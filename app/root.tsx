@@ -1,3 +1,12 @@
+import "@radix-ui/themes/styles.css"; // Import Radix UI global styles
+import { Theme } from "@radix-ui/themes";
+import "./i18n"; // import i18n
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "./components/LanguageSwitcher";
+import Header from "./components/Header";
+import ChampagneBubbles from "./components/ChampagneBubbles";
+
 import {
   isRouteErrorResponse,
   Links,
@@ -24,8 +33,15 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { i18n } = useTranslation();
+
+  // Dynamically update the <html lang="..."> attribute
+  useEffect(() => {
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
+
   return (
-    <html lang="en">
+    <html lang={i18n.language}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -33,7 +49,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        {/* Animated background */}
+        <ChampagneBubbles />
+
+        {/* Header & Navigation */}
+        <Header />
+        <LanguageSwitcher />
+
         {children}
+
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -41,8 +65,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Wrap everything in the Radix UI Theme for consistent styling
 export default function App() {
-  return <Outlet />;
+  return (
+    <Theme>
+      <Outlet /> {/* This allows nested pages to be rendered dynamically */}
+    </Theme>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

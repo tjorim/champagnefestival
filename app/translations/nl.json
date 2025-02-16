@@ -1,0 +1,19 @@
+{
+    "festivalName": "Champagne Festival",
+    "welcome": {
+        "title": "Welkom op de Champagne Festival website!"
+    },
+    "whatWeDo": {
+        "title": "Wat We Doen",
+        "description": "Informatie over ons non-profit en hoe we champagnefestivals organiseren."
+    },
+    "nextFestival": {
+        "title": "Volgend Champagne Festival",
+        "description": "Details over het aankomende festival, schema, en meer."
+    },
+    "schedule": "Schema",
+    "location": "Locatie",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "countdown": "Countdown"
+}
