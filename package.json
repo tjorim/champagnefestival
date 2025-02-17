@@ -5,7 +5,8 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
-    "start": "react-router-serve ./build/server/index.js",
+    "start": "wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
@@ -22,6 +23,8 @@
     "react-router": "^7.1.5"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^0.1.1",
+    "@cloudflare/workers-types": "^4.20250214.0",
     "@react-router/dev": "^7.1.5",
     "@tailwindcss/vite": "^4.0.6",
     "@types/node": "^22",
@@ -31,6 +34,7 @@
     "tailwindcss": "^4.0.6",
     "typescript": "^5.7.2",
     "vite": "^6.1.0",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "wrangler": "^3.109.1"
   }
 }
