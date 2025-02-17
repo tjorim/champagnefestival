@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* Custom font */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -8,7 +9,6 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #fff;
 }
 
 .App {
@@ -21,6 +21,8 @@ header {
   background: #222;
   color: #fff;
   padding: 1rem;
+  position: relative;
+  z-index: 2;
 }
 
 header nav a {
@@ -31,6 +33,17 @@ header nav a {
 
 .language-switcher {
   margin: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.language-switcher button {
+  padding: 0.5rem 1rem;
+  margin: 0 0.5rem;
+  background: var(--lang-btn-bg);
+  color: var(--lang-btn-color);
+  border: 1px solid var(--lang-btn-color);
+  border-radius: 4px;
 }
 
 section {
@@ -94,9 +107,12 @@ footer {
   color: #fff;
   padding: 1rem;
   width: 100%;
+  position: relative;
+  z-index: 2;
 }
 
-.champagne-bubbles {
+/* Bubble background styles */
+.bubble-container {
   position: fixed;
   top: 0;
   left: 0;
@@ -104,18 +120,18 @@ footer {
   height: 100%;
   pointer-events: none;
   overflow: hidden;
-  z-index: -1;
+  z-index: 0; /* behind .app-content */
 }
 
 .bubble {
   position: absolute;
-  bottom: -50px;
-  width: 20px;
-  height: 20px;
-  background: #000; /*rgba(255, 223, 186, 0.7)*/
+  bottom: calc(-1 * var(--bubble-size));
+  width: var(--bubble-size);
+  height: var(--bubble-size);
   border-radius: 50%;
-  animation: rise linear infinite;
-  opacity: 0.7;
+  background: var(--bubble-color);
+  left: var(--bubble-left);
+  animation: rise var(--bubble-duration) linear var(--bubble-delay) infinite;
 }
 
 @keyframes rise {
@@ -124,7 +140,21 @@ footer {
     opacity: 0.7;
   }
   100% {
-    transform: translateY(-110vh);
+    transform: translateY(-100vh);
     opacity: 0;
   }
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  cursor: pointer;
+  background: var(--text-color);
+  color: var(--bg-color);
+  border-radius: 4px;
+  z-index: 3;
 }

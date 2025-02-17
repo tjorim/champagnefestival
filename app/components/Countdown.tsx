@@ -1,47 +1,49 @@
 import React, { useState, useEffect } from "react";
 
-const Countdown = ({ targetDate }) => {
-    const calculateTimeLeft = () => {
+interface CountdownProps {
+    targetDate: string;
+}
+
+interface TimeLeft {
+    dagen?: number;
+    uren?: number;
+    minuten?: number;
+    seconden?: number;
+}
+
+const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
+    const calculateTimeLeft = (): TimeLeft => {
         const difference = +new Date(targetDate) - +new Date();
-        let timeLeft = {};
         if (difference > 0) {
-            timeLeft = {
+            return {
                 dagen: Math.floor(difference / (1000 * 60 * 60 * 24)),
                 uren: Math.floor((difference / (1000 * 60 * 60)) % 24),
                 minuten: Math.floor((difference / 1000 / 60) % 60),
                 seconden: Math.floor((difference / 1000) % 60),
             };
         }
-        return timeLeft;
+        return {};
     };
 
-    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+    const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
         }, 1000);
 
-        return () => clearTimeout(timer);
-    });
+        return () => clearInterval(timer);
+    }, [targetDate]);
 
-    const timerComponents = [];
-
-    Object.keys(timeLeft).forEach((interval) => {
-        timerComponents.push(
-            <span key={interval}>
-                {timeLeft[interval]} {interval}{" "}
-            </span>
-        );
-    });
+    const timerComponents = Object.keys(timeLeft).map((interval) => (
+        <span key={interval}>
+            {timeLeft[interval]} {interval}{" "}
+        </span>
+    ));
 
     return (
         <div className="countdown">
-            {timerComponents.length ? (
-                timerComponents
-            ) : (
-                <span>Festival has started!</span>
-            )}
+            {timerComponents.length ? timerComponents : <span>Festival has started!</span>}
         </div>
     );
 };

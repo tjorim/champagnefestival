@@ -1,17 +1,22 @@
-// A simple contact form that (for now) simply alerts on submit.
-
 import React, { useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 
-const ContactForm = () => {
-    const [form, setForm] = useState({ name: "", email: "", message: "" });
+interface FormState {
+    name: string;
+    email: string;
+    message: string;
+}
 
-    const handleChange = (e) => {
+const ContactForm: React.FC = () => {
+    const [form, setForm] = useState<FormState>({ name: "", email: "", message: "" });
+
+    const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        // In a real app, submit the data to a backend or service like Formspree.
+        // In a real app, submit the data to a backend or service.
         alert("Thank you for contacting us!");
         setForm({ name: "", email: "", message: "" });
     };

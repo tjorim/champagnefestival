@@ -5,7 +5,8 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import Header from "./components/Header";
-import ChampagneBubbles from "./components/ChampagneBubbles";
+import BubbleBackground from "./components/BubbleBackground";
+import ThemeToggle from "./components/ThemeToggle"; // New theme toggle
 
 import {
   isRouteErrorResponse,
@@ -35,7 +36,7 @@ export const links: Route.LinksFunction = () => [
 export function Layout({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
 
-  // Dynamically update the <html lang="..."> attribute
+  // Update the <html lang="..."> attribute dynamically
   useEffect(() => {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
@@ -50,11 +51,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {/* Animated background */}
-        <ChampagneBubbles />
+        <BubbleBackground />
 
         {/* Header & Navigation */}
         <Header />
         <LanguageSwitcher />
+        <ThemeToggle />
 
         {children}
 
@@ -68,7 +70,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 // Wrap everything in the Radix UI Theme for consistent styling
 export default function App() {
   return (
-    <Theme>
+    // Setting the default theme to dark; you can change this as needed.
+    <Theme appearance="dark">
       <Outlet /> {/* This allows nested pages to be rendered dynamically */}
     </Theme>
   );

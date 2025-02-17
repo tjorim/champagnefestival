@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next"; // Import useTranslation
 import type { Route } from "./+types/home"; // Import Route type for type safety
 
-import { Welcome } from "../welcome/welcome"; // assuming Welcome is a component
 import Carousel from "../components/Carousel";
 import Countdown from "../components/Countdown";
 import MapComponent from "../components/MapComponent";
@@ -23,8 +22,6 @@ export default function Home() {
 
   return (
     <div className="App">
-      {/* The Welcome section (you can replace this with actual content) */}
-      <Welcome />
       {/* The Welcome section */}
       <h1>{t("welcome.title")}</h1> {/* Use t function to translate content */}
       {/* What we do */}

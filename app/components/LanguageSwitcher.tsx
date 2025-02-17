@@ -1,34 +1,34 @@
+// LanguageSwitcher.tsx
+import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
 const LanguageSwitcher = () => {
     const { i18n } = useTranslation();
 
-    const handleChangeLanguage = (lang: string) => {
-        i18n.changeLanguage(lang);
+    const handleValueChange = (value: string) => {
+        if (value) {
+            i18n.changeLanguage(value);
+        }
     };
 
     return (
-        <div className="language-switcher flex gap-2">
-            <button
-                onClick={() => handleChangeLanguage('en')}
-                className="p-2 border rounded"
-            >
+        <ToggleGroup.Root
+            type="single"
+            value={i18n.language}
+            onValueChange={handleValueChange}
+            className="toggle-group"
+        >
+            <ToggleGroup.Item value="en" className="toggle-item">
                 English
-            </button>
-            <button
-                onClick={() => handleChangeLanguage('nl')}
-                className="p-2 border rounded"
-            >
+            </ToggleGroup.Item>
+            <ToggleGroup.Item value="nl" className="toggle-item">
                 Nederlands
-            </button>
-            <button
-                onClick={() => handleChangeLanguage('fr')}
-                className="p-2 border rounded"
-            >
+            </ToggleGroup.Item>
+            <ToggleGroup.Item value="fr" className="toggle-item">
                 Français
-            </button>
-        </div>
+            </ToggleGroup.Item>
+        </ToggleGroup.Root>
     );
 };
 

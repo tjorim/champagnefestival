@@ -1,5 +1,3 @@
-// A basic FAQ component with toggling answers.
-
 import React, { useState } from "react";
 
 const FAQ = () => {
@@ -12,12 +10,11 @@ const FAQ = () => {
             question: "When is the next festival?",
             answer: "The next festival is scheduled for March 2025.",
         },
-        // Add more FAQs as needed.
     ];
 
-    const [openIndex, setOpenIndex] = useState(null);
+    const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-    const toggleFAQ = (index) => {
+    const toggleFAQ = (index: number) => {
         setOpenIndex(openIndex === index ? null : index);
     };
 
@@ -25,8 +22,19 @@ const FAQ = () => {
         <div className="faq">
             {faqData.map((faq, index) => (
                 <div key={index} className="faq-item">
-                    <h4 onClick={() => toggleFAQ(index)}>{faq.question}</h4>
-                    {openIndex === index && <p>{faq.answer}</p>}
+                    <button
+                        onClick={() => toggleFAQ(index)}
+                        aria-expanded={openIndex === index}
+                        aria-controls={`faq-answer-${index}`}
+                        className="faq-question"
+                    >
+                        {faq.question}
+                    </button>
+                    {openIndex === index && (
+                        <p id={`faq-answer-${index}`} className="faq-answer">
+                            {faq.answer}
+                        </p>
+                    )}
                 </div>
             ))}
         </div>
