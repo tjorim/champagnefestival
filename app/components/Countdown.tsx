@@ -12,13 +12,19 @@ interface TimeLeft {
 }
 
 const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const calculateTimeLeft = (): TimeLeft => {
         const difference = +new Date(targetDate) - +new Date();
         if (difference > 0) {
             return {
                 dagen: Math.floor(difference / (1000 * 60 * 60 * 24)),
                 uren: Math.floor((difference / (1000 * 60 * 60)) % 24),
-                minuten: Math.floor((difference / 1000 / 60) % 60),
+                minuten: Math.floor((difference / (1000 * 60)) % 60),
                 seconden: Math.floor((difference / 1000) % 60),
             };
         }
@@ -42,8 +48,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
     ));
 
     return (
-        <div className="countdown">
-            {timerComponents.length ? timerComponents : <span>Festival has started!</span>}
+        <div className="countdown" suppressHydrationWarning>
+            {mounted
+                ? (timerComponents.length ? timerComponents : <span>Festival has started!</span>)
+                : "Loading..."}
         </div>
     );
 };

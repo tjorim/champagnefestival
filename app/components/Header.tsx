@@ -1,10 +1,8 @@
-// Header.tsx
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import LanguageSwitcher from './LanguageSwitcher';
-import ThemeToggle from './ThemeToggle';
 
 const Header = () => {
     const { t } = useTranslation();
@@ -43,7 +41,6 @@ const Header = () => {
                 {/* Right-Side Controls */}
                 <div className="flex items-center space-x-4">
                     <LanguageSwitcher />
-                    <ThemeToggle />
                     {/* Mobile Menu Toggle */}
                     <div className="md:hidden">
                         <button

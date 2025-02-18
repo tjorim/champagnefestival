@@ -13,22 +13,6 @@ body {
 
 .App {
   text-align: center;
-  position: relative;
-  z-index: 1;
-}
-
-header {
-  background: #222;
-  color: #fff;
-  padding: 1rem;
-  position: relative;
-  z-index: 2;
-}
-
-header nav a {
-  color: #fff;
-  margin: 0 1rem;
-  text-decoration: none;
 }
 
 .language-switcher {
@@ -120,16 +104,16 @@ footer {
   height: 100%;
   pointer-events: none;
   overflow: hidden;
-  z-index: 0; /* behind .app-content */
+  z-index: 1; /* behind .app-content */
 }
 
 .bubble {
   position: absolute;
-  bottom: calc(-1 * var(--bubble-size));
-  width: var(--bubble-size);
-  height: var(--bubble-size);
+  bottom: -50px; /* start below the visible area */
+  background: rgba(255, 255, 255, 0.3); /* semi-transparent white */
   border-radius: 50%;
-  background: var(--bubble-color);
+  height: var(--bubble-size);
+  width: var(--bubble-size);
   left: var(--bubble-left);
   animation: rise var(--bubble-duration) linear var(--bubble-delay) infinite;
 }
@@ -137,24 +121,10 @@ footer {
 @keyframes rise {
   0% {
     transform: translateY(0);
-    opacity: 0.7;
+    opacity: 1;
   }
   100% {
-    transform: translateY(-100vh);
+    transform: translateY(-120vh);
     opacity: 0;
   }
-}
-
-/* Theme toggle button */
-.theme-toggle {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  cursor: pointer;
-  background: var(--text-color);
-  color: var(--bg-color);
-  border-radius: 4px;
-  z-index: 3;
 }
