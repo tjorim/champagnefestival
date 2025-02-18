@@ -1,32 +1,39 @@
 // LanguageSwitcher.tsx
-import * as ToggleGroup from "@radix-ui/react-toggle-group";
-import React from "react";
-import { useTranslation } from "react-i18next";
+import React from 'react';
+import * as ToggleGroup from '@radix-ui/react-toggle-group';
+import { useTranslation } from 'react-i18next';
 
 const LanguageSwitcher = () => {
     const { i18n } = useTranslation();
-
-    const handleValueChange = (value: string) => {
-        if (value) {
-            i18n.changeLanguage(value);
-        }
-    };
+    const currentLang = i18n.language;
 
     return (
         <ToggleGroup.Root
             type="single"
-            value={i18n.language}
-            onValueChange={handleValueChange}
-            className="toggle-group"
+            value={currentLang}
+            onValueChange={(value) => i18n.changeLanguage(value)}
+            className="flex space-x-1"
         >
-            <ToggleGroup.Item value="en" className="toggle-item">
-                English
+            <ToggleGroup.Item
+                value="en"
+                className={`px-2 py-1 border rounded ${currentLang === 'en' ? 'bg-indigo-700' : 'bg-transparent'
+                    }`}
+            >
+                EN
             </ToggleGroup.Item>
-            <ToggleGroup.Item value="nl" className="toggle-item">
-                Nederlands
+            <ToggleGroup.Item
+                value="nl"
+                className={`px-2 py-1 border rounded ${currentLang === 'nl' ? 'bg-indigo-700' : 'bg-transparent'
+                    }`}
+            >
+                NL
             </ToggleGroup.Item>
-            <ToggleGroup.Item value="fr" className="toggle-item">
-                Français
+            <ToggleGroup.Item
+                value="fr"
+                className={`px-2 py-1 border rounded ${currentLang === 'fr' ? 'bg-indigo-700' : 'bg-transparent'
+                    }`}
+            >
+                FR
             </ToggleGroup.Item>
         </ToggleGroup.Root>
     );

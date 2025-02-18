@@ -3,10 +3,8 @@ import { Theme } from "@radix-ui/themes";
 import "./i18n"; // import i18n
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "./components/LanguageSwitcher";
 import Header from "./components/Header";
 import BubbleBackground from "./components/BubbleBackground";
-import ThemeToggle from "./components/ThemeToggle"; // New theme toggle
 
 import {
   isRouteErrorResponse,
@@ -55,8 +53,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Header & Navigation */}
         <Header />
-        <LanguageSwitcher />
-        <ThemeToggle />
 
         {children}
 

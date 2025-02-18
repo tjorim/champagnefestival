@@ -1,26 +1,24 @@
 // ThemeToggle.tsx
-import * as Switch from "@radix-ui/react-switch";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import * as Switch from '@radix-ui/react-switch';
 
 const ThemeToggle = () => {
-    const [checked, setChecked] = useState(true); // true means dark mode is active
+    const [isDark, setIsDark] = useState(true);
 
     useEffect(() => {
-        document.documentElement.setAttribute("data-theme", checked ? "dark" : "light");
-    }, [checked]);
+        // Update the data-theme attribute on the root element for your Radix theme (if applicable)
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    }, [isDark]);
 
     return (
-        <div className="theme-toggle-container">
-            <label htmlFor="theme-switch" className="theme-label">
-                Dark Mode
-            </label>
+        <div className="flex items-center space-x-2">
+            <span className="text-sm">Dark</span>
             <Switch.Root
-                id="theme-switch"
-                checked={checked}
-                onCheckedChange={setChecked}
-                className="switch-root"
+                className="w-10 h-6 bg-gray-300 rounded-full relative"
+                checked={isDark}
+                onCheckedChange={(checked) => setIsDark(checked)}
             >
-                <Switch.Thumb className="switch-thumb" />
+                <Switch.Thumb className="block w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200 translate-x-0" />
             </Switch.Root>
         </div>
     );
