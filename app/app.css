@@ -8,6 +8,7 @@
 
 body {
   margin: 0;
+  padding-top: 4rem; /* Adjust this value for your header's height */
   font-family: Arial, sans-serif;
 }
 
