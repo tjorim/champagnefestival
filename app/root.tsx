@@ -1,7 +1,7 @@
 import "@radix-ui/themes/styles.css"; // Import Radix UI global styles
 import { Theme } from "@radix-ui/themes";
 import "./i18n"; // import i18n
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import Header from "./components/Header";
 // Lazy load components that aren't needed immediately
@@ -43,7 +43,7 @@ function SkipLink() {
   );
 }
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout({ children }: { children: ReactNode }) {
   const { i18n } = useTranslation();
 
   // Update the <html lang="..."> attribute dynamically
