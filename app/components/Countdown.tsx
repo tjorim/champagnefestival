@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
+/**
+ * Props for the Countdown component
+ * @property {string} targetDate - Target date in ISO format (YYYY-MM-DD)
+ */
 interface CountdownProps {
     targetDate: string;
 }
 
+/**
+ * Structure for time remaining until target date
+ * All properties are optional since they won't exist after the target date
+ */
 interface TimeLeft {
     dagen?: number;
     uren?: number;
@@ -11,47 +19,86 @@ interface TimeLeft {
     seconden?: number;
 }
 
+/**
+ * Time units in milliseconds for conversion
+ */
+enum TimeUnits {
+    Day = 1000 * 60 * 60 * 24,
+    Hour = 1000 * 60 * 60,
+    Minute = 1000 * 60,
+    Second = 1000
+}
+
+/**
+ * Countdown component that displays time remaining until a target date
+ * Handles hydration mismatches by only rendering the final countdown on client-side
+ */
 const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
     const [mounted, setMounted] = useState(false);
 
+    // Set component as mounted after initial render
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    const calculateTimeLeft = (): TimeLeft => {
+    /**
+     * Calculate the time left until the target date
+     * @returns {TimeLeft} Object containing time units remaining
+     */
+    const calculateTimeLeft = useCallback((): TimeLeft => {
+        // Get time difference in milliseconds
         const difference = +new Date(targetDate) - +new Date();
+        
         if (difference > 0) {
             return {
-                dagen: Math.floor(difference / (1000 * 60 * 60 * 24)),
-                uren: Math.floor((difference / (1000 * 60 * 60)) % 24),
-                minuten: Math.floor((difference / (1000 * 60)) % 60),
-                seconden: Math.floor((difference / 1000) % 60),
+                dagen: Math.floor(difference / TimeUnits.Day),
+                uren: Math.floor((difference / TimeUnits.Hour) % 24),
+                minuten: Math.floor((difference / TimeUnits.Minute) % 60),
+                seconden: Math.floor((difference / TimeUnits.Second) % 60),
             };
         }
+        
         return {};
-    };
+    }, [targetDate]);
 
     const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
 
+    // Update countdown every second
     useEffect(() => {
+        // Initial calculation
+        setTimeLeft(calculateTimeLeft());
+        
         const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
         }, 1000);
 
+        // Clean up interval on unmount
         return () => clearInterval(timer);
-    }, [targetDate]);
+    }, [targetDate, calculateTimeLeft]);
 
-    const timerComponents = Object.keys(timeLeft).map((interval) => (
-        <span key={interval}>
-            {timeLeft[interval]} {interval}{" "}
+    // Map time units to display components
+    const timerComponents = Object.keys(timeLeft).map((interval: string) => (
+        <span key={interval} className="countdown-unit">
+            <span className="countdown-value">{timeLeft[interval as keyof TimeLeft]}</span>{" "}
+            <span className="countdown-label">{interval}</span>{" "}
         </span>
     ));
 
     return (
-        <div className="countdown" suppressHydrationWarning>
-            {mounted
-                ? (timerComponents.length ? timerComponents : <span>Festival has started!</span>)
-                : "Loading..."}
+        <div 
+            className="countdown" 
+            suppressHydrationWarning
+            aria-live="polite" // Announce updates to screen readers
+        >
+            {mounted ? (
+                timerComponents.length ? (
+                    <div className="countdown-units">{timerComponents}</div>
+                ) : (
+                    <span className="countdown-complete">Festival has started!</span>
+                )
+            ) : (
+                <span className="countdown-loading">Loading countdown...</span>
+            )}
         </div>
     );
 };
