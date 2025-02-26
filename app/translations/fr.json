@@ -1,10 +1,72 @@
 {
     "festivalName": "Festival de Champagne",
-    "whatWeDo": "Ce Que Nous Faisons",
-    "nextFestival": "Prochain Festival",
-    "schedule": "Programme",
-    "location": "Emplacement",
-    "faq": "FAQ",
-    "contact": "Contact",
-    "countdown": "Compte à Rebours"
+    "welcome": {
+        "title": "Bienvenue au Festival de Champagne",
+        "subtitle": "Une célébration du champagne fin et de la communauté",
+        "learnMore": "En Savoir Plus"
+    },
+    "whatWeDo": {
+        "title": "Ce Que Nous Faisons",
+        "description": "Notre festival réunit les producteurs de champagne, les passionnés et la communauté pour une célébration de cette boisson magnifique.",
+        "feature1": {
+            "title": "Rencontrez les Producteurs",
+            "description": "Rencontrez des producteurs du monde entier et découvrez leur savoir-faire."
+        },
+        "feature2": {
+            "title": "Dégustez des Champagnes",
+            "description": "Goûtez une grande variété de champagnes de différentes régions."
+        },
+        "feature3": {
+            "title": "Rejoignez Notre Communauté",
+            "description": "Connectez-vous avec d'autres passionnés et experts du champagne."
+        }
+    },
+    "nextFestival": {
+        "title": "Prochain Festival",
+        "description": "Rejoignez-nous pour notre prochain festival où nous présenterons plus de 20 producteurs de champagne du monde entier."
+    },
+    "schedule": {
+        "title": "Programme",
+        "description": "Les détails du programme du festival seront disponibles ici."
+    },
+    "location": {
+        "title": "Lieu de l'Événement"
+    },
+    "producers": {
+        "title": "Producteurs de Champagne"
+    },
+    "sponsors": {
+        "title": "Sponsors"
+    },
+    "faq": {
+        "title": "Questions Fréquemment Posées"
+    },
+    "contact": {
+        "title": "Contactez-Nous",
+        "intro": "Des questions ou vous souhaitez devenir sponsor? Contactez-nous!",
+        "name": "Votre Nom",
+        "email": "Votre Email",
+        "message": "Votre Message",
+        "submit": "Envoyer le Message",
+        "submitting": "Envoi en cours...",
+        "successMessage": "Merci pour votre message! Nous vous répondrons bientôt.",
+        "errors": {
+            "nameRequired": "Le nom est requis",
+            "emailRequired": "L'email est requis",
+            "emailInvalid": "Veuillez entrer une adresse email valide",
+            "messageRequired": "Le message est requis"
+        }
+    },
+    "loading": "Chargement...",
+    "errors": {
+        "general": "Oups!",
+        "unexpected": "Une erreur inattendue s'est produite.",
+        "404": "404",
+        "title": "Erreur",
+        "pageNotFound": "La page demandée n'a pas pu être trouvée.",
+        "backHome": "Retour à l'Accueil"
+    },
+    "accessibility": {
+        "skipToContent": "Passer au contenu principal"
+    }
 }

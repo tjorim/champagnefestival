@@ -1,19 +1,72 @@
 {
     "festivalName": "Champagne Festival",
     "welcome": {
-        "title": "Welkom op de Champagne Festival website!"
+        "title": "Welkom bij Champagne Festival",
+        "subtitle": "Een viering van fijne champagne en gemeenschap",
+        "learnMore": "Meer Informatie"
     },
     "whatWeDo": {
         "title": "Wat We Doen",
-        "description": "Informatie over ons non-profit en hoe we champagnefestivals organiseren."
+        "description": "Ons festival brengt champagneproducenten, liefhebbers en de gemeenschap samen voor een viering van deze prachtige drank.",
+        "feature1": {
+            "title": "Ontmoet Producenten",
+            "description": "Ontmoet producenten van over de hele wereld en leer over hun ambacht."
+        },
+        "feature2": {
+            "title": "Proef Champagnes",
+            "description": "Proef een grote verscheidenheid aan champagnes uit verschillende regio's."
+        },
+        "feature3": {
+            "title": "Word Deel van Onze Gemeenschap",
+            "description": "Maak contact met andere champagneliefhebbers en experts."
+        }
     },
     "nextFestival": {
-        "title": "Volgend Champagne Festival",
-        "description": "Details over het aankomende festival, schema, en meer."
+        "title": "Volgend Festival",
+        "description": "Doe mee aan ons volgende festival waar we meer dan 20 champagneproducenten van over de hele wereld presenteren."
     },
-    "schedule": "Schema",
-    "location": "Locatie",
-    "faq": "FAQ",
-    "contact": "Contact",
-    "countdown": "Countdown"
+    "schedule": {
+        "title": "Schema",
+        "description": "Festivalschema details komen hier."
+    },
+    "location": {
+        "title": "Evenementlocatie"
+    },
+    "producers": {
+        "title": "Champagne Producenten"
+    },
+    "sponsors": {
+        "title": "Sponsors"
+    },
+    "faq": {
+        "title": "Veelgestelde Vragen"
+    },
+    "contact": {
+        "title": "Neem Contact Op",
+        "intro": "Vragen of wil je sponsor worden? Neem contact met ons op!",
+        "name": "Je Naam",
+        "email": "Je Email",
+        "message": "Je Bericht",
+        "submit": "Verstuur Bericht",
+        "submitting": "Versturen...",
+        "successMessage": "Bedankt voor je bericht! We nemen zo snel mogelijk contact met je op.",
+        "errors": {
+            "nameRequired": "Naam is verplicht",
+            "emailRequired": "Email is verplicht",
+            "emailInvalid": "Voer een geldig e-mailadres in",
+            "messageRequired": "Bericht is verplicht"
+        }
+    },
+    "loading": "Laden...",
+    "errors": {
+        "general": "Oeps!",
+        "unexpected": "Er is een onverwachte fout opgetreden.",
+        "404": "404",
+        "title": "Fout",
+        "pageNotFound": "De gevraagde pagina kon niet worden gevonden.",
+        "backHome": "Terug naar Home"
+    },
+    "accessibility": {
+        "skipToContent": "Ga naar hoofdinhoud"
+    }
 }

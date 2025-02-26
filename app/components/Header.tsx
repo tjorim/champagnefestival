@@ -11,10 +11,10 @@ const Header = () => {
     const navLinks = [
         { label: t("whatWeDo.title", "What We Do"), href: "#what-we-do" },
         { label: t("nextFestival.title", "Next Festival"), href: "#next-festival" },
-        { label: t("schedule", "Schedule"), href: "#schedule" },
-        { label: t("location", "Location"), href: "#map" },
-        { label: t("faq", "FAQ"), href: "#faq" },
-        { label: t("contact", "Contact"), href: "#contact" },
+        { label: t("schedule.title", "Schedule"), href: "#schedule" },
+        { label: t("location.title", "Location"), href: "#map" },
+        { label: t("faq.title", "FAQ"), href: "#faq" },
+        { label: t("contact.title", "Contact"), href: "#contact" },
     ];
 
     return (
