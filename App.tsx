@@ -116,16 +116,20 @@ function App() {
           <section id="carousel" className="content-section">
             <div className="container">
               <h2>{t("producers.title", "Champagne Producers")}</h2>
-              <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
-                <Carousel itemsType="producers" />
-              </Suspense>
+              <SuspendedCarousel itemsType="producers" />
               
               <h2>{t("sponsors.title", "Sponsors")}</h2>
-              <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
-                <Carousel itemsType="sponsors" />
-              </Suspense>
+              <SuspendedCarousel itemsType="sponsors" />
             </div>
           </section>
+
+function SuspendedCarousel({ itemsType }: { itemsType: string }) {
+  return (
+    <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
+      <Carousel itemsType={itemsType} />
+    </Suspense>
+  );
+}
           
           {/* FAQ Section */}
           <section id="faq" className="content-section">
