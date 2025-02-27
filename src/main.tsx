@@ -24,6 +24,18 @@ import './i18n'; // Import i18n configuration
 import './index.css';
 import { producerItems, sponsorItems } from "./config/carousel";
 import { faqData } from "./config/faq";
+import { featureItems } from "./config/features";
+import { festivalDate } from "./config/dates";
+
+// Helper component for Carousels with Suspense
+function SuspendedCarousel({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
+  const { t } = useTranslation();
+  return (
+    <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
+      <Carousel itemsType={itemsType} items={items} />
+    </Suspense>
+  );
+}
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -32,18 +44,6 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
-
-  // Festival date
-  const festivalDate = new Date("2025-03-07T00:00:00");
-
-  // Helper component for Carousels with Suspense
-  function SuspendedCarousel({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
-    return (
-      <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
-        <Carousel itemsType={itemsType} items={items} />
-      </Suspense>
-    );
-  }
 
   return (
     <Theme appearance="dark">
@@ -54,7 +54,8 @@ function App() {
         </a>
 
         {/* Animated background */}
-        <Suspense fallback={<div className="bubble-container-placeholder" />}>
+        <Suspense fallback={<div className="bubble-background-placeholder" aria-label={t("loading.background", "Loading background...")} />}>
+
           <BubbleBackground />
         </Suspense>
 
@@ -77,11 +78,7 @@ function App() {
               <h2>{t("whatWeDo.title", "What We Do")}</h2>
               <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
               <div className="features">
-                {[
-                  { id: 1, titleKey: 'whatWeDo.feature1.title', descKey: 'whatWeDo.feature1.description', fallbackTitle: 'Feature 1', fallbackDesc: 'Description for feature 1' },
-                  { id: 2, titleKey: 'whatWeDo.feature2.title', descKey: 'whatWeDo.feature2.description', fallbackTitle: 'Feature 2', fallbackDesc: 'Description for feature 2' },
-                  { id: 3, titleKey: 'whatWeDo.feature3.title', descKey: 'whatWeDo.feature3.description', fallbackTitle: 'Feature 3', fallbackDesc: 'Description for feature 3' },
-                ].map((feature) => (
+                {featureItems.map((feature) => (
                   <div key={feature.id} className="feature">
                     <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
                     <p>{t(feature.descKey, feature.fallbackDesc)}</p>

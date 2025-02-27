@@ -77,7 +77,7 @@ const Carousel: React.FC<CarouselProps> = ({ itemsType, items = [], autoRotateIn
 
         const interval = setInterval(handleNext, autoRotateInterval);
         return () => clearInterval(interval);
-    }, [items.length, isPaused, handleNext]);
+    }, [items.length, isPaused, handleNext, autoRotateInterval]);
 
     // Keyboard navigation
     useEffect(() => {
@@ -135,6 +135,10 @@ const Carousel: React.FC<CarouselProps> = ({ itemsType, items = [], autoRotateIn
                             src={items[currentIndex].image}
                             alt={items[currentIndex].name}
                             className="carousel-image w-full h-full object-cover"
+                            onError={(e) => {
+                                e.currentTarget.src = 'path/to/fallback-image.jpg';
+                                e.currentTarget.onerror = null; // Prevent infinite loops
+                            }}
                         />
                     </div>
                     <p className="carousel-caption mt-4 text-lg font-medium text-center">{items[currentIndex].name}</p>
