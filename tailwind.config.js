@@ -12,6 +12,10 @@ export default {
         dark: '#121212',
         darkCard: '#1e1e1e'
       },
+      animation: {
+        slideDown: 'slideDown 300ms ease-out',
+        slideUp: 'slideUp 300ms ease-in'
+      }
     },
   },
   plugins: [],

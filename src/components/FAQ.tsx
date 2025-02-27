@@ -1,85 +1,71 @@
-import React, { useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import * as Collapsible from '@radix-ui/react-collapsible';
+import * as Accordion from '@radix-ui/react-accordion';
 import { ChevronDownIcon } from '@heroicons/react/24/solid';
 
 /**
- * FAQ item structure
+ * FAQ item structure from config
  */
-interface FAQItem {
-    question: string;
-    answer: string;
+interface FAQConfigItem {
+    question: {
+        labelKey: string;
+        defaultLabel: string;
+    };
+    answer: {
+        labelKey: string;
+        defaultLabel: string;
+    };
 }
 
 /**
  * Props for the FAQ component
  */
 interface FAQProps {
-    items?: FAQItem[];
+    faqItems?: FAQConfigItem[];
 }
 
 /**
  * FAQ component that displays a list of frequently asked questions
  * with expandable/collapsible answers in an accessible accordion pattern
  */
-const FAQ: React.FC<FAQProps> = ({ items = [] }) => {
+const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
     const { t } = useTranslation();
 
-    // Use props or imported data
-    const faqData: FAQItem[] = items.length > 0 ? items : [];
-    /*
-    const faqData = items.map(item => ({
-        ...item,
-        label: t(link.labelKey, link.defaultLabel)
-    }));
-    */
-
-    const [openIndex, setOpenIndex] = useState<number | null>(null);
-
-    const toggleFAQ = (index: number): void => {
-        setOpenIndex(openIndex === index ? null : index);
-    };
+    // Transform config items to displayable items with translations
+    const faqData = faqItems?.map(item => ({
+        question: t(item.question.labelKey, item.question.defaultLabel),
+        answer: t(item.answer.labelKey, item.answer.defaultLabel)
+    })) || [];
 
     return (
-        <div className="faq bg-darkCard rounded-lg overflow-hidden shadow-lg" role="region" aria-label="Frequently Asked Questions">
+        <Accordion.Root
+            type="single"
+            collapsible
+            className="w-full rounded-lg overflow-hidden shadow-lg"
+        >
             {faqData.map((faq, index) => (
-                <Collapsible.Root
+                <Accordion.Item 
                     key={index}
-                    className="faq-item mb-4 last:mb-0"
-                    open={openIndex === index}
-                    onOpenChange={(open) => {
-                        if (open) {
-                            setOpenIndex(index);
-                        } else {
-                            setOpenIndex(null);
-                        }
-                    }}
+                    value={`item-${index}`}
+                    className="border-b border-gray-800 last:border-b-0 overflow-hidden"
                 >
-                    <Collapsible.Trigger asChild>
-                        <button
-                            className={`w-full py-4 px-6 text-left flex items-center justify-between transition-colors rounded-lg ${openIndex === index
-                                    ? 'bg-indigo-500/10 text-white'
-                                    : 'hover:bg-gray-800/70 text-gray-200'
-                                }`}
-                            id={`faq-question-${index}`}
-                        >
-                            <span className="font-medium">{faq.question}</span>
-                            <ChevronDownIcon
-                                className={`h-3 w-3 text-indigo-400 transition-transform duration-300 ${openIndex === index ? 'transform rotate-180' : ''
-                                    }`}
-                                aria-hidden="true"
+                    <Accordion.Header className="w-full">
+                        <Accordion.Trigger className="w-full py-4 px-6 flex items-center justify-between gap-4 text-left bg-darkCard hover:bg-gray-800/50 transition-colors group">
+                            <span className="font-medium text-gray-200">{faq.question}</span>
+                            <ChevronDownIcon 
+                                className="h-5 w-5 flex-shrink-0 text-indigo-400 transition-transform duration-300 group-data-[state=open]:rotate-180" 
+                                aria-hidden 
                             />
-                        </button>
-                    </Collapsible.Trigger>
-
-                    <Collapsible.Content className="transition-all duration-300 data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden">
-                        <div className="px-6 py-4 text-gray-300 border-l-2 border-indigo-500/30 ml-6 mt-2">
+                        </Accordion.Trigger>
+                    </Accordion.Header>
+                    <Accordion.Content className="overflow-hidden bg-darkCard/50 data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
+                        <div className="px-6 py-4 text-gray-300 border-l-2 border-indigo-500/30 ml-6 mb-2">
                             <p>{faq.answer}</p>
                         </div>
-                    </Collapsible.Content>
-                </Collapsible.Root>
+                    </Accordion.Content>
+                </Accordion.Item>
             ))}
-        </div>
+        </Accordion.Root>
     );
 };
 

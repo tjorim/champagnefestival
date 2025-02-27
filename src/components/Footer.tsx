@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import PrivacyPolicy from "./PrivacyPolicy";
 
 const Footer = () => {
     const { t } = useTranslation();
     const currentYear = new Date().getFullYear();
+    const [privacyOpen, setPrivacyOpen] = useState(false);
 
     return (
         <footer role="contentinfo" className="bg-gradient-to-r from-indigo-900 to-purple-800 text-white py-6 mt-8">
@@ -13,15 +15,21 @@ const Footer = () => {
                         &copy; {currentYear} {t("festivalName", "Champagne Festival")}. {t("footer.rights", "All rights reserved.")}
                     </p>
                     <div className="flex space-x-4">
-                        <span className="text-gray-400 cursor-not-allowed">
+                        <button 
+                            onClick={() => setPrivacyOpen(true)} 
+                            className="text-white hover:text-gray-200 transition-colors bg-transparent border-none p-0 cursor-pointer font-normal"
+                        >
                             {t("footer.privacy", "Privacy Policy")}
-                        </span>
-                        <span className="text-gray-400 cursor-not-allowed">
-                            {t("footer.terms", "Terms of Service")}
-                        </span>
+                        </button>
                     </div>
                 </div>
             </div>
+            
+            {/* Privacy Policy Modal */}
+            <PrivacyPolicy 
+                isOpen={privacyOpen} 
+                onClose={() => setPrivacyOpen(false)} 
+            />
         </footer>
     );
 };

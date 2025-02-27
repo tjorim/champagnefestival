@@ -4,6 +4,10 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Only limit max-width on img and video elements */
+img, video {
   max-width: 100%;
 }
 
