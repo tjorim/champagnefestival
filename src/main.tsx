@@ -124,9 +124,11 @@ function App() {
 
                 {t("location.title", "Event Location")}
               </h2>
-              <Suspense fallback={<div className="map-loading">{t("loading", "Loading map...")}</div>}>
-                <MapComponent />
-              </Suspense>
+              <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
+                <Suspense fallback={<div className="map-loading">{t("loading", "Loading map...")}</div>}>
+                  <MapComponent />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           </section>
 
