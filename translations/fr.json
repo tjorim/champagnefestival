@@ -1,0 +1,87 @@
+{
+    "welcome": {
+        "title": "Bienvenue au Festival du Champagne",
+        "subtitle": "Une célébration du champagne fin et de la communauté",
+        "learnMore": "En Savoir Plus"
+    },
+    "whatWeDo": {
+        "title": "Ce Que Nous Faisons",
+        "description": "Notre festival réunit les producteurs de champagne, les passionnés et la communauté pour une célébration de cette magnifique boisson.",
+        "feature1": {
+            "title": "Rencontrez les Producteurs",
+            "description": "Rencontrez des producteurs du monde entier et découvrez leur savoir-faire."
+        },
+        "feature2": {
+            "title": "Dégustez des Champagnes",
+            "description": "Goûtez une grande variété de champagnes de différentes régions."
+        },
+        "feature3": {
+            "title": "Rejoignez Notre Communauté",
+            "description": "Connectez-vous avec d'autres passionnés et experts du champagne."
+        }
+    },
+    "nextFestival": {
+        "title": "Prochain Festival",
+        "description": "Rejoignez-nous pour notre prochain festival où nous présenterons plus de 20 producteurs de champagne du monde entier."
+    },
+    "schedule": {
+        "title": "Programme",
+        "description": "Les détails du programme du festival sont présentés ici."
+    },
+    "location": {
+        "title": "Lieu de l'Événement"
+    },
+    "countdown": {
+        "days": "jours",
+        "hours": "heures",
+        "minutes": "minutes",
+        "seconds": "secondes",
+        "started": "Le festival a commencé !",
+        "loading": "Chargement du compte à rebours..."
+    },
+    "producers": {
+        "title": "Producteurs de Champagne"
+    },
+    "sponsors": {
+        "title": "Sponsors"
+    },
+    "faq": {
+        "title": "Questions Fréquemment Posées",
+        "q1": "En quoi consiste le Festival du Champagne ?",
+        "a1": "Le Festival du Champagne est une célébration du champagne fin, réunissant producteurs, passionnés et la communauté pour des dégustations, des ateliers et des événements sociaux.",
+        "q2": "Quand aura lieu le prochain festival ?",
+        "a2": "Le prochain festival est prévu pour les 7-9 mars 2025. Notez ces dates dans vos calendriers pour un week-end de bulles et de festivités !",
+        "q3": "Où se tiendra le festival ?",
+        "a3": "Le festival se déroulera au Grand Palais des Expositions au centre-ville. Il y a des transports en commun pratiques et des parkings à proximité.",
+        "q4": "Les billets sont-ils déjà disponibles ?",
+        "a4": "Les billets early bird seront disponibles à partir de septembre 2024. Inscrivez-vous à notre newsletter pour être informé lorsque les billets seront mis en vente.",
+        "q5": "Puis-je devenir sponsor ou vendeur ?",
+        "a5": "Oui ! Nous accueillons les partenariats avec les entreprises liées au champagne, à la gastronomie et au mode de vie luxueux. Veuillez utiliser notre formulaire de contact pour exprimer votre intérêt."
+    },
+    "contact": {
+        "title": "Contactez-Nous",
+        "intro": "Vous avez des questions ou vous souhaitez devenir sponsor ? Contactez-nous !",
+        "name": "Votre Nom",
+        "email": "Votre Email",
+        "message": "Votre Message",
+        "submitting": "Envoi en cours...",
+        "submit": "Envoyer le Message",
+        "successMessage": "Merci pour votre message ! Nous vous répondrons bientôt.",
+        "errors": {
+            "nameRequired": "Le nom est requis",
+            "emailRequired": "L'email est requis",
+            "emailInvalid": "Veuillez entrer une adresse email valide",
+            "messageRequired": "Le message est requis"
+        }
+    },
+    "accessibility": {
+        "skipToContent": "Aller au contenu principal"
+    },
+    "festivalName": "Festival du Champagne",
+    "loading": "Chargement...",
+    "footer": {
+        "rights": "Tous droits réservés.",
+        "privacy": "Politique de Confidentialité",
+        "terms": "Conditions d'Utilisation"
+    }
+}

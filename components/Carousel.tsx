@@ -88,7 +88,7 @@ const Carousel: React.FC<CarouselProps> = ({ itemsType }) => {
 
     return (
         <div 
-            className="carousel" 
+            className="carousel bg-darkCard rounded-lg overflow-hidden shadow-lg max-w-4xl mx-auto my-8 relative" 
             ref={carouselRef}
             aria-label={`${itemsType} Carousel`} 
             onMouseEnter={() => setIsPaused(true)}
@@ -96,43 +96,50 @@ const Carousel: React.FC<CarouselProps> = ({ itemsType }) => {
             onFocus={() => setIsPaused(true)}
             onBlur={() => setIsPaused(false)}
             role="region"
+            style={{ maxWidth: "95vw" }}
         >
-            <div className="carousel-content">
+            <div className="carousel-content relative p-6 flex items-center justify-between">
                 <button 
                     onClick={handlePrev} 
                     aria-label="Previous slide"
-                    className="carousel-button carousel-prev"
+                    className="carousel-button absolute left-2 sm:left-4 z-10 h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors text-white text-xl sm:text-2xl opacity-70 hover:opacity-100 focus:opacity-100"
                 >
                     ‹
                 </button>
                 
                 <div 
-                    className="carousel-item"
+                    className="carousel-item flex-1 mx-auto px-8 sm:px-12 w-full max-w-full sm:max-w-2xl"
                     aria-live="polite"
                 >
-                    <img 
-                        src={items[currentIndex].image} 
-                        alt={items[currentIndex].name} 
-                        className="carousel-image"
-                    />
-                    <p className="carousel-caption">{items[currentIndex].name}</p>
+                    <div className="relative overflow-hidden rounded-lg aspect-video shadow-md">
+                        <img 
+                            src={items[currentIndex].image} 
+                            alt={items[currentIndex].name} 
+                            className="carousel-image w-full h-full object-cover"
+                        />
+                    </div>
+                    <p className="carousel-caption mt-4 text-lg font-medium text-center">{items[currentIndex].name}</p>
                 </div>
                 
                 <button 
                     onClick={handleNext} 
                     aria-label="Next slide"
-                    className="carousel-button carousel-next"
+                    className="carousel-button absolute right-2 sm:right-4 z-10 h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 transition-colors text-white text-xl sm:text-2xl opacity-70 hover:opacity-100 focus:opacity-100"
                 >
                     ›
                 </button>
             </div>
             
             {/* Slide indicators */}
-            <div className="carousel-indicators">
+            <div className="carousel-indicators flex justify-center space-x-3 pb-5">
                 {items.map((_, index) => (
                     <button
                         key={index}
-                        className={`carousel-indicator ${index === currentIndex ? 'active' : ''}`}
+                        className={`w-8 h-2 rounded-sm ${
+                            index === currentIndex 
+                                ? 'bg-indigo-500 w-12' 
+                                : 'bg-gray-600 hover:bg-gray-500'
+                        } transition-all duration-300`}
                         onClick={() => setCurrentIndex(index)}
                         aria-label={`Go to slide ${index + 1}`}
                         aria-current={index === currentIndex ? 'true' : 'false'}

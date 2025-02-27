@@ -1,5 +1,4 @@
 {
-    "festivalName": "Champagne Festival",
     "welcome": {
         "title": "Welcome to Champagne Festival",
         "subtitle": "A celebration of fine champagne and community",
@@ -30,7 +29,15 @@
         "description": "Festival schedule details go here."
     },
     "location": {
-        "title": "Event Location"
+        "title": "Location"
+    },
+    "countdown": {
+        "days": "days",
+        "hours": "hours",
+        "minutes": "minutes",
+        "seconds": "seconds",
+        "started": "Festival has started!",
+        "loading": "Loading countdown..."
     },
     "producers": {
         "title": "Champagne Producers"
@@ -39,7 +46,17 @@
         "title": "Sponsors"
     },
     "faq": {
-        "title": "Frequently Asked Questions"
+        "title": "Frequently Asked Questions",
+        "q1": "What is the Champagne Festival about?",
+        "a1": "The Champagne Festival is a celebration of fine champagne, bringing together producers, enthusiasts, and the community for tastings, workshops, and social events.",
+        "q2": "When is the next festival?",
+        "a2": "The next festival is scheduled for March 7-9, 2025. Mark your calendars for a weekend of bubbles and festivities!",
+        "q3": "Where will the festival be held?",
+        "a3": "The festival will take place at the Grand Exhibition Hall in the city center. There's convenient public transportation and parking nearby.",
+        "q4": "Are tickets available yet?",
+        "a4": "Early bird tickets will be available starting September 2024. Sign up for our newsletter to be notified when tickets go on sale.",
+        "q5": "Can I become a sponsor or vendor?",
+        "a5": "Yes! We welcome partnerships with businesses related to champagne, food, and luxury lifestyle. Please use our contact form to express your interest."
     },
     "contact": {
         "title": "Contact Us",
@@ -47,8 +64,8 @@
         "name": "Your Name",
         "email": "Your Email",
         "message": "Your Message",
-        "submit": "Send Message",
         "submitting": "Sending...",
+        "submit": "Send Message",
         "successMessage": "Thank you for your message! We'll get back to you soon.",
         "errors": {
             "nameRequired": "Name is required",
@@ -57,16 +74,14 @@
             "messageRequired": "Message is required"
         }
     },
-    "loading": "Loading...",
-    "errors": {
-        "general": "Oops!",
-        "unexpected": "An unexpected error occurred.",
-        "404": "404",
-        "title": "Error",
-        "pageNotFound": "The requested page could not be found.",
-        "backHome": "Back to Home"
-    },
     "accessibility": {
         "skipToContent": "Skip to main content"
+    },
+    "festivalName": "Champagne Festival",
+    "loading": "Loading...",
+    "footer": {
+        "rights": "All rights reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
     }
 }
