@@ -1,6 +1,6 @@
 // React and libraries
 import React, { useEffect, lazy, Suspense } from 'react';
-import { ErrorBoundary } from 'react-error-boundary'; // or from your custom implementation
+import { ErrorBoundary } from 'react-error-boundary';
 import { useTranslation } from "react-i18next";
 import ReactDOM from 'react-dom/client';
 
