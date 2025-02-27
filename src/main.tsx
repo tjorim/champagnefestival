@@ -167,7 +167,12 @@ function App() {
 }
 
 // Render the App
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  console.error('Root element not found');
+  throw new Error('Root element not found');
+}
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
