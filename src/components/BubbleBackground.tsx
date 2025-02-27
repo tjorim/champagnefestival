@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Bubble from "./Bubble";
 
 /**
@@ -38,11 +38,12 @@ const BubbleBackground: React.FC = () => {
         setIsLowPerformanceDevice(isLowEnd);
     }, []);
 
+    const resizeTimeoutRef = useRef<number>();
+
     // Handle window resize and adjust bubble count accordingly
     const handleResize = useCallback(() => {
-        let resizeTimeout: number;
-        if (resizeTimeout) clearTimeout(resizeTimeout);
-        resizeTimeout = window.setTimeout(() => {
+        if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = window.setTimeout(() => {
             const config = isLowPerformanceDevice
                 ? PERFORMANCE_CONFIG.LOW_PERFORMANCE
                 : PERFORMANCE_CONFIG.HIGH_PERFORMANCE;

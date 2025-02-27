@@ -1,23 +1,29 @@
+// React and libraries
 import React, { useEffect, lazy, Suspense } from 'react';
-import ReactDOM from 'react-dom/client';
 import { useTranslation } from "react-i18next";
-import { Theme } from "@radix-ui/themes";
-import { CalendarDaysIcon, TicketIcon } from "@heroicons/react/24/outline";
-import "@radix-ui/themes/styles.css";
-import './i18n'; // Import i18n configuration
-import './index.css';
+import ReactDOM from 'react-dom/client';
 
-// Components
+// UI Libraries
+import { Theme } from "@radix-ui/themes";
+import "@radix-ui/themes/styles.css";
+import { CalendarDaysIcon, TicketIcon, MapPinIcon } from "@heroicons/react/24/outline";
+
+// Components - Eagerly loaded
 import Header from "./components/Header";
 import Countdown from "./components/Countdown";
 import FAQ from "./components/FAQ";
 import ContactForm from "./components/ContactForm";
 import Footer from "./components/Footer";
 
-// Lazy load components that aren't immediately visible
+// Components - Lazy loaded
 const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
 const Carousel = lazy(() => import("./components/Carousel"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
+
+import './i18n'; // Import i18n configuration
+import './index.css';
+import { producerItems, sponsorItems } from "./config/carousel";
+import { faqData } from "./config/faq";
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -25,17 +31,16 @@ function App() {
   // Update the <html lang="..."> attribute dynamically
   useEffect(() => {
     document.documentElement.lang = i18n.language;
-    // Set dark theme globally
-    document.documentElement.setAttribute("data-theme", "dark");
   }, [i18n.language]);
 
   // Festival date
-  const festivalDate = "2025-03-07T00:00:00";
+  const festivalDate = new Date("2025-03-07T00:00:00");
 
-  function SuspendedCarousel({ itemsType }: { itemsType: string }) {
+  // Helper component for Carousels with Suspense
+  function SuspendedCarousel({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
     return (
       <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
-        <Carousel itemsType={itemsType} />
+        <Carousel itemsType={itemsType} items={items} />
       </Suspense>
     );
   }
@@ -70,12 +75,16 @@ function App() {
           <section id="what-we-do" className="content-section">
             <div className="container">
               <h2>{t("whatWeDo.title", "What We Do")}</h2>
-              <p>{t("whatWeDo.description", "Our festival brings together champagne producers, enthusiasts, and the community for a celebration of this magnificent beverage.")}</p>
+              <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
               <div className="features">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="feature">
-                    <h3>{t(`whatWeDo.feature${item}.title`, `Feature ${item}`)}</h3>
-                    <p>{t(`whatWeDo.feature${item}.description`, `Description for feature ${item}`)}</p>
+                {[
+                  { id: 1, titleKey: 'whatWeDo.feature1.title', descKey: 'whatWeDo.feature1.description', fallbackTitle: 'Feature 1', fallbackDesc: 'Description for feature 1' },
+                  { id: 2, titleKey: 'whatWeDo.feature2.title', descKey: 'whatWeDo.feature2.description', fallbackTitle: 'Feature 2', fallbackDesc: 'Description for feature 2' },
+                  { id: 3, titleKey: 'whatWeDo.feature3.title', descKey: 'whatWeDo.feature3.description', fallbackTitle: 'Feature 3', fallbackDesc: 'Description for feature 3' },
+                ].map((feature) => (
+                  <div key={feature.id} className="feature">
+                    <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
+                    <p>{t(feature.descKey, feature.fallbackDesc)}</p>
                   </div>
                 ))}
               </div>
@@ -86,12 +95,12 @@ function App() {
           <section id="next-festival" className="content-section highlight-section">
             <div className="container">
               <h2 className="flex items-center">
-                <CalendarDaysIcon className="w-3 h-3 inline-block mr-2 text-indigo-400" />
+                <CalendarDaysIcon className="w-5 h-5 inline-block mr-2 text-indigo-400" />
                 {t("nextFestival.title", "Next Festival")}
               </h2>
               <Countdown targetDate={festivalDate} />
               <p className="flex items-center justify-center gap-2 text-center mb-8">
-                <TicketIcon className="h-3 w-3 text-indigo-400 flex-shrink-0" />
+                <TicketIcon className="h-5 w-5 text-indigo-400 flex-shrink-0" />
                 {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
               </p>
             </div>
@@ -111,10 +120,8 @@ function App() {
           <section id="map" className="content-section">
             <div className="container">
               <h2 className="flex items-center">
-                <svg className="w-3 h-3 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
+                <MapPinIcon className="w-5 h-5 mr-2 text-indigo-400" />
+
                 {t("location.title", "Event Location")}
               </h2>
               <Suspense fallback={<div className="map-loading">{t("loading", "Loading map...")}</div>}>
@@ -127,10 +134,10 @@ function App() {
           <section id="carousel" className="content-section">
             <div className="container">
               <h2>{t("producers.title", "Champagne Producers")}</h2>
-              <SuspendedCarousel itemsType="producers" />
+              <SuspendedCarousel itemsType="producers" items={producerItems} />
 
               <h2>{t("sponsors.title", "Sponsors")}</h2>
-              <SuspendedCarousel itemsType="sponsors" />
+              <SuspendedCarousel itemsType="sponsors" items={sponsorItems} />
             </div>
           </section>
 
@@ -138,7 +145,7 @@ function App() {
           <section id="faq" className="content-section">
             <div className="container">
               <h2>{t("faq.title", "Frequently Asked Questions")}</h2>
-              <FAQ />
+              <FAQ faqItems={faqData} />
             </div>
           </section>
 

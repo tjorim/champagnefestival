@@ -21,6 +21,7 @@ const ContactForm: React.FC = () => {
     const [form, setForm] = useState<FormData>({ name: "", email: "", message: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
     // Handle form field changes
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -32,7 +33,7 @@ const ContactForm: React.FC = () => {
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         try {
             // Simulate API call (replace with actual API call in real app)
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -79,7 +80,7 @@ const ContactForm: React.FC = () => {
                             </Form.Control>
                         </div>
                     </Form.Field>
-                    
+
                     <Form.Field name="email" className="form-group">
                         <div className="flex items-baseline justify-between mb-2">
                             <Form.Label className="form-label font-medium">
@@ -109,7 +110,7 @@ const ContactForm: React.FC = () => {
                             </Form.Control>
                         </div>
                     </Form.Field>
-                    
+
                     <Form.Field name="message" className="form-group">
                         <div className="flex items-baseline justify-between mb-2">
                             <Form.Label className="form-label font-medium">
@@ -135,10 +136,10 @@ const ContactForm: React.FC = () => {
                             </Form.Control>
                         </div>
                     </Form.Field>
-                    
+
                     <Form.Submit asChild>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-8 rounded-md hover:from-indigo-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-indigo-500/30 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-70 w-full flex items-center justify-center"
                             disabled={isSubmitting}
                         >

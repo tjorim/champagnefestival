@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 
 /**
  * Props for the Countdown component
- * @property {string} targetDate - Target date in ISO format (YYYY-MM-DD)
  */
 interface CountdownProps {
-    targetDate: string;
+    targetDate: Date;
 }
 
 /**
@@ -46,7 +45,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
      */
     const calculateTimeLeft = useCallback((): TimeLeft => {
         // Get time difference in milliseconds
-        const difference = +new Date(targetDate) - +new Date();
+        const difference = +targetDate - +new Date();
         
         if (difference > 0) {
             return {

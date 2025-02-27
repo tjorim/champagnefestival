@@ -2,18 +2,19 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { HomeIcon } from '@heroicons/react/24/outline';
 import LanguageSwitcher from './LanguageSwitcher';
+import { mainNavLinks } from '../config/navigation';
 
-const Header = () => {
+interface HeaderProps {
+    logoSrc?: string;
+}
+
+const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
     const { t } = useTranslation();
 
-    const navLinks = [
-        { label: t("whatWeDo.title", "What We Do"), href: "#what-we-do" },
-        { label: t("nextFestival.title", "Next Festival"), href: "#next-festival" },
-        { label: t("schedule.title", "Schedule"), href: "#schedule" },
-        { label: t("location.title", "Location"), href: "#map" },
-        { label: t("faq.title", "FAQ"), href: "#faq" },
-        { label: t("contact.title", "Contact"), href: "#contact" },
-    ];
+    const navLinks = mainNavLinks.map(link => ({
+        ...link,
+        label: t(link.labelKey, link.defaultLabel)
+    }));
 
     return (
         <header style={{ zIndex: 'var(--header-z-index)' }} className="fixed top-0 left-0 w-full bg-gray-900 text-white shadow-xl">
@@ -22,13 +23,13 @@ const Header = () => {
                 {/* Logo / Title */}
                 <div className="flex items-center">
                     <a href="#welcome" className="flex items-center space-x-2 group">
-                        <img src="/images/logo.svg" alt="" className="h-9 w-9" />
+                        <img src={logoSrc} alt="Logo" className="h-9 w-9" />
                         <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 group-hover:from-indigo-300 group-hover:to-purple-400 transition-all">
                             {t("festivalName", "Champagne Festival")}
                         </span>
                     </a>
-                    <a 
-                        href="#welcome" 
+                    <a
+                        href="#welcome"
                         className="ml-3 p-1.5 rounded-full bg-gray-800/50 hover:bg-gray-800 transition-colors hidden sm:flex"
                         aria-label="Back to top"
                         title={t("navigation.home", "Home")}
@@ -36,7 +37,7 @@ const Header = () => {
                         <HomeIcon className="h-3 w-3 text-indigo-300" />
                     </a>
                 </div>
-                
+
                 {/* Desktop Navigation */}
                 <nav className="hidden md:flex space-x-4">
                     {navLinks.map((link, index) => (
@@ -50,7 +51,7 @@ const Header = () => {
                         </a>
                     ))}
                 </nav>
-                
+
                 {/* Language Switcher */}
                 <div className="flex items-center">
                     <LanguageSwitcher />

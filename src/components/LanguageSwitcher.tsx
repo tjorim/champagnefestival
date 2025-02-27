@@ -1,5 +1,5 @@
 // LanguageSwitcher.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { GlobeAltIcon } from '@heroicons/react/24/outline';
@@ -7,7 +7,6 @@ import { GlobeAltIcon } from '@heroicons/react/24/outline';
 const LanguageSwitcher = () => {
     const { i18n, t } = useTranslation();
     const currentLang = i18n.language;
-    const [isOpen, setIsOpen] = useState(false);
     const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
     
     // Prevent hydration issues by not rendering on first mount
