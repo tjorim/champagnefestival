@@ -5,14 +5,14 @@ import Bubble from "./Bubble";
  * Configuration for performance optimization
  */
 const PERFORMANCE_CONFIG = {
-  HIGH_PERFORMANCE: {
-    maxBubbles: 50,
-    mobileBubbles: 20
-  },
-  LOW_PERFORMANCE: {
-    maxBubbles: 25,
-    mobileBubbles: 10
-  }
+    HIGH_PERFORMANCE: {
+        maxBubbles: 50,
+        mobileBubbles: 20
+    },
+    LOW_PERFORMANCE: {
+        maxBubbles: 25,
+        mobileBubbles: 10
+    }
 };
 
 /**
@@ -31,31 +31,35 @@ const BubbleBackground: React.FC = () => {
     // Detect low performance devices (could be expanded with more sophisticated checks)
     useEffect(() => {
         // Simple performance detection - could be expanded with more sophisticated checks
-        const isLowEnd = 
-            window.navigator.hardwareConcurrency <= 4 || 
+        const isLowEnd =
+            window.navigator.hardwareConcurrency <= 4 ||
             /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
+
         setIsLowPerformanceDevice(isLowEnd);
     }, []);
 
     // Handle window resize and adjust bubble count accordingly
     const handleResize = useCallback(() => {
-        const config = isLowPerformanceDevice 
-            ? PERFORMANCE_CONFIG.LOW_PERFORMANCE 
-            : PERFORMANCE_CONFIG.HIGH_PERFORMANCE;
+        let resizeTimeout: number;
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = window.setTimeout(() => {
+            const config = isLowPerformanceDevice
+                ? PERFORMANCE_CONFIG.LOW_PERFORMANCE
+                : PERFORMANCE_CONFIG.HIGH_PERFORMANCE;
 
-        // Fewer bubbles on small screens
-        if (window.innerWidth < 768) {
-            setBubbleCount(config.mobileBubbles);
-        } else {
-            setBubbleCount(config.maxBubbles);
-        }
+            // Fewer bubbles on small screens
+            if (window.innerWidth < 768) {
+                setBubbleCount(config.mobileBubbles);
+            } else {
+                setBubbleCount(config.maxBubbles);
+            }
+        }, 200);
     }, [isLowPerformanceDevice]);
 
     // Set up resize listener and initial mounted state
     useEffect(() => {
         setMounted(true);
-        
+
         handleResize(); // set initial count
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
@@ -68,7 +72,7 @@ const BubbleBackground: React.FC = () => {
                 // Adjust animation properties based on performance capacity
                 const sizeFactor = isLowPerformanceDevice ? 0.7 : 1;
                 const durationFactor = isLowPerformanceDevice ? 1.5 : 1; // slower on low-end devices
-                
+
                 return (
                     <Bubble
                         key={i}
