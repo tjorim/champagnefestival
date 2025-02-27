@@ -1,5 +1,6 @@
 // React and libraries
 import React, { useEffect, lazy, Suspense } from 'react';
+import { ErrorBoundary } from 'react-error-boundary'; // or from your custom implementation
 import { useTranslation } from "react-i18next";
 import ReactDOM from 'react-dom/client';
 
@@ -121,9 +122,11 @@ function App() {
 
                 {t("location.title", "Event Location")}
               </h2>
-              <Suspense fallback={<div className="map-loading">{t("loading", "Loading map...")}</div>}>
-                <MapComponent />
-              </Suspense>
+              <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
+                <Suspense fallback={<div className="map-loading">{t("loading", "Loading map...")}</div>}>
+                  <MapComponent />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           </section>
 
