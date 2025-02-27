@@ -1,5 +1,6 @@
 // React and libraries
 import React, { useEffect, lazy, Suspense } from 'react';
+import { ErrorBoundary } from 'react-error-boundary'; // or from your custom implementation
 import { useTranslation } from "react-i18next";
 import ReactDOM from 'react-dom/client';
 
@@ -24,7 +25,6 @@ import './i18n'; // Import i18n configuration
 import './index.css';
 import { producerItems, sponsorItems } from "./config/carousel";
 import { faqData } from "./config/faq";
-
 function App() {
   const { t, i18n } = useTranslation();
 
