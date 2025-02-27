@@ -18,7 +18,7 @@ const MapComponent = lazy(() => import("./components/MapComponent"));
 
 function App() {
   const { t, i18n } = useTranslation();
-  
+
   // Update the <html lang="..."> attribute dynamically
   useEffect(() => {
     document.documentElement.lang = i18n.language;
@@ -28,6 +28,14 @@ function App() {
 
   // Festival date
   const festivalDate = "2025-03-07T00:00:00";
+
+  function SuspendedCarousel({ itemsType }: { itemsType: string }) {
+    return (
+      <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
+        <Carousel itemsType={itemsType} />
+      </Suspense>
+    );
+  }
 
   return (
     <Theme appearance="dark">
@@ -54,7 +62,7 @@ function App() {
               {t("welcome.learnMore", "Learn More")}
             </a>
           </section>
-          
+
           {/* What we do */}
           <section id="what-we-do" className="content-section">
             <div className="container">
@@ -70,7 +78,7 @@ function App() {
               </div>
             </div>
           </section>
-          
+
           {/* Next Festival with Countdown */}
           <section id="next-festival" className="content-section highlight-section">
             <div className="container">
@@ -85,7 +93,7 @@ function App() {
               </p>
             </div>
           </section>
-          
+
           {/* Schedule Section */}
           <section id="schedule" className="content-section">
             <div className="container">
@@ -95,7 +103,7 @@ function App() {
               </div>
             </div>
           </section>
-          
+
           {/* Interactive Map */}
           <section id="map" className="content-section">
             <div className="container">
@@ -111,26 +119,18 @@ function App() {
               </Suspense>
             </div>
           </section>
-          
+
           {/* Carousels for Producers & Sponsors */}
           <section id="carousel" className="content-section">
             <div className="container">
               <h2>{t("producers.title", "Champagne Producers")}</h2>
               <SuspendedCarousel itemsType="producers" />
-              
+
               <h2>{t("sponsors.title", "Sponsors")}</h2>
               <SuspendedCarousel itemsType="sponsors" />
             </div>
           </section>
 
-function SuspendedCarousel({ itemsType }: { itemsType: string }) {
-  return (
-    <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
-      <Carousel itemsType={itemsType} />
-    </Suspense>
-  );
-}
-          
           {/* FAQ Section */}
           <section id="faq" className="content-section">
             <div className="container">
@@ -138,7 +138,7 @@ function SuspendedCarousel({ itemsType }: { itemsType: string }) {
               <FAQ />
             </div>
           </section>
-          
+
           {/* Contact Form */}
           <section id="contact" className="content-section">
             <div className="container">
@@ -148,7 +148,7 @@ function SuspendedCarousel({ itemsType }: { itemsType: string }) {
             </div>
           </section>
         </main>
-        
+
         {/* Footer */}
         <Footer />
       </div>
