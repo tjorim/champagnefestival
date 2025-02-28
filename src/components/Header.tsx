@@ -11,7 +11,7 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
     const { t } = useTranslation();
 
     return (
-        <header style={{ zIndex: 'var(--header-z-index)' }} className="fixed top-0 left-0 w-full bg-gray-900 text-white shadow-xl">
+        <header className="fixed top-0 left-0 w-full bg-gray-900 text-white shadow-xl z-50">
             <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-900 to-indigo-900/20"></div>
             <div className="container mx-auto px-4 flex items-center justify-between h-16 relative z-10">
                 {/* Logo / Title */}
@@ -24,7 +24,7 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
                     </a>
                     <a
                         href="#welcome"
-                        className="ml-3 p-1.5 rounded-full bg-gray-800/50 hover:bg-gray-800 transition-colors hidden sm:flex"
+                        className="ml-3 p-1.5 rounded-full bg-gray-800/50 hover:bg-gray-800 transition-colors flex"
                         aria-label="Back to top"
                         title={t("navigation.home", "Home")}
                     >
