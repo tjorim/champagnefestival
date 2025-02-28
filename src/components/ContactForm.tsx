@@ -50,14 +50,14 @@ const ContactForm: React.FC = () => {
         e.preventDefault();
         setIsSubmitting(true);
         setGeneralError(null); // Reset general error on new submission attempt
-        
+
         // Basic validation
         const newErrors: Partial<Record<keyof FormData, string | null>> = {};
         if (!form.name) newErrors.name = t("contact.errors.nameRequired", "Name is required");
         if (!form.email) newErrors.email = t("contact.errors.emailRequired", "Email is required");
         else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = t("contact.errors.emailInvalid", "Please enter a valid email address");
         if (!form.message) newErrors.message = t("contact.errors.messageRequired", "Message is required");
-        
+
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             setIsSubmitting(false);
@@ -93,7 +93,7 @@ const ContactForm: React.FC = () => {
                                 <span>{generalError}</span>
                             </div>
                         )}
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="name">
                                 {t("contact.name", "Your Name")}
@@ -119,7 +119,7 @@ const ContactForm: React.FC = () => {
                                 <p className="text-sm text-destructive">{errors.name}</p>
                             )}
                         </div>
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="email">
                                 {t("contact.email", "Your Email")}
@@ -146,7 +146,7 @@ const ContactForm: React.FC = () => {
                                 <p className="text-sm text-destructive">{errors.email}</p>
                             )}
                         </div>
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="message">
                                 {t("contact.message", "Your Message")}
@@ -172,11 +172,13 @@ const ContactForm: React.FC = () => {
                                 <p className="text-sm text-destructive">{errors.message}</p>
                             )}
                         </div>
-                        
+
                         <Button
                             type="submit"
                             className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all"
                             disabled={isSubmitting}
+                            aria-busy={isSubmitting}
+                            aria-live="polite"
                         >
                             {isSubmitting ? (
                                 <span className="flex items-center">
