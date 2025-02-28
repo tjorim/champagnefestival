@@ -25,7 +25,7 @@ const PERFORMANCE_CONFIG = {
 const BubbleBackground: React.FC = () => {
     const [bubbleCount, setBubbleCount] = useState(0);
     const [mounted, setMounted] = useState(false);
-    const [bubbles, setBubbles] = useState<JSX.Element[]>([]);
+    const [bubbles, setBubbles] = useState<React.ReactNode[]>([]);
     const [isLowPerformanceDevice, setIsLowPerformanceDevice] = useState(false);
 
     // Detect low performance devices (could be expanded with more sophisticated checks)
@@ -38,11 +38,11 @@ const BubbleBackground: React.FC = () => {
         setIsLowPerformanceDevice(isLowEnd);
     }, []);
 
-    const resizeTimeoutRef = useRef<number>();
+    const resizeTimeoutRef = useRef<number | null>(null);
 
     // Handle window resize and adjust bubble count accordingly
     const handleResize = useCallback(() => {
-        if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+        if (resizeTimeoutRef.current) window.clearTimeout(resizeTimeoutRef.current);
         resizeTimeoutRef.current = window.setTimeout(() => {
             const config = isLowPerformanceDevice
                 ? PERFORMANCE_CONFIG.LOW_PERFORMANCE
