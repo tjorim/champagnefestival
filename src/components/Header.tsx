@@ -2,7 +2,6 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { HomeIcon } from '@heroicons/react/24/outline';
 import LanguageSwitcher from './LanguageSwitcher';
-import { mainNavLinks } from '../config/navigation';
 
 interface HeaderProps {
     logoSrc?: string;
@@ -10,13 +9,6 @@ interface HeaderProps {
 
 const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
     const { t } = useTranslation();
-
-    const navLinks = React.useMemo(() => {
-        return mainNavLinks.map(link => ({
-            ...link,
-            label: t(link.labelKey, link.defaultLabel)
-        }));
-    }, [t]);
 
     return (
         <header style={{ zIndex: 'var(--header-z-index)' }} className="fixed top-0 left-0 w-full bg-gray-900 text-white shadow-xl">
@@ -39,20 +31,6 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
                         <HomeIcon className="h-4 w-4 text-indigo-300" />
                     </a>
                 </div>
-
-                {/* Desktop Navigation */}
-                <nav className="hidden md:flex space-x-4">
-                    {navLinks.map((link) => (
-                        <a
-                            key={link.href}
-                            href={link.href}
-                            className="text-gray-300 hover:text-white px-3 py-2 relative group transition-colors"
-                        >
-                            {link.label}
-                            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-indigo-500 group-hover:w-full transition-all duration-300"></span>
-                        </a>
-                    ))}
-                </nav>
 
                 {/* Language Switcher */}
                 <div className="flex items-center">

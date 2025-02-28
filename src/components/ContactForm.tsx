@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import * as Form from '@radix-ui/react-form';
-import { EnvelopeIcon, UserIcon, ChatBubbleBottomCenterTextIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import { EnvelopeIcon, UserIcon, ChatBubbleBottomCenterTextIcon, PaperAirplaneIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 
 /**
  * Form data structure
@@ -21,26 +21,40 @@ const ContactForm: React.FC = () => {
     const [form, setForm] = useState<FormData>({ name: "", email: "", message: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+    const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
+    const [generalError, setGeneralError] = useState<string | null>(null);
 
     // Handle form field changes
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setForm({ ...form, [name]: value });
+
+        // Clear error when user starts typing again
+        if (errors[name as keyof FormData]) {
+            setErrors({ ...errors, [name]: null });
+        }
+
+        // Clear general error when user makes any changes
+        if (generalError) {
+            setGeneralError(null);
+        }
     };
 
     // Handle form submission
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setGeneralError(null); // Reset general error on new submission attempt
 
         try {
             // Simulate API call (replace with actual API call in real app)
             await new Promise(resolve => setTimeout(resolve, 1000));
             setIsSubmitted(true);
             setForm({ name: "", email: "", message: "" });
+            setErrors({});
         } catch (error) {
             console.error("Form submission error", error);
+            setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
         } finally {
             setIsSubmitting(false);
         }
@@ -160,6 +174,12 @@ const ContactForm: React.FC = () => {
                         </button>
                     </Form.Submit>
                 </Form.Root>
+            )}
+            {generalError && (
+                <div className="text-red-500 flex items-center gap-2 mb-4 p-2 bg-red-50 rounded-md">
+                    <ExclamationCircleIcon className="h-5 w-5" />
+                    <span>{generalError}</span>
+                </div>
             )}
         </div>
     );
