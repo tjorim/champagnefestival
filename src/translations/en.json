@@ -1,0 +1,87 @@
+{
+    "welcome": {
+        "title": "Welcome to Champagne Festival",
+        "subtitle": "A celebration of fine champagne and community",
+        "learnMore": "Learn More"
+    },
+    "whatWeDo": {
+        "title": "What We Do",
+        "description": "Our festival brings together champagne producers, enthusiasts, and the community for a celebration of this magnificent beverage.",
+        "feature1": {
+            "title": "Meet Producers",
+            "description": "Meet producers from around the world and learn about their craft."
+        },
+        "feature2": {
+            "title": "Taste Champagnes",
+            "description": "Sample a wide variety of champagnes from different regions."
+        },
+        "feature3": {
+            "title": "Join Our Community",
+            "description": "Connect with fellow champagne enthusiasts and experts."
+        }
+    },
+    "nextFestival": {
+        "title": "Next Festival",
+        "description": "Join us for our next festival where we'll feature over 20 champagne producers from around the world."
+    },
+    "schedule": {
+        "title": "Schedule",
+        "description": "View our detailed festival schedule with events, tastings, and special presentations."
+    },
+    "location": {
+        "title": "Location"
+    },
+    "countdown": {
+        "days": "days",
+        "hours": "hours",
+        "minutes": "minutes",
+        "seconds": "seconds",
+        "started": "Festival has started!",
+        "loading": "Loading countdown..."
+    },
+    "producers": {
+        "title": "Champagne Producers"
+    },
+    "sponsors": {
+        "title": "Sponsors"
+    },
+    "faq": {
+        "title": "Frequently Asked Questions",
+        "q1": "What is the Champagne Festival about?",
+        "a1": "The Champagne Festival is a celebration of fine champagne, bringing together producers, enthusiasts, and the community for tastings, workshops, and social events.",
+        "q2": "When is the next festival?",
+        "a2": "The next festival is scheduled for March 7-9, 2025. Mark your calendars for a weekend of bubbles and festivities!",
+        "q3": "Where will the festival be held?",
+        "a3": "The festival will take place at the Grand Exhibition Hall in the city center. There's convenient public transportation and parking nearby.",
+        "q4": "Are tickets available yet?",
+        "a4": "Early bird tickets will be available starting September 2024. Sign up for our newsletter to be notified when tickets go on sale.",
+        "q5": "Can I become a sponsor or vendor?",
+        "a5": "Yes! We welcome partnerships with businesses related to champagne, food, and luxury lifestyle. Please use our contact form to express your interest."
+    },
+    "contact": {
+        "title": "Contact Us",
+        "intro": "Have questions or want to become a sponsor? Reach out to us!",
+        "name": "Your Name",
+        "email": "Your Email",
+        "message": "Your Message",
+        "submitting": "Sending...",
+        "submit": "Send Message",
+        "successMessage": "Thank you for your message! We'll get back to you soon.",
+        "errors": {
+            "nameRequired": "Name is required",
+            "emailRequired": "Email is required",
+            "emailInvalid": "Please enter a valid email address",
+            "messageRequired": "Message is required"
+        }
+    },
+    "accessibility": {
+        "skipToContent": "Skip to main content"
+    },
+    "festivalName": "Champagne Festival",
+    "loading": "Loading...",
+    "footer": {
+        "rights": "All rights reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
+    }
+}

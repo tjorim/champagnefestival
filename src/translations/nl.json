@@ -1,0 +1,87 @@
+{
+    "welcome": {
+        "title": "Welkom bij Champagne Festival",
+        "subtitle": "Een viering van fijne champagne en gemeenschap",
+        "learnMore": "Meer Informatie"
+    },
+    "whatWeDo": {
+        "title": "Wat Wij Doen",
+        "description": "Ons festival brengt champagneproducenten, liefhebbers en de gemeenschap samen voor een viering van deze prachtige drank.",
+        "feature1": {
+            "title": "Ontmoet Producenten",
+            "description": "Ontmoet producenten van over de hele wereld en leer over hun ambacht."
+        },
+        "feature2": {
+            "title": "Proef Champagnes",
+            "description": "Proef een grote verscheidenheid aan champagnes uit verschillende regio's."
+        },
+        "feature3": {
+            "title": "Word Deel van Onze Gemeenschap",
+            "description": "Maak contact met andere champagneliefhebbers en experts."
+        }
+    },
+    "nextFestival": {
+        "title": "Volgend Festival",
+        "description": "Doe mee aan ons volgende festival waar we meer dan 20 champagneproducenten uit de hele wereld zullen presenteren."
+    },
+    "schedule": {
+        "title": "Programma",
+        "description": "Details van het festivalprogramma vindt u hier."
+    },
+    "location": {
+        "title": "Locatie"
+    },
+    "countdown": {
+        "days": "dagen",
+        "hours": "uren",
+        "minutes": "minuten",
+        "seconds": "seconden",
+        "started": "Festival is begonnen!",
+        "loading": "Countdown laden..."
+    },
+    "producers": {
+        "title": "Champagne Producenten"
+    },
+    "sponsors": {
+        "title": "Sponsors"
+    },
+    "faq": {
+        "title": "Veelgestelde Vragen",
+        "q1": "Waar gaat het Champagne Festival over?",
+        "a1": "Het Champagne Festival is een viering van fijne champagne, dat producenten, liefhebbers en de gemeenschap samenbrengt voor proeverijen, workshops en sociale evenementen.",
+        "q2": "Wanneer is het volgende festival?",
+        "a2": "Het volgende festival staat gepland voor 7-9 maart 2025. Noteer het in je agenda voor een weekend vol bubbels en feestelijkheden!",
+        "q3": "Waar wordt het festival gehouden?",
+        "a3": "Het festival vindt plaats in de Grand Exhibition Hall in het stadscentrum. Er is gemakkelijk openbaar vervoer en parkeergelegenheid in de buurt.",
+        "q4": "Zijn kaarten al beschikbaar?",
+        "a4": "Early bird-tickets zullen vanaf september 2024 beschikbaar zijn. Meld je aan voor onze nieuwsbrief om op de hoogte te worden gehouden wanneer kaarten in de verkoop gaan.",
+        "q5": "Kan ik sponsor of verkoper worden?",
+        "a5": "Ja! We verwelkomen partnerships met bedrijven gerelateerd aan champagne, voedsel en luxe lifestyle. Gebruik ons contactformulier om je interesse kenbaar te maken."
+    },
+    "contact": {
+        "title": "Contact",
+        "intro": "Heeft u vragen of wilt u sponsor worden? Neem contact met ons op!",
+        "name": "Uw Naam",
+        "email": "Uw E-mail",
+        "message": "Uw Bericht",
+        "submitting": "Versturen...",
+        "submit": "Verstuur Bericht",
+        "successMessage": "Bedankt voor uw bericht! We nemen zo snel mogelijk contact met u op.",
+        "errors": {
+            "nameRequired": "Naam is verplicht",
+            "emailRequired": "E-mail is verplicht",
+            "emailInvalid": "Voer een geldig e-mailadres in",
+            "messageRequired": "Bericht is verplicht"
+        }
+    },
+    "accessibility": {
+        "skipToContent": "Ga naar inhoud"
+    },
+    "festivalName": "Champagne Festival",
+    "loading": "Laden...",
+    "footer": {
+        "rights": "Alle rechten voorbehouden.",
+        "privacy": "Privacybeleid",
+        "terms": "Gebruiksvoorwaarden"
+    }
+}
