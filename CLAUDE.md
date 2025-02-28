@@ -3,8 +3,8 @@
 ## Build Commands
 - `npm run dev`: Start development server (HMR enabled)
 - `npm run build`: Create production build
-- `npm run start`: Run the built application
-- `npm run typecheck`: Generate types and run TypeScript check
+- `npm run preview`: Preview the built application 
+- `npm run typecheck`: Run TypeScript check with no emit
 
 ## Code Style Guidelines
 - **Imports**: Group imports: React, libraries, components, utils/types
