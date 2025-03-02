@@ -16,7 +16,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
         <Modal.Title>{t('privacy.title', 'Privacy Policy')}</Modal.Title>
       </Modal.Header>
       <Modal.Body className="modal-body">
-        <p className="text-secondary mb-3">
+        <p className="text-light mb-3">
           {t('privacy.lastUpdated', 'Last Updated')}: {t('privacy.lastUpdatedDate', 'March 2025')}
         </p>
 
@@ -28,46 +28,46 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
           <hr className="my-4 border-secondary" />
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
+            <h3 className="h5 fw-bold mb-2 text-brand">
               {t('privacy.dataCollection.title', 'Information We Collect')}
             </h3>
-            <p className="text-secondary">
+            <p className="text-light">
               {t('privacy.dataCollection.content', 'When you use our contact form, we may collect your name, email address, and any message content you provide. This information is only used to respond to your inquiries.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
+            <h3 className="h5 fw-bold mb-2 text-brand">
               {t('privacy.dataUse.title', 'How We Use Your Information')}
             </h3>
-            <p className="text-secondary">
+            <p className="text-light">
               {t('privacy.dataUse.content', 'We use the information you provide through our contact form solely to respond to your inquiries and communicate with you about the Champagne Festival.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
+            <h3 className="h5 fw-bold mb-2 text-brand">
               {t('privacy.dataProtection.title', 'How We Protect Your Information')}
             </h3>
-            <p className="text-secondary">
+            <p className="text-light">
               {t('privacy.dataProtection.content', 'We implement appropriate security measures to protect your personal information from unauthorized access, alteration, or disclosure.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
+            <h3 className="h5 fw-bold mb-2 text-brand">
               {t('privacy.cookies.title', 'Cookies and Similar Technologies')}
             </h3>
-            <p className="text-secondary">
+            <p className="text-light">
               {t('privacy.cookies.content', 'Our website may use cookies to enhance your browsing experience. You can set your browser to refuse cookies, but this may limit some functionality.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
+            <h3 className="h5 fw-bold mb-2 text-brand">
               {t('privacy.contactUs.title', 'Contact Us')}
             </h3>
-            <p className="text-secondary">
+            <p className="text-light">
               {t('privacy.contactUs.content', 'If you have any questions about our privacy policy, please contact us using the contact form on our website.')}
             </p>
           </div>
@@ -77,7 +77,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
         <Button
           onClick={onClose}
           variant="dark"
-          className="btn btn-gradient border-0"
+          className="bg-brand-gradient border-0"
         >
           {t('close', 'Close')}
         </Button>

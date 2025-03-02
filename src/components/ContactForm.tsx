@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, Form, Button, Alert } from "react-bootstrap";
+import { Card, Form, Button, Alert, Spinner } from "react-bootstrap";
 
 /**
  * Form data structure
@@ -73,7 +73,7 @@ const ContactForm: React.FC = () => {
     };
 
     return (
-        <Card className="max-w-2xl mx-auto border-0 shadow">
+        <Card className="mx-auto border-0 shadow" style={{ maxWidth: "42rem" }}>
             <Card.Body className="p-3 p-md-4">
                 {isSubmitted ? (
                     <Alert variant="success">
@@ -151,18 +151,14 @@ const ContactForm: React.FC = () => {
                         <Button
                             type="submit"
                             variant="dark"
-                            className="w-100"
-                            style={{
-                                background: "linear-gradient(135deg, #6e8efb, #a16efa)",
-                                border: "none"
-                            }}
+                            className="w-100 bg-brand-gradient"
                             disabled={isSubmitting}
                             aria-busy={isSubmitting ? "true" : "false"}
                             aria-live="polite"
                         >
                             {isSubmitting ? (
                                 <span className="d-flex align-items-center justify-content-center">
-                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <Spinner animation="border" size="sm" className="me-2" />
                                     {t("contact.submitting", "Sending...")}
                                 </span>
                             ) : (

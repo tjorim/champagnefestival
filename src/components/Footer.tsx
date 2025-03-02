@@ -10,13 +10,7 @@ const Footer = () => {
     return (
         <footer
             role="contentinfo"
-            style={{
-                background: "linear-gradient(to right, rgba(67, 56, 202, 0.7), rgba(126, 34, 206, 0.7))",
-                color: "white",
-                padding: "1.5rem 0",
-                marginTop: "2rem",
-                borderTop: "1px solid rgba(255, 255, 255, 0.1)"
-            }}
+            className="site-footer"
         >
             <div className="container">
                 <div className="row align-items-center">

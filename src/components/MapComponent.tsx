@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Spinner } from "react-bootstrap";
 
 interface MapComponentProps {
     embedUrl?: string;
@@ -10,24 +11,49 @@ const MapComponent = ({
     location = "Event Location"
 }: MapComponentProps) => {
     const [iframeError, setIframeError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Simulate loading state to ensure spinner is visible
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 1500);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleIframeError = () => {
         setIframeError(true);
+        setIsLoading(false);
+    };
+
+    const handleIframeLoad = () => {
+        setIsLoading(false);
     };
 
     return (
-        <div className="ratio ratio-16x9 rounded overflow-hidden shadow">
+        <div className="ratio ratio-16x9 rounded overflow-hidden shadow position-relative">
+            {isLoading && (
+                <div className="position-absolute top-0 start-0 w-100 h-100 bg-dark d-flex align-items-center justify-content-center">
+                    <div className="text-center">
+                        <Spinner animation="border" variant="light" className="mb-2" />
+                        <p className="text-light mb-0">Loading map...</p>
+                    </div>
+                </div>
+            )}
+
             {iframeError ? (
                 <div className="bg-dark p-4 text-center d-flex align-items-center justify-content-center">
-                    <p className="mb-0">Unable to load map. Please try again later.</p>
+                    <p className="mb-0 text-light">Unable to load map. Please try again later.</p>
                 </div>
             ) : (
                 <iframe
                     title={location}
                     src={embedUrl}
-                    className="border-0"
+                    className={`border-0 map-iframe ${isLoading ? 'map-iframe-loading' : 'map-iframe-loaded'}`}
                     loading="lazy"
                     onError={handleIframeError}
+                    onLoad={handleIframeLoad}
                     allowFullScreen
                 ></iframe>
             )}

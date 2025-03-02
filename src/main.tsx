@@ -7,6 +7,7 @@ import ReactDOM from 'react-dom/client';
 // UI Libraries
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import { Spinner } from "react-bootstrap";
 
 // Components - Eagerly loaded
 import Header from "./components/Header";
@@ -60,97 +61,102 @@ function App() {
       {/* Header & Navigation */}
       <Header />
 
-        <main id="main-content">
-          {/* Hero Section */}
-          <section className="hero" id="welcome">
-            <h1>{t("welcome.title", "Welcome to Champagne Festival")}</h1>
-            <p className="hero-subtitle">{t("welcome.subtitle", "A celebration of fine champagne and community")}</p>
-            <a href="#next-festival" className="cta-button">
-              {t("welcome.learnMore", "Learn More")}
-            </a>
-          </section>
+      <main id="main-content">
+        {/* Hero Section */}
+        <section className="hero" id="welcome">
+          <h1>{t("welcome.title", "Welcome to Champagne Festival")}</h1>
+          <p className="hero-subtitle">{t("welcome.subtitle", "A celebration of fine champagne and community")}</p>
+          <a href="#next-festival" className="cta-button">
+            {t("welcome.learnMore", "Learn More")}
+          </a>
+        </section>
 
-          {/* What we do */}
-          <section id="what-we-do" className="content-section">
-            <div className="container">
-              <h2>{t("whatWeDo.title", "What We Do")}</h2>
-              <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
-              <div className="features">
-                {featureItems.map((feature) => (
-                  <div key={feature.id} className="feature">
-                    <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
-                    <p>{t(feature.descKey, feature.fallbackDesc)}</p>
-                  </div>
-                ))}
-              </div>
+        {/* What we do */}
+        <section id="what-we-do" className="content-section">
+          <div className="container">
+            <h2 className="section-header">{t("whatWeDo.title", "What We Do")}</h2>
+            <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
+            <div className="features">
+              {featureItems.map((feature) => (
+                <div key={feature.id} className="feature">
+                  <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
+                  <p>{t(feature.descKey, feature.fallbackDesc)}</p>
+                </div>
+              ))}
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* Next Festival with Countdown */}
-          <section id="next-festival" className="content-section highlight-section">
-            <div className="container">
-              <h2>{t("nextFestival.title", "Next Festival")}</h2>
-              <Countdown targetDate={festivalDate} />
-              <p className="text-center mb-4" style={{ position: 'relative', zIndex: 50 }}>
-                {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
-              </p>
+        {/* Next Festival with Countdown */}
+        <section id="next-festival" className="content-section highlight-section">
+          <div className="container">
+            <h2 className="section-header">{t("nextFestival.title", "Next Festival")}</h2>
+            <Countdown targetDate={festivalDate} />
+            <p className="text-center mb-4" style={{ position: 'relative', zIndex: 50 }}>
+              {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
+            </p>
+          </div>
+        </section>
+
+        {/* Schedule Section */}
+        <section id="schedule" className="content-section">
+          <div className="container">
+            <h2 className="section-header">{t("schedule.title", "Schedule")}</h2>
+            <div className="schedule-table">
+              <p>{t("schedule.description", "Festival schedule details go here.")}</p>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* Schedule Section */}
-          <section id="schedule" className="content-section">
-            <div className="container">
-              <h2>{t("schedule.title", "Schedule")}</h2>
-              <div className="schedule-table">
-                <p>{t("schedule.description", "Festival schedule details go here.")}</p>
-              </div>
-            </div>
-          </section>
+        {/* Interactive Map */}
+        <section id="map" className="content-section">
+          <div className="container">
+            <h2 className="section-header mb-4">{t("location.title", "Event Location")}</h2>
+            <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
+              <Suspense fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
+                <div className="text-center">
+                  <Spinner animation="border" variant="primary" />
+                  <p className="mt-2">{t("loading", "Loading map...")}</p>
+                </div>
+              </div>}>
+                <MapComponent />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+        </section>
 
-          {/* Interactive Map */}
-          <section id="map" className="content-section">
-            <div className="container">
-              <h2 className="mb-4">{t("location.title", "Event Location")}</h2>
-              <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
-                <Suspense fallback={<div className="map-loading">{t("loading", "Loading map...")}</div>}>
-                  <MapComponent />
-                </Suspense>
-              </ErrorBoundary>
-            </div>
-          </section>
+        {/* Carousels for Producers & Sponsors */}
+        <section id="carousel" className="content-section">
+          <div className="container">
+            <h2 className="section-header">{t("producers.title", "Champagne Producers")}</h2>
+            <SuspendedCarousel itemsType="producers" items={producerItems} />
 
-          {/* Carousels for Producers & Sponsors */}
-          <section id="carousel" className="content-section">
-            <div className="container">
-              <h2>{t("producers.title", "Champagne Producers")}</h2>
-              <SuspendedCarousel itemsType="producers" items={producerItems} />
+            <h2 className="section-header">{t("sponsors.title", "Sponsors")}</h2>
+            <SuspendedCarousel itemsType="sponsors" items={sponsorItems} />
+          </div>
+        </section>
 
-              <h2>{t("sponsors.title", "Sponsors")}</h2>
-              <SuspendedCarousel itemsType="sponsors" items={sponsorItems} />
-            </div>
-          </section>
+        {/* FAQ Section */}
+        <section id="faq" className="content-section">
+          <div className="container">
+            <h2 className="section-header">{t("faq.title", "Frequently Asked Questions")}</h2>
+            <FAQ faqItems={faqData} />
+          </div>
+        </section>
 
-          {/* FAQ Section */}
-          <section id="faq" className="content-section">
-            <div className="container">
-              <h2>{t("faq.title", "Frequently Asked Questions")}</h2>
-              <FAQ faqItems={faqData} />
-            </div>
-          </section>
+        {/* Contact Form */}
+        <section id="contact" className="content-section">
+          <div className="container">
+            <h2 className="section-header">{t("contact.title", "Contact Us")}</h2>
+            <p>{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
+            <ContactForm />
+          </div>
+        </section>
+      </main>
 
-          {/* Contact Form */}
-          <section id="contact" className="content-section">
-            <div className="container">
-              <h2>{t("contact.title", "Contact Us")}</h2>
-              <p>{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
-              <ContactForm />
-            </div>
-          </section>
-        </main>
-
-        {/* Footer */}
-        <Footer />
-      </div>
+      {/* Footer */}
+      <Footer />
+    </div>
   );
 }
 

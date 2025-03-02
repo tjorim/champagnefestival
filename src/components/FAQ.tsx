@@ -43,13 +43,13 @@ const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
                 <Accordion.Item
                     key={index}
                     eventKey={`${index}`}
-                    className="border-dark"
+                    className="bg-dark"
                 >
                     <Accordion.Header>
                         {faq.question}
                     </Accordion.Header>
                     <Accordion.Body>
-                        <div className="py-2 border-start border-3 ps-3 custom-border-color">
+                        <div className="py-2 border-start border-3 ps-3 border-brand">
                             <p>{faq.answer}</p>
                         </div>
                     </Accordion.Body>

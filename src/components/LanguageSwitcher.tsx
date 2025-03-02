@@ -39,7 +39,7 @@ const LanguageSwitcher = () => {
                 as={Button}
                 variant="dark"
                 size="sm"
-                className="text-secondary hover-text-white bg-dark"
+                className="text-secondary bg-dark"
                 title={t("language.select", "Select language")}
             >
                 <i className="bi bi-globe2"></i>
@@ -48,7 +48,7 @@ const LanguageSwitcher = () => {
             </Dropdown.Toggle>
 
             <Dropdown.Menu
-                className="min-w-[220px]"
+                style={{ minWidth: "220px" }}
                 align="end"
             >
                 {languages.map((lang) => (
@@ -58,10 +58,10 @@ const LanguageSwitcher = () => {
                             }`}
                         onClick={() => changeLanguage(lang.code)}
                     >
-                        <span className="me-3 text-lg">{lang.flag}</span>
+                        <span className="me-3 fs-5">{lang.flag}</span>
                         <div>
                             <div className="fw-medium">{lang.label}</div>
-                            <div className="text-xs text-muted">{lang.nativeName}</div>
+                            <div className="small text-muted">{lang.nativeName}</div>
                         </div>
                         {currentLang === lang.code && (
                             <i className="bi bi-check ms-auto text-primary"></i>

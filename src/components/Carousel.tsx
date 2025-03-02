@@ -39,7 +39,7 @@ const Carousel: React.FC<CarouselProps> = ({
     if (items.length === 0) return null;
 
     return (
-        <Card className="mx-auto my-4 border-0 shadow" style={{ maxWidth: "900px" }}>
+        <Card className="mx-auto my-4 border-0 shadow carousel-container">
             <Card.Body className="p-3 p-md-4">
                 <BootstrapCarousel
                     activeIndex={index}
@@ -57,8 +57,7 @@ const Carousel: React.FC<CarouselProps> = ({
                                 <img
                                     src={item.image}
                                     alt={item.name}
-                                    className="w-100 img-fluid"
-                                    style={{ aspectRatio: "16/9", objectFit: "cover" }}
+                                    className="w-100 img-fluid carousel-image"
                                     onError={(e) => {
                                         e.currentTarget.src = 'path/to/fallback-image.jpg';
                                         e.currentTarget.onerror = null;
