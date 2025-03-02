@@ -16,24 +16,20 @@ const MapComponent = ({
     };
 
     return (
-        <div className="map-container relative overflow-hidden rounded-lg max-w-full">
+        <div className="ratio ratio-16x9 rounded overflow-hidden shadow">
             {iframeError ? (
-                <div className="map-error bg-gray-800 p-6 rounded-lg text-center">
-                    <p>Unable to load map. Please try again later.</p>
+                <div className="bg-dark p-4 text-center d-flex align-items-center justify-content-center">
+                    <p className="mb-0">Unable to load map. Please try again later.</p>
                 </div>
             ) : (
-                <div className="aspect-video w-full max-w-full overflow-hidden">
-                    <iframe
-                        title={location}
-                        src={embedUrl}
-                        width="100%"
-                        height="100%"
-                        style={{ border: 0, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                        loading="lazy"
-                        onError={handleIframeError}
-                        allowFullScreen
-                    ></iframe>
-                </div>
+                <iframe
+                    title={location}
+                    src={embedUrl}
+                    className="border-0"
+                    loading="lazy"
+                    onError={handleIframeError}
+                    allowFullScreen
+                ></iframe>
             )}
         </div>
     );

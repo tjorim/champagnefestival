@@ -87,6 +87,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
             className="countdown" 
             suppressHydrationWarning
             aria-live="polite" // Announce updates to screen readers
+            style={{ position: 'relative', zIndex: 50 }}
         >
             {mounted ? (
                 timerComponents.length ? (

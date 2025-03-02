@@ -335,6 +335,7 @@ h2::after {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.75rem;
+  position: relative;
 }
 
 .countdown-unit {
@@ -351,12 +352,17 @@ h2::after {
   font-size: 1.5rem;
   margin-right: 0.5rem;
   color: var(--primary-color);
+  min-width: 2ch;
+  display: inline-block;
+  text-align: center;
 }
 
 .countdown-label {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  min-width: 5ch;
+  display: inline-block;
 }
 
 .countdown-loading,
@@ -375,7 +381,7 @@ h2::after {
   height: 100%;
   pointer-events: none;
   overflow: hidden;
-  z-index: 0; /* behind content and header */
+  z-index: -1; /* ensure it's behind all content */
   /* Improve performance by offloading animation to GPU */
   will-change: transform;
 }
@@ -434,6 +440,8 @@ main {
   position: relative;
   z-index: 10;
 }
+
+/* Basic structure - no special z-index needed */
 
 /* Media queries */
 @media (max-width: 768px) {
@@ -586,5 +594,38 @@ main {
 }
 
 .text-light-subtle {
+  color: #e1e1e1;
+}
+
+/* Fix for Bootstrap dark theme component styles */
+.accordion-item {
+  background-color: #212529;
+  color: #e1e1e1;
+}
+
+.accordion-button {
+  background-color: #212529;
+  color: #e1e1e1;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: #2c3136;
+  color: #e1e1e1;
+  box-shadow: inset 0 -1px 0 rgba(110, 142, 251, 0.5);
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(110, 142, 251, 0.25);
+  border-color: #6e8efb;
+}
+
+.carousel-caption {
+  background-color: rgba(33, 37, 41, 0.75);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.card {
+  background-color: #212529;
   color: #e1e1e1;
 }

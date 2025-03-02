@@ -11,12 +11,12 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
 
   return (
-    <Modal show={isOpen} onHide={onClose} size="lg" centered>
-      <Modal.Header closeButton>
+    <Modal show={isOpen} onHide={onClose} size="lg" centered contentClassName="bg-dark">
+      <Modal.Header closeButton className="border-secondary">
         <Modal.Title>{t('privacy.title', 'Privacy Policy')}</Modal.Title>
       </Modal.Header>
       <Modal.Body className="modal-body">
-        <p className="text-muted mb-3">
+        <p className="text-secondary mb-3">
           {t('privacy.lastUpdated', 'Last Updated')}: {t('privacy.lastUpdatedDate', 'March 2025')}
         </p>
         
@@ -25,56 +25,63 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
             {t('privacy.intro', 'This Privacy Policy explains how we collect, use, and protect your personal information when you use our website or services.')}
           </p>
 
-          <hr className="my-4" />
+          <hr className="my-4 border-secondary" />
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2">
+            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
               {t('privacy.dataCollection.title', 'Information We Collect')}
             </h3>
-            <p className="text-muted">
+            <p className="text-secondary">
               {t('privacy.dataCollection.content', 'When you use our contact form, we may collect your name, email address, and any message content you provide. This information is only used to respond to your inquiries.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2">
+            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
               {t('privacy.dataUse.title', 'How We Use Your Information')}
             </h3>
-            <p className="text-muted">
+            <p className="text-secondary">
               {t('privacy.dataUse.content', 'We use the information you provide through our contact form solely to respond to your inquiries and communicate with you about the Champagne Festival.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2">
+            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
               {t('privacy.dataProtection.title', 'How We Protect Your Information')}
             </h3>
-            <p className="text-muted">
+            <p className="text-secondary">
               {t('privacy.dataProtection.content', 'We implement appropriate security measures to protect your personal information from unauthorized access, alteration, or disclosure.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2">
+            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
               {t('privacy.cookies.title', 'Cookies and Similar Technologies')}
             </h3>
-            <p className="text-muted">
+            <p className="text-secondary">
               {t('privacy.cookies.content', 'Our website may use cookies to enhance your browsing experience. You can set your browser to refuse cookies, but this may limit some functionality.')}
             </p>
           </div>
 
           <div className="mb-4">
-            <h3 className="h5 fw-bold mb-2">
+            <h3 className="h5 fw-bold mb-2" style={{ color: "#a16efa" }}>
               {t('privacy.contactUs.title', 'Contact Us')}
             </h3>
-            <p className="text-muted">
+            <p className="text-secondary">
               {t('privacy.contactUs.content', 'If you have any questions about our privacy policy, please contact us using the contact form on our website.')}
             </p>
           </div>
         </div>
       </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>
+      <Modal.Footer className="border-secondary">
+        <Button 
+          onClick={onClose}
+          variant="dark"
+          style={{
+            background: "linear-gradient(135deg, #6e8efb, #a16efa)",
+            border: "none"
+          }}
+        >
           {t('close', 'Close')}
         </Button>
       </Modal.Footer>

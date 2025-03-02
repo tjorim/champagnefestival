@@ -8,16 +8,30 @@ const Footer = () => {
     const [privacyOpen, setPrivacyOpen] = useState(false);
 
     return (
-        <footer role="contentinfo" className="bg-gradient-to-r from-indigo-900 to-purple-800 text-white py-6 mt-8">
+        <footer 
+            role="contentinfo" 
+            style={{ 
+                background: "linear-gradient(to right, rgba(67, 56, 202, 0.7), rgba(126, 34, 206, 0.7))",
+                color: "white",
+                padding: "1.5rem 0",
+                marginTop: "2rem",
+                borderTop: "1px solid rgba(255, 255, 255, 0.1)"
+            }}
+        >
             <div className="container">
-                <div className="flex flex-col md:flex-row justify-between items-center">
-                    <p className="mb-4 md:mb-0">
-                        &copy; {currentYear} {t("festivalName", "Champagne Festival")}. {t("footer.rights", "All rights reserved.")}
-                    </p>
-                    <div className="flex space-x-4">
+                <div className="row align-items-center">
+                    <div className="col-md-6 mb-3 mb-md-0 text-center text-md-start">
+                        <p className="mb-0">
+                            &copy; {currentYear} {t("festivalName", "Champagne Festival")}. {t("footer.rights", "All rights reserved.")}
+                        </p>
+                    </div>
+                    <div className="col-md-6 text-center text-md-end">
                         <button 
                             onClick={() => setPrivacyOpen(true)} 
-                            className="text-white hover:text-gray-200 transition-colors bg-transparent border-none p-0 cursor-pointer font-normal"
+                            className="btn btn-link text-white p-0 text-decoration-none"
+                            style={{ opacity: 0.9 }}
+                            onMouseOver={(e) => e.currentTarget.style.opacity = "1"}
+                            onMouseOut={(e) => e.currentTarget.style.opacity = "0.9"}
                         >
                             {t("footer.privacy", "Privacy Policy")}
                         </button>

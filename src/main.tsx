@@ -89,13 +89,9 @@ function App() {
           {/* Next Festival with Countdown */}
           <section id="next-festival" className="content-section highlight-section">
             <div className="container">
-              <h2 className="d-flex align-items-center">
-                <i className="bi bi-calendar-event me-2 text-indigo-400"></i>
-                {t("nextFestival.title", "Next Festival")}
-              </h2>
+              <h2>{t("nextFestival.title", "Next Festival")}</h2>
               <Countdown targetDate={festivalDate} />
-              <p className="d-flex align-items-center justify-content-center gap-2 text-center mb-4">
-                <i className="bi bi-ticket-perforated text-indigo-400"></i>
+              <p className="text-center mb-4" style={{ position: 'relative', zIndex: 50 }}>
                 {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
               </p>
             </div>
@@ -114,10 +110,7 @@ function App() {
           {/* Interactive Map */}
           <section id="map" className="content-section">
             <div className="container">
-              <h2 className="d-flex align-items-center">
-                <i className="bi bi-geo-alt me-2 text-indigo-400"></i>
-                {t("location.title", "Event Location")}
-              </h2>
+              <h2 className="mb-4">{t("location.title", "Event Location")}</h2>
               <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
                 <Suspense fallback={<div className="map-loading">{t("loading", "Loading map...")}</div>}>
                   <MapComponent />

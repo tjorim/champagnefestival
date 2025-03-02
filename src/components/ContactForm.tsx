@@ -73,7 +73,7 @@ const ContactForm: React.FC = () => {
     };
 
     return (
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto border-0 shadow">
             <Card.Body className="p-4">
                 {isSubmitted ? (
                     <Alert variant="success">
@@ -92,81 +92,70 @@ const ContactForm: React.FC = () => {
                             <Form.Label htmlFor="name">
                                 {t("contact.name", "Your Name")}
                             </Form.Label>
-                            <div className="position-relative">
-                                <div className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
-                                    <i className="bi bi-person"></i>
-                                </div>
-                                <Form.Control
-                                    id="name"
-                                    name="name"
-                                    value={form.name}
-                                    onChange={handleChange}
-                                    className={`ps-10 ${errors.name ? "border-danger" : ""}`}
-                                    disabled={isSubmitting}
-                                    isInvalid={!!errors.name}
-                                    required
-                                />
-                                <Form.Control.Feedback type="invalid">
-                                    {errors.name}
-                                </Form.Control.Feedback>
-                            </div>
+                            <Form.Control
+                                id="name"
+                                name="name"
+                                value={form.name}
+                                onChange={handleChange}
+                                placeholder="John Doe"
+                                disabled={isSubmitting}
+                                isInvalid={!!errors.name}
+                                required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                                {errors.name}
+                            </Form.Control.Feedback>
                         </Form.Group>
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="email">
                                 {t("contact.email", "Your Email")}
                             </Form.Label>
-                            <div className="position-relative">
-                                <div className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
-                                    <i className="bi bi-envelope"></i>
-                                </div>
-                                <Form.Control
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={form.email}
-                                    onChange={handleChange}
-                                    className={`ps-10 ${errors.email ? "border-danger" : ""}`}
-                                    disabled={isSubmitting}
-                                    isInvalid={!!errors.email}
-                                    required
-                                />
-                                <Form.Control.Feedback type="invalid">
-                                    {errors.email}
-                                </Form.Control.Feedback>
-                            </div>
+                            <Form.Control
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={form.email}
+                                onChange={handleChange}
+                                placeholder="email@example.com"
+                                disabled={isSubmitting}
+                                isInvalid={!!errors.email}
+                                required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                                {errors.email}
+                            </Form.Control.Feedback>
                         </Form.Group>
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="message">
                                 {t("contact.message", "Your Message")}
                             </Form.Label>
-                            <div className="position-relative">
-                                <div className="position-absolute top-0 start-0 mt-2 ms-3 text-muted">
-                                    <i className="bi bi-chat-square-text"></i>
-                                </div>
-                                <Form.Control
-                                    as="textarea"
-                                    id="message"
-                                    name="message"
-                                    value={form.message}
-                                    onChange={handleChange}
-                                    className={`ps-10 ${errors.message ? "border-danger" : ""}`}
-                                    style={{ minHeight: "120px" }}
-                                    disabled={isSubmitting}
-                                    isInvalid={!!errors.message}
-                                    required
-                                />
-                                <Form.Control.Feedback type="invalid">
-                                    {errors.message}
-                                </Form.Control.Feedback>
-                            </div>
+                            <Form.Control
+                                as="textarea"
+                                id="message"
+                                name="message"
+                                value={form.message}
+                                onChange={handleChange}
+                                placeholder="Type your message here..."
+                                style={{ minHeight: "120px" }}
+                                disabled={isSubmitting}
+                                isInvalid={!!errors.message}
+                                required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                                {errors.message}
+                            </Form.Control.Feedback>
                         </Form.Group>
 
                         <Button
                             type="submit"
-                            variant="primary"
-                            className="w-100 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all"
+                            variant="dark"
+                            className="w-100"
+                            style={{
+                                background: "linear-gradient(135deg, #6e8efb, #a16efa)",
+                                border: "none"
+                            }}
                             disabled={isSubmitting}
                             aria-busy={isSubmitting ? "true" : "false"}
                             aria-live="polite"

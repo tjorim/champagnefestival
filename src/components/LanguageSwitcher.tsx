@@ -44,7 +44,7 @@ const LanguageSwitcher = () => {
             >
                 <i className="bi bi-globe2"></i>
                 <span className="d-none d-sm-inline ms-2">{currentLanguage.code.toUpperCase()}</span>
-                <i className="bi bi-chevron-down ms-1 opacity-70 small"></i>
+                {/* Bootstrap dropdown toggle already includes a chevron */}
             </Dropdown.Toggle>
 
             <Dropdown.Menu 

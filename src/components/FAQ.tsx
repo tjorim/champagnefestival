@@ -38,18 +38,18 @@ const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
     })) || [];
 
     return (
-        <Accordion className="w-full rounded-lg overflow-hidden shadow-lg">
+        <Accordion className="rounded-lg shadow-lg">
             {faqData.map((faq, index) => (
                 <Accordion.Item 
                     key={index}
                     eventKey={`${index}`}
-                    className="border-b border-neutral-800 overflow-hidden"
+                    className="border-dark"
                 >
-                    <Accordion.Header className="px-6 py-4 hover:bg-neutral-800/50 text-gray-200 hover:text-white">
+                    <Accordion.Header>
                         {faq.question}
                     </Accordion.Header>
-                    <Accordion.Body className="bg-neutral-900/50 px-6 text-gray-300">
-                        <div className="py-4 border-l-2 border-indigo-500/30 pl-4">
+                    <Accordion.Body>
+                        <div className="py-2 border-start border-3 ps-3" style={{ borderColor: "#a16efa" }}>
                             <p>{faq.answer}</p>
                         </div>
                     </Accordion.Body>
