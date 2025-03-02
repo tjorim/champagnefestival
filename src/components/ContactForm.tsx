@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Mail, MessageSquare, Send, AlertCircle } from "lucide-react";
 import { Card, Form, Button, Alert } from "react-bootstrap";
-import { cn } from "@/lib/utils";
 
 /**
  * Form data structure
@@ -85,7 +83,7 @@ const ContactForm: React.FC = () => {
                     <Form onSubmit={handleSubmit} className="my-3">
                         {generalError && (
                             <Alert variant="danger" className="d-flex align-items-center">
-                                <AlertCircle className="h-5 w-5 me-2" />
+                                <i className="bi bi-exclamation-circle me-2"></i>
                                 <span>{generalError}</span>
                             </Alert>
                         )}
@@ -96,17 +94,14 @@ const ContactForm: React.FC = () => {
                             </Form.Label>
                             <div className="position-relative">
                                 <div className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
-                                    <User className="h-4 w-4" />
+                                    <i className="bi bi-person"></i>
                                 </div>
                                 <Form.Control
                                     id="name"
                                     name="name"
                                     value={form.name}
                                     onChange={handleChange}
-                                    className={cn(
-                                        "ps-10",
-                                        errors.name && "border-danger"
-                                    )}
+                                    className={`ps-10 ${errors.name ? "border-danger" : ""}`}
                                     disabled={isSubmitting}
                                     isInvalid={!!errors.name}
                                     required
@@ -123,7 +118,7 @@ const ContactForm: React.FC = () => {
                             </Form.Label>
                             <div className="position-relative">
                                 <div className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted">
-                                    <Mail className="h-4 w-4" />
+                                    <i className="bi bi-envelope"></i>
                                 </div>
                                 <Form.Control
                                     id="email"
@@ -131,10 +126,7 @@ const ContactForm: React.FC = () => {
                                     type="email"
                                     value={form.email}
                                     onChange={handleChange}
-                                    className={cn(
-                                        "ps-10",
-                                        errors.email && "border-danger"
-                                    )}
+                                    className={`ps-10 ${errors.email ? "border-danger" : ""}`}
                                     disabled={isSubmitting}
                                     isInvalid={!!errors.email}
                                     required
@@ -151,7 +143,7 @@ const ContactForm: React.FC = () => {
                             </Form.Label>
                             <div className="position-relative">
                                 <div className="position-absolute top-0 start-0 mt-2 ms-3 text-muted">
-                                    <MessageSquare className="h-4 w-4" />
+                                    <i className="bi bi-chat-square-text"></i>
                                 </div>
                                 <Form.Control
                                     as="textarea"
@@ -159,10 +151,7 @@ const ContactForm: React.FC = () => {
                                     name="message"
                                     value={form.message}
                                     onChange={handleChange}
-                                    className={cn(
-                                        "ps-10",
-                                        errors.message && "border-danger"
-                                    )}
+                                    className={`ps-10 ${errors.message ? "border-danger" : ""}`}
                                     style={{ minHeight: "120px" }}
                                     disabled={isSubmitting}
                                     isInvalid={!!errors.message}
@@ -189,7 +178,7 @@ const ContactForm: React.FC = () => {
                                 </span>
                             ) : (
                                 <span className="d-flex align-items-center justify-content-center">
-                                    <Send className="h-4 w-4 me-2" />
+                                    <i className="bi bi-send me-2"></i>
                                     {t("contact.submit", "Send Message")}
                                 </span>
                             )}

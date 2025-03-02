@@ -6,7 +6,7 @@ import ReactDOM from 'react-dom/client';
 
 // UI Libraries
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { CalendarDaysIcon, TicketIcon, MapPinIcon } from "@heroicons/react/24/outline";
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // Components - Eagerly loaded
 import Header from "./components/Header";
@@ -89,13 +89,13 @@ function App() {
           {/* Next Festival with Countdown */}
           <section id="next-festival" className="content-section highlight-section">
             <div className="container">
-              <h2 className="flex items-center">
-                <CalendarDaysIcon className="w-5 h-5 inline-block mr-2 text-indigo-400" />
+              <h2 className="d-flex align-items-center">
+                <i className="bi bi-calendar-event me-2 text-indigo-400"></i>
                 {t("nextFestival.title", "Next Festival")}
               </h2>
               <Countdown targetDate={festivalDate} />
-              <p className="flex items-center justify-center gap-2 text-center mb-8">
-                <TicketIcon className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+              <p className="d-flex align-items-center justify-content-center gap-2 text-center mb-4">
+                <i className="bi bi-ticket-perforated text-indigo-400"></i>
                 {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
               </p>
             </div>
@@ -114,9 +114,8 @@ function App() {
           {/* Interactive Map */}
           <section id="map" className="content-section">
             <div className="container">
-              <h2 className="flex items-center">
-                <MapPinIcon className="w-5 h-5 mr-2 text-indigo-400" />
-
+              <h2 className="d-flex align-items-center">
+                <i className="bi bi-geo-alt me-2 text-indigo-400"></i>
                 {t("location.title", "Event Location")}
               </h2>
               <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>

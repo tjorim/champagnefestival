@@ -1,10 +1,4 @@
-@tailwind base;
-
-@plugin "tailwindcss-animate";
-
-@custom-variant dark (&:is(.dark *));
-@tailwind components;
-@tailwind utilities;
+/* Bootstrap-based styles */
 
 * {
   box-sizing: border-box;
@@ -586,11 +580,11 @@ main {
   }
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* Dark theme for bootstrap */
+.bg-dark-subtle {
+  background-color: #1e1e1e;
+}
+
+.text-light-subtle {
+  color: #e1e1e1;
 }

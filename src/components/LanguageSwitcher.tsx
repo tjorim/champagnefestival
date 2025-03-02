@@ -1,9 +1,7 @@
 // LanguageSwitcher.tsx
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Check, ChevronDown } from "lucide-react";
 import { Dropdown, Button } from "react-bootstrap";
-import { cn } from "@/lib/utils";
 
 const LanguageSwitcher = () => {
     const { i18n, t } = useTranslation();
@@ -44,9 +42,9 @@ const LanguageSwitcher = () => {
                 className="text-neutral-300 hover:text-white hover:bg-neutral-800/60"
                 title={t("language.select", "Select language")}
             >
-                <Globe className="h-3 w-3" />
+                <i className="bi bi-globe2"></i>
                 <span className="d-none d-sm-inline ms-2">{currentLanguage.code.toUpperCase()}</span>
-                <ChevronDown className="w-3 h-3 ms-1 opacity-70" />
+                <i className="bi bi-chevron-down ms-1 opacity-70 small"></i>
             </Dropdown.Toggle>
 
             <Dropdown.Menu 
@@ -56,10 +54,9 @@ const LanguageSwitcher = () => {
                 {languages.map((lang) => (
                     <Dropdown.Item
                         key={lang.code}
-                        className={cn(
-                            "d-flex align-items-center px-4 py-3",
-                            currentLang === lang.code && "bg-primary/10"
-                        )}
+                        className={`d-flex align-items-center px-4 py-3 ${
+                            currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
+                        }`}
                         onClick={() => changeLanguage(lang.code)}
                     >
                         <span className="me-3 text-lg">{lang.flag}</span>
@@ -68,7 +65,7 @@ const LanguageSwitcher = () => {
                             <div className="text-xs text-muted">{lang.nativeName}</div>
                         </div>
                         {currentLang === lang.code && (
-                            <Check className="ms-auto h-3 w-3 text-primary" />
+                            <i className="bi bi-check ms-auto text-primary"></i>
                         )}
                     </Dropdown.Item>
                 ))}

@@ -1,11 +1,11 @@
-# Champagne Festival - Simplified
+# Champagne Festival
 
-This is a simplified version of the Champagne Festival website, using:
+This is the Champagne Festival website, using:
 
 - Vite + React for build tooling
-- Tailwind CSS for styling
+- React Bootstrap for UI components and styling
+- Bootstrap Icons for iconography
 - i18next for translations
-- Radix UI for theming
 - Single page structure without complex routing
 
 ## Getting Started
@@ -26,7 +26,9 @@ npm run preview
 
 ## Structure
 
-- Simple App.tsx file contains all page content
-- Components are reused from the original app
-- Dark theme is applied by default
+- Main.tsx file contains the primary app structure
+- Components are organized in the components directory
+- Bootstrap styling with dark theme applied by default
+- i18n integration for multi-language support (English, French, Dutch)
+- Responsive design for mobile and desktop
 - No complex routing or context providers

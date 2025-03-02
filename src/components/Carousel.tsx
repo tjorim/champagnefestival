@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Card, Carousel as BootstrapCarousel } from "react-bootstrap";
-import { cn } from "@/lib/utils";
 
 /**
  * Represents an item in the carousel
@@ -77,10 +76,9 @@ const Carousel: React.FC<CarouselProps> = ({
                     {items.map((_, i) => (
                         <button
                             key={i}
-                            className={cn(
-                                "h-2 rounded-full transition-all duration-300",
+                            className={`h-2 rounded-full transition-all duration-300 ${
                                 i === index ? "w-12 bg-primary" : "w-8 bg-neutral-600 hover:bg-neutral-500"
-                            )}
+                            }`}
                             onClick={() => setIndex(i)}
                             aria-label={`Go to slide ${i + 1}`}
                             aria-current={i === index ? 'true' : 'false'}

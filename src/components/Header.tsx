@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Home } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { Button, Navbar, Container } from 'react-bootstrap';
-import { cn } from '@/lib/utils';
 
 interface HeaderProps {
     logoSrc?: string;
@@ -19,11 +17,7 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
                 <div className="d-flex align-items-center">
                     <Navbar.Brand href="#welcome" className="d-flex align-items-center gap-2">
                         <img src={logoSrc} alt="Logo" width="36" height="36" />
-                        <span className={cn(
-                            "text-xl font-bold text-transparent bg-clip-text",
-                            "bg-gradient-to-r from-indigo-400 to-purple-500",
-                            "hover:from-indigo-300 hover:to-purple-400 transition-all"
-                        )}>
+                        <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 hover:from-indigo-300 hover:to-purple-400 transition-all">
                             {t("festivalName", "Champagne Festival")}
                         </span>
                     </Navbar.Brand>
@@ -34,7 +28,7 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
                         aria-label="Back to top"
                         title={t("navigation.home", "Home")}
                     >
-                        <Home className="h-4 w-4" />
+                        <i className="bi bi-house"></i>
                     </Button>
                 </div>
 
