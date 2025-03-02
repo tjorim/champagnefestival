@@ -58,7 +58,7 @@ video {
   }
 }
 
-/* Bootstrap animation keyframes to be defined as needed */
+/* Bootstrap animations are now handled by bootstrap directly */
 
 :root {
   /* Base brand colors */

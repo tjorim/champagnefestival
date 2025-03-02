@@ -43,7 +43,6 @@ const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
                 <Accordion.Item
                     key={index}
                     eventKey={`${index}`}
-                    className="bg-dark"
                 >
                     <Accordion.Header>
                         {faq.question}
