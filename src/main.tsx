@@ -5,8 +5,7 @@ import { useTranslation } from "react-i18next";
 import ReactDOM from 'react-dom/client';
 
 // UI Libraries
-import { Theme } from "@radix-ui/themes";
-import "@radix-ui/themes/styles.css";
+import 'bootstrap/dist/css/bootstrap.min.css';
 import { CalendarDaysIcon, TicketIcon, MapPinIcon } from "@heroicons/react/24/outline";
 
 // Components - Eagerly loaded
@@ -47,21 +46,19 @@ function App() {
   }, [i18n.language]);
 
   return (
-    <Theme appearance="dark">
-      <div className="App">
-        {/* Skip link for keyboard users */}
-        <a href="#main-content" className="skip-link">
-          {t("accessibility.skipToContent", "Skip to main content")}
-        </a>
+    <div className="App">
+      {/* Skip link for keyboard users */}
+      <a href="#main-content" className="skip-link">
+        {t("accessibility.skipToContent", "Skip to main content")}
+      </a>
 
-        {/* Animated background */}
-        <Suspense fallback={<div className="bubble-background-placeholder" aria-label={t("loading.background", "Loading background...")} />}>
+      {/* Animated background */}
+      <Suspense fallback={<div className="bubble-background-placeholder" aria-label={t("loading.background", "Loading background...")} />}>
+        <BubbleBackground />
+      </Suspense>
 
-          <BubbleBackground />
-        </Suspense>
-
-        {/* Header & Navigation */}
-        <Header />
+      {/* Header & Navigation */}
+      <Header />
 
         <main id="main-content">
           {/* Hero Section */}
@@ -162,7 +159,6 @@ function App() {
         {/* Footer */}
         <Footer />
       </div>
-    </Theme>
   );
 }
 

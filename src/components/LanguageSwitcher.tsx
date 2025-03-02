@@ -1,14 +1,8 @@
 // LanguageSwitcher.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Check, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { Dropdown, Button } from "react-bootstrap";
 import { cn } from "@/lib/utils";
 
 const LanguageSwitcher = () => {
@@ -42,46 +36,44 @@ const LanguageSwitcher = () => {
     }
     
     return (
-        <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-neutral-300 hover:text-white hover:bg-neutral-800/60"
-                    title={t("language.select", "Select language")}
-                >
-                    <Globe className="h-3 w-3" />
-                    <span className="hidden sm:inline ml-2">{currentLanguage.code.toUpperCase()}</span>
-                    <ChevronDown className="w-3 h-3 ml-1 opacity-70" />
-                </Button>
-            </DropdownMenuTrigger>
+        <Dropdown>
+            <Dropdown.Toggle 
+                as={Button}
+                variant="dark" 
+                size="sm" 
+                className="text-neutral-300 hover:text-white hover:bg-neutral-800/60"
+                title={t("language.select", "Select language")}
+            >
+                <Globe className="h-3 w-3" />
+                <span className="d-none d-sm-inline ms-2">{currentLanguage.code.toUpperCase()}</span>
+                <ChevronDown className="w-3 h-3 ms-1 opacity-70" />
+            </Dropdown.Toggle>
 
-            <DropdownMenuContent 
+            <Dropdown.Menu 
                 className="min-w-[220px]" 
                 align="end"
-                sideOffset={5}
             >
                 {languages.map((lang) => (
-                    <DropdownMenuItem
+                    <Dropdown.Item
                         key={lang.code}
                         className={cn(
-                            "flex items-center px-4 py-3 cursor-pointer",
+                            "d-flex align-items-center px-4 py-3",
                             currentLang === lang.code && "bg-primary/10"
                         )}
-                        onSelect={() => changeLanguage(lang.code)}
+                        onClick={() => changeLanguage(lang.code)}
                     >
-                        <span className="mr-3 text-lg">{lang.flag}</span>
+                        <span className="me-3 text-lg">{lang.flag}</span>
                         <div>
-                            <div className="font-medium">{lang.label}</div>
-                            <div className="text-xs text-muted-foreground">{lang.nativeName}</div>
+                            <div className="fw-medium">{lang.label}</div>
+                            <div className="text-xs text-muted">{lang.nativeName}</div>
                         </div>
                         {currentLang === lang.code && (
-                            <Check className="ml-auto h-3 w-3 text-primary" />
+                            <Check className="ms-auto h-3 w-3 text-primary" />
                         )}
-                    </DropdownMenuItem>
+                    </Dropdown.Item>
                 ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+            </Dropdown.Menu>
+        </Dropdown>
     );
 };
 
