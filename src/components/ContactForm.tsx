@@ -1,13 +1,7 @@
 import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Mail, MessageSquare, Send, AlertCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { Card, Form, Button, Alert, Spinner } from "react-bootstrap";
 
 /**
  * Form data structure
@@ -19,7 +13,7 @@ interface FormData {
 }
 
 /**
- * Contact form component with validation using shadcn UI components
+ * Contact form component with validation using react-bootstrap components
  */
 const ContactForm: React.FC = () => {
     const { t } = useTranslation();
@@ -79,125 +73,104 @@ const ContactForm: React.FC = () => {
     };
 
     return (
-        <Card className="max-w-2xl mx-auto">
-            <CardContent className="p-6">
+        <Card className="mx-auto border-0 shadow">
+            <Card.Body className="p-3 p-md-4">
                 {isSubmitted ? (
-                    <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 p-4 rounded-lg" role="alert">
+                    <Alert variant="success">
                         {t("contact.successMessage", "Thank you for your message! We'll get back to you soon.")}
-                    </div>
+                    </Alert>
                 ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <Form onSubmit={handleSubmit} className="my-3">
                         {generalError && (
-                            <div className="text-destructive flex items-center gap-2 mb-4 p-2 bg-destructive/10 rounded-md">
-                                <AlertCircle className="h-5 w-5" />
+                            <Alert variant="danger" className="d-flex align-items-center">
+                                <i className="bi bi-exclamation-circle me-2"></i>
                                 <span>{generalError}</span>
-                            </div>
+                            </Alert>
                         )}
 
-                        <div className="space-y-2">
-                            <Label htmlFor="name">
+                        <Form.Group className="mb-3">
+                            <Form.Label htmlFor="name">
                                 {t("contact.name", "Your Name")}
-                            </Label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                                    <User className="h-4 w-4" />
-                                </span>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    value={form.name}
-                                    onChange={handleChange}
-                                    className={cn(
-                                        "pl-10",
-                                        errors.name && "border-destructive focus-visible:ring-destructive"
-                                    )}
-                                    disabled={isSubmitting}
-                                    required
-                                />
-                            </div>
-                            {errors.name && (
-                                <p className="text-sm text-destructive">{errors.name}</p>
-                            )}
-                        </div>
+                            </Form.Label>
+                            <Form.Control
+                                id="name"
+                                name="name"
+                                value={form.name}
+                                onChange={handleChange}
+                                placeholder="John Doe"
+                                disabled={isSubmitting}
+                                isInvalid={!!errors.name}
+                                required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                                {errors.name}
+                            </Form.Control.Feedback>
+                        </Form.Group>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="email">
+                        <Form.Group className="mb-3">
+                            <Form.Label htmlFor="email">
                                 {t("contact.email", "Your Email")}
-                            </Label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                                    <Mail className="h-4 w-4" />
-                                </span>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={form.email}
-                                    onChange={handleChange}
-                                    className={cn(
-                                        "pl-10",
-                                        errors.email && "border-destructive focus-visible:ring-destructive"
-                                    )}
-                                    disabled={isSubmitting}
-                                    required
-                                />
-                            </div>
-                            {errors.email && (
-                                <p className="text-sm text-destructive">{errors.email}</p>
-                            )}
-                        </div>
+                            </Form.Label>
+                            <Form.Control
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={form.email}
+                                onChange={handleChange}
+                                placeholder="email@example.com"
+                                disabled={isSubmitting}
+                                isInvalid={!!errors.email}
+                                required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                                {errors.email}
+                            </Form.Control.Feedback>
+                        </Form.Group>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="message">
+                        <Form.Group className="mb-3">
+                            <Form.Label htmlFor="message">
                                 {t("contact.message", "Your Message")}
-                            </Label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-4 text-muted-foreground">
-                                    <MessageSquare className="h-4 w-4" />
-                                </span>
-                                <Textarea
-                                    id="message"
-                                    name="message"
-                                    value={form.message}
-                                    onChange={handleChange}
-                                    className={cn(
-                                        "pl-10 min-h-[120px]",
-                                        errors.message && "border-destructive focus-visible:ring-destructive"
-                                    )}
-                                    disabled={isSubmitting}
-                                    required
-                                />
-                            </div>
-                            {errors.message && (
-                                <p className="text-sm text-destructive">{errors.message}</p>
-                            )}
-                        </div>
+                            </Form.Label>
+                            <Form.Control
+                                as="textarea"
+                                id="message"
+                                name="message"
+                                value={form.message}
+                                onChange={handleChange}
+                                placeholder={t("contact.placeholderMessage", "Type your message here...")}
+                                style={{ minHeight: "120px" }}
+                                disabled={isSubmitting}
+                                isInvalid={!!errors.message}
+                                required
+                            />
+                            <Form.Control.Feedback type="invalid">
+                                {errors.message}
+                            </Form.Control.Feedback>
+                        </Form.Group>
 
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all"
+                            variant="dark"
+                            className="w-100 bg-brand-gradient"
                             disabled={isSubmitting}
-                            aria-busy={isSubmitting}
+                            aria-busy={isSubmitting ? "true" : "false"}
                             aria-live="polite"
                         >
                             {isSubmitting ? (
-                                <span className="flex items-center">
-                                    <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
+                                <span className="d-flex align-items-center justify-content-center">
+                                    <Spinner animation="border" size="sm" className="me-2" />
                                     {t("contact.submitting", "Sending...")}
                                 </span>
                             ) : (
-                                <span className="flex items-center">
-                                    <Send className="h-4 w-4 mr-2" />
+                                <span className="d-flex align-items-center justify-content-center">
+                                    <i className="bi bi-send me-2"></i>
                                     {t("contact.submit", "Send Message")}
                                 </span>
                             )}
                         </Button>
-                    </form>
+                    </Form>
                 )}
-            </CardContent>
+            </Card.Body>
         </Card>
     );
 };

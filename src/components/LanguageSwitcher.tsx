@@ -1,21 +1,13 @@
 // LanguageSwitcher.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Check, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Dropdown, Button } from "react-bootstrap";
 
 const LanguageSwitcher = () => {
     const { i18n, t } = useTranslation();
     const currentLang = i18n.language;
     const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
-    
+
     // Prevent hydration issues by not rendering on first mount
     useEffect(() => {
         setPreventHydrationIssue(true);
@@ -40,48 +32,45 @@ const LanguageSwitcher = () => {
     if (!preventHydrationIssue) {
         return <div className="mr-4"></div>;
     }
-    
-    return (
-        <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-                <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-neutral-300 hover:text-white hover:bg-neutral-800/60"
-                    title={t("language.select", "Select language")}
-                >
-                    <Globe className="h-3 w-3" />
-                    <span className="hidden sm:inline ml-2">{currentLanguage.code.toUpperCase()}</span>
-                    <ChevronDown className="w-3 h-3 ml-1 opacity-70" />
-                </Button>
-            </DropdownMenuTrigger>
 
-            <DropdownMenuContent 
-                className="min-w-[220px]" 
+    return (
+        <Dropdown>
+            <Dropdown.Toggle
+                as={Button}
+                variant="dark"
+                size="sm"
+                className="text-secondary"
+                aria-label="Language selection"
+                title={t("language.select", "Select language")}
+            >
+                <i className="bi bi-globe2"></i>
+                <span className="d-none d-sm-inline ms-2">{currentLanguage.code.toUpperCase()}</span>
+                {/* Bootstrap dropdown toggle already includes a chevron */}
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu
+                className="min-width-220"
                 align="end"
-                sideOffset={5}
             >
                 {languages.map((lang) => (
-                    <DropdownMenuItem
+                    <Dropdown.Item
                         key={lang.code}
-                        className={cn(
-                            "flex items-center px-4 py-3 cursor-pointer",
-                            currentLang === lang.code && "bg-primary/10"
-                        )}
-                        onSelect={() => changeLanguage(lang.code)}
+                        className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
+                            }`}
+                        onClick={() => changeLanguage(lang.code)}
                     >
-                        <span className="mr-3 text-lg">{lang.flag}</span>
+                        <span className="me-3 fs-5">{lang.flag}</span>
                         <div>
-                            <div className="font-medium">{lang.label}</div>
-                            <div className="text-xs text-muted-foreground">{lang.nativeName}</div>
+                            <div className="fw-medium">{lang.label}</div>
+                            <div className="small text-muted">{lang.nativeName}</div>
                         </div>
                         {currentLang === lang.code && (
-                            <Check className="ml-auto h-3 w-3 text-primary" />
+                            <i className="bi bi-check ms-auto text-primary"></i>
                         )}
-                    </DropdownMenuItem>
+                    </Dropdown.Item>
                 ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+            </Dropdown.Menu>
+        </Dropdown>
     );
 };
 

@@ -94,7 +94,7 @@ const BubbleBackground: React.FC = () => {
     }
 
     return (
-        <div className="bubble-container" aria-hidden="true" style={{ zIndex: 1 }}>
+        <div className="bubble-container" aria-hidden="true">
             {bubbles}
         </div>
     );

@@ -1,11 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Accordion } from "react-bootstrap";
 
 /**
  * FAQ item structure from config
@@ -31,6 +26,7 @@ interface FAQProps {
 /**
  * FAQ component that displays a list of frequently asked questions
  * with expandable/collapsible answers in an accessible accordion pattern
+ * Using react-bootstrap accordion
  */
 const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
     const { t } = useTranslation();
@@ -42,22 +38,21 @@ const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
     })) || [];
 
     return (
-        <Accordion type="single" collapsible className="w-full rounded-lg overflow-hidden shadow-lg">
+        <Accordion className="rounded-lg shadow-lg">
             {faqData.map((faq, index) => (
-                <AccordionItem 
+                <Accordion.Item
                     key={index}
-                    value={`item-${index}`}
-                    className="border-b border-neutral-800 last:border-b-0 overflow-hidden"
+                    eventKey={`${index}`}
                 >
-                    <AccordionTrigger className="px-6 py-4 hover:bg-neutral-800/50 text-gray-200 hover:text-white">
+                    <Accordion.Header>
                         {faq.question}
-                    </AccordionTrigger>
-                    <AccordionContent className="bg-neutral-900/50 px-6 text-gray-300">
-                        <div className="py-4 border-l-2 border-indigo-500/30 pl-4">
+                    </Accordion.Header>
+                    <Accordion.Body>
+                        <div className="py-2 border-start border-3 ps-3 border-brand">
                             <p>{faq.answer}</p>
                         </div>
-                    </AccordionContent>
-                </AccordionItem>
+                    </Accordion.Body>
+                </Accordion.Item>
             ))}
         </Accordion>
     );

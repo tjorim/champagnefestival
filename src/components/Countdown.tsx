@@ -46,7 +46,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
     const calculateTimeLeft = useCallback((): TimeLeft => {
         // Get time difference in milliseconds
         const difference = +targetDate - +new Date();
-        
+
         if (difference > 0) {
             return {
                 [t("countdown.days", "days")]: Math.floor(difference / TimeUnits.Day),
@@ -55,7 +55,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
                 [t("countdown.seconds", "seconds")]: Math.floor((difference / TimeUnits.Second) % 60),
             };
         }
-        
+
         return {};
     }, [targetDate, t]);
 
@@ -65,7 +65,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
     useEffect(() => {
         // Initial calculation
         setTimeLeft(calculateTimeLeft());
-        
+
         const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
         }, 1000);
@@ -83,8 +83,8 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
     ));
 
     return (
-        <div 
-            className="countdown" 
+        <div
+            className="countdown"
             suppressHydrationWarning
             aria-live="polite" // Announce updates to screen readers
         >

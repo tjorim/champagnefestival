@@ -83,5 +83,35 @@
         "rights": "Tous droits réservés.",
         "privacy": "Politique de Confidentialité",
         "terms": "Conditions d'Utilisation"
+    },
+    "language": {
+        "select": "Sélectionner la langue"
+    },
+    "close": "Fermer",
+    "privacy": {
+        "title": "Politique de Confidentialité",
+        "lastUpdated": "Dernière mise à jour",
+        "lastUpdatedDate": "Mars 2025",
+        "intro": "Cette Politique de Confidentialité explique comment nous collectons, utilisons et protégeons vos informations personnelles lorsque vous utilisez notre site web ou nos services.",
+        "dataCollection": {
+            "title": "Informations que nous collectons",
+            "content": "Lorsque vous utilisez notre formulaire de contact, nous pouvons collecter votre nom, adresse e-mail et tout contenu du message que vous fournissez. Ces informations sont uniquement utilisées pour répondre à vos demandes."
+        },
+        "dataUse": {
+            "title": "Comment nous utilisons vos informations",
+            "content": "Nous utilisons les informations que vous fournissez via notre formulaire de contact uniquement pour répondre à vos demandes et communiquer avec vous concernant le Festival du Champagne."
+        },
+        "dataProtection": {
+            "title": "Comment nous protégeons vos informations",
+            "content": "Nous mettons en œuvre des mesures de sécurité appropriées pour protéger vos informations personnelles contre tout accès, modification ou divulgation non autorisés."
+        },
+        "cookies": {
+            "title": "Cookies et technologies similaires",
+            "content": "Notre site web peut utiliser des cookies pour améliorer votre expérience de navigation. Vous pouvez configurer votre navigateur pour refuser les cookies, mais cela peut limiter certaines fonctionnalités."
+        },
+        "contactUs": {
+            "title": "Contactez-nous",
+            "content": "Si vous avez des questions concernant notre politique de confidentialité, veuillez nous contacter en utilisant le formulaire de contact sur notre site web."
+        }
     }
 }

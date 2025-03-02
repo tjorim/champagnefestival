@@ -83,5 +83,35 @@
         "rights": "All rights reserved.",
         "privacy": "Privacy Policy",
         "terms": "Terms of Service"
+    },
+    "language": {
+        "select": "Select language"
+    },
+    "close": "Close",
+    "privacy": {
+        "title": "Privacy Policy",
+        "lastUpdated": "Last Updated",
+        "lastUpdatedDate": "March 2025",
+        "intro": "This Privacy Policy explains how we collect, use, and protect your personal information when you use our website or services.",
+        "dataCollection": {
+            "title": "Information We Collect",
+            "content": "When you use our contact form, we may collect your name, email address, and any message content you provide. This information is only used to respond to your inquiries."
+        },
+        "dataUse": {
+            "title": "How We Use Your Information",
+            "content": "We use the information you provide through our contact form solely to respond to your inquiries and communicate with you about the Champagne Festival."
+        },
+        "dataProtection": {
+            "title": "How We Protect Your Information",
+            "content": "We implement appropriate security measures to protect your personal information from unauthorized access, alteration, or disclosure."
+        },
+        "cookies": {
+            "title": "Cookies and Similar Technologies",
+            "content": "Our website may use cookies to enhance your browsing experience. You can set your browser to refuse cookies, but this may limit some functionality."
+        },
+        "contactUs": {
+            "title": "Contact Us",
+            "content": "If you have any questions about our privacy policy, please contact us using the contact form on our website."
+        }
     }
 }
