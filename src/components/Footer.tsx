@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import PrivacyPolicy from "./PrivacyPolicy";
 
@@ -8,27 +8,31 @@ const Footer = () => {
     const [privacyOpen, setPrivacyOpen] = useState(false);
 
     return (
-        <footer role="contentinfo" className="bg-gradient-to-r from-indigo-900 to-purple-800 text-white py-6 mt-8">
+        <footer
+            className="site-footer"
+        >
             <div className="container">
-                <div className="flex flex-col md:flex-row justify-between items-center">
-                    <p className="mb-4 md:mb-0">
-                        &copy; {currentYear} {t("festivalName", "Champagne Festival")}. {t("footer.rights", "All rights reserved.")}
-                    </p>
-                    <div className="flex space-x-4">
-                        <button 
-                            onClick={() => setPrivacyOpen(true)} 
-                            className="text-white hover:text-gray-200 transition-colors bg-transparent border-none p-0 cursor-pointer font-normal"
+                <div className="row align-items-center">
+                    <div className="col-md-6 mb-3 mb-md-0 text-center text-md-start">
+                        <p className="mb-0">
+                            &copy; {currentYear} {t("festivalName", "Champagne Festival")}. {t("footer.rights", "All rights reserved.")}
+                        </p>
+                    </div>
+                    <div className="col-md-6 text-center text-md-end">
+                        <button
+                            onClick={() => setPrivacyOpen(true)}
+                            className="btn btn-link text-white p-0 text-decoration-none footer-link"
                         >
                             {t("footer.privacy", "Privacy Policy")}
                         </button>
                     </div>
                 </div>
             </div>
-            
+
             {/* Privacy Policy Modal */}
-            <PrivacyPolicy 
-                isOpen={privacyOpen} 
-                onClose={() => setPrivacyOpen(false)} 
+            <PrivacyPolicy
+                isOpen={privacyOpen}
+                onClose={() => setPrivacyOpen(false)}
             />
         </footer>
     );

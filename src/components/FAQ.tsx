@@ -1,7 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import * as Accordion from '@radix-ui/react-accordion';
-import { ChevronDownIcon } from '@heroicons/react/24/solid';
+import { Accordion } from "react-bootstrap";
 
 /**
  * FAQ item structure from config
@@ -27,6 +26,7 @@ interface FAQProps {
 /**
  * FAQ component that displays a list of frequently asked questions
  * with expandable/collapsible answers in an accessible accordion pattern
+ * Using react-bootstrap accordion
  */
 const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
     const { t } = useTranslation();
@@ -38,34 +38,23 @@ const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
     })) || [];
 
     return (
-        <Accordion.Root
-            type="single"
-            collapsible
-            className="w-full rounded-lg overflow-hidden shadow-lg"
-        >
+        <Accordion className="rounded-lg shadow-lg">
             {faqData.map((faq, index) => (
-                <Accordion.Item 
+                <Accordion.Item
                     key={index}
-                    value={`item-${index}`}
-                    className="border-b border-gray-800 last:border-b-0 overflow-hidden"
+                    eventKey={`${index}`}
                 >
-                    <Accordion.Header className="w-full">
-                        <Accordion.Trigger className="w-full py-4 px-6 flex items-center justify-between gap-4 text-left bg-darkCard hover:bg-gray-800/50 transition-colors group">
-                            <span className="font-medium text-gray-200">{faq.question}</span>
-                            <ChevronDownIcon 
-                                className="h-5 w-5 flex-shrink-0 text-indigo-400 transition-transform duration-300 group-data-[state=open]:rotate-180" 
-                                aria-hidden 
-                            />
-                        </Accordion.Trigger>
+                    <Accordion.Header>
+                        {faq.question}
                     </Accordion.Header>
-                    <Accordion.Content className="overflow-hidden bg-darkCard/50 data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
-                        <div className="px-6 py-4 text-gray-300 border-l-2 border-indigo-500/30 ml-6 mb-2">
+                    <Accordion.Body>
+                        <div className="py-2 border-start border-3 ps-3 border-brand">
                             <p>{faq.answer}</p>
                         </div>
-                    </Accordion.Content>
+                    </Accordion.Body>
                 </Accordion.Item>
             ))}
-        </Accordion.Root>
+        </Accordion>
     );
 };
 

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
+import { Spinner } from "react-bootstrap";
 
 interface MapComponentProps {
     embedUrl?: string;
@@ -10,30 +11,42 @@ const MapComponent = ({
     location = "Event Location"
 }: MapComponentProps) => {
     const [iframeError, setIframeError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const handleIframeError = () => {
         setIframeError(true);
+        setIsLoading(false);
+    };
+
+    const handleIframeLoad = () => {
+        setIsLoading(false);
     };
 
     return (
-        <div className="map-container relative overflow-hidden rounded-lg max-w-full">
+        <div className="ratio ratio-16x9 rounded overflow-hidden border position-relative">
+            {isLoading && (
+                <div className="position-absolute top-0 start-0 w-100 h-100 bg-dark d-flex align-items-center justify-content-center">
+                    <div className="text-center">
+                        <Spinner animation="border" variant="light" className="mb-2" />
+                        <p className="text-light mb-0">Loading map...</p>
+                    </div>
+                </div>
+            )}
+
             {iframeError ? (
-                <div className="map-error bg-gray-800 p-6 rounded-lg text-center">
-                    <p>Unable to load map. Please try again later.</p>
+                <div className="bg-dark p-4 text-center d-flex align-items-center justify-content-center">
+                    <p className="mb-0 text-light">Unable to load map. Please try again later.</p>
                 </div>
             ) : (
-                <div className="aspect-video w-full max-w-full overflow-hidden">
-                    <iframe
-                        title={location}
-                        src={embedUrl}
-                        width="100%"
-                        height="100%"
-                        style={{ border: 0, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                        loading="lazy"
-                        onError={handleIframeError}
-                        allowFullScreen
-                    ></iframe>
-                </div>
+                <iframe
+                    title={location}
+                    src={embedUrl}
+                    className={`border-0 map-iframe ${isLoading ? 'map-iframe-loading' : 'map-iframe-loaded'}`}
+                    loading="lazy"
+                    onError={handleIframeError}
+                    onLoad={handleIframeLoad}
+                    allowFullScreen
+                ></iframe>
             )}
         </div>
     );

@@ -83,5 +83,35 @@
         "rights": "Alle rechten voorbehouden.",
         "privacy": "Privacybeleid",
         "terms": "Gebruiksvoorwaarden"
+    },
+    "language": {
+        "select": "Taal selecteren"
+    },
+    "close": "Sluiten",
+    "privacy": {
+        "title": "Privacybeleid",
+        "lastUpdated": "Laatst bijgewerkt",
+        "lastUpdatedDate": "Maart 2025",
+        "intro": "Dit Privacybeleid legt uit hoe wij uw persoonlijke gegevens verzamelen, gebruiken en beschermen wanneer u onze website of diensten gebruikt.",
+        "dataCollection": {
+            "title": "Informatie die wij verzamelen",
+            "content": "Wanneer u ons contactformulier gebruikt, kunnen wij uw naam, e-mailadres en eventuele berichtinhoud verzamelen. Deze informatie wordt alleen gebruikt om op uw vragen te reageren."
+        },
+        "dataUse": {
+            "title": "Hoe wij uw informatie gebruiken",
+            "content": "Wij gebruiken de informatie die u via ons contactformulier verstrekt uitsluitend om op uw vragen te reageren en met u te communiceren over het Champagne Festival."
+        },
+        "dataProtection": {
+            "title": "Hoe wij uw informatie beschermen",
+            "content": "Wij implementeren passende beveiligingsmaatregelen om uw persoonlijke gegevens te beschermen tegen ongeautoriseerde toegang, wijziging of openbaarmaking."
+        },
+        "cookies": {
+            "title": "Cookies en vergelijkbare technologieën",
+            "content": "Onze website kan cookies gebruiken om uw surfervaring te verbeteren. U kunt uw browser instellen om cookies te weigeren, maar dit kan enkele functionaliteiten beperken."
+        },
+        "contactUs": {
+            "title": "Contact met ons opnemen",
+            "content": "Als u vragen heeft over ons privacybeleid, neem dan contact met ons op via het contactformulier op onze website."
+        }
     }
 }

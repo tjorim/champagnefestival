@@ -1,87 +1,27 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Bootstrap-based styles */
 
 * {
   box-sizing: border-box;
 }
 
 /* Only limit max-width on img and video elements */
-img, video {
+img,
+video {
   max-width: 100%;
 }
 
-@keyframes slideUpAndFade {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideRightAndFade {
-  from {
-    opacity: 0;
-    transform: translateX(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideDownAndFade {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideLeftAndFade {
-  from {
-    opacity: 0;
-    transform: translateX(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideDown {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--radix-collapsible-content-height);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    height: var(--radix-collapsible-content-height);
-  }
-  to {
-    height: 0;
-  }
-}
+/* Bootstrap animations are now handled by bootstrap directly */
 
 :root {
+  /* Base brand colors */
   --primary-color: #6e8efb;
   --secondary-color: #a16efa;
   --text-color: #e1e1e1;
   --background-color: #121212;
   --card-background: #1e1e1e;
   --header-height: 4rem;
-  
-  /* Tailwind-like shadows for Radix UI components */
+
+  /* Bootstrap shadow variables */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -93,7 +33,8 @@ html {
   scroll-behavior: smooth;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -120,13 +61,7 @@ body {
   overflow-x: hidden;
 }
 
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-  box-sizing: border-box;
-}
+/* Use Bootstrap's built-in .container with its responsive breakpoints */
 
 /* Skip link for accessibility */
 .skip-link {
@@ -196,7 +131,8 @@ h2 {
   text-align: center;
 }
 
-h2::after {
+/* Apply decorative line only to section headers with .section-header class */
+h2.section-header::after {
   content: "";
   position: absolute;
   width: 60px;
@@ -297,6 +233,8 @@ h2::after {
   display: flex;
   justify-content: center;
   margin: 1.5rem 0;
+  position: relative;
+  z-index: 50;
 }
 
 .countdown-units {
@@ -304,6 +242,7 @@ h2::after {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.75rem;
+  position: relative;
 }
 
 .countdown-unit {
@@ -320,12 +259,17 @@ h2::after {
   font-size: 1.5rem;
   margin-right: 0.5rem;
   color: var(--primary-color);
+  min-width: 2ch;
+  display: inline-block;
+  text-align: center;
 }
 
 .countdown-label {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  min-width: 5ch;
+  display: inline-block;
 }
 
 .countdown-loading,
@@ -334,6 +278,8 @@ h2::after {
   font-style: italic;
   opacity: 0.8;
 }
+
+/* Styling moved to brand color utilities section */
 
 /* Bubble Background Animation */
 .bubble-container {
@@ -344,19 +290,25 @@ h2::after {
   height: 100%;
   pointer-events: none;
   overflow: hidden;
-  z-index: 0; /* behind content and header */
+  z-index: -1;
+  /* ensure it's behind all content */
   /* Improve performance by offloading animation to GPU */
   will-change: transform;
 }
 
 .bubble {
   position: absolute;
-  bottom: -50px; /* start below the visible area */
-  background: rgba(255, 255, 255, 0.3); /* semi-transparent white */
+  bottom: -50px;
+  /* start below the visible area */
+  background: rgba(255, 255, 255, 0.3);
+  /* semi-transparent white */
   border-radius: 50%;
-  height: var(--bubble-size, 20px); /* Fallback size */
-  width: var(--bubble-size, 20px); /* Fallback size */
-  left: var(--bubble-left, 50%); /* Fallback position */
+  height: var(--bubble-size, 20px);
+  /* Fallback size */
+  width: var(--bubble-size, 20px);
+  /* Fallback size */
+  left: var(--bubble-left, 50%);
+  /* Fallback position */
   /* Use transform for better performance */
   will-change: transform, opacity;
   animation: rise var(--bubble-duration, 10s) linear var(--bubble-delay, 0s) infinite;
@@ -376,6 +328,7 @@ h2::after {
     transform: translateY(0);
     opacity: 1;
   }
+
   100% {
     transform: translateY(-120vh);
     opacity: 0;
@@ -387,6 +340,7 @@ h2::after {
     -webkit-transform: translateY(0);
     opacity: 1;
   }
+
   100% {
     -webkit-transform: translateY(-120vh);
     opacity: 0;
@@ -404,34 +358,36 @@ main {
   z-index: 10;
 }
 
+/* Basic structure - no special z-index needed */
+
 /* Media queries */
 @media (max-width: 768px) {
   h1 {
     font-size: 2.5rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1.2rem;
   }
-  
+
   .content-section {
     padding: 3rem 0;
   }
-  
+
   .container {
     width: 100%;
     padding: 0 1rem;
     overflow-x: hidden;
   }
-  
+
   .features {
     grid-template-columns: 1fr;
   }
-  
+
   .countdown-units {
     gap: 0.5rem;
   }
-  
+
   .countdown-unit {
     padding: 0.5rem 0.75rem;
   }
@@ -441,16 +397,117 @@ main {
   h1 {
     font-size: 2rem;
   }
-  
+
   h2 {
     font-size: 1.75rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1rem;
   }
-  
+
   .content-section {
     padding: 2rem 0;
   }
+}
+
+/* Bootstrap theme is now set via data-bs-theme="dark" on the HTML element */
+:root {
+  /* Override Bootstrap variables with our brand colors */
+  --bs-primary: #6e8efb;
+  --bs-primary-rgb: 110, 142, 251;
+  --bs-secondary: #a16efa;
+  --bs-secondary-rgb: 161, 110, 250;
+}
+
+/* Only override Bootstrap variables that need customization for our brand */
+
+/* Brand color utilities - with higher specificity instead of !important */
+:root .text-brand {
+  color: var(--secondary-color);
+}
+
+:root .border-brand {
+  border-color: var(--secondary-color);
+}
+
+:root .bg-brand-gradient {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.footer-link {
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+.footer-link:hover {
+  opacity: 1;
+}
+
+/* Component-specific styles */
+.site-footer {
+  background: linear-gradient(to right, rgba(67, 56, 202, 0.7), rgba(126, 34, 206, 0.7));
+  color: white;
+  padding: 1.5rem 0;
+  margin-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Carousel styling without card */
+.carousel-with-rounded-images {
+  margin-bottom: 2rem;
+}
+
+.carousel-image {
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+/* Make carousel captions more visible with a semi-transparent background */
+.carousel-caption {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+.map-iframe {
+  transition: opacity 0.3s ease;
+}
+
+.map-iframe-loading {
+  opacity: 0;
+}
+
+.map-iframe-loaded {
+  opacity: 1;
+}
+
+/* Custom Accordion Styling */
+.accordion {
+  --bs-accordion-border-width: 0;
+  --bs-accordion-border-radius: 0.5rem;
+  overflow: hidden;
+  margin-top: 2rem;
+}
+
+.accordion-item {
+  border-width: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Add brand colors to accordion focus */
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(110, 142, 251, 0.25);
+  border-color: #6e8efb;
+}
+
+.min-width-220 {
+  min-width: 220px;
 }
