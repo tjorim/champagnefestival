@@ -8,9 +8,9 @@ const Footer = () => {
     const [privacyOpen, setPrivacyOpen] = useState(false);
 
     return (
-        <footer 
-            role="contentinfo" 
-            style={{ 
+        <footer
+            role="contentinfo"
+            style={{
                 background: "linear-gradient(to right, rgba(67, 56, 202, 0.7), rgba(126, 34, 206, 0.7))",
                 color: "white",
                 padding: "1.5rem 0",
@@ -26,23 +26,20 @@ const Footer = () => {
                         </p>
                     </div>
                     <div className="col-md-6 text-center text-md-end">
-                        <button 
-                            onClick={() => setPrivacyOpen(true)} 
-                            className="btn btn-link text-white p-0 text-decoration-none"
-                            style={{ opacity: 0.9 }}
-                            onMouseOver={(e) => e.currentTarget.style.opacity = "1"}
-                            onMouseOut={(e) => e.currentTarget.style.opacity = "0.9"}
+                        <button
+                            onClick={() => setPrivacyOpen(true)}
+                            className="btn btn-link text-white p-0 text-decoration-none footer-link"
                         >
                             {t("footer.privacy", "Privacy Policy")}
                         </button>
                     </div>
                 </div>
             </div>
-            
+
             {/* Privacy Policy Modal */}
-            <PrivacyPolicy 
-                isOpen={privacyOpen} 
-                onClose={() => setPrivacyOpen(false)} 
+            <PrivacyPolicy
+                isOpen={privacyOpen}
+                onClose={() => setPrivacyOpen(false)}
             />
         </footer>
     );

@@ -19,7 +19,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
         <p className="text-secondary mb-3">
           {t('privacy.lastUpdated', 'Last Updated')}: {t('privacy.lastUpdatedDate', 'March 2025')}
         </p>
-        
+
         <div className="mt-4">
           <p>
             {t('privacy.intro', 'This Privacy Policy explains how we collect, use, and protect your personal information when you use our website or services.')}
@@ -74,13 +74,10 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
         </div>
       </Modal.Body>
       <Modal.Footer className="border-secondary">
-        <Button 
+        <Button
           onClick={onClose}
           variant="dark"
-          style={{
-            background: "linear-gradient(135deg, #6e8efb, #a16efa)",
-            border: "none"
-          }}
+          className="btn btn-gradient border-0"
         >
           {t('close', 'Close')}
         </Button>

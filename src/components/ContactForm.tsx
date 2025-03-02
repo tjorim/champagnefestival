@@ -74,7 +74,7 @@ const ContactForm: React.FC = () => {
 
     return (
         <Card className="max-w-2xl mx-auto border-0 shadow">
-            <Card.Body className="p-4">
+            <Card.Body className="p-3 p-md-4">
                 {isSubmitted ? (
                     <Alert variant="success">
                         {t("contact.successMessage", "Thank you for your message! We'll get back to you soon.")}

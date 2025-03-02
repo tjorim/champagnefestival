@@ -5,7 +5,8 @@
 }
 
 /* Only limit max-width on img and video elements */
-img, video {
+img,
+video {
   max-width: 100%;
 }
 
@@ -14,6 +15,7 @@ img, video {
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -25,6 +27,7 @@ img, video {
     opacity: 0;
     transform: translateX(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -36,6 +39,7 @@ img, video {
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -47,6 +51,7 @@ img, video {
     opacity: 0;
     transform: translateX(4px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -57,6 +62,7 @@ img, video {
   from {
     height: 0;
   }
+
   to {
     height: var(--radix-collapsible-content-height);
   }
@@ -66,6 +72,7 @@ img, video {
   from {
     height: var(--radix-collapsible-content-height);
   }
+
   to {
     height: 0;
   }
@@ -124,7 +131,8 @@ html {
   scroll-behavior: smooth;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -328,6 +336,8 @@ h2::after {
   display: flex;
   justify-content: center;
   margin: 1.5rem 0;
+  position: relative;
+  z-index: 50;
 }
 
 .countdown-units {
@@ -372,6 +382,32 @@ h2::after {
   opacity: 0.8;
 }
 
+.footer-link {
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.footer-link:hover {
+  opacity: 1;
+}
+
+.custom-border-color {
+  border-color: #a16efa !important;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #6e8efb, #a16efa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.btn-gradient {
+  background: linear-gradient(135deg, #6e8efb, #a16efa);
+}
+
 /* Bubble Background Animation */
 .bubble-container {
   position: fixed;
@@ -381,19 +417,25 @@ h2::after {
   height: 100%;
   pointer-events: none;
   overflow: hidden;
-  z-index: -1; /* ensure it's behind all content */
+  z-index: -1;
+  /* ensure it's behind all content */
   /* Improve performance by offloading animation to GPU */
   will-change: transform;
 }
 
 .bubble {
   position: absolute;
-  bottom: -50px; /* start below the visible area */
-  background: rgba(255, 255, 255, 0.3); /* semi-transparent white */
+  bottom: -50px;
+  /* start below the visible area */
+  background: rgba(255, 255, 255, 0.3);
+  /* semi-transparent white */
   border-radius: 50%;
-  height: var(--bubble-size, 20px); /* Fallback size */
-  width: var(--bubble-size, 20px); /* Fallback size */
-  left: var(--bubble-left, 50%); /* Fallback position */
+  height: var(--bubble-size, 20px);
+  /* Fallback size */
+  width: var(--bubble-size, 20px);
+  /* Fallback size */
+  left: var(--bubble-left, 50%);
+  /* Fallback position */
   /* Use transform for better performance */
   will-change: transform, opacity;
   animation: rise var(--bubble-duration, 10s) linear var(--bubble-delay, 0s) infinite;
@@ -413,6 +455,7 @@ h2::after {
     transform: translateY(0);
     opacity: 1;
   }
+
   100% {
     transform: translateY(-120vh);
     opacity: 0;
@@ -424,6 +467,7 @@ h2::after {
     -webkit-transform: translateY(0);
     opacity: 1;
   }
+
   100% {
     -webkit-transform: translateY(-120vh);
     opacity: 0;
@@ -573,6 +617,7 @@ main {
     from {
       height: 0;
     }
+
     to {
       height: var(--radix-accordion-content-height);
     }
@@ -582,6 +627,7 @@ main {
     from {
       height: var(--radix-accordion-content-height);
     }
+
     to {
       height: 0;
     }

@@ -7,7 +7,7 @@ const LanguageSwitcher = () => {
     const { i18n, t } = useTranslation();
     const currentLang = i18n.language;
     const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
-    
+
     // Prevent hydration issues by not rendering on first mount
     useEffect(() => {
         setPreventHydrationIssue(true);
@@ -32,14 +32,14 @@ const LanguageSwitcher = () => {
     if (!preventHydrationIssue) {
         return <div className="mr-4"></div>;
     }
-    
+
     return (
         <Dropdown>
-            <Dropdown.Toggle 
+            <Dropdown.Toggle
                 as={Button}
-                variant="dark" 
-                size="sm" 
-                className="text-neutral-300 hover:text-white hover:bg-neutral-800/60"
+                variant="dark"
+                size="sm"
+                className="text-secondary hover-text-white bg-dark"
                 title={t("language.select", "Select language")}
             >
                 <i className="bi bi-globe2"></i>
@@ -47,16 +47,15 @@ const LanguageSwitcher = () => {
                 {/* Bootstrap dropdown toggle already includes a chevron */}
             </Dropdown.Toggle>
 
-            <Dropdown.Menu 
-                className="min-w-[220px]" 
+            <Dropdown.Menu
+                className="min-w-[220px]"
                 align="end"
             >
                 {languages.map((lang) => (
                     <Dropdown.Item
                         key={lang.code}
-                        className={`d-flex align-items-center px-4 py-3 ${
-                            currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
-                        }`}
+                        className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
+                            }`}
                         onClick={() => changeLanguage(lang.code)}
                     >
                         <span className="me-3 text-lg">{lang.flag}</span>

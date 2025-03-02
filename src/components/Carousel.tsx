@@ -24,9 +24,9 @@ interface CarouselProps {
  * Carousel component for displaying rotating images with navigation
  * Using react-bootstrap carousel component with native styling
  */
-const Carousel: React.FC<CarouselProps> = ({ 
-    items = [], 
-    autoRotateInterval = 3000 
+const Carousel: React.FC<CarouselProps> = ({
+    items = [],
+    autoRotateInterval = 3000
 }) => {
     const [index, setIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);

@@ -14,23 +14,14 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
             <Container className="d-flex justify-content-between">
                 {/* Logo / Title */}
                 <Navbar.Brand href="#welcome" className="d-flex align-items-center">
-                    <img 
-                        src={logoSrc} 
-                        alt="Logo" 
-                        width="36" 
-                        height="36" 
+                    <img
+                        src={logoSrc}
+                        alt="Logo"
+                        width="36"
+                        height="36"
                         className="me-2"
                     />
-                    <span 
-                        style={{ 
-                            background: "linear-gradient(135deg, #6e8efb, #a16efa)",
-                            WebkitBackgroundClip: "text",
-                            backgroundClip: "text",
-                            color: "transparent",
-                            fontWeight: "bold",
-                            fontSize: "1.25rem"
-                        }}
-                    >
+                    <span className="gradient-text">
                         {t("festivalName", "Champagne Festival")}
                     </span>
                 </Navbar.Brand>

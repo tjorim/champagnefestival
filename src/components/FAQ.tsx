@@ -40,7 +40,7 @@ const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
     return (
         <Accordion className="rounded-lg shadow-lg">
             {faqData.map((faq, index) => (
-                <Accordion.Item 
+                <Accordion.Item
                     key={index}
                     eventKey={`${index}`}
                     className="border-dark"
@@ -49,7 +49,7 @@ const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
                         {faq.question}
                     </Accordion.Header>
                     <Accordion.Body>
-                        <div className="py-2 border-start border-3 ps-3" style={{ borderColor: "#a16efa" }}>
+                        <div className="py-2 border-start border-3 ps-3 custom-border-color">
                             <p>{faq.answer}</p>
                         </div>
                     </Accordion.Body>
