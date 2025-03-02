@@ -137,7 +137,7 @@ const ContactForm: React.FC = () => {
                                 name="message"
                                 value={form.message}
                                 onChange={handleChange}
-                                placeholder="Type your message here..."
+                                placeholder={t("contact.placeholderMessage", "Type your message here...")}
                                 style={{ minHeight: "120px" }}
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.message}
