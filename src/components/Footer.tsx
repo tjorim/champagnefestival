@@ -9,7 +9,6 @@ const Footer = () => {
 
     return (
         <footer
-            role="contentinfo"
             className="site-footer"
         >
             <div className="container">
