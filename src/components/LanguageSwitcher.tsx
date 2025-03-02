@@ -40,6 +40,7 @@ const LanguageSwitcher = () => {
                 variant="dark"
                 size="sm"
                 className="text-secondary"
+                aria-label="Language selection"
                 title={t("language.select", "Select language")}
             >
                 <i className="bi bi-globe2"></i>
