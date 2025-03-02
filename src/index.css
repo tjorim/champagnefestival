@@ -508,8 +508,6 @@ main {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Removed component-container class since we now use a standardized .container */
-
 /* Carousel styling without card */
 .carousel-with-rounded-images {
   margin-bottom: 2rem;
@@ -518,6 +516,13 @@ main {
 .carousel-image {
   aspect-ratio: 16/9;
   object-fit: cover;
+}
+
+/* Make carousel captions more visible with a semi-transparent background */
+.carousel-caption {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
 }
 
 .map-iframe {
@@ -551,11 +556,6 @@ main {
   border-color: #6e8efb;
 }
 
-/* Make carousel captions more visible with a semi-transparent background */
-.carousel-caption {
-  background-color: rgba(0, 0, 0, 0.6);
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
+.min-width-220 {
+  min-width: 220px;
 }
-
-/* Card styling is handled by Bootstrap dark theme */
