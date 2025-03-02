@@ -73,7 +73,7 @@ const ContactForm: React.FC = () => {
     };
 
     return (
-        <Card className="mx-auto border-0 shadow" style={{ maxWidth: "42rem" }}>
+        <Card className="mx-auto border-0 shadow">
             <Card.Body className="p-3 p-md-4">
                 {isSubmitted ? (
                     <Alert variant="success">

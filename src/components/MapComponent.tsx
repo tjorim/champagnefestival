@@ -32,7 +32,7 @@ const MapComponent = ({
     };
 
     return (
-        <div className="ratio ratio-16x9 rounded overflow-hidden shadow position-relative">
+        <div className="ratio ratio-16x9 rounded overflow-hidden border position-relative">
             {isLoading && (
                 <div className="position-absolute top-0 start-0 w-100 h-100 bg-dark d-flex align-items-center justify-content-center">
                     <div className="text-center">

@@ -39,39 +39,38 @@ const Carousel: React.FC<CarouselProps> = ({
     if (items.length === 0) return null;
 
     return (
-        <Card className="mx-auto my-4 border-0 shadow carousel-container">
-            <Card.Body className="p-3 p-md-4">
-                <BootstrapCarousel
-                    activeIndex={index}
-                    onSelect={handleSelect}
-                    interval={isPaused ? undefined : autoRotateInterval}
-                    indicators={true}
-                    controls={true}
-                    pause="hover"
-                    onMouseEnter={() => setIsPaused(true)}
-                    onMouseLeave={() => setIsPaused(false)}
-                >
-                    {items.map((item) => (
-                        <BootstrapCarousel.Item key={item.id}>
-                            <div className="overflow-hidden rounded shadow">
-                                <img
-                                    src={item.image}
-                                    alt={item.name}
-                                    className="w-100 img-fluid carousel-image"
-                                    onError={(e) => {
-                                        e.currentTarget.src = 'path/to/fallback-image.jpg';
-                                        e.currentTarget.onerror = null;
-                                    }}
-                                />
-                            </div>
-                            <BootstrapCarousel.Caption>
-                                <h3>{item.name}</h3>
-                            </BootstrapCarousel.Caption>
-                        </BootstrapCarousel.Item>
-                    ))}
-                </BootstrapCarousel>
-            </Card.Body>
-        </Card>
+        <div className="mx-auto my-4">
+            <BootstrapCarousel
+                activeIndex={index}
+                onSelect={handleSelect}
+                interval={isPaused ? undefined : autoRotateInterval}
+                indicators={true}
+                controls={true}
+                pause="hover"
+                onMouseEnter={() => setIsPaused(true)}
+                onMouseLeave={() => setIsPaused(false)}
+                className="carousel-with-rounded-images"
+            >
+                {items.map((item) => (
+                    <BootstrapCarousel.Item key={item.id}>
+                        <div className="overflow-hidden rounded shadow-sm">
+                            <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-100 img-fluid carousel-image"
+                                onError={(e) => {
+                                    e.currentTarget.src = 'path/to/fallback-image.jpg';
+                                    e.currentTarget.onerror = null;
+                                }}
+                            />
+                        </div>
+                        <BootstrapCarousel.Caption>
+                            <h3>{item.name}</h3>
+                        </BootstrapCarousel.Caption>
+                    </BootstrapCarousel.Item>
+                ))}
+            </BootstrapCarousel>
+        </div>
     );
 };
 

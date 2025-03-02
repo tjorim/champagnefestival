@@ -73,9 +73,9 @@ function App() {
 
         {/* What we do */}
         <section id="what-we-do" className="content-section">
-          <div className="container">
+          <div className="container text-center">
             <h2 className="section-header">{t("whatWeDo.title", "What We Do")}</h2>
-            <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
+            <p className="mx-auto">{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
             <div className="features">
               {featureItems.map((feature) => (
                 <div key={feature.id} className="feature">
@@ -89,10 +89,10 @@ function App() {
 
         {/* Next Festival with Countdown */}
         <section id="next-festival" className="content-section highlight-section">
-          <div className="container">
+          <div className="container text-center">
             <h2 className="section-header">{t("nextFestival.title", "Next Festival")}</h2>
             <Countdown targetDate={festivalDate} />
-            <p className="text-center mb-4" style={{ position: 'relative', zIndex: 50 }}>
+            <p className="mb-4 mx-auto" style={{ position: 'relative', zIndex: 50 }}>
               {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
             </p>
           </div>
@@ -100,17 +100,17 @@ function App() {
 
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
-          <div className="container">
+          <div className="container text-center">
             <h2 className="section-header">{t("schedule.title", "Schedule")}</h2>
             <div className="schedule-table">
-              <p>{t("schedule.description", "Festival schedule details go here.")}</p>
+              <p className="mx-auto">{t("schedule.description", "Festival schedule details go here.")}</p>
             </div>
           </div>
         </section>
 
         {/* Interactive Map */}
         <section id="map" className="content-section">
-          <div className="container">
+          <div className="container text-center">
             <h2 className="section-header mb-4">{t("location.title", "Event Location")}</h2>
             <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
               <Suspense fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
@@ -127,7 +127,7 @@ function App() {
 
         {/* Carousels for Producers & Sponsors */}
         <section id="carousel" className="content-section">
-          <div className="container">
+          <div className="container text-center">
             <h2 className="section-header">{t("producers.title", "Champagne Producers")}</h2>
             <SuspendedCarousel itemsType="producers" items={producerItems} />
 
@@ -138,7 +138,7 @@ function App() {
 
         {/* FAQ Section */}
         <section id="faq" className="content-section">
-          <div className="container">
+          <div className="container text-center">
             <h2 className="section-header">{t("faq.title", "Frequently Asked Questions")}</h2>
             <FAQ faqItems={faqData} />
           </div>
@@ -146,7 +146,7 @@ function App() {
 
         {/* Contact Form */}
         <section id="contact" className="content-section">
-          <div className="container">
+          <div className="container text-center">
             <h2 className="section-header">{t("contact.title", "Contact Us")}</h2>
             <p>{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
             <ContactForm />
