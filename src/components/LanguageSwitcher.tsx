@@ -39,7 +39,7 @@ const LanguageSwitcher = () => {
                 as={Button}
                 variant="dark"
                 size="sm"
-                className="text-secondary bg-dark"
+                className="text-secondary"
                 title={t("language.select", "Select language")}
             >
                 <i className="bi bi-globe2"></i>
@@ -48,7 +48,7 @@ const LanguageSwitcher = () => {
             </Dropdown.Toggle>
 
             <Dropdown.Menu
-                style={{ minWidth: "220px" }}
+                className="min-width-220"
                 align="end"
             >
                 {languages.map((lang) => (
