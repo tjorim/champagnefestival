@@ -13,15 +13,6 @@ const MapComponent = ({
     const [iframeError, setIframeError] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Simulate loading state to ensure spinner is visible
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 1500);
-
-        return () => clearTimeout(timer);
-    }, []);
-
     const handleIframeError = () => {
         setIframeError(true);
         setIsLoading(false);
