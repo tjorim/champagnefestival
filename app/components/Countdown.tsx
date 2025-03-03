@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+import { getDictionary } from "@/get-dictionary";
 
 /**
  * Props for the Countdown component
  */
 interface CountdownProps {
     targetDate: string | Date;
+    lang: string;
 }
 
 /**
@@ -32,12 +33,22 @@ enum TimeUnits {
  * Countdown component that displays time remaining until a target date
  * Handles hydration mismatches by only rendering the final countdown on client-side
  */
-const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
+const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
     const [mounted, setMounted] = useState(false);
-    const { t } = useTranslation();
+    const [dictionary, setDictionary] = useState<any>({});
     
     // Convert string date to Date object if needed
     const targetDateObj = typeof targetDate === 'string' ? new Date(targetDate) : targetDate;
+
+    // Load dictionary on client side
+    useEffect(() => {
+        const loadDictionary = async () => {
+            const dict = await getDictionary(lang);
+            setDictionary(dict);
+        };
+        
+        loadDictionary();
+    }, [lang]);
 
     // Set component as mounted after initial render
     useEffect(() => {
@@ -54,30 +65,32 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
 
         if (difference > 0) {
             return {
-                [t("countdown.days", "days")]: Math.floor(difference / TimeUnits.Day),
-                [t("countdown.hours", "hours")]: Math.floor((difference / TimeUnits.Hour) % 24),
-                [t("countdown.minutes", "minutes")]: Math.floor((difference / TimeUnits.Minute) % 60),
-                [t("countdown.seconds", "seconds")]: Math.floor((difference / TimeUnits.Second) % 60),
+                [dictionary.countdown?.days || "days"]: Math.floor(difference / TimeUnits.Day),
+                [dictionary.countdown?.hours || "hours"]: Math.floor((difference / TimeUnits.Hour) % 24),
+                [dictionary.countdown?.minutes || "minutes"]: Math.floor((difference / TimeUnits.Minute) % 60),
+                [dictionary.countdown?.seconds || "seconds"]: Math.floor((difference / TimeUnits.Second) % 60),
             };
         }
 
         return {};
-    }, [targetDateObj, t]);
+    }, [targetDateObj, dictionary]);
 
-    const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
+    const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
 
     // Update countdown every second
     useEffect(() => {
-        // Initial calculation
-        setTimeLeft(calculateTimeLeft());
-
-        const timer = setInterval(() => {
+        if (Object.keys(dictionary).length > 0) {
+            // Initial calculation
             setTimeLeft(calculateTimeLeft());
-        }, 1000);
 
-        // Clean up interval on unmount
-        return () => clearInterval(timer);
-    }, [targetDateObj, calculateTimeLeft]);
+            const timer = setInterval(() => {
+                setTimeLeft(calculateTimeLeft());
+            }, 1000);
+
+            // Clean up interval on unmount
+            return () => clearInterval(timer);
+        }
+    }, [targetDateObj, calculateTimeLeft, dictionary]);
 
     // Map time units to display components
     const timerComponents = Object.keys(timeLeft).map((interval: string) => (
@@ -97,10 +110,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
                 timerComponents.length ? (
                     <div className="countdown-units">{timerComponents}</div>
                 ) : (
-                    <span className="countdown-complete">{t("countdown.started", "Festival has started!")}</span>
+                    <span className="countdown-complete">{dictionary.countdown?.started || "Festival has started!"}</span>
                 )
             ) : (
-                <span className="countdown-loading">{t("countdown.loading", "Loading countdown...")}</span>
+                <span className="countdown-loading">{dictionary.countdown?.loading || "Loading countdown..."}</span>
             )}
         </div>
     );

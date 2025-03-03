@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { useTranslation } from "react-i18next";
 import { Card, Form, Button, Alert, Spinner } from "react-bootstrap";
+import { getDictionary, Dictionary } from "@/get-dictionary";
 
 /**
  * Form data structure
@@ -14,16 +14,41 @@ interface FormData {
     message: string;
 }
 
+interface ContactFormProps {
+    lang: string;
+}
+
 /**
  * Contact form component with validation using react-bootstrap components
  */
-const ContactForm: React.FC = () => {
-    const { t } = useTranslation();
+const ContactForm: React.FC<ContactFormProps> = ({ lang }) => {
+    const [dictionary, setDictionary] = useState<Dictionary | null>(null);
     const [form, setForm] = useState<FormData>({ name: "", email: "", message: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
+
+    // Load dictionary on client side
+    useEffect(() => {
+        const loadDictionary = async () => {
+            const dict = await getDictionary(lang);
+            setDictionary(dict);
+        };
+        
+        loadDictionary();
+    }, [lang]);
+
+    // Don't render form until dictionary is loaded
+    if (!dictionary) {
+        return (
+            <Card className="mx-auto border-0 shadow">
+                <Card.Body className="p-3 p-md-4 d-flex justify-content-center">
+                    <Spinner animation="border" />
+                </Card.Body>
+            </Card>
+        );
+    }
 
     // Handle form field changes
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -49,10 +74,10 @@ const ContactForm: React.FC = () => {
 
         // Basic validation
         const newErrors: Partial<Record<keyof FormData, string | null>> = {};
-        if (!form.name) newErrors.name = t("contact.errors.nameRequired", "Name is required");
-        if (!form.email) newErrors.email = t("contact.errors.emailRequired", "Email is required");
-        else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = t("contact.errors.emailInvalid", "Please enter a valid email address");
-        if (!form.message) newErrors.message = t("contact.errors.messageRequired", "Message is required");
+        if (!form.name) newErrors.name = dictionary.contact.errors.nameRequired;
+        if (!form.email) newErrors.email = dictionary.contact.errors.emailRequired;
+        else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = dictionary.contact.errors.emailInvalid;
+        if (!form.message) newErrors.message = dictionary.contact.errors.messageRequired;
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -68,7 +93,7 @@ const ContactForm: React.FC = () => {
             setErrors({});
         } catch (error) {
             console.error("Form submission error", error);
-            setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
+            setGeneralError(dictionary.contact.submissionError);
         } finally {
             setIsSubmitting(false);
         }
@@ -79,7 +104,7 @@ const ContactForm: React.FC = () => {
             <Card.Body className="p-3 p-md-4">
                 {isSubmitted ? (
                     <Alert variant="success">
-                        {t("contact.successMessage", "Thank you for your message! We'll get back to you soon.")}
+                        {dictionary.contact.successMessage}
                     </Alert>
                 ) : (
                     <Form onSubmit={handleSubmit} className="my-3">
@@ -92,7 +117,7 @@ const ContactForm: React.FC = () => {
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="name">
-                                {t("contact.name", "Your Name")}
+                                {dictionary.contact.name}
                             </Form.Label>
                             <Form.Control
                                 id="name"
@@ -111,7 +136,7 @@ const ContactForm: React.FC = () => {
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="email">
-                                {t("contact.email", "Your Email")}
+                                {dictionary.contact.email}
                             </Form.Label>
                             <Form.Control
                                 id="email"
@@ -131,7 +156,7 @@ const ContactForm: React.FC = () => {
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="message">
-                                {t("contact.message", "Your Message")}
+                                {dictionary.contact.message}
                             </Form.Label>
                             <Form.Control
                                 as="textarea"
@@ -139,7 +164,7 @@ const ContactForm: React.FC = () => {
                                 name="message"
                                 value={form.message}
                                 onChange={handleChange}
-                                placeholder={t("contact.placeholderMessage", "Type your message here...")}
+                                placeholder={dictionary.contact.placeholderMessage}
                                 style={{ minHeight: "120px" }}
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.message}
@@ -161,12 +186,12 @@ const ContactForm: React.FC = () => {
                             {isSubmitting ? (
                                 <span className="d-flex align-items-center justify-content-center">
                                     <Spinner animation="border" size="sm" className="me-2" />
-                                    {t("contact.submitting", "Sending...")}
+                                    {dictionary.contact.submitting}
                                 </span>
                             ) : (
                                 <span className="d-flex align-items-center justify-content-center">
                                     <i className="bi bi-send me-2"></i>
-                                    {t("contact.submit", "Send Message")}
+                                    {dictionary.contact.submit}
                                 </span>
                             )}
                         </Button>

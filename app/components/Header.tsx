@@ -1,22 +1,30 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 import { Navbar, Container } from 'react-bootstrap';
+import { getDictionary } from '@/get-dictionary';
 
 interface HeaderProps {
     logoSrc?: string;
+    lang: string;
 }
 
-const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
-    const { t } = useTranslation();
+const Header = ({ logoSrc = "/images/logo.svg", lang }: HeaderProps) => {
+    // We'll use local dictionary lookup for client components
+    // This is called client dictionary pattern
+    const dictionary = async () => {
+        const dict = await getDictionary(lang);
+        return dict;
+    };
 
     return (
         <Navbar fixed="top" bg="dark" variant="dark" className="shadow">
             <Container className="d-flex justify-content-between">
                 {/* Logo / Title */}
-                <Navbar.Brand href="#welcome" className="d-flex align-items-center">
+                <Navbar.Brand href={`/${lang}#welcome`} className="d-flex align-items-center">
                     <Image
                         src={logoSrc}
                         alt="Champagne Festival logo"
@@ -25,12 +33,12 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
                         className="me-2"
                     />
                     <span className="gradient-text">
-                        {t("festivalName", "Champagne Festival")}
+                        Champagne Festival
                     </span>
                 </Navbar.Brand>
 
                 {/* Language Switcher */}
-                <LanguageSwitcher />
+                <LanguageSwitcher currentLang={lang} />
             </Container>
         </Navbar>
     );

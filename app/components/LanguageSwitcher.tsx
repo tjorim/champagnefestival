@@ -1,36 +1,46 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Dropdown, Button } from "react-bootstrap";
+import { languages } from '@/get-dictionary';
 
-const LanguageSwitcher = () => {
-    const { i18n, t } = useTranslation();
-    const currentLang = i18n.language;
-    const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
+interface LanguageSwitcherProps {
+    currentLang: string;
+}
+
+const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
+    const [mounted, setMounted] = useState(false);
+    const router = useRouter();
+    const pathname = usePathname();
 
     // Prevent hydration issues by not rendering on first mount
     useEffect(() => {
-        setPreventHydrationIssue(true);
+        setMounted(true);
     }, []);
 
     // Language definitions
-    const languages = [
+    const languageOptions = [
         { code: 'en', label: 'English', flag: '🇬🇧', nativeName: 'English' },
         { code: 'nl', label: 'Dutch', flag: '🇳🇱', nativeName: 'Nederlands' },
         { code: 'fr', label: 'French', flag: '🇫🇷', nativeName: 'Français' },
     ];
 
     // Find current language details
-    const currentLanguage = languages.find(lang => lang.code === currentLang) || languages[0];
+    const currentLanguageOption = languageOptions.find(lang => lang.code === currentLang) || languageOptions[0];
 
-    // Handle language change
+    // Handle language change - redirects to the same page with a different locale
     const changeLanguage = (langCode: string) => {
-        i18n.changeLanguage(langCode);
+        const newPathname = pathname.replace(/^\/[^\/]+/, `/${langCode}`);
+        router.push(newPathname);
+        
+        // Set cookie for language preference
+        document.cookie = `NEXT_LOCALE=${langCode}; path=/; max-age=31536000; SameSite=Lax`;
     };
 
     // Don't render anything during server-side rendering to prevent hydration issues
-    if (!preventHydrationIssue) {
+    if (!mounted) {
         return <div className="mr-4"></div>;
     }
 
@@ -42,18 +52,17 @@ const LanguageSwitcher = () => {
                 size="sm"
                 className="text-secondary"
                 aria-label="Language selection"
-                title={t("language.select", "Select language")}
+                title="Select language"
             >
                 <i className="bi bi-globe2"></i>
-                <span className="d-none d-sm-inline ms-2">{currentLanguage.code.toUpperCase()}</span>
-                {/* Bootstrap dropdown toggle already includes a chevron */}
+                <span className="d-none d-sm-inline ms-2">{currentLanguageOption.code.toUpperCase()}</span>
             </Dropdown.Toggle>
 
             <Dropdown.Menu
                 className="min-width-220"
                 align="end"
             >
-                {languages.map((lang) => (
+                {languageOptions.map((lang) => (
                     <Dropdown.Item
                         key={lang.code}
                         className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
