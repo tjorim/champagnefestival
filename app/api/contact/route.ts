@@ -38,22 +38,37 @@ export async function POST(request: Request) {
     // 3. Log the contact request
     // For now, we'll just simulate a successful operation
     
-    // In a real application, you would use something like:
+    // For Cloudflare Pages, we need to use Cloudflare-compatible approaches:
+    // Option 1: Use Cloudflare Workers Email API:
     /*
-    await db.contact.create({
-      data: {
-        name: body.name,
-        email: body.email,
-        message: body.message,
-        createdAt: new Date(),
+    await fetch('https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/email/routing/rules', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + process.env.CLOUDFLARE_API_TOKEN,
+        'Content-Type': 'application/json'
       },
+      body: JSON.stringify({
+        to: 'info@champagnefestival.com',
+        subject: 'New Contact Form Submission',
+        body: `Name: ${body.name}\nEmail: ${body.email}\nMessage: ${body.message}`,
+      })
     });
+    */
     
-    // Or send an email
-    await sendEmail({
-      to: 'info@champagnefestival.com',
-      subject: 'New Contact Form Submission',
-      text: `Name: ${body.name}\nEmail: ${body.email}\nMessage: ${body.message}`,
+    // Option 2: Use an email service with a REST API (SendGrid, Resend, etc.)
+    /*
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + process.env.RESEND_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'contact@champagnefestival.com',
+        to: 'info@champagnefestival.com',
+        subject: 'New Contact Form Submission',
+        text: `Name: ${body.name}\nEmail: ${body.email}\nMessage: ${body.message}`,
+      })
     });
     */
     
