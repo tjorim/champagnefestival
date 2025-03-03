@@ -7,6 +7,7 @@
     "whatWeDo": {
         "title": "Ce Que Nous Faisons",
         "description": "Notre festival réunit les producteurs de champagne, les passionnés et la communauté pour une célébration de cette magnifique boisson.",
+        "forEveryone": "Que vous soyez un connaisseur de champagne ou que vous aimiez simplement déguster occasionnellement un verre de bulles, ce festival offre quelque chose pour tout le monde.",
         "feature1": {
             "title": "Rencontrez les Producteurs",
             "description": "Rencontrez des producteurs du monde entier et découvrez leur savoir-faire."
@@ -29,7 +30,13 @@
         "description": "Les détails du programme du festival sont présentés ici."
     },
     "location": {
-        "title": "Lieu de l'Événement"
+        "title": "Lieu de l'Événement",
+        "venueName": "Grand Palais des Expositions",
+        "venueDescription": "Situé au cœur de la ville, notre lieu offre un mélange parfait d'élégance et d'accessibilité. Le Grand Palais des Expositions dispose d'installations ultramodernes avec une architecture remarquable.",
+        "address": "Adresse",
+        "addressValue": "123 Boulevard du Festival, Centre-Ville",
+        "openingHours": "Heures d'Ouverture",
+        "openingHoursValue": "11h00 - 20h00"
     },
     "countdown": {
         "days": "jours",
@@ -61,12 +68,19 @@
     "contact": {
         "title": "Contactez-Nous",
         "intro": "Vous avez des questions ou vous souhaitez devenir sponsor ? Contactez-nous !",
+        "alternativeContact": "Vous pouvez également nous joindre via :",
+        "emailLabel": "Email",
+        "emailValue": "info@champagnefestival.com",
+        "phoneLabel": "Téléphone",
+        "phoneValue": "+1 (555) 123-4567",
         "name": "Votre Nom",
         "email": "Votre Email",
         "message": "Votre Message",
+        "placeholderMessage": "Comment pouvons-nous vous aider ?",
         "submitting": "Envoi en cours...",
         "submit": "Envoyer le Message",
         "successMessage": "Merci pour votre message ! Nous vous répondrons bientôt.",
+        "submissionError": "Une erreur s'est produite lors de l'envoi de votre message. Veuillez réessayer.",
         "errors": {
             "nameRequired": "Le nom est requis",
             "emailRequired": "L'email est requis",
@@ -79,6 +93,8 @@
     },
     "festivalName": "Festival du Champagne",
     "loading": "Chargement...",
+    "loadingBackground": "Chargement de l'image d'arrière-plan...",
+    "error": "Une erreur s'est produite. Veuillez réessayer.",
     "footer": {
         "rights": "Tous droits réservés.",
         "privacy": "Politique de Confidentialité",

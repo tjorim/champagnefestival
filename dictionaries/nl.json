@@ -7,6 +7,7 @@
     "whatWeDo": {
         "title": "Wat Wij Doen",
         "description": "Ons festival brengt champagneproducenten, liefhebbers en de gemeenschap samen voor een viering van deze prachtige drank.",
+        "forEveryone": "Of je nu een champagnekenner bent of gewoon af en toe geniet van een glaasje bubbels, dit festival heeft voor iedereen iets te bieden.",
         "feature1": {
             "title": "Ontmoet Producenten",
             "description": "Ontmoet producenten van over de hele wereld en leer over hun ambacht."
@@ -29,7 +30,13 @@
         "description": "Details van het festivalprogramma vindt u hier."
     },
     "location": {
-        "title": "Locatie"
+        "title": "Locatie",
+        "venueName": "Grand Exhibition Hall",
+        "venueDescription": "Centraal gelegen in het hart van de stad biedt onze locatie een perfecte mix van elegantie en toegankelijkheid. De Grand Exhibition Hall beschikt over ultramoderne faciliteiten met een prachtige architectuur.",
+        "address": "Adres",
+        "addressValue": "123 Festival Boulevard, Stadscentrum",
+        "openingHours": "Openingstijden",
+        "openingHoursValue": "11:00 - 20:00"
     },
     "countdown": {
         "days": "dagen",
@@ -61,12 +68,19 @@
     "contact": {
         "title": "Contact",
         "intro": "Heeft u vragen of wilt u sponsor worden? Neem contact met ons op!",
+        "alternativeContact": "U kunt ons ook bereiken via:",
+        "emailLabel": "E-mail",
+        "emailValue": "info@champagnefestival.com",
+        "phoneLabel": "Telefoon",
+        "phoneValue": "+1 (555) 123-4567",
         "name": "Uw Naam",
         "email": "Uw E-mail",
         "message": "Uw Bericht",
+        "placeholderMessage": "Hoe kunnen wij u helpen?",
         "submitting": "Versturen...",
         "submit": "Verstuur Bericht",
         "successMessage": "Bedankt voor uw bericht! We nemen zo snel mogelijk contact met u op.",
+        "submissionError": "Er is een fout opgetreden bij het verzenden van uw bericht. Probeer het opnieuw.",
         "errors": {
             "nameRequired": "Naam is verplicht",
             "emailRequired": "E-mail is verplicht",
@@ -79,6 +93,8 @@
     },
     "festivalName": "Champagne Festival",
     "loading": "Laden...",
+    "loadingBackground": "Achtergrondafbeelding laden...",
+    "error": "Er is een fout opgetreden. Probeer het opnieuw.",
     "footer": {
         "rights": "Alle rechten voorbehouden.",
         "privacy": "Privacybeleid",

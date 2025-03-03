@@ -10,6 +10,7 @@ export interface Dictionary {
   whatWeDo: {
     title: string;
     description: string;
+    forEveryone: string;
     feature1: {
       title: string;
       description: string;
@@ -33,6 +34,12 @@ export interface Dictionary {
   };
   location: {
     title: string;
+    venueName: string;
+    venueDescription: string;
+    address: string;
+    addressValue: string;
+    openingHours: string;
+    openingHoursValue: string;
   };
   countdown: {
     days: string;
@@ -64,6 +71,11 @@ export interface Dictionary {
   contact: {
     title: string;
     intro: string;
+    alternativeContact: string;
+    emailLabel: string;
+    emailValue: string;
+    phoneLabel: string;
+    phoneValue: string;
     name: string;
     email: string;
     message: string;

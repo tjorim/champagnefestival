@@ -86,14 +86,30 @@ const ContactForm: React.FC<ContactFormProps> = ({ lang }) => {
         }
 
         try {
-            // Simulate API call (replace with actual API call in real app)
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Use Next.js Server Action to handle form submission
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(form),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Something went wrong');
+            }
+            
             setIsSubmitted(true);
             setForm({ name: "", email: "", message: "" });
             setErrors({});
         } catch (error) {
             console.error("Form submission error", error);
-            setGeneralError(dictionary.contact.submissionError);
+            setGeneralError(
+                error instanceof Error 
+                    ? error.message 
+                    : dictionary.contact.submissionError
+            );
         } finally {
             setIsSubmitting(false);
         }

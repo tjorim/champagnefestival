@@ -44,7 +44,7 @@ export default async function Home({ params }: { params: { lang: string } }) {
                   {dict.whatWeDo.description}
                 </p>
                 <p>
-                  {"Whether you're a champagne connoisseur or simply enjoy the occasional glass of bubbly, this festival offers something for everyone."}
+                  {dict.whatWeDo.forEveryone}
                 </p>
               </Col>
               <Col md={6}>
@@ -71,7 +71,7 @@ export default async function Home({ params }: { params: { lang: string } }) {
           <Container>
             <h2 className="section-header">{dict.producers.title}</h2>
             <Suspense fallback={<div className="carousel-loading">{dict.loading}</div>}>
-              <Carousel />
+              <Carousel itemsType="producers" />
             </Suspense>
           </Container>
         </section>
@@ -81,17 +81,15 @@ export default async function Home({ params }: { params: { lang: string } }) {
             <h2 className="section-header">{dict.location.title}</h2>
             <Row className="mt-4">
               <Col lg={6}>
-                <h3>Grand Exhibition Hall</h3>
+                <h3>{dict.location.venueName}</h3>
                 <p>
-                  Located in the heart of the city, our venue offers a perfect blend
-                  of elegance and accessibility. The Grand Exhibition Hall features 
-                  state-of-the-art facilities with stunning architecture.
+                  {dict.location.venueDescription}
                 </p>
                 <p>
-                  <strong>Address:</strong> 123 Festival Boulevard, City Center
+                  <strong>{dict.location.address}:</strong> {dict.location.addressValue}
                 </p>
                 <p>
-                  <strong>Opening Hours:</strong> 11:00 AM - 8:00 PM
+                  <strong>{dict.location.openingHours}:</strong> {dict.location.openingHoursValue}
                 </p>
               </Col>
               <Col lg={6}>
@@ -119,13 +117,13 @@ export default async function Home({ params }: { params: { lang: string } }) {
                   {dict.contact.intro}
                 </p>
                 <p>
-                  Alternatively, you can reach us at:
+                  {dict.contact.alternativeContact}
                 </p>
                 <p>
-                  <strong>Email:</strong> info@champagnefestival.com
+                  <strong>{dict.contact.emailLabel}:</strong> {dict.contact.emailValue}
                 </p>
                 <p>
-                  <strong>Phone:</strong> +1 (555) 123-4567
+                  <strong>{dict.contact.phoneLabel}:</strong> {dict.contact.phoneValue}
                 </p>
               </Col>
               <Col md={6}>
