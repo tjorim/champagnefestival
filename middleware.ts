@@ -5,6 +5,16 @@ import { languages, defaultLanguage } from './get-dictionary';
 const locales = languages;
 const defaultLocale = defaultLanguage;
 
+/**
+ * Determines and returns the locale for a given Next.js request.
+ *
+ * The function first checks for a valid locale in the 'NEXT_LOCALE' cookie. If the cookie is absent or invalid,
+ * it parses the 'accept-language' header to extract the client's preferred languages and returns the first matching
+ * supported locale. If no match is found, the default locale is returned.
+ *
+ * @param request - The Next.js request object containing cookies and headers.
+ * @returns The selected locale as a string.
+ */
 function getLocale(request: NextRequest): string {
   // Check if locale is in cookie
   const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
@@ -30,6 +40,15 @@ function getLocale(request: NextRequest): string {
   return defaultLocale;
 }
 
+/**
+ * Redirects an incoming request to a locale-specific URL if the pathname does not already include a supported locale.
+ *
+ * The middleware checks if the request's pathname begins with a locale (e.g., "/en", "/fr"). If not, it
+ * determines the appropriate locale using `getLocale`, prepends the locale to the pathname, and returns a
+ * redirect response to the updated URL. If the pathname already contains a valid locale, no redirection occurs.
+ *
+ * @returns A redirect response with the locale-prefixed URL if redirection is applied, or undefined otherwise.
+ */
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
