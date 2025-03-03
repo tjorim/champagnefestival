@@ -7,10 +7,28 @@ import { languages, getDictionary } from '@/lib/i18n';
 
 const inter = Inter({ subsets: ['latin'] });
 
+/**
+ * Generates an array of static parameter objects for each supported language.
+ *
+ * This asynchronous function maps over the available languages and returns an array of objects, each containing a language code.
+ * The resulting array is used by Next.js to statically generate localized routes.
+ *
+ * @returns An array of objects with a "lang" property for each language.
+ */
 export async function generateStaticParams() {
   return languages.map(lang => ({ lang }));
 }
 
+/**
+ * Asynchronously generates SEO, OpenGraph, and Twitter metadata for the festival website using a localized dictionary.
+ *
+ * This function retrieves localization content based on the provided language code and constructs a metadata object
+ * that includes the title, description, keywords, social sharing details, alternate language URLs, and robots directives.
+ * The base URL is determined from an environment variable or defaults to "https://champagnefestival.com".
+ *
+ * @param params - An object containing the language code as `lang` for localization.
+ * @returns A promise that resolves to the metadata configuration.
+ */
 export async function generateMetadata({ params }: { params: { lang: string } }): Promise<Metadata> {
   // Get the dictionary based on the language
   const dict = await getDictionary(params.lang);
@@ -64,6 +82,14 @@ export async function generateMetadata({ params }: { params: { lang: string } })
   };
 };
 
+/**
+ * Renders the root layout for the application.
+ *
+ * This component establishes the HTML structure by setting the document's language attribute based on the provided parameters and applying a dark Bootstrap theme. It wraps and displays the child components within a container keyed by the language.
+ *
+ * @param children - The components to be rendered within the layout.
+ * @param params - An object containing the language code used to set the HTML element's `lang` attribute.
+ */
 export default function RootLayout({
   children,
   params

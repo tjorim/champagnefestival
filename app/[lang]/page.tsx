@@ -12,6 +12,16 @@ import FAQ from '@/app/components/FAQ';
 import MapComponent from '@/app/components/MapComponent';
 import ContactForm from '@/app/components/ContactForm';
 
+/**
+ * Renders the Home page for the festival website using localized data.
+ *
+ * This asynchronous component fetches the necessary content based on the provided language code. It retrieves dictionary data, carousel items, event details, and FAQ items, and then renders multiple sections including a hero section with countdown, about, producers gallery, venue details with a map, FAQ, and a contact form. The component utilizes lazy loading via React's Suspense for the carousel and map components to display fallback loading indicators during data fetching.
+ *
+ * @param params - An object that contains the language code.
+ * @param params.lang - The language code used to load localized content.
+ *
+ * @returns A JSX element representing the complete Home page layout.
+ */
 export default async function Home({ params }: { params: { lang: string } }) {
   // Get all data in parallel for the current language
   const [dict, producerItems, eventDetails] = await Promise.all([

@@ -11,6 +11,15 @@ export const metadata: Metadata = {
   description: 'Annual Champagne Festival',
 };
 
+/**
+ * Renders the root layout for the application.
+ *
+ * This component establishes the overall HTML structure by setting the document language to English and applying a dark Bootstrap theme along with global Inter font styling. It wraps and displays the provided children within the body element.
+ *
+ * @param children - The content to be rendered inside the layout.
+ *
+ * @returns A JSX element representing the complete HTML structure for the application.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{
