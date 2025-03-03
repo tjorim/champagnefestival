@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from "react";
-import { getDictionary } from "@/get-dictionary";
+import { getDictionary } from "@/lib/i18n";
 
 /**
  * Props for the Countdown component

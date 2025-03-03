@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import PrivacyPolicy from "./PrivacyPolicy";
 import { Container, Row, Col, Button } from "react-bootstrap";
-import { getDictionary } from "@/get-dictionary";
+import { getDictionary } from "@/lib/i18n";
 
 interface FooterProps {
     lang: string;

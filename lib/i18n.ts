@@ -141,12 +141,16 @@ export const defaultLanguage = 'nl';
 
 // Import dictionaries using dynamic imports
 const dictionaries: Record<string, () => Promise<Dictionary>> = {
-  en: () => import('./dictionaries/en.json').then((module) => module.default),
-  fr: () => import('./dictionaries/fr.json').then((module) => module.default),
-  nl: () => import('./dictionaries/nl.json').then((module) => module.default),
+  en: () => import('@/dictionaries/en.json').then((module) => module.default),
+  fr: () => import('@/dictionaries/fr.json').then((module) => module.default),
+  nl: () => import('@/dictionaries/nl.json').then((module) => module.default),
 };
 
-// Function to get a dictionary for a specific locale
+/**
+ * Get a dictionary for a specific locale
+ * @param locale - The locale to get the dictionary for
+ * @returns The dictionary for the requested locale
+ */
 export const getDictionary = async (locale: string = defaultLanguage): Promise<Dictionary> => {
   // Default to defaultLanguage if the requested locale is not available
   const requestedDictionary = dictionaries[locale] || dictionaries[defaultLanguage];

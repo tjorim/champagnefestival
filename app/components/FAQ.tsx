@@ -1,28 +1,22 @@
 'use client';
 
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { Accordion } from "react-bootstrap";
 
 /**
- * FAQ item structure from config
+ * FAQ item structure
  */
-interface FAQConfigItem {
-    question: {
-        labelKey: string;
-        defaultLabel: string;
-    };
-    answer: {
-        labelKey: string;
-        defaultLabel: string;
-    };
+interface FAQItem {
+    id: number;
+    question: string;
+    answer: string;
 }
 
 /**
  * Props for the FAQ component
  */
 interface FAQProps {
-    faqItems?: FAQConfigItem[];
+    items?: FAQItem[];
 }
 
 /**
@@ -30,21 +24,13 @@ interface FAQProps {
  * with expandable/collapsible answers in an accessible accordion pattern
  * Using react-bootstrap accordion
  */
-const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
-    const { t } = useTranslation();
-
-    // Transform config items to displayable items with translations
-    const faqData = faqItems?.map(item => ({
-        question: t(item.question.labelKey, item.question.defaultLabel),
-        answer: t(item.answer.labelKey, item.answer.defaultLabel)
-    })) || [];
-
+const FAQ: React.FC<FAQProps> = ({ items = [] }) => {
     return (
         <Accordion className="rounded-lg shadow-lg">
-            {faqData.map((faq, index) => (
+            {items.map((faq) => (
                 <Accordion.Item
-                    key={index}
-                    eventKey={`${index}`}
+                    key={faq.id}
+                    eventKey={`${faq.id}`}
                 >
                     <Accordion.Header>
                         {faq.question}

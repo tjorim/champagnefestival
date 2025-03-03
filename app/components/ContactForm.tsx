@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Card, Form, Button, Alert, Spinner } from "react-bootstrap";
-import { getDictionary, Dictionary } from "@/get-dictionary";
+import { getDictionary, Dictionary } from "@/lib/i18n";
 
 /**
  * Form data structure

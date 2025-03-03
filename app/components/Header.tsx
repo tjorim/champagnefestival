@@ -2,10 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 import { Navbar, Container } from 'react-bootstrap';
-import { getDictionary } from '@/get-dictionary';
+import { getDictionary } from '@/lib/i18n';
 
 interface HeaderProps {
     logoSrc?: string;

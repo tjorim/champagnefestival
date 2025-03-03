@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from "react-bootstrap";
-import { getDictionary } from "@/get-dictionary";
+import { getDictionary } from "@/lib/i18n";
 
 interface PrivacyPolicyProps {
   isOpen: boolean;

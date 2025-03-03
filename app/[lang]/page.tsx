@@ -1,17 +1,28 @@
 import { Suspense } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
-import { getDictionary } from '@/get-dictionary';
+import { getCarouselItems, getFaqItems, getEventDetails, getDictionaryData } from '@/lib/data';
+
+// Import UI components
 import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
-import Countdown from '@/app/components/Countdown';
 import BubbleBackground from '@/app/components/BubbleBackground';
+import Countdown from '@/app/components/Countdown';
 import Carousel from '@/app/components/Carousel';
 import FAQ from '@/app/components/FAQ';
 import MapComponent from '@/app/components/MapComponent';
 import ContactForm from '@/app/components/ContactForm';
 
 export default async function Home({ params }: { params: { lang: string } }) {
-  const dict = await getDictionary(params.lang);
+  // Get all data in parallel for the current language
+  const [dict, producerItems, eventDetails] = await Promise.all([
+    getDictionaryData(params.lang),
+    getCarouselItems('producers'),
+    // getEventDetails requires dict, so we'll get it separately
+    getDictionaryData(params.lang).then(dict => getEventDetails(dict))
+  ]);
+  
+  // Get FAQ items after we have the dictionary
+  const faqItems = await getFaqItems(dict);
   
   return (
     <>
@@ -22,19 +33,21 @@ export default async function Home({ params }: { params: { lang: string } }) {
       <BubbleBackground />
       
       <main id="main-content">
+        {/* Hero Section */}
         <section className="hero" id="home">
           <Container>
             <h1>{dict.festivalName} 2025</h1>
             <p className="hero-subtitle">
               {dict.welcome.subtitle}
             </p>
-            <Countdown targetDate="2025-06-15T12:00:00" lang={params.lang} />
+            <Countdown targetDate={eventDetails.dates.start} lang={params.lang} />
             <a href="#tickets" className="cta-button">
               {dict.welcome.learnMore}
             </a>
           </Container>
         </section>
 
+        {/* About Section */}
         <section className="content-section" id="about">
           <Container>
             <h2 className="section-header">{dict.whatWeDo.title}</h2>
@@ -67,15 +80,17 @@ export default async function Home({ params }: { params: { lang: string } }) {
           </Container>
         </section>
 
+        {/* Producers Section with Carousel */}
         <section className="content-section highlight-section" id="gallery">
           <Container>
             <h2 className="section-header">{dict.producers.title}</h2>
             <Suspense fallback={<div className="carousel-loading">{dict.loading}</div>}>
-              <Carousel itemsType="producers" />
+              <Carousel itemsType="producers" items={producerItems} />
             </Suspense>
           </Container>
         </section>
 
+        {/* Venue Section with Map */}
         <section className="content-section" id="venue">
           <Container>
             <h2 className="section-header">{dict.location.title}</h2>
@@ -94,20 +109,22 @@ export default async function Home({ params }: { params: { lang: string } }) {
               </Col>
               <Col lg={6}>
                 <Suspense fallback={<div className="map-loading">{dict.loading}</div>}>
-                  <MapComponent />
+                  <MapComponent address={eventDetails.location.address} />
                 </Suspense>
               </Col>
             </Row>
           </Container>
         </section>
 
+        {/* FAQ Section */}
         <section className="content-section highlight-section" id="faq">
           <Container>
             <h2 className="section-header">{dict.faq.title}</h2>
-            <FAQ />
+            <FAQ items={faqItems} />
           </Container>
         </section>
 
+        {/* Contact Section with Form */}
         <section className="content-section" id="contact">
           <Container>
             <h2 className="section-header">{dict.contact.title}</h2>
