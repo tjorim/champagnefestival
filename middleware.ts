@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { languages, defaultLanguage } from './get-dictionary';
+import { languages, defaultLanguage } from './lib/i18n';
 
-// Use the languages and defaultLanguage from get-dictionary.ts
+// Use the languages and defaultLanguage from lib/i18n.ts
 const locales = languages;
 const defaultLocale = defaultLanguage;
 
@@ -27,7 +27,7 @@ function getLocale(request: NextRequest): string {
   if (acceptLanguage) {
     const preferredLanguages = acceptLanguage
       .split(',')
-      .map(lang => lang.split(';')[0].trim().substring(0, 2).toLowerCase());
+      .map(lang => lang.split(';')[0].trim().split('-')[0].toLowerCase());
     
     for (const lang of preferredLanguages) {
       if (locales.includes(lang)) {

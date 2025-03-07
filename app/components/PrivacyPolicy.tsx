@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from "react-bootstrap";
-import { getDictionary } from "@/lib/i18n";
+import { getDictionary, Dictionary } from "@/lib/i18n";
 
 interface PrivacyPolicyProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface PrivacyPolicyProps {
 }
 
 const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose, lang }) => {
-  const [dictionary, setDictionary] = useState<any>({});
+  const [dictionary, setDictionary] = useState<Dictionary>({} as Dictionary);
   
   // Load dictionary on client side
   useEffect(() => {

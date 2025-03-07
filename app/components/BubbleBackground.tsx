@@ -71,6 +71,14 @@ const BubbleBackground: React.FC = () => {
     // Generate bubbles only after mounting to avoid hydration mismatches
     useEffect(() => {
         if (mounted && bubbleCount > 0) {
+            // Create a stable seed for randomization to avoid infinite re-renders
+            const seed = Date.now(); // Fixed seed for this render cycle
+            const random = (index: number, max: number) => {
+                // Simple deterministic random number generator using the seed and index
+                const value = Math.sin(seed + index) * 10000;
+                return Math.abs(value - Math.floor(value)) * max;
+            };
+            
             const generatedBubbles = Array.from({ length: bubbleCount }, (_, i) => {
                 // Adjust animation properties based on performance capacity
                 const sizeFactor = isLowPerformanceDevice ? 0.7 : 1;
@@ -79,10 +87,10 @@ const BubbleBackground: React.FC = () => {
                 return (
                     <Bubble
                         key={i}
-                        size={Math.random() * 20 * sizeFactor + 5} // between 5px and 25px (or smaller on low-end)
-                        duration={(Math.random() * 10 + 5) * durationFactor} // between 5s and 15s (or longer on low-end)
-                        delay={Math.random() * 5} // delay up to 5s
-                        left={Math.random() * 100} // random horizontal position
+                        size={random(i, 20) * sizeFactor + 5} // between 5px and 25px (or smaller on low-end)
+                        duration={(random(i + bubbleCount, 10) + 5) * durationFactor} // between 5s and 15s (or longer on low-end)
+                        delay={random(i + bubbleCount * 2, 5)} // delay up to 5s
+                        left={random(i + bubbleCount * 3, 100)} // random horizontal position
                     />
                 );
             });

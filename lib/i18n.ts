@@ -1,5 +1,3 @@
-import 'server-only';
-
 // Strongly typed dictionary structure based on our English translations
 export interface Dictionary {
   welcome: {

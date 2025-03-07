@@ -7,6 +7,10 @@
 - `npm run lint`: Run ESLint on the codebase
 - `npm run typecheck`: Run TypeScript check with no emit
 
+## Important Notes
+- Do not attempt to run the application with `npm run dev` during development as the environment may not be set up correctly
+- Focus on fixing code issues through static analysis rather than running the application
+
 ## Code Style Guidelines
 - **Imports**: Group imports: React, Next.js, libraries, components, utils/types
 - **Components**: Use functional components with TypeScript interfaces

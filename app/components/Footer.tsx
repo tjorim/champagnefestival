@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import PrivacyPolicy from "./PrivacyPolicy";
 import { Container, Row, Col, Button } from "react-bootstrap";
-import { getDictionary } from "@/lib/i18n";
+import { getDictionary, Dictionary } from "@/lib/i18n";
 
 interface FooterProps {
     lang: string;
@@ -12,7 +12,7 @@ interface FooterProps {
 const Footer = ({ lang }: FooterProps) => {
     const currentYear = new Date().getFullYear();
     const [privacyOpen, setPrivacyOpen] = useState(false);
-    const [dictionary, setDictionary] = useState<any>({});
+    const [dictionary, setDictionary] = useState<Dictionary>({} as Dictionary);
     
     // Load dictionary on client side
     useEffect(() => {

@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
 import { Dropdown, Button } from "react-bootstrap";
-import { languages } from '@/lib/i18n';
 
 interface LanguageSwitcherProps {
     currentLang: string;

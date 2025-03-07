@@ -6,6 +6,7 @@ import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// Generate standard metadata for non-localized routes
 export const metadata: Metadata = {
   title: 'Champagne Festival',
   description: 'Annual Champagne Festival',
@@ -26,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-bs-theme="dark">
-      <body className={inter.className}>
+    <html lang="en" data-bs-theme="dark" style={{transitionProperty: "none", marginRight: "0px"}}>
+      <body className={`${inter.className} rounded-avatar`}>
         {children}
       </body>
     </html>

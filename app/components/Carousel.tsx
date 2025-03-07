@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from "react";
-import { Card, Carousel as BootstrapCarousel } from "react-bootstrap";
+import { Carousel as BootstrapCarousel } from "react-bootstrap";
 import Image from "next/image";
 
 /**
@@ -76,15 +76,19 @@ const Carousel: React.FC<CarouselProps> = ({
                 {items.map((item) => (
                     <BootstrapCarousel.Item key={item.id}>
                         <div className="overflow-hidden rounded shadow-sm">
-                            <img
-                                src={item.image}
-                                alt={item.name}
-                                className="w-100 img-fluid carousel-image"
-                                onError={(e) => {
-                                    e.currentTarget.src = '/images/logo.svg';
-                                    e.currentTarget.onerror = null;
-                                }}
-                            />
+                            <div className="position-relative w-100" style={{ aspectRatio: '16/9' }}>
+                                <Image
+                                    src={item.image}
+                                    alt={item.name}
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 800px"
+                                    className="carousel-image object-cover rounded"
+                                    onError={() => {
+                                        // Using a fallback image if the main image fails to load
+                                        console.error(`Failed to load image: ${item.image}`);
+                                    }}
+                                />
+                            </div>
                         </div>
                         <BootstrapCarousel.Caption>
                             <h3>{item.name}</h3>

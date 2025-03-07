@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Champagne Festival website using React and Bootstrap",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

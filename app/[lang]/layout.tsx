@@ -1,11 +1,8 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../globals.css';
-import { languages, getDictionary } from '@/lib/i18n';
-
-const inter = Inter({ subsets: ['latin'] });
+import { languages, getDictionary, defaultLanguage } from '@/lib/i18n';
 
 /**
  * Generates an array of static parameter objects for each supported language.
@@ -29,9 +26,16 @@ export async function generateStaticParams() {
  * @param params - An object containing the language code as `lang` for localization.
  * @returns A promise that resolves to the metadata configuration.
  */
-export async function generateMetadata({ params }: { params: { lang: string } }): Promise<Metadata> {
+export async function generateMetadata({ 
+  params 
+}: { 
+  params: { lang: string }
+}): Promise<Metadata> {
+  // Use searchParams pattern to properly handle dynamic params
+  const lang = (await params)?.lang ?? defaultLanguage;
+  
   // Get the dictionary based on the language
-  const dict = await getDictionary(params.lang);
+  const dict = await getDictionary(lang);
   
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://champagnefestival.com";
   
@@ -46,9 +50,9 @@ export async function generateMetadata({ params }: { params: { lang: string } })
     openGraph: {
       title: `${dict.festivalName} 2025`,
       description: dict.welcome.subtitle,
-      locale: params.lang,
+      locale: lang,
       type: 'website',
-      url: `${baseUrl}/${params.lang}`,
+      url: `${baseUrl}/${lang}`,
       siteName: dict.festivalName,
       images: [
         {
@@ -73,7 +77,7 @@ export async function generateMetadata({ params }: { params: { lang: string } })
         'fr': `${baseUrl}/fr`,
         'nl': `${baseUrl}/nl`,
       },
-      canonical: `${baseUrl}/${params.lang}`,
+      canonical: `${baseUrl}/${lang}`,
     },
     robots: {
       index: true,
@@ -90,20 +94,21 @@ export async function generateMetadata({ params }: { params: { lang: string } })
  * @param children - The components to be rendered within the layout.
  * @param params - An object containing the language code used to set the HTML element's `lang` attribute.
  */
-export default function RootLayout({
+export default async function RootLayout({
   children,
-  params
+  params,
 }: {
   children: React.ReactNode;
   params: { lang: string };
 }) {
+  // Use searchParams pattern to properly handle dynamic params
+  const lang = (await params)?.lang ?? defaultLanguage;
+  
+  // Return only the child content wrapped in a div with language key
+  // This avoids nested <html> tags since the root layout already provides the HTML structure
   return (
-    <html lang={params.lang} data-bs-theme="dark">
-      <body className={inter.className}>
-        <div key={params.lang}>
-          {children}
-        </div>
-      </body>
-    </html>
+    <div key={lang}>
+      {children}
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from "react";
-import { getDictionary } from "@/lib/i18n";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { getDictionary, Dictionary } from "@/lib/i18n";
 
 /**
  * Props for the Countdown component
@@ -35,16 +35,30 @@ enum TimeUnits {
  */
 const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
     const [mounted, setMounted] = useState(false);
-    const [dictionary, setDictionary] = useState<any>({});
+    const [dictionary, setDictionary] = useState<Dictionary>({} as Dictionary);
+    const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
     
     // Convert string date to Date object if needed
-    const targetDateObj = typeof targetDate === 'string' ? new Date(targetDate) : targetDate;
-
+    // Wrapped in useMemo to avoid dependency changes on every render
+    const targetDateObj = useMemo(() => {
+        return typeof targetDate === 'string' ? new Date(targetDate) : targetDate;
+    }, [targetDate]);
+    
+    // Use refs to avoid dependency cycles
+    const dictionaryRef = useRef(dictionary);
+    const targetDateObjRef = useRef(targetDateObj);
+    
+    // Update refs when props change
+    useEffect(() => {
+        targetDateObjRef.current = targetDateObj;
+    }, [targetDateObj]);
+    
     // Load dictionary on client side
     useEffect(() => {
         const loadDictionary = async () => {
             const dict = await getDictionary(lang);
             setDictionary(dict);
+            dictionaryRef.current = dict;
         };
         
         loadDictionary();
@@ -54,43 +68,44 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
     useEffect(() => {
         setMounted(true);
     }, []);
-
-    /**
-     * Calculate the time left until the target date
-     * @returns {TimeLeft} Object containing time units remaining
-     */
+    
+    // Calculate time left using refs to avoid dependency cycles
     const calculateTimeLeft = useCallback((): TimeLeft => {
+        const dict = dictionaryRef.current;
+        const targetDate = targetDateObjRef.current;
+        
         // Get time difference in milliseconds
-        const difference = +targetDateObj - +new Date();
+        const difference = +targetDate - +new Date();
 
         if (difference > 0) {
             return {
-                [dictionary.countdown?.days || "days"]: Math.floor(difference / TimeUnits.Day),
-                [dictionary.countdown?.hours || "hours"]: Math.floor((difference / TimeUnits.Hour) % 24),
-                [dictionary.countdown?.minutes || "minutes"]: Math.floor((difference / TimeUnits.Minute) % 60),
-                [dictionary.countdown?.seconds || "seconds"]: Math.floor((difference / TimeUnits.Second) % 60),
+                [dict.countdown?.days || "days"]: Math.floor(difference / TimeUnits.Day),
+                [dict.countdown?.hours || "hours"]: Math.floor((difference / TimeUnits.Hour) % 24),
+                [dict.countdown?.minutes || "minutes"]: Math.floor((difference / TimeUnits.Minute) % 60),
+                [dict.countdown?.seconds || "seconds"]: Math.floor((difference / TimeUnits.Second) % 60),
             };
         }
 
         return {};
-    }, [targetDateObj, dictionary]);
+    }, []);
 
-    const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
-
-    // Update countdown every second
+    // Update countdown every second, but only after component is mounted
     useEffect(() => {
-        if (Object.keys(dictionary).length > 0) {
-            // Initial calculation
+        if (!mounted) return;
+        
+        // Wait for dictionary to be loaded
+        if (Object.keys(dictionaryRef.current).length === 0) return;
+        
+        // Initial calculation
+        setTimeLeft(calculateTimeLeft());
+
+        const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
+        }, 1000);
 
-            const timer = setInterval(() => {
-                setTimeLeft(calculateTimeLeft());
-            }, 1000);
-
-            // Clean up interval on unmount
-            return () => clearInterval(timer);
-        }
-    }, [targetDateObj, calculateTimeLeft, dictionary]);
+        // Clean up interval on unmount
+        return () => clearInterval(timer);
+    }, [mounted, calculateTimeLeft]);
 
     // Map time units to display components
     const timerComponents = Object.keys(timeLeft).map((interval: string) => (

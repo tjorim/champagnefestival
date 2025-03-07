@@ -1,10 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import LanguageSwitcher from './LanguageSwitcher';
 import { Navbar, Container } from 'react-bootstrap';
-import { getDictionary } from '@/lib/i18n';
 
 interface HeaderProps {
     logoSrc?: string;
@@ -12,12 +10,7 @@ interface HeaderProps {
 }
 
 const Header = ({ logoSrc = "/images/logo.svg", lang }: HeaderProps) => {
-    // We'll use local dictionary lookup for client components
-    // This is called client dictionary pattern
-    const dictionary = async () => {
-        const dict = await getDictionary(lang);
-        return dict;
-    };
+    // Dictionary lookup removed as it's not currently used
 
     return (
         <Navbar fixed="top" bg="dark" variant="dark" className="shadow">
