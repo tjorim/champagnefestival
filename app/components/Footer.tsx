@@ -1,29 +1,19 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import PrivacyPolicy from "./PrivacyPolicy";
 import { Container, Row, Col, Button } from "react-bootstrap";
-import { getDictionary, Dictionary } from "@/lib/i18n";
+import { Dictionary } from "@/lib/i18n";
 import { contactConfig } from "@/app/config/contact";
 
 interface FooterProps {
     lang: string;
+    dictionary: Dictionary;
 }
 
-const Footer = ({ lang }: FooterProps) => {
+const Footer = ({ lang, dictionary }: FooterProps) => {
     const currentYear = new Date().getFullYear();
     const [privacyOpen, setPrivacyOpen] = useState(false);
-    const [dictionary, setDictionary] = useState<Dictionary>({} as Dictionary);
-    
-    // Load dictionary on client side
-    useEffect(() => {
-        const loadDictionary = async () => {
-            const dict = await getDictionary(lang);
-            setDictionary(dict);
-        };
-        
-        loadDictionary();
-    }, [lang]);
 
     return (
         <footer className="site-footer">
@@ -31,7 +21,7 @@ const Footer = ({ lang }: FooterProps) => {
                 <Row className="align-items-center mb-3">
                     <Col md={6} className="mb-3 mb-md-0 text-center text-md-start">
                         <p className="mb-0">
-                            &copy; {currentYear} {dictionary.festivalName || "Champagne Festival"}. {dictionary.footer?.rights || "All rights reserved."}
+                            &copy; {currentYear} {dictionary.festivalName}. {dictionary.footer.rights}
                         </p>
                     </Col>
                     <Col md={6} className="text-center text-md-end">
@@ -40,7 +30,7 @@ const Footer = ({ lang }: FooterProps) => {
                             variant="link"
                             className="text-white p-0 text-decoration-none footer-link me-3"
                         >
-                            {dictionary.footer?.privacy || "Privacy Policy"}
+                            {dictionary.footer.privacy}
                         </Button>
                         {contactConfig.social.facebook && (
                             <a 
@@ -62,6 +52,7 @@ const Footer = ({ lang }: FooterProps) => {
                 isOpen={privacyOpen}
                 onClose={() => setPrivacyOpen(false)}
                 lang={lang}
+                dictionary={dictionary}
             />
         </footer>
     );

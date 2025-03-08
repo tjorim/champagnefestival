@@ -6,7 +6,7 @@
  */
 
 // Primary configuration - only update the year for future editions
-const FESTIVAL_CONFIG = {
+export const FESTIVAL_CONFIG = {
   year: 2025
   // No hardcoded hours - these should come from the schedule
 };

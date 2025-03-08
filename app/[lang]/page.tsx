@@ -46,13 +46,13 @@ export default async function Home({ params }: { params: { lang: string } }) {
       <Link href="#main-content" className="skip-link">
         {dict.accessibility.skipToContent}
       </Link>
-      <Header lang={formattedLang} />
+      <Header lang={formattedLang} dictionary={dict} />
       <BubbleBackground />
       
       <main id="main-content">
         {/* Hero Section */}
         <section className="hero" id="welcome">
-          <h1>{dict.welcome.title || "Welcome to Champagne Festival"}</h1>
+          <h1>{dict.welcome.title}</h1>
           <p className="hero-subtitle">{dict.welcome.subtitle}</p>
           <Link href={`/${formattedLang}#next-festival`} className="cta-button">
             {dict.welcome.learnMore}
@@ -85,7 +85,7 @@ export default async function Home({ params }: { params: { lang: string } }) {
         <section id="next-festival" className="content-section highlight-section">
           <div className="container text-center">
             <h2 className="section-header">{dict.nextFestival.title}</h2>
-            <Countdown targetDate={eventDetails.dates.start} lang={formattedLang} />
+            <Countdown targetDate={eventDetails.dates.start} dictionary={dict} />
             <p className="mb-4 mx-auto" style={{ position: 'relative', zIndex: 50 }}>
               {dict.nextFestival.description}
             </p>
@@ -130,7 +130,7 @@ export default async function Home({ params }: { params: { lang: string } }) {
                 <p className="mt-2">{dict.loading}</p>
               </div>
             </div>}>
-              <MapComponent />
+              <MapComponent dictionary={dict} />
             </Suspense>
           </div>
         </section>
@@ -150,7 +150,7 @@ export default async function Home({ params }: { params: { lang: string } }) {
             <p>{dict.contact.intro}</p>
             <div className="row">
               <div className="col-lg-8 mx-auto">
-                <ContactForm lang={formattedLang} />
+                <ContactForm dictionary={dict} />
               </div>
             </div>
             <div className="mt-4">
@@ -160,7 +160,7 @@ export default async function Home({ params }: { params: { lang: string } }) {
         </section>
       </main>
       
-      <Footer lang={formattedLang} />
+      <Footer lang={formattedLang} dictionary={dict} />
     </>
   );
 }

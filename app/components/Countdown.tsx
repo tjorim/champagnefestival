@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { getDictionary, Dictionary } from "@/lib/i18n";
+import { Dictionary } from "@/lib/i18n";
 
 /**
  * Props for the Countdown component
  */
 interface CountdownProps {
     targetDate: string | Date;
-    lang: string;
+    dictionary: Dictionary;
 }
 
 /**
@@ -33,9 +33,8 @@ enum TimeUnits {
  * Countdown component that displays time remaining until a target date
  * Handles hydration mismatches by only rendering the final countdown on client-side
  */
-const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
+const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
     const [mounted, setMounted] = useState(false);
-    const [dictionary, setDictionary] = useState<Dictionary>({} as Dictionary);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
     
     // Convert string date to Date object if needed
@@ -53,16 +52,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
         targetDateObjRef.current = targetDateObj;
     }, [targetDateObj]);
     
-    // Load dictionary on client side
+    // Update dictionary ref when it changes
     useEffect(() => {
-        const loadDictionary = async () => {
-            const dict = await getDictionary(lang);
-            setDictionary(dict);
-            dictionaryRef.current = dict;
-        };
-        
-        loadDictionary();
-    }, [lang]);
+        dictionaryRef.current = dictionary;
+    }, [dictionary]);
 
     // Set component as mounted after initial render
     useEffect(() => {
@@ -79,10 +72,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
 
         if (difference > 0) {
             return {
-                [dict.countdown?.days || "days"]: Math.floor(difference / TimeUnits.Day),
-                [dict.countdown?.hours || "hours"]: Math.floor((difference / TimeUnits.Hour) % 24),
-                [dict.countdown?.minutes || "minutes"]: Math.floor((difference / TimeUnits.Minute) % 60),
-                [dict.countdown?.seconds || "seconds"]: Math.floor((difference / TimeUnits.Second) % 60),
+                [dict.countdown.days]: Math.floor(difference / TimeUnits.Day),
+                [dict.countdown.hours]: Math.floor((difference / TimeUnits.Hour) % 24),
+                [dict.countdown.minutes]: Math.floor((difference / TimeUnits.Minute) % 60),
+                [dict.countdown.seconds]: Math.floor((difference / TimeUnits.Second) % 60),
             };
         }
 
@@ -92,9 +85,6 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
     // Update countdown every second, but only after component is mounted
     useEffect(() => {
         if (!mounted) return;
-        
-        // Wait for dictionary to be loaded
-        if (Object.keys(dictionaryRef.current).length === 0) return;
         
         // Initial calculation
         setTimeLeft(calculateTimeLeft());
@@ -125,10 +115,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, lang }) => {
                 timerComponents.length ? (
                     <div className="countdown-units">{timerComponents}</div>
                 ) : (
-                    <span className="countdown-complete">{dictionary.countdown?.started || "Festival has started!"}</span>
+                    <span className="countdown-complete">{dictionary.countdown.started}</span>
                 )
             ) : (
-                <span className="countdown-loading">{dictionary.countdown?.loading || "Loading countdown..."}</span>
+                <span className="countdown-loading">{dictionary.countdown.loading}</span>
             )}
         </div>
     );

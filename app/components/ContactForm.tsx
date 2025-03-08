@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Card, Form, Button, Alert, Spinner } from "react-bootstrap";
-import { getDictionary, Dictionary } from "@/lib/i18n";
+import { Dictionary } from "@/lib/i18n";
 
 /**
  * Form data structure
@@ -15,30 +15,19 @@ interface FormData {
 }
 
 interface ContactFormProps {
-    lang: string;
+    dictionary: Dictionary;
 }
 
 /**
  * Contact form component with validation using react-bootstrap components
  */
-const ContactForm: React.FC<ContactFormProps> = ({ lang }) => {
-    const [dictionary, setDictionary] = useState<Dictionary | null>(null);
+const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
     const [form, setForm] = useState<FormData>({ name: "", email: "", message: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
     const [submissionTimeoutId, setSubmissionTimeoutId] = useState<number | null>(null);
-
-    // Load dictionary on client side
-    useEffect(() => {
-        const loadDictionary = async () => {
-            const dict = await getDictionary(lang);
-            setDictionary(dict);
-        };
-        
-        loadDictionary();
-    }, [lang]);
 
     // Cleanup timeouts when component unmounts
     useEffect(() => {
@@ -50,16 +39,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ lang }) => {
         };
     }, [submissionTimeoutId]);
 
-    // Don't render form until dictionary is loaded
-    if (!dictionary) {
-        return (
-            <Card className="mx-auto border-0 shadow">
-                <Card.Body className="p-3 p-md-4 d-flex justify-content-center">
-                    <Spinner animation="border" />
-                </Card.Body>
-            </Card>
-        );
-    }
+    // Dictionary is now passed as a prop, so we don't need to check if it's loaded
 
     // Handle form field changes
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

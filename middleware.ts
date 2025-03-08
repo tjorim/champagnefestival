@@ -61,9 +61,20 @@ export function middleware(request: NextRequest) {
 
   // Redirect to locale-prefixed URL
   const locale = getLocale(request);
-  request.nextUrl.pathname = `/${locale}${pathname}`;
   
-  return NextResponse.redirect(request.nextUrl);
+  // Create a new URL with the locale prefix
+  // NextResponse.redirect will automatically preserve search params
+  const newUrl = new URL(`/${locale}${pathname}`, request.url);
+  
+  // Copy all search params from the original URL
+  request.nextUrl.searchParams.forEach((value, key) => {
+    newUrl.searchParams.set(key, value);
+  });
+  
+  // Note: Hash fragments (#) are never sent to the server, so they can't be preserved
+  // by middleware alone. They need to be handled client-side if needed.
+  
+  return NextResponse.redirect(newUrl);
 }
 
 export const config = {

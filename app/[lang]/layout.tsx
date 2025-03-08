@@ -3,6 +3,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../globals.css';
 import { languages, getDictionary, defaultLanguage } from '@/lib/i18n';
+import { FESTIVAL_CONFIG } from '@/app/config/dates';
 
 /**
  * Generates an array of static parameter objects for each supported language.
@@ -41,14 +42,14 @@ export async function generateMetadata({
   
   return {
     title: {
-      default: `${dict.festivalName} 2025`,
+      default: `${dict.festivalName} ${FESTIVAL_CONFIG.year}`,
       template: `%s | ${dict.festivalName}`
     },
     description: dict.welcome.subtitle,
     keywords: ["champagne", "festival", "wine tasting", "event", "gourmet", "luxury"],
     // Adding OpenGraph metadata for better social sharing
     openGraph: {
-      title: `${dict.festivalName} 2025`,
+      title: `${dict.festivalName} ${FESTIVAL_CONFIG.year}`,
       description: dict.welcome.subtitle,
       locale: lang,
       type: 'website',
@@ -66,7 +67,7 @@ export async function generateMetadata({
     // Twitter card
     twitter: {
       card: 'summary_large_image',
-      title: `${dict.festivalName} 2025`,
+      title: `${dict.festivalName} ${FESTIVAL_CONFIG.year}`,
       description: dict.welcome.subtitle,
       images: [`${baseUrl}/images/og-image.jpg`],
     },
