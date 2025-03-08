@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import LanguageSwitcher from './LanguageSwitcher';
 import { Navbar, Container } from 'react-bootstrap';
 
@@ -16,7 +17,7 @@ const Header = ({ logoSrc = "/images/logo.svg", lang }: HeaderProps) => {
         <Navbar fixed="top" bg="dark" variant="dark" className="shadow">
             <Container className="d-flex justify-content-between">
                 {/* Logo / Title */}
-                <Navbar.Brand href={`/${lang}#welcome`} className="d-flex align-items-center">
+                <Navbar.Brand as={Link} href={`/${lang}`} className="d-flex align-items-center">
                     <Image
                         src={logoSrc}
                         alt="Champagne Festival logo"

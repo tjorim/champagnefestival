@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import PrivacyPolicy from "./PrivacyPolicy";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { getDictionary, Dictionary } from "@/lib/i18n";
+import { contactConfig } from "@/app/config/contact";
 
 interface FooterProps {
     lang: string;
@@ -27,7 +28,7 @@ const Footer = ({ lang }: FooterProps) => {
     return (
         <footer className="site-footer">
             <Container>
-                <Row className="align-items-center">
+                <Row className="align-items-center mb-3">
                     <Col md={6} className="mb-3 mb-md-0 text-center text-md-start">
                         <p className="mb-0">
                             &copy; {currentYear} {dictionary.festivalName || "Champagne Festival"}. {dictionary.footer?.rights || "All rights reserved."}
@@ -37,10 +38,21 @@ const Footer = ({ lang }: FooterProps) => {
                         <Button
                             onClick={() => setPrivacyOpen(true)}
                             variant="link"
-                            className="text-white p-0 text-decoration-none footer-link"
+                            className="text-white p-0 text-decoration-none footer-link me-3"
                         >
                             {dictionary.footer?.privacy || "Privacy Policy"}
                         </Button>
+                        {contactConfig.social.facebook && (
+                            <a 
+                                href={`https://www.facebook.com/${contactConfig.social.facebook}`} 
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-white text-decoration-none ms-2"
+                                aria-label="Facebook"
+                            >
+                                <i className="bi bi-facebook"></i>
+                            </a>
+                        )}
                     </Col>
                 </Row>
             </Container>

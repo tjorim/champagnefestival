@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { getCarouselItems, getFaqItems, getEventDetails, getDictionaryData } from '@/lib/data';
+import Link from 'next/link';
 
 // Import UI components
 import Header from '@/app/components/Header';
@@ -10,6 +11,9 @@ import Carousel from '@/app/components/Carousel';
 import FAQ from '@/app/components/FAQ';
 import MapComponent from '@/app/components/MapComponent';
 import ContactForm from '@/app/components/ContactForm';
+import ContactInfo from '@/app/components/ContactInfo';
+import LocationInfo from '@/app/components/LocationInfo';
+import Schedule from '@/app/components/Schedule';
 
 /**
  * Renders the Home page for the festival website using localized data.
@@ -39,9 +43,9 @@ export default async function Home({ params }: { params: { lang: string } }) {
   
   return (
     <>
-      <a href="#main-content" className="skip-link">
+      <Link href="#main-content" className="skip-link">
         {dict.accessibility.skipToContent}
-      </a>
+      </Link>
       <Header lang={formattedLang} />
       <BubbleBackground />
       
@@ -50,9 +54,9 @@ export default async function Home({ params }: { params: { lang: string } }) {
         <section className="hero" id="welcome">
           <h1>{dict.welcome.title || "Welcome to Champagne Festival"}</h1>
           <p className="hero-subtitle">{dict.welcome.subtitle}</p>
-          <a href="#next-festival" className="cta-button">
+          <Link href={`/${formattedLang}#next-festival`} className="cta-button">
             {dict.welcome.learnMore}
-          </a>
+          </Link>
         </section>
 
         {/* What we do */}
@@ -90,10 +94,11 @@ export default async function Home({ params }: { params: { lang: string } }) {
         
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
-          <div className="container text-center">
-            <h2 className="section-header">{dict.schedule.title}</h2>
+          <div className="container">
+            <h2 className="section-header text-center">{dict.schedule.title}</h2>
+            <p className="text-center mx-auto mb-5" style={{ maxWidth: '800px' }}>{dict.schedule.description}</p>
             <div className="schedule-table">
-              <p className="mx-auto">{dict.schedule.description}</p>
+              <Schedule dictionary={dict} />
             </div>
           </div>
         </section>
@@ -112,6 +117,11 @@ export default async function Home({ params }: { params: { lang: string } }) {
         <section id="map" className="content-section">
           <div className="container text-center">
             <h2 className="section-header mb-4">{dict.location.title}</h2>
+            <div className="row mb-4">
+              <div className="col-lg-10 mx-auto">
+                <LocationInfo dictionary={dict} />
+              </div>
+            </div>
             <Suspense fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
               <div className="text-center">
                 <div className="spinner-border text-primary" role="status">
@@ -120,7 +130,7 @@ export default async function Home({ params }: { params: { lang: string } }) {
                 <p className="mt-2">{dict.loading}</p>
               </div>
             </div>}>
-              <MapComponent address={eventDetails.location.address} />
+              <MapComponent />
             </Suspense>
           </div>
         </section>
@@ -138,7 +148,14 @@ export default async function Home({ params }: { params: { lang: string } }) {
           <div className="container text-center">
             <h2 className="section-header">{dict.contact.title}</h2>
             <p>{dict.contact.intro}</p>
-            <ContactForm lang={formattedLang} />
+            <div className="row">
+              <div className="col-lg-8 mx-auto">
+                <ContactForm lang={formattedLang} />
+              </div>
+            </div>
+            <div className="mt-4">
+              <ContactInfo dictionary={dict} />
+            </div>
           </div>
         </section>
       </main>

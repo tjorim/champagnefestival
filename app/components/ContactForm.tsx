@@ -28,6 +28,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ lang }) => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
     const [generalError, setGeneralError] = useState<string | null>(null);
+    const [submissionTimeoutId, setSubmissionTimeoutId] = useState<number | null>(null);
 
     // Load dictionary on client side
     useEffect(() => {
@@ -38,6 +39,16 @@ const ContactForm: React.FC<ContactFormProps> = ({ lang }) => {
         
         loadDictionary();
     }, [lang]);
+
+    // Cleanup timeouts when component unmounts
+    useEffect(() => {
+        return () => {
+            // Clear form submission timeout if it exists
+            if (submissionTimeoutId) {
+                window.clearTimeout(submissionTimeoutId);
+            }
+        };
+    }, [submissionTimeoutId]);
 
     // Don't render form until dictionary is loaded
     if (!dictionary) {
@@ -100,9 +111,15 @@ const ContactForm: React.FC<ContactFormProps> = ({ lang }) => {
                 throw new Error(errorData.message || 'Something went wrong');
             }
             
-            setIsSubmitted(true);
-            setForm({ name: "", email: "", message: "" });
-            setErrors({});
+            // Use timeout for a smooth transition
+            const timeoutId = window.setTimeout(() => {
+                setIsSubmitted(true);
+                setForm({ name: "", email: "", message: "" });
+                setErrors({});
+                setSubmissionTimeoutId(null);
+            }, 500);
+            
+            setSubmissionTimeoutId(timeoutId);
         } catch (error) {
             console.error("Form submission error", error);
             setGeneralError(

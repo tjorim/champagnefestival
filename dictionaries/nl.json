@@ -27,7 +27,66 @@
     },
     "schedule": {
         "title": "Programma",
-        "description": "Details van het festivalprogramma vindt u hier."
+        "description": "Bekijk ons gedetailleerde festivalprogramma met evenementen, proeverijen en speciale presentaties.",
+        "days": {
+            "friday": "Vrijdag",
+            "saturday": "Zaterdag",
+            "sunday": "Zondag"
+        },
+        "categories": {
+            "tasting": "Degustatie",
+            "vip": "VIP",
+            "party": "Party",
+            "breakfast": "Ontbijt",
+            "exchange": "Ruilbeurs",
+            "general": "Algemeen"
+        },
+        "reservation": "Reservatie vereist",
+        "presenter": "Presentator",
+        "location": "Locatie",
+        "noEvents": "Geen evenementen gepland voor deze dag.",
+        "events": {
+            "fri-tasting": {
+                "title": "Doorlopende degustatie",
+                "description": "Doorlopende degustatie van verschillende champagnes."
+            },
+            "fri-vip": {
+                "title": "VIP-receptie",
+                "description": "Exclusieve VIP-receptie met speciale champagnes en hapjes."
+            },
+            "fri-end": {
+                "title": "Einde festival",
+                "description": "Sluiting van het festival op vrijdag."
+            },
+            "sat-exchange": {
+                "title": "Ruilbeurs",
+                "description": "Opening van de ruilbeurs voor verzamelaars."
+            },
+            "sat-opening": {
+                "title": "Opening festival & doorlopende degustatie",
+                "description": "Officiële opening van het festival op zaterdag met doorlopende champagne degustatie."
+            },
+            "sat-party": {
+                "title": "Champagneparty met DJ",
+                "description": "Feestelijke avond met DJ en champagne."
+            },
+            "sat-end": {
+                "title": "Einde festival + party",
+                "description": "Sluiting van het festival en de party op zaterdag."
+            },
+            "sun-breakfast": {
+                "title": "Champagneontbijt",
+                "description": "Champagne ontbijt ten voordele van een goed doel."
+            },
+            "sun-opening": {
+                "title": "Opening festival & doorlopende degustatie",
+                "description": "Opening van het festival op zondag met doorlopende champagne degustatie."
+            },
+            "sun-end": {
+                "title": "Einde festival",
+                "description": "Afsluiting van het festival op zondag."
+            }
+        }
     },
     "location": {
         "title": "Locatie",
@@ -36,7 +95,7 @@
         "address": "Adres",
         "addressValue": "123 Festival Boulevard, Stadscentrum",
         "openingHours": "Openingstijden",
-        "openingHoursValue": "11:00 - 20:00"
+        "openingHoursValue": "Zie programma"
     },
     "countdown": {
         "days": "dagen",
@@ -70,9 +129,7 @@
         "intro": "Heeft u vragen of wilt u sponsor worden? Neem contact met ons op!",
         "alternativeContact": "U kunt ons ook bereiken via:",
         "emailLabel": "E-mail",
-        "emailValue": "info@champagnefestival.com",
         "phoneLabel": "Telefoon",
-        "phoneValue": "+1 (555) 123-4567",
         "name": "Uw Naam",
         "email": "Uw E-mail",
         "message": "Uw Bericht",

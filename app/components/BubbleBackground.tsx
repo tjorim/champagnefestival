@@ -65,7 +65,17 @@ const BubbleBackground: React.FC = () => {
 
         handleResize(); // set initial count
         window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
+        
+        // Cleanup function for both resize listener and any pending timeouts
+        return () => {
+            window.removeEventListener("resize", handleResize);
+            
+            // Clear any pending resize timeout when component unmounts
+            if (resizeTimeoutRef.current) {
+                window.clearTimeout(resizeTimeoutRef.current);
+                resizeTimeoutRef.current = null;
+            }
+        };
     }, [handleResize]);
 
     // Generate bubbles only after mounting to avoid hydration mismatches

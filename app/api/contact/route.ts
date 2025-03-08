@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        to: 'info@champagnefestival.com',
+        to: contactConfig.emails.info,
         subject: 'New Contact Form Submission',
         body: `Name: ${body.name}\nEmail: ${body.email}\nMessage: ${body.message}`,
       })
@@ -77,8 +77,8 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'contact@champagnefestival.com',
-        to: 'info@champagnefestival.com',
+        from: contactConfig.emails.sender,
+        to: contactConfig.emails.info,
         subject: 'New Contact Form Submission',
         text: `Name: ${body.name}\nEmail: ${body.email}\nMessage: ${body.message}`,
       })

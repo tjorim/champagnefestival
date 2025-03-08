@@ -1,5 +1,6 @@
 import { getDictionary, Dictionary } from '@/lib/i18n';
 import { cache } from 'react';
+import { contactConfig } from '@/app/config/contact';
 
 /**
  * Fetch dictionary data for a specific language
@@ -79,8 +80,13 @@ export const getEventDetails = cache(async (dictionary: Dictionary) => {
       end: "2025-06-16T22:00:00"
     },
     location: {
-      name: dictionary.location.venueName,
-      address: dictionary.location.addressValue
+      name: contactConfig.location.venueName,
+      address: contactConfig.location.address,
+      city: contactConfig.location.city,
+      postalCode: contactConfig.location.postalCode,
+      country: contactConfig.location.country,
+      openingHours: contactConfig.location.openingHours,
+      coordinates: contactConfig.location.coordinates
     },
     description: dictionary.welcome.subtitle,
   };

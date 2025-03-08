@@ -27,7 +27,66 @@
     },
     "schedule": {
         "title": "Programme",
-        "description": "Les détails du programme du festival sont présentés ici."
+        "description": "Consultez notre programme détaillé du festival avec les événements, dégustations et présentations spéciales.",
+        "days": {
+            "friday": "Vendredi",
+            "saturday": "Samedi",
+            "sunday": "Dimanche"
+        },
+        "categories": {
+            "tasting": "Dégustation",
+            "vip": "VIP",
+            "party": "Soirée",
+            "breakfast": "Petit-déjeuner",
+            "exchange": "Bourse d'échange",
+            "general": "Général"
+        },
+        "reservation": "Réservation obligatoire",
+        "presenter": "Présentateur",
+        "location": "Lieu",
+        "noEvents": "Aucun événement programmé pour ce jour.",
+        "events": {
+            "fri-tasting": {
+                "title": "Dégustation continue",
+                "description": "Dégustation continue de différents champagnes."
+            },
+            "fri-vip": {
+                "title": "Réception VIP",
+                "description": "Réception VIP exclusive avec champagnes spéciaux et amuse-bouches."
+            },
+            "fri-end": {
+                "title": "Fin du festival",
+                "description": "Clôture du festival le vendredi."
+            },
+            "sat-exchange": {
+                "title": "Bourse d'échange",
+                "description": "Ouverture de la bourse d'échange pour les collectionneurs."
+            },
+            "sat-opening": {
+                "title": "Ouverture du festival et dégustation continue",
+                "description": "Ouverture officielle du festival le samedi avec dégustation continue de champagne."
+            },
+            "sat-party": {
+                "title": "Soirée champagne avec DJ",
+                "description": "Soirée festive avec DJ et champagne."
+            },
+            "sat-end": {
+                "title": "Fin du festival + soirée",
+                "description": "Clôture du festival et de la soirée le samedi."
+            },
+            "sun-breakfast": {
+                "title": "Petit-déjeuner champagne",
+                "description": "Petit-déjeuner champagne au profit d'une œuvre caritative."
+            },
+            "sun-opening": {
+                "title": "Ouverture du festival et dégustation continue",
+                "description": "Ouverture du festival le dimanche avec dégustation continue de champagne."
+            },
+            "sun-end": {
+                "title": "Fin du festival",
+                "description": "Clôture du festival le dimanche."
+            }
+        }
     },
     "location": {
         "title": "Lieu de l'Événement",
@@ -36,7 +95,7 @@
         "address": "Adresse",
         "addressValue": "123 Boulevard du Festival, Centre-Ville",
         "openingHours": "Heures d'Ouverture",
-        "openingHoursValue": "11h00 - 20h00"
+        "openingHoursValue": "Voir le programme"
     },
     "countdown": {
         "days": "jours",
@@ -70,9 +129,7 @@
         "intro": "Vous avez des questions ou vous souhaitez devenir sponsor ? Contactez-nous !",
         "alternativeContact": "Vous pouvez également nous joindre via :",
         "emailLabel": "Email",
-        "emailValue": "info@champagnefestival.com",
         "phoneLabel": "Téléphone",
-        "phoneValue": "+1 (555) 123-4567",
         "name": "Votre Nom",
         "email": "Votre Email",
         "message": "Votre Message",

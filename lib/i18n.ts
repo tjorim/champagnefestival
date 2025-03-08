@@ -29,6 +29,29 @@ export interface Dictionary {
   schedule: {
     title: string;
     description: string;
+    days: {
+      friday: string;
+      saturday: string;
+      sunday: string;
+    };
+    categories: {
+      tasting: string;
+      vip: string;
+      party: string;
+      breakfast: string;
+      exchange: string;
+      general: string;
+    };
+    reservation: string;
+    presenter: string;
+    location: string;
+    noEvents: string;
+    events: {
+      [eventId: string]: {
+        title: string;
+        description: string;
+      };
+    };
   };
   location: {
     title: string;
@@ -71,9 +94,7 @@ export interface Dictionary {
     intro: string;
     alternativeContact: string;
     emailLabel: string;
-    emailValue: string;
     phoneLabel: string;
-    phoneValue: string;
     name: string;
     email: string;
     message: string;

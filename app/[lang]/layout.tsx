@@ -37,7 +37,7 @@ export async function generateMetadata({
   // Get the dictionary based on the language
   const dict = await getDictionary(lang);
   
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://champagnefestival.com";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.champagnefestival.be";
   
   return {
     title: {
