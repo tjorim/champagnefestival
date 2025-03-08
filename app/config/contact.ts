@@ -40,10 +40,10 @@ export const contactConfig = {
     country: process.env.VENUE_COUNTRY || 'België',
     // Opening hours are in the dictionary by language - this field not used directly
     openingHours: process.env.VENUE_OPENING_HOURS || 'See schedule',
-    // Google Maps link or coordinates
+    // Map coordinates
     coordinates: {
-      lat: process.env.VENUE_LAT ? parseFloat(process.env.VENUE_LAT) : 51.23601,
-      lng: process.env.VENUE_LNG ? parseFloat(process.env.VENUE_LNG) : 2.97328,
+      lat: process.env.VENUE_LAT ? parseFloat(process.env.VENUE_LAT) : 51.252562,
+      lng: process.env.VENUE_LNG ? parseFloat(process.env.VENUE_LNG) : 2.974563,
     },
   },
 };

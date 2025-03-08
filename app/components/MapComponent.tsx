@@ -26,9 +26,9 @@ const MapComponentClient = ({
     // Use address from props if provided, otherwise use from config
     const venueAddress = address || contactConfig.location.address;
     
-    // Get coordinates from contact config with fallback to Brussels
-    const lat = contactConfig.location.coordinates.lat || 50.850346;
-    const lng = contactConfig.location.coordinates.lng || 4.351710;
+    // Get coordinates from contact config
+    const lat = contactConfig.location.coordinates.lat;
+    const lng = contactConfig.location.coordinates.lng;
     
     // Will hold references to the Leaflet map and marker
     // Using any since we're dynamically importing Leaflet
@@ -52,11 +52,22 @@ const MapComponentClient = ({
                 leafletCss.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
                 leafletCss.crossOrigin = '';
                 document.head.appendChild(leafletCss);
+                
+                // Fix missing marker icon issue by manually setting the icon path
+                // This is needed because the default icon paths are broken in bundled environments
+                delete L.Icon.Default.prototype._getIconUrl;
+                L.Icon.Default.mergeOptions({
+                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+                });
 
                 // If map container exists and Leaflet is loaded
                 if (mapContainerRef.current && !mapRef.current) {
-                    // Create a new map instance
-                    mapRef.current = L.map(mapContainerRef.current).setView([lat, lng], 16);
+                    // Create a new map instance with scroll wheel zoom disabled
+                    mapRef.current = L.map(mapContainerRef.current, {
+                        scrollWheelZoom: false
+                    }).setView([lat, lng], 16);
                     
                     // Add OpenStreetMap tile layer
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
