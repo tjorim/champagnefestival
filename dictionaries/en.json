@@ -17,8 +17,8 @@
             "description": "Sample a wide variety of champagnes from different regions."
         },
         "feature3": {
-            "title": "Gourmet Experience",
-            "description": "Enjoy carefully curated food pairings from top local chefs"
+            "title": "Join Our Community",
+            "description": "Connect with fellow champagne enthusiasts and experts"
         }
     },
     "nextFestival": {
@@ -116,7 +116,7 @@
         "q1": "What is the Champagne Festival about?",
         "a1": "The Champagne Festival is a celebration of fine champagne, bringing together producers, enthusiasts, and the community for tastings, workshops, and social events.",
         "q2": "When is the next festival?",
-        "a2": "The next festival is scheduled for March 7-9, 2025. Mark your calendars for a weekend of bubbles and festivities!",
+        "a2": "The next festival is scheduled for {festivalDateRange}. Mark your calendars for a weekend of bubbles and festivities!",
         "q3": "Where will the festival be held?",
         "a3": "The festival will take place at the Grand Exhibition Hall in the city center. There's convenient public transportation and parking nearby.",
         "q4": "Are tickets available yet?",

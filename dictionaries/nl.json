@@ -116,7 +116,7 @@
         "q1": "Waar gaat het Champagne Festival over?",
         "a1": "Het Champagne Festival is een viering van fijne champagne, dat producenten, liefhebbers en de gemeenschap samenbrengt voor proeverijen, workshops en sociale evenementen.",
         "q2": "Wanneer is het volgende festival?",
-        "a2": "Het volgende festival staat gepland voor 7-9 maart 2025. Noteer het in je agenda voor een weekend vol bubbels en feestelijkheden!",
+        "a2": "Het volgende festival staat gepland voor {festivalDateRange}. Noteer het in je agenda voor een weekend vol bubbels en feestelijkheden!",
         "q3": "Waar wordt het festival gehouden?",
         "a3": "Het festival vindt plaats in de Grand Exhibition Hall in het stadscentrum. Er is gemakkelijk openbaar vervoer en parkeergelegenheid in de buurt.",
         "q4": "Zijn kaarten al beschikbaar?",

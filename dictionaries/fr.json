@@ -116,7 +116,7 @@
         "q1": "En quoi consiste le Festival du Champagne ?",
         "a1": "Le Festival du Champagne est une célébration du champagne fin, réunissant producteurs, passionnés et la communauté pour des dégustations, des ateliers et des événements sociaux.",
         "q2": "Quand aura lieu le prochain festival ?",
-        "a2": "Le prochain festival est prévu pour les 7-9 mars 2025. Notez ces dates dans vos calendriers pour un week-end de bulles et de festivités !",
+        "a2": "Le prochain festival est prévu pour les {festivalDateRange}. Notez ces dates dans vos calendriers pour un week-end de bulles et de festivités !",
         "q3": "Où se tiendra le festival ?",
         "a3": "Le festival se déroulera au Grand Palais des Expositions au centre-ville. Il y a des transports en commun pratiques et des parkings à proximité.",
         "q4": "Les billets sont-ils déjà disponibles ?",

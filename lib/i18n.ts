@@ -154,6 +154,9 @@ export interface Dictionary {
   };
 }
 
+// Import festival date configuration
+import { FESTIVAL_DATE_RANGE } from '@/app/config/dates';
+
 // Define supported languages
 export const languages = ['en', 'fr', 'nl'];
 export const defaultLanguage = 'nl';
@@ -173,5 +176,25 @@ const dictionaries: Record<string, () => Promise<Dictionary>> = {
 export const getDictionary = async (locale: string = defaultLanguage): Promise<Dictionary> => {
   // Default to defaultLanguage if the requested locale is not available
   const requestedDictionary = dictionaries[locale] || dictionaries[defaultLanguage];
-  return requestedDictionary();
+  const dictionary = await requestedDictionary();
+  
+  // Update the festival date in the FAQ
+  updateFestivalDate(dictionary, locale);
+  
+  return dictionary;
 };
+
+/**
+ * Updates the festival date in the FAQ question about festival dates
+ * This is a simple, direct approach to fix the hardcoded date
+ */
+function updateFestivalDate(dictionary: Dictionary, locale: string): void {
+  // Get the correct date range for the locale
+  const dateRange = FESTIVAL_DATE_RANGE[locale as keyof typeof FESTIVAL_DATE_RANGE] || 
+                    FESTIVAL_DATE_RANGE.en;
+  
+  // Update the FAQ answer with the correct date
+  if (dictionary.faq?.a2) {
+    dictionary.faq.a2 = dictionary.faq.a2.replace(/{festivalDateRange}/g, dateRange);
+  }
+}

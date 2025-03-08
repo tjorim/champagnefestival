@@ -1,6 +1,8 @@
 import { getDictionary, Dictionary } from '@/lib/i18n';
 import { cache } from 'react';
 import { contactConfig } from '@/app/config/contact';
+import { festivalDate, festivalEndDate } from '@/app/config/dates';
+import { getEventsByDay } from '@/app/config/schedule';
 
 /**
  * Fetch dictionary data for a specific language
@@ -73,11 +75,43 @@ export const getFaqItems = cache(async (dictionary: Dictionary) => {
  * This could be used for SEO or display purposes
  */
 export const getEventDetails = cache(async (dictionary: Dictionary) => {
+  // Find the first and last event times from the schedule
+  const firstDayEvents = getEventsByDay(1);
+  const lastDayEvents = getEventsByDay(3);
+  
+  // Get opening time (earliest event on day 1)
+  const earliestEvent = firstDayEvents.reduce((earliest, event) => {
+    const currentTime = event.startTime;
+    return earliest === '' || currentTime < earliest ? currentTime : earliest;
+  }, '');
+  
+  // Get closing time (latest event on day 3)
+  const latestEvent = lastDayEvents.reduce((latest, event) => {
+    // Use endTime if available, otherwise use startTime
+    const currentTime = event.endTime || event.startTime;
+    return latest === '' || currentTime > latest ? currentTime : latest;
+  }, '');
+  
+  // Create Date objects with the correct times
+  const startDate = new Date(festivalDate);
+  const endDate = new Date(festivalEndDate);
+  
+  // Parse times (assuming format HH:MM)
+  if (earliestEvent) {
+    const [hours, minutes] = earliestEvent.split(':').map(Number);
+    startDate.setHours(hours, minutes, 0, 0);
+  }
+  
+  if (latestEvent) {
+    const [hours, minutes] = latestEvent.split(':').map(Number);
+    endDate.setHours(hours, minutes, 0, 0);
+  }
+  
   return {
-    name: `${dictionary.festivalName} 2025`,
+    name: `${dictionary.festivalName} ${festivalDate.getFullYear()}`,
     dates: {
-      start: "2025-06-15T12:00:00",
-      end: "2025-06-16T22:00:00"
+      start: startDate.toISOString(),
+      end: endDate.toISOString()
     },
     location: {
       name: contactConfig.location.venueName,

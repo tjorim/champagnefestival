@@ -16,6 +16,8 @@ interface CarouselItem {
 /**
  * Props for the Carousel component
  * @property {string} itemsType - Type of items to display (producers or sponsors)
+ * This prop is used for identification purposes when managing data fetching
+ * in parent components, but doesn't affect the component's rendering logic
  */
 interface CarouselProps {
     itemsType?: "producers" | "sponsors";
@@ -38,27 +40,24 @@ const Carousel: React.FC<CarouselProps> = ({
         setIndex(selectedIndex);
     };
 
-    // Early return if no items available
-    if (items.length === 0) {
-        // Provide some default items when no items are passed
-        items = [
-            {
-                id: 1,
-                name: "Champagne Tasting",
-                image: "/images/logo.svg"
-            },
-            {
-                id: 2,
-                name: "Festival Location",
-                image: "/images/logo.svg"
-            },
-            {
-                id: 3,
-                name: "Gourmet Experience",
-                image: "/images/logo.svg"
-            }
-        ];
-    }
+    // Create a new array with default items when no items are passed instead of modifying props
+    const displayItems = items.length === 0 ? [
+        {
+            id: 1,
+            name: "Champagne Tasting",
+            image: "/images/logo.svg"
+        },
+        {
+            id: 2,
+            name: "Festival Location",
+            image: "/images/logo.svg"
+        },
+        {
+            id: 3,
+            name: "Gourmet Experience",
+            image: "/images/logo.svg"
+        }
+    ] : items;
 
     return (
         <div className="mx-auto my-4">
@@ -73,7 +72,7 @@ const Carousel: React.FC<CarouselProps> = ({
                 onMouseLeave={() => setIsPaused(false)}
                 className="carousel-with-rounded-images"
             >
-                {items.map((item) => (
+                {displayItems.map((item) => (
                     <BootstrapCarousel.Item key={item.id}>
                         <div className="overflow-hidden rounded shadow-sm">
                             <div className="position-relative w-100" style={{ aspectRatio: '16/9' }}>

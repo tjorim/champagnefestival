@@ -24,20 +24,23 @@ export interface FestivalDay {
   label: string; // e.g., "Friday", "Saturday", "Sunday"
 }
 
+// Import festival days from the central configuration
+import { festivalDays as configDays } from './dates';
+
 export const festivalDays: FestivalDay[] = [
   {
     id: 1,
-    date: '2025-03-07',
+    date: configDays[0].toISOString().split('T')[0], // Friday
     label: 'Friday'
   },
   {
     id: 2,
-    date: '2025-03-08',
+    date: configDays[1].toISOString().split('T')[0], // Saturday
     label: 'Saturday'
   },
   {
     id: 3,
-    date: '2025-03-09',
+    date: configDays[2].toISOString().split('T')[0], // Sunday
     label: 'Sunday'
   }
 ];
