@@ -23,7 +23,7 @@ const MapComponent = lazy(() => import("./components/MapComponent"));
 
 import './i18n'; // Import i18n configuration
 import './index.css';
-import { producerItems, sponsorItems } from "./config/carousel";
+import { producerItems, sponsorItems } from "./config/marqueeSlider";
 import { faqData } from "./config/faq";
 import { featureItems } from "./config/features";
 import { festivalDate } from "./config/dates";

@@ -55,7 +55,10 @@ const MapComponentClient = ({
                 
                 // Fix missing marker icon issue by manually setting the icon path
                 // This is needed because the default icon paths are broken in bundled environments
-                delete L.Icon.Default.prototype._getIconUrl;
+                // Using a type assertion to avoid TypeScript errors with _getIconUrl
+                const IconDefault = L.Icon.Default as any;
+                delete IconDefault.prototype._getIconUrl;
+                
                 L.Icon.Default.mergeOptions({
                     iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
                     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',

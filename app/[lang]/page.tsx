@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
-import { getCarouselItems, getFaqItems, getEventDetails, getDictionaryData } from '@/lib/data';
+import { getFaqItems, getEventDetails, getDictionaryData } from '@/lib/data';
+import { producerItems, sponsorItems } from '@/app/config/marqueeSlider';
 import Link from 'next/link';
 
 // Import UI components
@@ -7,7 +8,7 @@ import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import BubbleBackground from '@/app/components/BubbleBackground';
 import Countdown from '@/app/components/Countdown';
-import Carousel from '@/app/components/Carousel';
+import MarqueeSlider from '@/app/components/MarqueeSlider';
 import FAQ from '@/app/components/FAQ';
 import MapComponent from '@/app/components/MapComponent';
 import ContactForm from '@/app/components/ContactForm';
@@ -30,10 +31,9 @@ export default async function Home({ params }: { params: { lang: string } }) {
   const lang = (await params)?.lang ?? 'en';
   const formattedLang = lang.split('-')[0]; // Use only primary language code
   
-  // Get all data in parallel for the current language
-  const [dict, producerItems, eventDetails] = await Promise.all([
+  // Get dictionary data and event details in parallel
+  const [dict, eventDetails] = await Promise.all([
     getDictionaryData(formattedLang),
-    getCarouselItems('producers'),
     // getEventDetails requires dict, so we'll get it separately
     getDictionaryData(formattedLang).then(dict => getEventDetails(dict))
   ]);
@@ -92,6 +92,19 @@ export default async function Home({ params }: { params: { lang: string } }) {
           </div>
         </section>
         
+        {/* Producers Marquee */}
+        <section id="producers" className="content-section">
+          <div className="container text-center">
+            <h2 className="section-header">{dict.producers.title}</h2>
+            <Suspense fallback={<div className="carousel-loading">{dict.loading}</div>}>
+              <MarqueeSlider 
+                itemsType="producers" 
+                items={producerItems}
+              />
+            </Suspense>
+          </div>
+        </section>
+        
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
           <div className="container">
@@ -103,12 +116,15 @@ export default async function Home({ params }: { params: { lang: string } }) {
           </div>
         </section>
         
-        {/* Carousels for Producers */}
-        <section id="carousel" className="content-section">
+        {/* Sponsors Marquee - Before FAQ section */}
+        <section id="sponsors" className="content-section">
           <div className="container text-center">
-            <h2 className="section-header">{dict.producers.title}</h2>
+            <h2 className="section-header">{dict.sponsors.title}</h2>
             <Suspense fallback={<div className="carousel-loading">{dict.loading}</div>}>
-              <Carousel itemsType="producers" items={producerItems} />
+              <MarqueeSlider 
+                itemsType="sponsors" 
+                items={sponsorItems}
+              />
             </Suspense>
           </div>
         </section>

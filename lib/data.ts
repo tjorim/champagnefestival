@@ -14,28 +14,6 @@ export const getDictionaryData = cache(async (lang: string): Promise<Dictionary>
 });
 
 /**
- * Fetch carousel items for a specific type (producers or sponsors)
- * This would be replaced with a real API call in production
- */
-export const getCarouselItems = cache(async (type: 'producers' | 'sponsors') => {
-  // Mock data - in a real app, this would fetch from an API or database
-  if (type === 'producers') {
-    return [
-      { id: 1, name: "Veuve Clicquot", image: "https://placehold.co/600x400?text=Veuve+Clicquot" },
-      { id: 2, name: "Moët & Chandon", image: "https://placehold.co/600x400?text=Moët+%26+Chandon" },
-      { id: 3, name: "Dom Pérignon", image: "https://placehold.co/600x400?text=Dom+Pérignon" },
-      { id: 4, name: "Bollinger", image: "https://placehold.co/600x400?text=Bollinger" },
-    ];
-  } else {
-    return [
-      { id: 1, name: "Luxury Hotels Group", image: "https://placehold.co/600x400?text=Luxury+Hotels" },
-      { id: 2, name: "Gourmet Foods Inc.", image: "https://placehold.co/600x400?text=Gourmet+Foods" },
-      { id: 3, name: "Fine Wine Magazine", image: "https://placehold.co/600x400?text=Wine+Magazine" },
-    ];
-  }
-});
-
-/**
  * Fetch FAQ items
  * Uses the dictionary to get localized FAQs
  */
