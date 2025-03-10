@@ -55,10 +55,8 @@ export interface Dictionary {
   };
   location: {
     title: string;
-    venueName: string;
     venueDescription: string;
     address: string;
-    addressValue: string;
     openingHours: string;
     openingHoursValue: string;
   };
