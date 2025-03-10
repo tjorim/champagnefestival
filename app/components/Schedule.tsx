@@ -3,13 +3,10 @@
 import React, { useState } from 'react';
 import { Tab, Nav, Card, Badge } from 'react-bootstrap';
 import { festivalDays, scheduleEvents, ScheduleEvent } from '@/app/config/schedule';
-import { Dictionary } from '@/lib/i18n';
+import { useTranslations } from 'next-intl';
 
-interface ScheduleProps {
-  dictionary: Dictionary;
-}
-
-const Schedule: React.FC<ScheduleProps> = ({ dictionary }) => {
+const Schedule: React.FC = () => {
+  const t = useTranslations('schedule');
   const [activeDay, setActiveDay] = useState(festivalDays[0].id);
 
   // Get events for the active day
@@ -33,17 +30,19 @@ const Schedule: React.FC<ScheduleProps> = ({ dictionary }) => {
     }
   };
 
-  // Get category label from dictionary
-  const getCategoryLabel = (category: ScheduleEvent['category']) => {
-    switch(category) {
-      case 'tasting': return dictionary.schedule.categories.tasting;
-      case 'vip': return dictionary.schedule.categories.vip;
-      case 'party': return dictionary.schedule.categories.party;
-      case 'breakfast': return dictionary.schedule.categories.breakfast;
-      case 'exchange': return dictionary.schedule.categories.exchange;
-      case 'general': return dictionary.schedule.categories.general;
-      default: return category;
+  // Get translated day name from dictionary
+  const getDayName = (dayLabel: string) => {
+    switch(dayLabel.toLowerCase()) {
+      case 'friday': return t('days.friday');
+      case 'saturday': return t('days.saturday');
+      case 'sunday': return t('days.sunday');
+      default: return dayLabel;
     }
+  };
+
+  // Get translated category name
+  const getCategoryLabel = (category: ScheduleEvent['category']) => {
+    return t(`categories.${category}`);
   };
 
   return (
@@ -56,7 +55,7 @@ const Schedule: React.FC<ScheduleProps> = ({ dictionary }) => {
           {festivalDays.map(day => (
             <Nav.Item key={day.id}>
               <Nav.Link eventKey={day.id} className="px-4">
-                {dictionary.schedule.days[day.label.toLowerCase() as keyof typeof dictionary.schedule.days]}
+                {getDayName(day.label)}
                 <span className="d-block small">
                   {new Date(day.date).toLocaleDateString(undefined, { 
                     month: 'short', 
@@ -81,27 +80,27 @@ const Schedule: React.FC<ScheduleProps> = ({ dictionary }) => {
                         </div>
                         <div className="flex-grow-1">
                           <h5 className="event-title mb-1">
-                            {dictionary.schedule.events?.[event.id]?.title || event.title}
+                            {t(`events.${event.id}.title`, { fallback: event.title })}
                           </h5>
                           <Badge bg={getCategoryColor(event.category)} className="mb-2">
                             {getCategoryLabel(event.category)}
                           </Badge>
                           {event.reservation && (
                             <Badge bg="warning" className="mb-2 ms-2">
-                              {dictionary.schedule.reservation}
+                              {t('reservation')}
                             </Badge>
                           )}
                           <p className="event-description mb-1">
-                            {dictionary.schedule.events?.[event.id]?.description || event.description}
+                            {t(`events.${event.id}.description`, { fallback: event.description })}
                           </p>
                           {event.presenter && (
                             <p className="event-presenter small mb-0">
-                              <strong>{dictionary.schedule.presenter}:</strong> {event.presenter}
+                              <strong>{t('presenter')}:</strong> {event.presenter}
                             </p>
                           )}
                           {event.location && (
                             <p className="event-location small mb-0">
-                              <strong>{dictionary.schedule.location}:</strong> {event.location}
+                              <strong>{t('location')}:</strong> {event.location}
                             </p>
                           )}
                         </div>
@@ -112,7 +111,7 @@ const Schedule: React.FC<ScheduleProps> = ({ dictionary }) => {
               </div>
             ) : (
               <div className="text-center py-5">
-                <p>{dictionary.schedule.noEvents}</p>
+                <p>{t('noEvents')}</p>
               </div>
             )}
           </Tab.Pane>

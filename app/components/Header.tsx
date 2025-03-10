@@ -4,15 +4,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import LanguageSwitcher from './LanguageSwitcher';
 import { Navbar, Container } from 'react-bootstrap';
-import { Dictionary } from '@/lib/i18n';
+import { useTranslations } from 'next-intl';
 
 interface HeaderProps {
     logoSrc?: string;
     lang: string;
-    dictionary: Dictionary;
 }
 
-const Header = ({ logoSrc = "/images/logo.svg", lang, dictionary }: HeaderProps) => {
+const Header = ({ logoSrc = "/images/logo.svg", lang }: HeaderProps) => {
+    const t = useTranslations();
+    
     return (
         <Navbar fixed="top" bg="dark" variant="dark" className="shadow">
             <Container className="d-flex justify-content-between">
@@ -26,7 +27,7 @@ const Header = ({ logoSrc = "/images/logo.svg", lang, dictionary }: HeaderProps)
                         className="me-2"
                     />
                     <span className="gradient-text">
-                        {dictionary.festivalName}
+                        {t('festivalName')}
                     </span>
                 </Navbar.Brand>
 

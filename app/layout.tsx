@@ -3,22 +3,15 @@ import { Inter } from 'next/font/google';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './globals.css';
-import { defaultLanguage, getDictionary } from '@/lib/i18n';
+import { defaultLanguage } from '@/lib/i18n';
 import { FESTIVAL_CONFIG } from '@/app/config/dates';
 
 const inter = Inter({ subsets: ['latin'] });
 
-// Generate standard metadata for non-localized routes
-// We'll use a server-side generated metadata for better SEO
-export async function generateMetadata(): Promise<Metadata> {
-  // Get the default language dictionary
-  const dict = await getDictionary(defaultLanguage);
-  
-  return {
-    title: `${dict.festivalName} ${FESTIVAL_CONFIG.year}`,
-    description: dict.welcome.subtitle,
-  };
-}
+export const metadata: Metadata = {
+  title: `Champagne Festival ${FESTIVAL_CONFIG.year}`,
+  description: "Join us for the most exquisite champagne tasting experience",
+};
 
 /**
  * Renders the root layout for the application.

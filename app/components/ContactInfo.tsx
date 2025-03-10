@@ -2,31 +2,27 @@
 
 import React from 'react';
 import { contactConfig } from '@/app/config/contact';
-import { Dictionary } from '@/lib/i18n';
-
-interface ContactInfoProps {
-  dictionary: Dictionary;
-}
+import { useTranslations } from 'next-intl';
 
 /**
  * Component to display contact information from configuration
  */
-const ContactInfo: React.FC<ContactInfoProps> = ({ dictionary }) => {
+const ContactInfo: React.FC = () => {
+  const t = useTranslations('contact');
+  
   return (
     <div className="contact-info">
-      {dictionary.contact.alternativeContact && (
-        <p className="mb-3">{dictionary.contact.alternativeContact}</p>
-      )}
+      <p className="mb-3">{t('alternativeContact')}</p>
       
       <div className="mb-2">
-        <strong>{dictionary.contact.emailLabel}: </strong>
+        <strong>{t('emailLabel')}: </strong>
         <a href={`mailto:${contactConfig.emails.info}`} className="text-decoration-none">
           {contactConfig.emails.info}
         </a>
       </div>
       
       <div className="mb-2">
-        <strong>{dictionary.contact.phoneLabel}: </strong>
+        <strong>{t('phoneLabel')}: </strong>
         <a href={`tel:${contactConfig.phones.main.replace(/\s/g, '')}`} className="text-decoration-none">
           {contactConfig.phones.main}
         </a>

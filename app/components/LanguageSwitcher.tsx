@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Dropdown, Button } from "react-bootstrap";
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
+import { Link } from 'next-intl/link';
 
 interface LanguageSwitcherProps {
     currentLang: string;
@@ -10,7 +13,8 @@ interface LanguageSwitcherProps {
 
 const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
     const [mounted, setMounted] = useState(false);
-    const router = useRouter();
+    const t = useTranslations();
+    const locale = useLocale();
     const pathname = usePathname();
 
     // Prevent hydration issues by not rendering on first mount
@@ -28,15 +32,6 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
     // Find current language details
     const currentLanguageOption = languageOptions.find(lang => lang.code === currentLang) || languageOptions[0];
 
-    // Handle language change - redirects to the same page with a different locale
-    const changeLanguage = (langCode: string) => {
-        const newPathname = pathname.replace(/^\/[^\/]+/, `/${langCode}`);
-        router.push(newPathname);
-        
-        // Set cookie for language preference
-        document.cookie = `NEXT_LOCALE=${langCode}; path=/; max-age=31536000; SameSite=Lax`;
-    };
-
     // Don't render anything during server-side rendering to prevent hydration issues
     if (!mounted) {
         return <div className="mr-4"></div>;
@@ -49,8 +44,8 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
                 variant="dark"
                 size="sm"
                 className="text-secondary"
-                aria-label="Language selection"
-                title="Select language"
+                aria-label={t('language.select')}
+                title={t('language.select')}
             >
                 <i className="bi bi-globe2"></i>
                 <span className="d-none d-sm-inline ms-2">{currentLanguageOption.code.toUpperCase()}</span>
@@ -61,11 +56,12 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
                 align="end"
             >
                 {languageOptions.map((lang) => (
-                    <Dropdown.Item
+                    <Link 
                         key={lang.code}
-                        className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
-                            }`}
-                        onClick={() => changeLanguage(lang.code)}
+                        href={pathname} 
+                        locale={lang.code}
+                        className="dropdown-item d-flex align-items-center px-4 py-3"
+                        style={currentLang === lang.code ? {background: 'rgba(var(--bs-primary-rgb), 0.1)'} : {}}
                     >
                         <span className="me-3 fs-5">{lang.flag}</span>
                         <div>
@@ -75,7 +71,7 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
                         {currentLang === lang.code && (
                             <i className="bi bi-check ms-auto text-primary"></i>
                         )}
-                    </Dropdown.Item>
+                    </Link>
                 ))}
             </Dropdown.Menu>
         </Dropdown>

@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Dictionary } from "@/lib/i18n";
+import { useTranslations } from "next-intl";
 
 /**
  * Props for the Countdown component
  */
 interface CountdownProps {
     targetDate: string | Date;
-    dictionary: Dictionary;
 }
 
 /**
@@ -33,7 +32,8 @@ enum TimeUnits {
  * Countdown component that displays time remaining until a target date
  * Handles hydration mismatches by only rendering the final countdown on client-side
  */
-const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
+const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
+    const t = useTranslations('countdown');
     const [mounted, setMounted] = useState(false);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
     
@@ -44,18 +44,25 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
     }, [targetDate]);
     
     // Use refs to avoid dependency cycles
-    const dictionaryRef = useRef(dictionary);
+    const tRef = useRef<any>(null);
     const targetDateObjRef = useRef(targetDateObj);
     
-    // Update refs when props change
+    // Update refs when values change
     useEffect(() => {
         targetDateObjRef.current = targetDateObj;
     }, [targetDateObj]);
     
-    // Update dictionary ref when it changes
+    // Update translation ref once when it's available
     useEffect(() => {
-        dictionaryRef.current = dictionary;
-    }, [dictionary]);
+        if (!tRef.current) {
+            tRef.current = {
+                days: t('days'),
+                hours: t('hours'),
+                minutes: t('minutes'),
+                seconds: t('seconds')
+            };
+        }
+    }, [t]);
 
     // Set component as mounted after initial render
     useEffect(() => {
@@ -64,7 +71,8 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
     
     // Calculate time left using refs to avoid dependency cycles
     const calculateTimeLeft = useCallback((): TimeLeft => {
-        const dict = dictionaryRef.current;
+        if (!tRef.current) return {};
+        
         const targetDate = targetDateObjRef.current;
         
         // Get time difference in milliseconds
@@ -72,19 +80,19 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
 
         if (difference > 0) {
             return {
-                [dict.countdown.days]: Math.floor(difference / TimeUnits.Day),
-                [dict.countdown.hours]: Math.floor((difference / TimeUnits.Hour) % 24),
-                [dict.countdown.minutes]: Math.floor((difference / TimeUnits.Minute) % 60),
-                [dict.countdown.seconds]: Math.floor((difference / TimeUnits.Second) % 60),
+                [tRef.current.days]: Math.floor(difference / TimeUnits.Day),
+                [tRef.current.hours]: Math.floor((difference / TimeUnits.Hour) % 24),
+                [tRef.current.minutes]: Math.floor((difference / TimeUnits.Minute) % 60),
+                [tRef.current.seconds]: Math.floor((difference / TimeUnits.Second) % 60),
             };
         }
 
         return {};
     }, []);
 
-    // Update countdown every second, but only after component is mounted
+    // Update countdown every second, but only after component is mounted and translations are loaded
     useEffect(() => {
-        if (!mounted) return;
+        if (!mounted || !tRef.current) return;
         
         // Initial calculation
         setTimeLeft(calculateTimeLeft());
@@ -115,10 +123,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
                 timerComponents.length ? (
                     <div className="countdown-units">{timerComponents}</div>
                 ) : (
-                    <span className="countdown-complete">{dictionary.countdown.started}</span>
+                    <span className="countdown-complete">{t('started')}</span>
                 )
             ) : (
-                <span className="countdown-loading">{dictionary.countdown.loading}</span>
+                <span className="countdown-loading">{t('loading')}</span>
             )}
         </div>
     );
