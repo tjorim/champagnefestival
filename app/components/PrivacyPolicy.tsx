@@ -3,12 +3,11 @@
 import React from 'react';
 import { Modal, Button } from "react-bootstrap";
 import { useTranslations } from 'next-intl';
-import { FESTIVAL_CONFIG } from '@/app/config/dates';
+import { festivalYear } from '@/app/config/dates';
 
 interface PrivacyPolicyProps {
   isOpen: boolean;
   onClose: () => void;
-  lang?: string;
 }
 
 const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
@@ -25,7 +24,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       </Modal.Header>
       <Modal.Body className="modal-body">
         <p className="text-light mb-3">
-          {tPrivacy('lastUpdated')}: {tPrivacy('lastUpdatedDate').replace('2025', FESTIVAL_CONFIG.year.toString())}
+          {tPrivacy('lastUpdated')}: {tPrivacy('lastUpdatedDate').replace('2025', festivalYear.toString())}
         </p>
 
         <div className="mt-4">

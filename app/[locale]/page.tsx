@@ -3,8 +3,9 @@
 import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { producerItems, sponsorItems } from '@/app/config/marqueeSlider';
-import Link from 'next/link';
-import { eventDetails } from '@/app/config/schedule';
+import { faqKeys } from '@/app/config/faq';
+import { Link } from '@/navigation';
+import { festivalDate } from '@/app/config/dates';
 
 // Import UI components
 import Header from '@/app/components/Header';
@@ -18,13 +19,11 @@ import ContactForm from '@/app/components/ContactForm';
 import ContactInfo from '@/app/components/ContactInfo';
 import LocationInfo from '@/app/components/LocationInfo';
 import Schedule from '@/app/components/Schedule';
-import { useLocale } from 'next-intl';
 
 /**
  * Renders the Home page for the festival website using next-intl for localization.
  */
 export default function HomePage() {
-  const locale = useLocale();
   const t = useTranslations();
   const tWelcome = useTranslations('welcome');
   const tWhatWeDo = useTranslations('whatWeDo');
@@ -36,21 +35,21 @@ export default function HomePage() {
   const tFaq = useTranslations('faq');
   const tContact = useTranslations('contact');
   const tAccessibility = useTranslations('accessibility');
-  
+
   return (
     <>
       <Link href="#main-content" className="skip-link">
         {tAccessibility('skipToContent')}
       </Link>
-      <Header lang={locale} />
+      <Header />
       <BubbleBackground />
-      
+
       <main id="main-content">
         {/* Hero Section */}
         <section className="hero" id="welcome">
           <h1>{tWelcome('title')}</h1>
           <p className="hero-subtitle">{tWelcome('subtitle')}</p>
-          <Link href={`/${locale}#next-festival`} className="cta-button">
+          <Link href="#next-festival" className="cta-button">
             {tWelcome('learnMore')}
           </Link>
         </section>
@@ -77,30 +76,31 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Next Festival with Countdown */}
+        {/* Next Festival with Countdown - smart visibility built into the component */}
         <section id="next-festival" className="content-section highlight-section">
           <div className="container text-center">
             <h2 className="section-header">{tNextFestival('title')}</h2>
-            <Countdown targetDate={eventDetails.dates.start} />
+            {/* Countdown will automatically handle visibility based on date */}
+            <Countdown targetDate={festivalDate.toISOString()} autoHideAfterDays={30} />
             <p className="mb-4 mx-auto" style={{ position: 'relative', zIndex: 50 }}>
               {tNextFestival('description')}
             </p>
           </div>
         </section>
-        
+
         {/* Producers Marquee */}
         <section id="producers" className="content-section">
           <div className="container text-center">
             <h2 className="section-header">{tProducers('title')}</h2>
             <Suspense fallback={<div className="carousel-loading">{t('loading')}</div>}>
-              <MarqueeSlider 
-                itemsType="producers" 
+              <MarqueeSlider
+                itemsType="producers"
                 items={producerItems}
               />
             </Suspense>
           </div>
         </section>
-        
+
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
           <div className="container">
@@ -111,14 +111,14 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        
+
         {/* Sponsors Marquee - Before FAQ section */}
         <section id="sponsors" className="content-section">
           <div className="container text-center">
             <h2 className="section-header">{tSponsors('title')}</h2>
             <Suspense fallback={<div className="carousel-loading">{t('loading')}</div>}>
-              <MarqueeSlider 
-                itemsType="sponsors" 
+              <MarqueeSlider
+                itemsType="sponsors"
                 items={sponsorItems}
               />
             </Suspense>
@@ -151,7 +151,7 @@ export default function HomePage() {
         <section id="faq" className="content-section">
           <div className="container text-center">
             <h2 className="section-header">{tFaq('title')}</h2>
-            <FAQ />
+            <FAQ keys={faqKeys} />
           </div>
         </section>
 
@@ -171,7 +171,7 @@ export default function HomePage() {
           </div>
         </section>
       </main>
-      
+
       <Footer />
     </>
   );

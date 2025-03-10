@@ -3,14 +3,28 @@ import { Inter } from 'next/font/google';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './globals.css';
-import { defaultLanguage } from '@/lib/i18n';
-import { FESTIVAL_CONFIG } from '@/app/config/dates';
+import { defaultLanguage, languages } from '@/lib/i18n';
+import { festivalYear } from '@/app/config/dates';
+import { baseUrl } from '@/app/config/site';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// Base metadata that will be extended by locale-specific metadata
 export const metadata: Metadata = {
-  title: `Champagne Festival ${FESTIVAL_CONFIG.year}`,
-  description: "Join us for the most exquisite champagne tasting experience",
+  // Minimal fallback values that should rarely be seen by users
+  // Real metadata is generated in [locale]/layout.tsx
+  title: {
+    template: '%s | Champagne Festival',
+    default: `Champagne Festival ${festivalYear}`,
+  },
+  description: "Champagne Festival",
+  // Define available languages for better SEO
+  alternates: {
+    languages: {
+      'x-default': '/',
+      ...Object.fromEntries(languages.map(lang => [lang, `/${lang}`]))
+    }
+  }
 };
 
 /**
@@ -31,6 +45,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang={defaultLanguage} data-bs-theme="dark" style={{transitionProperty: "none", marginRight: "0px"}}>
+      <head>
+        {/* Alternate language links for SEO */}
+        {languages.map(lang => (
+          <link 
+            key={lang} 
+            rel="alternate" 
+            hrefLang={lang} 
+            href={`${baseUrl}/${lang}`} 
+          />
+        ))}
+        <link rel="alternate" hrefLang="x-default" href={baseUrl} />
+      </head>
       <body className={`${inter.className} rounded-avatar`}>
         {children}
       </body>

@@ -1,4 +1,7 @@
 {
+    "seo": {
+        "keywords": ["champagne", "festival", "dégustation de vin", "événement", "gastronomie", "luxe", "festival belge"]
+    },
     "welcome": {
         "title": "Bienvenue au Festival du Champagne",
         "subtitle": "Une célébration du champagne fin et de la communauté",
@@ -101,7 +104,9 @@
         "minutes": "minutes",
         "seconds": "secondes",
         "started": "Le festival a commencé !",
-        "loading": "Chargement du compte à rebours..."
+        "loading": "Chargement du compte à rebours...",
+        "concluded": "Le festival est terminé. À la prochaine édition !",
+        "happening": "Le festival a lieu en ce moment !"
     },
     "producers": {
         "title": "Producteurs de Champagne"

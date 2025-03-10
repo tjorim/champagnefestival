@@ -30,8 +30,34 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 - Next.js - React framework for server-rendered applications
 - React Bootstrap - UI component library
-- i18next - Internationalization library
+- next-intl - Internationalization library for Next.js (migration in progress)
 - TypeScript - Type-safe JavaScript
+
+## Internationalization
+
+The project is currently transitioning from a custom internationalization implementation to `next-intl`. You'll find two different approaches in the codebase:
+
+1. **Legacy approach** in `/app/[lang]` routes:
+   - Uses custom dictionary loading via `getDictionaryData` function
+   - Passes dictionary directly to components via props
+
+2. **New approach** in `/app/[locale]` routes:
+   - Uses `next-intl` library with proper integration with Next.js
+   - Uses hooks like `useTranslations` to access translations
+   - Configured via `middleware.ts` and `navigation.ts`
+
+**Note**: We've migrated most components to use the `next-intl` approach. The following components are fully migrated:
+- Header (uses useLocale hook)
+- Footer
+- FAQ (uses config for structure but translations from dictionary)
+- ContactForm
+- ContactInfo
+- LocationInfo
+- PrivacyPolicy
+- Schedule
+- MapComponent
+
+When developing, always use the `next-intl` pattern with the `useTranslations` hook rather than passing dictionary props.
 
 ## Development Guidelines
 

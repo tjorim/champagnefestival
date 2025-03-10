@@ -1,17 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Dropdown, Button } from "react-bootstrap";
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
-import { Link } from 'next-intl/link';
+import { Link } from '@/navigation';
 
-interface LanguageSwitcherProps {
-    currentLang: string;
-}
-
-const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
+const LanguageSwitcher = () => {
     const [mounted, setMounted] = useState(false);
     const t = useTranslations();
     const locale = useLocale();
@@ -30,7 +26,7 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
     ];
 
     // Find current language details
-    const currentLanguageOption = languageOptions.find(lang => lang.code === currentLang) || languageOptions[0];
+    const currentLanguageOption = languageOptions.find(lang => lang.code === locale) || languageOptions[0];
 
     // Don't render anything during server-side rendering to prevent hydration issues
     if (!mounted) {
@@ -61,14 +57,14 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
                         href={pathname} 
                         locale={lang.code}
                         className="dropdown-item d-flex align-items-center px-4 py-3"
-                        style={currentLang === lang.code ? {background: 'rgba(var(--bs-primary-rgb), 0.1)'} : {}}
+                        style={locale === lang.code ? {background: 'rgba(var(--bs-primary-rgb), 0.1)'} : {}}
                     >
                         <span className="me-3 fs-5">{lang.flag}</span>
                         <div>
                             <div className="fw-medium">{lang.label}</div>
                             <div className="small text-muted">{lang.nativeName}</div>
                         </div>
-                        {currentLang === lang.code && (
+                        {locale === lang.code && (
                             <i className="bi bi-check ms-auto text-primary"></i>
                         )}
                     </Link>

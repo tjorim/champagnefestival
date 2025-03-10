@@ -4,22 +4,13 @@ import { useState } from "react";
 import PrivacyPolicy from "./PrivacyPolicy";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { useTranslations } from 'next-intl';
-import { useLocale } from 'next-intl';
 import { contactConfig } from "@/app/config/contact";
 
-interface FooterProps {
-    lang?: string;
-}
-
-const Footer = ({ lang }: FooterProps) => {
-    const locale = useLocale();
+const Footer = () => {
     const t = useTranslations();
     const tFooter = useTranslations('footer');
     const currentYear = new Date().getFullYear();
     const [privacyOpen, setPrivacyOpen] = useState(false);
-
-    // Use provided lang prop or fallback to locale from next-intl
-    const currentLang = lang || locale;
 
     return (
         <footer className="site-footer">
@@ -57,7 +48,6 @@ const Footer = ({ lang }: FooterProps) => {
             <PrivacyPolicy
                 isOpen={privacyOpen}
                 onClose={() => setPrivacyOpen(false)}
-                lang={currentLang}
             />
         </footer>
     );

@@ -153,7 +153,7 @@ export interface Dictionary {
 }
 
 // Import festival date configuration
-import { FESTIVAL_DATE_RANGE } from '@/app/config/dates';
+import { festivalDateRange } from '@/app/config/dates';
 
 // Define supported languages
 export const languages = ['en', 'fr', 'nl'];
@@ -188,8 +188,8 @@ export const getDictionary = async (locale: string = defaultLanguage): Promise<D
  */
 function updateFestivalDate(dictionary: Dictionary, locale: string): void {
   // Get the correct date range for the locale
-  const dateRange = FESTIVAL_DATE_RANGE[locale as keyof typeof FESTIVAL_DATE_RANGE] || 
-                    FESTIVAL_DATE_RANGE.en;
+  const dateRange = festivalDateRange[locale as keyof typeof festivalDateRange] || 
+                    festivalDateRange.en;
   
   // Update the FAQ answer with the correct date
   if (dictionary.faq?.a2) {

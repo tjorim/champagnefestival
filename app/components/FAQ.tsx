@@ -5,35 +5,48 @@ import { Accordion } from "react-bootstrap";
 import { useTranslations } from "next-intl";
 
 /**
+ * FAQ component interface for keys prop
+ */
+interface FAQProps {
+  // Array of keys that define which FAQ items to display
+  keys: Array<{
+    id: number;
+    questionKey: string;
+    answerKey: string;
+  }>;
+}
+
+/**
  * FAQ component that displays a list of frequently asked questions
  * with expandable/collapsible answers in an accessible accordion pattern
  * Using react-bootstrap accordion
+ * 
+ * The component requires keys to be passed in, which define which FAQ items to display.
+ * These keys correspond to translation keys in the dictionary files.
  */
-const FAQ: React.FC = () => {
+const FAQ: React.FC<FAQProps> = ({ keys }) => {
     const t = useTranslations('faq');
     
-    // Create 5 FAQ items directly using the translations
-    const faqs = [
-        { id: 1, key: 'q1', answerKey: 'a1' },
-        { id: 2, key: 'q2', answerKey: 'a2' },
-        { id: 3, key: 'q3', answerKey: 'a3' },
-        { id: 4, key: 'q4', answerKey: 'a4' },
-        { id: 5, key: 'q5', answerKey: 'a5' }
-    ];
+    // Map the translation keys to their values with fallbacks for better safety
+    const faqItems = keys.map(item => ({
+        id: item.id,
+        question: t(item.questionKey, { defaultValue: `Question ${item.id}` }),
+        answer: t(item.answerKey, { defaultValue: `Answer to question ${item.id}` })
+    }));
     
     return (
         <Accordion className="rounded-lg shadow-lg">
-            {faqs.map((faq) => (
+            {faqItems.map((item) => (
                 <Accordion.Item
-                    key={faq.id}
-                    eventKey={`${faq.id}`}
+                    key={item.id}
+                    eventKey={`${item.id}`}
                 >
                     <Accordion.Header>
-                        {t(faq.key)}
+                        {item.question}
                     </Accordion.Header>
                     <Accordion.Body>
                         <div className="py-2 border-start border-3 ps-3 border-brand">
-                            <p>{t(faq.answerKey)}</p>
+                            <p>{item.answer}</p>
                         </div>
                     </Accordion.Body>
                 </Accordion.Item>

@@ -190,6 +190,7 @@ const ContactForm: React.FC = () => {
                             disabled={isSubmitting}
                             aria-busy={isSubmitting ? "true" : "false"}
                             aria-live="polite"
+                            aria-label={t('submit', { defaultValue: 'Submit contact form' })}
                         >
                             {isSubmitting ? (
                                 <span className="d-flex align-items-center justify-content-center">
