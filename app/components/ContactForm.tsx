@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Card, Form, Button, Alert, Spinner } from "react-bootstrap";
-import { Dictionary } from "@/lib/i18n";
+import { useTranslations } from 'next-intl';
 
 /**
  * Form data structure
@@ -14,14 +14,11 @@ interface FormData {
     message: string;
 }
 
-interface ContactFormProps {
-    dictionary: Dictionary;
-}
-
 /**
  * Contact form component with validation using react-bootstrap components
  */
-const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
+const ContactForm: React.FC = () => {
+    const t = useTranslations('contact');
     const [form, setForm] = useState<FormData>({ name: "", email: "", message: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -38,8 +35,6 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
             }
         };
     }, [submissionTimeoutId]);
-
-    // Dictionary is now passed as a prop, so we don't need to check if it's loaded
 
     // Handle form field changes
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -65,10 +60,10 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
 
         // Basic validation
         const newErrors: Partial<Record<keyof FormData, string | null>> = {};
-        if (!form.name) newErrors.name = dictionary.contact.errors.nameRequired;
-        if (!form.email) newErrors.email = dictionary.contact.errors.emailRequired;
-        else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = dictionary.contact.errors.emailInvalid;
-        if (!form.message) newErrors.message = dictionary.contact.errors.messageRequired;
+        if (!form.name) newErrors.name = t('errors.nameRequired');
+        if (!form.email) newErrors.email = t('errors.emailRequired');
+        else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = t('errors.emailInvalid');
+        if (!form.message) newErrors.message = t('errors.messageRequired');
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -105,7 +100,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
             setGeneralError(
                 error instanceof Error 
                     ? error.message 
-                    : dictionary.contact.submissionError
+                    : t('submissionError')
             );
         } finally {
             setIsSubmitting(false);
@@ -117,7 +112,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
             <Card.Body className="p-3 p-md-4">
                 {isSubmitted ? (
                     <Alert variant="success">
-                        {dictionary.contact.successMessage}
+                        {t('successMessage')}
                     </Alert>
                 ) : (
                     <Form onSubmit={handleSubmit} className="my-3">
@@ -130,7 +125,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="name">
-                                {dictionary.contact.name}
+                                {t('name')}
                             </Form.Label>
                             <Form.Control
                                 id="name"
@@ -149,7 +144,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="email">
-                                {dictionary.contact.email}
+                                {t('email')}
                             </Form.Label>
                             <Form.Control
                                 id="email"
@@ -169,7 +164,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
 
                         <Form.Group className="mb-3">
                             <Form.Label htmlFor="message">
-                                {dictionary.contact.message}
+                                {t('message')}
                             </Form.Label>
                             <Form.Control
                                 as="textarea"
@@ -177,7 +172,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
                                 name="message"
                                 value={form.message}
                                 onChange={handleChange}
-                                placeholder={dictionary.contact.placeholderMessage}
+                                placeholder={t('placeholderMessage')}
                                 style={{ minHeight: "120px" }}
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.message}
@@ -195,16 +190,17 @@ const ContactForm: React.FC<ContactFormProps> = ({ dictionary }) => {
                             disabled={isSubmitting}
                             aria-busy={isSubmitting ? "true" : "false"}
                             aria-live="polite"
+                            aria-label={t('submit', { defaultValue: 'Submit contact form' })}
                         >
                             {isSubmitting ? (
                                 <span className="d-flex align-items-center justify-content-center">
                                     <Spinner animation="border" size="sm" className="me-2" />
-                                    {dictionary.contact.submitting}
+                                    {t('submitting')}
                                 </span>
                             ) : (
                                 <span className="d-flex align-items-center justify-content-center">
                                     <i className="bi bi-send me-2"></i>
-                                    {dictionary.contact.submit}
+                                    {t('submit')}
                                 </span>
                             )}
                         </Button>

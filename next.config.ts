@@ -1,8 +1,10 @@
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Remove i18n config as we're using App Router's built-in i18n
   images: {
     remotePatterns: [
       {
@@ -18,4 +20,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

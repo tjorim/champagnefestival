@@ -1,4 +1,7 @@
 {
+    "seo": {
+        "keywords": ["champagne", "festival", "wijnproeverij", "evenement", "gastronomie", "luxe", "Belgisch festival"]
+    },
     "welcome": {
         "title": "Welkom bij Champagne Festival",
         "subtitle": "Een viering van fijne champagne en gemeenschap",
@@ -101,7 +104,9 @@
         "minutes": "minuten",
         "seconds": "seconden",
         "started": "Festival is begonnen!",
-        "loading": "Countdown laden..."
+        "loading": "Countdown laden...",
+        "concluded": "Het festival is afgelopen. Tot de volgende keer!",
+        "happening": "Het festival is nu bezig!"
     },
     "producers": {
         "title": "Champagne Producenten"
