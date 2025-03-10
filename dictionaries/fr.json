@@ -90,10 +90,8 @@
     },
     "location": {
         "title": "Lieu de l'Événement",
-        "venueName": "Grand Palais des Expositions",
-        "venueDescription": "Situé au cœur de la ville, notre lieu offre un mélange parfait d'élégance et d'accessibilité. Le Grand Palais des Expositions dispose d'installations ultramodernes avec une architecture remarquable.",
+        "venueDescription": "Situé au cœur de Bredene, notre lieu offre un mélange parfait d'élégance et d'accessibilité avec des installations ultramodernes et une architecture remarquable.",
         "address": "Adresse",
-        "addressValue": "123 Boulevard du Festival, Centre-Ville",
         "openingHours": "Heures d'Ouverture",
         "openingHoursValue": "Voir le programme"
     },
@@ -118,7 +116,7 @@
         "q2": "Quand aura lieu le prochain festival ?",
         "a2": "Le prochain festival est prévu pour les {festivalDateRange}. Notez ces dates dans vos calendriers pour un week-end de bulles et de festivités !",
         "q3": "Où se tiendra le festival ?",
-        "a3": "Le festival se déroulera au Grand Palais des Expositions au centre-ville. Il y a des transports en commun pratiques et des parkings à proximité.",
+        "a3": "Le festival se déroulera au Meeting- en eventcentrum Staf Versluys à Bredene. Il y a des transports en commun pratiques et des parkings à proximité.",
         "q4": "Les billets sont-ils déjà disponibles ?",
         "a4": "Les billets early bird seront disponibles à partir de septembre 2024. Inscrivez-vous à notre newsletter pour être informé lorsque les billets seront mis en vente.",
         "q5": "Puis-je devenir sponsor ou vendeur ?",

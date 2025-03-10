@@ -9,7 +9,6 @@ import { defaultLanguage } from '@/lib/i18n';
  * to the localized version of the site.
  *
  * @example
- * // With defaultLanguage set to "en", accessing this page redirects to "/en".
  */
 export default function Home() {
   redirect(`/${defaultLanguage}`);

@@ -90,10 +90,8 @@
     },
     "location": {
         "title": "Location",
-        "venueName": "Grand Exhibition Hall",
-        "venueDescription": "Located in the heart of the city, our venue offers a perfect blend of elegance and accessibility. The Grand Exhibition Hall features state-of-the-art facilities with stunning architecture.",
+        "venueDescription": "Located in the heart of Bredene, our venue offers a perfect blend of elegance and accessibility with state-of-the-art facilities and stunning architecture.",
         "address": "Address",
-        "addressValue": "123 Festival Boulevard, City Center",
         "openingHours": "Opening Hours",
         "openingHoursValue": "See schedule"
     },
@@ -118,7 +116,7 @@
         "q2": "When is the next festival?",
         "a2": "The next festival is scheduled for {festivalDateRange}. Mark your calendars for a weekend of bubbles and festivities!",
         "q3": "Where will the festival be held?",
-        "a3": "The festival will take place at the Grand Exhibition Hall in the city center. There's convenient public transportation and parking nearby.",
+        "a3": "The festival will take place at the Meeting- en eventcentrum Staf Versluys in Bredene. There's convenient public transportation and parking nearby.",
         "q4": "Are tickets available yet?",
         "a4": "Early bird tickets will be available starting September 2024. Sign up for our newsletter to be notified when tickets go on sale.",
         "q5": "Can I become a sponsor or vendor?",
