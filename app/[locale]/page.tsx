@@ -1,6 +1,7 @@
 'use client';
 
-// Let's try without edge runtime declaration
+// Enable Edge Runtime for Cloudflare Pages
+export const runtime = 'edge';
 
 import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';

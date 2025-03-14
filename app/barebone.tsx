@@ -1,7 +1,7 @@
 'use client';
 
-// No runtime declaration
-// As simple as possible
+// Enable Edge Runtime for Cloudflare Pages
+export const runtime = 'edge';
 
 export default function Barebone() {
   return (

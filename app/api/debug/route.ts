@@ -9,9 +9,8 @@ export async function GET() {
     const data = {
       timestamp: new Date().toISOString(),
       env: {
-        node_version: process?.versions?.node || 'undefined',
-        node_env: process?.env?.NODE_ENV || 'undefined',
-        runtime: typeof process !== 'undefined' ? 'node' : 'edge',
+        runtime: 'edge',
+        environment: process?.env?.CF_PAGES ? 'Cloudflare Pages' : 'Unknown',
       },
       headers: Object.fromEntries(new Headers().entries()),
     };

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-// No runtime declaration
+// Enable Edge Runtime for Cloudflare Pages
+export const runtime = 'edge';
 
 export function GET() {
   return NextResponse.json({ 
