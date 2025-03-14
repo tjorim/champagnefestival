@@ -24,6 +24,11 @@ export default function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     const pathname = url.pathname;
     
+    // Skip middleware for minimal test page to bypass internationalization
+    if (pathname === '/minimal-test' || pathname.startsWith('/api/debug')) {
+      return NextResponse.next();
+    }
+    
     // Handle the root path and redirect to default locale
     if (pathname === '/') {
       url.pathname = `/${defaultLanguage}`;
@@ -39,11 +44,31 @@ export default function middleware(request: NextRequest) {
         pathname,
         defaultLocale: defaultLanguage,
         locales: languages,
+        timestamp: new Date().toISOString(),
       });
     }
     
+    // For specific debug paths, just continue to the next middleware
+    if (pathname === '/api/debug') {
+      return NextResponse.next();
+    }
+    
     // For all other paths, use the intl middleware
-    return intlMiddleware(request);
+    try {
+      return intlMiddleware(request);
+    } catch (intlError) {
+      console.error('Intl middleware error:', intlError);
+      return NextResponse.json(
+        { 
+          error: 'Intl Middleware Error', 
+          message: intlError instanceof Error ? intlError.message : 'Unknown error in intl middleware',
+          stack: intlError instanceof Error ? intlError.stack : undefined,
+          url: request.url,
+          pathname,
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Middleware error:', error);
     // Return an error response with details
@@ -51,7 +76,9 @@ export default function middleware(request: NextRequest) {
       { 
         error: 'Middleware Error', 
         message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
+        url: request.url,
+        pathname: request.nextUrl.pathname,
       },
       { status: 500 }
     );
@@ -59,7 +86,16 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Match all pathnames except for
-  // - ... for files in the public folder (e.g. /favicon.ico)
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)']
+  // Match specific routes rather than excluding patterns
+  // This makes the middleware more predictable and easier to debug
+  matcher: [
+    // Root path
+    '/',
+    // Locale paths
+    '/:locale(en|fr|nl)/:path*',
+    // Only specific API routes
+    '/api/contact/:path*',
+    // Debug paths
+    '/debug-middleware',
+  ]
 };
