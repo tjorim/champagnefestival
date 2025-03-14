@@ -2,8 +2,12 @@
  * Site-wide configuration for the Champagne Festival application
  */
 
-// Base URL of the site - falls back to default if environment variable not set
-export const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.champagnefestival.be";
+// Base URL of the site
+// First try CF_PAGES_URL (automatically set by Cloudflare), then NEXT_PUBLIC_BASE_URL, then fallback
+export const baseUrl = 
+  (typeof process !== 'undefined' && process?.env?.CF_PAGES_URL) || 
+  (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_BASE_URL) || 
+  "https://www.champagnefestival.be";
 
 // Site name and organization
 export const siteConfig = {
@@ -14,13 +18,13 @@ export const siteConfig = {
   social: {
     twitter: "@ChampagneFest",
     facebook: {
-      appId: process.env.FACEBOOK_APP_ID || ""
+      appId: (typeof process !== 'undefined' && process?.env?.FACEBOOK_APP_ID) || ""
     }
   },
   
   // SEO verification codes
   verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION || ""
+    google: (typeof process !== 'undefined' && process?.env?.GOOGLE_SITE_VERIFICATION) || ""
   }
 };
 

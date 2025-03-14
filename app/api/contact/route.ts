@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+// Enable Edge Runtime for Cloudflare Pages
+export const runtime = 'edge';
+
 // Define the expected request body shape
 interface ContactRequest {
   name: string;

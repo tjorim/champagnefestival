@@ -1,5 +1,8 @@
 'use client';
 
+// Enable Edge Runtime for Cloudflare Pages
+export const runtime = 'edge';
+
 import { Suspense } from 'react';
 import { useTranslations } from 'next-intl';
 import { producerItems, sponsorItems } from '@/app/config/marqueeSlider';

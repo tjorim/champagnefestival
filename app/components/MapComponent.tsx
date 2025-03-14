@@ -58,13 +58,9 @@ const MapComponentClient = ({
                 // This is needed because the default icon paths are broken in bundled environments
                 // Using a type assertion to avoid TypeScript errors with _getIconUrl
                 // Define an extended interface for L.Icon.Default that includes _getIconUrl method
-                interface IconDefaultExtended extends L.Icon.Default {
-                    prototype: {
-                        _getIconUrl?: unknown;
-                    };
-                }
-                
-                const IconDefault = L.Icon.Default as IconDefaultExtended;
+                // Cast to unknown first to avoid TypeScript errors with the internal _getIconUrl property
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const IconDefault = L.Icon.Default as any;
                 delete IconDefault.prototype._getIconUrl;
                 
                 L.Icon.Default.mergeOptions({

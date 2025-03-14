@@ -7,6 +7,9 @@ import { Metadata } from 'next';
 import { baseUrl, siteConfig } from '@/app/config/site';
 import EventStructuredData from '@/app/components/JsonLd';
 
+// Enable Edge Runtime for Cloudflare Pages
+export const runtime = 'edge';
+
 
 /**
  * Generates metadata for each locale-specific route
