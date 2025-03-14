@@ -7,8 +7,7 @@ import { defaultLanguage, languages } from '@/lib/i18n';
 import { festivalYear } from '@/app/config/dates';
 import { baseUrl } from '@/app/config/site';
 
-// Enable Edge Runtime for Cloudflare Pages
-export const runtime = 'edge';
+// Let's try without edge runtime declaration
 
 const inter = Inter({ subsets: ['latin'] });
 

@@ -7,8 +7,7 @@ import { Metadata } from 'next';
 import { baseUrl, siteConfig } from '@/app/config/site';
 import EventStructuredData from '@/app/components/JsonLd';
 
-// Enable Edge Runtime for Cloudflare Pages
-export const runtime = 'edge';
+// Let's try without edge runtime declaration
 
 
 /**

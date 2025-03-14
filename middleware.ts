@@ -24,8 +24,13 @@ export default function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     const pathname = url.pathname;
     
-    // Skip middleware for minimal test page to bypass internationalization
-    if (pathname === '/minimal-test' || pathname.startsWith('/api/debug')) {
+    // Skip middleware for test pages to bypass internationalization
+    if (
+      pathname === '/minimal-test' || 
+      pathname === '/barebone' || 
+      pathname.startsWith('/api/debug') || 
+      pathname.startsWith('/api/basic')
+    ) {
       return NextResponse.next();
     }
     
