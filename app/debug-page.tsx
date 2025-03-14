@@ -2,6 +2,8 @@
 
 export const runtime = 'edge';
 
+import Link from 'next/link';
+
 export default function DebugPage() {
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
@@ -23,10 +25,10 @@ export default function DebugPage() {
       
       <h2>Links to Test:</h2>
       <ul>
-        <li><a href="/nl">Dutch Home</a></li>
-        <li><a href="/en">English Home</a></li>
-        <li><a href="/fr">French Home</a></li>
-        <li><a href="/api/contact">API (should return 405 Method Not Allowed)</a></li>
+        <li><Link href="/nl">Dutch Home</Link></li>
+        <li><Link href="/en">English Home</Link></li>
+        <li><Link href="/fr">French Home</Link></li>
+        <li><Link href="/api/contact">API (should return 405 Method Not Allowed)</Link></li>
       </ul>
     </div>
   );
