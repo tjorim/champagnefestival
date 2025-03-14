@@ -5,11 +5,8 @@
  * "The first full weekend (Friday, Saturday, Sunday) of March and October"
  */
 
-// Primary configuration - only update the year for future editions
-export const FESTIVAL_CONFIG = {
-  year: 2025
-  // No hardcoded hours - these should come from the schedule
-};
+// Festival configuration
+export const festivalYear = 2025; // Current festival year
 
 /**
  * Calculates the first Friday of a given month that is part of a full weekend
@@ -51,15 +48,15 @@ function getFirstFullWeekend(year: number, month: number) {
 }
 
 // Calculate March and October festival dates
-const marchWeekend = getFirstFullWeekend(FESTIVAL_CONFIG.year, 3); // March
-const octoberWeekend = getFirstFullWeekend(FESTIVAL_CONFIG.year, 10); // October
+const marchWeekend = getFirstFullWeekend(festivalYear, 3); // March
+const octoberWeekend = getFirstFullWeekend(festivalYear, 10); // October
 
 // Currently active festival edition (change this to switch between March/October)
-const ACTIVE_EDITION = 'march'; // or 'october'
+export const activeEdition = 'march'; // or 'october'
 
 // Get the active weekend
-const activeWeekend = ACTIVE_EDITION === 'march' ? marchWeekend : octoberWeekend;
-const activeMonth = ACTIVE_EDITION === 'march' ? 3 : 10;
+const activeWeekend = activeEdition === 'march' ? marchWeekend : octoberWeekend;
+const activeMonth = activeEdition === 'march' ? 3 : 10;
 
 // Export festival start and end dates (without specific times)
 // Times should be determined by the schedule, not here
@@ -87,14 +84,14 @@ function generateDateRangeStrings() {
   const month = activeMonth - 1; // 0-indexed for arrays
   const startDay = activeWeekend.friday.getDate();
   const endDay = activeWeekend.sunday.getDate();
-  const year = FESTIVAL_CONFIG.year;
   
   return {
-    en: `${MONTH_NAMES.en[month]} ${startDay}-${endDay}, ${year}`,
-    fr: `${startDay}-${endDay} ${MONTH_NAMES.fr[month]} ${year}`,
-    nl: `${startDay}-${endDay} ${MONTH_NAMES.nl[month]} ${year}`
+    en: `${MONTH_NAMES.en[month]} ${startDay}-${endDay}, ${festivalYear}`,
+    fr: `${startDay}-${endDay} ${MONTH_NAMES.fr[month]} ${festivalYear}`,
+    nl: `${startDay}-${endDay} ${MONTH_NAMES.nl[month]} ${festivalYear}`
   };
 }
 
 // Automatically generated formatted date strings for translations
-export const FESTIVAL_DATE_RANGE = generateDateRangeStrings();
+export const festivalDateRange = generateDateRangeStrings();
+

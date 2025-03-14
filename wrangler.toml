@@ -1,0 +1,5 @@
+# Pages configuration for champagnefestival
+name = "champagnefestival"
+compatibility_date = "2024-03-14"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
