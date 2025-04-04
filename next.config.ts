@@ -6,6 +6,7 @@ const withNextIntl = createNextIntlPlugin('./app/i18n.ts');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: 'export',
   images: {
     remotePatterns: [
       {
@@ -21,7 +22,7 @@ const nextConfig: NextConfig = {
   },
   // Enable Cloudflare Pages compatibility
   // Remove standalone output for Cloudflare Pages compatibility
-  
+
   // Copy routing files to the output directory
   async rewrites() {
     return [
@@ -35,7 +36,7 @@ const nextConfig: NextConfig = {
       }
     ];
   },
-  
+
   // Ensure these files are copied to output
   async headers() {
     return [];

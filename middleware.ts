@@ -59,21 +59,7 @@ export default function middleware(request: NextRequest) {
     }
     
     // For all other paths, use the intl middleware
-    try {
-      return intlMiddleware(request);
-    } catch (intlError) {
-      console.error('Intl middleware error:', intlError);
-      return NextResponse.json(
-        { 
-          error: 'Intl Middleware Error', 
-          message: intlError instanceof Error ? intlError.message : 'Unknown error in intl middleware',
-          stack: intlError instanceof Error ? intlError.stack : undefined,
-          url: request.url,
-          pathname,
-        },
-        { status: 500 }
-      );
-    }
+    return intlMiddleware(request);
   } catch (error) {
     console.error('Middleware error:', error);
     // Return an error response with details
