@@ -112,27 +112,14 @@ export default async function LocaleLayout({
   const messages = await getMessages({ locale });
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
-      {/* Add EventStructuredData component for better schema.org SEO */}
-      <EventStructuredData locale={locale} />
-      
-      {/* Script to update the HTML lang attribute */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            // Wait for document to be ready
-            document.addEventListener('DOMContentLoaded', function() {
-              document.documentElement.lang = "${locale}";
-            });
-            // Also set it immediately for SSR
-            if (document.documentElement) {
-              document.documentElement.lang = "${locale}";
-            }
-          `
-        }}
-      />
-      
-      {children}
-    </NextIntlClientProvider>
+    <html lang={locale} data-bs-theme="dark" style={{transitionProperty: "none", marginRight: "0px"}}>
+      <body>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {/* Add EventStructuredData component for better schema.org SEO */}
+          <EventStructuredData locale={locale} />
+          {children}
+        </NextIntlClientProvider>
+      </body>
+    </html>
   );
 }
