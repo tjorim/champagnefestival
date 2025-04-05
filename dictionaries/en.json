@@ -1,4 +1,7 @@
 {
+    "seo": {
+        "keywords": ["champagne", "festival", "wine tasting", "event", "gourmet", "luxury", "Belgian festival"]
+    },
     "welcome": {
         "title": "Welcome to Champagne Festival",
         "subtitle": "Join us for the most exquisite champagne tasting experience",
@@ -101,7 +104,9 @@
         "minutes": "minutes",
         "seconds": "seconds",
         "started": "Festival has started!",
-        "loading": "Loading countdown..."
+        "loading": "Loading countdown...",
+        "concluded": "The festival has concluded. See you next time!",
+        "happening": "The festival is happening now!"
     },
     "producers": {
         "title": "Champagne Producers"

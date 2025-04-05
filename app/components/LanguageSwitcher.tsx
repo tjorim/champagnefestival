@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Dropdown, Button } from "react-bootstrap";
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
+import { Link } from '@/navigation';
 
-interface LanguageSwitcherProps {
-    currentLang: string;
-}
-
-const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
+const LanguageSwitcher = () => {
     const [mounted, setMounted] = useState(false);
-    const router = useRouter();
+    const t = useTranslations();
+    const locale = useLocale();
     const pathname = usePathname();
 
     // Prevent hydration issues by not rendering on first mount
@@ -26,16 +26,7 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
     ];
 
     // Find current language details
-    const currentLanguageOption = languageOptions.find(lang => lang.code === currentLang) || languageOptions[0];
-
-    // Handle language change - redirects to the same page with a different locale
-    const changeLanguage = (langCode: string) => {
-        const newPathname = pathname.replace(/^\/[^\/]+/, `/${langCode}`);
-        router.push(newPathname);
-        
-        // Set cookie for language preference
-        document.cookie = `NEXT_LOCALE=${langCode}; path=/; max-age=31536000; SameSite=Lax`;
-    };
+    const currentLanguageOption = languageOptions.find(lang => lang.code === locale) || languageOptions[0];
 
     // Don't render anything during server-side rendering to prevent hydration issues
     if (!mounted) {
@@ -49,8 +40,8 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
                 variant="dark"
                 size="sm"
                 className="text-secondary"
-                aria-label="Language selection"
-                title="Select language"
+                aria-label={t('language.select')}
+                title={t('language.select')}
             >
                 <i className="bi bi-globe2"></i>
                 <span className="d-none d-sm-inline ms-2">{currentLanguageOption.code.toUpperCase()}</span>
@@ -61,21 +52,22 @@ const LanguageSwitcher = ({ currentLang }: LanguageSwitcherProps) => {
                 align="end"
             >
                 {languageOptions.map((lang) => (
-                    <Dropdown.Item
+                    <Link 
                         key={lang.code}
-                        className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
-                            }`}
-                        onClick={() => changeLanguage(lang.code)}
+                        href={pathname} 
+                        locale={lang.code}
+                        className="dropdown-item d-flex align-items-center px-4 py-3"
+                        style={locale === lang.code ? {background: 'rgba(var(--bs-primary-rgb), 0.1)'} : {}}
                     >
                         <span className="me-3 fs-5">{lang.flag}</span>
                         <div>
                             <div className="fw-medium">{lang.label}</div>
                             <div className="small text-muted">{lang.nativeName}</div>
                         </div>
-                        {currentLang === lang.code && (
+                        {locale === lang.code && (
                             <i className="bi bi-check ms-auto text-primary"></i>
                         )}
-                    </Dropdown.Item>
+                    </Link>
                 ))}
             </Dropdown.Menu>
         </Dropdown>

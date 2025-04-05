@@ -2,81 +2,80 @@
 
 import React from 'react';
 import { Modal, Button } from "react-bootstrap";
-import { Dictionary } from "@/lib/i18n";
-import { FESTIVAL_CONFIG } from '@/app/config/dates';
+import { useTranslations } from 'next-intl';
+import { festivalYear } from '@/app/config/dates';
 
 interface PrivacyPolicyProps {
   isOpen: boolean;
   onClose: () => void;
-  lang: string;
-  dictionary: Dictionary;
 }
 
-const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose, dictionary }) => {
-  // Modal is only shown when isOpen is true
-  // All dictionary data is pre-loaded via props
+const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
+  // Use next-intl for translations
+  const t = useTranslations();
+  const tPrivacy = useTranslations('privacy');
 
   return (
     <Modal show={isOpen} onHide={onClose} size="lg" centered contentClassName="bg-dark" aria-labelledby="privacy-policy-title" restoreFocus={true}>
       <Modal.Header closeButton className="border-secondary">
         <Modal.Title id="privacy-policy-title">
-          {dictionary.privacy.title}
+          {tPrivacy('title')}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body className="modal-body">
         <p className="text-light mb-3">
-          {dictionary.privacy.lastUpdated}: {dictionary.privacy.lastUpdatedDate.replace('2025', FESTIVAL_CONFIG.year.toString())}
+          {tPrivacy('lastUpdated')}: {tPrivacy('lastUpdatedDate').replace('2025', festivalYear.toString())}
         </p>
 
         <div className="mt-4">
           <p>
-            {dictionary.privacy.intro}
+            {tPrivacy('intro')}
           </p>
 
           <hr className="my-4 border-secondary" />
 
           <div className="mb-4">
             <h3 className="h5 fw-bold mb-2 text-brand">
-              {dictionary.privacy.dataCollection.title}
+              {tPrivacy('dataCollection.title')}
             </h3>
             <p className="text-light">
-              {dictionary.privacy.dataCollection.content}
+              {tPrivacy('dataCollection.content')}
             </p>
           </div>
 
           <div className="mb-4">
             <h3 className="h5 fw-bold mb-2 text-brand">
-              {dictionary.privacy.dataUse.title}
+              {tPrivacy('dataUse.title')}
             </h3>
             <p className="text-light">
-              {dictionary.privacy.dataUse.content}
+              {tPrivacy('dataUse.content')}
             </p>
           </div>
 
           <div className="mb-4">
             <h3 className="h5 fw-bold mb-2 text-brand">
-              {dictionary.privacy.dataProtection.title}
+              {tPrivacy('dataProtection.title')}
             </h3>
             <p className="text-light">
-              {dictionary.privacy.dataProtection.content}
+              {tPrivacy('dataProtection.content')}
             </p>
           </div>
 
           <div className="mb-4">
             <h3 className="h5 fw-bold mb-2 text-brand">
-              {dictionary.privacy.cookies.title}
+              {tPrivacy('cookies.title')}
             </h3>
             <p className="text-light">
-              {dictionary.privacy.cookies.content}
+              {tPrivacy('cookies.content')}
             </p>
           </div>
 
           <div className="mb-4">
             <h3 className="h5 fw-bold mb-2 text-brand">
-              {dictionary.privacy.contactUs.title}
+              {tPrivacy('contactUs.title')}
             </h3>
             <p className="text-light">
-              {dictionary.privacy.contactUs.content}
+              {tPrivacy('contactUs.content')}
             </p>
           </div>
         </div>
@@ -87,7 +86,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose, dictiona
           variant="dark"
           className="bg-brand-gradient border-0"
         >
-          {dictionary.close}
+          {t('close')}
         </Button>
       </Modal.Footer>
     </Modal>

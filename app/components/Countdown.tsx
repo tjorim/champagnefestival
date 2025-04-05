@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Dictionary } from "@/lib/i18n";
+import { useTranslations } from "next-intl";
+import { festivalEndDate } from "@/app/config/dates";
 
 /**
  * Props for the Countdown component
  */
 interface CountdownProps {
     targetDate: string | Date;
-    dictionary: Dictionary;
+    autoHideAfterDays?: number; // Days after festival end to auto-hide the countdown
 }
 
 /**
@@ -30,12 +31,25 @@ enum TimeUnits {
 }
 
 /**
+ * Status of the festival countdown
+ */
+enum CountdownStatus {
+    UPCOMING = 'upcoming',  // Festival is in the future
+    CURRENT = 'current',    // Festival is happening now
+    CONCLUDED = 'concluded', // Festival just ended (within grace period)
+    HIDDEN = 'hidden'       // Festival ended long ago, don't show anything
+}
+
+/**
  * Countdown component that displays time remaining until a target date
  * Handles hydration mismatches by only rendering the final countdown on client-side
+ * Automatically manages visibility based on festival date status
  */
-const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
+const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 30 }) => {
+    const t = useTranslations('countdown');
     const [mounted, setMounted] = useState(false);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
+    const [status, setStatus] = useState<CountdownStatus>(CountdownStatus.UPCOMING);
     
     // Convert string date to Date object if needed
     // Wrapped in useMemo to avoid dependency changes on every render
@@ -44,18 +58,64 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
     }, [targetDate]);
     
     // Use refs to avoid dependency cycles
-    const dictionaryRef = useRef(dictionary);
+    // Define a type for the translations ref
+    interface TimeUnitsTranslations {
+        days: string;
+        hours: string;
+        minutes: string;
+        seconds: string;
+    }
+    
+    const tRef = useRef<TimeUnitsTranslations | null>(null);
     const targetDateObjRef = useRef(targetDateObj);
     
-    // Update refs when props change
+    // Update refs when values change
     useEffect(() => {
         targetDateObjRef.current = targetDateObj;
     }, [targetDateObj]);
     
-    // Update dictionary ref when it changes
+    // Update translation ref once when it's available
     useEffect(() => {
-        dictionaryRef.current = dictionary;
-    }, [dictionary]);
+        if (!tRef.current) {
+            tRef.current = {
+                days: t('days'),
+                hours: t('hours'),
+                minutes: t('minutes'),
+                seconds: t('seconds')
+            };
+        }
+    }, [t]);
+    
+    // Determine the current status of the countdown
+    const determineCountdownStatus = useCallback(() => {
+        const now = new Date();
+        const festivalStart = targetDateObjRef.current;
+        const festivalEnd = new Date(festivalEndDate);
+        
+        // Add end of day to festival end date (23:59:59)
+        festivalEnd.setHours(23, 59, 59);
+        
+        // Festival hasn't started yet
+        if (now < festivalStart) {
+            return CountdownStatus.UPCOMING;
+        }
+        
+        // Festival is currently happening
+        if (now >= festivalStart && now <= festivalEnd) {
+            return CountdownStatus.CURRENT;
+        }
+        
+        // Festival recently concluded (within autoHideAfterDays)
+        const hideDate = new Date(festivalEnd);
+        hideDate.setDate(hideDate.getDate() + autoHideAfterDays);
+        
+        if (now <= hideDate) {
+            return CountdownStatus.CONCLUDED;
+        }
+        
+        // Festival ended long ago
+        return CountdownStatus.HIDDEN;
+    }, [autoHideAfterDays]);
 
     // Set component as mounted after initial render
     useEffect(() => {
@@ -64,7 +124,8 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
     
     // Calculate time left using refs to avoid dependency cycles
     const calculateTimeLeft = useCallback((): TimeLeft => {
-        const dict = dictionaryRef.current;
+        if (!tRef.current) return {};
+        
         const targetDate = targetDateObjRef.current;
         
         // Get time difference in milliseconds
@@ -72,30 +133,39 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
 
         if (difference > 0) {
             return {
-                [dict.countdown.days]: Math.floor(difference / TimeUnits.Day),
-                [dict.countdown.hours]: Math.floor((difference / TimeUnits.Hour) % 24),
-                [dict.countdown.minutes]: Math.floor((difference / TimeUnits.Minute) % 60),
-                [dict.countdown.seconds]: Math.floor((difference / TimeUnits.Second) % 60),
+                [tRef.current.days]: Math.floor(difference / TimeUnits.Day),
+                [tRef.current.hours]: Math.floor((difference / TimeUnits.Hour) % 24),
+                [tRef.current.minutes]: Math.floor((difference / TimeUnits.Minute) % 60),
+                [tRef.current.seconds]: Math.floor((difference / TimeUnits.Second) % 60),
             };
         }
 
         return {};
     }, []);
 
-    // Update countdown every second, but only after component is mounted
+    // Update countdown every second, but only after component is mounted and translations are loaded
     useEffect(() => {
-        if (!mounted) return;
+        if (!mounted || !tRef.current) return;
         
         // Initial calculation
         setTimeLeft(calculateTimeLeft());
+        
+        // Determine initial status
+        setStatus(determineCountdownStatus());
 
         const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
+            
+            // Regularly check status (less frequently than time updates)
+            // This ensures status changes when festival starts/ends without requiring a page refresh
+            if (Math.random() < 0.1) { // Only check ~10% of the time to reduce calculations
+                setStatus(determineCountdownStatus());
+            }
         }, 1000);
 
         // Clean up interval on unmount
         return () => clearInterval(timer);
-    }, [mounted, calculateTimeLeft]);
+    }, [mounted, calculateTimeLeft, determineCountdownStatus]);
 
     // Map time units to display components
     const timerComponents = Object.keys(timeLeft).map((interval: string) => (
@@ -105,20 +175,36 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, dictionary }) => {
         </span>
     ));
 
+    // Don't render anything if the status is HIDDEN
+    if (status === CountdownStatus.HIDDEN) {
+        return null;
+    }
+    
     return (
         <div
-            className="countdown"
+            className={`countdown countdown-${status.toLowerCase()}`}
             suppressHydrationWarning
             aria-live="polite" // Announce updates to screen readers
         >
-            {mounted ? (
+            {!mounted ? (
+                <span className="countdown-loading">{t('loading')}</span>
+            ) : status === CountdownStatus.CONCLUDED ? (
+                // Festival just concluded
+                <span className="countdown-concluded">
+                    {t('concluded', { defaultValue: 'Festival has concluded. See you next time!' })}
+                </span>
+            ) : status === CountdownStatus.CURRENT ? (
+                // Festival is happening now
+                <span className="countdown-current">
+                    {t('happening', { defaultValue: 'The festival is happening now!' })}
+                </span>
+            ) : (
+                // Upcoming festival with countdown
                 timerComponents.length ? (
                     <div className="countdown-units">{timerComponents}</div>
                 ) : (
-                    <span className="countdown-complete">{dictionary.countdown.started}</span>
+                    <span className="countdown-complete">{t('started')}</span>
                 )
-            ) : (
-                <span className="countdown-loading">{dictionary.countdown.loading}</span>
             )}
         </div>
     );

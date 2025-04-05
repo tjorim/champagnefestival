@@ -1,85 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
 import { languages, defaultLanguage } from './lib/i18n';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-// Use the languages and defaultLanguage from lib/i18n.ts
-const locales = languages;
-const defaultLocale = defaultLanguage;
+// Create the next-intl middleware
+const intlMiddleware = createMiddleware({
+  // A list of all locales that are supported
+  locales: languages,
 
-/**
- * Determines and returns the locale for a given Next.js request.
- *
- * The function first checks for a valid locale in the 'NEXT_LOCALE' cookie. If the cookie is absent or invalid,
- * it parses the 'accept-language' header to extract the client's preferred languages and returns the first matching
- * supported locale. If no match is found, the default locale is returned.
- *
- * @param request - The Next.js request object containing cookies and headers.
- * @returns The selected locale as a string.
- */
-function getLocale(request: NextRequest): string {
-  // Check if locale is in cookie
-  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
-  if (cookieLocale && locales.includes(cookieLocale)) {
-    return cookieLocale;
-  }
+  // If a user tries to access a page with a locale that is not supported, they will be redirected to defaultLocale
+  defaultLocale: defaultLanguage,
 
-  // Check if locale is in accept-language header
-  const acceptLanguage = request.headers.get('accept-language');
-  if (acceptLanguage) {
-    const preferredLanguages = acceptLanguage
-      .split(',')
-      .map(lang => lang.split(';')[0].trim().split('-')[0].toLowerCase());
-    
-    for (const lang of preferredLanguages) {
-      if (locales.includes(lang)) {
-        return lang;
-      }
+  // Use always to ensure all URLs have a locale prefix for better compatibility
+  localePrefix: 'always',
+
+  // Enable automatic locale detection
+  localeDetection: true
+});
+
+// Export a middleware handler that first redirects the root and then applies the intl middleware
+export default function middleware(request: NextRequest) {
+  try {
+    const url = request.nextUrl.clone();
+    const pathname = url.pathname;
+
+    // Handle the root path and redirect to default locale
+    if (pathname === '/') {
+      url.pathname = `/${defaultLanguage}`;
+      return NextResponse.redirect(url);
     }
+
+    // Debug route to check middleware functionality
+    if (pathname === '/debug-middleware') {
+      return NextResponse.json({
+        message: 'Middleware is working properly',
+        url: request.url,
+        nextUrl: request.nextUrl.toString(),
+        pathname,
+        defaultLocale: defaultLanguage,
+        locales: languages,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // For all other paths, use the intl middleware
+    return intlMiddleware(request);
+  } catch (error) {
+    console.error('Middleware error:', error);
+    // Return an error response with details
+    return NextResponse.json(
+      {
+        error: 'Middleware Error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        url: request.url,
+        pathname: request.nextUrl.pathname,
+      },
+      { status: 500 }
+    );
   }
-
-  // Default locale
-  return defaultLocale;
-}
-
-/**
- * Redirects an incoming request to a locale-specific URL if the pathname does not already include a supported locale.
- *
- * The middleware checks if the request's pathname begins with a locale (e.g., "/en", "/fr"). If not, it
- * determines the appropriate locale using `getLocale`, prepends the locale to the pathname, and returns a
- * redirect response to the updated URL. If the pathname already contains a valid locale, no redirection occurs.
- *
- * @returns A redirect response with the locale-prefixed URL if redirection is applied, or undefined otherwise.
- */
-export function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-
-  // Check if the pathname already has a locale
-  const pathnameHasLocale = locales.some(
-    locale => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
-
-  if (pathnameHasLocale) return;
-
-  // Redirect to locale-prefixed URL
-  const locale = getLocale(request);
-  
-  // Create a new URL with the locale prefix
-  // NextResponse.redirect will automatically preserve search params
-  const newUrl = new URL(`/${locale}${pathname}`, request.url);
-  
-  // Copy all search params from the original URL
-  request.nextUrl.searchParams.forEach((value, key) => {
-    newUrl.searchParams.set(key, value);
-  });
-  
-  // Note: Hash fragments (#) are never sent to the server, so they can't be preserved
-  // by middleware alone. They need to be handled client-side if needed.
-  
-  return NextResponse.redirect(newUrl);
 }
 
 export const config = {
+  // Match specific routes rather than excluding patterns
+  // This makes the middleware more predictable and easier to debug
   matcher: [
-    // Skip all internal paths (_next, assets, api)
-    '/((?!_next|images|favicon.ico|api).*)',
-  ],
+    // Root path
+    '/',
+    // Locale paths
+    '/:locale(en|fr|nl)/:path*',
+    // Only specific API routes
+    '/api/contact/:path*',
+  ]
 };

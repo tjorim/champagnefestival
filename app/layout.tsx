@@ -3,22 +3,32 @@ import { Inter } from 'next/font/google';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './globals.css';
-import { defaultLanguage, getDictionary } from '@/lib/i18n';
-import { FESTIVAL_CONFIG } from '@/app/config/dates';
+import { defaultLanguage, languages } from '@/lib/i18n';
+import { festivalYear } from '@/app/config/dates';
+import { baseUrl } from '@/app/config/site';
+
+// Enable Edge Runtime for Cloudflare Pages
+export const runtime = 'edge';
 
 const inter = Inter({ subsets: ['latin'] });
 
-// Generate standard metadata for non-localized routes
-// We'll use a server-side generated metadata for better SEO
-export async function generateMetadata(): Promise<Metadata> {
-  // Get the default language dictionary
-  const dict = await getDictionary(defaultLanguage);
-  
-  return {
-    title: `${dict.festivalName} ${FESTIVAL_CONFIG.year}`,
-    description: dict.welcome.subtitle,
-  };
-}
+// Base metadata that will be extended by locale-specific metadata
+export const metadata: Metadata = {
+  // Minimal fallback values that should rarely be seen by users
+  // Real metadata is generated in [locale]/layout.tsx
+  title: {
+    template: '%s | Champagne Festival',
+    default: `Champagne Festival ${festivalYear}`,
+  },
+  description: "Champagne Festival",
+  // Define available languages for better SEO
+  alternates: {
+    languages: {
+      'x-default': '/',
+      ...Object.fromEntries(languages.map(lang => [lang, `/${lang}`]))
+    }
+  }
+};
 
 /**
  * Renders the root layout for the application.
@@ -38,6 +48,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang={defaultLanguage} data-bs-theme="dark" style={{transitionProperty: "none", marginRight: "0px"}}>
+      <head>
+        {/* Alternate language links for SEO */}
+        {languages.map(lang => (
+          <link 
+            key={lang} 
+            rel="alternate" 
+            hrefLang={lang} 
+            href={`${baseUrl}/${lang}`} 
+          />
+        ))}
+        <link rel="alternate" hrefLang="x-default" href={baseUrl} />
+      </head>
       <body className={`${inter.className} rounded-avatar`}>
         {children}
       </body>
