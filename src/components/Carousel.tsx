@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Card, Carousel as BootstrapCarousel } from "react-bootstrap";
+import { Carousel as BootstrapCarousel } from "react-bootstrap";
 
 /**
  * Represents an item in the carousel
