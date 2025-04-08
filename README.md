@@ -1,6 +1,8 @@
 # Champagne Festival Website
 
-This is the official website for the Champagne Festival, built with Next.js and React Bootstrap.
+This is the official website for the Champagne Festival, built with React and React Bootstrap.
+
+> **IMPORTANT**: This project is currently being migrated from Next.js back to a standard React application. The `back-to-react` branch contains this migration work in progress.
 
 ## Getting Started
 
@@ -20,44 +22,42 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Project Structure
 
-- `app/` - Next.js App Router directory containing all page components and layouts
-- `app/components/` - React components used throughout the application
-- `app/config/` - Configuration files for different aspects of the website
-- `app/translations/` - Translation files for i18n
+- `src/` - React application source code
+  - `src/components/` - React components used throughout the application
+  - `src/config/` - Configuration files for different aspects of the website
+  - `src/translations/` - Translation files for i18n
+  - `src/types/` - TypeScript type definitions
 - `public/` - Static assets like images
+
+> **Note**: The `app/` directory contains the previous Next.js implementation which is being phased out.
 
 ## Technologies Used
 
-- Next.js - React framework for server-rendered applications
+- React - JavaScript library for building user interfaces
 - React Bootstrap - UI component library
-- next-intl - Internationalization library for Next.js (migration in progress)
+- i18next - Internationalization library for React applications
 - TypeScript - Type-safe JavaScript
 
 ## Internationalization
 
-The project is currently transitioning from a custom internationalization implementation to `next-intl`. You'll find two different approaches in the codebase:
+The project is currently transitioning from Next.js with `next-intl` back to React with `i18next`. The new internationalization approach:
 
-1. **Legacy approach** in `/app/[lang]` routes:
-   - Uses custom dictionary loading via `getDictionaryData` function
-   - Passes dictionary directly to components via props
+- Uses `i18next` and `react-i18next` for translations
+- Implements browser language detection with `i18next-browser-languagedetector`
+- Stores translations in JSON files in the `src/translations` directory
+- Uses the `useTranslation` hook to access translations in components
 
-2. **New approach** in `/app/[locale]` routes:
-   - Uses `next-intl` library with proper integration with Next.js
-   - Uses hooks like `useTranslations` to access translations
-   - Configured via `middleware.ts` and `navigation.ts`
+When developing, use the `useTranslation` hook from `react-i18next` to access translations:
 
-**Note**: We've migrated most components to use the `next-intl` approach. The following components are fully migrated:
-- Header (uses useLocale hook)
-- Footer
-- FAQ (uses config for structure but translations from dictionary)
-- ContactForm
-- ContactInfo
-- LocationInfo
-- PrivacyPolicy
-- Schedule
-- MapComponent
+```tsx
+import { useTranslation } from 'react-i18next';
 
-When developing, always use the `next-intl` pattern with the `useTranslations` hook rather than passing dictionary props.
+function MyComponent() {
+  const { t } = useTranslation();
+  
+  return <h1>{t('welcome.title', 'Welcome to Champagne Festival')}</h1>;
+}
+```
 
 ## Development Guidelines
 
@@ -69,23 +69,19 @@ When developing, always use the `next-intl` pattern with the `useTranslations` h
 
 ## Security Enhancements and Best Practices
 
-### Image Domain Configuration
+### Image Handling
 
-We've updated the image configuration in `next.config.ts` to use the more secure `remotePatterns` approach instead of the deprecated `domains` array. This provides more granular control over which external image sources are allowed.
+With the migration to React, we're using standard HTML `<img>` tags with the `ResponsiveImage` component for consistent image handling across the application.
 
-```typescript
-images: {
-  remotePatterns: [
-    {
-      protocol: 'https',
-      hostname: 'placehold.co',
-      pathname: '/**',
-    },
-    // Additional trusted image sources can be added here
-  ],
-  dangerouslyAllowSVG: true,
-  contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-}
+```tsx
+import ResponsiveImage from './components/ResponsiveImage';
+
+<ResponsiveImage 
+  src="/images/example.jpg" 
+  alt="Example image" 
+  width={800} 
+  height={600} 
+/>
 ```
 
 ### Contact Information Configuration
@@ -158,12 +154,14 @@ import MapComponent from "@/app/components/MapComponent";
 
 ## Deployment
 
-The project is configured for easy deployment on Vercel or any other Next.js compatible hosting.
+The project is configured for deployment on Cloudflare Pages or any other static site hosting provider.
 
 ```bash
 npm run build
 ```
 
-Then deploy the built application to your preferred hosting provider.
+This will create a production build in the `dist` directory that can be deployed to your preferred hosting provider.
 
 Don't forget to set the required environment variables in your production environment.
+
+For more details on deployment options, see [DEPLOYMENT.md](./DEPLOYMENT.md).

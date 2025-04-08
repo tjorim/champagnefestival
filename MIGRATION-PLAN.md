@@ -1,8 +1,12 @@
-# Migration Plan: [lang] to [locale] Routes
+# Migration Plan: Next.js to React
 
-This document outlines the plan for migrating from the custom [lang] internationalization approach to the next-intl [locale] approach.
+> **IMPORTANT UPDATE (April 9, 2025)**: The project is now being migrated from Next.js back to a standard React application. This document has been updated to reflect this change.
 
-## Current Status (Updated March 10, 2025)
+## Previous Migration (Completed): [lang] to [locale] Routes
+
+This section documents the previous migration from the custom [lang] internationalization approach to the next-intl [locale] approach.
+
+### Status (Completed March 10, 2025)
 
 - ✅ All shared components have been migrated to use next-intl hooks:
   - Header (uses useLocale hook)
@@ -26,7 +30,7 @@ This document outlines the plan for migrating from the custom [lang] internation
 - ✅ Dynamic festival date calculation implemented 
 - ❌ [lang] routes still exist and use the old approach
 
-## Migration Steps
+### Migration Steps (Completed)
 
 ### 1. Complete Component Migration ✅
 
@@ -60,25 +64,80 @@ All testing is complete and we're confident the [locale] routes are working prop
 rm -rf app/[lang]  # COMPLETED on March 10, 2025
 ```
 
-### 5. Final Clean Up
+### 5. Final Clean Up (No Longer Applicable)
 
-- Remove any remaining code related to the old approach
-- Remove src directory once migration is complete
-- Update documentation to reflect the new approach
-- Add tests for the new implementation
+~~- Remove any remaining code related to the old approach~~
+~~- Remove src directory once migration is complete~~
+~~- Update documentation to reflect the new approach~~
+~~- Add tests for the new implementation~~
 
-## Notes
+> Note: The src directory is now being used for the React implementation.
 
-- No need for complex redirections from [lang] to [locale] - we'll make a clean cut
-- The next-intl middleware will handle language detection and redirection
-- The migration can be done gradually, component by component
+## Current Migration: Next.js to React
 
-## Benefits of next-intl (Already Realized)
+This section outlines the plan for migrating from Next.js back to a standard React application.
 
-- ✅ Better integration with Next.js App Router
-- ✅ Type-safe translations with hooks
-- ✅ Cleaner component implementation without prop drilling
-- ✅ Enhanced SEO support with proper metadata
-- ✅ Automatic language detection and redirection
-- ✅ Improved performance with server components where possible
-- ✅ Centralized configuration for easier maintenance
+### Current Status (Updated April 9, 2025)
+
+- ✅ Initial React application structure set up in `src/` directory
+- ✅ Basic components migrated to React
+- ✅ i18next and i18next-browser-languagedetector added for internationalization
+- ✅ React Bootstrap integrated for UI components
+- ❌ Complete migration of all components from Next.js to React
+- ❌ Update all imports and references to use the new structure
+- ❌ Remove Next.js specific code and dependencies
+
+### Migration Steps
+
+#### 1. Setup React Application Structure
+
+- ✅ Create basic React application structure in `src/` directory
+- ✅ Set up i18next for internationalization
+- ✅ Configure build tools for React
+
+#### 2. Component Migration
+
+- ✅ Migrate shared components to React
+  - ✅ Header
+  - ✅ Footer
+  - ✅ FAQ
+  - ✅ ContactForm
+  - ✅ ContactInfo
+  - ✅ JsonLd
+  - ❌ Remaining components
+- ❌ Update component imports to use the new structure
+- ❌ Remove Next.js specific code from components
+
+#### 3. Routing and Navigation
+
+- ❌ Implement React Router for client-side routing
+- ❌ Create route components for each page
+- ❌ Implement language switching with i18next
+
+#### 4. Build and Deployment
+
+- ❌ Update build configuration for React
+- ❌ Configure deployment for static hosting
+- ❌ Update CI/CD pipeline for the new build process
+
+#### 5. Final Clean Up
+
+- ❌ Remove Next.js specific files and directories
+- ❌ Remove Next.js specific dependencies
+- ❌ Update documentation to reflect the new approach
+- ❌ Add tests for the React implementation
+
+### Notes
+
+- The migration will be done gradually, component by component
+- Both implementations will coexist during the migration
+- The React implementation will eventually replace the Next.js implementation
+
+### Benefits of React (Expected)
+
+- ⏳ Simpler development workflow
+- ⏳ Reduced complexity in the codebase
+- ⏳ Easier onboarding for new developers
+- ⏳ More direct control over the application
+- ⏳ Reduced build times
+- ⏳ Simplified deployment process
