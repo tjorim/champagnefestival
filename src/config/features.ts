@@ -1,3 +1,7 @@
+/**
+ * Feature items configuration
+ * Uses translation keys from our type-safe Dictionary
+ */
 export const featureItems = [
   {
     id: 1,
@@ -20,4 +24,13 @@ export const featureItems = [
     fallbackTitle: "Feature 3",
     fallbackDesc: "Description for feature 3",
   },
-];
+] as const;
+
+// Type for a feature item
+export interface FeatureItem {
+  id: number;
+  titleKey: string;
+  descKey: string;
+  fallbackTitle: string;
+  fallbackDesc: string;
+}
