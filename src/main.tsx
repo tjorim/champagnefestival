@@ -15,6 +15,7 @@ import Countdown from "./components/Countdown";
 import FAQ from "./components/FAQ";
 import ContactForm from "./components/ContactForm";
 import Footer from "./components/Footer";
+import Schedule from "./components/Schedule";
 
 // Components - Lazy loaded
 const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
@@ -24,7 +25,7 @@ const MapComponent = lazy(() => import("./components/MapComponent"));
 import './i18n'; // Import i18n configuration
 import './index.css';
 import { producerItems, sponsorItems } from "./config/marqueeSlider";
-import { faqData } from "./config/faq";
+import { faqKeys } from "./config/faq";
 import { featureItems } from "./config/features";
 import { festivalDate } from "./config/dates";
 
@@ -100,10 +101,10 @@ function App() {
 
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
-          <div className="container text-center">
-            <h2 className="section-header">{t("schedule.title", "Schedule")}</h2>
-            <div className="schedule-table">
-              <p className="mx-auto">{t("schedule.description", "Festival schedule details go here.")}</p>
+          <div className="container">
+            <h2 className="section-header text-center">{t("schedule.title", "Schedule")}</h2>
+            <div className="schedule-container">
+              <Schedule />
             </div>
           </div>
         </section>
@@ -140,7 +141,7 @@ function App() {
         <section id="faq" className="content-section">
           <div className="container text-center">
             <h2 className="section-header">{t("faq.title", "Frequently Asked Questions")}</h2>
-            <FAQ faqItems={faqData} />
+            <FAQ keys={faqKeys} />
           </div>
         </section>
 

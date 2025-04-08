@@ -26,7 +26,66 @@
     },
     "schedule": {
         "title": "Schedule",
-        "description": "View our detailed festival schedule with events, tastings, and special presentations."
+        "description": "View our detailed festival schedule with events, tastings, and special presentations.",
+        "days": {
+            "friday": "Friday",
+            "saturday": "Saturday",
+            "sunday": "Sunday"
+        },
+        "categories": {
+            "tasting": "Tasting",
+            "vip": "VIP Event",
+            "party": "Party",
+            "breakfast": "Breakfast",
+            "exchange": "Exchange",
+            "general": "General"
+        },
+        "reservation": "Reservation required",
+        "presenter": "Presenter",
+        "location": "Location",
+        "noEvents": "No events scheduled for this day",
+        "events": {
+            "fri-tasting": {
+                "title": "Ongoing Tasting",
+                "description": "Ongoing tasting of various champagnes."
+            },
+            "fri-vip": {
+                "title": "VIP Reception",
+                "description": "Exclusive VIP reception with special champagnes and appetizers."
+            },
+            "fri-end": {
+                "title": "End of Festival",
+                "description": "Closing of the festival on Friday."
+            },
+            "sat-exchange": {
+                "title": "Exchange Fair",
+                "description": "Opening of the exchange fair for collectors."
+            },
+            "sat-opening": {
+                "title": "Festival Opening & Ongoing Tasting",
+                "description": "Official opening of the festival on Saturday with ongoing champagne tasting."
+            },
+            "sat-party": {
+                "title": "Champagne Party with DJ",
+                "description": "Festive evening with DJ and champagne."
+            },
+            "sat-end": {
+                "title": "End of Festival + Party",
+                "description": "Closing of the festival and party on Saturday."
+            },
+            "sun-breakfast": {
+                "title": "Champagne Breakfast",
+                "description": "Champagne breakfast in support of a good cause."
+            },
+            "sun-opening": {
+                "title": "Festival Opening & Ongoing Tasting",
+                "description": "Opening of the festival on Sunday with ongoing champagne tasting."
+            },
+            "sun-end": {
+                "title": "End of Festival",
+                "description": "Conclusion of the festival on Sunday."
+            }
+        }
     },
     "location": {
         "title": "Location"

@@ -104,9 +104,14 @@ This section outlines the plan for migrating from Next.js back to a standard Rea
   - ✅ ContactForm
   - ✅ ContactInfo
   - ✅ JsonLd
-  - ❌ Remaining components
-- ❌ Update component imports to use the new structure
-- ❌ Remove Next.js specific code from components
+  - ✅ Schedule
+  - ✅ LocationInfo
+  - ✅ MarqueeSlider
+  - ✅ ResponsiveImage
+  - ✅ SectionHeading
+  - ❌ Remaining components (BubbleBackground, MapComponent, Countdown, etc.)
+- ⏳ Update component imports to use the new structure (in progress)
+- ⏳ Remove Next.js specific code from components (in progress)
 
 #### 3. Routing and Navigation
 

@@ -26,7 +26,66 @@
     },
     "schedule": {
         "title": "Programme",
-        "description": "Les détails du programme du festival sont présentés ici."
+        "description": "Consultez le programme détaillé du festival avec les événements, dégustations et présentations spéciales.",
+        "days": {
+            "friday": "Vendredi",
+            "saturday": "Samedi",
+            "sunday": "Dimanche"
+        },
+        "categories": {
+            "tasting": "Dégustation",
+            "vip": "Événement VIP",
+            "party": "Soirée",
+            "breakfast": "Petit-déjeuner",
+            "exchange": "Échange",
+            "general": "Général"
+        },
+        "reservation": "Réservation requise",
+        "presenter": "Présentateur",
+        "location": "Lieu",
+        "noEvents": "Aucun événement prévu pour ce jour",
+        "events": {
+            "fri-tasting": {
+                "title": "Dégustation Continue",
+                "description": "Dégustation continue de différents champagnes."
+            },
+            "fri-vip": {
+                "title": "Réception VIP",
+                "description": "Réception VIP exclusive avec champagnes spéciaux et amuse-bouches."
+            },
+            "fri-end": {
+                "title": "Fin du Festival",
+                "description": "Clôture du festival le vendredi."
+            },
+            "sat-exchange": {
+                "title": "Bourse d'Échange",
+                "description": "Ouverture de la bourse d'échange pour les collectionneurs."
+            },
+            "sat-opening": {
+                "title": "Ouverture du Festival & Dégustation Continue",
+                "description": "Ouverture officielle du festival le samedi avec dégustation continue de champagne."
+            },
+            "sat-party": {
+                "title": "Soirée Champagne avec DJ",
+                "description": "Soirée festive avec DJ et champagne."
+            },
+            "sat-end": {
+                "title": "Fin du Festival + Soirée",
+                "description": "Clôture du festival et de la soirée le samedi."
+            },
+            "sun-breakfast": {
+                "title": "Petit-déjeuner Champagne",
+                "description": "Petit-déjeuner champagne au profit d'une bonne cause."
+            },
+            "sun-opening": {
+                "title": "Ouverture du Festival & Dégustation Continue",
+                "description": "Ouverture du festival le dimanche avec dégustation continue de champagne."
+            },
+            "sun-end": {
+                "title": "Fin du Festival",
+                "description": "Conclusion du festival le dimanche."
+            }
+        }
     },
     "location": {
         "title": "Lieu de l'Événement"

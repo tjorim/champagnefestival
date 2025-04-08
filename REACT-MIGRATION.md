@@ -123,14 +123,78 @@ function MyComponent() {
   return <div>{/* Render data */}</div>;
 }
 ```
-
 ### 5. Build and Deployment
 
 - **Before**: Used Next.js build process with server components
 - **After**: Using Vite for development and building
 
+#### Vite Configuration
+
+The build process has been configured with Vite to optimize for production:
+
+```typescript
+// vite.config.ts (key parts)
+build: {
+  outDir: 'dist',
+  minify: 'terser',
+  sourcemap: mode !== 'production',
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        vendor: ['react', 'react-dom', 'react-bootstrap', 'react-i18next', 'i18next'],
+        leaflet: ['leaflet', 'react-leaflet'],
+        swiper: ['swiper', 'swiper/react'],
+      },
+    }
+  }
+}
+```
+
+#### Environment Variables
+
+Environment variables are managed using Vite's built-in env handling:
+
+1. `.env.development` - Development-specific variables
+2. `.env.production` - Production-specific variables
+3. `.env.example` - Template for environment setup
+
+Variables must be prefixed with `VITE_` to be accessible in the client code via `import.meta.env.VITE_*`
+
+#### Scripts
+
+The following npm scripts are available for the React implementation:
+
+- `npm run dev:react` - Start the Vite dev server
+- `npm run build:react` - Build the React app for production
+- `npm run preview:react` - Preview the production build locally
+- `npm run deploy:react` - Build and deploy to Cloudflare Pages
+
+### 6. Component Migration Status
+
+As of April 9, 2025, the following components have been successfully migrated:
+
+- ✅ Header - Navigation component with language switching
+- ✅ Footer - Site footer with copyright and links
+- ✅ FAQ - Accordion-based frequently asked questions
+- ✅ ContactForm - Form for contacting festival organizers
+- ✅ ContactInfo - Display of contact information
+- ✅ JsonLd - Structured data for SEO
+- ✅ Schedule - Festival schedule with day-based tabs
+- ✅ MarqueeSlider - Sliding component for sponsors and producers
+- ✅ LocationInfo - Venue location information
+- ✅ ResponsiveImage - Optimized image component
+- ✅ SectionHeading - Reusable section heading component
+Components that still need to be migrated:
+- ✅ MapComponent - Interactive map with Leaflet integration
+- ✅ BubbleBackground - Animated background component
+- ✅ Carousel - Image carousel component for sponsors
+- ✅ PrivacyPolicy - Privacy policy content
+- ✅ Countdown - Festival countdown timer
+- ❌ Countdown - Festival countdown timer
+
 ## Migration Progress
 
+See the [TODO.md](./TODO.md) file for the current migration progress and remaining tasks. The React implementation now has scripts for development, building, and deployment using Vite.
 See the [TODO.md](./TODO.md) file for the current migration progress and remaining tasks.
 
 ## How to Contribute

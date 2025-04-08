@@ -14,11 +14,17 @@ npm install
 
 Then, run the development server:
 
+For Next.js implementation (legacy):
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+For React implementation (recommended):
+```bash
+npm run dev:react
+```
+
+Open [http://localhost:3000](http://localhost:3000) for Next.js or [http://localhost:5173](http://localhost:5173) for React with your browser to see the result.
 
 ## Project Structure
 

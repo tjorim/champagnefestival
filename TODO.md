@@ -21,6 +21,7 @@
 - [ ] Continue standardizing prop interfaces for remaining components
 - [x] Create centralized site configuration
 - [ ] Complete the migration from Next.js to React
+  - [x] Integrate Schedule component in the main React application
 
 ## Internationalization Improvements
 - [x] Evaluate if the current i18n approach can be simplified
@@ -75,14 +76,19 @@
 ## Migration Tasks (Next.js to React)
 - [x] Set up basic React application structure
 - [x] Configure i18next for internationalization
-- [ ] Migrate all components from Next.js to React
+- [x] Migrate all components from Next.js to React
   - [x] Header
   - [x] Footer
   - [x] FAQ
   - [x] ContactForm
   - [x] ContactInfo
   - [x] JsonLd
-  - [ ] Remaining components
-- [ ] Implement React Router for navigation
-- [ ] Update build and deployment configuration
-- [ ] Remove Next.js specific code and dependencies
+  - [x] Schedule
+  - [x] MapComponent
+  - [x] BubbleBackground
+  - [x] Carousel
+  - [x] PrivacyPolicy
+  - [x] Countdown
+- [ ] Finish optimizing the build and deployment configuration for Vite
+- [ ] Finalize environment variable handling for Vite
+- [ ] Remove Next.js specific code and dependencies when ready
