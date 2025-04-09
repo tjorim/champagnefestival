@@ -20,12 +20,12 @@ interface FormData {
  */
 const ContactForm: React.FC = () => {
     const { t } = useTranslation();
-    const [form, setForm] = useState<FormData>({ 
-        name: "", 
-        email: "", 
-        message: "", 
+    const [form, setForm] = useState<FormData>({
+        name: "",
+        email: "",
+        message: "",
         honeypot: "",
-        formStartTime: new Date().toISOString() 
+        formStartTime: new Date().toISOString()
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -55,18 +55,31 @@ const ContactForm: React.FC = () => {
         setGeneralError(null); // Reset general error on new submission attempt
 
         // Basic validation
+        // Check if required fields are filled
         const newErrors: Partial<Record<keyof FormData, string | null>> = {};
         if (!form.name) newErrors.name = t("contact.errors.nameRequired", "Name is required");
         if (!form.email) newErrors.email = t("contact.errors.emailRequired", "Email is required");
         else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = t("contact.errors.emailInvalid", "Please enter a valid email address");
         if (!form.message) newErrors.message = t("contact.errors.messageRequired", "Message is required");
 
+        // Anti-spam check: if honeypot is filled, silently "succeed" without sending
+        if (form.honeypot) {
+            console.log("Honeypot triggered - likely bot submission");
+            // Fake success to confuse bots
+            setIsSubmitted(true);
+            setIsSubmitting(false);
+            return;
+        }
+
+        // Check if there are any validation errors
+        // If there are errors, set them and stop submission
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             setIsSubmitting(false);
             return;
         }
 
+        // If no errors, proceed with submission
         try {
             // Call our Cloudflare Function endpoint
             const response = await fetch('/contact', {
@@ -76,25 +89,30 @@ const ContactForm: React.FC = () => {
                 },
                 body: JSON.stringify(form),
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.message || 'Something went wrong');
             }
-            
+
             setIsSubmitted(true);
-            setForm({ 
-                name: "", 
-                email: "", 
-                message: "", 
+            setForm({
+                name: "",
+                email: "",
+                message: "",
                 honeypot: "",
-                formStartTime: new Date().toISOString() 
+                formStartTime: new Date().toISOString()
             });
             setErrors({});
         } catch (error) {
             console.error("Form submission error", error);
-            setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
+            // Provide more specific error messages
+            if (error instanceof TypeError && error.message.includes('fetch')) {
+                setGeneralError(t("contact.networkError", "Network error: Please check your internet connection and try again."));
+            } else {
+                setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -178,7 +196,7 @@ const ContactForm: React.FC = () => {
                                 {errors.message}
                             </Form.Control.Feedback>
                         </Form.Group>
-                        
+
                         {/* Hidden honeypot field to catch bots */}
                         <div style={{ display: 'none' }}>
                             <Form.Control
