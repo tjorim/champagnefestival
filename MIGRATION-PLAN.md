@@ -1,10 +1,10 @@
 # Champagne Festival Migration Plan
 
-> **IMPORTANT UPDATE (April 9, 2025)**: The project is now being migrated from Next.js back to a standard React application. This document has been updated to reflect this change.
+> **IMPORTANT UPDATE (April 9, 2025)**: The project is now being migrated from Next.js back to a standard React application. This document serves as the single source of truth for migration information and tasks.
 
 ## Overview
 
-The Champagne Festival website is currently being migrated from Next.js back to a standard React application. This document provides a comprehensive view of the migration process.
+The Champagne Festival website is currently being migrated from Next.js back to a standard React application. This document provides a comprehensive view of the migration process, including strategy, progress, and remaining tasks.
 
 ## Migration Timeline
 
@@ -18,82 +18,10 @@ The Champagne Festival website is currently being migrated from Next.js back to 
 3. **Performance** - Static React application provides sufficient performance without server-side rendering overhead
 4. **Deployment** - Static site hosting is simpler and more cost-effective
 
-## Previous Migration (Completed): [lang] to [locale] Routes
+## Current Status and Tasks
 
-This section documents the previous migration from the custom [lang] internationalization approach to the next-intl [locale] approach.
+### Completed Tasks
 
-### Status (Completed March 10, 2025)
-
-- ✅ All shared components have been migrated to use next-intl hooks:
-  - Header (uses useLocale hook)
-  - Footer
-  - FAQ (uses config for structure but translations from hooks)
-  - ContactForm
-  - ContactInfo
-  - LocationInfo
-  - PrivacyPolicy
-  - Schedule
-  - MapComponent
-  - Countdown
-  - BubbleBackground
-  - MarqueeSlider
-- ✅ Middleware is already configured for next-intl
-- ✅ [locale] routes are fully functional with SEO optimizations
-- ✅ Proper HTML lang attributes implemented for each language
-- ✅ Comprehensive SEO metadata implemented (JSON-LD, OpenGraph, Twitter)
-- ✅ Accessibility improvements (ARIA attributes, color contrast, focus styles)
-- ✅ Centralized site configuration for better maintainability
-- ✅ Dynamic festival date calculation implemented 
-- ❌ [lang] routes still exist and use the old approach
-
-### Migration Steps (Completed)
-
-### 1. Complete Component Migration ✅
-
-- ✅ Ensure all components use the next-intl hooks
-- ✅ Remove dictionary prop passing in the [locale] routes
-- ✅ Test all components in the [locale] routes to ensure they work properly
-
-### 2. Update Root Page ✅
-
-- ✅ Removal of root page.tsx since middleware handles redirection
-- ✅ Proper language detection and redirection through next-intl middleware
-- ✅ Language preferences respected through the Accept-Language header and cookies
-- ✅ Default language (Dutch) used as fallback
-
-### 3. SEO and Link Optimization ✅
-
-- ✅ Links updated to use the Link component from next-intl navigation
-- ✅ SEO metadata fully implemented for [locale] routes:
-  - ✅ Title and description with proper translations
-  - ✅ OpenGraph and Twitter card metadata
-  - ✅ JSON-LD structured data for event information
-  - ✅ Alternate language links and canonical URLs
-  - ✅ Proper HTML lang attributes for accessibility
-
-### 4. Remove [lang] Routes ✅
-
-All testing is complete and we're confident the [locale] routes are working properly:
-
-```bash
-# Remove the [lang] routes
-rm -rf app/[lang]  # COMPLETED on March 10, 2025
-```
-
-### 5. Final Clean Up (No Longer Applicable)
-
-~~- Remove any remaining code related to the old approach~~
-~~- Remove src directory once migration is complete~~
-~~- Update documentation to reflect the new approach~~
-~~- Add tests for the new implementation~~
-
-> Note: The src directory is now being used for the React implementation.
-
-## Current Migration: Next.js to React
-
-This section outlines the plan for migrating from Next.js back to a standard React application.
-
-### Current Status (Updated April 9, 2025)
 - ✅ Initial React application structure set up in `src/` directory
 - ✅ All components successfully migrated from Next.js to React
 - ✅ i18next and i18next-browser-languagedetector implemented for internationalization
@@ -102,8 +30,115 @@ This section outlines the plan for migrating from Next.js back to a standard Rea
 - ✅ Vite configured for development and production builds
 - ✅ Environment variable handling configured for different deployment environments
 - ✅ Cloudflare Pages deployment configured via wrangler.toml
-- ❌ Comprehensive testing of all components in the React environment
-- ❌ Remove Next.js specific code and dependencies
+- ✅ Proper image optimization settings for all images (format, sizes, quality)
+  - ✅ Priority, sizes, and alt text added to key images
+  - ✅ ResponsiveImage component created for consistent image handling
+- ✅ Standardized component prop interfaces for FAQ component
+- ✅ Centralized site configuration
+- ✅ ARIA attributes added to key components
+  - ✅ Countdown component
+  - ✅ MapComponent
+- ✅ Color contrast improvements
+  - ✅ Text on dark backgrounds
+  - ✅ Focus visibility styles
+- ✅ Dynamic festival date logic
+  - ✅ Automatic festival date calculation based on first weekend rule
+  - ✅ Smart visibility for festival information based on current date
+
+### Pending Tasks (By Category)
+
+#### Performance Optimizations
+- [ ] Implement code splitting with React.lazy and Suspense (migration priority)
+- [ ] Optimize bundle size with tree shaking and dynamic imports
+- [ ] Optimize remaining images across the site
+- [ ] Add proper caching strategies for static assets
+- [ ] Analyze and optimize Core Web Vitals metrics (LCP, FID, CLS)
+- [ ] Implement progressive loading for better performance on low-end devices
+
+#### Developer Experience
+- [ ] Enhance error handling with custom error boundaries
+- [ ] Implement more comprehensive logging for debugging
+- [ ] Add JSDoc comments to key functions and interfaces
+- [ ] Create component and page documentation
+- [ ] Continue standardizing prop interfaces for remaining components
+
+#### Internationalization
+- [ ] Migrate all translations from next-intl to i18next format
+- [ ] Implement language switching UI
+- [ ] Migrate SEO metadata to React Helmet or similar solution
+  - [ ] Add structured JSON-LD data for events
+  - [ ] Implement proper meta tags for SEO
+
+#### Testing
+- [ ] Set up Vitest for unit testing (migration priority)
+- [ ] Add component tests with React Testing Library
+- [ ] Implement end-to-end tests with Playwright or Cypress
+- [ ] Add automated accessibility testing
+- [ ] Create cross-browser testing strategy
+- [ ] Add testing coverage reporting
+
+#### Accessibility
+- [ ] Conduct a full accessibility audit
+- [ ] Continue adding ARIA attributes to remaining components
+- [ ] Add keyboard navigation support
+- [ ] Test with screen readers
+
+#### UI/UX Improvements
+- [ ] Refine mobile responsiveness
+- [ ] Add better loading states and skeletons with React Suspense
+- [ ] Implement scroll restoration with React Router
+- [ ] Add page transitions with Framer Motion or similar library
+- [ ] Optimize form validation UX with React Hook Form
+
+#### DevOps
+- [ ] Add automated CI/CD pipeline (migration priority)
+- [ ] Add versioning and changelog
+- [ ] Consider containerization with Docker
+- [ ] Setup proper deployment environments (staging, production)
+- [ ] Update deployment configuration for static site hosting
+- [ ] Implement proper monitoring and analytics
+- [ ] Create deployment rollback procedures
+
+#### Migration Tasks
+- [ ] Finish optimizing the build and deployment configuration for Vite
+  - [ ] Configure code splitting for optimal bundle sizes
+  - [ ] Implement lazy loading for below-the-fold components
+- [ ] Finalize environment variable handling for Vite
+- [ ] Remove Next.js specific code and dependencies when ready
+
+### Sprint Priorities
+1. **Comprehensive Testing Suite**:
+   - Set up Vitest and implement basic component tests
+   - Verify correct functionality in all major browsers
+   - Test screen reader compatibility
+
+2. **Performance Optimization**:
+   - Implement code splitting with React.lazy and Suspense
+   - Optimize image loading with proper sizing and formats
+   - Add native lazy loading for below-the-fold content
+
+3. **Final Infrastructure Transition**:
+   - Move CI/CD pipeline to build React version by default
+   - Update monitoring and analytics for the React implementation
+   - Create rollback plan in case of unexpected issues
+
+## Previous Migration Details: [lang] to [locale] Routes
+
+This section documents the previous migration from the custom [lang] internationalization approach to the next-intl [locale] approach.
+
+### Status (Completed March 10, 2025)
+
+- ✅ All shared components have been migrated to use next-intl hooks
+- ✅ Middleware is already configured for next-intl
+- ✅ [locale] routes are fully functional with SEO optimizations
+- ✅ Proper HTML lang attributes implemented for each language
+- ✅ Comprehensive SEO metadata implemented (JSON-LD, OpenGraph, Twitter)
+- ✅ Accessibility improvements (ARIA attributes, color contrast, focus styles)
+- ✅ Centralized site configuration for better maintainability
+- ✅ Dynamic festival date calculation implemented
+- ✅ [lang] routes removed
+
+## Current Migration: Technical Details
 
 ### Key Technical Changes
 
@@ -237,68 +272,33 @@ Variables must be prefixed with `VITE_` to be accessible in the client code via 
 - `npm run lint` - Run ESLint on the codebase
 - `npm run typecheck` - Run TypeScript check with no emit
 
-### Migration Steps
+### Migrated Components
 
-#### 1. Setup React Application Structure
+- ✅ Header - Navigation component with language switching
+- ✅ Footer - Site footer with copyright and links
+- ✅ FAQ - Accordion-based frequently asked questions
+- ✅ ContactForm - Form for contacting festival organizers
+- ✅ ContactInfo - Display of contact information
+- ✅ JsonLd - Structured data for SEO
+- ✅ Schedule - Festival schedule with day-based tabs
+- ✅ LocationInfo - Venue location information
+- ✅ MapComponent - Interactive map with Leaflet integration
+- ✅ BubbleBackground - Animated background component
+- ✅ Countdown - Festival countdown timer
+- ✅ MarqueeSlider - Sliding component for sponsors and producers
+- ✅ Carousel - Image carousel component (upgraded to use Swiper)
+- ✅ PrivacyPolicy - Privacy policy content
+- ✅ ResponsiveImage - Optimized image component
+- ✅ SectionHeading - Reusable section heading component
 
-- ✅ Create basic React application structure in `src/` directory
-- ✅ Set up i18next for internationalization
-- ✅ Configure build tools for React
+### Migration Strategy
 
-#### 2. Component Migration
+The migration is being done gradually, with both implementations coexisting during the transition:
 
-- ✅ Migrate shared components to React - COMPLETED
-  - ✅ Header - Navigation component with language switching
-  - ✅ Footer - Site footer with copyright and links
-  - ✅ FAQ - Accordion-based frequently asked questions
-  - ✅ ContactForm - Form for contacting festival organizers
-  - ✅ ContactInfo - Display of contact information
-  - ✅ JsonLd - Structured data for SEO
-  - ✅ Schedule - Festival schedule with day-based tabs
-  - ✅ LocationInfo - Venue location information
-  - ✅ MapComponent - Interactive map with Leaflet integration
-  - ✅ BubbleBackground - Animated background component
-  - ✅ Countdown - Festival countdown timer
-  - ✅ MarqueeSlider - Sliding component for sponsors and producers
-  - ✅ Carousel - Image carousel component (upgraded to use Swiper)
-  - ✅ PrivacyPolicy - Privacy policy content
-  - ✅ ResponsiveImage - Optimized image component
-  - ✅ SectionHeading - Reusable section heading component
-- ✅ Update component imports to use relative paths in the React structure
-- ✅ Remove Next.js specific code from components (e.g., 'use client' directives)
-
-#### 3. Navigation and Section Handling
-
-- ✅ Maintain single-page application structure with anchor links
-- ✅ Implement language switching with i18next
-- ✅ Keep privacy policy as a modal dialog rather than a separate page
-- ❌ Add smooth scrolling between sections
-- ❌ Implement history API for better back/forward navigation with hash changes
-
-#### 4. Build and Deployment
-
-- ✅ Configure Vite for development and production builds
-- ✅ Optimize bundle size with chunk splitting and minification
-- ✅ Set up environment variables for different deployment environments
-- ✅ Configure Cloudflare Pages deployment via wrangler.toml
-- ❌ Set up CI/CD pipeline for automated testing and deployment
-- ❌ Configure proper caching strategies for static assets
-
-#### 5. Testing and Quality Assurance
-
-- ❌ Set up Vitest for unit testing
-- ❌ Implement component tests with React Testing Library
-- ❌ Conduct cross-browser testing
-- ❌ Verify accessibility compliance
-- ❌ Perform performance testing and optimization
-- ❌ Test internationalization in all supported languages
-
-#### 6. Final Clean Up
-
-- ❌ Remove Next.js specific files and directories (app/, middleware.ts, etc.)
-- ❌ Remove Next.js specific dependencies from package.json
-- ❌ Update documentation to reflect the new React architecture
-- ❌ Create developer onboarding guide for the React implementation
+1. The `app/` directory contains the Next.js implementation
+2. The `src/` directory contains the new React implementation
+3. All components have been migrated one by one
+4. Once testing is complete, the Next.js implementation will be removed
 
 ### Benefits of React (Realized)
 
@@ -308,23 +308,6 @@ Variables must be prefixed with `VITE_` to be accessible in the client code via 
 - ✅ More direct control over the application
 - ✅ Reduced build times
 - ✅ Simplified deployment process
-
-### Upcoming Sprint Priorities
-
-1. **Comprehensive Testing Suite**:
-   - Set up Vitest and implement basic component tests
-   - Verify correct functionality in all major browsers
-   - Test screen reader compatibility
-
-2. **Performance Optimization**:
-   - Implement code splitting with React.lazy and Suspense
-   - Optimize image loading with proper sizing and formats
-   - Add native lazy loading for below-the-fold content
-
-3. **Final Infrastructure Transition**:
-   - Move CI/CD pipeline to build React version by default
-   - Update monitoring and analytics for the React implementation
-   - Create rollback plan in case of unexpected issues
 
 ### Potential Challenges and Mitigations
 
@@ -340,16 +323,16 @@ Variables must be prefixed with `VITE_` to be accessible in the client code via 
    - Challenge: Features might not work consistently across browsers
    - Mitigation: Create a browser compatibility matrix, test thoroughly, add polyfills as needed
 
-### How to Contribute
+## How to Contribute
 
 If you're working on this project, here's how you can help with the migration:
 
-1. Check the TODO.md file for components that need to be migrated
-2. Migrate one component at a time, ensuring it works correctly in the React implementation
-3. Update the TODO.md file to reflect your progress
+1. Check the tasks list in this document for items that need attention
+2. Focus on sprint priorities first
+3. Update this document to reflect your progress
 4. Test thoroughly to ensure the component works as expected
 
-### Testing During Migration
+## Testing During Migration
 
 During the migration, you can test the React implementation by running:
 
@@ -359,7 +342,15 @@ npm run dev:react
 
 This will start the development server for the React implementation at http://localhost:5173.
 
-### Final Evaluation Criteria
+## Deployment
+
+The project is configured for deployment on Cloudflare Pages with:
+1. **Direct from GitHub** - Connect repository through Cloudflare dashboard
+2. **Manual with Wrangler** - Use included Wrangler configuration and deploy script
+
+Custom domains can be configured through the Cloudflare Pages dashboard after initial deployment.
+
+## Final Evaluation Criteria
 
 Before completely removing the Next.js implementation, ensure:
 
@@ -369,6 +360,6 @@ Before completely removing the Next.js implementation, ensure:
 4. Accessibility requirements are fully met
 5. All tests pass with high coverage
 
-### Questions and Support
+## Questions and Support
 
 If you have questions about the migration process, please contact the project maintainers.
