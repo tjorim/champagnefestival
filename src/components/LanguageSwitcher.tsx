@@ -21,7 +21,7 @@ const LanguageSwitcher = () => {
     ];
 
     // Find current language details
-    const currentLanguage = languages.find(lang => 
+    const currentLanguage = languages.find(lang =>
         lang.code === currentLang || currentLang.startsWith(lang.code + '-')
     ) || languages[0];
 
@@ -60,6 +60,7 @@ const LanguageSwitcher = () => {
                         className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
                             }`}
                         as="a"
+                        // Dutch is the default language (root path), other languages use query parameters
                         href={lang.code === 'nl' ? '/' : `?lng=${lang.code}`}
                         onClick={(e) => {
                             // Prevent page reload if JavaScript is enabled
@@ -72,7 +73,7 @@ const LanguageSwitcher = () => {
                             <div className="fw-medium">{lang.label}</div>
                             <div className="small text-muted">{lang.nativeName}</div>
                         </div>
-                        {currentLang === lang.code && (
+                        {(currentLang === lang.code || currentLang.startsWith(lang.code + '-')) && (
                             <i className="bi bi-check ms-auto text-primary"></i>
                         )}
                     </Dropdown.Item>
