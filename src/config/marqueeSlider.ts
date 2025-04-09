@@ -14,7 +14,7 @@ export const producerItems: SliderItem[] = [
   { 
     id: 1, 
     name: "Producer 1", 
-    image: "/images/producers/producer1.jpg" // Fallback to placeholder if not exists
+    image: "/images/producers/producer1.jpg" // Note: actual fallback is handled in components via onError, using fallbackImage
   },
   { 
     id: 2, 
