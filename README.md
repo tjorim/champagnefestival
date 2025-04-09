@@ -143,8 +143,8 @@ import MapComponent from "@/app/components/MapComponent";
    - For production, set environment variables in your hosting platform
 
 2. **Image Sources**:
-   - When adding new external image sources, update `remotePatterns` in `next.config.ts`
-   - Avoid using the deprecated `domains` array
+   - When adding new external image sources, ensure they're from trusted sources
+   - Consider using content security policies to restrict image sources
    - Only add trusted and necessary image sources
 
 3. **Contact Information**:
