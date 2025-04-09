@@ -12,7 +12,7 @@ interface FormData {
     message: string;
     honeypot?: string; // Anti-spam honeypot field
     formStartTime: string; // When the form was loaded (to detect bots filling too quickly)
-    recaptchaToken?: string; // Optional reCAPTCHA token
+    recaptchaToken?: string; // Optional reCAPTCHA token obtained via reCAPTCHA API integration (e.g., using grecaptcha.execute)
 }
 
 /**
