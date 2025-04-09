@@ -153,11 +153,10 @@ import MapComponent from "@/app/components/MapComponent";
    - Use the `ContactInfo` component for consistent display of contact information
    
 4. **Event Schedule**:
-   - Update the schedule in `app/config/schedule.ts` for upcoming events
+   - Update the schedule in `src/config/schedule.ts` for upcoming events
    - The schedule is structured with festival days and events with detailed timing
    - For translations, update the event titles and descriptions in each language's dictionary file under `schedule.events`
    - Each event has an ID that's used to match translations in the dictionaries
-
 ## Deployment
 
 The project is configured for deployment on Cloudflare Pages or any other static site hosting provider.
