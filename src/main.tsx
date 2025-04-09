@@ -257,7 +257,7 @@ function App() {
             <h2 className="section-header text-center">{t("contact.title", "Contact Us")}</h2>
             <p className="text-center">{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
             <div className="row justify-content-center">
-              <div className="col-md-8 col-lg-6">
+              <div className="col-md-10 col-lg-8">
                 <ContactForm />
               </div>
             </div>
