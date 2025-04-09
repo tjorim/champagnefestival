@@ -47,6 +47,98 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
+  
+  // Add support for history API when scrolling between sections
+  useEffect(() => {
+    // Update URL hash when scrolling between sections
+    const handleScroll = () => {
+      // Debounce for performance
+      if (window.scrollY > 100) { // Only update when scrolled past the top
+        const sections = document.querySelectorAll('section[id]');
+        
+        // Find the section closest to the top of the viewport
+        const active = Array.from(sections).reduce((nearest, section) => {
+          const rect = section.getBoundingClientRect();
+          const offset = Math.abs(rect.top);
+          
+          return offset < Math.abs(nearest.rect.top) 
+            ? { id: section.id, rect } 
+            : nearest;
+        }, { id: '', rect: { top: Infinity } as DOMRect });
+        
+        // Update URL if we found an active section
+        if (active.id && window.location.hash !== `#${active.id}`) {
+          // Use replaceState to avoid creating new history entries while scrolling
+          window.history.replaceState(null, '', `#${active.id}`);
+        }
+      }
+    };
+    
+    // Add throttled scroll listener
+    let timeout: number | null = null;
+    const throttledScroll = () => {
+      if (timeout === null) {
+        timeout = window.setTimeout(() => {
+          handleScroll();
+          timeout = null;
+        }, 100);
+      }
+    };
+    
+    window.addEventListener('scroll', throttledScroll);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('scroll', throttledScroll);
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, []);
+  
+  // Add support for history API when scrolling between sections
+  useEffect(() => {
+    // Update URL hash when scrolling between sections
+    const handleScroll = () => {
+      // Debounce for performance
+      if (window.scrollY > 100) { // Only update when scrolled past the top
+        const sections = document.querySelectorAll('section[id]');
+        
+        // Find the section closest to the top of the viewport
+        const active = Array.from(sections).reduce((nearest, section) => {
+          const rect = section.getBoundingClientRect();
+          const offset = Math.abs(rect.top);
+          
+          return offset < Math.abs(nearest.rect.top) 
+            ? { id: section.id, rect } 
+            : nearest;
+        }, { id: '', rect: { top: Infinity } as DOMRect });
+        
+        // Update URL if we found an active section
+        if (active.id && window.location.hash !== `#${active.id}`) {
+          // Use replaceState to avoid creating new history entries while scrolling
+          window.history.replaceState(null, '', `#${active.id}`);
+        }
+      }
+    };
+    
+    // Add throttled scroll listener
+    let timeout: number | null = null;
+    const throttledScroll = () => {
+      if (timeout === null) {
+        timeout = window.setTimeout(() => {
+          handleScroll();
+          timeout = null;
+        }, 100);
+      }
+    };
+    
+    window.addEventListener('scroll', throttledScroll);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('scroll', throttledScroll);
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, []);
 
   return (
     <div className="App">
