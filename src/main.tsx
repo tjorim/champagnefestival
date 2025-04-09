@@ -33,8 +33,14 @@ import { festivalDate } from "./config/dates";
 // Helper component for MarqueeSlider with Suspense
 function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
   const { t } = useTranslation();
+  
+  // Get appropriate loading text based on itemsType
+  const loadingText = itemsType === "producers" 
+    ? t("loading.producers", "Loading producers...") 
+    : t("loading.sponsors", "Loading sponsors...");
+    
   return (
-    <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
+    <Suspense fallback={<div className="carousel-loading">{loadingText}</div>}>
       <MarqueeSlider itemsType={itemsType} items={items} />
     </Suspense>
   );
@@ -202,10 +208,27 @@ function App() {
           </div>
         </section>
 
-        {/* Interactive Map */}
-        <section id="map" className="content-section">
+
+        {/* Producers Carousel */}
+        <section id="producers" className="content-section">
           <div className="container text-center">
-            <h2 className="section-header mb-4">{t("location.title", "Event Location")}</h2>
+            <h2 className="section-header">{t("producers.title", "Champagne Producers")}</h2>
+            <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section id="faq" className="content-section">
+          <div className="container">
+            <h2 className="section-header text-center">{t("faq.title", "Frequently Asked Questions")}</h2>
+            <FAQ keys={faqKeys} />
+          </div>
+        </section>
+        
+        {/* Interactive Map - Moved here */}
+        <section id="map" className="content-section">
+          <div className="container">
+            <h2 className="section-header text-center">{t("location.title", "Event Location")}</h2>
             <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
               <Suspense fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
                 <div className="text-center">
@@ -219,22 +242,12 @@ function App() {
           </div>
         </section>
 
-        {/* Carousels for Producers & Sponsors */}
-        <section id="carousel" className="content-section">
+        {/* Sponsors Carousel */}
+        <section id="sponsors" className="content-section highlight-section">
           <div className="container text-center">
-            <h2 className="section-header">{t("producers.title", "Champagne Producers")}</h2>
-            <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
-
             <h2 className="section-header">{t("sponsors.title", "Sponsors")}</h2>
+            <p>{t("sponsors.intro", "Our event is made possible by the generous support of our sponsors:")}</p>
             <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
-          </div>
-        </section>
-
-        {/* FAQ Section */}
-        <section id="faq" className="content-section">
-          <div className="container">
-            <h2 className="section-header text-center">{t("faq.title", "Frequently Asked Questions")}</h2>
-            <FAQ keys={faqKeys} />
           </div>
         </section>
 
