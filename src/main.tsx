@@ -175,14 +175,18 @@ function App() {
         <section id="what-we-do" className="content-section">
           <div className="container text-center">
             <h2 className="section-header">{t("whatWeDo.title", "What We Do")}</h2>
-            <p className="mx-auto">{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
-            <div className="features">
-              {featureItems.map((feature) => (
-                <div key={feature.id} className="feature">
-                  <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
-                  <p>{t(feature.descKey, feature.fallbackDesc)}</p>
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-8">
+                <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
+                <div className="features">
+                  {featureItems.map((feature) => (
+                    <div key={feature.id} className="feature">
+                      <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
+                      <p>{t(feature.descKey, feature.fallbackDesc)}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </section>
@@ -191,10 +195,14 @@ function App() {
         <section id="next-festival" className="content-section highlight-section">
           <div className="container text-center">
             <h2 className="section-header">{t("nextFestival.title", "Next Festival")}</h2>
-            <Countdown targetDate={festivalDate} />
-            <p className="mb-4 mx-auto" style={{ position: 'relative', zIndex: 50 }}>
-              {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
-            </p>
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-8">
+                <Countdown targetDate={festivalDate} />
+                <p className="mb-4" style={{ position: 'relative', zIndex: 50 }}>
+                  {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -202,8 +210,12 @@ function App() {
         <section id="schedule" className="content-section">
           <div className="container">
             <h2 className="section-header text-center">{t("schedule.title", "Schedule")}</h2>
-            <div className="schedule-container">
-              <Schedule />
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-8">
+                <div className="schedule-container">
+                  <Schedule />
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -213,7 +225,11 @@ function App() {
         <section id="producers" className="content-section">
           <div className="container text-center">
             <h2 className="section-header">{t("producers.title", "Champagne Producers")}</h2>
-            <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-8">
+                <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -221,7 +237,11 @@ function App() {
         <section id="faq" className="content-section">
           <div className="container">
             <h2 className="section-header text-center">{t("faq.title", "Frequently Asked Questions")}</h2>
-            <FAQ keys={faqKeys} />
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-8">
+                <FAQ keys={faqKeys} />
+              </div>
+            </div>
           </div>
         </section>
         
@@ -229,16 +249,20 @@ function App() {
         <section id="map" className="content-section">
           <div className="container">
             <h2 className="section-header text-center">{t("location.title", "Event Location")}</h2>
-            <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
-              <Suspense fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
-                <div className="text-center">
-                  <Spinner animation="border" variant="primary" />
-                  <p className="mt-2">{t("loading", "Loading map...")}</p>
-                </div>
-              </div>}>
-                <MapComponent />
-              </Suspense>
-            </ErrorBoundary>
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-8">
+                <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
+                  <Suspense fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
+                    <div className="text-center">
+                      <Spinner animation="border" variant="primary" />
+                      <p className="mt-2">{t("loading", "Loading map...")}</p>
+                    </div>
+                  </div>}>
+                    <MapComponent />
+                  </Suspense>
+                </ErrorBoundary>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -246,8 +270,12 @@ function App() {
         <section id="sponsors" className="content-section highlight-section">
           <div className="container text-center">
             <h2 className="section-header">{t("sponsors.title", "Sponsors")}</h2>
-            <p>{t("sponsors.intro", "Our event is made possible by the generous support of our sponsors:")}</p>
-            <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-8">
+                <p>{t("sponsors.intro", "Our event is made possible by the generous support of our sponsors:")}</p>
+                <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
+              </div>
+            </div>
           </div>
         </section>
 
