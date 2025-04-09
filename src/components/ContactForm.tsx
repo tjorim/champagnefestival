@@ -10,6 +10,7 @@ interface FormData {
     name: string;
     email: string;
     message: string;
+    honeypot?: string; // Anti-spam honeypot field
 }
 
 /**
@@ -17,7 +18,7 @@ interface FormData {
  */
 const ContactForm: React.FC = () => {
     const { t } = useTranslation();
-    const [form, setForm] = useState<FormData>({ name: "", email: "", message: "" });
+    const [form, setForm] = useState<FormData>({ name: "", email: "", message: "", honeypot: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
@@ -59,10 +60,23 @@ const ContactForm: React.FC = () => {
         }
 
         try {
-            // Simulate API call (replace with actual API call in real app)
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Call our Cloudflare Function endpoint
+            const response = await fetch('/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(form),
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.message || 'Something went wrong');
+            }
+            
             setIsSubmitted(true);
-            setForm({ name: "", email: "", message: "" });
+            setForm({ name: "", email: "", message: "", honeypot: "" });
             setErrors({});
         } catch (error) {
             console.error("Form submission error", error);
@@ -147,6 +161,19 @@ const ContactForm: React.FC = () => {
                                 {errors.message}
                             </Form.Control.Feedback>
                         </Form.Group>
+                        
+                        {/* Hidden honeypot field to catch bots */}
+                        <div style={{ display: 'none' }}>
+                            <Form.Control
+                                name="honeypot"
+                                type="text"
+                                autoComplete="off"
+                                value={form.honeypot}
+                                onChange={handleChange}
+                                tabIndex={-1}
+                                aria-hidden="true"
+                            />
+                        </div>
 
                         <Button
                             type="submit"
