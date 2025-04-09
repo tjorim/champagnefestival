@@ -1,6 +1,22 @@
-# Migration Plan: Next.js to React
+# Champagne Festival Migration Plan
 
 > **IMPORTANT UPDATE (April 9, 2025)**: The project is now being migrated from Next.js back to a standard React application. This document has been updated to reflect this change.
+
+## Overview
+
+The Champagne Festival website is currently being migrated from Next.js back to a standard React application. This document provides a comprehensive view of the migration process.
+
+## Migration Timeline
+
+1. **Previous Migration (Completed March 10, 2025)** - From custom [lang] to next-intl [locale] approach
+2. **Current Migration (In Progress - April 9, 2025)** - From Next.js to standard React application
+
+## Reasons for Migration to React
+
+1. **Simplicity** - Standard React application is simpler to maintain with fewer abstractions
+2. **Developer Experience** - React ecosystem is more familiar to the development team
+3. **Performance** - Static React application provides sufficient performance without server-side rendering overhead
+4. **Deployment** - Static site hosting is simpler and more cost-effective
 
 ## Previous Migration (Completed): [lang] to [locale] Routes
 
@@ -88,7 +104,67 @@ This section outlines the plan for migrating from Next.js back to a standard Rea
 - ✅ Cloudflare Pages deployment configured via wrangler.toml
 - ❌ Comprehensive testing of all components in the React environment
 - ❌ Remove Next.js specific code and dependencies
-- ❌ Remove Next.js specific code and dependencies
+
+### Key Technical Changes
+
+#### 1. Internationalization
+```tsx
+// Before (Next.js with next-intl)
+import { useTranslations } from 'next-intl';
+
+function MyComponent() {
+  const t = useTranslations('namespace');
+  return <h1>{t('title')}</h1>;
+}
+
+// After (React with i18next)
+import { useTranslation } from 'react-i18next';
+
+function MyComponent() {
+  const { t } = useTranslation();
+  return <h1>{t('namespace.title', 'Default Title')}</h1>;
+}
+```
+
+#### 2. Image Handling
+```tsx
+// Before (Next.js)
+import Image from 'next/image';
+
+<Image 
+  src="/images/example.jpg"
+  alt="Example"
+  width={800}
+  height={600}
+  priority
+/>
+
+// After (React)
+import ResponsiveImage from './components/ResponsiveImage';
+
+<ResponsiveImage 
+  src="/images/example.jpg"
+  alt="Example"
+  width={800}
+  height={600}
+/>
+```
+
+#### 3. Build System
+- Migrated from Next.js build process to Vite
+- Optimized bundle size with chunk splitting and minification
+- Environment variables now use Vite's built-in env handling with `VITE_` prefix
+
+### Development Commands
+
+- `npm run dev:react` - Start React development server (for the new React implementation)
+- `npm run build:react` - Build the React app for production
+- `npm run preview:react` - Preview the production build locally
+- `npm run deploy:react` - Build and deploy to Cloudflare Pages
+- `npm run dev:next` - Start Next.js development server (for the legacy Next.js implementation)
+- `npm run build` - Create production build
+- `npm run lint` - Run ESLint on the codebase
+- `npm run typecheck` - Run TypeScript check with no emit
 
 ### Migration Steps
 
