@@ -7,6 +7,7 @@
     "whatWeDo": {
         "title": "Wat Wij Doen",
         "description": "Ons festival brengt champagneproducenten, liefhebbers en de gemeenschap samen voor een viering van deze prachtige drank.",
+        "forEveryone": "Of u nu een champagnekenner bent of gewoon af en toe geniet van een glas bubbels, dit festival biedt voor ieder wat wils.",
         "feature1": {
             "title": "Ontmoet Producenten",
             "description": "Ontmoet producenten van over de hele wereld en leer over hun ambacht."
@@ -88,7 +89,11 @@
         }
     },
     "location": {
-        "title": "Locatie"
+        "title": "Locatie",
+        "venueDescription": "Onze prestigieuze locatie",
+        "address": "Locatie Adres",
+        "openingHours": "Openingstijden",
+        "openingHoursValue": "Zie programma voor details"
     },
     "countdown": {
         "days": "dagen",
@@ -120,12 +125,17 @@
     "contact": {
         "title": "Contact",
         "intro": "Heeft u vragen of wilt u sponsor worden? Neem contact met ons op!",
+        "alternativeContact": "U kunt ons ook bereiken via e-mail of telefoon:",
+        "emailLabel": "E-mail:",
+        "phoneLabel": "Telefoon:",
         "name": "Uw Naam",
         "email": "Uw E-mail",
         "message": "Uw Bericht",
+        "placeholderMessage": "Typ hier uw bericht...",
         "submitting": "Versturen...",
         "submit": "Verstuur Bericht",
         "successMessage": "Bedankt voor uw bericht! We nemen zo snel mogelijk contact met u op.",
+        "submissionError": "Er is een fout opgetreden bij het versturen van uw bericht. Probeer het opnieuw.",
         "errors": {
             "nameRequired": "Naam is verplicht",
             "emailRequired": "E-mail is verplicht",
@@ -138,6 +148,8 @@
     },
     "festivalName": "Champagne Festival",
     "loading": "Laden...",
+    "loadingBackground": "Achtergrond laden...",
+    "error": "Er is een fout opgetreden",
     "footer": {
         "rights": "Alle rechten voorbehouden.",
         "privacy": "Privacybeleid",

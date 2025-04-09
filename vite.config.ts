@@ -30,8 +30,8 @@ export default defineConfig(({ mode }: { mode: string }) => {
     // Build configuration
     build: {
       outDir: 'dist',
-      // Optimize build size
-      minify: 'terser',
+      // Optimize build size with esbuild (faster than terser with minimal compression difference)
+      minify: 'esbuild',
       // Generate sourcemaps for easier debugging (only in development)
       sourcemap: mode !== 'production',
       // Optimize chunks for better loading performance
