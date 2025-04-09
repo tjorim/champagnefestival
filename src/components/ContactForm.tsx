@@ -108,7 +108,7 @@ const ContactForm: React.FC = () => {
                         {t("contact.successMessage", "Thank you for your message! We'll get back to you soon.")}
                     </Alert>
                 ) : (
-                    <Form onSubmit={handleSubmit} className="my-3">
+                    <Form onSubmit={handleSubmit} className="my-3" name="contact-form" autoComplete="on">
                         {generalError && (
                             <Alert variant="danger" className="d-flex align-items-center">
                                 <i className="bi bi-exclamation-circle me-2"></i>
@@ -128,6 +128,7 @@ const ContactForm: React.FC = () => {
                                 placeholder="John Doe"
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.name}
+                                autoComplete="name"
                                 required
                             />
                             <Form.Control.Feedback type="invalid">
@@ -148,6 +149,7 @@ const ContactForm: React.FC = () => {
                                 placeholder="email@example.com"
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.email}
+                                autoComplete="email"
                                 required
                             />
                             <Form.Control.Feedback type="invalid">
@@ -169,6 +171,7 @@ const ContactForm: React.FC = () => {
                                 style={{ minHeight: "120px" }}
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.message}
+                                autoComplete="off"
                                 required
                             />
                             <Form.Control.Feedback type="invalid">
