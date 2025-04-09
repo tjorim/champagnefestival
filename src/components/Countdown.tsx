@@ -155,15 +155,21 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         // Determine initial status
         setStatus(determineCountdownStatus());
 
+        // Update timeLeft every second
         const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
-            
-            // Regularly check status (less frequently than time updates)
-            // This ensures status changes when festival starts/ends without requiring a page refresh
-            if (Math.random() < 0.1) { // Only check ~10% of the time to reduce calculations
-                setStatus(determineCountdownStatus());
-            }
         }, 1000);
+
+        // Deterministically update status every minute to ensure timely state transitions
+        const statusTimer = setInterval(() => {
+            setStatus(determineCountdownStatus());
+        }, 60000);
+
+        // Clean up intervals on unmount
+        return () => {
+            clearInterval(timer);
+            clearInterval(statusTimer);
+        };
 
         // Clean up interval on unmount
         return () => clearInterval(timer);
