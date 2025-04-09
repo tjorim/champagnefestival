@@ -130,7 +130,7 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
                                             // Quietly set a fallback image without console errors
                                             e.currentTarget.src = '/images/logo.svg';
                                             // Remove the onError handler to prevent infinite loops if fallback also fails
-                                            e.currentTarget.onError = null;
+                                            (e.currentTarget as HTMLImageElement).onerror = null;
                                         }}
                                     />
                                 </div>

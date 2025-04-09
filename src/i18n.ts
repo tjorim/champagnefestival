@@ -32,20 +32,52 @@ const resources: Record<string, { translation: Dictionary }> = {
 // Update festival dates in all translations
 const updatedResources = updateFestivalDates(resources);
 
+// Create a language detector that normalizes language codes
+const normalizedLanguageDetector = {
+    name: 'normalized',
+    lookup: () => {
+        // Get browser language
+        const browserLang = navigator.language || (navigator as any).userLanguage || '';
+        
+        // Extract the base language code
+        const baseLang = browserLang.split('-')[0].toLowerCase();
+        
+        // Check if it's a supported language
+        if (['en', 'fr', 'nl'].includes(baseLang)) {
+            return baseLang;
+        }
+        
+        // Default to Dutch
+        return 'nl';
+    }
+};
+
 i18n
-    // detect user language
+    // First add our custom language detector
+    .use({
+        type: 'languageDetector',
+        init: () => {},
+        detect: () => normalizedLanguageDetector.lookup(),
+        cacheUserLanguage: () => {}
+    } as any)
+    // Then the standard detector as fallback
     .use(LanguageDetector)
     // pass the i18n instance to react-i18next
     .use(initReactI18next)
     // init i18next
     .init({
         resources: updatedResources,
-        lng: 'nl', // default language
         fallbackLng: 'nl',
-        interpolation: {
-            escapeValue: false, // not needed for react as it escapes by default
-        },
-        debug: false // Set to true when debugging is needed
+        supportedLngs: ['nl', 'fr', 'en'], // Add list of supported languages
+        load: 'languageOnly', // Reduce language codes like 'en-US' to just 'en'
+        detection: {
+            // Try to detect locale from different sources in order
+            order: ['querystring', 'navigator', 'htmlTag', 'localStorage'],
+            // Look for ?lng= parameter in URL
+            lookupQuerystring: 'lng',
+            // Store user language preference
+            caches: ['localStorage']
+        }
     });
 
 // Type augmentation for useTranslation hook

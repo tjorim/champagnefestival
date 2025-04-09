@@ -51,57 +51,49 @@ function App() {
 
   // Update the <html lang="..."> attribute dynamically
   useEffect(() => {
-    document.documentElement.lang = i18n.language;
+    // Get base language code
+    const baseLanguage = i18n.language.split('-')[0];
+    
+    // Set HTML lang attribute for SEO
+    document.documentElement.lang = baseLanguage;
+    
+    // Update URL with language parameter without page reload
+    const url = new URL(window.location.href);
+    const currentLng = url.searchParams.get('lng');
+    
+    // Always use base language code for URL
+    if (baseLanguage !== 'nl' && baseLanguage !== currentLng) {
+      // Only update URL for non-Dutch languages
+      url.searchParams.set('lng', baseLanguage);
+      window.history.replaceState({}, '', url.toString());
+    } else if (currentLng && baseLanguage === 'nl') {
+      // Remove parameter for default language (Dutch)
+      url.searchParams.delete('lng');
+      window.history.replaceState({}, '', url.toString());
+    }
   }, [i18n.language]);
   
-  // Add support for history API when scrolling between sections
-  useEffect(() => {
-    // Update URL hash when scrolling between sections
-    const handleScroll = () => {
-      // Debounce for performance
-      if (window.scrollY > 100) { // Only update when scrolled past the top
-        const sections = document.querySelectorAll('section[id]');
-        
-        // Find the section closest to the top of the viewport
-        const active = Array.from(sections).reduce((nearest, section) => {
-          const rect = section.getBoundingClientRect();
-          const offset = Math.abs(rect.top);
-          
-          return offset < Math.abs(nearest.rect.top) 
-            ? { id: section.id, rect } 
-            : nearest;
-        }, { id: '', rect: { top: Infinity } as DOMRect });
-        
-        // Update URL if we found an active section
-        if (active.id && window.location.hash !== `#${active.id}`) {
-          // Use replaceState to avoid creating new history entries while scrolling
-          window.history.replaceState(null, '', `#${active.id}`);
-        }
-      }
-    };
-    
-    // Add throttled scroll listener
-    let timeout: number | null = null;
-    const throttledScroll = () => {
-      if (timeout === null) {
-        timeout = window.setTimeout(() => {
-          handleScroll();
-          timeout = null;
-        }, 100);
-      }
-    };
-    
-    window.addEventListener('scroll', throttledScroll);
-    
-    // Clean up
-    return () => {
-      window.removeEventListener('scroll', throttledScroll);
-      if (timeout) window.clearTimeout(timeout);
-    };
-  }, []);
   
-  // Add support for history API when scrolling between sections
+  // Support for hash navigation and section tracking
   useEffect(() => {
+    // Function to handle direct navigation via hash
+    const scrollToHashSection = () => {
+      if (window.location.hash) {
+        const targetId = window.location.hash.substring(1);
+        const targetElement = document.getElementById(targetId);
+        
+        if (targetElement) {
+          // Delay to ensure lazy-loaded content is rendered
+          setTimeout(() => {
+            targetElement.scrollIntoView({ behavior: 'smooth' });
+          }, 300);
+        }
+      }
+    };
+    
+    // Execute on initial load
+    scrollToHashSection();
+    
     // Update URL hash when scrolling between sections
     const handleScroll = () => {
       // Debounce for performance
@@ -137,11 +129,14 @@ function App() {
       }
     };
     
+    // Add event listeners
     window.addEventListener('scroll', throttledScroll);
+    window.addEventListener('hashchange', scrollToHashSection);
     
     // Clean up
     return () => {
       window.removeEventListener('scroll', throttledScroll);
+      window.removeEventListener('hashchange', scrollToHashSection);
       if (timeout) window.clearTimeout(timeout);
     };
   }, []);
@@ -164,29 +159,35 @@ function App() {
       <main id="main-content">
         {/* Hero Section */}
         <section className="hero" id="welcome">
-          <h1>{t("welcome.title", "Welcome to Champagne Festival")}</h1>
+          <h1 className="brand-title">
+            {t("welcome.title", "Welcome to Champagne Festival")}
+          </h1>
           <p className="hero-subtitle">{t("welcome.subtitle", "A celebration of fine champagne and community")}</p>
           <a href="#next-festival" className="cta-button">
             {t("welcome.learnMore", "Learn More")}
+            <i className="bi bi-arrow-down-circle ms-2"></i>
           </a>
         </section>
 
         {/* What we do */}
         <section id="what-we-do" className="content-section">
           <div className="container text-center">
-            <h2 className="section-header">{t("whatWeDo.title", "What We Do")}</h2>
+            <h2 className="section-header">
+              {t("whatWeDo.title", "What We Do")}
+            </h2>
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
-                <div className="features">
-                  {featureItems.map((feature) => (
-                    <div key={feature.id} className="feature">
-                      <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
-                      <p>{t(feature.descKey, feature.fallbackDesc)}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
+            </div>
+            {/* Features in full width to display side by side */}
+            <div className="features">
+              {featureItems.map((feature) => (
+                <div key={feature.id} className="feature">
+                  <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
+                  <p>{t(feature.descKey, feature.fallbackDesc)}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -194,7 +195,9 @@ function App() {
         {/* Next Festival with Countdown */}
         <section id="next-festival" className="content-section highlight-section">
           <div className="container text-center">
-            <h2 className="section-header">{t("nextFestival.title", "Next Festival")}</h2>
+            <h2 className="section-header">
+              {t("nextFestival.title", "Next Festival")}
+            </h2>
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <Countdown targetDate={festivalDate} />
@@ -209,7 +212,9 @@ function App() {
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">{t("schedule.title", "Schedule")}</h2>
+            <h2 className="section-header text-center">
+              {t("schedule.title", "Schedule")}
+            </h2>
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
@@ -224,19 +229,20 @@ function App() {
         {/* Producers Carousel */}
         <section id="producers" className="content-section">
           <div className="container text-center">
-            <h2 className="section-header">{t("producers.title", "Champagne Producers")}</h2>
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
-                <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
-              </div>
-            </div>
+            <h2 className="section-header">
+              {t("producers.title", "Champagne Producers")}
+            </h2>
+            <p>{t("producers.intro", "Explore our selection of premium champagne producers from the region:")}</p>
+            <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
           </div>
         </section>
 
         {/* FAQ Section */}
         <section id="faq" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">{t("faq.title", "Frequently Asked Questions")}</h2>
+            <h2 className="section-header text-center">
+              {t("faq.title", "Frequently Asked Questions")}
+            </h2>
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <FAQ keys={faqKeys} />
@@ -248,7 +254,9 @@ function App() {
         {/* Interactive Map - Moved here */}
         <section id="map" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">{t("location.title", "Event Location")}</h2>
+            <h2 className="section-header text-center">
+              {t("location.title", "Event Location")}
+            </h2>
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
@@ -269,20 +277,20 @@ function App() {
         {/* Sponsors Carousel */}
         <section id="sponsors" className="content-section highlight-section">
           <div className="container text-center">
-            <h2 className="section-header">{t("sponsors.title", "Sponsors")}</h2>
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
-                <p>{t("sponsors.intro", "Our event is made possible by the generous support of our sponsors:")}</p>
-                <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
-              </div>
-            </div>
+            <h2 className="section-header">
+              {t("sponsors.title", "Sponsors")}
+            </h2>
+            <p>{t("sponsors.intro", "Our event is made possible by the generous support of our sponsors:")}</p>
+            <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
           </div>
         </section>
 
         {/* Contact Form */}
         <section id="contact" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">{t("contact.title", "Contact Us")}</h2>
+            <h2 className="section-header text-center">
+              {t("contact.title", "Contact Us")}
+            </h2>
             <p className="text-center">{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">

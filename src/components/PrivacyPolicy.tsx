@@ -1,5 +1,6 @@
-import React from 'react';
-import { Modal, Button } from "react-bootstrap";
+import React, { useEffect } from 'react';
+import Modal from "react-bootstrap/Modal";
+import Button from "react-bootstrap/Button";
 import { useTranslation } from 'react-i18next';
 import { festivalYear } from '../config/dates';
 
@@ -21,9 +22,52 @@ interface PrivacyPolicyProps {
 const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
   // Use react-i18next for translations
   const { t } = useTranslation();
+  
+  // Handle URL hash updates, scroll position, and background scrolling
+  useEffect(() => {
+    if (isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      document.body.setAttribute('data-scroll-position', scrollY.toString());
+      
+      // Update URL hash
+      window.history.replaceState(null, '', '#privacy-policy');
+      
+      // Disable background scrolling without affecting layout
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflowY = 'scroll'; // Keep scrollbar to prevent layout shift
+    } else if (window.location.hash === '#privacy-policy') {
+      // Remove hash when closing
+      window.history.replaceState(null, '', window.location.pathname);
+      
+      // Re-enable scrolling and restore position
+      const scrollY = parseInt(document.body.getAttribute('data-scroll-position') || '0');
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflowY = '';
+      
+      // Restore scroll position
+      window.scrollTo(0, scrollY);
+    }
+  }, [isOpen]);
 
   return (
-    <Modal show={isOpen} onHide={onClose} size="lg" centered contentClassName="bg-dark" aria-labelledby="privacy-policy-title" restoreFocus={true}>
+    <Modal 
+      show={isOpen} 
+      onHide={onClose} 
+      size="lg" 
+      centered={true}
+      contentClassName="bg-dark" 
+      aria-labelledby="privacy-policy-title" 
+      restoreFocus={true}
+      scrollable={true}
+      enforceFocus={true}
+      keyboard={true}
+      backdrop={true}
+    >
       <Modal.Header closeButton className="border-secondary">
         <Modal.Title id="privacy-policy-title">
           {t('privacy.title', 'Privacy Policy')}

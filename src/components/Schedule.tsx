@@ -84,7 +84,20 @@ const Schedule: React.FC = () => {
                     <Card.Body>
                       <div className="d-flex justify-content-between align-items-start">
                         <div className="event-time text-muted me-3 text-nowrap">
-                          {event.startTime}{event.endTime ? ` - ${event.endTime}` : ''}
+                          {event.endTime ? (
+                            <>
+                              <div title={t('schedule.startTime', 'Start time')}>{event.startTime}</div>
+                              <div title={t('schedule.endTime', 'End time')}>{event.endTime}</div>
+                              <span className="visually-hidden">
+                                {t('schedule.timeRange', 'From {{start}} to {{end}}', {
+                                  start: event.startTime,
+                                  end: event.endTime
+                                })}
+                              </span>
+                            </>
+                          ) : (
+                            <span title={t('schedule.time', 'Time')}>{event.startTime}</span>
+                          )}
                         </div>
                         <div className="flex-grow-1">
                           <h5 className="event-title mb-1">
