@@ -55,7 +55,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 // Fix missing marker icon issue by manually setting the icon path to the CDN
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const IconDefault = L.Icon.Default as any;
-                delete IconDefault.prototype._getIconUrl;
+                IconDefault.prototype._getIconUrl = undefined;
                 
                 // Directly set the default icon paths to use the CDN
                 L.Icon.Default.mergeOptions({
