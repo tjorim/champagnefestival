@@ -126,7 +126,20 @@ function MyComponent() {
 }
 ```
 
-#### 2. Image Handling
+#### 2. Routing
+```tsx
+// Before (Next.js)
+import Link from 'next/link';
+
+<Link href="/about">About</Link>
+
+// After (React Router)
+import { Link } from 'react-router-dom';
+
+<Link to="/about">About</Link>
+```
+
+#### 3. Image Handling
 ```tsx
 // Before (Next.js)
 import Image from 'next/image';
@@ -150,10 +163,68 @@ import ResponsiveImage from './components/ResponsiveImage';
 />
 ```
 
-#### 3. Build System
+#### 4. Data Fetching
+```tsx
+// Before (Next.js)
+export async function getServerSideProps() {
+  const res = await fetch('https://api.example.com/data');
+  const data = await res.json();
+  return { props: { data } };
+}
+
+// After (React)
+import { useState, useEffect } from 'react';
+
+function MyComponent() {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    async function fetchData() {
+      const res = await fetch('https://api.example.com/data');
+      const data = await res.json();
+      setData(data);
+    }
+    fetchData();
+  }, []);
+  
+  if (!data) return <div>Loading...</div>;
+  
+  return <div>{/* Render data */}</div>;
+}
+```
+
+#### 5. Build System
 - Migrated from Next.js build process to Vite
 - Optimized bundle size with chunk splitting and minification
 - Environment variables now use Vite's built-in env handling with `VITE_` prefix
+
+##### Vite Configuration Example
+```typescript
+// vite.config.ts (key parts)
+build: {
+  outDir: 'dist',
+  minify: 'terser',
+  sourcemap: mode !== 'production',
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        vendor: ['react', 'react-dom', 'react-bootstrap', 'react-i18next', 'i18next'],
+        leaflet: ['leaflet', 'react-leaflet'],
+        swiper: ['swiper', 'swiper/react'],
+      },
+    }
+  }
+}
+```
+
+##### Environment Variables
+Environment variables are managed using Vite's built-in env handling:
+
+1. `.env.development` - Development-specific variables
+2. `.env.production` - Production-specific variables
+3. `.env.example` - Template for environment setup
+
+Variables must be prefixed with `VITE_` to be accessible in the client code via `import.meta.env.VITE_*`
 
 ### Development Commands
 
@@ -177,22 +248,22 @@ import ResponsiveImage from './components/ResponsiveImage';
 #### 2. Component Migration
 
 - ✅ Migrate shared components to React - COMPLETED
-  - ✅ Header
-  - ✅ Footer
-  - ✅ FAQ
-  - ✅ ContactForm
-  - ✅ ContactInfo
-  - ✅ JsonLd
-  - ✅ Schedule
-  - ✅ LocationInfo
-  - ✅ MapComponent
-  - ✅ BubbleBackground
-  - ✅ Countdown
-  - ✅ MarqueeSlider
-  - ✅ Carousel (upgraded to use Swiper)
-  - ✅ PrivacyPolicy
-  - ✅ ResponsiveImage
-  - ✅ SectionHeading
+  - ✅ Header - Navigation component with language switching
+  - ✅ Footer - Site footer with copyright and links
+  - ✅ FAQ - Accordion-based frequently asked questions
+  - ✅ ContactForm - Form for contacting festival organizers
+  - ✅ ContactInfo - Display of contact information
+  - ✅ JsonLd - Structured data for SEO
+  - ✅ Schedule - Festival schedule with day-based tabs
+  - ✅ LocationInfo - Venue location information
+  - ✅ MapComponent - Interactive map with Leaflet integration
+  - ✅ BubbleBackground - Animated background component
+  - ✅ Countdown - Festival countdown timer
+  - ✅ MarqueeSlider - Sliding component for sponsors and producers
+  - ✅ Carousel - Image carousel component (upgraded to use Swiper)
+  - ✅ PrivacyPolicy - Privacy policy content
+  - ✅ ResponsiveImage - Optimized image component
+  - ✅ SectionHeading - Reusable section heading component
 - ✅ Update component imports to use relative paths in the React structure
 - ✅ Remove Next.js specific code from components (e.g., 'use client' directives)
 
@@ -269,6 +340,25 @@ import ResponsiveImage from './components/ResponsiveImage';
    - Challenge: Features might not work consistently across browsers
    - Mitigation: Create a browser compatibility matrix, test thoroughly, add polyfills as needed
 
+### How to Contribute
+
+If you're working on this project, here's how you can help with the migration:
+
+1. Check the TODO.md file for components that need to be migrated
+2. Migrate one component at a time, ensuring it works correctly in the React implementation
+3. Update the TODO.md file to reflect your progress
+4. Test thoroughly to ensure the component works as expected
+
+### Testing During Migration
+
+During the migration, you can test the React implementation by running:
+
+```bash
+npm run dev:react
+```
+
+This will start the development server for the React implementation at http://localhost:5173.
+
 ### Final Evaluation Criteria
 
 Before completely removing the Next.js implementation, ensure:
@@ -278,3 +368,7 @@ Before completely removing the Next.js implementation, ensure:
 3. SEO scores remain consistent
 4. Accessibility requirements are fully met
 5. All tests pass with high coverage
+
+### Questions and Support
+
+If you have questions about the migration process, please contact the project maintainers.
