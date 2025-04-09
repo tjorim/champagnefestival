@@ -121,19 +121,6 @@ GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
 2. Use the new components to display contact and location information from the configuration:
-```tsx
-// For contact information
-import ContactInfo from "@/app/components/ContactInfo";
-<ContactInfo dictionary={dict} />
-
-// For location information
-import LocationInfo from "@/app/components/LocationInfo";
-<LocationInfo dictionary={dict} />
-
-// For maps with coordinates from configuration
-import MapComponent from "@/app/components/MapComponent";
-<MapComponent />
-```
 
 ### Maintenance Guidelines
 
