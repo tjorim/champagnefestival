@@ -52,7 +52,7 @@ const FAQ: React.FC<FAQProps> = ({ keys = [] }) => {
                         {item.question}
                     </Accordion.Header>
                     <Accordion.Body>
-                        <div className="py-2 border-start border-3 ps-3 border-brand">
+                        <div className="py-2 border-start border-3 ps-3 border-brand text-start">
                             <p>{item.answer}</p>
                         </div>
                     </Accordion.Body>

@@ -116,7 +116,7 @@ const ContactForm: React.FC = () => {
                             </Alert>
                         )}
 
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="name">
                                 {t("contact.name", "Your Name")}
                             </Form.Label>
@@ -136,7 +136,7 @@ const ContactForm: React.FC = () => {
                             </Form.Control.Feedback>
                         </Form.Group>
 
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="email">
                                 {t("contact.email", "Your Email")}
                             </Form.Label>
@@ -157,7 +157,7 @@ const ContactForm: React.FC = () => {
                             </Form.Control.Feedback>
                         </Form.Group>
 
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="message">
                                 {t("contact.message", "Your Message")}
                             </Form.Label>

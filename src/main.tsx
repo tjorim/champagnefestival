@@ -232,18 +232,22 @@ function App() {
 
         {/* FAQ Section */}
         <section id="faq" className="content-section">
-          <div className="container text-center">
-            <h2 className="section-header">{t("faq.title", "Frequently Asked Questions")}</h2>
+          <div className="container">
+            <h2 className="section-header text-center">{t("faq.title", "Frequently Asked Questions")}</h2>
             <FAQ keys={faqKeys} />
           </div>
         </section>
 
         {/* Contact Form */}
         <section id="contact" className="content-section">
-          <div className="container text-center">
-            <h2 className="section-header">{t("contact.title", "Contact Us")}</h2>
-            <p>{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
-            <ContactForm />
+          <div className="container">
+            <h2 className="section-header text-center">{t("contact.title", "Contact Us")}</h2>
+            <p className="text-center">{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
+            <div className="row justify-content-center">
+              <div className="col-md-8 col-lg-6">
+                <ContactForm />
+              </div>
+            </div>
           </div>
         </section>
       </main>
