@@ -50,22 +50,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 // Dynamically import Leaflet at runtime
                 const L = await import('leaflet').then(module => module.default);
                 
-                // Import Leaflet CSS needed for proper styling
-                const leafletCss = document.createElement('link');
-                leafletCss.rel = 'stylesheet';
-                leafletCss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-                leafletCss.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-                leafletCss.crossOrigin = '';
-                document.head.appendChild(leafletCss);
+                // No need to dynamically load CSS as we'll import it directly
                 
-                // Fix missing marker icon issue by manually setting the icon path
+                // Fix missing marker icon issue by manually setting the icon path to the CDN
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const IconDefault = L.Icon.Default as any;
                 delete IconDefault.prototype._getIconUrl;
                 
+                // Directly set the default icon paths to use the CDN
                 L.Icon.Default.mergeOptions({
-                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
                     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
                     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
                 });
 
@@ -81,7 +76,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     }).addTo(mapRef.current);
                     
-                    // Add a marker for the location using the effect-scoped variables
+                    // Add a marker for the location using the default icon
                     L.marker([lat, lng]).addTo(mapRef.current)
                         .bindPopup(`<b>${effectLocation}</b><br>${effectAddress}`)
                         .openPopup();

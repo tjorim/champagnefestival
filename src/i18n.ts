@@ -45,7 +45,7 @@ i18n
         interpolation: {
             escapeValue: false, // not needed for react as it escapes by default
         },
-        debug: process.env.NODE_ENV === 'development'
+        debug: false // Set to true when debugging is needed
     });
 
 // Type augmentation for useTranslation hook

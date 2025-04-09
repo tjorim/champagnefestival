@@ -6,8 +6,4 @@ compatibility_date = "2024-03-14"
 # This points to Vite's output directory
 pages_build_output_dir = "dist"
 
-# Redirects all paths to index.html for SPA routing
-[[routes]]
-pattern = "/*"
-script = ""
-destination = "/index.html"
+# Routes configuration for SPA (handled by _routes.json)

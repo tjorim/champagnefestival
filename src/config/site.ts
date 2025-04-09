@@ -3,7 +3,7 @@
  */
 
 // Base URL for the site, used for SEO and social sharing
-export const baseUrl = process.env.REACT_APP_BASE_URL || 'https://champagnefestival.be';
+export const baseUrl = 'https://champagnefestival.be';
 
 // Site metadata
 export const siteMetadata = {

@@ -1,0 +1,10 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: no-referrer-when-downgrade
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org https://*.openstreetmap.org https://unpkg.com; font-src 'self' data:; connect-src 'self' https://*.tile.openstreetmap.org https://*.openstreetmap.org; frame-src 'self';
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

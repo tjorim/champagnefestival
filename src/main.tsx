@@ -7,6 +7,7 @@ import ReactDOM from 'react-dom/client';
 // UI Libraries
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS directly
 import { Spinner } from "react-bootstrap";
 
 // Components - Eagerly loaded
@@ -19,7 +20,7 @@ import Schedule from "./components/Schedule";
 
 // Components - Lazy loaded
 const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
-const Carousel = lazy(() => import("./components/Carousel"));
+const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
 
 import './i18n'; // Import i18n configuration
@@ -29,12 +30,12 @@ import { faqKeys } from "./config/faq";
 import { featureItems } from "./config/features";
 import { festivalDate } from "./config/dates";
 
-// Helper component for Carousels with Suspense
-function SuspendedCarousel({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
+// Helper component for MarqueeSlider with Suspense
+function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
   const { t } = useTranslation();
   return (
     <Suspense fallback={<div className="carousel-loading">{t("loading", "Loading...")}</div>}>
-      <Carousel itemsType={itemsType} items={items} />
+      <MarqueeSlider itemsType={itemsType} items={items} />
     </Suspense>
   );
 }
@@ -130,10 +131,10 @@ function App() {
         <section id="carousel" className="content-section">
           <div className="container text-center">
             <h2 className="section-header">{t("producers.title", "Champagne Producers")}</h2>
-            <SuspendedCarousel itemsType="producers" items={producerItems} />
+            <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
 
             <h2 className="section-header">{t("sponsors.title", "Sponsors")}</h2>
-            <SuspendedCarousel itemsType="sponsors" items={sponsorItems} />
+            <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
           </div>
         </section>
 

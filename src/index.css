@@ -13,10 +13,11 @@ video {
 /* Bootstrap animations are now handled by bootstrap directly */
 
 :root {
-  /* Base brand colors */
-  --primary-color: #6e8efb;
-  --secondary-color: #a16efa;
-  --text-color: #e1e1e1;
+  /* Base brand colors with enhanced contrast for accessibility */
+  --primary-color: #5a7ff0; /* Slightly darker for better contrast */
+  --secondary-color: #9a5df6; /* Slightly darker for better contrast */
+  --text-color: #f0f0f0; /* Brighter for better contrast on dark backgrounds */
+  --text-muted: #c5c5c5; /* For less important text, still WCAG AA compliant */
   --background-color: #121212;
   --card-background: #1e1e1e;
   --header-height: 4rem;
@@ -414,10 +415,14 @@ main {
 /* Bootstrap theme is now set via data-bs-theme="dark" on the HTML element */
 :root {
   /* Override Bootstrap variables with our brand colors */
-  --bs-primary: #6e8efb;
-  --bs-primary-rgb: 110, 142, 251;
-  --bs-secondary: #a16efa;
-  --bs-secondary-rgb: 161, 110, 250;
+  --bs-primary: #5a7ff0;
+  --bs-primary-rgb: 90, 127, 240;
+  --bs-secondary: #9a5df6;
+  --bs-secondary-rgb: 154, 93, 246;
+  
+  /* Focus styles for accessibility */
+  --focus-ring-color: rgba(90, 127, 240, 0.5);
+  --focus-ring-width: 0.25rem;
 }
 
 /* Only override Bootstrap variables that need customization for our brand */
@@ -504,8 +509,15 @@ main {
 
 /* Add brand colors to accordion focus */
 .accordion-button:focus {
-  box-shadow: 0 0 0 0.25rem rgba(110, 142, 251, 0.25);
-  border-color: #6e8efb;
+  box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-color);
+  border-color: var(--primary-color);
+}
+
+/* Improved focus styles for all interactive elements */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .min-width-220 {

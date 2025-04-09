@@ -127,9 +127,10 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
                                         className="w-100 h-100 object-cover rounded"
                                         style={{ objectFit: 'cover' }}
                                         onError={(e) => {
-                                            console.error(`Failed to load image: ${item.image}`);
-                                            // Set a fallback image
+                                            // Quietly set a fallback image without console errors
                                             e.currentTarget.src = '/images/logo.svg';
+                                            // Remove the onError handler to prevent infinite loops if fallback also fails
+                                            e.currentTarget.onError = null;
                                         }}
                                     />
                                 </div>
