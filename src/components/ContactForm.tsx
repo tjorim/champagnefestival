@@ -11,6 +11,8 @@ interface FormData {
     email: string;
     message: string;
     honeypot?: string; // Anti-spam honeypot field
+    formStartTime: string; // When the form was loaded (to detect bots filling too quickly)
+    recaptchaToken?: string; // Optional reCAPTCHA token
 }
 
 /**
@@ -18,7 +20,13 @@ interface FormData {
  */
 const ContactForm: React.FC = () => {
     const { t } = useTranslation();
-    const [form, setForm] = useState<FormData>({ name: "", email: "", message: "", honeypot: "" });
+    const [form, setForm] = useState<FormData>({ 
+        name: "", 
+        email: "", 
+        message: "", 
+        honeypot: "",
+        formStartTime: new Date().toISOString() 
+    });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
@@ -76,7 +84,13 @@ const ContactForm: React.FC = () => {
             }
             
             setIsSubmitted(true);
-            setForm({ name: "", email: "", message: "", honeypot: "" });
+            setForm({ 
+                name: "", 
+                email: "", 
+                message: "", 
+                honeypot: "",
+                formStartTime: new Date().toISOString() 
+            });
             setErrors({});
         } catch (error) {
             console.error("Form submission error", error);

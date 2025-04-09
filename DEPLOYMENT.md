@@ -68,6 +68,10 @@ This project requires environment variables for both the frontend and the contac
 - `SMTP_PASSWORD`: SMTP password for authentication
 - `SMTP_PORT`: SMTP port (usually 587 for TLS or 465 for SSL)
 
+### Optional Anti-Spam Variables
+- `RECAPTCHA_SITE_KEY`: Google reCAPTCHA v3 site key (for frontend)
+- `RECAPTCHA_SECRET_KEY`: Google reCAPTCHA v3 secret key (for backend)
+
 Important Notes:
 - Vite frontend variables must start with `VITE_` to be accessible in the frontend code
 - Function variables are securely stored and accessible only to Cloudflare Functions

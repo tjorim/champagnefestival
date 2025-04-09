@@ -13,6 +13,77 @@ export async function onRequestPost(context) {
     const smtpUsername = context.env.SMTP_USERNAME;
     const smtpPassword = context.env.SMTP_PASSWORD;
     const smtpPort = parseInt(context.env.SMTP_PORT || "587");
+    const recaptchaSecret = context.env.RECAPTCHA_SECRET_KEY;
+    
+    // Get request information
+    const userAgent = context.request.headers.get("User-Agent") || "Unknown";
+    const ipAddress = context.request.headers.get("CF-Connecting-IP") || "Unknown";
+    const referer = context.request.headers.get("Referer") || "Unknown";
+    
+    // Anti-spam check 1: Check for honeypot field (should be empty)
+    if (formData.honeypot) {
+      console.log(`Potential spam detected (honeypot): IP: ${ipAddress}, UA: ${userAgent}`);
+      
+      // Return a "success" response to avoid giving feedback to bots
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: "Thank you for your message! We'll get back to you soon."
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        }
+      });
+    }
+    
+    // Anti-spam check 2: Check submission timestamp (too fast = bot)
+    const submissionTime = new Date();
+    const formStartTime = formData.formStartTime ? new Date(formData.formStartTime) : null;
+    
+    if (formStartTime && submissionTime - formStartTime < 3000) { // Less than 3 seconds
+      console.log(`Potential spam detected (too fast): IP: ${ipAddress}, Time: ${submissionTime - formStartTime}ms`);
+      
+      return new Response(JSON.stringify({ 
+        success: false,
+        message: "Your submission was too quick. Please try again."
+      }), {
+        status: 429, // Too many requests
+        headers: {
+          "Content-Type": "application/json",
+        }
+      });
+    }
+    
+    // Anti-spam check 3: reCAPTCHA validation if enabled
+    if (recaptchaSecret && formData.recaptchaToken) {
+      try {
+        const recaptchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `secret=${recaptchaSecret}&response=${formData.recaptchaToken}`
+        });
+        
+        const recaptchaResult = await recaptchaResponse.json();
+        
+        if (!recaptchaResult.success || recaptchaResult.score < 0.5) {
+          console.log(`reCAPTCHA failed: IP: ${ipAddress}, Score: ${recaptchaResult.score}`);
+          
+          return new Response(JSON.stringify({ 
+            success: false,
+            message: "Security verification failed. Please try again."
+          }), {
+            status: 403,
+            headers: {
+              "Content-Type": "application/json",
+            }
+          });
+        }
+      } catch (recaptchaError) {
+        console.error("reCAPTCHA verification error:", recaptchaError);
+      }
+    }
     
     // Validate the form data
     if (!formData.name || !formData.email || !formData.message) {
@@ -41,20 +112,6 @@ export async function onRequestPost(context) {
       });
     }
     
-    // Honeypot field check (anti-spam)
-    if (formData.honeypot) {
-      // Silent success response for potential bots
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: "Form submitted successfully" 
-      }), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-        }
-      });
-    }
-    
     // Prepare email content
     const subject = `New Contact Form Submission from ${formData.name}`;
     const emailBody = `
@@ -64,9 +121,10 @@ export async function onRequestPost(context) {
       Message:
       ${formData.message}
       
-      Sent from: ${context.request.headers.get("User-Agent") || "Unknown"}
-      IP: ${context.request.headers.get("CF-Connecting-IP") || "Unknown"}
-      Time: ${new Date().toISOString()}
+      Sent from: ${userAgent}
+      IP: ${ipAddress}
+      Referrer: ${referer}
+      Time: ${submissionTime.toISOString()}
     `;
     
     // Log the email data for debugging
