@@ -44,13 +44,19 @@ export default defineConfig(({ mode }: { mode: string }) => {
       minify: 'esbuild',
       // Generate sourcemaps for easier debugging (only in development)
       sourcemap: mode !== 'production',
-      // Optimize chunks for better loading performance
+      // Simpler chunking strategy for single-page site
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom', 'react-bootstrap', 'react-i18next', 'i18next'],
-            leaflet: ['leaflet', 'react-leaflet'],
-            swiper: ['swiper', 'swiper/react'],
+            // Framework code (rarely changes)
+            framework: ['react', 'react-dom'],
+            // UI libraries (bootstrap, i18n)
+            ui: ['react-bootstrap', 'react-i18next', 'i18next', 'i18next-browser-languagedetector'],
+            // Heavy specialty libraries with limited use
+            maps: ['leaflet', 'react-leaflet'],
+            carousel: ['swiper', 'swiper/react'],
+            // Other vendor dependencies
+            vendor: [],
           },
           // Customize chunk naming format
           chunkFileNames: 'assets/js/[name]-[hash].js',

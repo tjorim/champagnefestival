@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Accordion } from "react-bootstrap";
+import Accordion from "react-bootstrap/Accordion";
 import { Dictionary } from "../types/i18n";
 
 /**

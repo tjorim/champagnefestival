@@ -8,18 +8,20 @@ import ReactDOM from 'react-dom/client';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS directly
-import { Spinner } from "react-bootstrap";
+import Spinner from "react-bootstrap/Spinner";
 
-// Components - Eagerly loaded
+// Components - Eagerly loaded (critical path components)
 import Header from "./components/Header";
-import Countdown from "./components/Countdown";
-import FAQ from "./components/FAQ";
-import ContactForm from "./components/ContactForm";
 import Footer from "./components/Footer";
-import Schedule from "./components/Schedule";
 
 // Components - Lazy loaded
 const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
+// Important visible components with deferred loading
+const Countdown = lazy(() => import("./components/Countdown"));
+const FAQ = lazy(() => import("./components/FAQ"));
+const ContactForm = lazy(() => import("./components/ContactForm"));
+const Schedule = lazy(() => import("./components/Schedule"));
+// Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
 
