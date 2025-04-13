@@ -1,81 +1,21 @@
 # Migration Plan: Next.js to React
 
-> **IMPORTANT UPDATE (April 9, 2025)**: The project is now being migrated from Next.js back to a standard React application. This document has been updated to reflect this change.
+> **IMPORTANT UPDATE (April 13, 2025)**: The project has been successfully migrated from Next.js back to a standard React application. This document serves as both historical record and future task planning.
 
-## Previous Migration (Completed): [lang] to [locale] Routes
+## Historical Note: Previous Next.js Migrations
 
-This section documents the previous migration from the custom [lang] internationalization approach to the next-intl [locale] approach.
+The project previously used Next.js with different internationalization approaches:
+1. Initially used custom `[lang]` route parameters
+2. Later migrated to Next.js's `next-intl` with `[locale]` routes
+3. Finally migrated from Next.js to React with i18next
 
-### Status (Completed March 10, 2025)
+These historical migrations informed our current approach to internationalization in the React implementation.
 
-- ✅ All shared components have been migrated to use next-intl hooks:
-  - Header (uses useLocale hook)
-  - Footer
-  - FAQ (uses config for structure but translations from hooks)
-  - ContactForm
-  - ContactInfo
-  - LocationInfo
-  - PrivacyPolicy
-  - Schedule
-  - MapComponent
-  - Countdown
-  - BubbleBackground
-  - MarqueeSlider
-- ✅ Middleware is already configured for next-intl
-- ✅ [locale] routes are fully functional with SEO optimizations
-- ✅ Proper HTML lang attributes implemented for each language
-- ✅ Comprehensive SEO metadata implemented (JSON-LD, OpenGraph, Twitter)
-- ✅ Accessibility improvements (ARIA attributes, color contrast, focus styles)
-- ✅ Centralized site configuration for better maintainability
-- ✅ Dynamic festival date calculation implemented 
-- ❌ [lang] routes still exist and use the old approach
+> **Note**: This section is maintained for historical context only. The Next.js implementation, including all `app/` directory code, has been completely removed as of April 13, 2025.
 
-### Migration Steps (Completed)
+## Completed Migration: Next.js to React
 
-### 1. Complete Component Migration ✅
-
-- ✅ Ensure all components use the next-intl hooks
-- ✅ Remove dictionary prop passing in the [locale] routes
-- ✅ Test all components in the [locale] routes to ensure they work properly
-
-### 2. Update Root Page ✅
-
-- ✅ Removal of root page.tsx since middleware handles redirection
-- ✅ Proper language detection and redirection through next-intl middleware
-- ✅ Language preferences respected through the Accept-Language header and cookies
-- ✅ Default language (Dutch) used as fallback
-
-### 3. SEO and Link Optimization ✅
-
-- ✅ Links updated to use the Link component from next-intl navigation
-- ✅ SEO metadata fully implemented for [locale] routes:
-  - ✅ Title and description with proper translations
-  - ✅ OpenGraph and Twitter card metadata
-  - ✅ JSON-LD structured data for event information
-  - ✅ Alternate language links and canonical URLs
-  - ✅ Proper HTML lang attributes for accessibility
-
-### 4. Remove [lang] Routes ✅
-
-All testing is complete and we're confident the [locale] routes are working properly:
-
-```bash
-# Remove the [lang] routes
-rm -rf app/[lang]  # COMPLETED on March 10, 2025
-```
-
-### 5. Final Clean Up (No Longer Applicable)
-
-~~- Remove any remaining code related to the old approach~~
-~~- Remove src directory once migration is complete~~
-~~- Update documentation to reflect the new approach~~
-~~- Add tests for the new implementation~~
-
-> Note: The src directory is now being used for the React implementation.
-
-## Current Migration: Next.js to React
-
-This section outlines the plan for migrating from Next.js back to a standard React application.
+This section documents the completed migration from Next.js back to a standard React application, along with upcoming tasks to enhance the React implementation.
 
 ### Current Status (Updated April 13, 2025)
 - ✅ Initial React application structure set up in `src/` directory
@@ -193,53 +133,35 @@ This section outlines the plan for migrating from Next.js back to a standard Rea
    - Challenge: Features might not work consistently across browsers
    - Mitigation: Create a browser compatibility matrix, test thoroughly, add polyfills as needed
 
-### Rollout Strategy
+### Final Steps Before Launch
 
-To ensure a smooth transition from Next.js to React, we will follow this staged rollout approach:
+Since the site hasn't gone live yet, we can focus on these key areas before the initial public launch:
 
-1. **Alpha Testing Phase** (Current):
-   - Internal testing with the development team
-   - Fix any critical issues identified
+1. **Testing**:
+   - Cross-browser testing on major browsers (Chrome, Firefox, Safari, Edge)
+   - Mobile device testing (iOS and Android)
+   - Accessibility validation
 
-2. **Beta Testing Phase**:
-   - Limited release to select users/stakeholders
-   - Gather feedback and make adjustments
-   - Monitor performance metrics compared to Next.js implementation
+2. **Performance Optimization**:
+   - Core Web Vitals optimization (LCP, FID, CLS)
+   - Image optimization
+   - Bundle size analysis and reduction
 
-3. **Progressive Rollout**:
-   - Gradually increase traffic to the React implementation
-   - Start with 10%, monitor, then increase to 25%, 50%, and finally 100%
-   - Use feature flags to control the rollout
+3. **SEO Verification**:
+   - Structured data validation
+   - Meta tags implementation
+   - Sitemap generation
 
-4. **Full Cutover**:
-   - Complete transition to React implementation
-   - Remove Next.js code and dependencies
-   - Archive the Next.js implementation for reference
+### Project Timeline
 
-### Final Evaluation Criteria
-
-Before completely removing the Next.js implementation, ensure:
-
-1. All features work identically in the React implementation
-2. Performance metrics meet or exceed the Next.js implementation:
-   - Core Web Vitals (LCP, FID, CLS) within good thresholds
-   - Bundle size optimized and loading times comparable or better
-   - Low-end device performance validated
-3. SEO scores remain consistent across search engines
-4. Accessibility requirements are fully met (WCAG 2.1 AA compliance)
-5. Cross-browser compatibility verified across modern browsers
-6. All tests pass with high coverage (>80% minimum)
-
-### Migration Timeline
-
-Based on current progress and project priorities, here is the updated timeline for completing remaining tasks:
+Based on current progress and project priorities, here is the updated timeline for the remaining pre-launch tasks:
 
 | Date | Milestone |
 |------|-----------|
 | April 13, 2025 | ✅ **Complete migration**: Remove Next.js implementation |
-| April 15, 2025 | Complete testing infrastructure and initial component tests |
 | April 20, 2025 | Finalize performance optimization and bundle analysis |
-| April 25, 2025 | Cross-browser testing and compatibility fixes |
-| May 5, 2025 | Post-migration cleanup and documentation update |
+| April 25, 2025 | Complete cross-browser testing and implement fixes |
+| May 1, 2025 | Final content review and accessibility validation |
+| May 10, 2025 | **Site Launch**: Official public launch |
 
 **IMPORTANT**: All development now occurs exclusively in the React implementation. The Next.js code has been completely removed from the codebase as of April 13, 2025, ahead of schedule.
