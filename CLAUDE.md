@@ -1,19 +1,16 @@
 # Champagne Festival Project Guidelines
 
-> **IMPORTANT UPDATE (April 9, 2025)**: The project is now being migrated from Next.js back to a standard React application. These guidelines have been updated to reflect this change.
+> **IMPORTANT UPDATE (April 13, 2025)**: The project has been successfully migrated from Next.js back to a standard React application. All Next.js code has been removed.
 
 ## Build Commands
-- `npm run dev:react`: Start React development server (for the new React implementation)
-- `npm run dev:next`: Start Next.js development server (for the legacy Next.js implementation)
+- `npm run dev`: Start React development server
 - `npm run build`: Create production build
 - `npm run lint`: Run ESLint on the codebase
 - `npm run typecheck`: Run TypeScript check with no emit
 
 ## Important Notes
-- The project is currently in a transition phase from Next.js to React
-- The `src/` directory contains the new React implementation
-- The `app/` directory contains the legacy Next.js implementation
-- Focus on developing in the React implementation unless specifically working on the Next.js version
+- The project is a standard React application using Vite as the build tool
+- The `src/` directory contains all application code
 
 ## Code Style Guidelines
 - **Imports**: Group imports: React, libraries, components, utils/types
@@ -45,13 +42,3 @@
 - Implement proper prop types with TypeScript interfaces
 - Use React.Fragment to avoid unnecessary DOM elements
 
-## Legacy Next.js Guidelines (for reference only)
-> These guidelines apply only to the legacy Next.js implementation in the `app/` directory.
-
-- Use App Router for all routes
-- Create a layout.tsx file for consistent layouts
-- Use Next.js's built-in data fetching methods when possible
-- Add 'use client' directive to components with interactivity
-- Use next/image for image optimization
-- Use next/link for client-side navigation
-- Use metadata API for SEO optimization

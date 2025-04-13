@@ -126,8 +126,7 @@ VENUE_LAT=51.23601
 VENUE_LNG=2.97328
 
 # Other configuration
-NEXT_PUBLIC_BASE_URL=https://www.champagnefestival.be
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+VITE_PUBLIC_URL=https://www.champagnefestival.be
 ```
 
 2. Use the new components to display contact and location information from the configuration:
