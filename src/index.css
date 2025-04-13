@@ -561,6 +561,56 @@ body {
   overflow-y: auto;
 }
 
+/* Utility class for specific minimum width */
 .min-width-220 {
   min-width: 220px;
+}
+
+/* Enhanced accessibility features */
+
+/* Skip link for keyboard users */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--primary-color);
+  color: white;
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.2s;
+  border-radius: 0 0 4px 0;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Visually hidden elements (for screen readers) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ARIA live regions */
+[aria-live="polite"],
+[aria-live="assertive"] {
+  position: relative;
+}
+
+/* Better focus management for forms */
+input:focus,
+select:focus,
+textarea:focus,
+button:focus,
+a:focus {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
 }

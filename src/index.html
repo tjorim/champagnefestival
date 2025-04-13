@@ -11,6 +11,25 @@
   <meta name="author" content="Champagne Festival Organization" />
   <meta name="keywords" content="champagne, festival, belgium, wine, tasting, event, community" />
   
+  <!-- Performance optimizations -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Core Web Vitals optimization - preload critical assets -->
+  <link rel="preload" as="font" href="/assets/woff2/bootstrap-icons.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="style" href="/assets/css/index.css">
+  <link rel="preload" as="script" href="/assets/js/framework.js">
+  
+  <!-- Optimized font loading - limit to needed weights -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" 
+        rel="stylesheet" media="print" onload="this.media='all'">
+  <!-- Fallback for JS disabled browsers -->
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </noscript>
+  
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="%VITE_PUBLIC_URL%" />
@@ -27,11 +46,12 @@
   
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍾</text></svg>" />
   <link rel="canonical" href="%VITE_PUBLIC_URL%" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-    rel="stylesheet">
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- PWA capability hints -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Champagne Festival">
 </head>
 
 <body>
