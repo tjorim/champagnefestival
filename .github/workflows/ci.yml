@@ -35,7 +35,7 @@ jobs:
         run: npm run typecheck
       
       - name: Test
-        run: npm test || echo "Tests currently missing"
+        run: npm test
       
       - name: Build
         run: npm run build
