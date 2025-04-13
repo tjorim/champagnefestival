@@ -82,6 +82,15 @@ export async function onRequestPost(context) {
         }
       } catch (recaptchaError) {
         console.error("reCAPTCHA verification error:", recaptchaError);
+        return new Response(JSON.stringify({ 
+          success: false,
+          message: "Security verification failed. Please try again later."
+        }), {
+          status: 403,
+          headers: {
+            "Content-Type": "application/json",
+          }
+        });
       }
     }
     

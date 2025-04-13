@@ -114,6 +114,17 @@ function App() {
         if (active.id && window.location.hash !== `#${active.id}`) {
           // Use replaceState to avoid creating new history entries while scrolling
           window.history.replaceState(null, '', `#${active.id}`);
+          
+          // Update aria-current for accessibility
+          sections.forEach(section => {
+            if (section.id === active.id) {
+              section.setAttribute('aria-current', 'true');
+              section.setAttribute('tabindex', '-1'); // Make focusable but not in tab order
+            } else {
+              section.removeAttribute('aria-current');
+              section.removeAttribute('tabindex');
+            }
+          });
         }
       }
     };
