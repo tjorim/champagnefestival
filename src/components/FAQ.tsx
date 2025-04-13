@@ -1,55 +1,59 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Accordion } from "react-bootstrap";
+import Accordion from "react-bootstrap/Accordion";
+import { Dictionary } from "../types/i18n";
 
 /**
- * FAQ item structure from config
- */
-interface FAQConfigItem {
-    question: {
-        labelKey: string;
-        defaultLabel: string;
-    };
-    answer: {
-        labelKey: string;
-        defaultLabel: string;
-    };
-}
-
-/**
- * Props for the FAQ component
+ * FAQ component interface for keys prop
  */
 interface FAQProps {
-    faqItems?: FAQConfigItem[];
+  // Array of keys that define which FAQ items to display
+  keys?: Array<{
+    id: number;
+    questionKey: string;
+    answerKey: string;
+  }>;
 }
 
 /**
  * FAQ component that displays a list of frequently asked questions
  * with expandable/collapsible answers in an accessible accordion pattern
  * Using react-bootstrap accordion
+ * 
+ * The component uses type-safe translations and handles dynamic date updates
+ * through the i18n configuration.
  */
-const FAQ: React.FC<FAQProps> = ({ faqItems = [] }) => {
-    const { t } = useTranslation();
-
-    // Transform config items to displayable items with translations
-    const faqData = faqItems?.map(item => ({
-        question: t(item.question.labelKey, item.question.defaultLabel),
-        answer: t(item.answer.labelKey, item.answer.defaultLabel)
-    })) || [];
-
+const FAQ: React.FC<FAQProps> = ({ keys = [] }) => {
+    const { t } = useTranslation<keyof Dictionary['faq']>();
+    
+    // Map the translation keys to their values with fallbacks for better safety
+    const faqItems = keys.map(item => ({
+        id: item.id,
+        question: t(`faq.${item.questionKey}`, { 
+            defaultValue: `Question ${item.id}`,
+            ns: 'translation'
+        }),
+        answer: t(`faq.${item.answerKey}`, { 
+            defaultValue: `Answer to question ${item.id}`,
+            ns: 'translation'
+        })
+    }));
+    
     return (
         <Accordion className="rounded-lg shadow-lg">
-            {faqData.map((faq, index) => (
+            {faqItems.map((item) => (
                 <Accordion.Item
-                    key={index}
-                    eventKey={`${index}`}
+                    key={item.id}
+                    eventKey={`${item.id}`}
+                    // Add ARIA attributes for better accessibility
+                    aria-expanded="false"
                 >
                     <Accordion.Header>
-                        {faq.question}
+                        {item.question}
                     </Accordion.Header>
                     <Accordion.Body>
-                        <div className="py-2 border-start border-3 ps-3 border-brand">
-                            <p>{faq.answer}</p>
+                        <div className="py-2 border-start border-3 ps-3 border-brand text-start">
+                            <p>{item.answer}</p>
                         </div>
                     </Accordion.Body>
                 </Accordion.Item>

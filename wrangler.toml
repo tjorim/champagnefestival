@@ -1,5 +1,19 @@
-# Pages configuration for champagnefestival
+# Cloudflare Pages configuration for Champagne Festival
 name = "champagnefestival"
 compatibility_date = "2024-03-14"
-compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output/static"
+
+# Build configuration
+# This points to Vite's output directory
+pages_build_output_dir = "dist"
+
+# Routes configuration for SPA (handled by _routes.json)
+
+# Environment variables for functions
+[vars]
+CONTACT_EMAIL = "info@champagnefestival.be"
+
+# Note: In production, set these in the Cloudflare dashboard
+# SMTP_HOSTNAME = "smtp.example.com"
+# SMTP_USERNAME = "noreply@example.com"
+# SMTP_PASSWORD = "your-smtp-password"
+# SMTP_PORT = "587"

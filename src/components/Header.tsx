@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
-import { Navbar, Container } from 'react-bootstrap';
+import Navbar from 'react-bootstrap/Navbar';
+import Container from 'react-bootstrap/Container';
 
 interface HeaderProps {
     logoSrc?: string;
