@@ -39,16 +39,34 @@ const normalizedLanguageDetector = {
         // Get browser language
         const browserLang = navigator.language || (navigator as any).userLanguage || '';
         
+        // Support languages
+        const supportedLanguages = ['en', 'fr', 'nl'];
+        const defaultLanguage = 'nl';
+        
+        // Ensure we have a valid string to work with
+        if (!browserLang || typeof browserLang !== 'string') {
+            return defaultLanguage;
+        }
+        
         // Extract the base language code
         const baseLang = browserLang.split('-')[0].toLowerCase();
         
+        // Verify we have a non-empty string after normalization
+        if (!baseLang) {
+            return defaultLanguage;
+        }
+        
         // Check if it's a supported language
-        if (['en', 'fr', 'nl'].includes(baseLang)) {
+        if (supportedLanguages.includes(baseLang)) {
             return baseLang;
         }
         
+        // For languages that aren't supported, we could implement
+        // fallback logic for similar languages if needed
+        // Example: 'de' -> 'en', 'es' -> 'fr', etc.
+        
         // Default to Dutch
-        return 'nl';
+        return defaultLanguage;
     }
 };
 
