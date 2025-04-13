@@ -33,9 +33,27 @@ Open [http://localhost:3000](http://localhost:3000) for Next.js or [http://local
   - `src/config/` - Configuration files for different aspects of the website
   - `src/translations/` - Translation files for i18n
   - `src/types/` - TypeScript type definitions
+  - `src/tests/` - Test files for components and utilities
 - `public/` - Static assets like images
 
-> **Note**: The `app/` directory contains the previous Next.js implementation which is being phased out.
+> **Note**: The `app/` directory contains the previous Next.js implementation which is being phased out. This will be removed entirely by April 30, 2025 (see MIGRATION-PLAN.md for details).
+
+## Browser Compatibility
+
+This project targets modern browsers with good support for ES2020 features:
+
+| Browser             | Minimum Version |
+|---------------------|-----------------|
+| Chrome              | 85+             |
+| Firefox             | 80+             |
+| Safari              | 14+             |
+| Edge (Chromium)     | 85+             |
+| iOS Safari          | 14+             |
+| Android Chrome      | 85+             |
+
+We do not support Internet Explorer or legacy Edge (non-Chromium).
+
+The project uses modern JavaScript features without extensive polyfills to maintain performance and reduce bundle size. For the small percentage of users on older browsers, we provide a basic experience notification suggesting they upgrade.
 
 ## Technologies Used
 

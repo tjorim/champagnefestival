@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }: { mode: string }) => {
@@ -11,7 +12,16 @@ export default defineConfig(({ mode }: { mode: string }) => {
   console.log(`Building for ${mode} mode with ${env.VITE_PUBLIC_URL || 'default'} as public URL`);
   
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      // Add visualizer for bundle analysis in analyze mode
+      mode === 'analyze' && visualizer({
+        open: true,
+        filename: 'dist/stats.html',
+        gzipSize: true,
+        brotliSize: true,
+      }),
+    ].filter(Boolean),
     
     resolve: {
       alias: {
