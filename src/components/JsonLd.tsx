@@ -50,10 +50,11 @@ const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => 
     }),
     'offers': {
       '@type': 'Offer',
-      'url': `${baseUrl}/${locale}`,
+      'url': baseUrl,
       'availability': 'https://schema.org/InStock',
       'priceCurrency': 'EUR'
     },
+    'inLanguage': locale,
     'organizer': {
       '@type': 'Organization',
       'name': festivalName,

@@ -170,9 +170,6 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
             clearInterval(timer);
             clearInterval(statusTimer);
         };
-
-        // Clean up interval on unmount
-        return () => clearInterval(timer);
     }, [mounted, calculateTimeLeft, determineCountdownStatus]);
 
     // Map time units to display components

@@ -28,14 +28,50 @@ const BubbleBackground: React.FC = () => {
     const [bubbles, setBubbles] = useState<React.ReactNode[]>([]);
     const [isLowPerformanceDevice, setIsLowPerformanceDevice] = useState(false);
 
-    // Detect low performance devices (could be expanded with more sophisticated checks)
+    // Detect device performance capabilities
     useEffect(() => {
-        // Simple performance detection - could be expanded with more sophisticated checks
-        const isLowEnd =
-            window.navigator.hardwareConcurrency <= 4 ||
-            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Comprehensive device performance detection
+        const checkPerformance = () => {
+            const indicators = [];
+            
+            // CPU core check
+            if (window.navigator.hardwareConcurrency <= 4) {
+                indicators.push('low-cpu');
+            }
+            
+            // Memory check (not supported in all browsers)
+            const nav = navigator as Navigator & { deviceMemory?: number };
+            if (nav.deviceMemory && nav.deviceMemory <= 4) {
+                indicators.push('low-memory');
+            }
+            
+            // Network condition check (not supported in all browsers)
+            const connection = (navigator as Navigator & { 
+                connection?: { 
+                    effectiveType?: string, 
+                    saveData?: boolean 
+                } 
+            }).connection;
+            
+            if (connection) {
+                if (['slow-2g', '2g', '3g'].includes(connection.effectiveType || '')) {
+                    indicators.push('low-network');
+                }
+                if (connection.saveData) {
+                    indicators.push('data-saver');
+                }
+            }
+            
+            // Mobile device check
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                indicators.push('mobile');
+            }
+            
+            // Consider the device low-performance if it meets any of these criteria
+            return indicators.length > 0;
+        };
 
-        setIsLowPerformanceDevice(isLowEnd);
+        setIsLowPerformanceDevice(checkPerformance());
     }, []);
 
     const resizeTimeoutRef = useRef<number | null>(null);
