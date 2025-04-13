@@ -11,7 +11,12 @@ vi.mock('../components/PrivacyPolicy', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback: string) => fallback
+    t: (key: string, options?: any) => {
+      // Handle fallback strings or objects with defaultValue
+      if (typeof options === 'string') return options;
+      if (options?.defaultValue) return options.defaultValue;
+      return key;
+    }
   })
 }));
 
@@ -26,7 +31,7 @@ describe('Footer component', () => {
     expect(screen.getByText(new RegExp(currentYear))).toBeInTheDocument();
   });
   
-  it('shows privacy policy modal when clicked', async () => {
+  it('shows and closes privacy policy modal when clicked', async () => {
     // Mock setTimeout
     vi.useFakeTimers();
     
@@ -38,17 +43,24 @@ describe('Footer component', () => {
     // Click the privacy policy link within act
     const privacyLink = screen.getByText('Privacy Policy');
     
-    // Using act for both the click and timer advancement
-    await fireEvent.click(privacyLink);
-    
-    // Advance timers to execute setTimeout callback within act
-    // We need to use act here because the timer will cause a state update
+    // Using act for both the click and timer advancement in a single operation
     act(() => {
+      fireEvent.click(privacyLink);
+      // Advance timers to execute setTimeout callback
       vi.runAllTimers();
     });
     
     // Privacy policy modal should now be shown
     expect(screen.getByTestId('privacy-modal')).toBeInTheDocument();
+    
+    // Test closing the modal
+    const modal = screen.getByTestId('privacy-modal');
+    act(() => {
+      fireEvent.click(modal);
+    });
+    
+    // Modal should be closed
+    expect(screen.queryByTestId('privacy-modal')).not.toBeInTheDocument();
     
     // Clean up
     vi.useRealTimers();

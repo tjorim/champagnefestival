@@ -4,6 +4,11 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useTranslation } from "react-i18next";
 import ReactDOM from 'react-dom/client';
 
+// Custom hooks
+import { useScrollNavigation } from './hooks/useScrollNavigation';
+import { useLanguage } from './hooks/useLanguage';
+import { useServiceWorker } from './hooks/useServiceWorker';
+
 // UI Libraries
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -51,108 +56,10 @@ function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" |
 function App() {
   const { t, i18n } = useTranslation();
 
-  // Update the <html lang="..."> attribute dynamically
-  useEffect(() => {
-    // Get base language code
-    const baseLanguage = i18n.language.split('-')[0];
-    
-    // Set HTML lang attribute for SEO
-    document.documentElement.lang = baseLanguage;
-    
-    // Update URL with language parameter without page reload
-    const url = new URL(window.location.href);
-    const currentLng = url.searchParams.get('lng');
-    
-    // Always use base language code for URL
-    if (baseLanguage !== 'nl' && baseLanguage !== currentLng) {
-      // Only update URL for non-Dutch languages
-      url.searchParams.set('lng', baseLanguage);
-      window.history.replaceState({}, '', url.toString());
-    } else if (currentLng && baseLanguage === 'nl') {
-      // Remove parameter for default language (Dutch)
-      url.searchParams.delete('lng');
-      window.history.replaceState({}, '', url.toString());
-    }
-  }, [i18n.language]);
-  
-  
-  // Support for hash navigation and section tracking
-  useEffect(() => {
-    // Function to handle direct navigation via hash
-    const scrollToHashSection = () => {
-      if (window.location.hash) {
-        const targetId = window.location.hash.substring(1);
-        const targetElement = document.getElementById(targetId);
-        
-        if (targetElement) {
-          // Delay to ensure lazy-loaded content is rendered
-          setTimeout(() => {
-            targetElement.scrollIntoView({ behavior: 'smooth' });
-          }, 300);
-        }
-      }
-    };
-    
-    // Execute on initial load
-    scrollToHashSection();
-    
-    // Update URL hash when scrolling between sections
-    const handleScroll = () => {
-      // Debounce for performance
-      if (window.scrollY > 100) { // Only update when scrolled past the top
-        const sections = document.querySelectorAll('section[id]');
-        
-        // Find the section closest to the top of the viewport
-        const active = Array.from(sections).reduce((nearest, section) => {
-          const rect = section.getBoundingClientRect();
-          const offset = Math.abs(rect.top);
-          
-          return offset < Math.abs(nearest.rect.top) 
-            ? { id: section.id, rect } 
-            : nearest;
-        }, { id: '', rect: { top: Infinity } as DOMRect });
-        
-        // Update URL if we found an active section
-        if (active.id && window.location.hash !== `#${active.id}`) {
-          // Use replaceState to avoid creating new history entries while scrolling
-          window.history.replaceState(null, '', `#${active.id}`);
-          
-          // Update aria-current for accessibility
-          sections.forEach(section => {
-            if (section.id === active.id) {
-              section.setAttribute('aria-current', 'true');
-              section.setAttribute('tabindex', '-1'); // Make focusable but not in tab order
-            } else {
-              section.removeAttribute('aria-current');
-              section.removeAttribute('tabindex');
-            }
-          });
-        }
-      }
-    };
-    
-    // Add throttled scroll listener
-    let timeout: number | null = null;
-    const throttledScroll = () => {
-      if (timeout === null) {
-        timeout = window.setTimeout(() => {
-          handleScroll();
-          timeout = null;
-        }, 100);
-      }
-    };
-    
-    // Add event listeners
-    window.addEventListener('scroll', throttledScroll);
-    window.addEventListener('hashchange', scrollToHashSection);
-    
-    // Clean up
-    return () => {
-      window.removeEventListener('scroll', throttledScroll);
-      window.removeEventListener('hashchange', scrollToHashSection);
-      if (timeout) window.clearTimeout(timeout);
-    };
-  }, []);
+  // Use custom hooks for language, navigation, and service worker
+  useLanguage(i18n, 'nl');
+  useScrollNavigation();
+  useServiceWorker();
 
   return (
     <div className="App">
@@ -332,15 +239,4 @@ ReactDOM.createRoot(rootElement).render(
   </React.StrictMode>
 );
 
-// Register service worker for PWA capabilities
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('Service Worker registered with scope:', registration.scope);
-      })
-      .catch(error => {
-        console.error('Service Worker registration failed:', error);
-      });
-  });
-}
+// Service worker registration is now handled by the useServiceWorker hook
