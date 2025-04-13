@@ -125,8 +125,8 @@ This section outlines the plan for migrating from Next.js back to a standard Rea
 - ✅ Maintain single-page application structure with anchor links
 - ✅ Implement language switching with i18next
 - ✅ Keep privacy policy as a modal dialog rather than a separate page
-- ❌ Add smooth scrolling between sections
-- ❌ Implement history API for better back/forward navigation with hash changes
+- ✅ Add smooth scrolling between sections
+- ✅ Implement history API for better back/forward navigation with hash changes
 
 #### 4. Build and Deployment
 
@@ -148,8 +148,8 @@ This section outlines the plan for migrating from Next.js back to a standard Rea
 
 #### 6. Final Clean Up
 
-- ❌ Remove Next.js specific files and directories (app/, middleware.ts, etc.)
-- ❌ Remove Next.js specific dependencies from package.json
+- ✅ Remove Next.js specific files and directories (app/, middleware.ts, etc.)
+- ✅ Remove Next.js specific dependencies from package.json
 - ❌ Update documentation to reflect the new React architecture
 - ❌ Create developer onboarding guide for the React implementation
 

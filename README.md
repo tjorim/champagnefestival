@@ -2,7 +2,7 @@
 
 This is the official website for the Champagne Festival, built with React and React Bootstrap.
 
-> **IMPORTANT**: This project is currently being migrated from Next.js back to a standard React application. The `back-to-react` branch contains this migration work in progress.
+> **IMPORTANT UPDATE (April 13, 2025)**: This project has been successfully migrated from Next.js back to a standard React application. The Next.js code has been removed.
 
 ## Getting Started
 
@@ -14,17 +14,11 @@ npm install
 
 Then, run the development server:
 
-For Next.js implementation (legacy):
 ```bash
 npm run dev
 ```
 
-For React implementation (recommended):
-```bash
-npm run dev:react
-```
-
-Open [http://localhost:3000](http://localhost:3000) for Next.js or [http://localhost:5173](http://localhost:5173) for React with your browser to see the result.
+Open [http://localhost:5173](http://localhost:5173) with your browser to see the result.
 
 ## Project Structure
 
@@ -35,8 +29,6 @@ Open [http://localhost:3000](http://localhost:3000) for Next.js or [http://local
   - `src/types/` - TypeScript type definitions
   - `src/tests/` - Test files for components and utilities
 - `public/` - Static assets like images
-
-> **Note**: The `app/` directory contains the previous Next.js implementation which is being phased out. This will be removed entirely by April 30, 2025 (see MIGRATION-PLAN.md for details).
 
 ## Browser Compatibility
 
@@ -64,7 +56,7 @@ The project uses modern JavaScript features without extensive polyfills to maint
 
 ## Internationalization
 
-The project is currently transitioning from Next.js with `next-intl` back to React with `i18next`. The new internationalization approach:
+The project uses React with `i18next` for internationalization. The implementation approach:
 
 - Uses `i18next` and `react-i18next` for translations
 - Implements browser language detection with `i18next-browser-languagedetector`
