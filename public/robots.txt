@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://champagnefestival.example.com/sitemap.xml
+Sitemap: https://champagnefestival.be/sitemap.xml
