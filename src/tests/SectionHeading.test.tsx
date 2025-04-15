@@ -8,7 +8,6 @@ describe('SectionHeading component', () => {
     expect(screen.getByText('Test Heading')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2 })).toHaveAttribute('id', 'test-heading');
   });
-  });
 
   it('applies the provided className', () => {
     render(<SectionHeading id="test-heading" title="Test Heading" className="custom-class" />);
@@ -18,10 +17,10 @@ describe('SectionHeading component', () => {
 
   it('renders with subtitle when provided', () => {
     render(
-      <SectionHeading 
-        id="test-heading" 
-        title="Test Heading" 
-        subtitle="This is a subtitle" 
+      <SectionHeading
+        id="test-heading"
+        title="Test Heading"
+        subtitle="This is a subtitle"
       />
     );
     expect(screen.getByText('Test Heading')).toBeInTheDocument();
