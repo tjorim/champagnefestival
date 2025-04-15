@@ -6,6 +6,8 @@ describe('SectionHeading component', () => {
   it('renders the heading with the provided title', () => {
     render(<SectionHeading id="test-heading" title="Test Heading" />);
     expect(screen.getByText('Test Heading')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2 })).toHaveAttribute('id', 'test-heading');
+  });
   });
 
   it('applies the provided className', () => {
