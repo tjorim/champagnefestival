@@ -16,6 +16,10 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock leaflet since it doesn't work well in jsdom
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+// Mock objects that are not available in jsdom
 vi.mock('leaflet', () => ({
   icon: vi.fn().mockReturnValue({}),
   latLng: vi.fn().mockReturnValue({}),
