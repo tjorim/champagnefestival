@@ -63,6 +63,11 @@ const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => 
   };
 
   // Use React.createElement instead of JSX to avoid potential issues with SSR
+  // SECURITY NOTE: dangerouslySetInnerHTML is used here to render JSON-LD.
+  // This is considered safe because the 'structuredData' object is constructed
+  // entirely from trusted, developer-controlled sources (config files, translations)
+  // and does not include any raw user input. Ensure this remains true if modifying
+  // the data sources in the future.
   return React.createElement('script', {
     type: 'application/ld+json',
     dangerouslySetInnerHTML: {
