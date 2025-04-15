@@ -19,9 +19,20 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(ASSETS_TO_CACHE);
+        console.log('Opened cache');
+        return cache.addAll(ASSETS_TO_CACHE)
+          .catch(error => {
+            console.error('Failed to cache assets during installation:', error);
+            // Optionally decide if installation should fail completely
+            // For now, let's allow installation to continue
+            return Promise.resolve();
+          });
       })
       .then(() => self.skipWaiting())
+      .catch(error => {
+        // Handle potential errors during cache opening or skipWaiting
+        console.error('Service Worker installation failed:', error);
+      })
   );
 });
 
