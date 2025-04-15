@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Tab, Nav, Card, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { festivalDays, scheduleEvents, ScheduleEvent } from '../config/schedule';
@@ -17,13 +17,13 @@ const Schedule: React.FC = () => {
   const { t } = useTranslation();
   const [activeDay, setActiveDay] = useState(festivalDays[0].id);
 
-  // Get events for the active day
-  const dayEvents = scheduleEvents.filter(event => event.dayId === activeDay);
-  
-  // Sort events by start time
-  const sortedEvents = [...dayEvents].sort((a, b) => 
-    a.startTime.localeCompare(b.startTime)
-  );
+  // Get events for the active day and sort them by start time
+  const sortedEvents = useMemo(() => {
+    const dayEvents = scheduleEvents.filter(event => event.dayId === activeDay);
+    return [...dayEvents].sort((a, b) => 
+      a.startTime.localeCompare(b.startTime)
+    );
+  }, [activeDay]); // Recompute only when activeDay changes
 
   // Get category badge color
   const getCategoryColor = (category: ScheduleEvent['category']) => {
