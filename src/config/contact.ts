@@ -1,7 +1,6 @@
 /**
  * Contact information configuration
  * Store all contact-related information in this file
- * Values should be loaded from environment variables in production
  */
 
 interface Coordinates {
