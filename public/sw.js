@@ -60,24 +60,28 @@ self.addEventListener('fetch', (event) => {
         if (response) {
           return response;
         }
-        
+
         // Not in cache - fetch from network
         return fetch(event.request).then((networkResponse) => {
           // Don't cache third-party requests
           if (!event.request.url.startsWith(self.location.origin)) {
             return networkResponse;
           }
-          
+
           // Clone the response
           const responseToCache = networkResponse.clone();
-          
+
           // Only cache successful responses
           if (responseToCache.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
+            // Return the promise chain to ensure it completes
+            return caches.open(CACHE_NAME).then((cache) => {
+              return cache.put(event.request, responseToCache)
+                // Return the original network response after caching
+                .then(() => networkResponse);
             });
           }
-          
+
+          // If not caching, return the original network response directly
           return networkResponse;
         })
         .catch(() => {
@@ -85,12 +89,12 @@ self.addEventListener('fetch', (event) => {
           if (event.request.headers.get('Accept')?.includes('text/html')) {
             return caches.match('/offline.html');
           }
-          
+
           // For images, return a placeholder
           if (event.request.headers.get('Accept')?.includes('image/')) {
             return caches.match('/images/offline-placeholder.svg');
           }
-          
+
           // Return error response if no fallback is available
           return new Response('Network error occurred', {
             status: 503,
