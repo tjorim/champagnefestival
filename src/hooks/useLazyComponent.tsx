@@ -30,9 +30,15 @@ export function useLazyComponent<T extends ComponentType<any>>(
   );
   
   // Return component with proper suspense wrapping
-  return (props: React.ComponentProps<T>) => (
+  // Return component with proper suspense wrapping
+  const WrappedComponent = (props: React.ComponentProps<T>) => (
     <Suspense fallback={customFallback || defaultFallback}>
       <LazyComponent {...props} />
     </Suspense>
   );
+  
+  // Add display name for debugging
+  WrappedComponent.displayName = `LazyComponent(${LazyComponent.displayName || 'Component'})`;
+  
+  return WrappedComponent;
 }
