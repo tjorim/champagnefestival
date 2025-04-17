@@ -33,26 +33,26 @@ const BubbleBackground: React.FC = () => {
         // Comprehensive device performance detection
         const checkPerformance = () => {
             const indicators = [];
-            
+
             // CPU core check
             if (window.navigator.hardwareConcurrency <= 4) {
                 indicators.push('low-cpu');
             }
-            
+
             // Memory check (not supported in all browsers)
             const nav = navigator as Navigator & { deviceMemory?: number };
             if (nav.deviceMemory && nav.deviceMemory <= 4) {
                 indicators.push('low-memory');
             }
-            
+
             // Network condition check (not supported in all browsers)
-            const connection = (navigator as Navigator & { 
-                connection?: { 
-                    effectiveType?: string, 
-                    saveData?: boolean 
-                } 
+            const connection = (navigator as Navigator & {
+                connection?: {
+                    effectiveType?: string,
+                    saveData?: boolean
+                }
             }).connection;
-            
+
             if (connection) {
                 if (['slow-2g', '2g', '3g'].includes(connection.effectiveType || '')) {
                     indicators.push('low-network');
@@ -61,12 +61,12 @@ const BubbleBackground: React.FC = () => {
                     indicators.push('data-saver');
                 }
             }
-            
+
             // Mobile device check
             if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                 indicators.push('mobile');
             }
-            
+
             // Consider the device low-performance if it meets any of these criteria
             return indicators.length > 0;
         };
@@ -99,11 +99,11 @@ const BubbleBackground: React.FC = () => {
 
         handleResize(); // set initial count
         window.addEventListener("resize", handleResize);
-        
+
         // Cleanup function for both resize listener and any pending timeouts
         return () => {
             window.removeEventListener("resize", handleResize);
-            
+
             // Clear any pending resize timeout when component unmounts
             if (resizeTimeoutRef.current) {
                 window.clearTimeout(resizeTimeoutRef.current);
@@ -122,7 +122,7 @@ const BubbleBackground: React.FC = () => {
                 const value = Math.sin(seed + index) * 10000;
                 return Math.abs(value - Math.floor(value)) * max;
             };
-            
+
             const generatedBubbles = Array.from({ length: bubbleCount }, (_, i) => {
                 // Adjust animation properties based on performance capacity
                 const sizeFactor = isLowPerformanceDevice ? 0.7 : 1;

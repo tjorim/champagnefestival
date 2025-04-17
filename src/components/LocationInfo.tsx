@@ -9,7 +9,7 @@ import { contactConfig } from '../config/contact';
  */
 const LocationInfo: React.FC = () => {
   const { t } = useTranslation();
-  
+
   return (
     <Card className="border-0 shadow-sm">
       <Card.Body className="p-4">

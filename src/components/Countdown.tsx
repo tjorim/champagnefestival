@@ -52,13 +52,13 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     const [mounted, setMounted] = useState(false);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
     const [status, setStatus] = useState<CountdownStatus>(CountdownStatus.UPCOMING);
-    
+
     // Convert string date to Date object if needed
     // Wrapped in useMemo to avoid dependency changes on every render
     const targetDateObj = useMemo(() => {
         return typeof targetDate === 'string' ? new Date(targetDate) : targetDate;
     }, [targetDate]);
-    
+
     // Use refs to avoid dependency cycles
     // Define a type for the translations ref
     interface TimeUnitsTranslations {
@@ -67,15 +67,15 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         minutes: string;
         seconds: string;
     }
-    
+
     const tRef = useRef<TimeUnitsTranslations | null>(null);
     const targetDateObjRef = useRef(targetDateObj);
-    
+
     // Update refs when values change
     useEffect(() => {
         targetDateObjRef.current = targetDateObj;
     }, [targetDateObj]);
-    
+
     // Update translation ref once when it's available
     useEffect(() => {
         if (!tRef.current) {
@@ -87,34 +87,34 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
             };
         }
     }, [t]);
-    
+
     // Determine the current status of the countdown
     const determineCountdownStatus = useCallback(() => {
         const now = new Date();
         const festivalStart = targetDateObjRef.current;
         const festivalEnd = new Date(festivalEndDate);
-        
+
         // Add end of day to festival end date (23:59:59)
         festivalEnd.setHours(23, 59, 59);
-        
+
         // Festival hasn't started yet
         if (now < festivalStart) {
             return CountdownStatus.UPCOMING;
         }
-        
+
         // Festival is currently happening
         if (now >= festivalStart && now <= festivalEnd) {
             return CountdownStatus.CURRENT;
         }
-        
+
         // Festival recently concluded (within autoHideAfterDays)
         const hideDate = new Date(festivalEnd);
         hideDate.setDate(hideDate.getDate() + autoHideAfterDays);
-        
+
         if (now <= hideDate) {
             return CountdownStatus.CONCLUDED;
         }
-        
+
         // Festival ended long ago
         return CountdownStatus.HIDDEN;
     }, [autoHideAfterDays]);
@@ -123,13 +123,13 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     useEffect(() => {
         setMounted(true);
     }, []);
-    
+
     // Calculate time left using refs to avoid dependency cycles
     const calculateTimeLeft = useCallback((): TimeLeft => {
         if (!tRef.current) return {};
-        
+
         const targetDate = targetDateObjRef.current;
-        
+
         // Get time difference in milliseconds
         const difference = +targetDate - +new Date();
 
@@ -148,10 +148,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     // Update countdown every second, but only after component is mounted and translations are loaded
     useEffect(() => {
         if (!mounted || !tRef.current) return;
-        
+
         // Initial calculation
         setTimeLeft(calculateTimeLeft());
-        
+
         // Determine initial status
         setStatus(determineCountdownStatus());
 
@@ -184,7 +184,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     if (status === CountdownStatus.HIDDEN) {
         return null;
     }
-    
+
     return (
         <div
             className={`countdown countdown-${status.toLowerCase()}`}

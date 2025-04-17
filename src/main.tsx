@@ -41,12 +41,12 @@ import { festivalDate } from "./config/dates";
 // Helper component for MarqueeSlider with Suspense
 function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
   const { t } = useTranslation();
-  
+
   // Get appropriate loading text based on itemsType
-  const loadingText = itemsType === "producers" 
-    ? t("loading.producers", "Loading producers...") 
+  const loadingText = itemsType === "producers"
+    ? t("loading.producers", "Loading producers...")
     : t("loading.sponsors", "Loading sponsors...");
-    
+
   return (
     <Suspense fallback={<div className="carousel-loading">{loadingText}</div>}>
       <MarqueeSlider itemsType={itemsType} items={items} />
@@ -148,10 +148,10 @@ function App() {
         <section id="producers" className="content-section">
           <div className="container text-center">
             {/* Replaced h2 with SectionHeading and added subtitle */}
-            <SectionHeading 
-              id="producers-heading" 
-              titleKey="producers.title" 
-              fallbackTitle="Champagne Producers" 
+            <SectionHeading
+              id="producers-heading"
+              titleKey="producers.title"
+              fallbackTitle="Champagne Producers"
               subtitleKey="producers.intro"
               fallbackSubtitle="Explore our selection of premium champagne producers from the region:"
             />
@@ -172,7 +172,7 @@ function App() {
             </div>
           </div>
         </section>
-        
+
         {/* Interactive Map - Moved here */}
         <section id="map" className="content-section">
           <div className="container">
@@ -199,10 +199,10 @@ function App() {
         <section id="sponsors" className="content-section highlight-section">
           <div className="container text-center">
             {/* Replaced h2 with SectionHeading and added subtitle */}
-            <SectionHeading 
-              id="sponsors-heading" 
-              titleKey="sponsors.title" 
-              fallbackTitle="Sponsors" 
+            <SectionHeading
+              id="sponsors-heading"
+              titleKey="sponsors.title"
+              fallbackTitle="Sponsors"
               subtitleKey="sponsors.intro"
               fallbackSubtitle="Our event is made possible by the generous support of our sponsors:"
             />
@@ -215,10 +215,10 @@ function App() {
         <section id="contact" className="content-section">
           <div className="container">
             {/* Replaced h2 with SectionHeading and added subtitle */}
-            <SectionHeading 
-              id="contact-heading" 
-              titleKey="contact.title" 
-              fallbackTitle="Contact Us" 
+            <SectionHeading
+              id="contact-heading"
+              titleKey="contact.title"
+              fallbackTitle="Contact Us"
               subtitleKey="contact.intro"
               fallbackSubtitle="Have questions or want to become a sponsor? Reach out to us!"
             />

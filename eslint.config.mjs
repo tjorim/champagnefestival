@@ -9,7 +9,7 @@ import globals from 'globals';
 export default [
   // Base JS config
   js.configs.recommended,
-  
+
   // React config
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
@@ -42,7 +42,7 @@ export default [
       },
     },
   },
-  
+
   // TypeScript config
   {
     files: ['**/*.{ts,tsx}'],
@@ -62,7 +62,7 @@ export default [
       '@typescript-eslint/explicit-module-boundary-types': 'off',
     },
   },
-  
+
   // Specific overrides for our project
   {
     files: ['src/**/*'],

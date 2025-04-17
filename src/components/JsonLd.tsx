@@ -15,11 +15,11 @@ interface EventStructuredDataProps {
 const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => {
   const { t } = useTranslation();
   const festivalName = t('festivalName', { defaultValue: 'Champagne Festival' });
-  
+
   const venueAddress = contactConfig.location.address;
   const venueName = contactConfig.location.venueName;
   const { lat, lng } = contactConfig.location.coordinates;
-  
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Event',
@@ -45,8 +45,8 @@ const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => 
       }
     },
     'image': [`${baseUrl}/images/og-image.jpg`],
-    'description': t('welcome.subtitle', { 
-      defaultValue: 'Annual champagne festival featuring tastings, masterclasses, and gourmet food pairings' 
+    'description': t('welcome.subtitle', {
+      defaultValue: 'Annual champagne festival featuring tastings, masterclasses, and gourmet food pairings'
     }),
     'offers': {
       '@type': 'Offer',

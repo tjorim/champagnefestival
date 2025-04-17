@@ -18,7 +18,7 @@ export function useServiceWorker(swPath: string = '/sw.js') {
         navigator.serviceWorker.register(swPath)
           .then(registration => {
             console.warn('Service Worker registered with scope:', registration.scope);
-            
+
             // Handle service worker updates
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
@@ -38,7 +38,7 @@ export function useServiceWorker(swPath: string = '/sw.js') {
             console.warn('Service Worker registration failed:', error);
           });
       };
-      
+
       // Register when the window has loaded
       if (document.readyState === 'complete') {
         registerSW();

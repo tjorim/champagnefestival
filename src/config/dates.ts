@@ -15,10 +15,10 @@ export const festivalYear = 2025; // Current festival year
 function getFirstFullWeekend(year: number, month: number) {
   // Create a date for the 1st of the month
   const firstDay = new Date(year, month - 1, 1);
-  
+
   // Get the day of the week for the 1st (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
   const firstDayOfWeek = firstDay.getDay();
-  
+
   // Calculate days to add to get to the first Friday
   let daysToAdd = 0;
   if (firstDayOfWeek <= 5) {
@@ -28,14 +28,14 @@ function getFirstFullWeekend(year: number, month: number) {
     // If the 1st is Saturday, add 6 days to get to the next Friday
     daysToAdd = 5 + 7 - firstDayOfWeek;
   }
-  
+
   // Create the first Friday
   const firstFriday = new Date(year, month - 1, 1 + daysToAdd);
-  
+
   // Create the following Saturday and Sunday
   const firstSaturday = new Date(year, month - 1, 1 + daysToAdd + 1);
   const firstSunday = new Date(year, month - 1, 1 + daysToAdd + 2);
-  
+
   return {
     friday: firstFriday,
     saturday: firstSaturday,
@@ -61,7 +61,7 @@ export const festivalEndDate = new Date(activeWeekend.sunday);
 // Individual festival days
 export const festivalDays = [
   activeWeekend.friday,
-  activeWeekend.saturday, 
+  activeWeekend.saturday,
   activeWeekend.sunday
 ];
 
@@ -78,7 +78,7 @@ function generateDateRangeStrings() {
   const month = activeMonth - 1; // 0-indexed for arrays
   const startDay = activeWeekend.friday.getDate();
   const endDay = activeWeekend.sunday.getDate();
-  
+
   return {
     en: `${MONTH_NAMES.en[month]} ${startDay}-${endDay}, ${festivalYear}`,
     fr: `${startDay}-${endDay} ${MONTH_NAMES.fr[month]} ${festivalYear}`,

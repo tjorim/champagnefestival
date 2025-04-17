@@ -14,10 +14,14 @@ video {
 
 :root {
   /* Base brand colors with enhanced contrast for accessibility */
-  --primary-color: #5a7ff0; /* Slightly darker for better contrast */
-  --secondary-color: #9a5df6; /* Slightly darker for better contrast */
-  --text-color: #f0f0f0; /* Brighter for better contrast on dark backgrounds */
-  --text-muted: #c5c5c5; /* For less important text, still WCAG AA compliant */
+  --primary-color: #5a7ff0;
+  /* Slightly darker for better contrast */
+  --secondary-color: #9a5df6;
+  /* Slightly darker for better contrast */
+  --text-color: #f0f0f0;
+  /* Brighter for better contrast on dark backgrounds */
+  --text-muted: #c5c5c5;
+  /* For less important text, still WCAG AA compliant */
   --background-color: #121212;
   --card-background: #1e1e1e;
   --header-height: 4rem;
@@ -402,7 +406,7 @@ main {
   --bs-primary-rgb: 90, 127, 240;
   --bs-secondary: #9a5df6;
   --bs-secondary-rgb: 154, 93, 246;
-  
+
   /* Focus styles for accessibility */
   --focus-ring-color: rgba(90, 127, 240, 0.5);
   --focus-ring-width: 0.25rem;
@@ -502,7 +506,8 @@ main {
 
 /* Modal styling improvements */
 .modal-backdrop {
-  opacity: 0.75 !important; /* Darker backdrop for better focus */
+  opacity: 0.75 !important;
+  /* Darker backdrop for better focus */
 }
 
 /* Prevent body from shifting with scrollbar width */

@@ -7,12 +7,12 @@ import { Dictionary } from "../types/i18n";
  * FAQ component interface for keys prop
  */
 interface FAQProps {
-  // Array of keys that define which FAQ items to display
-  keys?: Array<{
-    id: number;
-    questionKey: string;
-    answerKey: string;
-  }>;
+    // Array of keys that define which FAQ items to display
+    keys?: Array<{
+        id: number;
+        questionKey: string;
+        answerKey: string;
+    }>;
 }
 
 /**
@@ -25,20 +25,20 @@ interface FAQProps {
  */
 const FAQ: React.FC<FAQProps> = ({ keys = [] }) => {
     const { t } = useTranslation<keyof Dictionary['faq']>();
-    
+
     // Map the translation keys to their values with fallbacks for better safety
     const faqItems = keys.map(item => ({
         id: item.id,
-        question: t(`faq.${item.questionKey}`, { 
+        question: t(`faq.${item.questionKey}`, {
             defaultValue: `Question ${item.id}`,
             ns: 'translation'
         }),
-        answer: t(`faq.${item.answerKey}`, { 
+        answer: t(`faq.${item.answerKey}`, {
             defaultValue: `Answer to question ${item.id}`,
             ns: 'translation'
         })
     }));
-    
+
     return (
         <Accordion className="rounded-lg shadow-lg">
             {faqItems.map((item) => (

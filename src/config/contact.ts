@@ -49,18 +49,18 @@ export const contactConfig: ContactConfig = {
         // The email address for general information inquiries
         info: 'nancy.cattrysse@telenet.be',
     },
-    
+
     // Phone numbers
     phones: {
         // Main contact phone number
         main: '+32 478 48 01 77',
     },
-    
+
     // Social media handles
     social: {
         facebook: 'champagnefestival.kust',
     },
-    
+
     // Location information
     location: {
         // Venue name

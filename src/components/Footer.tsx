@@ -6,22 +6,22 @@ const Footer = () => {
     const { t } = useTranslation();
     const currentYear = new Date().getFullYear();
     const [privacyOpen, setPrivacyOpen] = useState(false);
-    
+
     // Open the privacy policy modal if the URL has #privacy-policy
     useEffect(() => {
         if (window.location.hash === '#privacy-policy') {
             setPrivacyOpen(true);
         }
-        
+
         // Listen for hash changes
         const handleHashChange = () => {
             if (window.location.hash === '#privacy-policy') {
                 setPrivacyOpen(true);
             }
         };
-        
+
         window.addEventListener('hashchange', handleHashChange);
-        
+
         // Clean up event listener
         return () => {
             window.removeEventListener('hashchange', handleHashChange);

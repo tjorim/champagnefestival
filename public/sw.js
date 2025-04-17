@@ -84,23 +84,23 @@ self.addEventListener('fetch', (event) => {
           // If not caching, return the original network response directly
           return networkResponse;
         })
-        .catch(() => {
-          // If both cache and network fail, return a fallback for HTML requests
-          if (event.request.headers.get('Accept')?.includes('text/html')) {
-            return caches.match('/offline.html');
-          }
+          .catch(() => {
+            // If both cache and network fail, return a fallback for HTML requests
+            if (event.request.headers.get('Accept')?.includes('text/html')) {
+              return caches.match('/offline.html');
+            }
 
-          // For images, return a placeholder
-          if (event.request.headers.get('Accept')?.includes('image/')) {
-            return caches.match('/images/offline-placeholder.svg');
-          }
+            // For images, return a placeholder
+            if (event.request.headers.get('Accept')?.includes('image/')) {
+              return caches.match('/images/offline-placeholder.svg');
+            }
 
-          // Return error response if no fallback is available
-          return new Response('Network error occurred', {
-            status: 503,
-            headers: { 'Content-Type': 'text/plain' }
+            // Return error response if no fallback is available
+            return new Response('Network error occurred', {
+              status: 503,
+              headers: { 'Content-Type': 'text/plain' }
+            });
           });
-        });
       })
   );
 });

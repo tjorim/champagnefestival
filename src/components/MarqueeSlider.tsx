@@ -93,7 +93,7 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
                     disableOnInteraction: false
                 }}
                 navigation={true}
-                pagination={{ 
+                pagination={{
                     clickable: true,
                     dynamicBullets: true
                 }}

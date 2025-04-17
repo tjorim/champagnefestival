@@ -23,5 +23,9 @@
   "lang": "nl",
   "dir": "ltr",
   "orientation": "portrait-primary",
-  "categories": ["events", "food", "lifestyle"]
+  "categories": [
+    "events",
+    "food",
+    "lifestyle"
+  ]
 }

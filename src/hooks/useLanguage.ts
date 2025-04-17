@@ -12,21 +12,21 @@ import { UseTranslationResponse } from 'react-i18next';
  * @param defaultLanguage The default language code (defaults to 'nl')
  */
 export function useLanguage(
-  i18n: UseTranslationResponse<string, string>['i18n'], 
+  i18n: UseTranslationResponse<string, string>['i18n'],
   defaultLanguage: string = 'nl'
 ) {
   useEffect(() => {
     // Get base language code
     const baseLanguage = i18n.language.split('-')[0];
-    
+
     // Set HTML lang attribute for SEO
     document.documentElement.lang = baseLanguage;
-    
+
     // Update URL with language parameter without page reload
     try {
       const url = new URL(window.location.href);
       const currentLng = url.searchParams.get('lng');
-    
+
       // Always use base language code for URL
       if (baseLanguage !== defaultLanguage && baseLanguage !== currentLng) {
         // Only update URL for non-default languages

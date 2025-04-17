@@ -7,10 +7,10 @@ import { visualizer } from 'rollup-plugin-visualizer';
 export default defineConfig(({ mode }: { mode: string }) => {
   // Load environment variables based on mode (available via env object if needed)
   const env = loadEnv(mode, process.cwd());
-  
+
   // Example of using env variables
   console.log(`Building for ${mode} mode with ${env.VITE_PUBLIC_URL || 'default'} as public URL`);
-  
+
   return {
     plugins: [
       react(),
@@ -22,21 +22,21 @@ export default defineConfig(({ mode }: { mode: string }) => {
         brotliSize: true,
       }),
     ].filter(Boolean),
-    
+
     resolve: {
       alias: {
         // Set up aliases to match the paths in tsconfig.json
         '@': resolve(__dirname, './src'),
       },
     },
-    
+
     // Configure the server for development
     server: {
       port: 5173,
       open: true,
       host: true, // Listen on all local IPs
     },
-    
+
     // Build configuration
     build: {
       outDir: 'dist',
@@ -71,16 +71,16 @@ export default defineConfig(({ mode }: { mode: string }) => {
         },
       },
     },
-    
+
     // Optimize assets
     optimizeDeps: {
       include: ['react', 'react-dom', 'react-bootstrap', 'i18next', 'react-i18next'],
     },
-    
+
     // Configure environment variables
     // https://vitejs.dev/guide/env-and-mode.html
     envPrefix: ['VITE_', 'REACT_'],
-    
+
     // Pass some environment values explicitly
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version),

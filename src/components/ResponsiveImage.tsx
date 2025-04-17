@@ -27,9 +27,9 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
 }) => {
   // Calculate aspect ratio if both dimensions are provided
   const aspectRatio = width && height ? `${(height / width) * 100}%` : undefined;
-  
+
   return (
-    <div 
+    <div
       className={`position-relative ${className}`}
       style={fill ? { width: '100%', height: '100%' } : undefined}
     >
@@ -37,7 +37,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
       {aspectRatio && !fill && (
         <div style={{ paddingBottom: aspectRatio }} />
       )}
-      
+
       <img
         src={src}
         alt={alt}

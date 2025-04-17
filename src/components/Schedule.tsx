@@ -20,14 +20,14 @@ const Schedule: React.FC = () => {
   // Get events for the active day and sort them by start time
   const sortedEvents = useMemo(() => {
     const dayEvents = scheduleEvents.filter(event => event.dayId === activeDay);
-    return [...dayEvents].sort((a, b) => 
+    return [...dayEvents].sort((a, b) =>
       a.startTime.localeCompare(b.startTime)
     );
   }, [activeDay]); // Recompute only when activeDay changes
 
   // Get category badge color
   const getCategoryColor = (category: ScheduleEvent['category']) => {
-    switch(category) {
+    switch (category) {
       case 'tasting': return 'danger';
       case 'vip': return 'warning';
       case 'party': return 'info';
@@ -40,7 +40,7 @@ const Schedule: React.FC = () => {
 
   // Get translated day name
   const getDayName = (dayLabel: string) => {
-    switch(dayLabel.toLowerCase()) {
+    switch (dayLabel.toLowerCase()) {
       case 'friday': return t('schedule.days.friday', 'Friday');
       case 'saturday': return t('schedule.days.saturday', 'Saturday');
       case 'sunday': return t('schedule.days.sunday', 'Sunday');
@@ -55,8 +55,8 @@ const Schedule: React.FC = () => {
 
   return (
     <div className="schedule-container">
-      <Tab.Container 
-        activeKey={activeDay} 
+      <Tab.Container
+        activeKey={activeDay}
         onSelect={(k) => k && setActiveDay(Number(k))}
       >
         <Nav variant="tabs" className="mb-4 justify-content-center">
@@ -65,16 +65,16 @@ const Schedule: React.FC = () => {
               <Nav.Link eventKey={day.id} className="px-4">
                 {getDayName(day.label)}
                 <span className="d-block small">
-                  {new Date(day.date).toLocaleDateString(undefined, { 
-                    month: 'short', 
-                    day: 'numeric' 
+                  {new Date(day.date).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric'
                   })}
                 </span>
               </Nav.Link>
             </Nav.Item>
           ))}
         </Nav>
-        
+
         <Tab.Content>
           <Tab.Pane eventKey={activeDay} active={true}>
             {sortedEvents.length > 0 ? (
