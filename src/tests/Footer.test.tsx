@@ -11,10 +11,10 @@ vi.mock('../components/PrivacyPolicy', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: any) => {
+    t: (key: string, options?: Record<string, unknown> | string | undefined) => {
       // Handle fallback strings or objects with defaultValue
       if (typeof options === 'string') return options;
-      if (options?.defaultValue) return options.defaultValue;
+      if (typeof options === 'object' && options?.defaultValue) return options.defaultValue;
       return key;
     }
   })

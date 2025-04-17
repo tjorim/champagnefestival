@@ -68,7 +68,7 @@ const ContactForm: React.FC = () => {
 
         // Anti-spam check: if honeypot is filled, silently "succeed" without sending
         if (form.honeypot) {
-            console.log("Honeypot triggered - likely bot submission");
+            console.warn("Honeypot triggered - likely bot submission");
             // Fake success to confuse bots
             setIsSubmitted(true);
             setIsSubmitting(false);
@@ -110,7 +110,7 @@ const ContactForm: React.FC = () => {
             });
             setErrors({});
         } catch (error) {
-            console.error("Form submission error", error);
+            console.warn('Form submission error:', error);
             // Provide more specific error messages
             if (error instanceof TypeError && error.message.includes('fetch')) {
                 setGeneralError(t("contact.networkError", "Network error: Please check your internet connection and try again."));

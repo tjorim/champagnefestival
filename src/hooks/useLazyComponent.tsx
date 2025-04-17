@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, ComponentType } from 'react';
+import React, { lazy, Suspense } from 'react';
 import Spinner from 'react-bootstrap/Spinner';
 
 /**
@@ -12,13 +12,13 @@ import Spinner from 'react-bootstrap/Spinner';
  * @param loadingFallback Custom fallback component (optional)
  * @returns A component wrapped with Suspense
  */
-export function useLazyComponent<T extends ComponentType<any>>(
-  importFn: () => Promise<{ default: T }>,
+export function useLazyComponent<TProps>(
+  importFn: () => Promise<{ default: React.ComponentType<TProps> }>,
   loadingText: string = 'Loading...',
   customFallback?: React.ReactNode
-): React.FC<React.ComponentProps<T>> {
+): React.FC<React.PropsWithChildren<TProps>> {
   const LazyComponent = lazy(importFn);
-  
+
   // Default fallback with spinner
   const defaultFallback = (
     <div className="d-flex align-items-center justify-content-center py-3">
@@ -28,17 +28,16 @@ export function useLazyComponent<T extends ComponentType<any>>(
       </div>
     </div>
   );
-  
+
   // Return component with proper suspense wrapping
-  // Return component with proper suspense wrapping
-  const WrappedComponent = (props: React.ComponentProps<T>) => (
+  const WrappedComponent: React.FC<React.PropsWithChildren<TProps>> = (props) => (
     <Suspense fallback={customFallback || defaultFallback}>
       <LazyComponent {...props} />
     </Suspense>
   );
-  
+
   // Add display name for debugging
-  WrappedComponent.displayName = `LazyComponent(${LazyComponent.displayName || 'Component'})`;
-  
+  WrappedComponent.displayName = `LazyComponent`;
+
   return WrappedComponent;
 }

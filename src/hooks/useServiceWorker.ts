@@ -17,7 +17,7 @@ export function useServiceWorker(swPath: string = '/sw.js') {
       const registerSW = () => {
         navigator.serviceWorker.register(swPath)
           .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
+            console.warn('Service Worker registered with scope:', registration.scope);
             
             // Handle service worker updates
             registration.addEventListener('updatefound', () => {
@@ -26,7 +26,7 @@ export function useServiceWorker(swPath: string = '/sw.js') {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     // New content is available, notify user
-                    console.log('New content is available; please refresh.');
+                    console.warn('New content is available; please refresh.');
                     // TODO: Dispatch an event here to show a notification/toast to the user
                     // Example: document.dispatchEvent(new CustomEvent('swUpdate', { detail: registration }));
                   }
@@ -35,7 +35,7 @@ export function useServiceWorker(swPath: string = '/sw.js') {
             });
           })
           .catch(error => {
-            console.error('Service Worker registration failed:', error);
+            console.warn('Service Worker registration failed:', error);
           });
       };
       

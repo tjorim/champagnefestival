@@ -37,7 +37,7 @@ const normalizedLanguageDetector = {
     name: 'normalized',
     lookup: () => {
         // Get browser language
-        const browserLang = navigator.language || (navigator as any).userLanguage || '';
+        const browserLang = navigator.language || (navigator as Navigator & { userLanguage?: string }).userLanguage || '';
         
         // Support languages
         const supportedLanguages = ['en', 'fr', 'nl'];
@@ -77,7 +77,7 @@ i18n
         init: () => {},
         detect: () => normalizedLanguageDetector.lookup(),
         cacheUserLanguage: () => {}
-    } as any)
+    } as import('i18next').Module | import('i18next').LanguageDetectorModule)
     // Then the standard detector as fallback
     .use(LanguageDetector)
     // pass the i18n instance to react-i18next

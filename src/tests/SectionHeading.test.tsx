@@ -4,13 +4,13 @@ import SectionHeading from '../components/SectionHeading';
 
 describe('SectionHeading component', () => {
   it('renders the heading with the provided title', () => {
-    render(<SectionHeading id="test-heading" title="Test Heading" />);
+    render(<SectionHeading id="test-heading" titleKey="Test Heading" fallbackTitle="Test Heading" />);
     expect(screen.getByText('Test Heading')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2 })).toHaveAttribute('id', 'test-heading');
   });
 
   it('applies the provided className', () => {
-    render(<SectionHeading id="test-heading" title="Test Heading" className="custom-class" />);
+    render(<SectionHeading id="test-heading" titleKey="Test Heading" fallbackTitle="Test Heading" className="custom-class" />);
     const container = screen.getByText('Test Heading').closest('div');
     expect(container).toHaveClass('custom-class');
   });
@@ -19,8 +19,10 @@ describe('SectionHeading component', () => {
     render(
       <SectionHeading
         id="test-heading"
-        title="Test Heading"
-        subtitle="This is a subtitle"
+        titleKey="Test Heading"
+        fallbackTitle="Test Heading"
+        subtitleKey="This is a subtitle"
+        fallbackSubtitle="This is a subtitle"
       />
     );
     expect(screen.getByText('Test Heading')).toBeInTheDocument();

@@ -12,7 +12,7 @@ import { UseTranslationResponse } from 'react-i18next';
  * @param defaultLanguage The default language code (defaults to 'nl')
  */
 export function useLanguage(
-  i18n: UseTranslationResponse<string>['i18n'], 
+  i18n: UseTranslationResponse<string, string>['i18n'], 
   defaultLanguage: string = 'nl'
 ) {
   useEffect(() => {
