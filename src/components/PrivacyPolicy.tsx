@@ -68,7 +68,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       keyboard={true}
       backdrop={true}
     >
-      <Modal.Header closeButton className="border-secondary">
+      <Modal.Header closeButton>
         <Modal.Title id="privacy-policy-title">
           {t('privacy.title', 'Privacy Policy')}
         </Modal.Title>
@@ -83,7 +83,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
             {t('privacy.intro', 'Welcome to the Champagne Festival website. This Privacy Policy explains how we collect, use, and protect your personal information when you use our website and services.')}
           </p>
 
-          <hr className="my-4 border-secondary" />
+          <hr className="my-4" />
 
           <div className="mb-4">
             <h3 className="h5 fw-bold mb-2 text-brand">
@@ -131,11 +131,11 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
       </Modal.Body>
-      <Modal.Footer className="border-secondary">
+      <Modal.Footer>
         <Button
           onClick={onClose}
           variant="dark"
-          className="bg-brand-gradient border-0"
+          className="bg-brand-gradient"
         >
           {t('close', 'Close')}
         </Button>

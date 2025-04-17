@@ -217,7 +217,7 @@ const ContactForm: React.FC = () => {
                         <Button
                             type="submit"
                             variant="dark"
-                            className="w-100 bg-brand-gradient"
+                            className="btn w-100 bg-brand-gradient text-white"
                             disabled={isSubmitting}
                             aria-busy={isSubmitting ? "true" : "false"}
                             aria-live="polite"

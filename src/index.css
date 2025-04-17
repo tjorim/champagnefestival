@@ -67,25 +67,30 @@ body {
 /* Skip link for accessibility */
 .skip-link {
   position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--primary-color);
+  color: white;
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.2s;
+  border-radius: 0 0 4px 0;
+  text-decoration: none;
   width: 1px;
   height: 1px;
-  padding: 0;
-  margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
-  z-index: 9999;
 }
 
 .skip-link:focus {
+  top: 0;
   width: auto;
   height: auto;
   clip: auto;
   overflow: visible;
   white-space: normal;
-  top: 0;
-  left: 0;
   background: var(--primary-color);
   color: white;
   padding: 8px;
@@ -125,7 +130,6 @@ h1 {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  /* Fix for text cut-off issue */
   padding-bottom: 0.1em;
 }
 
@@ -154,31 +158,6 @@ h2.section-header::after {
   font-size: 1.5rem;
   max-width: 600px;
   margin-bottom: 2rem;
-}
-
-.cta-button {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 50px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-  border: 2px solid transparent;
-}
-
-.cta-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.cta-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .highlight-section {
@@ -383,7 +362,6 @@ main {
   .container {
     width: 100%;
     padding: 0 1rem;
-    overflow-x: hidden;
   }
 
   .features {
@@ -433,15 +411,7 @@ main {
 /* Only override Bootstrap variables that need customization for our brand */
 
 /* Brand color utilities - with higher specificity instead of !important */
-:root .text-brand {
-  color: var(--secondary-color);
-}
-
-:root .border-brand {
-  border-color: var(--secondary-color);
-}
-
-:root .bg-brand-gradient {
+.bg-brand-gradient {
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
 }
 
@@ -468,29 +438,10 @@ main {
 /* Component-specific styles */
 .site-footer {
   background: linear-gradient(to right, rgba(67, 56, 202, 0.7), rgba(126, 34, 206, 0.7));
-  color: white;
   padding: 1.5rem 0;
-  margin-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Carousel styling without card */
-.carousel-with-rounded-images {
-  margin-bottom: 2rem;
-}
-
-.carousel-image {
-  aspect-ratio: 16/9;
-  object-fit: cover;
-}
-
-/* Make carousel captions more visible with a semi-transparent background */
-.carousel-caption {
-  background-color: rgba(0, 0, 0, 0.6);
-  border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-}
-
+/* Map iframe styling */
 .map-iframe {
   transition: opacity 0.3s ease;
 }
@@ -519,6 +470,11 @@ main {
   opacity: 0.7;
 }
 
+/* Remove focus outline from bootstrap */
+.schedule-container .nav-tabs .nav-link:focus {
+  outline: none;
+}
+
 /* Custom Accordion Styling */
 .accordion {
   --bs-accordion-border-width: 0;
@@ -536,6 +492,10 @@ main {
 .accordion-button:focus {
   box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-color);
   border-color: var(--primary-color);
+}
+
+.accordion-button:focus {
+  box-shadow: none;
 }
 
 /* Improved focus styles for all interactive elements */
@@ -561,30 +521,7 @@ body {
   overflow-y: auto;
 }
 
-/* Utility class for specific minimum width */
-.min-width-220 {
-  min-width: 220px;
-}
-
 /* Enhanced accessibility features */
-
-/* Skip link for keyboard users */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 0;
-  background: var(--primary-color);
-  color: white;
-  padding: 8px;
-  z-index: 100;
-  transition: top 0.2s;
-  border-radius: 0 0 4px 0;
-  text-decoration: none;
-}
-
-.skip-link:focus {
-  top: 0;
-}
 
 /* Visually hidden elements (for screen readers) */
 .visually-hidden {

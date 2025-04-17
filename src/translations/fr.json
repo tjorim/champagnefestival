@@ -93,7 +93,9 @@
         "venueDescription": "Notre lieu prestigieux",
         "address": "Adresse du lieu",
         "openingHours": "Horaires d'ouverture",
-        "openingHoursValue": "Voir le programme pour plus de détails"
+        "openingHoursValue": "Voir le programme pour plus de détails",
+        "openInMaps": "Ouvrir dans Maps",
+        "country": "Belgique"
     },
     "countdown": {
         "days": "jours",

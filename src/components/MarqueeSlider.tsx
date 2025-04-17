@@ -119,13 +119,12 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
                 {carouselItems.map((item, index) => (
                     <SwiperSlide key={`${item.id}-${index}`}>
                         <div className="h-100">
-                            <div className="overflow-hidden rounded shadow-sm mb-2">
+                            <div className="overflow-hidden shadow-sm mb-2">
                                 <div className="position-relative w-100" style={{ aspectRatio: '4/3' }}>
                                     <img
                                         src={item.image}
                                         alt={item.name}
-                                        className="w-100 h-100 object-cover rounded"
-                                        style={{ objectFit: 'cover' }}
+                                        className="w-100 h-100 object-fit-contain"
                                         onError={(e) => {
                                             // Quietly set a fallback image without console errors
                                             e.currentTarget.src = '/images/logo.svg';

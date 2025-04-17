@@ -1,22 +1,31 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 interface SectionHeadingProps {
   id: string;
-  title: string;
-  subtitle?: string;
+  titleKey: string; // Changed from title
+  fallbackTitle: string; // Added fallback
+  subtitleKey?: string; // Optional subtitle key
+  fallbackSubtitle?: string; // Optional fallback subtitle
   className?: string;
 }
 
 /**
- * Accessible section heading component with proper ARIA attributes
+ * Accessible section heading component with proper ARIA attributes and i18n support
  * Used for consistent section headers across the application
  */
 const SectionHeading: React.FC<SectionHeadingProps> = ({ 
   id, 
-  title, 
-  subtitle, 
+  titleKey, 
+  fallbackTitle,
+  subtitleKey,
+  fallbackSubtitle,
   className = '' 
 }) => {
+  const { t } = useTranslation(); // Use the hook
+  const title = t(titleKey, fallbackTitle); // Translate title
+  const subtitle = subtitleKey ? t(subtitleKey, fallbackSubtitle ?? "") : undefined; // Translate subtitle if key exists
+
   return (
     <div className={`text-center ${className}`}>
       <h2 
@@ -25,7 +34,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
         tabIndex={-1} // Allow focus but not in tab order
         aria-label={subtitle ? `${title} - ${subtitle}` : title}
       >
-        {title}
+        {title} {/* Render translated title */}
       </h2>
       {subtitle && (
         <p 
@@ -33,7 +42,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
           id={`${id}-subtitle`}
           aria-describedby={id}
         >
-          {subtitle}
+          {subtitle} {/* Render translated subtitle */}
         </p>
       )}
     </div>

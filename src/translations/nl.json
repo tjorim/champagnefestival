@@ -93,7 +93,9 @@
         "venueDescription": "Onze prestigieuze locatie",
         "address": "Locatie Adres",
         "openingHours": "Openingstijden",
-        "openingHoursValue": "Zie programma voor details"
+        "openingHoursValue": "Zie programma voor details",
+        "openInMaps": "Openen in Maps",
+        "country": "België"
     },
     "countdown": {
         "days": "dagen",

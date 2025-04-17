@@ -18,6 +18,7 @@ import Spinner from "react-bootstrap/Spinner";
 // Components - Eagerly loaded (critical path components)
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import SectionHeading from "./components/SectionHeading"; // Added import
 
 // Components - Lazy loaded
 const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
@@ -83,7 +84,7 @@ function App() {
             {t("welcome.title", "Welcome to Champagne Festival")}
           </h1>
           <p className="hero-subtitle">{t("welcome.subtitle", "A celebration of fine champagne and community")}</p>
-          <a href="#next-festival" className="cta-button">
+          <a href="#next-festival" className="btn bg-brand-gradient text-white rounded-pill border-0 py-2 px-4 fw-bold">
             {t("welcome.learnMore", "Learn More")}
             <i className="bi bi-arrow-down-circle ms-2"></i>
           </a>
@@ -92,9 +93,8 @@ function App() {
         {/* What we do */}
         <section id="what-we-do" className="content-section">
           <div className="container text-center">
-            <h2 className="section-header">
-              {t("whatWeDo.title", "What We Do")}
-            </h2>
+            {/* Replaced h2 with SectionHeading */}
+            <SectionHeading id="what-we-do-heading" titleKey="whatWeDo.title" fallbackTitle="What We Do" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
@@ -115,9 +115,8 @@ function App() {
         {/* Next Festival with Countdown */}
         <section id="next-festival" className="content-section highlight-section">
           <div className="container text-center">
-            <h2 className="section-header">
-              {t("nextFestival.title", "Next Festival")}
-            </h2>
+            {/* Replaced h2 with SectionHeading */}
+            <SectionHeading id="next-festival-heading" titleKey="nextFestival.title" fallbackTitle="Next Festival" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <Countdown targetDate={festivalDate} />
@@ -132,9 +131,8 @@ function App() {
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">
-              {t("schedule.title", "Schedule")}
-            </h2>
+            {/* Replaced h2 with SectionHeading */}
+            <SectionHeading id="schedule-heading" titleKey="schedule.title" fallbackTitle="Schedule" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
@@ -149,10 +147,15 @@ function App() {
         {/* Producers Carousel */}
         <section id="producers" className="content-section">
           <div className="container text-center">
-            <h2 className="section-header">
-              {t("producers.title", "Champagne Producers")}
-            </h2>
-            <p>{t("producers.intro", "Explore our selection of premium champagne producers from the region:")}</p>
+            {/* Replaced h2 with SectionHeading and added subtitle */}
+            <SectionHeading 
+              id="producers-heading" 
+              titleKey="producers.title" 
+              fallbackTitle="Champagne Producers" 
+              subtitleKey="producers.intro"
+              fallbackSubtitle="Explore our selection of premium champagne producers from the region:"
+            />
+            {/* Removed redundant <p> tag */}
             <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
           </div>
         </section>
@@ -160,9 +163,8 @@ function App() {
         {/* FAQ Section */}
         <section id="faq" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">
-              {t("faq.title", "Frequently Asked Questions")}
-            </h2>
+            {/* Replaced h2 with SectionHeading */}
+            <SectionHeading id="faq-heading" titleKey="faq.title" fallbackTitle="Frequently Asked Questions" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <FAQ keys={faqKeys} />
@@ -174,9 +176,8 @@ function App() {
         {/* Interactive Map - Moved here */}
         <section id="map" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">
-              {t("location.title", "Event Location")}
-            </h2>
+            {/* Replaced h2 with SectionHeading */}
+            <SectionHeading id="map-heading" titleKey="location.title" fallbackTitle="Event Location" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
@@ -197,10 +198,15 @@ function App() {
         {/* Sponsors Carousel */}
         <section id="sponsors" className="content-section highlight-section">
           <div className="container text-center">
-            <h2 className="section-header">
-              {t("sponsors.title", "Sponsors")}
-            </h2>
-            <p>{t("sponsors.intro", "Our event is made possible by the generous support of our sponsors:")}</p>
+            {/* Replaced h2 with SectionHeading and added subtitle */}
+            <SectionHeading 
+              id="sponsors-heading" 
+              titleKey="sponsors.title" 
+              fallbackTitle="Sponsors" 
+              subtitleKey="sponsors.intro"
+              fallbackSubtitle="Our event is made possible by the generous support of our sponsors:"
+            />
+            {/* Removed redundant <p> tag */}
             <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
           </div>
         </section>
@@ -208,10 +214,15 @@ function App() {
         {/* Contact Form */}
         <section id="contact" className="content-section">
           <div className="container">
-            <h2 className="section-header text-center">
-              {t("contact.title", "Contact Us")}
-            </h2>
-            <p className="text-center">{t("contact.intro", "Have questions or want to become a sponsor? Reach out to us!")}</p>
+            {/* Replaced h2 with SectionHeading and added subtitle */}
+            <SectionHeading 
+              id="contact-heading" 
+              titleKey="contact.title" 
+              fallbackTitle="Contact Us" 
+              subtitleKey="contact.intro"
+              fallbackSubtitle="Have questions or want to become a sponsor? Reach out to us!"
+            />
+            {/* Removed redundant <p> tag */}
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <ContactForm />
