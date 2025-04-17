@@ -2,25 +2,11 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { Dictionary } from './types/i18n';
-import { festivalDateRange } from './config/dates';
 
 // Import translations
 import enTranslation from "./translations/en.json";
 import nlTranslation from './translations/nl.json';
 import frTranslation from './translations/fr.json';
-
-// Update festival dates in translations
-function updateFestivalDates(resources: Record<string, { translation: Dictionary }>) {
-    Object.entries(resources).forEach(([lang, { translation }]) => {
-        if (translation.faq?.a2) {
-            translation.faq.a2 = translation.faq.a2.replace(
-                /{festivalDateRange}/g,
-                festivalDateRange[lang as keyof typeof festivalDateRange] || festivalDateRange.en
-            );
-        }
-    });
-    return resources;
-}
 
 // Supported languages constant (alphabetical order)
 export const SUPPORTED_LANGUAGES = ['en', 'fr', 'nl'] as const;
@@ -32,62 +18,47 @@ const resources = {
     nl: { translation: nlTranslation as Dictionary },
 } satisfies Record<typeof SUPPORTED_LANGUAGES[number], { translation: Dictionary }>;
 
-// Update festival dates in all translations
-const updatedResources = updateFestivalDates(resources);
-
-// Create a language detector that normalizes language codes
-const normalizedLanguageDetector = {
-    name: 'normalized',
-    lookup: () => {
+// Create a language detector that normalizes language codes and implements the i18next interface
+const normalizedLanguageDetector: import('i18next').LanguageDetectorModule = {
+    type: 'languageDetector',
+    init: () => { },
+    detect: () => {
         // Get browser language
         const browserLang = navigator.language || (navigator as Navigator & { userLanguage?: string }).userLanguage || '';
-        
         // Support languages
-        const supportedLanguages = ['en', 'fr', 'nl'];
+        const supportedLanguages = SUPPORTED_LANGUAGES as readonly string[];
+        // Default language
         const defaultLanguage = 'nl';
-        
         // Ensure we have a valid string to work with
         if (!browserLang || typeof browserLang !== 'string') {
             return defaultLanguage;
         }
-        
         // Extract the base language code
         const baseLang = browserLang.split('-')[0].toLowerCase();
-        
         // Verify we have a non-empty string after normalization
         if (!baseLang) {
             return defaultLanguage;
         }
-        
         // Check if it's a supported language
         if (supportedLanguages.includes(baseLang)) {
             return baseLang;
         }
-        
-        // For languages that aren't supported, we could implement
-        // fallback logic for similar languages if needed
-        // Example: 'de' -> 'en', 'es' -> 'fr', etc.
-        
-        // Default to Dutch
+        // Default to Dutch if no match is found
         return defaultLanguage;
-    }
+    },
+    cacheUserLanguage: () => { }
 };
 
 i18n
-    // First add our custom language detector
-    .use({
-        type: 'languageDetector',
-        init: () => {},
-        detect: () => normalizedLanguageDetector.lookup(),
-        cacheUserLanguage: () => {}
-    } as import('i18next').Module | import('i18next').LanguageDetectorModule)
+    // Use the custom language detector directly
+    .use(normalizedLanguageDetector)
     // Then the standard detector as fallback
     .use(LanguageDetector)
     // pass the i18n instance to react-i18next
     .use(initReactI18next)
     // init i18next
     .init({
-        resources: updatedResources,
+        resources: resources,
         fallbackLng: 'nl', // Dutch is the most common
         supportedLngs: SUPPORTED_LANGUAGES,
         load: 'languageOnly', // Reduce language codes like 'en-US' to just 'en'
