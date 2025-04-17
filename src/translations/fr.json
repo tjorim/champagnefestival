@@ -2,7 +2,7 @@
     "welcome": {
         "title": "Bienvenue au Festival du Champagne",
         "subtitle": "Une célébration du champagne fin et de la communauté",
-        "learnMore": "En Savoir Plus"
+        "learnMore": "En savoir plus"
     },
     "whatWeDo": {
         "title": "Ce Que Nous Faisons",
@@ -129,11 +129,11 @@
     "contact": {
         "title": "Contactez-Nous",
         "intro": "Vous avez des questions ou vous souhaitez devenir sponsor ? Contactez-nous !",
-        "alternativeContact": "Vous pouvez également nous joindre par email ou téléphone :",
-        "emailLabel": "Email :",
+        "alternativeContact": "Vous pouvez également nous joindre par e-mail ou téléphone :",
+        "emailLabel": "E-mail :",
         "phoneLabel": "Téléphone :",
         "name": "Votre Nom",
-        "email": "Votre Email",
+        "email": "Votre E-mail",
         "message": "Votre Message",
         "placeholderMessage": "Tapez votre message ici...",
         "submitting": "Envoi en cours...",
@@ -142,8 +142,8 @@
         "submissionError": "Une erreur s'est produite lors de l'envoi de votre message. Veuillez réessayer.",
         "errors": {
             "nameRequired": "Le nom est requis",
-            "emailRequired": "L'email est requis",
-            "emailInvalid": "Veuillez entrer une adresse email valide",
+            "emailRequired": "L'e-mail est requis",
+            "emailInvalid": "Veuillez entrer une adresse e-mail valide",
             "messageRequired": "Le message est requis"
         }
     },

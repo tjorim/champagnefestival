@@ -29,8 +29,11 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       const scrollY = window.scrollY;
       document.body.setAttribute('data-scroll-position', scrollY.toString());
 
-      // Update URL hash
+      // Update URL hash to indicate the modal is open
+      const originalHash = window.location.hash;
       window.history.replaceState(null, '', '#privacy-policy');
+      // Store original hash for restoration later
+      document.body.setAttribute('data-original-hash', originalHash);
 
       // Disable background scrolling without affecting layout
       document.body.style.position = 'fixed';
@@ -38,8 +41,14 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       document.body.style.width = '100%';
       document.body.style.overflowY = 'scroll'; // Keep scrollbar to prevent layout shift
     } else if (window.location.hash === '#privacy-policy') {
-      // Remove hash when closing
-      window.history.replaceState(null, '', window.location.pathname);
+      // Remove hash when closing the modal
+      const originalHash = document.body.getAttribute('data-original-hash') || '';
+      // Restore original hash if it exists
+      if (originalHash) {
+        window.history.replaceState(null, '', originalHash);
+      }
+      // Remove the hash from the URL
+      document.body.removeAttribute('data-original-hash');
 
       // Re-enable scrolling and restore position
       const scrollY = parseInt(document.body.getAttribute('data-scroll-position') || '0');
@@ -58,6 +67,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       document.body.style.width = '';
       document.body.style.overflowY = '';
       document.body.removeAttribute('data-scroll-position');
+      document.body.removeAttribute('data-original-hash');
     };
   }, [isOpen]);
 
@@ -143,6 +153,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
           onClick={onClose}
           variant="dark"
           className="bg-brand-gradient"
+          style={{ transition: 'opacity 0.2s' }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
         >
           {t('close', 'Close')}
         </Button>
