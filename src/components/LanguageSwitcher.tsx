@@ -53,13 +53,6 @@ const LanguageSwitcher = () => {
             <Dropdown.Menu
                 className="min-width-220"
                 align="end"
-                popperConfig={{
-                  strategy: 'fixed', // Prevents clipping by parent containers
-                  modifiers: [
-                    { name: 'preventOverflow', options: { boundary: 'viewport' } },
-                    { name: 'flip', options: { fallbackPlacements: ['bottom', 'top'] } }
-                  ]
-                }}
             >
                 {languages.map((lang) => (
                     <Dropdown.Item
