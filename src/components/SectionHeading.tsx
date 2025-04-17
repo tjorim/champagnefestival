@@ -33,6 +33,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
         className="section-header"
         tabIndex={-1} // Allow focus but not in tab order
         aria-label={subtitle ? `${title} - ${subtitle}` : title}
+        aria-describedby={subtitle ? `${id}-subtitle` : undefined}
       >
         {title} {/* Render translated title */}
       </h2>
@@ -40,7 +41,6 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
         <p
           className="mx-auto mb-4"
           id={`${id}-subtitle`}
-          aria-describedby={id}
         >
           {subtitle} {/* Render translated subtitle */}
         </p>

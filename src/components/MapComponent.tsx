@@ -1,10 +1,7 @@
 import React from "react";
 import { contactConfig } from "../config/contact";
 import { useTranslation } from "react-i18next";
-import { MapContainer } from 'react-leaflet/MapContainer';
-import { TileLayer } from 'react-leaflet/TileLayer';
-import { Marker } from 'react-leaflet/Marker';
-import { Popup } from 'react-leaflet/Popup';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 
 interface MapComponentProps {
     address?: string;

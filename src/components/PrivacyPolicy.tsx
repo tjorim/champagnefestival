@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import { useTranslation } from 'react-i18next';
-import { festivalYear } from '../config/dates';
 
 interface PrivacyPolicyProps {
   isOpen: boolean;
@@ -22,17 +21,17 @@ interface PrivacyPolicyProps {
 const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
   // Use react-i18next for translations
   const { t } = useTranslation();
-  
+
   // Handle URL hash updates, scroll position, and background scrolling
   useEffect(() => {
     if (isOpen) {
       // Save current scroll position
       const scrollY = window.scrollY;
       document.body.setAttribute('data-scroll-position', scrollY.toString());
-      
+
       // Update URL hash
       window.history.replaceState(null, '', '#privacy-policy');
-      
+
       // Disable background scrolling without affecting layout
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
@@ -41,27 +40,35 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
     } else if (window.location.hash === '#privacy-policy') {
       // Remove hash when closing
       window.history.replaceState(null, '', window.location.pathname);
-      
+
       // Re-enable scrolling and restore position
       const scrollY = parseInt(document.body.getAttribute('data-scroll-position') || '0');
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflowY = '';
-      
+
       // Restore scroll position
       window.scrollTo(0, scrollY);
     }
+    // Cleanup to always revert global side-effects
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflowY = '';
+      document.body.removeAttribute('data-scroll-position');
+    };
   }, [isOpen]);
 
   return (
-    <Modal 
-      show={isOpen} 
-      onHide={onClose} 
-      size="lg" 
+    <Modal
+      show={isOpen}
+      onHide={onClose}
+      size="lg"
       centered={true}
-      contentClassName="bg-dark" 
-      aria-labelledby="privacy-policy-title" 
+      contentClassName="bg-dark"
+      aria-labelledby="privacy-policy-title"
       restoreFocus={true}
       scrollable={true}
       enforceFocus={true}
