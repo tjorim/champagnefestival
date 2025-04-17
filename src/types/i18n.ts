@@ -59,6 +59,8 @@ export interface Dictionary {
     address: string;
     openingHours: string;
     openingHoursValue: string;
+    mapLabel: string;
+    mapTitle: string;
   };
   countdown: {
     days: string;

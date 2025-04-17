@@ -22,8 +22,8 @@ interface MapComponentProps {
  * - Accessibility support with ARIA attributes
  * - Configurable location with fallbacks to the contact config
  */
-const MapComponent: React.FC<MapComponentProps> = ({ 
-    address, 
+const MapComponent: React.FC<MapComponentProps> = ({
+    address,
     location = contactConfig.location.venueName
 }) => {
     const { t } = useTranslation();
@@ -33,15 +33,15 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const computedLocation = location || contactConfig.location.venueName;
 
     return (
-        <div 
+        <div
             className="ratio ratio-16x9 rounded overflow-hidden border position-relative"
             aria-label={t('location.mapLabel', 'Festival location map')}
         >
-            <MapContainer 
-                center={[lat, lng]} 
-                zoom={16} 
-                scrollWheelZoom={false} 
-                style={{ width: '100%', height: '100%' }} 
+            <MapContainer
+                center={[lat, lng]}
+                zoom={16}
+                scrollWheelZoom={false}
+                style={{ width: '100%', height: '100%' }}
                 aria-label={t('location.mapTitle', 'Interactive map showing venue location')}
             >
                 <TileLayer
@@ -55,10 +55,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         {contactConfig.location.postalCode} {contactConfig.location.city}<br />
                         {t('location.country')}<br />
                         <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(computedLocation + ', ' + contactConfig.location.postalCode + ' ' + contactConfig.location.city)}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                `${computedLocation}, ${computedAddress}, ${contactConfig.location.postalCode} ${contactConfig.location.city}`
+                            )}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{display: 'inline-block', textDecoration: 'none', marginTop: 8}}
+                            style={{ display: 'inline-block', textDecoration: 'none', marginTop: 8 }}
                         >
                             {t('location.openInMaps', 'Open in Maps')}
                         </a>

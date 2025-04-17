@@ -14,22 +14,22 @@ interface SectionHeadingProps {
  * Accessible section heading component with proper ARIA attributes and i18n support
  * Used for consistent section headers across the application
  */
-const SectionHeading: React.FC<SectionHeadingProps> = ({ 
-  id, 
-  titleKey, 
+const SectionHeading: React.FC<SectionHeadingProps> = ({
+  id,
+  titleKey,
   fallbackTitle,
   subtitleKey,
   fallbackSubtitle,
-  className = '' 
+  className = ''
 }) => {
   const { t } = useTranslation(); // Use the hook
   const title = t(titleKey, fallbackTitle); // Translate title
-  const subtitle = subtitleKey ? t(subtitleKey, fallbackSubtitle ?? "") : undefined; // Translate subtitle if key exists
+  const subtitle = subtitleKey ? t(subtitleKey, fallbackSubtitle ?? '') : undefined; // Translate subtitle if key exists
 
   return (
     <div className={`text-center ${className}`}>
-      <h2 
-        id={id} 
+      <h2
+        id={id}
         className="section-header"
         tabIndex={-1} // Allow focus but not in tab order
         aria-label={subtitle ? `${title} - ${subtitle}` : title}
@@ -37,7 +37,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
         {title} {/* Render translated title */}
       </h2>
       {subtitle && (
-        <p 
+        <p
           className="mx-auto mb-4"
           id={`${id}-subtitle`}
           aria-describedby={id}

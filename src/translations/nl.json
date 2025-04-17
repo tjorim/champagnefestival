@@ -95,7 +95,9 @@
         "openingHours": "Openingstijden",
         "openingHoursValue": "Zie programma voor details",
         "openInMaps": "Openen in Maps",
-        "country": "België"
+        "country": "België",
+        "mapLabel": "Kaart van festivallocatie",
+        "mapTitle": "Interactieve kaart met de locatie van het evenement"
     },
     "countdown": {
         "days": "dagen",

@@ -75,7 +75,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       </Modal.Header>
       <Modal.Body className="modal-body">
         <p className="text-light mb-3">
-          {t('privacy.lastUpdated', 'Last Updated')}: {t('privacy.lastUpdatedDate', 'January 1, 2025').replace('2025', festivalYear.toString())}
+          {t('privacy.lastUpdated', 'Last Updated')}: {t('privacy.lastUpdatedDate', 'January 1, 2025')}
         </p>
 
         <div className="mt-4">

@@ -490,11 +490,6 @@ main {
 
 /* Add brand colors to accordion focus */
 .accordion-button:focus {
-  box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring-color);
-  border-color: var(--primary-color);
-}
-
-.accordion-button:focus {
   box-shadow: none;
 }
 

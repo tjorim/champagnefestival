@@ -22,12 +22,15 @@ function updateFestivalDates(resources: Record<string, { translation: Dictionary
     return resources;
 }
 
+// Supported languages constant (alphabetical order)
+export const SUPPORTED_LANGUAGES = ['en', 'fr', 'nl'] as const;
+
 // Define resources with type safety
-const resources: Record<string, { translation: Dictionary }> = {
+const resources = {
     en: { translation: enTranslation as Dictionary },
-    nl: { translation: nlTranslation as Dictionary },
     fr: { translation: frTranslation as Dictionary },
-};
+    nl: { translation: nlTranslation as Dictionary },
+} satisfies Record<typeof SUPPORTED_LANGUAGES[number], { translation: Dictionary }>;
 
 // Update festival dates in all translations
 const updatedResources = updateFestivalDates(resources);
@@ -85,8 +88,8 @@ i18n
     // init i18next
     .init({
         resources: updatedResources,
-        fallbackLng: 'nl',
-        supportedLngs: ['nl', 'fr', 'en'], // Add list of supported languages
+        fallbackLng: 'nl', // Dutch is the most common
+        supportedLngs: SUPPORTED_LANGUAGES,
         load: 'languageOnly', // Reduce language codes like 'en-US' to just 'en'
         detection: {
             // Try to detect locale from different sources in order
