@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.6",
-    "bootstrap-icons": "^1.12.1",
+    "bootstrap-icons": "^1.13.1",
     "i18next": "^25.2.1",
     "i18next-browser-languagedetector": "^8.1.0",
     "react": "^19.1.0",
