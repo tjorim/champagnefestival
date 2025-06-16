@@ -131,7 +131,8 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         const targetDate = targetDateObjRef.current;
 
         // Get time difference in milliseconds
-        const difference = +targetDate - +new Date();
+        const now = Date.now();
+        const difference = targetDate.getTime() - now;
 
         if (difference > 0) {
             return {
