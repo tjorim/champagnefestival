@@ -74,7 +74,17 @@ export default defineConfig(({ mode }: { mode: string }) => {
 
     // Optimize assets
     optimizeDeps: {
-      include: ['react', 'react-dom', 'react-bootstrap', 'i18next', 'react-i18next'],
+      include: [
+        'react',
+        'react-dom',
+        'react-bootstrap',
+        'i18next',
+        'react-i18next',
+        'i18next-browser-languagedetector',
+        'leaflet',
+        'react-leaflet',
+        'swiper'
+      ],
     },
 
     // Configure environment variables
