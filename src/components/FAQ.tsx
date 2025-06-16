@@ -45,8 +45,6 @@ const FAQ: React.FC<FAQProps> = ({ keys = [] }) => {
                 <Accordion.Item
                     key={item.id}
                     eventKey={`${item.id}`}
-                    // Add ARIA attributes for better accessibility
-                    aria-expanded="false"
                 >
                     <Accordion.Header>
                         {item.question}
