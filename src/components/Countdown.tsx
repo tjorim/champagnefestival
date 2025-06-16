@@ -78,16 +78,13 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
 
     // Update translation ref once when it's available
     useEffect(() => {
-        if (!tRef.current) {
-            tRef.current = {
-                days: t('countdown.days', 'Days'),
-                hours: t('countdown.hours', 'Hours'),
-                minutes: t('countdown.minutes', 'Minutes'),
-                seconds: t('countdown.seconds', 'Seconds')
-            };
-        }
-    }, [t]);
-
+        tRef.current = {
+            days: t('countdown.days', 'Days'),
+            hours: t('countdown.hours', 'Hours'),
+            minutes: t('countdown.minutes', 'Minutes'),
+            seconds: t('countdown.seconds', 'Seconds')
+        };
+    }, [i18n.language]);
     // Determine the current status of the countdown
     const determineCountdownStatus = useCallback(() => {
         const now = new Date();
