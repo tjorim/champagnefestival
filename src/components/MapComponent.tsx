@@ -20,14 +20,14 @@ interface MapComponentProps {
  * - Configurable location with fallbacks to the contact config
  */
 const MapComponent: React.FC<MapComponentProps> = ({
-    address,
+    address = contactConfig.location.address,
     location = contactConfig.location.venueName
 }) => {
     const { t } = useTranslation();
     const lat = contactConfig.location.coordinates.lat;
     const lng = contactConfig.location.coordinates.lng;
-    const computedAddress = address || contactConfig.location.address;
-    const computedLocation = location || contactConfig.location.venueName;
+    const computedAddress = address;
+    const computedLocation = location;
 
     return (
         <div
