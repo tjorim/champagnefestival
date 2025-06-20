@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "lint": "eslint --cache --ext .js,.jsx,.ts,.tsx src/",
     "typecheck": "tsc --noEmit",
