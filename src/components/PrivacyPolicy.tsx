@@ -22,56 +22,66 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
   // Use react-i18next for translations
   const { t } = useTranslation();
 
-  // Handle URL hash updates, scroll position, and background scrolling
+  // Handle URL hash updates when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      // Save current scroll position
-      const scrollY = window.scrollY;
-      document.body.setAttribute('data-scroll-position', scrollY.toString());
-
-      // Update URL hash to indicate the modal is open
       const originalHash = window.location.hash;
       window.history.replaceState(null, '', '#privacy-policy');
-      // Store original hash for restoration later
       document.body.setAttribute('data-original-hash', originalHash);
+    } else if (window.location.hash === '#privacy-policy') {
+      const originalHash = document.body.getAttribute('data-original-hash') || '';
+      if (originalHash) {
+        window.history.replaceState(null, '', originalHash);
+      } else {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+      document.body.removeAttribute('data-original-hash');
+    }
 
-      // Disable background scrolling without affecting layout
+    return () => {
+      document.body.removeAttribute('data-original-hash');
+      if (window.location.hash === '#privacy-policy') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+  }, [isOpen]);
+
+  // Handle scroll position preservation
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY;
+      document.body.setAttribute('data-scroll-position', scrollY.toString());
+    } else {
+      const scrollY = parseInt(document.body.getAttribute('data-scroll-position') || '0');
+      document.body.removeAttribute('data-scroll-position');
+      window.scrollTo(0, scrollY);
+    }
+
+    return () => {
+      document.body.removeAttribute('data-scroll-position');
+    };
+  }, [isOpen]);
+
+  // Handle background scroll prevention
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY;
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
-      document.body.style.overflowY = 'scroll'; // Keep scrollbar to prevent layout shift
-    } else if (window.location.hash === '#privacy-policy') {
-      // Remove hash when closing the modal
-      const originalHash = document.body.getAttribute('data-original-hash') || '';
-      // Restore original hash if it exists
-      if (originalHash) {
-        window.history.replaceState(null, '', originalHash);
-      }
-      // Remove the hash from the URL
-      document.body.removeAttribute('data-original-hash');
-
-      // Re-enable scrolling and restore position
-      const scrollY = parseInt(document.body.getAttribute('data-scroll-position') || '0');
+      document.body.style.overflowY = 'scroll';
+    } else {
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflowY = '';
-
-      // Restore scroll position
-      window.scrollTo(0, scrollY);
     }
-    // Cleanup to always revert global side-effects
+
     return () => {
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflowY = '';
-      document.body.removeAttribute('data-scroll-position');
-      document.body.removeAttribute('data-original-hash');
-      // Also clear the hash if this component is unmounted while the hash is still set
-      if (window.location.hash === '#privacy-policy') {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
     };
   }, [isOpen]);
 

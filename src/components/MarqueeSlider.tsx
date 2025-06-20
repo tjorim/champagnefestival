@@ -73,10 +73,12 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
 
     // For proper looping, ensure we have enough slides
     // Duplicate items if needed to have at least twice as many as the max slidesPerView (4)
-    let carouselItems = [...displayItems];
-    while (carouselItems.length < 8) {
-        carouselItems = [...carouselItems, ...displayItems];
-    }
+    const minSlides = 8;
+    const carouselItems = displayItems.length === 0 ? [] : 
+        Array.from(
+            { length: Math.ceil(minSlides / displayItems.length) * displayItems.length },
+            (_, index) => displayItems[index % displayItems.length]
+        );
 
     return (
         <div className="mx-auto my-4">

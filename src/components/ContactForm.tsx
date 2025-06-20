@@ -24,12 +24,16 @@ interface FormData {
  */
 const ContactForm: React.FC = () => {
     const { t } = useTranslation();
+    
+    // Initialize form start time once when component mounts
+    const formStartTime = new Date().toISOString();
+    
     const [form, setForm] = useState<FormData>({
         name: "",
         email: "",
         message: "",
         honeypot: "",
-        formStartTime: new Date().toISOString()
+        formStartTime
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -106,15 +110,20 @@ const ContactForm: React.FC = () => {
                 email: "",
                 message: "",
                 honeypot: "",
-                formStartTime: new Date().toISOString()
+                formStartTime
             });
             setErrors({});
         } catch (error) {
             console.warn('Form submission error:', error);
-            // Provide more specific error messages
+            // Provide more specific error messages based on error type
             if (error instanceof TypeError && error.message.includes('fetch')) {
+                // Network connectivity issues
                 setGeneralError(t("contact.networkError", "Network error: Please check your internet connection and try again."));
+            } else if (error instanceof Error && error.message.includes('JSON')) {
+                // JSON parsing issues from server response
+                setGeneralError(t("contact.submissionError", "Server response error. Please try again later."));
             } else {
+                // General server or validation errors
                 setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
             }
         } finally {
