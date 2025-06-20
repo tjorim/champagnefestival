@@ -15,13 +15,18 @@ interface CountdownProps {
  * All properties are optional since they won't exist after the target date
  */
 interface TimeLeft {
-    [key: string]: number | undefined;
+    months?: number;
+    days?: number;
+    hours?: number;
+    minutes?: number;
+    seconds?: number;
 }
 
 /**
  * Time units in milliseconds for conversion
  */
 enum TimeUnits {
+    Month = 1000 * 60 * 60 * 24 * 30.44, // Average days per month
     Day = 1000 * 60 * 60 * 24,
     Hour = 1000 * 60 * 60,
     Minute = 1000 * 60,
@@ -48,7 +53,7 @@ enum CountdownStatus {
  * - Client-side only rendering to prevent hydration mismatches
  */
 const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 30 }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [mounted, setMounted] = useState(false);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
     const [status, setStatus] = useState<CountdownStatus>(CountdownStatus.UPCOMING);
@@ -62,6 +67,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     // Use refs to avoid dependency cycles
     // Define a type for the translations ref
     interface TimeUnitsTranslations {
+        months: string;
         days: string;
         hours: string;
         minutes: string;
@@ -79,6 +85,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     // Update translation ref once when it's available
     useEffect(() => {
         tRef.current = {
+            months: t('countdown.months', 'Months'),
             days: t('countdown.days', 'Days'),
             hours: t('countdown.hours', 'Hours'),
             minutes: t('countdown.minutes', 'Minutes'),
@@ -132,11 +139,18 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         const difference = targetDate.getTime() - now;
 
         if (difference > 0) {
+            const months = Math.floor(difference / TimeUnits.Month);
+            const days = Math.floor((difference % TimeUnits.Month) / TimeUnits.Day);
+            const hours = Math.floor((difference % TimeUnits.Day) / TimeUnits.Hour);
+            const minutes = Math.floor((difference % TimeUnits.Hour) / TimeUnits.Minute);
+            const seconds = Math.floor((difference % TimeUnits.Minute) / TimeUnits.Second);
+
             return {
-                [tRef.current.days]: Math.floor(difference / TimeUnits.Day),
-                [tRef.current.hours]: Math.floor((difference / TimeUnits.Hour) % 24),
-                [tRef.current.minutes]: Math.floor((difference / TimeUnits.Minute) % 60),
-                [tRef.current.seconds]: Math.floor((difference / TimeUnits.Second) % 60),
+                ...(months > 0 && { months }),
+                ...(days > 0 && { days }),
+                ...(hours > 0 && { hours }),
+                ...(minutes > 0 && { minutes }),
+                ...(seconds > 0 && { seconds }),
             };
         }
 
@@ -145,36 +159,37 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
 
     // Update countdown every second, but only after component is mounted and translations are loaded
     useEffect(() => {
-        if (!mounted || !tRef.current) return;
+        if (!mounted) return;
 
-        // Initial calculation
-        setTimeLeft(calculateTimeLeft());
-
-        // Determine initial status
-        setStatus(determineCountdownStatus());
-
-        // Update timeLeft every second
-        const timer = setInterval(() => {
+        // Initial calculation and status determination
+        if (tRef.current) {
             setTimeLeft(calculateTimeLeft());
+            setStatus(determineCountdownStatus());
+        }
+
+        // Update timeLeft every second and status every minute
+        const timer = setInterval(() => {
+            if (tRef.current) {
+                setTimeLeft(calculateTimeLeft());
+            }
+            
+            // Update status every minute (when seconds are 0)
+            if (Date.now() % 60000 < 1000) {
+                setStatus(determineCountdownStatus());
+            }
         }, 1000);
 
-        // Deterministically update status every minute to ensure timely state transitions
-        const statusTimer = setInterval(() => {
-            setStatus(determineCountdownStatus());
-        }, 60000);
-
-        // Clean up intervals on unmount
+        // Clean up interval on unmount
         return () => {
             clearInterval(timer);
-            clearInterval(statusTimer);
         };
     }, [mounted, calculateTimeLeft, determineCountdownStatus]);
 
     // Map time units to display components
-    const timerComponents = Object.keys(timeLeft).map((interval: string) => (
-        <span key={interval} className="countdown-unit">
-            <span className="countdown-value">{timeLeft[interval as keyof TimeLeft]}</span>{" "}
-            <span className="countdown-label">{interval}</span>{" "}
+    const timerComponents = Object.entries(timeLeft).map(([unit, value]) => (
+        <span key={unit} className="countdown-unit">
+            <span className="countdown-value">{value}</span>{" "}
+            <span className="countdown-label">{tRef.current?.[unit as keyof TimeUnitsTranslations] || unit}</span>{" "}
         </span>
     ));
 
