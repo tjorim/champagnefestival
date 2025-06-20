@@ -172,7 +172,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
             if (tRef.current) {
                 setTimeLeft(calculateTimeLeft());
             }
-            
+
             // Update status every minute (when seconds are 0)
             if (Date.now() % 60000 < 1000) {
                 setStatus(determineCountdownStatus());

@@ -55,19 +55,11 @@ export default defineConfig(({ mode }: { mode: string }) => {
             // Heavy specialty libraries with limited use
             maps: ['leaflet', 'react-leaflet'],
             carousel: ['swiper', 'swiper/react'],
-            // Other vendor dependencies
-            vendor: [],
           },
           // Customize chunk naming format
           chunkFileNames: 'assets/js/[name]-[hash].js',
           entryFileNames: 'assets/js/[name]-[hash].js',
           assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
-        },
-      },
-      terserOptions: {
-        compress: {
-          // Remove console logs in production
-          drop_console: mode === 'production',
         },
       },
     },
@@ -85,6 +77,10 @@ export default defineConfig(({ mode }: { mode: string }) => {
         'react-leaflet',
         'swiper'
       ],
+      esbuildOptions: {
+        // Remove console logs in production
+        drop: mode === 'production' ? ['console', 'debugger'] : [],
+      },
     },
 
     // Configure environment variables

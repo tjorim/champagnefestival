@@ -2,10 +2,23 @@ import React from "react";
 import { contactConfig } from "../config/contact";
 import { useTranslation } from "react-i18next";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// Fix for default markers not showing in Vite/Webpack builds
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: markerIcon2x,
+    iconUrl: markerIcon,
+    shadowUrl: markerShadow,
+});
 
 interface MapComponentProps {
     address?: string;
     location?: string;
+    coordinates?: { lat: number; lng: number };
 }
 
 /**
@@ -21,11 +34,12 @@ interface MapComponentProps {
  */
 const MapComponent: React.FC<MapComponentProps> = ({
     address = contactConfig.location.address,
-    location = contactConfig.location.venueName
+    location = contactConfig.location.venueName,
+    coordinates = contactConfig.location.coordinates
 }) => {
     const { t } = useTranslation();
-    const lat = contactConfig.location.coordinates.lat;
-    const lng = contactConfig.location.coordinates.lng;
+    const lat = coordinates.lat;
+    const lng = coordinates.lng;
     const computedAddress = address;
     const computedLocation = location;
 
@@ -51,7 +65,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         <b>{computedLocation}</b><br />
                         {computedAddress}<br />
                         {contactConfig.location.postalCode} {contactConfig.location.city}<br />
-                        {t('location.country')}<br />
+                        {t('location.country', contactConfig.location.country)}<br />
                         <a
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                                 `${computedLocation}, ${computedAddress}, ${contactConfig.location.postalCode} ${contactConfig.location.city}`

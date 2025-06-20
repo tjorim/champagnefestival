@@ -68,6 +68,10 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       document.body.style.overflowY = '';
       document.body.removeAttribute('data-scroll-position');
       document.body.removeAttribute('data-original-hash');
+      // Also clear the hash if this component is unmounted while the hash is still set
+      if (window.location.hash === '#privacy-policy') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
     };
   }, [isOpen]);
 
