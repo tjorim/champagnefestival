@@ -63,6 +63,7 @@ export interface Dictionary {
     mapTitle: string;
   };
   countdown: {
+    months: string;
     days: string;
     hours: string;
     minutes: string;

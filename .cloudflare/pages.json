@@ -1,28 +1,16 @@
 {
   "build": {
-    "command": "npm run pages:build",
+    "command": "npm run build",
     "environment": {
       "NODE_VERSION": "20.12.1"
     },
-    "output_directory": ".vercel/output/static"
+    "output_directory": "dist"
   },
   "routes": [
     {
-      "pattern": "/_next/static/*",
+      "pattern": "/assets/*",
       "cache": {
         "max_age": 31536000
-      }
-    },
-    {
-      "pattern": "/_next/data/*",
-      "cache": {
-        "max_age": 300
-      }
-    },
-    {
-      "pattern": "/_next/image*",
-      "cache": {
-        "max_age": 86400
       }
     }
   ]

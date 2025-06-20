@@ -100,6 +100,7 @@
         "mapTitle": "Interactive map showing venue location"
     },
     "countdown": {
+        "months": "months",
         "days": "days",
         "hours": "hours",
         "minutes": "minutes",
