@@ -12,6 +12,9 @@ export default defineConfig(({ mode }: { mode: string }) => {
   console.log(`Building for ${mode} mode with ${env.VITE_PUBLIC_URL || 'default'} as public URL`);
 
   return {
+    // Set base URL for production deployment, but allow preview to work locally
+    base: mode === 'production' ? 'https://champagnefestival.be/' : '/',
+    
     plugins: [
       react(),
       // Add visualizer for bundle analysis in analyze mode

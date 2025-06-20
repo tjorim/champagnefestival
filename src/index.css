@@ -521,6 +521,14 @@ body {
   overflow-y: auto;
 }
 
+.modal-close-btn {
+  transition: opacity 0.2s;
+}
+
+.modal-close-btn:hover {
+  opacity: 0.9 !important;
+}
+
 /* Enhanced accessibility features */
 
 /* Visually hidden elements (for screen readers) */

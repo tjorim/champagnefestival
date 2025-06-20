@@ -48,11 +48,11 @@ const marchWeekend = getFirstFullWeekend(festivalYear, 3); // March
 const octoberWeekend = getFirstFullWeekend(festivalYear, 10); // October
 
 // Currently active festival edition (change this to switch between March/October)
-export const activeEdition = 'october'; // or 'march'
+export const activeEdition: 'march' | 'october' = 'october';
 
 // Get the active weekend
-const activeWeekend = activeEdition === 'march' ? marchWeekend : octoberWeekend;
-const activeMonth = activeEdition === 'march' ? 3 : 10;
+const activeWeekend = (activeEdition as 'march' | 'october') === 'march' ? marchWeekend : octoberWeekend;
+const activeMonth = (activeEdition as 'march' | 'october') === 'march' ? 3 : 10;
 
 // Export festival start and end dates
 export const festivalDate = new Date(activeWeekend.friday);

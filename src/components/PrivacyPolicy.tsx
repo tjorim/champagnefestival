@@ -156,10 +156,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
         <Button
           onClick={onClose}
           variant="dark"
-          className="bg-brand-gradient"
-          style={{ transition: 'opacity 0.2s' }}
-          onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+          className="bg-brand-gradient modal-close-btn"
         >
           {t('close', 'Close')}
         </Button>
