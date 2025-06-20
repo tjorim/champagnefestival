@@ -23,7 +23,7 @@
     },
     "nextFestival": {
         "title": "Next Festival",
-        "description": "Join us for our next festival where we'll feature over 20 champagne producers from around the world."
+        "description": "Join us for our next festival where we will feature over 20 champagne producers from around the world."
     },
     "schedule": {
         "title": "Schedule",
@@ -44,7 +44,7 @@
         "reservation": "Reservation required",
         "presenter": "Presenter",
         "location": "Location",
-        "noEvents": "No events scheduled for this day",
+        "noEvents": "No events scheduled for this day.",
         "events": {
             "fri-tasting": {
                 "title": "Ongoing Tasting",
@@ -84,7 +84,7 @@
             },
             "sun-end": {
                 "title": "End of Festival",
-                "description": "Conclusion of the festival on Sunday."
+                "description": "Closing of the festival on Sunday."
             }
         }
     },
@@ -119,13 +119,13 @@
         "q1": "What is the Champagne Festival about?",
         "a1": "The Champagne Festival is a celebration of fine champagne, bringing together producers, enthusiasts, and the community for tastings, workshops, and social events.",
         "q2": "When is the next festival?",
-        "a2": "The next festival is scheduled for March 7-9, 2025. Mark your calendars for a weekend of bubbles and festivities!",
+        "a2": "The next festival is scheduled for March 7-9, 2025. Mark your calendars for a weekend of bubbles and festivities.",
         "q3": "Where will the festival be held?",
         "a3": "The festival will take place at the Grand Exhibition Hall in the city center. There's convenient public transportation and parking nearby.",
         "q4": "Are tickets available yet?",
         "a4": "Early bird tickets will be available starting September 2024. Sign up for our newsletter to be notified when tickets go on sale.",
         "q5": "Can I become a sponsor or vendor?",
-        "a5": "Yes! We welcome partnerships with businesses related to champagne, food, and luxury lifestyle. Please use our contact form to express your interest."
+        "a5": "Yes. We welcome partnerships with businesses related to champagne, food, and luxury lifestyle. Please use our contact form to express your interest."
     },
     "contact": {
         "title": "Contact Us",
@@ -141,11 +141,19 @@
         "submit": "Send Message",
         "successMessage": "Thank you for your message! We'll get back to you soon.",
         "submissionError": "There was an error submitting your message. Please try again.",
+        "networkError": "Network error: Please check your internet connection and try again.",
         "errors": {
             "nameRequired": "Name is required",
             "emailRequired": "Email is required",
             "emailInvalid": "Please enter a valid email address",
-            "messageRequired": "Message is required"
+            "messageRequired": "Message is required",
+            "submissionTooFast": "Your submission was too quick. Please try again.",
+            "securityVerificationFailed": "Security verification failed. Please try again.",
+            "securityVerificationError": "Security verification failed. Please try again later.",
+            "missingFields": "Missing required fields.",
+            "invalidEmailServer": "Invalid email address.",
+            "emailSendError": "Error sending email. Please try again later.",
+            "serverError": "An error occurred while processing your request."
         }
     },
     "accessibility": {
@@ -154,6 +162,8 @@
     "festivalName": "Champagne Festival",
     "loading": "Loading...",
     "loadingBackground": "Loading background...",
+    "loadingProducers": "Loading producers...",
+    "loadingSponsors": "Loading sponsors...",
     "error": "An error occurred",
     "footer": {
         "rights": "All rights reserved.",

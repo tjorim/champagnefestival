@@ -104,11 +104,19 @@ export interface Dictionary {
     submit: string;
     successMessage: string;
     submissionError: string;
+    networkError: string;
     errors: {
       nameRequired: string;
       emailRequired: string;
       emailInvalid: string;
       messageRequired: string;
+      submissionTooFast: string;
+      securityVerificationFailed: string;
+      securityVerificationError: string;
+      missingFields: string;
+      invalidEmailServer: string;
+      emailSendError: string;
+      serverError: string;
     };
   };
   accessibility: {
@@ -117,6 +125,8 @@ export interface Dictionary {
   festivalName: string;
   loading: string;
   loadingBackground: string;
+  loadingProducers: string;
+  loadingSponsors: string;
   error: string;
   footer: {
     rights: string;

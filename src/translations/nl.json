@@ -141,11 +141,19 @@
         "submit": "Verstuur Bericht",
         "successMessage": "Bedankt voor uw bericht! We nemen zo snel mogelijk contact met u op.",
         "submissionError": "Er is een fout opgetreden bij het versturen van uw bericht. Probeer het opnieuw.",
+        "networkError": "Netwerkfout: Controleer uw internetverbinding en probeer het opnieuw.",
         "errors": {
             "nameRequired": "Naam is verplicht",
             "emailRequired": "E-mail is verplicht",
             "emailInvalid": "Voer een geldig e-mailadres in",
-            "messageRequired": "Bericht is verplicht"
+            "messageRequired": "Bericht is verplicht",
+            "submissionTooFast": "Uw inzending was te snel. Probeer het opnieuw.",
+            "securityVerificationFailed": "Beveiligingsverificatie mislukt. Probeer het opnieuw.",
+            "securityVerificationError": "Beveiligingsverificatie mislukt. Probeer het later opnieuw.",
+            "missingFields": "Verplichte velden ontbreken.",
+            "invalidEmailServer": "Ongeldig e-mailadres.",
+            "emailSendError": "Fout bij het versturen van e-mail. Probeer het later opnieuw.",
+            "serverError": "Er is een fout opgetreden bij het verwerken van uw verzoek."
         }
     },
     "accessibility": {
@@ -154,6 +162,8 @@
     "festivalName": "Champagne Festival",
     "loading": "Laden...",
     "loadingBackground": "Achtergrond laden...",
+    "loadingProducers": "Producenten laden...",
+    "loadingSponsors": "Sponsors laden...",
     "error": "Er is een fout opgetreden",
     "footer": {
         "rights": "Alle rechten voorbehouden.",
