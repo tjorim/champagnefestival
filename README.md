@@ -108,7 +108,7 @@ Contact information has been moved from hardcoded values in dictionary files to 
 
 > **Note:** The values shown below are examples/placeholders. Replace them with your actual contact information and configuration.
 
-```
+```bash
 # Contact information
 CONTACT_EMAIL=your-email@example.com
 SENDER_EMAIL=your-sender@example.com

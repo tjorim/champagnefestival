@@ -28,12 +28,26 @@
 - **Consistency**: Follow existing patterns in component structure
 
 ## React Specific Guidelines
-- Use React Router for client-side routing
+- Use hash-based navigation with anchor links (no React Router - single-page application)
+- Navigation is handled by the custom `useScrollNavigation` hook for smooth scrolling and URL updates
+- Use navigation configuration from `src/config/navigation.ts` for consistent routing
 - Implement code splitting with React.lazy and Suspense
 - Use i18next for internationalization
 - Implement error boundaries for graceful error handling
 - Use React.memo for performance optimization when appropriate
 - Implement proper state management with React hooks
+
+## Navigation Guidelines
+- **Single-Page Application**: All content is rendered in one page with section-based navigation
+- **Hash Links**: Use anchor links with `href="#section-id"` format for navigation
+- **Navigation Config**: Add new navigation items to `src/config/navigation.ts`
+- **Scroll Navigation**: The `useScrollNavigation` hook automatically handles:
+  - Smooth scrolling to target sections
+  - URL hash updates when scrolling between sections
+  - ARIA attributes for accessibility
+  - Performance-optimized scroll event handling
+- **Section IDs**: Ensure all main sections have unique `id` attributes for navigation
+- **Modal Navigation**: Special hash links like `#privacy-policy` can trigger modals
 
 ## Component Structure
 - Use React Bootstrap components like Card, Button, Accordion, Modal, Form, etc.

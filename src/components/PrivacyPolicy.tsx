@@ -22,64 +22,32 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
   // Use react-i18next for translations
   const { t } = useTranslation();
 
-  // Handle URL hash updates when modal opens/closes
-  useEffect(() => {
-    const currentHash = window.location.hash;
-    
-    if (isOpen) {
-      // Only update hash if not already set to privacy-policy
-      if (currentHash !== '#privacy-policy') {
-        document.body.setAttribute('data-original-hash', currentHash);
-        window.history.replaceState(null, '', '#privacy-policy');
-      }
-    } else {
-      // Only restore hash if currently showing privacy-policy and we have original hash stored
-      if (currentHash === '#privacy-policy') {
-        const originalHash = document.body.getAttribute('data-original-hash') || '';
-        document.body.removeAttribute('data-original-hash');
-        
-        if (originalHash) {
-          window.history.replaceState(null, '', originalHash);
-        } else {
-          window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        }
-      }
-    }
-  }, [isOpen]);
-
-  // Handle background scroll prevention and scroll position preservation
+  // Prevent background scroll when modal is open
   useEffect(() => {
     if (isOpen) {
+      // Store original scroll position
       const scrollY = window.scrollY;
+      
+      // Apply styles to prevent scrolling
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
-      document.body.style.overflowY = 'scroll';
-    } else {
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      document.body.style.overflowY = '';
-      
-      // Restore scroll position
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY) * -1);
-      }
-    }
+      document.body.style.height = '100%';
+      document.body.style.overflow = 'hidden';
 
-    return () => {
-      const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      document.body.style.overflowY = '';
-      
-      // Restore scroll position on cleanup
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY) * -1);
-      }
-    };
+      // Cleanup function
+      return () => {
+        // Restore original styles
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.height = '';
+        document.body.style.overflow = '';
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+      };
+    }
   }, [isOpen]);
 
   return (

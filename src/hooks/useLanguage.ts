@@ -29,14 +29,9 @@ export function useLanguage(
         const url = new URL(window.location.href);
         const currentLng = url.searchParams.get('lng');
 
-        // Always use base language code for URL
-        if (baseLanguage !== defaultLanguage && baseLanguage !== currentLng) {
-          // Only update URL for non-default languages
+        // Always add language parameter when different from current URL
+        if (baseLanguage !== currentLng) {
           url.searchParams.set('lng', baseLanguage);
-          window.history.replaceState({}, '', url.toString());
-        } else if (currentLng && baseLanguage === defaultLanguage) {
-          // Remove parameter for default language
-          url.searchParams.delete('lng');
           window.history.replaceState({}, '', url.toString());
         }
       } catch (error) {

@@ -145,15 +145,20 @@ export async function onRequestPost(context) {
     // Sanitize form data to prevent XSS and injection attacks
     const sanitizeText = (text) => {
       if (typeof text !== 'string') return '';
-      // Remove HTML tags and escape special characters
+      // Remove HTML tags first, then escape special characters in single pass
       return text
         .replace(/<[^>]*>/g, '') // Remove HTML tags
-        .replace(/&/g, '&amp;')  // Escape ampersands
-        .replace(/</g, '&lt;')   // Escape less than
-        .replace(/>/g, '&gt;')   // Escape greater than
-        .replace(/"/g, '&quot;') // Escape quotes
-        .replace(/'/g, '&#x27;') // Escape apostrophes
-        .replace(/`/g, '&#x60;') // Escape backticks
+        .replace(/[&<>"'`]/g, (match) => {
+          const escapeMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;',
+            '`': '&#x60;'
+          };
+          return escapeMap[match];
+        })
         .trim();
     };
 

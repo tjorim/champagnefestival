@@ -9,7 +9,10 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Fix for default markers not showing in Vite/Webpack builds
 // Override the _getIconUrl method to provide proper icon URLs
-(L.Icon.Default.prototype as any)._getIconUrl = function (name: string) {
+const DefaultIcon = L.Icon.Default.prototype as L.Icon.Default & { 
+    _getIconUrl?: (name: string) => string; 
+};
+DefaultIcon._getIconUrl = function (name: string) {
     const iconUrls: Record<string, string> = {
         'icon': markerIcon,
         'icon-2x': markerIcon2x,

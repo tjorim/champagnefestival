@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import { Dictionary } from './types/i18n';
 
 // Import translations
@@ -23,6 +22,19 @@ const normalizedLanguageDetector: import('i18next').LanguageDetectorModule = {
     type: 'languageDetector',
     init: () => { },
     detect: () => {
+        // First check URL parameter for language
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLanguage = urlParams.get('lng');
+        if (urlLanguage && (SUPPORTED_LANGUAGES as readonly string[]).includes(urlLanguage)) {
+            return urlLanguage;
+        }
+        
+        // Then check localStorage for saved language preference
+        const savedLanguage = localStorage.getItem('i18nextLng');
+        if (savedLanguage && (SUPPORTED_LANGUAGES as readonly string[]).includes(savedLanguage)) {
+            return savedLanguage;
+        }
+        
         // Get browser language
         const browserLang = navigator.language || (navigator as Navigator & { userLanguage?: string }).userLanguage || '';
         // Support languages
@@ -46,14 +58,15 @@ const normalizedLanguageDetector: import('i18next').LanguageDetectorModule = {
         // Default to Dutch if no match is found
         return defaultLanguage;
     },
-    cacheUserLanguage: () => { }
+    cacheUserLanguage: (lng: string) => {
+        // Save language preference to localStorage
+        localStorage.setItem('i18nextLng', lng);
+    }
 };
 
 i18n
-    // Use the custom language detector directly
+    // Use the custom language detector only
     .use(normalizedLanguageDetector)
-    // Then the standard detector as fallback
-    .use(LanguageDetector)
     // pass the i18n instance to react-i18next
     .use(initReactI18next)
     // init i18next
@@ -62,14 +75,6 @@ i18n
         fallbackLng: 'nl', // Dutch is the most common
         supportedLngs: SUPPORTED_LANGUAGES,
         load: 'languageOnly', // Reduce language codes like 'en-US' to just 'en'
-        detection: {
-            // Try to detect locale from different sources in order
-            order: ['querystring', 'navigator', 'htmlTag', 'localStorage'],
-            // Look for ?lng= parameter in URL
-            lookupQuerystring: 'lng',
-            // Store user language preference
-            caches: ['localStorage']
-        }
     });
 
 // Type augmentation for useTranslation hook

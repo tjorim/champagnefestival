@@ -38,17 +38,17 @@ export const festivalDays: FestivalDay[] = [
   {
     id: 1,
     date: toLocalISOString(configDays[0]), // Friday
-    label: 'schedule.days.friday'
+    label: 'friday'
   },
   {
     id: 2,
     date: toLocalISOString(configDays[1]), // Saturday
-    label: 'schedule.days.saturday'
+    label: 'saturday'
   },
   {
     id: 3,
     date: toLocalISOString(configDays[2]), // Sunday
-    label: 'schedule.days.sunday'
+    label: 'sunday'
   }
 ];
 

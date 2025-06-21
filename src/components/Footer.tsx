@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import PrivacyPolicy from "./PrivacyPolicy";
 
@@ -7,26 +7,7 @@ const Footer = () => {
     const currentYear = new Date().getFullYear();
     const [privacyOpen, setPrivacyOpen] = useState(false);
 
-    // Open the privacy policy modal if the URL has #privacy-policy
-    useEffect(() => {
-        if (window.location.hash === '#privacy-policy') {
-            setPrivacyOpen(true);
-        }
-
-        // Listen for hash changes
-        const handleHashChange = () => {
-            if (window.location.hash === '#privacy-policy') {
-                setPrivacyOpen(true);
-            }
-        };
-
-        window.addEventListener('hashchange', handleHashChange);
-
-        // Clean up event listener
-        return () => {
-            window.removeEventListener('hashchange', handleHashChange);
-        };
-    }, []);
+    // Privacy policy modal is handled via direct button clicks, no URL hash needed
 
     return (
         <footer
@@ -40,19 +21,12 @@ const Footer = () => {
                         </p>
                     </div>
                     <div className="col-md-6 text-center text-md-end">
-                        <a
-                            href="#privacy-policy"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                // Set a small timeout to ensure scroll position doesn't jump
-                                setTimeout(() => {
-                                    setPrivacyOpen(true);
-                                }, 0);
-                            }}
+                        <button
+                            onClick={() => setPrivacyOpen(true)}
                             className="btn btn-link text-white p-0 text-decoration-none footer-link"
                         >
                             {t("footer.privacy", "Privacy Policy")}
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
