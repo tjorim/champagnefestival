@@ -55,7 +55,10 @@ const activeWeekend = (activeEdition as 'march' | 'october') === 'march' ? march
 const activeMonth = (activeEdition as 'march' | 'october') === 'march' ? 3 : 10;
 
 // Export festival start and end dates
+// Festival opens at 17:00 on Friday
 export const festivalDate = new Date(activeWeekend.friday);
+festivalDate.setHours(17, 0, 0, 0); // Set to 17:00:00
+
 export const festivalEndDate = new Date(activeWeekend.sunday);
 
 // Individual festival days

@@ -25,21 +25,29 @@ export interface FestivalDay {
   label: string; // e.g., "Friday", "Saturday", "Sunday"
 }
 
+// Helper function to format date as ISO string in local time (Belgian time)
+const toLocalISOString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Festival days derived from central date configuration
 export const festivalDays: FestivalDay[] = [
   {
     id: 1,
-    date: configDays[0].toISOString().split('T')[0], // Friday
+    date: toLocalISOString(configDays[0]), // Friday
     label: 'Friday'
   },
   {
     id: 2,
-    date: configDays[1].toISOString().split('T')[0], // Saturday
+    date: toLocalISOString(configDays[1]), // Saturday
     label: 'Saturday'
   },
   {
     id: 3,
-    date: configDays[2].toISOString().split('T')[0], // Sunday
+    date: toLocalISOString(configDays[2]), // Sunday
     label: 'Sunday'
   }
 ];

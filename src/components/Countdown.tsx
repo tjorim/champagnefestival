@@ -24,9 +24,9 @@ interface TimeLeft {
 
 /**
  * Time units in milliseconds for conversion
+ * Note: Month is calculated using date arithmetic, not a fixed value
  */
 enum TimeUnits {
-    Month = 1000 * 60 * 60 * 24 * 30.44, // Average days per month
     Day = 1000 * 60 * 60 * 24,
     Hour = 1000 * 60 * 60,
     Minute = 1000 * 60,
@@ -61,7 +61,16 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     // Convert string date to Date object if needed
     // Wrapped in useMemo to avoid dependency changes on every render
     const targetDateObj = useMemo(() => {
-        return typeof targetDate === 'string' ? new Date(targetDate) : targetDate;
+        if (typeof targetDate === 'string') {
+            const date = new Date(targetDate);
+            if (isNaN(date.getTime())) {
+                console.error('Invalid date provided to Countdown component:', targetDate);
+                // Return current date as fallback - will show "festival has started" message
+                return new Date();
+            }
+            return date;
+        }
+        return targetDate;
     }, [targetDate]);
 
     // Use refs to avoid dependency cycles
@@ -110,11 +119,30 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
             const difference = targetDate.getTime() - now;
 
             if (difference > 0) {
-                const months = Math.floor(difference / TimeUnits.Month);
-                const days = Math.floor((difference % TimeUnits.Month) / TimeUnits.Day);
-                const hours = Math.floor((difference % TimeUnits.Day) / TimeUnits.Hour);
-                const minutes = Math.floor((difference % TimeUnits.Hour) / TimeUnits.Minute);
-                const seconds = Math.floor((difference % TimeUnits.Minute) / TimeUnits.Second);
+                // Calculate months using proper date arithmetic
+                const targetMonth = targetDate.getMonth();
+                const targetYear = targetDate.getFullYear();
+                const nowDate = new Date(now);
+                const nowMonth = nowDate.getMonth();
+                const nowYear = nowDate.getFullYear();
+                
+                let months = (targetYear - nowYear) * 12 + (targetMonth - nowMonth);
+                
+                // Create a date that's 'months' away from now for accurate day calculation
+                const tempDate = new Date(nowDate);
+                tempDate.setMonth(tempDate.getMonth() + months);
+                
+                // If tempDate is after targetDate, we need to reduce months by 1
+                if (tempDate.getTime() > targetDate.getTime()) {
+                    months = months - 1;
+                    tempDate.setMonth(nowDate.getMonth() + months);
+                }
+                
+                const remainingMs = targetDate.getTime() - tempDate.getTime();
+                const days = Math.floor(remainingMs / TimeUnits.Day);
+                const hours = Math.floor((remainingMs % TimeUnits.Day) / TimeUnits.Hour);
+                const minutes = Math.floor((remainingMs % TimeUnits.Hour) / TimeUnits.Minute);
+                const seconds = Math.floor((remainingMs % TimeUnits.Minute) / TimeUnits.Second);
 
                 return {
                     ...(months > 0 && { months }),

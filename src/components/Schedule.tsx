@@ -14,7 +14,7 @@ import { festivalDays, scheduleEvents, ScheduleEvent } from '../config/schedule'
  * - Support for event details: location, presenter, reservation requirements
  */
 const Schedule: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [activeDay, setActiveDay] = useState(festivalDays[0].id);
 
   // Get events for the active day and sort them by start time
@@ -65,7 +65,7 @@ const Schedule: React.FC = () => {
               <Nav.Link eventKey={day.id} className="px-4">
                 {getDayName(day.label)}
                 <span className="d-block small">
-                  {new Date(day.date).toLocaleDateString(undefined, {
+                  {new Date(day.date).toLocaleDateString(i18n.language, {
                     month: 'short',
                     day: 'numeric'
                   })}
