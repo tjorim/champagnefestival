@@ -38,17 +38,17 @@ export const festivalDays: FestivalDay[] = [
   {
     id: 1,
     date: toLocalISOString(configDays[0]), // Friday
-    label: 'Friday'
+    label: 'schedule.days.friday'
   },
   {
     id: 2,
     date: toLocalISOString(configDays[1]), // Saturday
-    label: 'Saturday'
+    label: 'schedule.days.saturday'
   },
   {
     id: 3,
     date: toLocalISOString(configDays[2]), // Sunday
-    label: 'Sunday'
+    label: 'schedule.days.sunday'
   }
 ];
 
@@ -113,7 +113,7 @@ export const scheduleEvents: ScheduleEvent[] = [
   {
     id: 'sat-end',
     title: 'Einde festival + party',
-    startTime: '24:00',
+    startTime: '23:59',
     description: 'Sluiting van het festival en de party op zaterdag.',
     category: 'general',
     dayId: 2

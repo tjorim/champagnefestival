@@ -64,9 +64,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         if (typeof targetDate === 'string') {
             const date = new Date(targetDate);
             if (isNaN(date.getTime())) {
-                console.error('Invalid date provided to Countdown component:', targetDate);
-                // Return current date as fallback - will show "festival has started" message
-                return new Date();
+                throw new Error(`Invalid date provided to Countdown component: "${targetDate}". Please provide a valid date string or Date object.`);
             }
             return date;
         }
@@ -109,6 +107,9 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     // Update countdown every second, but only after component is mounted and translations are loaded
     useEffect(() => {
         if (!mounted) return;
+
+        // Track the last minute when status was updated
+        let lastStatusUpdateMinute = -1;
 
         // Helper function to calculate time left (moved inside effect)
         const calculateTime = (): TimeLeft => {
@@ -186,6 +187,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         if (tRef.current) {
             setTimeLeft(calculateTime());
             setStatus(calculateStatus());
+            lastStatusUpdateMinute = new Date().getMinutes();
         }
 
         // Update timeLeft every second and status every minute
@@ -194,9 +196,11 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
                 setTimeLeft(calculateTime());
             }
 
-            // Update status every minute (when seconds are 0)
-            if (Date.now() % 60000 < 1000 && tRef.current) {
+            // Update status when minute changes
+            const currentMinute = new Date().getMinutes();
+            if (currentMinute !== lastStatusUpdateMinute && tRef.current) {
                 setStatus(calculateStatus());
+                lastStatusUpdateMinute = currentMinute;
             }
         }, 1000);
 

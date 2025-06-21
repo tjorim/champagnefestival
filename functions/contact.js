@@ -23,12 +23,14 @@ export async function onRequestPost(context) {
     if (formData.honeypot) {
       console.log(`Potential spam detected (honeypot): IP: ${ipAddress}, UA: ${userAgent}`);
 
-      // Return a "success" response to avoid giving feedback to bots
+      // Return consistent response structure without confirming success
+      // Internal flag indicates spam detection for monitoring purposes
       return new Response(JSON.stringify({
-        success: true,
-        message: "Thank you for your message! We'll get back to you soon."
+        success: false,
+        message: "Message processing failed. Please try again later.",
+        _internal: { flagged: true, reason: "honeypot" }
       }), {
-        status: 200,
+        status: 422, // Unprocessable Entity
         headers: {
           "Content-Type": "application/json",
         }
@@ -106,9 +108,29 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Simple email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
+    // Comprehensive email validation
+    const emailRegex = /^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+    
+    // Additional validation checks
+    const isValidEmail = (email) => {
+      // Basic regex check
+      if (!emailRegex.test(email)) return false;
+      
+      // Check email length limits (local part max 64, domain max 253, total max 320)
+      const [localPart, domain] = email.split('@');
+      if (localPart.length > 64 || domain.length > 253 || email.length > 320) return false;
+      
+      // Check for consecutive dots
+      if (email.includes('..')) return false;
+      
+      // Check for valid domain structure
+      const domainParts = domain.split('.');
+      if (domainParts.length < 2 || domainParts.some(part => part.length === 0)) return false;
+      
+      return true;
+    };
+    
+    if (!isValidEmail(formData.email)) {
       return new Response(JSON.stringify({
         success: false,
         message: "Invalid email address"
@@ -120,14 +142,33 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Prepare email content
-    const subject = `New Contact Form Submission from ${formData.name}`;
+    // Sanitize form data to prevent XSS and injection attacks
+    const sanitizeText = (text) => {
+      if (typeof text !== 'string') return '';
+      // Remove HTML tags and escape special characters
+      return text
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&/g, '&amp;')  // Escape ampersands
+        .replace(/</g, '&lt;')   // Escape less than
+        .replace(/>/g, '&gt;')   // Escape greater than
+        .replace(/"/g, '&quot;') // Escape quotes
+        .replace(/'/g, '&#x27;') // Escape apostrophes
+        .replace(/`/g, '&#x60;') // Escape backticks
+        .trim();
+    };
+
+    const sanitizedName = sanitizeText(formData.name);
+    const sanitizedEmail = sanitizeText(formData.email);
+    const sanitizedMessage = sanitizeText(formData.message);
+
+    // Prepare email content with sanitized data
+    const subject = `New Contact Form Submission from ${sanitizedName}`;
     const emailBody = `
-      Name: ${formData.name}
-      Email: ${formData.email}
+      Name: ${sanitizedName}
+      Email: ${sanitizedEmail}
       
       Message:
-      ${formData.message}
+      ${sanitizedMessage}
       
       Sent from: ${userAgent}
       IP: ${ipAddress}

@@ -25,16 +25,13 @@ interface FormData {
 const ContactForm: React.FC = () => {
     const { t } = useTranslation();
     
-    // Initialize form start time once when component mounts
-    const formStartTime = new Date().toISOString();
-    
-    const [form, setForm] = useState<FormData>({
+    const [form, setForm] = useState<FormData>(() => ({
         name: "",
         email: "",
         message: "",
         honeypot: "",
-        formStartTime
-    });
+        formStartTime: new Date().toISOString() // Initialize only once
+    }));
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
@@ -110,7 +107,7 @@ const ContactForm: React.FC = () => {
                 email: "",
                 message: "",
                 honeypot: "",
-                formStartTime
+                formStartTime: form.formStartTime // Keep original form start time
             });
             setErrors({});
         } catch (error) {
@@ -146,6 +143,19 @@ const ContactForm: React.FC = () => {
                                 <span>{generalError}</span>
                             </Alert>
                         )}
+
+                        {/* Hidden honeypot field to catch bots - placed early to trap bots */}
+                        <div style={{ display: 'none' }}>
+                            <Form.Control
+                                name="honeypot"
+                                type="text"
+                                autoComplete="off"
+                                value={form.honeypot}
+                                onChange={handleChange}
+                                tabIndex={-1}
+                                aria-hidden="true"
+                            />
+                        </div>
 
                         <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="name">
@@ -210,18 +220,6 @@ const ContactForm: React.FC = () => {
                             </Form.Control.Feedback>
                         </Form.Group>
 
-                        {/* Hidden honeypot field to catch bots */}
-                        <div style={{ display: 'none' }}>
-                            <Form.Control
-                                name="honeypot"
-                                type="text"
-                                autoComplete="off"
-                                value={form.honeypot}
-                                onChange={handleChange}
-                                tabIndex={-1}
-                                aria-hidden="true"
-                            />
-                        </div>
 
                         <Button
                             type="submit"

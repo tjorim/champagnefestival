@@ -47,23 +47,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // Handle scroll position preservation
-  useEffect(() => {
-    if (isOpen) {
-      const scrollY = window.scrollY;
-      document.body.setAttribute('data-scroll-position', scrollY.toString());
-    } else {
-      const scrollY = parseInt(document.body.getAttribute('data-scroll-position') || '0');
-      document.body.removeAttribute('data-scroll-position');
-      window.scrollTo(0, scrollY);
-    }
-
-    return () => {
-      document.body.removeAttribute('data-scroll-position');
-    };
-  }, [isOpen]);
-
-  // Handle background scroll prevention
+  // Handle background scroll prevention and scroll position preservation
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
@@ -72,17 +56,29 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       document.body.style.width = '100%';
       document.body.style.overflowY = 'scroll';
     } else {
+      const scrollY = document.body.style.top;
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflowY = '';
+      
+      // Restore scroll position
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY) * -1);
+      }
     }
 
     return () => {
+      const scrollY = document.body.style.top;
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflowY = '';
+      
+      // Restore scroll position on cleanup
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY) * -1);
+      }
     };
   }, [isOpen]);
 

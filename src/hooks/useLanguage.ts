@@ -23,22 +23,25 @@ export function useLanguage(
     document.documentElement.lang = baseLanguage;
 
     // Update URL with language parameter without page reload
-    try {
-      const url = new URL(window.location.href);
-      const currentLng = url.searchParams.get('lng');
+    // Check if we're in a browser environment
+    if (typeof window !== 'undefined' && window.location) {
+      try {
+        const url = new URL(window.location.href);
+        const currentLng = url.searchParams.get('lng');
 
-      // Always use base language code for URL
-      if (baseLanguage !== defaultLanguage && baseLanguage !== currentLng) {
-        // Only update URL for non-default languages
-        url.searchParams.set('lng', baseLanguage);
-        window.history.replaceState({}, '', url.toString());
-      } else if (currentLng && baseLanguage === defaultLanguage) {
-        // Remove parameter for default language
-        url.searchParams.delete('lng');
-        window.history.replaceState({}, '', url.toString());
+        // Always use base language code for URL
+        if (baseLanguage !== defaultLanguage && baseLanguage !== currentLng) {
+          // Only update URL for non-default languages
+          url.searchParams.set('lng', baseLanguage);
+          window.history.replaceState({}, '', url.toString());
+        } else if (currentLng && baseLanguage === defaultLanguage) {
+          // Remove parameter for default language
+          url.searchParams.delete('lng');
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (error) {
+        console.error('Error updating language in URL:', error);
       }
-    } catch (error) {
-      console.error('Error updating language in URL:', error);
     }
     // No cleanup function needed for this effect as it only manipulates
     // the DOM and browser history state directly without setting up

@@ -1,7 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import Accordion from "react-bootstrap/Accordion";
-import { Dictionary } from "../types/i18n";
 
 /**
  * FAQ component interface for keys prop
@@ -24,7 +23,7 @@ interface FAQProps {
  * through the i18n configuration.
  */
 const FAQ: React.FC<FAQProps> = ({ keys = [] }) => {
-    const { t } = useTranslation<keyof Dictionary['faq']>();
+    const { t } = useTranslation();
 
     // Map the translation keys to their values with fallbacks for better safety
     const faqItems = keys.map(item => ({

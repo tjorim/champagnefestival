@@ -105,28 +105,31 @@ import ResponsiveImage from './components/ResponsiveImage';
 Contact information has been moved from hardcoded values in dictionary files to environment variables for improved security and easier updates:
 
 1. Create a `.env.local` file with the following variables:
+
+> **Note:** The values shown below are examples/placeholders. Replace them with your actual contact information and configuration.
+
 ```
 # Contact information
-CONTACT_EMAIL=nancy.cattrysse@telenet.be
-SENDER_EMAIL=nancy.cattrysse@telenet.be
-INFO_EMAIL=nancy.cattrysse@telenet.be
-MAIN_PHONE=+32478480177
+CONTACT_EMAIL=your-email@example.com
+SENDER_EMAIL=your-sender@example.com
+INFO_EMAIL=your-info@example.com
+MAIN_PHONE=+32123456789
 
 # Social media handles
-FACEBOOK_HANDLE=champagnefestival.kust
+FACEBOOK_HANDLE=your.facebook.handle
 
 # Location information
-VENUE_NAME=Meeting- en eventcentrum Staf Versluys
-VENUE_ADDRESS=Kapelstraat 76
-VENUE_CITY=Bredene
-VENUE_POSTAL_CODE=8450
-VENUE_COUNTRY=België
-VENUE_OPENING_HOURS=Zie programma
-VENUE_LAT=51.23601
-VENUE_LNG=2.97328
+VENUE_NAME=Your Venue Name
+VENUE_ADDRESS=Your Address
+VENUE_CITY=Your City
+VENUE_POSTAL_CODE=1234
+VENUE_COUNTRY=Your Country
+VENUE_OPENING_HOURS=See program
+VENUE_LAT=51.2345
+VENUE_LNG=2.9876
 
 # Other configuration
-VITE_PUBLIC_URL=https://www.champagnefestival.be
+VITE_PUBLIC_URL=https://your-domain.com
 ```
 
 2. Use the new components to display contact and location information from the configuration:

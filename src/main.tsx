@@ -119,7 +119,9 @@ function App() {
             <SectionHeading id="next-festival-heading" titleKey="nextFestival.title" fallbackTitle="Next Festival" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <Countdown targetDate={festivalDate} />
+                <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                  <Countdown targetDate={festivalDate} />
+                </Suspense>
                 <p className="mb-4" style={{ position: 'relative', zIndex: 50 }}>
                   {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
                 </p>
@@ -136,7 +138,9 @@ function App() {
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
-                  <Schedule />
+                  <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                    <Schedule />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -167,7 +171,9 @@ function App() {
             <SectionHeading id="faq-heading" titleKey="faq.title" fallbackTitle="Frequently Asked Questions" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <FAQ keys={faqKeys} />
+                <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                  <FAQ keys={faqKeys} />
+                </Suspense>
               </div>
             </div>
           </div>
@@ -225,7 +231,9 @@ function App() {
             {/* Removed redundant <p> tag */}
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <ContactForm />
+                <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                  <ContactForm />
+                </Suspense>
               </div>
             </div>
           </div>

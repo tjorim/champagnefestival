@@ -65,10 +65,17 @@ const Schedule: React.FC = () => {
               <Nav.Link eventKey={day.id} className="px-4">
                 {getDayName(day.label)}
                 <span className="d-block small">
-                  {new Date(day.date).toLocaleDateString(i18n.language, {
-                    month: 'short',
-                    day: 'numeric'
-                  })}
+                  {(() => {
+                    try {
+                      return new Date(day.date).toLocaleDateString(i18n.language, {
+                        month: 'short',
+                        day: 'numeric'
+                      });
+                    } catch (error) {
+                      console.warn('Date formatting error for day:', day.date, error);
+                      return day.date || '';
+                    }
+                  })()}
                 </span>
               </Nav.Link>
             </Nav.Item>

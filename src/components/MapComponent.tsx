@@ -8,12 +8,16 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Fix for default markers not showing in Vite/Webpack builds
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: markerIcon2x,
-    iconUrl: markerIcon,
-    shadowUrl: markerShadow,
-});
+// Override the _getIconUrl method to provide proper icon URLs
+(L.Icon.Default.prototype as any)._getIconUrl = function (name: string) {
+    const iconUrls: Record<string, string> = {
+        'icon': markerIcon,
+        'icon-2x': markerIcon2x,
+        'shadow': markerShadow
+    };
+    
+    return iconUrls[name] || '';
+};
 
 interface MapComponentProps {
     address?: string;
