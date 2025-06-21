@@ -1,0 +1,26 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: no-referrer-when-downgrade
+  Permissions-Policy: camera=(), microphone=(), geolocation=(self), interest-cohort=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: https://*.tile.openstreetmap.org https://*.openstreetmap.org https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.tile.openstreetmap.org https://*.openstreetmap.org https://*.pages.dev; frame-src 'self'; script-src-elem 'self'; style-src-elem 'self' https://fonts.googleapis.com;
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Cache static assets
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cache images
+/images/*
+  Cache-Control: public, max-age=604800
+
+# HTML and critical files need shorter cache
+/*.html
+  Cache-Control: public, max-age=3600
+
+/manifest.json
+  Cache-Control: public, max-age=86400
+
+/sw.js
+  Cache-Control: public, max-age=0, no-cache, must-revalidate

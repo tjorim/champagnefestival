@@ -7,6 +7,8 @@ const Footer = () => {
     const currentYear = new Date().getFullYear();
     const [privacyOpen, setPrivacyOpen] = useState(false);
 
+    // Privacy policy modal is handled via direct button clicks, no URL hash needed
+
     return (
         <footer
             className="site-footer"
