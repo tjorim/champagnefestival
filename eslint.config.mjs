@@ -10,6 +10,17 @@ export default [
   // Base JS config
   js.configs.recommended,
 
+  // Global language options for all files
+  {
+    languageOptions: {
+      ecmaVersion: 'latest',
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+  },
+
   // React config
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
@@ -18,16 +29,10 @@ export default [
       'react-hooks': reactHooksPlugin,
     },
     languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
       parserOptions: {
         ecmaFeatures: {
           jsx: true,
         },
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node,
       },
     },
     rules: {
@@ -35,6 +40,7 @@ export default [
       ...reactHooksPlugin.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off', // Not needed with modern React
       'react/jsx-uses-react': 'off',     // Not needed with modern React
+      'no-console': ['warn', { allow: ['warn', 'error'] }], // Project-specific: only allow console.warn and console.error
     },
     settings: {
       react: {
@@ -63,12 +69,4 @@ export default [
     },
   },
 
-  // Specific overrides for our project
-  {
-    files: ['src/**/*'],
-    rules: {
-      // Rules specific to our src code
-      'no-console': ['warn', { allow: ['warn', 'error'] }], // Only allow console.warn and console.error
-    },
-  },
 ];

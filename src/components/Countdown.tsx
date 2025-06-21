@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { festivalEndDate } from "../config/dates";
 
@@ -91,91 +91,84 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
             minutes: t('countdown.minutes', 'Minutes'),
             seconds: t('countdown.seconds', 'Seconds')
         };
-    }, [i18n.language]);
-    // Determine the current status of the countdown
-    const determineCountdownStatus = useCallback(() => {
-        const now = new Date();
-        const festivalStart = targetDateObjRef.current;
-        const festivalEnd = new Date(festivalEndDate);
-
-        // Add end of day to festival end date (23:59:59)
-        festivalEnd.setHours(23, 59, 59);
-
-        // Festival hasn't started yet
-        if (now < festivalStart) {
-            return CountdownStatus.UPCOMING;
-        }
-
-        // Festival is currently happening
-        if (now >= festivalStart && now <= festivalEnd) {
-            return CountdownStatus.CURRENT;
-        }
-
-        // Festival recently concluded (within autoHideAfterDays)
-        const hideDate = new Date(festivalEnd);
-        hideDate.setDate(hideDate.getDate() + autoHideAfterDays);
-
-        if (now <= hideDate) {
-            return CountdownStatus.CONCLUDED;
-        }
-
-        // Festival ended long ago
-        return CountdownStatus.HIDDEN;
-    }, [autoHideAfterDays]);
-
+    }, [t, i18n.language]);
     // Set component as mounted after initial render
     useEffect(() => {
         setMounted(true);
-    }, []);
-
-    // Calculate time left using refs to avoid dependency cycles
-    const calculateTimeLeft = useCallback((): TimeLeft => {
-        if (!tRef.current) return {};
-
-        const targetDate = targetDateObjRef.current;
-
-        // Get time difference in milliseconds
-        const now = Date.now();
-        const difference = targetDate.getTime() - now;
-
-        if (difference > 0) {
-            const months = Math.floor(difference / TimeUnits.Month);
-            const days = Math.floor((difference % TimeUnits.Month) / TimeUnits.Day);
-            const hours = Math.floor((difference % TimeUnits.Day) / TimeUnits.Hour);
-            const minutes = Math.floor((difference % TimeUnits.Hour) / TimeUnits.Minute);
-            const seconds = Math.floor((difference % TimeUnits.Minute) / TimeUnits.Second);
-
-            return {
-                ...(months > 0 && { months }),
-                ...(days > 0 && { days }),
-                ...(hours > 0 && { hours }),
-                ...(minutes > 0 && { minutes }),
-                ...(seconds > 0 && { seconds }),
-            };
-        }
-
-        return {};
     }, []);
 
     // Update countdown every second, but only after component is mounted and translations are loaded
     useEffect(() => {
         if (!mounted) return;
 
+        // Helper function to calculate time left (moved inside effect)
+        const calculateTime = (): TimeLeft => {
+            if (!tRef.current) return {};
+
+            const targetDate = targetDateObjRef.current;
+            const now = Date.now();
+            const difference = targetDate.getTime() - now;
+
+            if (difference > 0) {
+                const months = Math.floor(difference / TimeUnits.Month);
+                const days = Math.floor((difference % TimeUnits.Month) / TimeUnits.Day);
+                const hours = Math.floor((difference % TimeUnits.Day) / TimeUnits.Hour);
+                const minutes = Math.floor((difference % TimeUnits.Hour) / TimeUnits.Minute);
+                const seconds = Math.floor((difference % TimeUnits.Minute) / TimeUnits.Second);
+
+                return {
+                    ...(months > 0 && { months }),
+                    ...(days > 0 && { days }),
+                    ...(hours > 0 && { hours }),
+                    ...(minutes > 0 && { minutes }),
+                    ...(seconds > 0 && { seconds }),
+                };
+            }
+
+            return {};
+        };
+
+        // Helper function to determine status (moved inside effect)
+        const calculateStatus = (): CountdownStatus => {
+            const now = new Date();
+            const festivalStart = targetDateObjRef.current;
+            const festivalEnd = new Date(festivalEndDate);
+
+            festivalEnd.setHours(23, 59, 59);
+
+            if (now < festivalStart) {
+                return CountdownStatus.UPCOMING;
+            }
+
+            if (now >= festivalStart && now <= festivalEnd) {
+                return CountdownStatus.CURRENT;
+            }
+
+            const hideDate = new Date(festivalEnd);
+            hideDate.setDate(hideDate.getDate() + autoHideAfterDays);
+
+            if (now <= hideDate) {
+                return CountdownStatus.CONCLUDED;
+            }
+
+            return CountdownStatus.HIDDEN;
+        };
+
         // Initial calculation and status determination
         if (tRef.current) {
-            setTimeLeft(calculateTimeLeft());
-            setStatus(determineCountdownStatus());
+            setTimeLeft(calculateTime());
+            setStatus(calculateStatus());
         }
 
         // Update timeLeft every second and status every minute
         const timer = setInterval(() => {
             if (tRef.current) {
-                setTimeLeft(calculateTimeLeft());
+                setTimeLeft(calculateTime());
             }
 
             // Update status every minute (when seconds are 0)
             if (Date.now() % 60000 < 1000 && tRef.current) {
-                setStatus(determineCountdownStatus());
+                setStatus(calculateStatus());
             }
         }, 1000);
 
@@ -183,7 +176,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         return () => {
             clearInterval(timer);
         };
-    }, [mounted, calculateTimeLeft, determineCountdownStatus]);
+    }, [mounted, autoHideAfterDays]);
 
     // Map time units to display components
     const timerComponents = Object.entries(timeLeft).map(([unit, value]) => (

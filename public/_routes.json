@@ -4,8 +4,7 @@
     "/*"
   ],
   "exclude": [
-    "/assets/*",
-    "/images/*"
+    "/assets/*"
   ],
   "routes": [
     {

@@ -12,7 +12,6 @@ export async function onRequestPost(context) {
     const smtpHostname = context.env.SMTP_HOSTNAME;
     const smtpUsername = context.env.SMTP_USERNAME;
     const smtpPassword = context.env.SMTP_PASSWORD;
-    const smtpPort = parseInt(context.env.SMTP_PORT || "587", 10);
     const recaptchaSecret = context.env.RECAPTCHA_SECRET_KEY;
 
     // Get request information
