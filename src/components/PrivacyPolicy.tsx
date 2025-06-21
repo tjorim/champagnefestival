@@ -24,26 +24,27 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
 
   // Handle URL hash updates when modal opens/closes
   useEffect(() => {
+    const currentHash = window.location.hash;
+    
     if (isOpen) {
-      const originalHash = window.location.hash;
-      window.history.replaceState(null, '', '#privacy-policy');
-      document.body.setAttribute('data-original-hash', originalHash);
-    } else if (window.location.hash === '#privacy-policy') {
-      const originalHash = document.body.getAttribute('data-original-hash') || '';
-      if (originalHash) {
-        window.history.replaceState(null, '', originalHash);
-      } else {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      // Only update hash if not already set to privacy-policy
+      if (currentHash !== '#privacy-policy') {
+        document.body.setAttribute('data-original-hash', currentHash);
+        window.history.replaceState(null, '', '#privacy-policy');
       }
-      document.body.removeAttribute('data-original-hash');
+    } else {
+      // Only restore hash if currently showing privacy-policy and we have original hash stored
+      if (currentHash === '#privacy-policy') {
+        const originalHash = document.body.getAttribute('data-original-hash') || '';
+        document.body.removeAttribute('data-original-hash');
+        
+        if (originalHash) {
+          window.history.replaceState(null, '', originalHash);
+        } else {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      }
     }
-
-    return () => {
-      document.body.removeAttribute('data-original-hash');
-      if (window.location.hash === '#privacy-policy') {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      }
-    };
   }, [isOpen]);
 
   // Handle scroll position preservation
