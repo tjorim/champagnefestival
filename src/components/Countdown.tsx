@@ -145,13 +145,24 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
                 const minutes = Math.floor((remainingMs % TimeUnits.Hour) / TimeUnits.Minute);
                 const seconds = Math.floor((remainingMs % TimeUnits.Minute) / TimeUnits.Second);
 
-                return {
-                    ...(months > 0 && { months }),
-                    ...(days > 0 && { days }),
-                    ...(hours > 0 && { hours }),
-                    ...(minutes > 0 && { minutes }),
-                    ...(seconds > 0 && { seconds }),
-                };
+                // Always show exactly 3 boxes for consistent layout
+                const result: TimeLeft = {};
+                
+                if (months > 0) {
+                    result.months = months;
+                    result.days = days;
+                    result.hours = hours;
+                } else if (days > 0) {
+                    result.days = days;
+                    result.hours = hours;
+                    result.minutes = minutes;
+                } else {
+                    result.hours = hours;
+                    result.minutes = minutes;
+                    result.seconds = seconds;
+                }
+                
+                return result;
             }
 
             return {};
@@ -212,10 +223,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
 
     // Map time units to display components
     const timerComponents = Object.entries(timeLeft).map(([unit, value]) => (
-        <span key={unit} className="countdown-unit">
-            <span className="countdown-value">{value}</span>{" "}
-            <span className="countdown-label">{tRef.current?.[unit as keyof TimeUnitsTranslations] || unit}</span>{" "}
-        </span>
+        <div key={unit} className="countdown-unit">
+            <span className="countdown-value">{value}</span>
+            <span className="countdown-label">{tRef.current?.[unit as keyof TimeUnitsTranslations] || unit}</span>
+        </div>
     ));
 
     // Don't render anything if the status is HIDDEN

@@ -213,29 +213,33 @@ h2.section-header::after {
 }
 
 .countdown-unit {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   background-color: rgba(110, 142, 251, 0.15);
   padding: 0.75rem 1.25rem;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  flex: 1;
 }
 
 .countdown-value {
   font-weight: bold;
   font-size: 1.5rem;
-  margin-right: 0.5rem;
   color: var(--primary-color);
-  min-width: 2ch;
-  display: inline-block;
+  margin-right: 0.5rem;
+  min-width: 2.5ch;
   text-align: center;
+  display: inline-block;
 }
 
 .countdown-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  min-width: 5ch;
+  opacity: 0.9;
+  min-width: 4ch;
+  text-align: center;
   display: inline-block;
 }
 
