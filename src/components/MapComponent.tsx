@@ -46,6 +46,23 @@ const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
     const { t } = useTranslation();
 
+    // Validate coordinates
+    const validCoordinates = coordinates && 
+        typeof coordinates.lat === 'number' && 
+        typeof coordinates.lng === 'number' && 
+        !isNaN(coordinates.lat) && 
+        !isNaN(coordinates.lng) &&
+        coordinates.lat >= -90 && coordinates.lat <= 90 &&
+        coordinates.lng >= -180 && coordinates.lng <= 180;
+
+    if (!validCoordinates) {
+        return (
+            <div className="ratio ratio-16x9 rounded overflow-hidden border d-flex align-items-center justify-content-center bg-light">
+                <p className="text-muted">{t('location.mapError', 'Map could not be loaded')}</p>
+            </div>
+        );
+    }
+
     return (
         <div
             className="ratio ratio-16x9 rounded overflow-hidden border position-relative"
@@ -69,16 +86,32 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         {address}<br />
                         {contactConfig.location.postalCode} {contactConfig.location.city}<br />
                         {t('location.country', contactConfig.location.country)}<br />
-                        <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                `${location}, ${address}, ${contactConfig.location.postalCode} ${contactConfig.location.city}`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'inline-block', textDecoration: 'none', marginTop: 8 }}
-                        >
-                            {t('location.openInMaps', 'Open in Maps')}
-                        </a>
+                        {(() => {
+                            // Build Google Maps URL with error handling
+                            const locationParts = [
+                                location,
+                                address,
+                                contactConfig.location.postalCode,
+                                contactConfig.location.city
+                            ].filter(Boolean); // Remove empty/null/undefined values
+                            
+                            if (locationParts.length === 0) {
+                                return null; // Don't render link if no location data
+                            }
+                            
+                            const query = locationParts.join(', ');
+                            
+                            return (
+                                <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: 'inline-block', textDecoration: 'none', marginTop: 8 }}
+                                >
+                                    {t('location.openInMaps', 'Open in Maps')}
+                                </a>
+                            );
+                        })()}
                     </Popup>
                 </Marker>
             </MapContainer>
