@@ -1,12 +1,7 @@
-import React, { useEffect } from 'react';
-import Modal from "react-bootstrap/Modal";
-import Button from "react-bootstrap/Button";
+import { useState } from 'react';
+import Button from 'react-bootstrap/Button';
+import Modal from 'react-bootstrap/Modal';
 import { useTranslation } from 'react-i18next';
-
-interface PrivacyPolicyProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
 
 /**
  * Privacy Policy modal component
@@ -18,51 +13,31 @@ interface PrivacyPolicyProps {
  * - Sections for different aspects of the privacy policy
  * - Responsive layout
  */
-const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
-  // Use react-i18next for translations
+function PrivacyPolicy() {
+  const [show, setShow] = useState(false);
   const { t } = useTranslation();
 
-  // Prevent background scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      // Store original scroll position
-      const scrollY = window.scrollY;
-      
-      // Apply styles to prevent scrolling
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      document.body.style.height = '100%';
-      document.body.style.overflow = 'hidden';
-
-      // Cleanup function
-      return () => {
-        // Restore original styles
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.height = '';
-        document.body.style.overflow = '';
-        
-        // Restore scroll position
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [isOpen]);
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
 
   return (
-    <Modal
-      show={isOpen}
-      onHide={onClose}
+    <>
+      <Button 
+        variant="link" 
+        onClick={handleShow}
+        className="text-white p-0 text-decoration-none footer-link"
+      >
+        {t('footer.privacy', 'Privacy Policy')}
+      </Button>
+
+      <Modal
+      show={show}
+      onHide={handleClose}
       size="lg"
-      centered={true}
-      contentClassName="bg-dark"
       aria-labelledby="privacy-policy-title"
-      restoreFocus={true}
+      centered
+      contentClassName="bg-dark"
       scrollable={true}
-      enforceFocus={true}
-      keyboard={true}
-      backdrop={true}
     >
       <Modal.Header closeButton>
         <Modal.Title id="privacy-policy-title">
@@ -129,7 +104,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
       </Modal.Body>
       <Modal.Footer>
         <Button
-          onClick={onClose}
+          onClick={handleClose}
           variant="dark"
           className="bg-brand-gradient modal-close-btn"
         >
@@ -137,7 +112,8 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ isOpen, onClose }) => {
         </Button>
       </Modal.Footer>
     </Modal>
+    </>
   );
-};
+}
 
 export default PrivacyPolicy;

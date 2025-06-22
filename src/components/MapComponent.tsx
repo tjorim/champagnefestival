@@ -45,10 +45,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     coordinates = contactConfig.location.coordinates
 }) => {
     const { t } = useTranslation();
-    const lat = coordinates.lat;
-    const lng = coordinates.lng;
-    const computedAddress = address;
-    const computedLocation = location;
 
     return (
         <div
@@ -56,7 +52,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
             aria-label={t('location.mapLabel', 'Festival location map')}
         >
             <MapContainer
-                center={[lat, lng]}
+                center={[coordinates.lat, coordinates.lng]}
                 zoom={16}
                 scrollWheelZoom={false}
                 style={{ width: '100%', height: '100%' }}
@@ -67,15 +63,15 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <Marker position={[lat, lng]}>
+                <Marker position={[coordinates.lat, coordinates.lng]}>
                     <Popup>
-                        <b>{computedLocation}</b><br />
-                        {computedAddress}<br />
+                        <b>{location}</b><br />
+                        {address}<br />
                         {contactConfig.location.postalCode} {contactConfig.location.city}<br />
                         {t('location.country', contactConfig.location.country)}<br />
                         <a
                             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                `${computedLocation}, ${computedAddress}, ${contactConfig.location.postalCode} ${contactConfig.location.city}`
+                                `${location}, ${address}, ${contactConfig.location.postalCode} ${contactConfig.location.city}`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -87,7 +83,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 </Marker>
             </MapContainer>
             <div id="map-description" className="visually-hidden">
-                {computedLocation}: {computedAddress}
+                {location}: {address}
             </div>
         </div>
     );

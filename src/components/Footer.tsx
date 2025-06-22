@@ -1,13 +1,9 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import PrivacyPolicy from "./PrivacyPolicy";
 
 const Footer = () => {
     const { t } = useTranslation();
     const currentYear = new Date().getFullYear();
-    const [privacyOpen, setPrivacyOpen] = useState(false);
-
-    // Privacy policy modal is handled via direct button clicks, no URL hash needed
 
     return (
         <footer
@@ -21,21 +17,10 @@ const Footer = () => {
                         </p>
                     </div>
                     <div className="col-md-6 text-center text-md-end">
-                        <button
-                            onClick={() => setPrivacyOpen(true)}
-                            className="btn btn-link text-white p-0 text-decoration-none footer-link"
-                        >
-                            {t("footer.privacy", "Privacy Policy")}
-                        </button>
+                        <PrivacyPolicy />
                     </div>
                 </div>
             </div>
-
-            {/* Privacy Policy Modal */}
-            <PrivacyPolicy
-                isOpen={privacyOpen}
-                onClose={() => setPrivacyOpen(false)}
-            />
         </footer>
     );
 };

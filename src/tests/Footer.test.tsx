@@ -4,18 +4,25 @@ import Footer from '../components/Footer';
 
 // Mock the PrivacyPolicy component since we're only testing the Footer
 vi.mock('../components/PrivacyPolicy', () => ({
-  default: ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) =>
-    isOpen ? <div data-testid="privacy-modal" onClick={onClose}>Mock Privacy Policy</div> : null
+  default: () => {
+    const { useState } = require('react');
+    const [show, setShow] = useState(false);
+    
+    return (
+      <>
+        <button onClick={() => setShow(true)}>Privacy Policy</button>
+        {show && <div data-testid="privacy-modal" onClick={() => setShow(false)}>Mock Privacy Policy</div>}
+      </>
+    );
+  }
 }));
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown> | string | undefined) => {
-      // Handle fallback strings or objects with defaultValue
-      if (typeof options === 'string') return options;
-      if (typeof options === 'object' && options?.defaultValue) return options.defaultValue;
-      return key;
+    t: (key: string, fallback?: string) => {
+      // Return the fallback if provided, otherwise return the key
+      return fallback || key;
     }
   })
 }));
