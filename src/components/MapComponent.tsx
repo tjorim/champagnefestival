@@ -7,6 +7,30 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
+/**
+ * Generates a Google Maps URL for the given location data
+ * @param location - Venue name
+ * @param address - Street address
+ * @param postalCode - Postal code
+ * @param city - City name
+ * @returns Google Maps search URL or null if no valid location data
+ */
+const generateGoogleMapsUrl = (
+    location: string,
+    address: string,
+    postalCode: string,
+    city: string
+): string | null => {
+    const locationParts = [location, address, postalCode, city].filter(Boolean);
+    
+    if (locationParts.length === 0) {
+        return null;
+    }
+    
+    const query = locationParts.join(', ');
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+};
+
 // Fix for default markers not showing in Vite/Webpack builds
 // Override the _getIconUrl method to provide proper icon URLs
 const DefaultIcon = L.Icon.Default.prototype as L.Icon.Default & { 
@@ -63,6 +87,14 @@ const MapComponent: React.FC<MapComponentProps> = ({
         );
     }
 
+    // Generate Google Maps URL
+    const mapsUrl = generateGoogleMapsUrl(
+        location,
+        address,
+        contactConfig.location.postalCode,
+        contactConfig.location.city
+    );
+
     return (
         <div
             className="ratio ratio-16x9 rounded overflow-hidden border position-relative"
@@ -86,32 +118,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         {address}<br />
                         {contactConfig.location.postalCode} {contactConfig.location.city}<br />
                         {t('location.country', contactConfig.location.country)}<br />
-                        {(() => {
-                            // Build Google Maps URL with error handling
-                            const locationParts = [
-                                location,
-                                address,
-                                contactConfig.location.postalCode,
-                                contactConfig.location.city
-                            ].filter(Boolean); // Remove empty/null/undefined values
-                            
-                            if (locationParts.length === 0) {
-                                return null; // Don't render link if no location data
-                            }
-                            
-                            const query = locationParts.join(', ');
-                            
-                            return (
-                                <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ display: 'inline-block', textDecoration: 'none', marginTop: 8 }}
-                                >
-                                    {t('location.openInMaps', 'Open in Maps')}
-                                </a>
-                            );
-                        })()}
+                        {mapsUrl && (
+                            <a
+                                href={mapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: 'inline-block', textDecoration: 'none', marginTop: 8 }}
+                            >
+                                {t('location.openInMaps', 'Open in Maps')}
+                            </a>
+                        )}
                     </Popup>
                 </Marker>
             </MapContainer>
