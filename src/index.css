@@ -474,6 +474,18 @@ main {
   box-shadow: none;
 }
 
+/* Fallback for browsers without :focus-visible support */
+:focus {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Modern browsers with :focus-visible support */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Improved focus styles for all interactive elements */
 :focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
@@ -482,8 +494,8 @@ main {
 }
 
 /* Darker backdrop for better focus */
-.modal-backdrop {
-  opacity: 0.75 !important;
+.modal-backdrop.show {
+  opacity: 0.75;
 }
 
 /* Handle modal scrolling */

@@ -6,12 +6,18 @@ import { useTranslation } from 'react-i18next';
 /**
  * Privacy Policy modal component
  * 
- * Displays the festival's privacy policy in a modal dialog
+ * A self-contained privacy policy modal component that renders a trigger button
+ * and manages its own modal state internally.
+ * 
  * Implements:
  * - Modal dialog with scrollable content
  * - Internationalized content
+ * - Self-managed open/close state
+ * - Accessible modal with proper ARIA attributes
  * - Sections for different aspects of the privacy policy
  * - Responsive layout
+ * 
+ * @returns {JSX.Element} Button trigger and modal dialog
  */
 function PrivacyPolicy() {
   const [show, setShow] = useState(false);
