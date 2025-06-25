@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, Form, Button, Alert, Spinner } from "react-bootstrap";
+import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
+import Alert from "react-bootstrap/Alert";
+import Spinner from "react-bootstrap/Spinner";
 
 /**
  * Form data structure
@@ -10,6 +14,9 @@ interface FormData {
     name: string;
     email: string;
     message: string;
+    honeypot?: string; // Anti-spam honeypot field
+    formStartTime: string; // When the form was loaded (to detect bots filling too quickly)
+    recaptchaToken?: string; // Optional reCAPTCHA token obtained via reCAPTCHA API integration (e.g., using grecaptcha.execute)
 }
 
 /**
@@ -17,7 +24,14 @@ interface FormData {
  */
 const ContactForm: React.FC = () => {
     const { t } = useTranslation();
-    const [form, setForm] = useState<FormData>({ name: "", email: "", message: "" });
+    
+    const [form, setForm] = useState<FormData>(() => ({
+        name: "",
+        email: "",
+        message: "",
+        honeypot: "",
+        formStartTime: new Date().toISOString() // Initialize only once
+    }));
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
@@ -46,27 +60,69 @@ const ContactForm: React.FC = () => {
         setGeneralError(null); // Reset general error on new submission attempt
 
         // Basic validation
+        // Check if required fields are filled
         const newErrors: Partial<Record<keyof FormData, string | null>> = {};
         if (!form.name) newErrors.name = t("contact.errors.nameRequired", "Name is required");
         if (!form.email) newErrors.email = t("contact.errors.emailRequired", "Email is required");
         else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = t("contact.errors.emailInvalid", "Please enter a valid email address");
         if (!form.message) newErrors.message = t("contact.errors.messageRequired", "Message is required");
 
+        // Anti-spam check: if honeypot is filled, silently "succeed" without sending
+        if (form.honeypot) {
+            console.warn("Honeypot triggered - likely bot submission");
+            // Fake success to confuse bots
+            setIsSubmitted(true);
+            setIsSubmitting(false);
+            return;
+        }
+
+        // Check if there are any validation errors
+        // If there are errors, set them and stop submission
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
             setIsSubmitting(false);
             return;
         }
 
+        // If no errors, proceed with submission
         try {
-            // Simulate API call (replace with actual API call in real app)
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Call our Cloudflare Function endpoint
+            const response = await fetch('/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(form),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Something went wrong');
+            }
+
             setIsSubmitted(true);
-            setForm({ name: "", email: "", message: "" });
+            setForm({
+                name: "",
+                email: "",
+                message: "",
+                honeypot: "",
+                formStartTime: form.formStartTime // Keep original form start time
+            });
             setErrors({});
         } catch (error) {
-            console.error("Form submission error", error);
-            setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
+            console.warn('Form submission error:', error);
+            // Provide more specific error messages based on error type
+            if (error instanceof TypeError && error.message.includes('fetch')) {
+                // Network connectivity issues
+                setGeneralError(t("contact.networkError", "Network error: Please check your internet connection and try again."));
+            } else if (error instanceof Error && error.message.includes('JSON')) {
+                // JSON parsing issues from server response
+                setGeneralError(t("contact.submissionError", "Server response error. Please try again later."));
+            } else {
+                // General server or validation errors
+                setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -80,7 +136,7 @@ const ContactForm: React.FC = () => {
                         {t("contact.successMessage", "Thank you for your message! We'll get back to you soon.")}
                     </Alert>
                 ) : (
-                    <Form onSubmit={handleSubmit} className="my-3">
+                    <Form onSubmit={handleSubmit} className="my-3" name="contact-form" autoComplete="on">
                         {generalError && (
                             <Alert variant="danger" className="d-flex align-items-center">
                                 <i className="bi bi-exclamation-circle me-2"></i>
@@ -88,7 +144,20 @@ const ContactForm: React.FC = () => {
                             </Alert>
                         )}
 
-                        <Form.Group className="mb-3">
+                        {/* Hidden honeypot field to catch bots - placed early to trap bots */}
+                        <div style={{ display: 'none' }}>
+                            <Form.Control
+                                name="honeypot"
+                                type="text"
+                                autoComplete="off"
+                                value={form.honeypot}
+                                onChange={handleChange}
+                                tabIndex={-1}
+                                aria-hidden="true"
+                            />
+                        </div>
+
+                        <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="name">
                                 {t("contact.name", "Your Name")}
                             </Form.Label>
@@ -100,6 +169,7 @@ const ContactForm: React.FC = () => {
                                 placeholder="John Doe"
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.name}
+                                autoComplete="name"
                                 required
                             />
                             <Form.Control.Feedback type="invalid">
@@ -107,7 +177,7 @@ const ContactForm: React.FC = () => {
                             </Form.Control.Feedback>
                         </Form.Group>
 
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="email">
                                 {t("contact.email", "Your Email")}
                             </Form.Label>
@@ -120,6 +190,7 @@ const ContactForm: React.FC = () => {
                                 placeholder="email@example.com"
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.email}
+                                autoComplete="email"
                                 required
                             />
                             <Form.Control.Feedback type="invalid">
@@ -127,7 +198,7 @@ const ContactForm: React.FC = () => {
                             </Form.Control.Feedback>
                         </Form.Group>
 
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="message">
                                 {t("contact.message", "Your Message")}
                             </Form.Label>
@@ -141,6 +212,7 @@ const ContactForm: React.FC = () => {
                                 style={{ minHeight: "120px" }}
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.message}
+                                autoComplete="off"
                                 required
                             />
                             <Form.Control.Feedback type="invalid">
@@ -148,10 +220,11 @@ const ContactForm: React.FC = () => {
                             </Form.Control.Feedback>
                         </Form.Group>
 
+
                         <Button
                             type="submit"
                             variant="dark"
-                            className="w-100 bg-brand-gradient"
+                            className="btn w-100 bg-brand-gradient text-white"
                             disabled={isSubmitting}
                             aria-busy={isSubmitting ? "true" : "false"}
                             aria-live="polite"

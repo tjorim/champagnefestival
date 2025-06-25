@@ -21,7 +21,9 @@ const LanguageSwitcher = () => {
     ];
 
     // Find current language details
-    const currentLanguage = languages.find(lang => lang.code === currentLang) || languages[0];
+    const currentLanguage = languages.find(lang =>
+        lang.code === currentLang || currentLang.startsWith(lang.code + '-')
+    ) || languages[0];
 
     // Handle language change
     const changeLanguage = (langCode: string) => {
@@ -57,14 +59,21 @@ const LanguageSwitcher = () => {
                         key={lang.code}
                         className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
                             }`}
-                        onClick={() => changeLanguage(lang.code)}
+                        as="a"
+                        // Dutch is the default language (root path), other languages use query parameters
+                        href={lang.code === 'nl' ? '/' : `?lng=${lang.code}`}
+                        onClick={(e) => {
+                            // Prevent page reload if JavaScript is enabled
+                            e.preventDefault();
+                            changeLanguage(lang.code);
+                        }}
                     >
                         <span className="me-3 fs-5">{lang.flag}</span>
                         <div>
                             <div className="fw-medium">{lang.label}</div>
                             <div className="small text-muted">{lang.nativeName}</div>
                         </div>
-                        {currentLang === lang.code && (
+                        {(currentLang === lang.code || currentLang.startsWith(lang.code + '-')) && (
                             <i className="bi bi-check ms-auto text-primary"></i>
                         )}
                     </Dropdown.Item>

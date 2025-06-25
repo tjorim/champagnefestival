@@ -2,11 +2,12 @@
     "welcome": {
         "title": "Bienvenue au Festival du Champagne",
         "subtitle": "Une célébration du champagne fin et de la communauté",
-        "learnMore": "En Savoir Plus"
+        "learnMore": "En savoir plus"
     },
     "whatWeDo": {
         "title": "Ce Que Nous Faisons",
         "description": "Notre festival réunit les producteurs de champagne, les passionnés et la communauté pour une célébration de cette magnifique boisson.",
+        "forEveryone": "Que vous soyez un connaisseur de champagne ou que vous appréciiez simplement un verre de bulles à l'occasion, ce festival offre quelque chose pour tous.",
         "feature1": {
             "title": "Rencontrez les Producteurs",
             "description": "Rencontrez des producteurs du monde entier et découvrez leur savoir-faire."
@@ -26,12 +27,80 @@
     },
     "schedule": {
         "title": "Programme",
-        "description": "Les détails du programme du festival sont présentés ici."
+        "description": "Consultez le programme détaillé du festival avec les événements, dégustations et présentations spéciales.",
+        "days": {
+            "friday": "Vendredi",
+            "saturday": "Samedi",
+            "sunday": "Dimanche"
+        },
+        "categories": {
+            "tasting": "Dégustation",
+            "vip": "Événement VIP",
+            "party": "Soirée",
+            "breakfast": "Petit-déjeuner",
+            "exchange": "Échange",
+            "general": "Général"
+        },
+        "reservation": "Réservation requise",
+        "presenter": "Présentateur",
+        "location": "Lieu",
+        "noEvents": "Aucun événement prévu pour ce jour",
+        "events": {
+            "fri-tasting": {
+                "title": "Dégustation Continue",
+                "description": "Dégustation continue de différents champagnes."
+            },
+            "fri-vip": {
+                "title": "Réception VIP",
+                "description": "Réception VIP exclusive avec champagnes spéciaux et amuse-bouches."
+            },
+            "fri-end": {
+                "title": "Fin du Festival",
+                "description": "Clôture du festival le vendredi."
+            },
+            "sat-exchange": {
+                "title": "Bourse d'Échange",
+                "description": "Ouverture de la bourse d'échange pour les collectionneurs."
+            },
+            "sat-opening": {
+                "title": "Ouverture du Festival & Dégustation Continue",
+                "description": "Ouverture officielle du festival le samedi avec dégustation continue de champagne."
+            },
+            "sat-party": {
+                "title": "Soirée Champagne avec DJ",
+                "description": "Soirée festive avec DJ et champagne."
+            },
+            "sat-end": {
+                "title": "Fin du Festival + Soirée",
+                "description": "Clôture du festival et de la soirée le samedi."
+            },
+            "sun-breakfast": {
+                "title": "Petit-déjeuner Champagne",
+                "description": "Petit-déjeuner champagne au profit d'une bonne cause."
+            },
+            "sun-opening": {
+                "title": "Ouverture du Festival & Dégustation Continue",
+                "description": "Ouverture du festival le dimanche avec dégustation continue de champagne."
+            },
+            "sun-end": {
+                "title": "Fin du Festival",
+                "description": "Conclusion du festival le dimanche."
+            }
+        }
     },
     "location": {
-        "title": "Lieu de l'Événement"
+        "title": "Lieu de l'Événement",
+        "venueDescription": "Notre lieu prestigieux",
+        "address": "Adresse du lieu",
+        "openingHours": "Horaires d'ouverture",
+        "openingHoursValue": "Voir le programme pour plus de détails",
+        "openInMaps": "Ouvrir dans Maps",
+        "country": "Belgique",
+        "mapLabel": "Carte de l'emplacement du festival",
+        "mapTitle": "Carte interactive montrant le lieu de l'événement"
     },
     "countdown": {
+        "months": "mois",
         "days": "jours",
         "hours": "heures",
         "minutes": "minutes",
@@ -61,17 +130,30 @@
     "contact": {
         "title": "Contactez-Nous",
         "intro": "Vous avez des questions ou vous souhaitez devenir sponsor ? Contactez-nous !",
+        "alternativeContact": "Vous pouvez également nous joindre par e-mail ou téléphone :",
+        "emailLabel": "E-mail :",
+        "phoneLabel": "Téléphone :",
         "name": "Votre Nom",
-        "email": "Votre Email",
+        "email": "Votre E-mail",
         "message": "Votre Message",
+        "placeholderMessage": "Tapez votre message ici...",
         "submitting": "Envoi en cours...",
         "submit": "Envoyer le Message",
         "successMessage": "Merci pour votre message ! Nous vous répondrons bientôt.",
+        "submissionError": "Une erreur s'est produite lors de l'envoi de votre message. Veuillez réessayer.",
+        "networkError": "Erreur réseau : Veuillez vérifier votre connexion internet et réessayer.",
         "errors": {
             "nameRequired": "Le nom est requis",
-            "emailRequired": "L'email est requis",
-            "emailInvalid": "Veuillez entrer une adresse email valide",
-            "messageRequired": "Le message est requis"
+            "emailRequired": "L'e-mail est requis",
+            "emailInvalid": "Veuillez entrer une adresse e-mail valide",
+            "messageRequired": "Le message est requis",
+            "submissionTooFast": "Votre soumission était trop rapide. Veuillez réessayer.",
+            "securityVerificationFailed": "La vérification de sécurité a échoué. Veuillez réessayer.",
+            "securityVerificationError": "La vérification de sécurité a échoué. Veuillez réessayer plus tard.",
+            "missingFields": "Champs obligatoires manquants.",
+            "invalidEmailServer": "Adresse e-mail invalide.",
+            "emailSendError": "Erreur lors de l'envoi de l'e-mail. Veuillez réessayer plus tard.",
+            "serverError": "Une erreur s'est produite lors du traitement de votre demande."
         }
     },
     "accessibility": {
@@ -79,6 +161,10 @@
     },
     "festivalName": "Festival du Champagne",
     "loading": "Chargement...",
+    "loadingBackground": "Chargement de l'arrière-plan...",
+    "loadingProducers": "Chargement des producteurs...",
+    "loadingSponsors": "Chargement des sponsors...",
+    "error": "Une erreur s'est produite",
     "footer": {
         "rights": "Tous droits réservés.",
         "privacy": "Politique de Confidentialité",

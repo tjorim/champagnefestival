@@ -1,0 +1,17 @@
+{
+  "build": {
+    "command": "npm run build",
+    "environment": {
+      "NODE_VERSION": "20.12.1"
+    },
+    "output_directory": "dist"
+  },
+  "routes": [
+    {
+      "pattern": "/assets/*",
+      "cache": {
+        "max_age": 31536000
+      }
+    }
+  ]
+}
