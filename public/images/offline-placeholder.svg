@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#333333"/>
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">Image Unavailable</text>
+  <text x="50%" y="65%" font-family="Arial, sans-serif" font-size="18" fill="#aaaaaa" text-anchor="middle" dominant-baseline="middle">You are currently offline</text>
+</svg>
