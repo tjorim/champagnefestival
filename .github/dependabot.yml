@@ -9,3 +9,30 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    # Specify labels for npm pull requests
+    labels:
+      - "dependencies"
+      - "npm"
+    # Limit the number of open pull requests
+    open-pull-requests-limit: 10
+    # Group related updates to reduce PR noise
+    groups:
+      react-packages:
+        patterns:
+          - "react"
+          - "react-*"
+          - "@types/react*"
+        exclude-patterns:
+          - "react-leaflet"
+      typescript-packages:
+        patterns:
+          - "typescript"
+          - "@typescript-eslint/*"
+          - "@types/*"
+    # Define auto-approval criteria
+    ignore:
+      # Don't update to React versions that need breaking changes
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
