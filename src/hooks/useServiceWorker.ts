@@ -17,18 +17,13 @@ export function useServiceWorker(swPath: string = '/sw.js') {
       const registerSW = () => {
         navigator.serviceWorker.register(swPath)
           .then(registration => {
-            console.warn('Service Worker registered with scope:', registration.scope);
-
             // Handle service worker updates
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
               if (newWorker) {
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New content is available, notify user
-                    console.warn('New content is available; please refresh.');
-                    // TODO: Dispatch an event here to show a notification/toast to the user
-                    // Example: document.dispatchEvent(new CustomEvent('swUpdate', { detail: registration }));
+                    document.dispatchEvent(new CustomEvent('swUpdate', { detail: registration }));
                   }
                 });
               }

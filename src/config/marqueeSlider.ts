@@ -14,7 +14,7 @@ export const producerItems: SliderItem[] = [
   {
     id: 1,
     name: "Producer 1",
-    image: "/images/producers/producer1.jpg" // Note: actual fallback is handled in components via onError, using fallbackImage
+    image: "/images/producers/producer1.jpg"
   },
   {
     id: 2,
@@ -45,6 +45,3 @@ export const sponsorItems: SliderItem[] = [
     image: "/images/sponsors/sponsor3.jpg"
   },
 ];
-
-// Fallback image if the specified image fails to load
-export const fallbackImage = "/images/logo.svg";
