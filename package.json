@@ -18,7 +18,7 @@
     "react": "^19.1.1",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.1",
-    "react-error-boundary": "^6.0.0",
+    "react-error-boundary": "^6.1.1",
     "react-i18next": "^15.6.1"
   },
   "devDependencies": {
