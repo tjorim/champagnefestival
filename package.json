@@ -30,7 +30,7 @@
     "react-error-boundary": "^6.1.1",
     "react-i18next": "^16.5.4",
     "react-leaflet": "^5.0.0",
-    "swiper": "^11.2.6"
+    "swiper": "^12.1.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
