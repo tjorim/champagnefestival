@@ -3,7 +3,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 interface SuspenseWithBoundaryProps {
   fallback: React.ReactNode;
-  errorFallback?: React.ReactNode;
+  errorFallback: React.ReactNode | null;
   children: React.ReactNode;
 }
 
@@ -17,6 +17,10 @@ interface SuspenseWithBoundaryProps {
  * @param children - The lazy-loaded component(s) to wrap
  */
 function SuspenseWithBoundary({ fallback, errorFallback, children }: SuspenseWithBoundaryProps) {
+  if (errorFallback === undefined) {
+    throw new Error('SuspenseWithBoundary requires an explicit errorFallback prop. Pass null to opt out of rendering an error fallback.');
+  }
+
   return (
     <ErrorBoundary fallback={errorFallback != null ? <>{errorFallback}</> : <></>}>
       <Suspense fallback={fallback}>

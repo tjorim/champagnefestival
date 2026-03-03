@@ -38,6 +38,25 @@ import { faqKeys } from "./config/faq";
 import { featureItems } from "./config/features";
 import { festivalDate } from "./config/dates";
 
+interface AppSuspenseProps {
+  children: React.ReactNode;
+  errorKey: string;
+  errorFallbackText: string;
+}
+
+function AppSuspense({ children, errorKey, errorFallbackText }: AppSuspenseProps) {
+  const { t } = useTranslation();
+
+  return (
+    <SuspenseWithBoundary
+      fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
+      errorFallback={<div className="text-center p-4">{t(errorKey, errorFallbackText)}</div>}
+    >
+      {children}
+    </SuspenseWithBoundary>
+  );
+}
+
 // Helper component for MarqueeSlider with Suspense and ErrorBoundary
 function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
   const { t } = useTranslation();
@@ -129,12 +148,9 @@ function App() {
             <SectionHeading id="next-festival-heading" titleKey="nextFestival.title" fallbackTitle="Next Festival" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <SuspenseWithBoundary
-                  fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
-                  errorFallback={<div className="text-center p-4">{t("error.countdown", "Error loading countdown")}</div>}
-                >
+                <AppSuspense errorKey="error.countdown" errorFallbackText="Error loading countdown">
                   <Countdown targetDate={festivalDate} />
-                </SuspenseWithBoundary>
+                </AppSuspense>
                 <p className="mb-4" style={{ position: 'relative', zIndex: 50 }}>
                   {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
                 </p>
@@ -151,12 +167,9 @@ function App() {
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
-                  <SuspenseWithBoundary
-                    fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
-                    errorFallback={<div className="text-center p-4">{t("error.schedule", "Error loading schedule")}</div>}
-                  >
+                  <AppSuspense errorKey="error.schedule" errorFallbackText="Error loading schedule">
                     <Schedule />
-                  </SuspenseWithBoundary>
+                  </AppSuspense>
                 </div>
               </div>
             </div>
@@ -187,12 +200,9 @@ function App() {
             <SectionHeading id="faq-heading" titleKey="faq.title" fallbackTitle="Frequently Asked Questions" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <SuspenseWithBoundary
-                  fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
-                  errorFallback={<div className="text-center p-4">{t("error.faq", "Error loading FAQ")}</div>}
-                >
+                <AppSuspense errorKey="error.faq" errorFallbackText="Error loading FAQ">
                   <FAQ keys={faqKeys} />
-                </SuspenseWithBoundary>
+                </AppSuspense>
               </div>
             </div>
           </div>
@@ -251,12 +261,9 @@ function App() {
             {/* Removed redundant <p> tag */}
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <SuspenseWithBoundary
-                  fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
-                  errorFallback={<div className="text-center p-4">{t("error.contact", "Error loading contact form")}</div>}
-                >
+                <AppSuspense errorKey="error.contact" errorFallbackText="Error loading contact form">
                   <ContactForm />
-                </SuspenseWithBoundary>
+                </AppSuspense>
               </div>
             </div>
           </div>
