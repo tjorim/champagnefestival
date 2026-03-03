@@ -13,14 +13,10 @@ interface SuspenseWithBoundaryProps {
  * from crashing the whole page.
  *
  * @param fallback - Content shown while the lazy component is loading
- * @param errorFallback - Content shown if the component throws an error (omit for decorative components)
+ * @param errorFallback - Content shown if the component throws an error (pass null for decorative components)
  * @param children - The lazy-loaded component(s) to wrap
  */
 function SuspenseWithBoundary({ fallback, errorFallback, children }: SuspenseWithBoundaryProps) {
-  if (errorFallback === undefined) {
-    throw new Error('SuspenseWithBoundary requires an explicit errorFallback prop. Pass null to opt out of rendering an error fallback.');
-  }
-
   return (
     <ErrorBoundary fallback={errorFallback != null ? <>{errorFallback}</> : <></>}>
       <Suspense fallback={fallback}>
