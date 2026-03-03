@@ -1,6 +1,5 @@
 // React and libraries
-import React, { lazy, Suspense } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
+import React, { lazy } from 'react';
 import { useTranslation } from "react-i18next";
 import ReactDOM from 'react-dom/client';
 
@@ -19,6 +18,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import SectionHeading from "./components/SectionHeading"; // Added import
+import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
 
 // Components - Lazy loaded
 const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
@@ -38,7 +38,7 @@ import { faqKeys } from "./config/faq";
 import { featureItems } from "./config/features";
 import { festivalDate } from "./config/dates";
 
-// Helper component for MarqueeSlider with Suspense
+// Helper component for MarqueeSlider with Suspense and ErrorBoundary
 function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
   const { t } = useTranslation();
 
@@ -47,10 +47,17 @@ function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" |
     ? t("loading.producers", "Loading producers...")
     : t("loading.sponsors", "Loading sponsors...");
 
+  const errorText = itemsType === "producers"
+    ? t("error.producers", "Error loading producers")
+    : t("error.sponsors", "Error loading sponsors");
+
   return (
-    <Suspense fallback={<div className="carousel-loading">{loadingText}</div>}>
+    <SuspenseWithBoundary
+      fallback={<div className="carousel-loading">{loadingText}</div>}
+      errorFallback={<div className="carousel-error">{errorText}</div>}
+    >
       <MarqueeSlider itemsType={itemsType} items={items} />
-    </Suspense>
+    </SuspenseWithBoundary>
   );
 }
 
@@ -70,9 +77,12 @@ function App() {
       </a>
 
       {/* Animated background */}
-      <Suspense fallback={<div className="bubble-background-placeholder" aria-label={t("loading.background", "Loading background...")} />}>
+      <SuspenseWithBoundary
+        fallback={<div className="bubble-background-placeholder" aria-label={t("loading.background", "Loading background...")} />}
+        errorFallback={null}
+      >
         <BubbleBackground />
-      </Suspense>
+      </SuspenseWithBoundary>
 
       {/* Header & Navigation */}
       <Header />
@@ -119,9 +129,12 @@ function App() {
             <SectionHeading id="next-festival-heading" titleKey="nextFestival.title" fallbackTitle="Next Festival" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                <SuspenseWithBoundary
+                  fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
+                  errorFallback={<div className="text-center p-4">{t("error.countdown", "Error loading countdown")}</div>}
+                >
                   <Countdown targetDate={festivalDate} />
-                </Suspense>
+                </SuspenseWithBoundary>
                 <p className="mb-4" style={{ position: 'relative', zIndex: 50 }}>
                   {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
                 </p>
@@ -138,9 +151,12 @@ function App() {
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
-                  <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                  <SuspenseWithBoundary
+                    fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
+                    errorFallback={<div className="text-center p-4">{t("error.schedule", "Error loading schedule")}</div>}
+                  >
                     <Schedule />
-                  </Suspense>
+                  </SuspenseWithBoundary>
                 </div>
               </div>
             </div>
@@ -171,9 +187,12 @@ function App() {
             <SectionHeading id="faq-heading" titleKey="faq.title" fallbackTitle="Frequently Asked Questions" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                <SuspenseWithBoundary
+                  fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
+                  errorFallback={<div className="text-center p-4">{t("error.faq", "Error loading FAQ")}</div>}
+                >
                   <FAQ keys={faqKeys} />
-                </Suspense>
+                </SuspenseWithBoundary>
               </div>
             </div>
           </div>
@@ -186,16 +205,17 @@ function App() {
             <SectionHeading id="map-heading" titleKey="location.title" fallbackTitle="Event Location" />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <ErrorBoundary fallback={<div className="map-error">{t("error", "Error loading map")}</div>}>
-                  <Suspense fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
+                <SuspenseWithBoundary
+                  fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
                     <div className="text-center">
                       <Spinner animation="border" variant="primary" />
                       <p className="mt-2">{t("loading", "Loading map...")}</p>
                     </div>
-                  </div>}>
-                    <MapComponent />
-                  </Suspense>
-                </ErrorBoundary>
+                  </div>}
+                  errorFallback={<div className="map-error">{t("error", "Error loading map")}</div>}
+                >
+                  <MapComponent />
+                </SuspenseWithBoundary>
               </div>
             </div>
           </div>
@@ -231,9 +251,12 @@ function App() {
             {/* Removed redundant <p> tag */}
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <Suspense fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}>
+                <SuspenseWithBoundary
+                  fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
+                  errorFallback={<div className="text-center p-4">{t("error.contact", "Error loading contact form")}</div>}
+                >
                   <ContactForm />
-                </Suspense>
+                </SuspenseWithBoundary>
               </div>
             </div>
           </div>
