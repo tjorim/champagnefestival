@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { SCROLL_THRESHOLD_PX, SCROLL_THROTTLE_MS, ACTIVE_SECTION_CLEANUP_DELAY_MS } from '../config/constants';
 
 /**
  * Custom hook to handle hash-based navigation and section tracking
@@ -51,7 +52,7 @@ export function useScrollNavigation() {
           // Clean up observer after a delay (when content should be loaded)
           setTimeout(() => {
             resizeObserver.disconnect();
-          }, 2000);
+          }, ACTIVE_SECTION_CLEANUP_DELAY_MS);
         }
       }
     };
@@ -65,7 +66,7 @@ export function useScrollNavigation() {
       if (!hasScrolledToInitialHash.current) return;
       
       // Debounce for performance
-      if (window.scrollY > 100) { // Only update when scrolled past the top
+      if (window.scrollY > SCROLL_THRESHOLD_PX) { // Only update when scrolled past the top
         const sections = document.querySelectorAll('section[id]');
 
         // Find the section closest to the top of the viewport
@@ -104,7 +105,7 @@ export function useScrollNavigation() {
         timeout = window.setTimeout(() => {
           handleScroll();
           timeout = null;
-        }, 100);
+        }, SCROLL_THROTTLE_MS);
       }
     };
 

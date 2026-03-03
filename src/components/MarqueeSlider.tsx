@@ -3,6 +3,7 @@ import React from "react";
 import { Swiper, SwiperSlide } from 'swiper/react';
 // Import required Swiper modules
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
+import { BREAKPOINTS, CAROUSEL_SPEED_MS, CAROUSEL_AUTOPLAY_DELAY_MS } from "../config/constants";
 
 // Import Swiper styles
 import 'swiper/css';
@@ -88,9 +89,9 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
                 slidesPerView={4}
                 loop={true}
                 centeredSlides={true}
-                speed={2000}
+                speed={CAROUSEL_SPEED_MS}
                 autoplay={{
-                    delay: 3000,
+                    delay: CAROUSEL_AUTOPLAY_DELAY_MS,
                     pauseOnMouseEnter: true,
                     disableOnInteraction: false
                 }}
@@ -101,17 +102,17 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
                 }}
                 breakpoints={{
                     // Mobile - 2 items
-                    320: {
+                    [BREAKPOINTS.xs]: {
                         slidesPerView: 2,
                         spaceBetween: 8
                     },
                     // Tablet - 3 items
-                    768: {
+                    [BREAKPOINTS.md]: {
                         slidesPerView: 3,
                         spaceBetween: 12
                     },
                     // Desktop - 4 items
-                    1024: {
+                    [BREAKPOINTS.lg]: {
                         slidesPerView: 4,
                         spaceBetween: 16
                     }

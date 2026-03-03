@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import Bubble from "./Bubble";
+import { BREAKPOINTS, RESIZE_DEBOUNCE_MS } from "../config/constants";
 
 /**
  * Configuration for performance optimization
@@ -85,12 +86,12 @@ const BubbleBackground: React.FC = () => {
                 : PERFORMANCE_CONFIG.HIGH_PERFORMANCE;
 
             // Fewer bubbles on small screens
-            if (window.innerWidth < 768) {
+            if (window.innerWidth < BREAKPOINTS.md) {
                 setBubbleCount(config.mobileBubbles);
             } else {
                 setBubbleCount(config.maxBubbles);
             }
-        }, 200);
+        }, RESIZE_DEBOUNCE_MS);
     }, [isLowPerformanceDevice]);
 
     // Set up resize listener and initial mounted state
