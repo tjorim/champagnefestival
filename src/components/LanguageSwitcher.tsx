@@ -22,7 +22,7 @@ const LanguageSwitcher = () => {
     // Find current language details
     const currentLanguage = languages.find(lang =>
         lang.code === currentLang || currentLang.startsWith(lang.code + '-')
-    ) || languages[0];
+    ) ?? { code: 'nl', label: 'Dutch', flag: '🇳🇱', nativeName: 'Nederlands' };
 
     // Handle language change
     const changeLanguage = (langCode: string) => {

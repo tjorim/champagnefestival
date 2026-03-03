@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { Dictionary } from './types/i18n';
+import type { Dictionary } from './types/i18n';
 
 // Import translations
 import enTranslation from "./translations/en.json";
@@ -46,7 +46,7 @@ const normalizedLanguageDetector: import('i18next').LanguageDetectorModule = {
             return defaultLanguage;
         }
         // Extract the base language code
-        const baseLang = browserLang.split('-')[0].toLowerCase();
+        const baseLang = (browserLang.split('-')[0] ?? '').toLowerCase();
         // Verify we have a non-empty string after normalization
         if (!baseLang) {
             return defaultLanguage;
