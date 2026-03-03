@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { UseTranslationResponse } from 'react-i18next';
+import type { UseTranslationResponse } from 'react-i18next';
 
 /**
  * Custom hook to handle language settings and HTML attributes
@@ -17,7 +17,7 @@ export function useLanguage(
 ) {
   useEffect(() => {
     // Get base language code
-    const baseLanguage = i18n.language.split('-')[0];
+    const baseLanguage = i18n.language.split('-')[0] ?? defaultLanguage;
 
     // Set HTML lang attribute for SEO
     document.documentElement.lang = baseLanguage;

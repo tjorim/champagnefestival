@@ -70,7 +70,7 @@ export const festivalDays = [
   activeWeekend.friday,
   activeWeekend.saturday,
   activeWeekend.sunday
-];
+] as const;
 
 // Month names for different languages
 const MONTH_NAMES = {

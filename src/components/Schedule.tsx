@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Tab, Nav, Card, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { festivalDays, scheduleEvents, ScheduleEvent } from '../config/schedule';
+import { festivalDays, scheduleEvents } from '../config/schedule';
+import type { ScheduleEvent } from '../config/schedule';
 
 /**
  * Schedule component displays the festival schedule with tabs for each festival day 
@@ -15,7 +16,7 @@ import { festivalDays, scheduleEvents, ScheduleEvent } from '../config/schedule'
  */
 const Schedule: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const [activeDay, setActiveDay] = useState(festivalDays[0].id);
+  const [activeDay, setActiveDay] = useState(festivalDays[0]?.id ?? 1);
 
   // Get events for the active day and sort them by start time
   const sortedEvents = useMemo(() => {
