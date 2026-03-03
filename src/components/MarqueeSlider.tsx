@@ -77,7 +77,7 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({
     const carouselItems = displayItems.length === 0 ? [] : 
         Array.from(
             { length: Math.ceil(minSlides / displayItems.length) * displayItems.length },
-            (_, index) => displayItems[index % displayItems.length]
+            (_, index): CarouselItem => displayItems[index % displayItems.length] ?? displayItems[0]!
         );
 
     return (

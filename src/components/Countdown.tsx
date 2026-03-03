@@ -26,22 +26,24 @@ interface TimeLeft {
  * Time units in milliseconds for conversion
  * Note: Month is calculated using date arithmetic, not a fixed value
  */
-enum TimeUnits {
-    Day = 1000 * 60 * 60 * 24,
-    Hour = 1000 * 60 * 60,
-    Minute = 1000 * 60,
-    Second = 1000
-}
+const TIME_UNITS = {
+    day: 1000 * 60 * 60 * 24,
+    hour: 1000 * 60 * 60,
+    minute: 1000 * 60,
+    second: 1000
+} as const;
 
 /**
  * Status of the festival countdown
  */
-enum CountdownStatus {
-    UPCOMING = 'upcoming',  // Festival is in the future
-    CURRENT = 'current',    // Festival is happening now
-    CONCLUDED = 'concluded', // Festival just ended (within grace period)
-    HIDDEN = 'hidden'       // Festival ended long ago, don't show anything
-}
+const COUNTDOWN_STATUS = {
+    upcoming: 'upcoming',  // Festival is in the future
+    current: 'current',    // Festival is happening now
+    concluded: 'concluded', // Festival just ended (within grace period)
+    hidden: 'hidden'       // Festival ended long ago, don't show anything
+} as const;
+
+type CountdownStatus = (typeof COUNTDOWN_STATUS)[keyof typeof COUNTDOWN_STATUS];
 
 /**
  * Countdown component that displays time remaining until a target date
@@ -56,7 +58,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     const { t, i18n } = useTranslation();
     const [mounted, setMounted] = useState(false);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
-    const [status, setStatus] = useState<CountdownStatus>(CountdownStatus.UPCOMING);
+    const [status, setStatus] = useState<CountdownStatus>(COUNTDOWN_STATUS.upcoming);
 
     // Convert string date to Date object if needed
     // Wrapped in useMemo to avoid dependency changes on every render
@@ -140,10 +142,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
                 }
                 
                 const remainingMs = targetDate.getTime() - tempDate.getTime();
-                const days = Math.floor(remainingMs / TimeUnits.Day);
-                const hours = Math.floor((remainingMs % TimeUnits.Day) / TimeUnits.Hour);
-                const minutes = Math.floor((remainingMs % TimeUnits.Hour) / TimeUnits.Minute);
-                const seconds = Math.floor((remainingMs % TimeUnits.Minute) / TimeUnits.Second);
+                const days = Math.floor(remainingMs / TIME_UNITS.day);
+                const hours = Math.floor((remainingMs % TIME_UNITS.day) / TIME_UNITS.hour);
+                const minutes = Math.floor((remainingMs % TIME_UNITS.hour) / TIME_UNITS.minute);
+                const seconds = Math.floor((remainingMs % TIME_UNITS.minute) / TIME_UNITS.second);
 
                 // Always show exactly 3 boxes for consistent layout
                 const result: TimeLeft = {};
@@ -177,21 +179,21 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
             festivalEnd.setHours(23, 59, 59);
 
             if (now < festivalStart) {
-                return CountdownStatus.UPCOMING;
+                return COUNTDOWN_STATUS.upcoming;
             }
 
             if (now >= festivalStart && now <= festivalEnd) {
-                return CountdownStatus.CURRENT;
+                return COUNTDOWN_STATUS.current;
             }
 
             const hideDate = new Date(festivalEnd);
             hideDate.setDate(hideDate.getDate() + autoHideAfterDays);
 
             if (now <= hideDate) {
-                return CountdownStatus.CONCLUDED;
+                return COUNTDOWN_STATUS.concluded;
             }
 
-            return CountdownStatus.HIDDEN;
+            return COUNTDOWN_STATUS.hidden;
         };
 
         // Initial calculation and status determination
@@ -230,7 +232,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     ));
 
     // Don't render anything if the status is HIDDEN
-    if (status === CountdownStatus.HIDDEN) {
+    if (status === COUNTDOWN_STATUS.hidden) {
         return null;
     }
 
@@ -241,12 +243,12 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         >
             {!mounted ? (
                 <span className="countdown-loading">{t('countdown.loading', 'Loading countdown...')}</span>
-            ) : status === CountdownStatus.CONCLUDED ? (
+            ) : status === COUNTDOWN_STATUS.concluded ? (
                 // Festival just concluded
                 <span className="countdown-concluded">
                     {t('countdown.concluded', 'Festival has concluded. See you next time!')}
                 </span>
-            ) : status === CountdownStatus.CURRENT ? (
+            ) : status === COUNTDOWN_STATUS.current ? (
                 // Festival is happening now
                 <span className="countdown-current">
                     {t('countdown.happening', 'The festival is happening now!')}
