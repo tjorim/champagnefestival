@@ -1,41 +1,36 @@
-// React and libraries
 import React, { lazy } from 'react';
-import { m } from './paraglide/messages';
 import ReactDOM from 'react-dom/client';
 
-// Custom hooks
-import { useScrollNavigation } from './hooks/useScrollNavigation';
-import { useLanguage } from './hooks/useLanguage';
-import { useServiceWorker } from './hooks/useServiceWorker';
-
-// UI Libraries
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS directly
-import Spinner from "react-bootstrap/Spinner";
+import 'leaflet/dist/leaflet.css';
+import Spinner from 'react-bootstrap/Spinner';
 
-// Components - Eagerly loaded (critical path components)
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import SectionHeading from "./components/SectionHeading"; // Added import
-import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
+import Footer from './components/Footer';
+import Header from './components/Header';
+import SectionHeading from './components/SectionHeading';
+import SuspenseWithBoundary from './components/SuspenseWithBoundary';
+
+import { useLanguage } from './hooks/useLanguage';
+import { useScrollNavigation } from './hooks/useScrollNavigation';
+import { useServiceWorker } from './hooks/useServiceWorker';
+import { m } from './paraglide/messages';
+import { festivalDate } from './config/dates';
+import { featureItems } from './config/features';
+import { faqIds } from './config/faq';
+import { producerItems, sponsorItems } from './config/marqueeSlider';
+import './index.css';
 
 // Components - Lazy loaded
-const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
+const BubbleBackground = lazy(() => import('./components/BubbleBackground'));
 // Important visible components with deferred loading
-const Countdown = lazy(() => import("./components/Countdown"));
-const FAQ = lazy(() => import("./components/FAQ"));
-const ContactForm = lazy(() => import("./components/ContactForm"));
-const Schedule = lazy(() => import("./components/Schedule"));
+const Countdown = lazy(() => import('./components/Countdown'));
+const FAQ = lazy(() => import('./components/FAQ'));
+const ContactForm = lazy(() => import('./components/ContactForm'));
+const Schedule = lazy(() => import('./components/Schedule'));
 // Below-the-fold components
-const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
-const MapComponent = lazy(() => import("./components/MapComponent"));
-
-import './index.css';
-import { producerItems, sponsorItems } from "./config/marqueeSlider";
-import { faqIds } from "./config/faq";
-import { featureItems } from "./config/features";
-import { festivalDate } from "./config/dates";
+const MarqueeSlider = lazy(() => import('./components/MarqueeSlider'));
+const MapComponent = lazy(() => import('./components/MapComponent'));
 
 interface AppSuspenseProps {
   children: React.ReactNode;
