@@ -1,9 +1,17 @@
 import reactPlugin from '@vitejs/plugin-react';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [reactPlugin() as ReturnType<typeof reactPlugin>],
+  plugins: [
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/paraglide',
+      strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
+    }),
+    reactPlugin() as ReturnType<typeof reactPlugin>,
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

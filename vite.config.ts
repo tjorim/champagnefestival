@@ -6,12 +6,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: '/champagnefestival/',
   plugins: [
-    reactPlugin(),
     paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/paraglide',
       strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
     }),
+    reactPlugin(),
   ],
   css: {
     transformer: 'lightningcss',
