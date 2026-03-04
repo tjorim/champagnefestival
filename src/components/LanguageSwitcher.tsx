@@ -5,13 +5,12 @@ import { Dropdown, Button } from "react-bootstrap";
 
 const LanguageSwitcher = () => {
     const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
+    const [currentLang, setCurrentLang] = useState(getLocale());
 
     // Prevent hydration issues by not rendering on first mount
     useEffect(() => {
         setPreventHydrationIssue(true);
     }, []);
-
-    const currentLang = getLocale();
 
     // Language definitions
     const languages = [
@@ -28,6 +27,7 @@ const LanguageSwitcher = () => {
     const changeLanguage = (langCode: string) => {
         if (isLocale(langCode)) {
             setLocale(langCode);
+            setCurrentLang(langCode);
         }
     };
 

@@ -2,6 +2,13 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import Footer from '../components/Footer';
 
+vi.mock('../paraglide/messages', () => ({
+  m: {
+    festival_name: () => 'Champagne Festival',
+    footer_rights: () => 'All rights reserved.',
+  },
+}));
+
 // Mock the PrivacyPolicy component since we're only testing the Footer
 vi.mock('../components/PrivacyPolicy', () => ({
   default: function MockPrivacyPolicy() {
@@ -17,9 +24,9 @@ describe('Footer component', () => {
 
     // Check that the copyright text includes the current year
     const currentYear = new Date().getFullYear().toString();
-    expect(screen.getByText(/Champagne Festival/)).toBeInTheDocument();
-    expect(screen.getByText(/All rights reserved./)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(currentYear))).toBeInTheDocument();
+    const footer = screen.getByRole('contentinfo');
+
+    expect(footer).toHaveTextContent(`© ${currentYear} Champagne Festival. All rights reserved.`);
   });
 
   it('renders privacy policy button', () => {

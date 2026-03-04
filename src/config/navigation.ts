@@ -1,6 +1,11 @@
 import { m } from '../paraglide/messages';
 
-export const mainNavLinks = [
+export interface NavLink {
+  getLabel: () => string;
+  href: string;
+}
+
+export const mainNavLinks: NavLink[] = [
   {
     getLabel: m.what_we_do_title,
     href: "#what-we-do",

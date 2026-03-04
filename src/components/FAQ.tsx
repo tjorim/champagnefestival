@@ -1,6 +1,7 @@
 import React from "react";
-import { m } from "../paraglide/messages";
 import Accordion from "react-bootstrap/Accordion";
+
+import { m } from "../paraglide/messages";
 import type { FaqId } from "../config/faq";
 
 /**

@@ -32,19 +32,11 @@ const generateGoogleMapsUrl = (
 };
 
 // Fix for default markers not showing in Vite/Webpack builds
-// Override the _getIconUrl method to provide proper icon URLs
-const DefaultIcon = L.Icon.Default.prototype as L.Icon.Default & { 
-    _getIconUrl?: (name: string) => string; 
-};
-DefaultIcon._getIconUrl = function (name: string) {
-    const iconUrls: Record<string, string> = {
-        'icon': markerIcon,
-        'icon-2x': markerIcon2x,
-        'shadow': markerShadow
-    };
-    
-    return iconUrls[name] || '';
-};
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
+});
 
 interface MapComponentProps {
     address?: string;

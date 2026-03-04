@@ -1,18 +1,16 @@
 import React from 'react';
 import { m } from '../paraglide/messages';
+import { getLocale } from '../paraglide/runtime';
 import { festivalYear, festivalDate, festivalEndDate } from '../config/dates';
 import { contactConfig } from '../config/contact';
 import { baseUrl } from '../config/site';
 
-interface EventStructuredDataProps {
-  locale: string;
-}
 
 /**
  * Component that renders JSON-LD structured data for an event
  * Uses Paraglide JS for translations and our configuration files
  */
-const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => {
+const EventStructuredData: React.FC = () => {
   const festivalName = m.festival_name();
 
   const venueAddress = contactConfig.location.address;
@@ -51,7 +49,7 @@ const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => 
       'availability': 'https://schema.org/InStock',
       'priceCurrency': 'EUR'
     },
-    'inLanguage': locale,
+    'inLanguage': getLocale(),
     'organizer': {
       '@type': 'Organization',
       'name': festivalName,
