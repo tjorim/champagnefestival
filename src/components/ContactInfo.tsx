@@ -1,35 +1,32 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { m } from '../paraglide/messages';
 import { contactConfig } from '../config/contact';
 
 /**
  * Component to display contact information from configuration
- * Uses react-i18next for translations and contactConfig for data
  */
 const ContactInfo: React.FC = () => {
-  const { t } = useTranslation();
-
   return (
     <div className="contact-info">
-      <p className="mb-3">{t('contact.alternativeContact')}</p>
+      <p className="mb-3">{m.contact_alternative_contact()}</p>
 
       <div className="mb-2">
-        <strong>{t('contact.emailLabel')}: </strong>
+        <strong>{m.contact_email_label()}</strong>{" "}
         <a
           href={`mailto:${contactConfig.emails.info}`}
           className="text-decoration-none"
-          aria-label={t('contact.emailLabel')}
+          aria-label={m.contact_email_label()}
         >
           {contactConfig.emails.info}
         </a>
       </div>
 
       <div className="mb-2">
-        <strong>{t('contact.phoneLabel')}: </strong>
+        <strong>{m.contact_phone_label()}</strong>{" "}
         <a
           href={`tel:${contactConfig.phones.main.replace(/\s/g, '')}`}
           className="text-decoration-none"
-          aria-label={t('contact.phoneLabel')}
+          aria-label={m.contact_phone_label()}
         >
           {contactConfig.phones.main}
         </a>

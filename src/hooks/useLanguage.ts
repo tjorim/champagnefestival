@@ -1,45 +1,14 @@
 import { useEffect } from 'react';
-import type { UseTranslationResponse } from 'react-i18next';
+import { getLocale } from '../paraglide/runtime';
 
 /**
- * Custom hook to handle language settings and HTML attributes
- * Features:
- * - Updates HTML lang attribute dynamically based on current language
- * - Manages URL parameters for language persistence
- * - Handles default language (Dutch) without URL parameters
- * 
- * @param i18n The i18n instance from useTranslation
- * @param defaultLanguage The default language code (defaults to 'nl')
+ * Custom hook to handle language settings and HTML attributes.
+ * Updates the HTML lang attribute based on the current Paraglide locale.
  */
-export function useLanguage(
-  i18n: UseTranslationResponse<string, string>['i18n'],
-  defaultLanguage: string = 'nl'
-) {
+export function useLanguage() {
   useEffect(() => {
-    // Get base language code
-    const baseLanguage = i18n.language.split('-')[0] ?? defaultLanguage;
-
-    // Set HTML lang attribute for SEO
-    document.documentElement.lang = baseLanguage;
-
-    // Update URL with language parameter without page reload
-    // Check if we're in a browser environment
-    if (typeof window !== 'undefined' && window.location) {
-      try {
-        const url = new URL(window.location.href);
-        const currentLng = url.searchParams.get('lng');
-
-        // Always add language parameter when different from current URL
-        if (baseLanguage !== currentLng) {
-          url.searchParams.set('lng', baseLanguage);
-          window.history.replaceState({}, '', url.toString());
-        }
-      } catch (error) {
-        console.error('Error updating language in URL:', error);
-      }
-    }
-    // No cleanup function needed for this effect as it only manipulates
-    // the DOM and browser history state directly without setting up
-    // subscriptions or timers.
-  }, [i18n.language, defaultLanguage]);
+    // Language changes reload the page (Paraglide default), so this only
+    // needs to run once on mount to set the initial locale.
+    document.documentElement.lang = getLocale();
+  }, []);
 }

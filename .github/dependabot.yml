@@ -43,9 +43,7 @@ updates:
           - "oxfmt"
       i18n:
         patterns:
-          - "i18next"
-          - "i18next-*"
-          - "react-i18next"
+          - "@inlang/*"
       maps:
         patterns:
           - "leaflet"

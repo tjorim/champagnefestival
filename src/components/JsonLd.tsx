@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { m } from '../paraglide/messages';
 import { festivalYear, festivalDate, festivalEndDate } from '../config/dates';
 import { contactConfig } from '../config/contact';
 import { baseUrl } from '../config/site';
@@ -10,11 +10,10 @@ interface EventStructuredDataProps {
 
 /**
  * Component that renders JSON-LD structured data for an event
- * Uses react-i18next for translations and our configuration files
+ * Uses Paraglide JS for translations and our configuration files
  */
 const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => {
-  const { t } = useTranslation();
-  const festivalName = t('festivalName', { defaultValue: 'Champagne Festival' });
+  const festivalName = m.festival_name();
 
   const venueAddress = contactConfig.location.address;
   const venueName = contactConfig.location.venueName;
@@ -45,9 +44,7 @@ const EventStructuredData: React.FC<EventStructuredDataProps> = ({ locale }) => 
       }
     },
     'image': [`${baseUrl}/images/og-image.jpg`],
-    'description': t('welcome.subtitle', {
-      defaultValue: 'Annual champagne festival featuring tastings, masterclasses, and gourmet food pairings'
-    }),
+    'description': m.welcome_subtitle(),
     'offers': {
       '@type': 'Offer',
       'url': baseUrl,

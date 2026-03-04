@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { m } from "../paraglide/messages";
 import { festivalEndDate } from "../config/dates";
 
 /**
@@ -55,7 +55,7 @@ type CountdownStatus = (typeof COUNTDOWN_STATUS)[keyof typeof COUNTDOWN_STATUS];
  * - Client-side only rendering to prevent hydration mismatches
  */
 const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 30 }) => {
-    const { t, i18n } = useTranslation();
+
     const [mounted, setMounted] = useState(false);
     const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
     const [status, setStatus] = useState<CountdownStatus>(COUNTDOWN_STATUS.upcoming);
@@ -74,7 +74,6 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     }, [targetDate]);
 
     // Use refs to avoid dependency cycles
-    // Define a type for the translations ref
     interface TimeUnitsTranslations {
         months: string;
         days: string;
@@ -91,16 +90,16 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
         targetDateObjRef.current = targetDateObj;
     }, [targetDateObj]);
 
-    // Update translation ref once when it's available
+    // Set translation ref on mount
     useEffect(() => {
         tRef.current = {
-            months: t('countdown.months', 'Months'),
-            days: t('countdown.days', 'Days'),
-            hours: t('countdown.hours', 'Hours'),
-            minutes: t('countdown.minutes', 'Minutes'),
-            seconds: t('countdown.seconds', 'Seconds')
+            months: m.countdown_months(),
+            days: m.countdown_days(),
+            hours: m.countdown_hours(),
+            minutes: m.countdown_minutes(),
+            seconds: m.countdown_seconds(),
         };
-    }, [t, i18n.language]);
+    }, []);
     // Set component as mounted after initial render
     useEffect(() => {
         setMounted(true);
@@ -242,23 +241,23 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
             aria-live="polite" // Announce updates to screen readers
         >
             {!mounted ? (
-                <span className="countdown-loading">{t('countdown.loading', 'Loading countdown...')}</span>
+                <span className="countdown-loading">{m.countdown_loading()}</span>
             ) : status === COUNTDOWN_STATUS.concluded ? (
                 // Festival just concluded
                 <span className="countdown-concluded">
-                    {t('countdown.concluded', 'Festival has concluded. See you next time!')}
+                    {m.countdown_concluded()}
                 </span>
             ) : status === COUNTDOWN_STATUS.current ? (
                 // Festival is happening now
                 <span className="countdown-current">
-                    {t('countdown.happening', 'The festival is happening now!')}
+                    {m.countdown_happening()}
                 </span>
             ) : (
                 // Upcoming festival with countdown
                 timerComponents.length ? (
                     <div className="countdown-units">{timerComponents}</div>
                 ) : (
-                    <span className="countdown-complete">{t('countdown.started', 'The festival has started!')}</span>
+                    <span className="countdown-complete">{m.countdown_started()}</span>
                 )
             )}
         </div>

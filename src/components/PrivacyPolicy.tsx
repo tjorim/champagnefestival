@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
-import { useTranslation } from 'react-i18next';
+import { m } from '../paraglide/messages';
 import { privacyPolicyConfig } from '../config/privacyPolicy';
 
 /**
@@ -22,8 +22,6 @@ import { privacyPolicyConfig } from '../config/privacyPolicy';
  */
 function PrivacyPolicy() {
   const [show, setShow] = useState(false);
-  const { t } = useTranslation();
-
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
@@ -34,7 +32,7 @@ function PrivacyPolicy() {
         onClick={handleShow}
         className="text-white p-0 text-decoration-none footer-link"
       >
-        {t('footer.privacy', 'Privacy Policy')}
+        {m.footer_privacy()}
       </Button>
 
       <Modal
@@ -48,17 +46,17 @@ function PrivacyPolicy() {
     >
       <Modal.Header closeButton>
         <Modal.Title id="privacy-policy-title">
-          {t('privacy.title', 'Privacy Policy')}
+          {m.privacy_title()}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body className="modal-body">
         <p className="text-light mb-3">
-          {t(privacyPolicyConfig.lastUpdatedKey, privacyPolicyConfig.fallbackLastUpdated)}: {t(privacyPolicyConfig.lastUpdatedDateKey, privacyPolicyConfig.fallbackLastUpdatedDate)}
+          {privacyPolicyConfig.getLastUpdated()}: {privacyPolicyConfig.getLastUpdatedDate()}
         </p>
 
         <div className="mt-4">
           <p>
-            {t(privacyPolicyConfig.introKey, privacyPolicyConfig.fallbackIntro)}
+            {privacyPolicyConfig.getIntro()}
           </p>
 
           <hr className="my-4" />
@@ -66,10 +64,10 @@ function PrivacyPolicy() {
           {privacyPolicyConfig.sections.map((section, index) => (
             <div key={index} className="mb-4">
               <h3 className="h5 fw-bold mb-2 text-brand">
-                {t(section.titleKey, section.fallbackTitle)}
+                {section.getTitle()}
               </h3>
               <p className="text-light">
-                {t(section.contentKey, section.fallbackContent)}
+                {section.getContent()}
               </p>
             </div>
           ))}
@@ -81,7 +79,7 @@ function PrivacyPolicy() {
           variant="dark"
           className="bg-brand-gradient modal-close-btn"
         >
-          {t('close', 'Close')}
+          {m.close()}
         </Button>
       </Modal.Footer>
     </Modal>

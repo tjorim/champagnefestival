@@ -11,16 +11,6 @@ vi.mock('../components/PrivacyPolicy', () => ({
   }
 }));
 
-// Mock react-i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string) => {
-      // Return the fallback if provided, otherwise return the key
-      return fallback || key;
-    }
-  })
-}));
-
 describe('Footer component', () => {
   it('renders footer with copyright text', () => {
     render(<Footer />);

@@ -1,10 +1,18 @@
 import reactPlugin from '@vitejs/plugin-react';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: '/champagnefestival/',
-  plugins: [reactPlugin()],
+  plugins: [
+    reactPlugin(),
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/paraglide',
+      strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
+    }),
+  ],
   css: {
     transformer: 'lightningcss',
   },
@@ -34,9 +42,6 @@ export default defineConfig({
             }
             if (id.includes('react-bootstrap') || id.includes('bootstrap')) {
               return 'vendor-ui';
-            }
-            if (id.includes('i18next')) {
-              return 'vendor-i18n';
             }
             if (id.includes('leaflet')) {
               return 'vendor-maps';

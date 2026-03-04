@@ -1,30 +1,6 @@
 /**
- * FAQ configuration with simplified keys matching our Dictionary interface
+ * FAQ configuration — IDs for the five Q&A pairs.
+ * The corresponding messages are `faq_q{n}` / `faq_a{n}` in the Paraglide message catalogue.
  */
-export const faqKeys = [
-  {
-    id: 1,
-    questionKey: 'q1',
-    answerKey: 'a1'
-  },
-  {
-    id: 2,
-    questionKey: 'q2',
-    answerKey: 'a2'
-  },
-  {
-    id: 3,
-    questionKey: 'q3',
-    answerKey: 'a3'
-  },
-  {
-    id: 4,
-    questionKey: 'q4',
-    answerKey: 'a4'
-  },
-  {
-    id: 5,
-    questionKey: 'q5',
-    answerKey: 'a5'
-  }
-];
+export const faqIds = [1, 2, 3, 4, 5] as const;
+export type FaqId = (typeof faqIds)[number];
