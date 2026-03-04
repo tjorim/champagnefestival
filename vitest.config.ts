@@ -1,6 +1,6 @@
-import reactPlugin from '@vitejs/plugin-react';
+import { resolve } from 'node:path';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
-import { resolve } from 'path';
+import reactPlugin from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
