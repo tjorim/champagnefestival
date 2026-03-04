@@ -1,42 +1,28 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 import Accordion from "react-bootstrap/Accordion";
 
+import { m } from "../paraglide/messages";
+import type { FaqId } from "../config/faq";
+
 /**
- * FAQ component interface for keys prop
+ * Returns the translated question and answer for the given FAQ ID.
  */
-interface FAQProps {
-    // Array of keys that define which FAQ items to display
-    keys?: Array<{
-        id: number;
-        questionKey: string;
-        answerKey: string;
-    }>;
+function getFaqItem(id: FaqId): { question: string; answer: string } {
+    switch (id) {
+        case 1: return { question: m.faq_q1(), answer: m.faq_a1() };
+        case 2: return { question: m.faq_q2(), answer: m.faq_a2() };
+        case 3: return { question: m.faq_q3(), answer: m.faq_a3() };
+        case 4: return { question: m.faq_q4(), answer: m.faq_a4() };
+        case 5: return { question: m.faq_q5(), answer: m.faq_a5() };
+    }
 }
 
 /**
  * FAQ component that displays a list of frequently asked questions
- * with expandable/collapsible answers in an accessible accordion pattern
- * Using react-bootstrap accordion
- * 
- * The component uses type-safe translations and handles dynamic date updates
- * through the i18n configuration.
+ * with expandable/collapsible answers in an accessible accordion pattern.
  */
-const FAQ: React.FC<FAQProps> = ({ keys = [] }) => {
-    const { t } = useTranslation();
-
-    // Map the translation keys to their values with fallbacks for better safety
-    const faqItems = keys.map(item => ({
-        id: item.id,
-        question: t(`faq.${item.questionKey}`, {
-            defaultValue: `Question ${item.id}`,
-            ns: 'translation'
-        }),
-        answer: t(`faq.${item.answerKey}`, {
-            defaultValue: `Answer to question ${item.id}`,
-            ns: 'translation'
-        })
-    }));
+const FAQ: React.FC<{ ids?: readonly FaqId[] }> = ({ ids = [1, 2, 3, 4, 5] }) => {
+    const faqItems = ids.map(id => ({ id, ...getFaqItem(id) }));
 
     return (
         <Accordion className="rounded-lg shadow-lg">

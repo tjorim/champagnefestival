@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { getLocale, setLocale, isLocale } from '../paraglide/runtime';
+import { m } from '../paraglide/messages';
 import { Dropdown, Button } from "react-bootstrap";
 
 const LanguageSwitcher = () => {
-    const { i18n, t } = useTranslation();
-    const currentLang = i18n.language;
     const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
+    const [currentLang, setCurrentLang] = useState(getLocale());
 
     // Prevent hydration issues by not rendering on first mount
     useEffect(() => {
@@ -17,16 +17,18 @@ const LanguageSwitcher = () => {
         { code: 'en', label: 'English', flag: '🇬🇧', nativeName: 'English' },
         { code: 'nl', label: 'Dutch', flag: '🇳🇱', nativeName: 'Nederlands' },
         { code: 'fr', label: 'French', flag: '🇫🇷', nativeName: 'Français' },
-    ];
+    ] as const;
 
     // Find current language details
-    const currentLanguage = languages.find(lang =>
-        lang.code === currentLang || currentLang.startsWith(lang.code + '-')
-    ) ?? { code: 'nl', label: 'Dutch', flag: '🇳🇱', nativeName: 'Nederlands' };
+    const currentLanguage = languages.find(lang => lang.code === currentLang)
+        ?? { code: 'nl', label: 'Dutch', flag: '🇳🇱', nativeName: 'Nederlands' };
 
     // Handle language change
     const changeLanguage = (langCode: string) => {
-        i18n.changeLanguage(langCode);
+        if (isLocale(langCode)) {
+            setLocale(langCode);
+            setCurrentLang(langCode);
+        }
     };
 
     // Don't render anything during server-side rendering to prevent hydration issues
@@ -42,7 +44,7 @@ const LanguageSwitcher = () => {
                 size="sm"
                 className="text-secondary"
                 aria-label="Language selection"
-                title={t("language.select", "Select language")}
+                title={m.language_select()}
             >
                 <i className="bi bi-globe2"></i>
                 <span className="d-none d-sm-inline ms-2">{currentLanguage.code.toUpperCase()}</span>
@@ -58,21 +60,15 @@ const LanguageSwitcher = () => {
                         key={lang.code}
                         className={`d-flex align-items-center px-4 py-3 ${currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
                             }`}
-                        as="a"
-                        // Dutch is the default language (root path), other languages use query parameters
-                        href={lang.code === 'nl' ? '/' : `?lng=${lang.code}`}
-                        onClick={(e) => {
-                            // Prevent page reload if JavaScript is enabled
-                            e.preventDefault();
-                            changeLanguage(lang.code);
-                        }}
+                        as="button"
+                        onClick={() => changeLanguage(lang.code)}
                     >
                         <span className="me-3 fs-5">{lang.flag}</span>
                         <div>
                             <div className="fw-medium">{lang.label}</div>
                             <div className="small text-muted">{lang.nativeName}</div>
                         </div>
-                        {(currentLang === lang.code || currentLang.startsWith(lang.code + '-')) && (
+                        {currentLang === lang.code && (
                             <i className="bi bi-check ms-auto text-primary"></i>
                         )}
                     </Dropdown.Item>

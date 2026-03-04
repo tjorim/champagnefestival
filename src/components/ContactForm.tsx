@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { m } from "../paraglide/messages";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -23,7 +23,6 @@ interface FormData {
  * Contact form component with validation using react-bootstrap components
  */
 const ContactForm: React.FC = () => {
-    const { t } = useTranslation();
     
     const [form, setForm] = useState<FormData>(() => ({
         name: "",
@@ -62,10 +61,10 @@ const ContactForm: React.FC = () => {
         // Basic validation
         // Check if required fields are filled
         const newErrors: Partial<Record<keyof FormData, string | null>> = {};
-        if (!form.name) newErrors.name = t("contact.errors.nameRequired", "Name is required");
-        if (!form.email) newErrors.email = t("contact.errors.emailRequired", "Email is required");
-        else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = t("contact.errors.emailInvalid", "Please enter a valid email address");
-        if (!form.message) newErrors.message = t("contact.errors.messageRequired", "Message is required");
+        if (!form.name) newErrors.name = m.contact_errors_name_required();
+        if (!form.email) newErrors.email = m.contact_errors_email_required();
+        else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = m.contact_errors_email_invalid();
+        if (!form.message) newErrors.message = m.contact_errors_message_required();
 
         // Anti-spam check: if honeypot is filled, silently "succeed" without sending
         if (form.honeypot) {
@@ -115,13 +114,13 @@ const ContactForm: React.FC = () => {
             // Provide more specific error messages based on error type
             if (error instanceof TypeError && error.message.includes('fetch')) {
                 // Network connectivity issues
-                setGeneralError(t("contact.networkError", "Network error: Please check your internet connection and try again."));
+                setGeneralError(m.contact_network_error());
             } else if (error instanceof Error && error.message.includes('JSON')) {
                 // JSON parsing issues from server response
-                setGeneralError(t("contact.submissionError", "Server response error. Please try again later."));
+                setGeneralError(m.contact_submission_error());
             } else {
                 // General server or validation errors
-                setGeneralError(t("contact.submissionError", "Something went wrong. Please try again later."));
+                setGeneralError(m.contact_submission_error());
             }
         } finally {
             setIsSubmitting(false);
@@ -133,7 +132,7 @@ const ContactForm: React.FC = () => {
             <Card.Body className="p-3 p-md-4">
                 {isSubmitted ? (
                     <Alert variant="success">
-                        {t("contact.successMessage", "Thank you for your message! We'll get back to you soon.")}
+                        {m.contact_success_message()}
                     </Alert>
                 ) : (
                     <Form onSubmit={handleSubmit} className="my-3" name="contact-form" autoComplete="on">
@@ -159,7 +158,7 @@ const ContactForm: React.FC = () => {
 
                         <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="name">
-                                {t("contact.name", "Your Name")}
+                                {m.contact_name()}
                             </Form.Label>
                             <Form.Control
                                 id="name"
@@ -179,7 +178,7 @@ const ContactForm: React.FC = () => {
 
                         <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="email">
-                                {t("contact.email", "Your Email")}
+                                {m.contact_email()}
                             </Form.Label>
                             <Form.Control
                                 id="email"
@@ -200,7 +199,7 @@ const ContactForm: React.FC = () => {
 
                         <Form.Group className="mb-3 text-start">
                             <Form.Label htmlFor="message">
-                                {t("contact.message", "Your Message")}
+                                {m.contact_message()}
                             </Form.Label>
                             <Form.Control
                                 as="textarea"
@@ -208,7 +207,7 @@ const ContactForm: React.FC = () => {
                                 name="message"
                                 value={form.message}
                                 onChange={handleChange}
-                                placeholder={t("contact.placeholderMessage", "Type your message here...")}
+                                placeholder={m.contact_placeholder_message()}
                                 style={{ minHeight: "120px" }}
                                 disabled={isSubmitting}
                                 isInvalid={!!errors.message}
@@ -232,12 +231,12 @@ const ContactForm: React.FC = () => {
                             {isSubmitting ? (
                                 <span className="d-flex align-items-center justify-content-center">
                                     <Spinner animation="border" size="sm" className="me-2" />
-                                    {t("contact.submitting", "Sending...")}
+                                    {m.contact_submitting()}
                                 </span>
                             ) : (
                                 <span className="d-flex align-items-center justify-content-center">
                                     <i className="bi bi-send me-2"></i>
-                                    {t("contact.submit", "Send Message")}
+                                    {m.contact_submit()}
                                 </span>
                             )}
                         </Button>

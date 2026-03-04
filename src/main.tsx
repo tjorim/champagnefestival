@@ -1,56 +1,47 @@
-// React and libraries
 import React, { lazy } from 'react';
-import { useTranslation } from "react-i18next";
 import ReactDOM from 'react-dom/client';
 
-// Custom hooks
-import { useScrollNavigation } from './hooks/useScrollNavigation';
-import { useLanguage } from './hooks/useLanguage';
-import { useServiceWorker } from './hooks/useServiceWorker';
-
-// UI Libraries
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS directly
-import Spinner from "react-bootstrap/Spinner";
+import 'leaflet/dist/leaflet.css';
+import Spinner from 'react-bootstrap/Spinner';
 
-// Components - Eagerly loaded (critical path components)
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import SectionHeading from "./components/SectionHeading"; // Added import
-import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
+import Footer from './components/Footer';
+import Header from './components/Header';
+import SectionHeading from './components/SectionHeading';
+import SuspenseWithBoundary from './components/SuspenseWithBoundary';
+
+import { useLanguage } from './hooks/useLanguage';
+import { useScrollNavigation } from './hooks/useScrollNavigation';
+import { useServiceWorker } from './hooks/useServiceWorker';
+import { m } from './paraglide/messages';
+import { festivalDate } from './config/dates';
+import { featureItems } from './config/features';
+import { faqIds } from './config/faq';
+import { producerItems, sponsorItems } from './config/marqueeSlider';
+import './index.css';
 
 // Components - Lazy loaded
-const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
+const BubbleBackground = lazy(() => import('./components/BubbleBackground'));
 // Important visible components with deferred loading
-const Countdown = lazy(() => import("./components/Countdown"));
-const FAQ = lazy(() => import("./components/FAQ"));
-const ContactForm = lazy(() => import("./components/ContactForm"));
-const Schedule = lazy(() => import("./components/Schedule"));
+const Countdown = lazy(() => import('./components/Countdown'));
+const FAQ = lazy(() => import('./components/FAQ'));
+const ContactForm = lazy(() => import('./components/ContactForm'));
+const Schedule = lazy(() => import('./components/Schedule'));
 // Below-the-fold components
-const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
-const MapComponent = lazy(() => import("./components/MapComponent"));
-
-import './i18n'; // Import i18n configuration
-import './index.css';
-import { producerItems, sponsorItems } from "./config/marqueeSlider";
-import { faqKeys } from "./config/faq";
-import { featureItems } from "./config/features";
-import { festivalDate } from "./config/dates";
+const MarqueeSlider = lazy(() => import('./components/MarqueeSlider'));
+const MapComponent = lazy(() => import('./components/MapComponent'));
 
 interface AppSuspenseProps {
   children: React.ReactNode;
-  errorKey: string;
   errorFallbackText: string;
 }
 
-function AppSuspense({ children, errorKey, errorFallbackText }: AppSuspenseProps) {
-  const { t } = useTranslation();
-
+function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
   return (
     <SuspenseWithBoundary
       fallback={<div className="text-center p-4"><Spinner animation="border" variant="light" /></div>}
-      errorFallback={<div className="text-center p-4">{t(errorKey, errorFallbackText)}</div>}
+      errorFallback={<div className="text-center p-4">{errorFallbackText}</div>}
     >
       {children}
     </SuspenseWithBoundary>
@@ -59,16 +50,14 @@ function AppSuspense({ children, errorKey, errorFallbackText }: AppSuspenseProps
 
 // Helper component for MarqueeSlider with Suspense and ErrorBoundary
 function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" | "sponsors"; items: Array<{ id: number; name: string; image: string; }> }) {
-  const { t } = useTranslation();
-
   // Get appropriate loading text based on itemsType
   const loadingText = itemsType === "producers"
-    ? t("loading.producers", "Loading producers...")
-    : t("loading.sponsors", "Loading sponsors...");
+    ? m.loading_producers()
+    : m.loading_sponsors();
 
   const errorText = itemsType === "producers"
-    ? t("error.producers", "Error loading producers")
-    : t("error.sponsors", "Error loading sponsors");
+    ? m.error_loading_producers()
+    : m.error_loading_sponsors();
 
   return (
     <SuspenseWithBoundary
@@ -81,10 +70,8 @@ function SuspendedMarqueeSlider({ itemsType, items }: { itemsType: "producers" |
 }
 
 function App() {
-  const { t, i18n } = useTranslation();
-
   // Use custom hooks for language, navigation, and service worker
-  useLanguage(i18n, 'nl');
+  useLanguage();
   useScrollNavigation();
   useServiceWorker();
 
@@ -92,12 +79,12 @@ function App() {
     <div className="App">
       {/* Skip link for keyboard users */}
       <a href="#main-content" className="skip-link">
-        {t("accessibility.skipToContent", "Skip to main content")}
+        {m.accessibility_skip_to_content()}
       </a>
 
       {/* Animated background */}
       <SuspenseWithBoundary
-        fallback={<div className="bubble-background-placeholder" aria-label={t("loading.background", "Loading background...")} />}
+        fallback={<div className="bubble-background-placeholder" aria-label={m.loading_background()} />}
         errorFallback={null}
       >
         <BubbleBackground />
@@ -110,11 +97,11 @@ function App() {
         {/* Hero Section */}
         <section className="hero" id="welcome">
           <h1 className="brand-title">
-            {t("welcome.title", "Welcome to Champagne Festival")}
+            {m.welcome_title()}
           </h1>
-          <p className="hero-subtitle">{t("welcome.subtitle", "A celebration of fine champagne and community")}</p>
+          <p className="hero-subtitle">{m.welcome_subtitle()}</p>
           <a href="#next-festival" className="btn bg-brand-gradient text-white rounded-pill border-0 py-2 px-4 fw-bold">
-            {t("welcome.learnMore", "Learn More")}
+            {m.welcome_learn_more()}
             <i className="bi bi-arrow-down-circle ms-2"></i>
           </a>
         </section>
@@ -123,18 +110,18 @@ function App() {
         <section id="what-we-do" className="content-section">
           <div className="container text-center">
             {/* Replaced h2 with SectionHeading */}
-            <SectionHeading id="what-we-do-heading" titleKey="whatWeDo.title" fallbackTitle="What We Do" />
+            <SectionHeading id="what-we-do-heading" title={m.what_we_do_title()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <p>{t("whatWeDo.description", "Our Champagne Festival brings together passionate producers from the Champagne region, enthusiasts, and our local community for an unforgettable celebration of this magnificent beverage.")}</p>
+                <p>{m.what_we_do_description()}</p>
               </div>
             </div>
             {/* Features in full width to display side by side */}
             <div className="features">
               {featureItems.map((feature) => (
                 <div key={feature.id} className="feature">
-                  <h3>{t(feature.titleKey, feature.fallbackTitle)}</h3>
-                  <p>{t(feature.descKey, feature.fallbackDesc)}</p>
+                  <h3>{feature.getTitle()}</h3>
+                  <p>{feature.getDesc()}</p>
                 </div>
               ))}
             </div>
@@ -145,14 +132,14 @@ function App() {
         <section id="next-festival" className="content-section highlight-section">
           <div className="container text-center">
             {/* Replaced h2 with SectionHeading */}
-            <SectionHeading id="next-festival-heading" titleKey="nextFestival.title" fallbackTitle="Next Festival" />
+            <SectionHeading id="next-festival-heading" title={m.next_festival_title()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <AppSuspense errorKey="error.countdown" errorFallbackText="Error loading countdown">
+                <AppSuspense errorFallbackText={m.error_countdown()}>
                   <Countdown targetDate={festivalDate} />
                 </AppSuspense>
                 <p className="mb-4" style={{ position: 'relative', zIndex: 50 }}>
-                  {t("nextFestival.description", "Join us for our next festival where we'll feature over 20 champagne producers from around the world.")}
+                  {m.next_festival_description()}
                 </p>
               </div>
             </div>
@@ -163,11 +150,11 @@ function App() {
         <section id="schedule" className="content-section">
           <div className="container">
             {/* Replaced h2 with SectionHeading */}
-            <SectionHeading id="schedule-heading" titleKey="schedule.title" fallbackTitle="Schedule" />
+            <SectionHeading id="schedule-heading" title={m.schedule_title()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
-                  <AppSuspense errorKey="error.schedule" errorFallbackText="Error loading schedule">
+                  <AppSuspense errorFallbackText={m.error_schedule()}>
                     <Schedule />
                   </AppSuspense>
                 </div>
@@ -183,10 +170,7 @@ function App() {
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading
               id="producers-heading"
-              titleKey="producers.title"
-              fallbackTitle="Champagne Producers"
-              subtitleKey="producers.intro"
-              fallbackSubtitle="Explore our selection of premium champagne producers from the region:"
+              title={m.producers_title()}
             />
             {/* Removed redundant <p> tag */}
             <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
@@ -197,11 +181,11 @@ function App() {
         <section id="faq" className="content-section">
           <div className="container">
             {/* Replaced h2 with SectionHeading */}
-            <SectionHeading id="faq-heading" titleKey="faq.title" fallbackTitle="Frequently Asked Questions" />
+            <SectionHeading id="faq-heading" title={m.faq_title()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <AppSuspense errorKey="error.faq" errorFallbackText="Error loading FAQ">
-                  <FAQ keys={faqKeys} />
+                <AppSuspense errorFallbackText={m.error_faq()}>
+                  <FAQ ids={faqIds} />
                 </AppSuspense>
               </div>
             </div>
@@ -212,17 +196,17 @@ function App() {
         <section id="map" className="content-section">
           <div className="container">
             {/* Replaced h2 with SectionHeading */}
-            <SectionHeading id="map-heading" titleKey="location.title" fallbackTitle="Event Location" />
+            <SectionHeading id="map-heading" title={m.location_title()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <SuspenseWithBoundary
                   fallback={<div className="map-loading d-flex align-items-center justify-content-center py-5">
                     <div className="text-center">
                       <Spinner animation="border" variant="primary" />
-                      <p className="mt-2">{t("loading", "Loading map...")}</p>
+                      <p className="mt-2">{m.loading()}</p>
                     </div>
                   </div>}
-                  errorFallback={<div className="map-error">{t("error", "Error loading map")}</div>}
+                  errorFallback={<div className="map-error">{m.error_loading_map()}</div>}
                 >
                   <MapComponent />
                 </SuspenseWithBoundary>
@@ -237,10 +221,7 @@ function App() {
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading
               id="sponsors-heading"
-              titleKey="sponsors.title"
-              fallbackTitle="Sponsors"
-              subtitleKey="sponsors.intro"
-              fallbackSubtitle="Our event is made possible by the generous support of our sponsors:"
+              title={m.sponsors_title()}
             />
             {/* Removed redundant <p> tag */}
             <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
@@ -253,15 +234,13 @@ function App() {
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading
               id="contact-heading"
-              titleKey="contact.title"
-              fallbackTitle="Contact Us"
-              subtitleKey="contact.intro"
-              fallbackSubtitle="Have questions or want to become a sponsor? Reach out to us!"
+              title={m.contact_title()}
+              subtitle={m.contact_intro()}
             />
             {/* Removed redundant <p> tag */}
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <AppSuspense errorKey="error.contact" errorFallbackText="Error loading contact form">
+                <AppSuspense errorFallbackText={m.error_contact()}>
                   <ContactForm />
                 </AppSuspense>
               </div>

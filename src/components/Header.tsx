@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+import { m } from '../paraglide/messages';
 import LanguageSwitcher from './LanguageSwitcher';
 import Navbar from 'react-bootstrap/Navbar';
 import Container from 'react-bootstrap/Container';
@@ -8,8 +8,6 @@ interface HeaderProps {
 }
 
 const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
-    const { t } = useTranslation();
-
     return (
         <Navbar fixed="top" bg="dark" variant="dark" className="shadow">
             <Container className="d-flex justify-content-between">
@@ -23,7 +21,7 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
                         className="me-2"
                     />
                     <span className="gradient-text">
-                        {t("festivalName", "Champagne Festival")}
+                        {m.festival_name()}
                     </span>
                 </Navbar.Brand>
 
