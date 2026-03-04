@@ -19,7 +19,7 @@
 - **State Management**: Use React hooks (useState, useContext) for state
 - **Naming**: PascalCase for components, camelCase for variables/functions
 - **Types**: Use strict TypeScript typing, avoid `any`
-- **i18n**: Use translation keys with fallback values `t("key", "Fallback")`
+- **i18n**: Use Paraglide message functions — `import * as m from '../paraglide/messages.js'` then call `m.key_name()`
 - **CSS**: Use Bootstrap classes with consistent color/spacing patterns
 - **Layout**: Mobile-first responsive design with Bootstrap grid and utility classes
 - **Error Handling**: Use try/catch blocks with user-friendly messages
@@ -32,7 +32,7 @@
 - Navigation is handled by the custom `useScrollNavigation` hook for smooth scrolling and URL updates
 - Use navigation configuration from `src/config/navigation.ts` for consistent routing
 - Implement code splitting with React.lazy and Suspense
-- Use i18next for internationalization
+- Use Paraglide (`@inlang/paraglide-js`) for internationalization
 - Implement error boundaries for graceful error handling
 - Use React.memo for performance optimization when appropriate
 - Implement proper state management with React hooks

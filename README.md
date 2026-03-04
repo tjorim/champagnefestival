@@ -25,7 +25,7 @@ Open [http://localhost:5173](http://localhost:5173) with your browser to see the
 - `src/` - React application source code
   - `src/components/` - React components used throughout the application
   - `src/config/` - Configuration files for different aspects of the website
-  - `src/translations/` - Translation files for i18n
+  - `messages/` - Translation files for i18n (one JSON per locale)
   - `src/types/` - TypeScript type definitions
   - `src/tests/` - Test files for components and utilities
 - `public/` - Static assets like images
@@ -51,29 +51,30 @@ The project uses modern JavaScript features without extensive polyfills to maint
 
 - React - JavaScript library for building user interfaces
 - React Bootstrap - UI component library
-- i18next - Internationalization library for React applications
+- Paraglide (`@inlang/paraglide-js`) - Compile-time i18n library
 - TypeScript - Type-safe JavaScript
 
 ## Internationalization
 
-The project uses React with `i18next` for internationalization. The implementation approach:
+The project uses [Paraglide](https://inlang.com/m/gerre34r/library-inlang-paraglideJs) (`@inlang/paraglide-js`) for compile-time i18n. Translations are stored as flat JSON files in `messages/{locale}.json` (locales: `nl`, `en`, `fr`; base: `nl`).
 
-- Uses `i18next` and `react-i18next` for translations
-- Implements browser language detection with `i18next-browser-languagedetector`
-- Stores translations in JSON files in the `src/translations` directory
-- Uses the `useTranslation` hook to access translations in components
-
-When developing, use the `useTranslation` hook from `react-i18next` to access translations:
+When developing, import the generated message functions:
 
 ```tsx
-import { useTranslation } from 'react-i18next';
+import * as m from '../paraglide/messages.js';
 
 function MyComponent() {
-  const { t } = useTranslation();
-  
-  return <h1>{t('welcome.title', 'Welcome to Champagne Festival')}</h1>;
+  return <h1>{m.welcome_title()}</h1>;
 }
 ```
+
+To switch locale at runtime, use the runtime helpers:
+
+```tsx
+import { getLocale, setLocale } from '../paraglide/runtime.js';
+```
+
+To add or update translations, edit the files in `messages/` and run `npm run paraglide:compile`.
 
 ## Development Guidelines
 
@@ -166,8 +167,7 @@ import MapComponent from "../components/MapComponent";
 4. **Event Schedule**:
    - Update the schedule in `src/config/schedule.ts` for upcoming events
    - The schedule is structured with festival days and events with detailed timing
-   - For translations, update the event titles and descriptions in each language's dictionary file under `schedule.events`
-   - Each event has an ID that's used to match translations in the dictionaries
+   - For translations, update the event titles and descriptions in the locale files under `messages/{locale}.json`
 ## Deployment
 
 The project is configured for deployment on Cloudflare Pages or any other static site hosting provider.
