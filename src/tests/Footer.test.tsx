@@ -26,9 +26,7 @@ describe('Footer component', () => {
     const currentYear = new Date().getFullYear().toString();
     const footer = screen.getByRole('contentinfo');
 
-    expect(footer).toHaveTextContent('Champagne Festival');
-    expect(footer).toHaveTextContent('All rights reserved.');
-    expect(footer).toHaveTextContent(currentYear);
+    expect(footer).toHaveTextContent(`© ${currentYear} Champagne Festival. All rights reserved.`);
   });
 
   it('renders privacy policy button', () => {
