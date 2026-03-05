@@ -46,7 +46,7 @@ describe('MarqueeSlider component', () => {
     render(<MarqueeSlider items={items} />);
     // Item is duplicated to have at least 8 slides
     const slides = screen.getAllByTestId('swiper-slide');
-    expect(slides.length).toBeGreaterThanOrEqual(8);
+    expect(slides.length).toBe(8);
   });
 
   it('renders images with alt text', () => {

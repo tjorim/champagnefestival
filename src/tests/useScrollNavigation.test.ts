@@ -53,6 +53,13 @@ describe('useScrollNavigation hook', () => {
     expect(addEventListenerSpy).toHaveBeenCalledWith('hashchange', expect.any(Function));
   });
 
+  it('removes hashchange event listener on unmount', () => {
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+    const { unmount } = renderHook(() => useScrollNavigation());
+    unmount();
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('hashchange', expect.any(Function));
+  });
+
   it('handles initial hash without throwing', () => {
     Object.defineProperty(window, 'location', {
       writable: true,

@@ -10,14 +10,23 @@ describe('useServiceWorker hook', () => {
   it('does not register service worker in non-production environment', () => {
     // import.meta.env.PROD is false by default in tests
     const registerMock = vi.fn();
-    Object.defineProperty(navigator, 'serviceWorker', {
-      value: { register: registerMock },
-      configurable: true,
-    });
+    const originalSW = (navigator as Navigator & { serviceWorker?: unknown }).serviceWorker;
 
-    renderHook(() => useServiceWorker());
-    // Should NOT be called because PROD is false in test environment
-    expect(registerMock).not.toHaveBeenCalled();
+    try {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        value: { register: registerMock },
+        configurable: true,
+      });
+
+      renderHook(() => useServiceWorker());
+      // Should NOT be called because PROD is false in test environment
+      expect(registerMock).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        value: originalSW,
+        configurable: true,
+      });
+    }
   });
 
   it('mounts without throwing an error', () => {
