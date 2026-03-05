@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import ContactInfo from '../components/ContactInfo';
+import ContactInfo from '@/components/ContactInfo';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     contact_alternative_contact: () => 'Or contact us directly:',
     contact_email_label: () => 'Email:',

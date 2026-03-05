@@ -1,8 +1,8 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import Countdown from '../components/Countdown';
+import Countdown from '@/components/Countdown';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     countdown_months: () => 'months',
     countdown_days: () => 'days',
@@ -17,7 +17,7 @@ vi.mock('../paraglide/messages', () => ({
 }));
 
 // festivalEndDate is 7 days in the future
-vi.mock('../config/dates', () => ({
+vi.mock('@/config/dates', () => ({
   festivalEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
 }));
 

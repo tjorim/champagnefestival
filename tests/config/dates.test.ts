@@ -6,7 +6,7 @@ import {
   festivalDays,
   festivalDateRange,
   activeEdition,
-} from '../config/dates';
+} from '@/config/dates';
 
 describe('dates config', () => {
   it('exports the festival year', () => {

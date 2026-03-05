@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import FAQ from '../components/FAQ';
+import FAQ from '@/components/FAQ';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     faq_q1: () => 'What is the Champagne Festival?',
     faq_a1: () => 'An annual celebration of champagne.',

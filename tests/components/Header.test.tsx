@@ -1,21 +1,21 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import Header from '../components/Header';
+import Header from '@/components/Header';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     festival_name: () => 'Champagne Festival',
     language_select: () => 'Select language',
   },
 }));
 
-vi.mock('../paraglide/runtime', () => ({
+vi.mock('@/paraglide/runtime', () => ({
   getLocale: vi.fn().mockReturnValue('nl'),
   setLocale: vi.fn(),
   isLocale: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock('../components/LanguageSwitcher', () => ({
+vi.mock('@/components/LanguageSwitcher', () => ({
   default: () => <div data-testid="language-switcher" />,
 }));
 

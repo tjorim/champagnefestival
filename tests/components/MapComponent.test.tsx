@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import MapComponent from '../components/MapComponent';
+import MapComponent from '@/components/MapComponent';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     error_loading_map: () => 'Error loading map',
     location_map_label: () => 'Festival location map',

@@ -1,8 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import ContactForm from '../components/ContactForm';
+import ContactForm from '@/components/ContactForm';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     contact_name: () => 'Name',
     contact_email: () => 'Email',

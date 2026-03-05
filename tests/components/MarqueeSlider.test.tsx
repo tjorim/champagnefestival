@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import MarqueeSlider from '../components/MarqueeSlider';
+import MarqueeSlider from '@/components/MarqueeSlider';
 
 vi.mock('swiper/react', () => ({
   Swiper: ({ children }: { children: React.ReactNode }) => <div data-testid="swiper">{children}</div>,

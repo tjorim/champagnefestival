@@ -6,7 +6,7 @@ import {
   getEventsByCategory,
   getAllEventsSorted,
   requiresReservation,
-} from '../config/schedule';
+} from '@/config/schedule';
 
 describe('schedule config', () => {
   it('exports 3 festival days', () => {

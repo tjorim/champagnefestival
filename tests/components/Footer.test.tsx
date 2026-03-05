@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import Footer from '../components/Footer';
+import Footer from '@/components/Footer';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     festival_name: () => 'Champagne Festival',
     footer_rights: () => 'All rights reserved.',
@@ -10,7 +10,7 @@ vi.mock('../paraglide/messages', () => ({
 }));
 
 // Mock the PrivacyPolicy component since we're only testing the Footer
-vi.mock('../components/PrivacyPolicy', () => ({
+vi.mock('@/components/PrivacyPolicy', () => ({
   default: function MockPrivacyPolicy() {
     return (
       <button data-testid="privacy-button">Privacy Policy</button>

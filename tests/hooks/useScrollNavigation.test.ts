@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useScrollNavigation } from '../hooks/useScrollNavigation';
+import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 
 // ResizeObserver must be a proper constructor function (not arrow function)
 const MockResizeObserver = vi.fn().mockImplementation(() => ({
