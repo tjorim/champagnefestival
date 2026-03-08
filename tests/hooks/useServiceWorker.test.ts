@@ -10,7 +10,8 @@ describe('useServiceWorker hook', () => {
   it('does not register service worker in non-production environment', () => {
     // import.meta.env.PROD is false by default in tests
     const registerMock = vi.fn();
-    const originalSW = (navigator as Navigator & { serviceWorker?: unknown }).serviceWorker;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker');
+    const hadServiceWorker = Object.prototype.hasOwnProperty.call(navigator, 'serviceWorker');
 
     try {
       Object.defineProperty(navigator, 'serviceWorker', {
@@ -22,10 +23,11 @@ describe('useServiceWorker hook', () => {
       // Should NOT be called because PROD is false in test environment
       expect(registerMock).not.toHaveBeenCalled();
     } finally {
-      Object.defineProperty(navigator, 'serviceWorker', {
-        value: originalSW,
-        configurable: true,
-      });
+      if (hadServiceWorker && originalDescriptor) {
+        Object.defineProperty(navigator, 'serviceWorker', originalDescriptor);
+      } else {
+        delete (navigator as Navigator & { serviceWorker?: unknown }).serviceWorker;
+      }
     }
   });
 
@@ -34,16 +36,23 @@ describe('useServiceWorker hook', () => {
   });
 
   it('mounts without throwing when serviceWorker is not supported', () => {
-    const originalSW = (navigator as Navigator & { serviceWorker?: unknown }).serviceWorker;
-    Object.defineProperty(navigator, 'serviceWorker', {
-      value: undefined,
-      configurable: true,
-    });
-    expect(() => renderHook(() => useServiceWorker())).not.toThrow();
-    Object.defineProperty(navigator, 'serviceWorker', {
-      value: originalSW,
-      configurable: true,
-    });
+    const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker');
+    const hadServiceWorker = Object.prototype.hasOwnProperty.call(navigator, 'serviceWorker');
+
+    try {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        value: undefined,
+        configurable: true,
+      });
+
+      expect(() => renderHook(() => useServiceWorker())).not.toThrow();
+    } finally {
+      if (hadServiceWorker && originalDescriptor) {
+        Object.defineProperty(navigator, 'serviceWorker', originalDescriptor);
+      } else {
+        delete (navigator as Navigator & { serviceWorker?: unknown }).serviceWorker;
+      }
+    }
   });
 
   it('accepts a custom service worker path', () => {

@@ -54,10 +54,21 @@ describe('useScrollNavigation hook', () => {
   });
 
   it('removes hashchange event listener on unmount', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
     const { unmount } = renderHook(() => useScrollNavigation());
+    const hashchangeHandler = addEventListenerSpy.mock.calls
+      .filter(([eventName]) => eventName === 'hashchange')
+      .at(-1)?.[1];
+
     unmount();
-    expect(removeEventListenerSpy).toHaveBeenCalledWith('hashchange', expect.any(Function));
+
+    expect(hashchangeHandler).toBeDefined();
+    const removedHashchangeCall = removeEventListenerSpy.mock.calls.find(
+      ([eventName, handler]) => eventName === 'hashchange' && handler === hashchangeHandler
+    );
+    expect(removedHashchangeCall).toBeDefined();
   });
 
   it('handles initial hash without throwing', () => {
