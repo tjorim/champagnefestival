@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface ResponsiveImageProps {
   src: string;
@@ -18,12 +18,12 @@ interface ResponsiveImageProps {
 const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   src,
   alt,
-  className = '',
+  className = "",
   priority = false,
-  sizes = '100vw',
+  sizes = "100vw",
   width,
   height,
-  fill = false
+  fill = false,
 }) => {
   // Calculate aspect ratio if both dimensions are provided
   const aspectRatio = width && height ? `${(height / width) * 100}%` : undefined;
@@ -31,30 +31,28 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   return (
     <div
       className={`position-relative ${className}`}
-      style={fill ? { width: '100%', height: '100%' } : undefined}
+      style={fill ? { width: "100%", height: "100%" } : undefined}
     >
       {/* Aspect ratio container */}
-      {aspectRatio && !fill && (
-        <div style={{ paddingBottom: aspectRatio }} />
-      )}
+      {aspectRatio && !fill && <div style={{ paddingBottom: aspectRatio }} />}
 
       <img
         src={src}
         alt={alt}
-        loading={priority ? 'eager' : 'lazy'}
+        loading={priority ? "eager" : "lazy"}
         sizes={sizes}
         width={width}
         height={height}
-        className={`object-cover ${fill ? 'position-absolute w-100 h-100' : 'w-100'}`}
+        className={`object-cover ${fill ? "position-absolute w-100 h-100" : "w-100"}`}
         style={{
-          objectFit: 'cover',
+          objectFit: "cover",
           top: 0,
-          left: 0
+          left: 0,
         }}
         onError={(e) => {
           console.error(`Failed to load image: ${src}`);
           // You might want to set a fallback image here
-          e.currentTarget.src = '/images/logo.svg';
+          e.currentTarget.src = "/images/logo.svg";
         }}
       />
     </div>

@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { Tab, Nav, Card, Badge } from 'react-bootstrap';
-import { m } from '../paraglide/messages';
-import { getLocale } from '../paraglide/runtime';
-import { festivalDays, scheduleEvents } from '../config/schedule';
-import type { ScheduleEvent } from '../config/schedule';
+import React, { useState, useMemo } from "react";
+import { Tab, Nav, Card, Badge } from "react-bootstrap";
+import { m } from "../paraglide/messages";
+import { getLocale } from "../paraglide/runtime";
+import { festivalDays, scheduleEvents } from "../config/schedule";
+import type { ScheduleEvent } from "../config/schedule";
 
 /**
  * Returns the translated title and description for a schedule event ID.
@@ -12,29 +12,59 @@ import type { ScheduleEvent } from '../config/schedule';
 function getEventTranslation(
   eventId: string,
   fallbackTitle: string,
-  fallbackDesc: string
+  fallbackDesc: string,
 ): { title: string; description: string } {
   switch (eventId) {
-    case 'fri-tasting':
-      return { title: m.schedule_events_fri_tasting_title(), description: m.schedule_events_fri_tasting_description() };
-    case 'fri-vip':
-      return { title: m.schedule_events_fri_vip_title(), description: m.schedule_events_fri_vip_description() };
-    case 'fri-end':
-      return { title: m.schedule_events_fri_end_title(), description: m.schedule_events_fri_end_description() };
-    case 'sat-exchange':
-      return { title: m.schedule_events_sat_exchange_title(), description: m.schedule_events_sat_exchange_description() };
-    case 'sat-opening':
-      return { title: m.schedule_events_sat_opening_title(), description: m.schedule_events_sat_opening_description() };
-    case 'sat-party':
-      return { title: m.schedule_events_sat_party_title(), description: m.schedule_events_sat_party_description() };
-    case 'sat-end':
-      return { title: m.schedule_events_sat_end_title(), description: m.schedule_events_sat_end_description() };
-    case 'sun-breakfast':
-      return { title: m.schedule_events_sun_breakfast_title(), description: m.schedule_events_sun_breakfast_description() };
-    case 'sun-opening':
-      return { title: m.schedule_events_sun_opening_title(), description: m.schedule_events_sun_opening_description() };
-    case 'sun-end':
-      return { title: m.schedule_events_sun_end_title(), description: m.schedule_events_sun_end_description() };
+    case "fri-tasting":
+      return {
+        title: m.schedule_events_fri_tasting_title(),
+        description: m.schedule_events_fri_tasting_description(),
+      };
+    case "fri-vip":
+      return {
+        title: m.schedule_events_fri_vip_title(),
+        description: m.schedule_events_fri_vip_description(),
+      };
+    case "fri-end":
+      return {
+        title: m.schedule_events_fri_end_title(),
+        description: m.schedule_events_fri_end_description(),
+      };
+    case "sat-exchange":
+      return {
+        title: m.schedule_events_sat_exchange_title(),
+        description: m.schedule_events_sat_exchange_description(),
+      };
+    case "sat-opening":
+      return {
+        title: m.schedule_events_sat_opening_title(),
+        description: m.schedule_events_sat_opening_description(),
+      };
+    case "sat-party":
+      return {
+        title: m.schedule_events_sat_party_title(),
+        description: m.schedule_events_sat_party_description(),
+      };
+    case "sat-end":
+      return {
+        title: m.schedule_events_sat_end_title(),
+        description: m.schedule_events_sat_end_description(),
+      };
+    case "sun-breakfast":
+      return {
+        title: m.schedule_events_sun_breakfast_title(),
+        description: m.schedule_events_sun_breakfast_description(),
+      };
+    case "sun-opening":
+      return {
+        title: m.schedule_events_sun_opening_title(),
+        description: m.schedule_events_sun_opening_description(),
+      };
+    case "sun-end":
+      return {
+        title: m.schedule_events_sun_end_title(),
+        description: m.schedule_events_sun_end_description(),
+      };
     default:
       return { title: fallbackTitle, description: fallbackDesc };
   }
@@ -49,36 +79,41 @@ const Schedule: React.FC = () => {
 
   // Get events for the active day and sort them by start time
   const sortedEvents = useMemo(() => {
-    const dayEvents = scheduleEvents.filter(event => event.dayId === activeDay);
-    return [...dayEvents].sort((a, b) =>
-      a.startTime.localeCompare(b.startTime)
-    );
+    const dayEvents = scheduleEvents.filter((event) => event.dayId === activeDay);
+    return [...dayEvents].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [activeDay]);
 
   // Get category badge color
-  const getCategoryColor = (category: ScheduleEvent['category']) => {
+  const getCategoryColor = (category: ScheduleEvent["category"]) => {
     switch (category) {
-      case 'tasting': return 'danger';
-      case 'vip': return 'warning';
-      case 'party': return 'info';
-      case 'breakfast': return 'success';
-      case 'exchange': return 'secondary';
-      case 'general': return 'primary';
-      default: return 'secondary';
+      case "tasting":
+        return "danger";
+      case "vip":
+        return "warning";
+      case "party":
+        return "info";
+      case "breakfast":
+        return "success";
+      case "exchange":
+        return "secondary";
+      case "general":
+        return "primary";
+      default:
+        return "secondary";
     }
   };
 
   // Get translated day name
   const getDayName = (dayId: string | number, dayLabel: string) => {
     switch (String(dayId).toLowerCase()) {
-      case '1':
-      case 'friday':
+      case "1":
+      case "friday":
         return m.schedule_days_friday();
-      case '2':
-      case 'saturday':
+      case "2":
+      case "saturday":
         return m.schedule_days_saturday();
-      case '3':
-      case 'sunday':
+      case "3":
+      case "sunday":
         return m.schedule_days_sunday();
       default:
         return dayLabel;
@@ -86,26 +121,30 @@ const Schedule: React.FC = () => {
   };
 
   // Get translated category name
-  const getCategoryLabel = (category: ScheduleEvent['category']) => {
+  const getCategoryLabel = (category: ScheduleEvent["category"]) => {
     switch (category) {
-      case 'tasting': return m.schedule_categories_tasting();
-      case 'vip': return m.schedule_categories_vip();
-      case 'party': return m.schedule_categories_party();
-      case 'breakfast': return m.schedule_categories_breakfast();
-      case 'exchange': return m.schedule_categories_exchange();
-      case 'general': return m.schedule_categories_general();
-      default: return category;
+      case "tasting":
+        return m.schedule_categories_tasting();
+      case "vip":
+        return m.schedule_categories_vip();
+      case "party":
+        return m.schedule_categories_party();
+      case "breakfast":
+        return m.schedule_categories_breakfast();
+      case "exchange":
+        return m.schedule_categories_exchange();
+      case "general":
+        return m.schedule_categories_general();
+      default:
+        return category;
     }
   };
 
   return (
     <div className="schedule-container">
-      <Tab.Container
-        activeKey={activeDay}
-        onSelect={(k) => k && setActiveDay(Number(k))}
-      >
+      <Tab.Container activeKey={activeDay} onSelect={(k) => k && setActiveDay(Number(k))}>
         <Nav variant="tabs" className="mb-4 justify-content-center">
-          {festivalDays.map(day => (
+          {festivalDays.map((day) => (
             <Nav.Item key={day.id}>
               <Nav.Link eventKey={day.id} className="px-4">
                 {getDayName(day.id, day.label)}
@@ -113,12 +152,12 @@ const Schedule: React.FC = () => {
                   {(() => {
                     try {
                       return new Date(day.date).toLocaleDateString(getLocale(), {
-                        month: 'short',
-                        day: 'numeric'
+                        month: "short",
+                        day: "numeric",
                       });
                     } catch (error) {
-                      console.warn('Date formatting error for day:', day.date, error);
-                      return day.date || '';
+                      console.warn("Date formatting error for day:", day.date, error);
+                      return day.date || "";
                     }
                   })()}
                 </span>
@@ -131,8 +170,12 @@ const Schedule: React.FC = () => {
           <Tab.Pane eventKey={activeDay} active={true}>
             {sortedEvents.length > 0 ? (
               <div className="events-list">
-                {sortedEvents.map(event => {
-                  const { title, description } = getEventTranslation(event.id, event.title, event.description);
+                {sortedEvents.map((event) => {
+                  const { title, description } = getEventTranslation(
+                    event.id,
+                    event.title,
+                    event.description,
+                  );
                   return (
                     <Card key={event.id} className="mb-3 shadow-sm border-0">
                       <Card.Body>
@@ -143,7 +186,10 @@ const Schedule: React.FC = () => {
                                 <div title={m.schedule_start_time()}>{event.startTime}</div>
                                 <div title={m.schedule_end_time()}>{event.endTime}</div>
                                 <span className="visually-hidden">
-                                  {m.schedule_time_range({ start: event.startTime, end: event.endTime })}
+                                  {m.schedule_time_range({
+                                    start: event.startTime,
+                                    end: event.endTime,
+                                  })}
                                 </span>
                               </>
                             ) : (
@@ -151,9 +197,7 @@ const Schedule: React.FC = () => {
                             )}
                           </div>
                           <div className="flex-grow-1">
-                            <h5 className="event-title mb-1">
-                              {title}
-                            </h5>
+                            <h5 className="event-title mb-1">{title}</h5>
                             <Badge bg={getCategoryColor(event.category)} className="mb-2">
                               {getCategoryLabel(event.category)}
                             </Badge>
@@ -162,9 +206,7 @@ const Schedule: React.FC = () => {
                                 {m.schedule_reservation()}
                               </Badge>
                             )}
-                            <p className="event-description mb-1">
-                              {description}
-                            </p>
+                            <p className="event-description mb-1">{description}</p>
                             {event.presenter && (
                               <p className="event-presenter small mb-0">
                                 <strong>{m.schedule_presenter()}:</strong> {event.presenter}

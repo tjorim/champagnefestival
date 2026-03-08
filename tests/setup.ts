@@ -1,24 +1,23 @@
-import '@testing-library/jest-dom';
-import { vi } from 'vitest';
-
+import "@testing-library/jest-dom";
+import { vi } from "vitest";
 
 // Mock objects that are not available in jsdom
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: () => { },
-    removeListener: () => { },
-    addEventListener: () => { },
-    removeEventListener: () => { },
-    dispatchEvent: () => { },
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => {},
   }),
 });
 
 // Mock leaflet since it doesn't work well in jsdom
-vi.mock('leaflet', () => ({
+vi.mock("leaflet", () => ({
   icon: vi.fn().mockReturnValue({}),
   latLng: vi.fn().mockReturnValue({}),
   map: vi.fn().mockReturnValue({

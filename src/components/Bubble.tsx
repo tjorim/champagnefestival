@@ -8,10 +8,10 @@ import React from "react";
  * @property {number} left - Horizontal position of the bubble in percentage
  */
 interface BubbleProps {
-    size: number;
-    duration: number;
-    delay: number;
-    left: number;
+  size: number;
+  duration: number;
+  delay: number;
+  left: number;
 }
 
 /**
@@ -23,16 +23,18 @@ interface BubbleProps {
  * --bubble-left: Controls the horizontal position of the bubble
  */
 const Bubble: React.FC<BubbleProps> = ({ size, duration, delay, left }) => (
-    <div
-        className="bubble"
-        style={{
-            "--bubble-size": `${size}px`,
-            "--bubble-duration": `${duration}s`,
-            "--bubble-delay": `${delay}s`,
-            "--bubble-left": `${left}%`,
-        } as React.CSSProperties}
-        aria-hidden="true" // Decorative content, hidden from screen readers
-    />
+  <div
+    className="bubble"
+    style={
+      {
+        "--bubble-size": `${size}px`,
+        "--bubble-duration": `${duration}s`,
+        "--bubble-delay": `${delay}s`,
+        "--bubble-left": `${left}%`,
+      } as React.CSSProperties
+    }
+    aria-hidden="true" // Decorative content, hidden from screen readers
+  />
 );
 
 export default Bubble;
