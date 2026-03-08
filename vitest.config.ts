@@ -1,25 +1,25 @@
-import { resolve } from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { resolve } from "node:path";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   esbuild: {
-    jsx: 'automatic',
-    jsxImportSource: 'react',
+    jsx: "automatic",
+    jsxImportSource: "react",
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      "@": resolve(__dirname, "src"),
     },
   },
   test: {
-    environment: 'happy-dom',
+    environment: "happy-dom",
     globals: true,
-    setupFiles: ['./tests/setup.ts'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    setupFiles: ["./tests/setup.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**"],
     coverage: {
-      provider: 'v8',
-      include: ['src/**'],
-      exclude: ['src/paraglide/**', 'src/main.tsx', 'src/assets/**'],
+      provider: "v8",
+      include: ["src/**"],
+      exclude: ["src/paraglide/**", "src/main.tsx", "src/assets/**"],
     },
   },
 });

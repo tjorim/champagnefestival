@@ -1,60 +1,60 @@
 {
-	"name": "champagnefestival",
-	"private": true,
-	"version": "0.1.0",
-	"description": "Champagne Festival website using React and Bootstrap",
-	"engines": {
-		"node": ">=20.19.0"
-	},
-	"type": "module",
-	"scripts": {
-		"dev": "vite",
-		"build": "npm run paraglide:compile && tsc -b && vite build",
-		"preview": "vite preview",
-		"typecheck": "npm run paraglide:compile && tsc -b --noEmit",
-		"lint": "oxlint",
-		"format": "oxfmt .",
-		"test": "vitest run",
-		"test:ui": "vitest --ui",
-		"test:watch": "vitest",
-		"paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations"
-	},
-	"dependencies": {
-		"bootstrap": "^5.3.7",
-		"bootstrap-icons": "^1.13.1",
-		"leaflet": "^1.9.4",
-		"react": "^19.1.1",
-		"react-bootstrap": "^2.10.10",
-		"react-dom": "^19.1.1",
-		"react-error-boundary": "^6.1.1",
-		"react-leaflet": "^5.0.0",
-		"swiper": "^12.1.2"
-	},
-	"devDependencies": {
-		"@inlang/paraglide-js": "^2.13.1",
-		"@inlang/plugin-m-function-matcher": "^2.2.1",
-		"@inlang/plugin-message-format": "^4.3.0",
-		"@testing-library/jest-dom": "^6.6.3",
-		"@testing-library/react": "^16.3.0",
-		"@testing-library/user-event": "^14.6.1",
-		"@types/leaflet": "^1.9.17",
-		"@types/node": "^25",
-		"@types/react": "^19.1.11",
-		"@types/react-dom": "^19.1.7",
-		"@vitejs/plugin-react": "^6.0.0-beta.0",
-		"@vitest/ui": "^4.0.18",
-		"happy-dom": "^20.8.3",
-		"lightningcss": "^1.31.0",
-		"oxfmt": "^0.36.0",
-		"oxlint": "^1.0.0",
-		"terser": "^5.46.0",
-		"typescript": "^5.9.3",
-		"vite": "^8.0.0-beta.16",
-		"vitest": "^4.0.18"
-	},
-	"overrides": {
-		"@vitejs/plugin-react": {
-			"vite": "$vite"
-		}
-	}
+  "name": "champagnefestival",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Champagne Festival website using React and Bootstrap",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run paraglide:compile && tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "npm run paraglide:compile && tsc -b --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt .",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest",
+    "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.7",
+    "bootstrap-icons": "^1.13.1",
+    "leaflet": "^1.9.4",
+    "react": "^19.1.1",
+    "react-bootstrap": "^2.10.10",
+    "react-dom": "^19.1.1",
+    "react-error-boundary": "^6.1.1",
+    "react-leaflet": "^5.0.0",
+    "swiper": "^12.1.2"
+  },
+  "devDependencies": {
+    "@inlang/paraglide-js": "^2.13.1",
+    "@inlang/plugin-m-function-matcher": "^2.2.1",
+    "@inlang/plugin-message-format": "^4.3.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/leaflet": "^1.9.17",
+    "@types/node": "^25",
+    "@types/react": "^19.1.11",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^6.0.0-beta.0",
+    "@vitest/ui": "^4.0.18",
+    "happy-dom": "^20.8.3",
+    "lightningcss": "^1.31.0",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.0.0",
+    "terser": "^5.46.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0-beta.16",
+    "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "@vitejs/plugin-react": {
+      "vite": "$vite"
+    }
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
 }

@@ -3,8 +3,8 @@
  * Contains the structured data for events, workshops, tastings, and other activities
  */
 
-import { contactConfig } from './contact';
-import { festivalDays as configDays } from './dates';
+import { contactConfig } from "./contact";
+import { festivalDays as configDays } from "./dates";
 
 export interface ScheduleEvent {
   id: string;
@@ -15,21 +15,21 @@ export interface ScheduleEvent {
   reservation?: boolean;
   location?: string;
   presenter?: string;
-  category: 'tasting' | 'vip' | 'party' | 'breakfast' | 'exchange' | 'general';
+  category: "tasting" | "vip" | "party" | "breakfast" | "exchange" | "general";
   dayId: number;
 }
 
 export interface FestivalDay {
   id: number;
-  date: string;  // ISO date format
+  date: string; // ISO date format
   label: string; // e.g., "Friday", "Saturday", "Sunday"
 }
 
 // Helper function to format date as ISO string in local time (Belgian time)
 const toLocalISOString = (date: Date): string => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
@@ -38,127 +38,128 @@ export const festivalDays: FestivalDay[] = [
   {
     id: 1,
     date: toLocalISOString(configDays[0]), // Friday
-    label: 'friday'
+    label: "friday",
   },
   {
     id: 2,
     date: toLocalISOString(configDays[1]), // Saturday
-    label: 'saturday'
+    label: "saturday",
   },
   {
     id: 3,
     date: toLocalISOString(configDays[2]), // Sunday
-    label: 'sunday'
-  }
+    label: "sunday",
+  },
 ];
 
 // Schedule events with translations handled in the UI
 export const scheduleEvents: ScheduleEvent[] = [
   // FRIDAY EVENTS - DAY 1
   {
-    id: 'fri-tasting',
-    title: 'Doorlopende degustatie',
-    startTime: '17:00',
-    endTime: '23:00',
-    description: 'Doorlopende degustatie van verschillende champagnes.',
+    id: "fri-tasting",
+    title: "Doorlopende degustatie",
+    startTime: "17:00",
+    endTime: "23:00",
+    description: "Doorlopende degustatie van verschillende champagnes.",
     location: contactConfig.location.venueName,
-    category: 'tasting',
-    dayId: 1
+    category: "tasting",
+    dayId: 1,
   },
   {
-    id: 'fri-vip',
-    title: 'VIP-receptie',
-    startTime: '19:30',
-    endTime: '21:30',
-    description: 'Exclusieve VIP-receptie met speciale champagnes en hapjes.',
+    id: "fri-vip",
+    title: "VIP-receptie",
+    startTime: "19:30",
+    endTime: "21:30",
+    description: "Exclusieve VIP-receptie met speciale champagnes en hapjes.",
     reservation: true,
-    category: 'vip',
-    dayId: 1
+    category: "vip",
+    dayId: 1,
   },
   {
-    id: 'fri-end',
-    title: 'Einde festival',
-    startTime: '23:00',
-    description: 'Sluiting van het festival op vrijdag.',
-    category: 'general',
-    dayId: 1
+    id: "fri-end",
+    title: "Einde festival",
+    startTime: "23:00",
+    description: "Sluiting van het festival op vrijdag.",
+    category: "general",
+    dayId: 1,
   },
 
   // SATURDAY EVENTS - DAY 2
   {
-    id: 'sat-exchange',
-    title: 'Ruilbeurs',
-    startTime: '09:30',
-    description: 'Opening van de ruilbeurs voor verzamelaars.',
+    id: "sat-exchange",
+    title: "Ruilbeurs",
+    startTime: "09:30",
+    description: "Opening van de ruilbeurs voor verzamelaars.",
     reservation: true,
-    category: 'exchange',
-    dayId: 2
+    category: "exchange",
+    dayId: 2,
   },
   {
-    id: 'sat-opening',
-    title: 'Opening festival & doorlopende degustatie',
-    startTime: '10:00',
-    description: 'Officiële opening van het festival op zaterdag met doorlopende champagne degustatie.',
-    category: 'tasting',
-    dayId: 2
+    id: "sat-opening",
+    title: "Opening festival & doorlopende degustatie",
+    startTime: "10:00",
+    description:
+      "Officiële opening van het festival op zaterdag met doorlopende champagne degustatie.",
+    category: "tasting",
+    dayId: 2,
   },
   {
-    id: 'sat-party',
-    title: 'Champagneparty met DJ',
-    startTime: '20:00',
-    description: 'Feestelijke avond met DJ en champagne.',
-    category: 'party',
-    dayId: 2
+    id: "sat-party",
+    title: "Champagneparty met DJ",
+    startTime: "20:00",
+    description: "Feestelijke avond met DJ en champagne.",
+    category: "party",
+    dayId: 2,
   },
   {
-    id: 'sat-end',
-    title: 'Einde festival + party',
-    startTime: '23:59',
-    description: 'Sluiting van het festival en de party op zaterdag.',
-    category: 'general',
-    dayId: 2
+    id: "sat-end",
+    title: "Einde festival + party",
+    startTime: "23:59",
+    description: "Sluiting van het festival en de party op zaterdag.",
+    category: "general",
+    dayId: 2,
   },
 
   // SUNDAY EVENTS - DAY 3
   {
-    id: 'sun-breakfast',
-    title: 'Champagneontbijt',
-    startTime: '09:00',
-    description: 'Champagne ontbijt ten voordele van een goed doel.',
+    id: "sun-breakfast",
+    title: "Champagneontbijt",
+    startTime: "09:00",
+    description: "Champagne ontbijt ten voordele van een goed doel.",
     reservation: true,
-    category: 'breakfast',
-    dayId: 3
+    category: "breakfast",
+    dayId: 3,
   },
   {
-    id: 'sun-opening',
-    title: 'Opening festival & doorlopende degustatie',
-    startTime: '10:00',
-    description: 'Opening van het festival op zondag met doorlopende champagne degustatie.',
-    category: 'tasting',
-    dayId: 3
+    id: "sun-opening",
+    title: "Opening festival & doorlopende degustatie",
+    startTime: "10:00",
+    description: "Opening van het festival op zondag met doorlopende champagne degustatie.",
+    category: "tasting",
+    dayId: 3,
   },
   {
-    id: 'sun-end',
-    title: 'Einde festival',
-    startTime: '18:00',
-    description: 'Afsluiting van het festival op zondag.',
-    category: 'general',
-    dayId: 3
-  }
+    id: "sun-end",
+    title: "Einde festival",
+    startTime: "18:00",
+    description: "Afsluiting van het festival op zondag.",
+    category: "general",
+    dayId: 3,
+  },
 ];
 
 /**
  * Helper function to get events for a specific day
  */
 export function getEventsByDay(dayId: number): ScheduleEvent[] {
-  return scheduleEvents.filter(event => event.dayId === dayId);
+  return scheduleEvents.filter((event) => event.dayId === dayId);
 }
 
 /**
  * Helper function to get events by category
  */
-export function getEventsByCategory(category: ScheduleEvent['category']): ScheduleEvent[] {
-  return scheduleEvents.filter(event => event.category === category);
+export function getEventsByCategory(category: ScheduleEvent["category"]): ScheduleEvent[] {
+  return scheduleEvents.filter((event) => event.category === category);
 }
 
 /**

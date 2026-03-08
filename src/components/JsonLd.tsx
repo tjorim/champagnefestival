@@ -1,10 +1,9 @@
-import React from 'react';
-import { m } from '../paraglide/messages';
-import { getLocale } from '../paraglide/runtime';
-import { festivalYear, festivalDate, festivalEndDate } from '../config/dates';
-import { contactConfig } from '../config/contact';
-import { baseUrl } from '../config/site';
-
+import React from "react";
+import { m } from "../paraglide/messages";
+import { getLocale } from "../paraglide/runtime";
+import { festivalYear, festivalDate, festivalEndDate } from "../config/dates";
+import { contactConfig } from "../config/contact";
+import { baseUrl } from "../config/site";
 
 /**
  * Component that renders JSON-LD structured data for an event
@@ -18,43 +17,43 @@ const EventStructuredData: React.FC = () => {
   const { lat, lng } = contactConfig.location.coordinates;
 
   const structuredData = {
-    '@context': 'https://schema.org',
-    '@type': 'Event',
-    'name': `${festivalName} ${festivalYear}`,
-    'startDate': festivalDate.toISOString(),
-    'endDate': festivalEndDate.toISOString(),
-    'eventAttendanceMode': 'https://schema.org/OfflineEventAttendanceMode',
-    'eventStatus': 'https://schema.org/EventScheduled',
-    'location': {
-      '@type': 'Place',
-      'name': venueName,
-      'address': {
-        '@type': 'PostalAddress',
-        'streetAddress': venueAddress,
-        'addressLocality': contactConfig.location.city,
-        'postalCode': contactConfig.location.postalCode,
-        'addressCountry': contactConfig.location.country
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: `${festivalName} ${festivalYear}`,
+    startDate: festivalDate.toISOString(),
+    endDate: festivalEndDate.toISOString(),
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: {
+      "@type": "Place",
+      name: venueName,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: venueAddress,
+        addressLocality: contactConfig.location.city,
+        postalCode: contactConfig.location.postalCode,
+        addressCountry: contactConfig.location.country,
       },
-      'geo': {
-        '@type': 'GeoCoordinates',
-        'latitude': lat,
-        'longitude': lng
-      }
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: lat,
+        longitude: lng,
+      },
     },
-    'image': [`${baseUrl}/images/og-image.jpg`],
-    'description': m.welcome_subtitle(),
-    'offers': {
-      '@type': 'Offer',
-      'url': baseUrl,
-      'availability': 'https://schema.org/InStock',
-      'priceCurrency': 'EUR'
+    image: [`${baseUrl}/images/og-image.jpg`],
+    description: m.welcome_subtitle(),
+    offers: {
+      "@type": "Offer",
+      url: baseUrl,
+      availability: "https://schema.org/InStock",
+      priceCurrency: "EUR",
     },
-    'inLanguage': getLocale(),
-    'organizer': {
-      '@type': 'Organization',
-      'name': festivalName,
-      'url': baseUrl
-    }
+    inLanguage: getLocale(),
+    organizer: {
+      "@type": "Organization",
+      name: festivalName,
+      url: baseUrl,
+    },
   };
 
   // Use React.createElement instead of JSX to avoid potential issues with SSR
@@ -63,11 +62,11 @@ const EventStructuredData: React.FC = () => {
   // entirely from trusted, developer-controlled sources (config files, translations)
   // and does not include any raw user input. Ensure this remains true if modifying
   // the data sources in the future.
-  return React.createElement('script', {
-    type: 'application/ld+json',
+  return React.createElement("script", {
+    type: "application/ld+json",
     dangerouslySetInnerHTML: {
-      __html: JSON.stringify(structuredData)
-    }
+      __html: JSON.stringify(structuredData),
+    },
   });
 };
 

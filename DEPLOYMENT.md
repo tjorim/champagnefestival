@@ -30,21 +30,25 @@ This project is configured to be deployed to Cloudflare Pages, which provides se
 This project includes the necessary Wrangler configuration and a deploy script.
 
 1. Log in to Cloudflare from the CLI:
+
    ```bash
    npx wrangler login
    ```
 
 2. Build and deploy the site:
+
    ```bash
    npm run build && npm run deploy
    ```
-   
+
    Or use the NPM script:
+
    ```bash
    npm run deploy
    ```
 
    If deploying for the first time, you'll need to create a project:
+
    ```bash
    npx wrangler pages project create champagne-festival
    ```
@@ -57,11 +61,13 @@ This project requires environment variables for both the frontend and the contac
 2. Click on "Settings" > "Environment variables"
 3. Add the following variables for both production and preview environments:
 
-### Frontend Variables (prefixed with VITE_)
+### Frontend Variables (prefixed with VITE\_)
+
 - `VITE_PUBLIC_URL`: The public URL of your site
 - `VITE_SITE_TITLE`: The title of your site (optional)
 
 ### Contact Form Function Variables
+
 - `CONTACT_EMAIL`: Email address to receive contact form submissions
 - `SMTP_HOSTNAME`: SMTP server hostname for sending emails
 - `SMTP_USERNAME`: SMTP username/email for authentication
@@ -69,10 +75,12 @@ This project requires environment variables for both the frontend and the contac
 - `SMTP_PORT`: SMTP port (usually 587 for TLS or 465 for SSL)
 
 ### Optional Anti-Spam Variables
+
 - `RECAPTCHA_SITE_KEY`: Google reCAPTCHA v3 site key (for frontend)
 - `RECAPTCHA_SECRET_KEY`: Google reCAPTCHA v3 secret key (for backend)
 
 Important Notes:
+
 - Vite frontend variables must start with `VITE_` to be accessible in the frontend code
 - Function variables are securely stored and accessible only to Cloudflare Functions
 - For testing locally, add these variables to your `.env` file (but never commit sensitive values to version control)
@@ -106,17 +114,19 @@ To create a new function:
 
 1. Add a JavaScript file to the `/functions` directory
 2. Export an appropriate handler function:
+
    ```javascript
    // Handle all HTTP methods
    export function onRequest(context) {
      return new Response("Hello, world!");
    }
-   
+
    // Or handle specific HTTP methods
    export function onRequestPost(context) {
      // Process POST requests only
    }
    ```
+
 3. Deploy your site to make the function available
 
 ### Testing Functions Locally
@@ -155,6 +165,6 @@ If you encounter issues during deployment:
 2. Verify that all required environment variables are set
 3. Ensure your Vite configuration is properly set up (check vite.config.ts)
 4. Confirm that `dist` is the correct output directory
-5. Check that your SPA routing is working properly with the _routes.json file
+5. Check that your SPA routing is working properly with the \_routes.json file
 
 For more help, refer to the [Cloudflare Pages documentation](https://developers.cloudflare.com/pages/)

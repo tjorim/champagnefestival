@@ -34,14 +34,14 @@ Open [http://localhost:5173](http://localhost:5173) with your browser to see the
 
 This project targets modern browsers with good support for ES2020 features:
 
-| Browser             | Minimum Version |
-|---------------------|-----------------|
-| Chrome              | 85+             |
-| Firefox             | 80+             |
-| Safari              | 14+             |
-| Edge (Chromium)     | 85+             |
-| iOS Safari          | 14+             |
-| Android Chrome      | 85+             |
+| Browser         | Minimum Version |
+| --------------- | --------------- |
+| Chrome          | 85+             |
+| Firefox         | 80+             |
+| Safari          | 14+             |
+| Edge (Chromium) | 85+             |
+| iOS Safari      | 14+             |
+| Android Chrome  | 85+             |
 
 We do not support Internet Explorer or legacy Edge (non-Chromium).
 
@@ -61,7 +61,7 @@ The project uses [Paraglide](https://inlang.com/m/gerre34r/library-inlang-paragl
 When developing, import the generated message functions:
 
 ```tsx
-import * as m from '../paraglide/messages.js';
+import * as m from "../paraglide/messages.js";
 
 function MyComponent() {
   return <h1>{m.welcome_title()}</h1>;
@@ -71,7 +71,7 @@ function MyComponent() {
 To switch locale at runtime, use the runtime helpers:
 
 ```tsx
-import { getLocale, setLocale } from '../paraglide/runtime.js';
+import { getLocale, setLocale } from "../paraglide/runtime.js";
 ```
 
 To add or update translations, edit the files in `messages/` and run `npm run paraglide:compile`.
@@ -91,14 +91,9 @@ To add or update translations, edit the files in `messages/` and run `npm run pa
 With the migration to React, we're using standard HTML `<img>` tags with the `ResponsiveImage` component for consistent image handling across the application.
 
 ```tsx
-import ResponsiveImage from './components/ResponsiveImage';
+import ResponsiveImage from "./components/ResponsiveImage";
 
-<ResponsiveImage 
-  src="/images/example.jpg" 
-  alt="Example image" 
-  width={800} 
-  height={600} 
-/>
+<ResponsiveImage src="/images/example.jpg" alt="Example image" width={800} height={600} />;
 ```
 
 ### Contact Information Configuration
@@ -134,14 +129,15 @@ VITE_PUBLIC_URL=https://your-domain.com
 ```
 
 2. Use the new components to display contact and location information from the configuration:
+
 ```tsx
 // For contact information
 import ContactInfo from "../components/ContactInfo";
-<ContactInfo />
+<ContactInfo />;
 
 // For location information
 import LocationInfo from "../components/LocationInfo";
-<LocationInfo />
+<LocationInfo />;
 
 // For maps with coordinates from configuration
 import MapComponent from "../components/MapComponent";
@@ -149,7 +145,7 @@ import MapComponent from "../components/MapComponent";
 
 ### Maintenance Guidelines
 
-1. **Environment Variables**: 
+1. **Environment Variables**:
    - Always use environment variables for sensitive information
    - For local development, use `.env.local` (already in .gitignore)
    - For production, set environment variables in your hosting platform
@@ -163,11 +159,11 @@ import MapComponent from "../components/MapComponent";
    - Update contact details by changing environment variables
    - Never hardcode contact information in source files or translations
    - Use the `ContactInfo` component for consistent display of contact information
-   
 4. **Event Schedule**:
    - Update the schedule in `src/config/schedule.ts` for upcoming events
    - The schedule is structured with festival days and events with detailed timing
    - For translations, update the event titles and descriptions in the locale files under `messages/{locale}.json`
+
 ## Deployment
 
 The project is configured for deployment on Cloudflare Pages or any other static site hosting provider.

@@ -5,6 +5,7 @@
 ## Historical Note: Previous Next.js Migrations
 
 The project previously used Next.js with different internationalization approaches:
+
 1. Initially used custom `[lang]` route parameters
 2. Later migrated to Next.js's `next-intl` with `[locale]` routes
 3. Finally migrated from Next.js to React with i18next
@@ -18,6 +19,7 @@ These historical migrations informed our current approach to internationalizatio
 This section documents the completed migration from Next.js back to a standard React application, along with upcoming tasks to enhance the React implementation.
 
 ### Current Status (Updated April 13, 2025)
+
 - ✅ Initial React application structure set up in `src/` directory
 - ✅ All components successfully migrated from Next.js to React
 - ✅ i18next and i18next-browser-languagedetector implemented for internationalization
@@ -156,12 +158,12 @@ Since the site hasn't gone live yet, we can focus on these key areas before the 
 
 Based on current progress and project priorities, here is the updated timeline for the remaining pre-launch tasks:
 
-| Date | Milestone |
-|------|-----------|
+| Date           | Milestone                                                |
+| -------------- | -------------------------------------------------------- |
 | April 13, 2025 | ✅ **Complete migration**: Remove Next.js implementation |
-| April 20, 2025 | Finalize performance optimization and bundle analysis |
-| April 25, 2025 | Complete cross-browser testing and implement fixes |
-| May 1, 2025 | Final content review and accessibility validation |
-| May 10, 2025 | **Site Launch**: Official public launch |
+| April 20, 2025 | Finalize performance optimization and bundle analysis    |
+| April 25, 2025 | Complete cross-browser testing and implement fixes       |
+| May 1, 2025    | Final content review and accessibility validation        |
+| May 10, 2025   | **Site Launch**: Official public launch                  |
 
 **IMPORTANT**: All development now occurs exclusively in the React implementation. The Next.js code has been completely removed from the codebase as of April 13, 2025, ahead of schedule.

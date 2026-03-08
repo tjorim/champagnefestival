@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface SectionHeadingProps {
   id: string;
@@ -11,12 +11,7 @@ interface SectionHeadingProps {
  * Accessible section heading component with proper ARIA attributes.
  * Callers pass already-translated strings (e.g. from Paraglide message functions).
  */
-const SectionHeading: React.FC<SectionHeadingProps> = ({
-  id,
-  title,
-  subtitle,
-  className = ''
-}) => {
+const SectionHeading: React.FC<SectionHeadingProps> = ({ id, title, subtitle, className = "" }) => {
   return (
     <div className={`text-center ${className}`}>
       <h2
@@ -29,10 +24,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({
         {title}
       </h2>
       {subtitle && (
-        <p
-          className="mx-auto mb-4"
-          id={`${id}-subtitle`}
-        >
+        <p className="mx-auto mb-4" id={`${id}-subtitle`}>
           {subtitle}
         </p>
       )}
