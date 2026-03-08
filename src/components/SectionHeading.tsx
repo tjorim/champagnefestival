@@ -18,7 +18,6 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({ id, title, subtitle, cl
         id={id}
         className="section-header"
         tabIndex={-1}
-        aria-label={subtitle ? `${title} - ${subtitle}` : title}
         aria-describedby={subtitle ? `${id}-subtitle` : undefined}
       >
         {title}
