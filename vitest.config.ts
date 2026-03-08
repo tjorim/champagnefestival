@@ -1,11 +1,18 @@
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import reactPlugin from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  esbuild: {
-    jsx: "automatic",
-    jsxImportSource: "react",
-  },
+  plugins: [
+    // oxlint-disable-next-line @typescript-eslint/no-explicit-any -- paraglide plugin types don't match vitest's plugin type
+    paraglideVitePlugin({
+      project: "./project.inlang",
+      outdir: "./src/paraglide",
+      strategy: ["localStorage", "preferredLanguage", "baseLocale"],
+    }) as any,
+    reactPlugin(),
+  ],
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),

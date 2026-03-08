@@ -36,9 +36,6 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Compile translations
-        run: npm run paraglide:compile
-
       - name: Test
         run: npm run test
 
