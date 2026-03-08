@@ -8,7 +8,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': resolve(__dirname, 'src'),
     },
   },
   test: {
@@ -16,5 +16,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      exclude: ['src/paraglide/**', 'src/main.tsx', 'src/assets/**'],
+    },
   },
 });

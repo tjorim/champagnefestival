@@ -1,10 +1,15 @@
-import { resolve } from 'node:path';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import reactPlugin from '@vitejs/plugin-react';
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: '/champagnefestival/',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
   plugins: [
     paraglideVitePlugin({
       project: './project.inlang',
@@ -15,11 +20,6 @@ export default defineConfig({
   ],
   css: {
     transformer: 'lightningcss',
-  },
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
-    },
   },
   build: {
     cssMinify: 'lightningcss',
