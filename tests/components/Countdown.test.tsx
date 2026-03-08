@@ -90,5 +90,6 @@ describe('Countdown component', () => {
     });
     const container = document.querySelector('.countdown');
     expect(container).toBeInTheDocument();
+    expect(container).toHaveAttribute('aria-live', 'polite');
   });
 });
