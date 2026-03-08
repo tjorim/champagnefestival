@@ -38,4 +38,9 @@ describe("LocationInfo component", () => {
     expect(screen.getByText("Opening Hours")).toBeInTheDocument();
     expect(screen.getByText("Fri-Sun, 10:00-23:00")).toBeInTheDocument();
   });
+
+  it("renders the localized country name", () => {
+    render(<LocationInfo />);
+    expect(screen.getByText("Belgium")).toBeInTheDocument();
+  });
 });
