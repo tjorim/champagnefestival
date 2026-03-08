@@ -19,7 +19,7 @@ const LocationInfo: React.FC = () => {
               <p className="mb-1">
                 {contactConfig.location.postalCode} {contactConfig.location.city}
               </p>
-              <p>{contactConfig.location.country}</p>
+              <p>{m.location_country()}</p>
             </div>
           </Col>
           <Col md={6}>

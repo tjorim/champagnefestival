@@ -15,7 +15,7 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
         <Navbar.Brand href="#welcome" className="d-flex align-items-center">
           <img
             src={logoSrc}
-            alt="Champagne Festival logo"
+            alt={m.header_logo_alt()}
             width="36"
             height="36"
             className="me-2"

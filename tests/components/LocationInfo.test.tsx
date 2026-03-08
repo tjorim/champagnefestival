@@ -7,6 +7,7 @@ vi.mock("@/paraglide/messages", () => ({
     location_address: () => "Address",
     location_opening_hours: () => "Opening Hours",
     location_opening_hours_value: () => "Fri-Sun, 10:00-23:00",
+    location_country: () => "Belgium",
   },
 }));
 
