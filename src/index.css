@@ -36,7 +36,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   background-color: var(--background-color);
   color: var(--text-color);
   padding-top: var(--header-height);

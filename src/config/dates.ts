@@ -1,6 +1,6 @@
 /**
  * Central configuration for festival dates
- * 
+ *
  * This file automatically calculates festival dates based on the rule:
  * "The first full weekend (Friday, Saturday, Sunday) of March and October"
  */
@@ -39,7 +39,7 @@ function getFirstFullWeekend(year: number, month: number) {
   return {
     friday: firstFriday,
     saturday: firstSaturday,
-    sunday: firstSunday
+    sunday: firstSunday,
   };
 }
 
@@ -48,11 +48,12 @@ const marchWeekend = getFirstFullWeekend(festivalYear, 3); // March
 const octoberWeekend = getFirstFullWeekend(festivalYear, 10); // October
 
 // Currently active festival edition (change this to switch between March/October)
-export const activeEdition: 'march' | 'october' = 'october';
+export const activeEdition: "march" | "october" = "october";
 
 // Get the active weekend
-const activeWeekend = (activeEdition as 'march' | 'october') === 'march' ? marchWeekend : octoberWeekend;
-const activeMonth = (activeEdition as 'march' | 'october') === 'march' ? 3 : 10;
+const activeWeekend =
+  (activeEdition as "march" | "october") === "march" ? marchWeekend : octoberWeekend;
+const activeMonth = (activeEdition as "march" | "october") === "march" ? 3 : 10;
 
 // Export festival start and end dates
 // Festival opens at 17:00 on Friday
@@ -60,7 +61,10 @@ export const festivalDate = new Date(
   activeWeekend.friday.getFullYear(),
   activeWeekend.friday.getMonth(),
   activeWeekend.friday.getDate(),
-  17, 0, 0, 0 // Set to 17:00:00
+  17,
+  0,
+  0,
+  0, // Set to 17:00:00
 );
 
 export const festivalEndDate = new Date(activeWeekend.sunday);
@@ -69,14 +73,53 @@ export const festivalEndDate = new Date(activeWeekend.sunday);
 export const festivalDays = [
   activeWeekend.friday,
   activeWeekend.saturday,
-  activeWeekend.sunday
+  activeWeekend.sunday,
 ] as const;
 
 // Month names for different languages
 const MONTH_NAMES = {
-  en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-  fr: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
-  nl: ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december']
+  en: [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ],
+  fr: [
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+  ],
+  nl: [
+    "januari",
+    "februari",
+    "maart",
+    "april",
+    "mei",
+    "juni",
+    "juli",
+    "augustus",
+    "september",
+    "oktober",
+    "november",
+    "december",
+  ],
 };
 
 // Helper function to generate localized date range strings
@@ -89,7 +132,7 @@ function generateDateRangeStrings() {
   return {
     en: `${MONTH_NAMES.en[month]} ${startDay}-${endDay}, ${festivalYear}`,
     fr: `${startDay}-${endDay} ${MONTH_NAMES.fr[month]} ${festivalYear}`,
-    nl: `${startDay}-${endDay} ${MONTH_NAMES.nl[month]} ${festivalYear}`
+    nl: `${startDay}-${endDay} ${MONTH_NAMES.nl[month]} ${festivalYear}`,
   };
 }
 

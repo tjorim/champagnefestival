@@ -1,7 +1,7 @@
-import React from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
-import { m } from '../paraglide/messages';
-import { contactConfig } from '../config/contact';
+import React from "react";
+import { Card, Row, Col } from "react-bootstrap";
+import { m } from "../paraglide/messages";
+import { contactConfig } from "../config/contact";
 
 /**
  * Component to display venue location information from configuration
@@ -19,7 +19,7 @@ const LocationInfo: React.FC = () => {
               <p className="mb-1">
                 {contactConfig.location.postalCode} {contactConfig.location.city}
               </p>
-              <p>{contactConfig.location.country}</p>
+              <p>{m.location_country()}</p>
             </div>
           </Col>
           <Col md={6}>

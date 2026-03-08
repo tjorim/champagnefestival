@@ -1,11 +1,7 @@
 {
   "version": 1,
-  "include": [
-    "/*"
-  ],
-  "exclude": [
-    "/assets/*"
-  ],
+  "include": ["/*"],
+  "exclude": ["/assets/*"],
   "routes": [
     {
       "src": "/(.*)",

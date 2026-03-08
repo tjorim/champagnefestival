@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { getLocale } from '../paraglide/runtime';
+import { useEffect } from "react";
+import { getLocale } from "../paraglide/runtime";
 
 /**
  * Custom hook to handle language settings and HTML attributes.

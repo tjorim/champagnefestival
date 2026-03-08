@@ -1,5 +1,5 @@
-import React, { Suspense } from 'react';
-import { ErrorBoundary } from 'react-error-boundary';
+import React, { Suspense } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 interface SuspenseWithBoundaryProps {
   fallback: React.ReactNode;
@@ -19,9 +19,7 @@ interface SuspenseWithBoundaryProps {
 function SuspenseWithBoundary({ fallback, errorFallback, children }: SuspenseWithBoundaryProps) {
   return (
     <ErrorBoundary fallback={errorFallback != null ? <>{errorFallback}</> : <></>}>
-      <Suspense fallback={fallback}>
-        {children}
-      </Suspense>
+      <Suspense fallback={fallback}>{children}</Suspense>
     </ErrorBoundary>
   );
 }
