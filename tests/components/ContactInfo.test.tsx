@@ -32,7 +32,7 @@ describe('ContactInfo component', () => {
 
   it('renders email and phone labels', () => {
     render(<ContactInfo />);
-    expect(screen.getAllByText('Email:').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Phone:').length).toBeGreaterThan(0);
+    expect(screen.getByText('Email:')).toBeInTheDocument();
+    expect(screen.getByText('Phone:')).toBeInTheDocument();
   });
 });

@@ -31,8 +31,8 @@ describe('LanguageSwitcher component', () => {
     render(<LanguageSwitcher />);
     await act(async () => {});
     fireEvent.click(screen.getByRole('button', { name: /language selection/i }));
-    // English appears twice (label and nativeName are both "English"), use getAllByText
-    expect(screen.getAllByText('English').length).toBeGreaterThan(0);
+    // English appears twice: once as the language label, once as the native name
+    expect(screen.getAllByText('English')).toHaveLength(2);
     expect(screen.getByText('Nederlands')).toBeInTheDocument();
     expect(screen.getByText('Français')).toBeInTheDocument();
   });

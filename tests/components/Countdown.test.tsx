@@ -16,14 +16,16 @@ vi.mock('@/paraglide/messages', () => ({
   },
 }));
 
-// festivalEndDate is 7 days in the future
+let mockFestivalEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
 vi.mock('@/config/dates', () => ({
-  festivalEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  get festivalEndDate() { return mockFestivalEndDate; },
 }));
 
 describe('Countdown component', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    mockFestivalEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   });
 
   afterEach(() => {
@@ -32,26 +34,25 @@ describe('Countdown component', () => {
 
   it('renders countdown div with aria-live polite attribute', async () => {
     const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-    render(<Countdown targetDate={futureDate} />);
+    const { container } = render(<Countdown targetDate={futureDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
-    const countdownDiv = document.querySelector('.countdown');
+    const countdownDiv = container.querySelector('.countdown');
     expect(countdownDiv).toBeInTheDocument();
     expect(countdownDiv).toHaveAttribute('aria-live', 'polite');
   });
 
   it('shows upcoming countdown after mounting for far future date', async () => {
     const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-    render(<Countdown targetDate={futureDate} />);
+    const { container } = render(<Countdown targetDate={futureDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
-    expect(document.querySelector('.countdown-upcoming')).toBeInTheDocument();
+    expect(container.querySelector('.countdown-upcoming')).toBeInTheDocument();
   });
 
   it('shows "happening now" when targetDate is past but festivalEndDate is in the future', async () => {
-    // targetDate = 1 day ago, festivalEndDate = 7 days in future (from mock)
     const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
     render(<Countdown targetDate={pastDate} />);
     await act(async () => {
@@ -60,36 +61,56 @@ describe('Countdown component', () => {
     expect(screen.getByText('Happening now!')).toBeInTheDocument();
   });
 
+  it('shows "concluded" when festival has ended but is within autoHideAfterDays', async () => {
+    mockFestivalEndDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const pastStartDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+    render(<Countdown targetDate={pastStartDate} />);
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getByText('Festival concluded')).toBeInTheDocument();
+  });
+
+  it('renders nothing when festival ended and autoHideAfterDays has passed', async () => {
+    mockFestivalEndDate = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
+    const pastStartDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+    const { container } = render(<Countdown targetDate={pastStartDate} />);
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(container.querySelector('.countdown')).toBeNull();
+  });
+
   it('throws error for invalid date string', () => {
     expect(() => render(<Countdown targetDate="not-a-date" />)).toThrow();
   });
 
   it('accepts a Date object as targetDate', async () => {
     const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    render(<Countdown targetDate={futureDate} />);
+    const { container } = render(<Countdown targetDate={futureDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
-    expect(document.querySelector('.countdown')).toBeInTheDocument();
+    expect(container.querySelector('.countdown')).toBeInTheDocument();
   });
 
   it('uses autoHideAfterDays prop', async () => {
     const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-    render(<Countdown targetDate={futureDate} autoHideAfterDays={60} />);
+    const { container } = render(<Countdown targetDate={futureDate} autoHideAfterDays={60} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
-    expect(document.querySelector('.countdown')).toBeInTheDocument();
+    expect(container.querySelector('.countdown')).toBeInTheDocument();
   });
 
   it('renders countdown container with correct class', async () => {
     const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-    render(<Countdown targetDate={futureDate} />);
+    const { container } = render(<Countdown targetDate={futureDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
-    const container = document.querySelector('.countdown');
-    expect(container).toBeInTheDocument();
-    expect(container).toHaveAttribute('aria-live', 'polite');
+    const countdownEl = container.querySelector('.countdown');
+    expect(countdownEl).toBeInTheDocument();
+    expect(countdownEl).toHaveAttribute('aria-live', 'polite');
   });
 });

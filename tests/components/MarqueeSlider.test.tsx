@@ -27,8 +27,8 @@ describe('MarqueeSlider component', () => {
 
   it('renders default items when no items prop provided', () => {
     render(<MarqueeSlider />);
-    // Default items include "Champagne Tasting" - may be duplicated, use getAllByText
-    expect(screen.getAllByText('Champagne Tasting').length).toBeGreaterThan(0);
+    // Default items include "Champagne Tasting" - duplicated by the slider for fill
+    expect(screen.getAllByText('Champagne Tasting')).not.toHaveLength(0);
   });
 
   it('renders provided items', () => {
@@ -37,8 +37,8 @@ describe('MarqueeSlider component', () => {
       { id: 2, name: 'Maison B', image: '/images/b.jpg' },
     ];
     render(<MarqueeSlider items={items} />);
-    expect(screen.getAllByText('Maison A').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Maison B').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Maison A')).not.toHaveLength(0);
+    expect(screen.getAllByText('Maison B')).not.toHaveLength(0);
   });
 
   it('duplicates items to fill minimum slide count', () => {

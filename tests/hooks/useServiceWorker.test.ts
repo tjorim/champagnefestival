@@ -1,12 +1,8 @@
 import { renderHook } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
 
 describe('useServiceWorker hook', () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-  });
-
   it('does not register service worker in non-production environment', () => {
     // import.meta.env.PROD is false by default in tests
     const registerMock = vi.fn();
