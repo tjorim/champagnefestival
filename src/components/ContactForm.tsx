@@ -160,7 +160,7 @@ const ContactForm: React.FC = () => {
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                placeholder="John Doe"
+                placeholder={m.contact_placeholder_name()}
                 disabled={isSubmitting}
                 isInvalid={!!errors.name}
                 autoComplete="name"
@@ -177,7 +177,7 @@ const ContactForm: React.FC = () => {
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="email@example.com"
+                placeholder={m.contact_placeholder_email()}
                 disabled={isSubmitting}
                 isInvalid={!!errors.email}
                 autoComplete="email"

@@ -7,6 +7,7 @@ vi.mock("@/paraglide/messages", () => ({
     location_address: () => "Address",
     location_opening_hours: () => "Opening Hours",
     location_opening_hours_value: () => "Fri-Sun, 10:00-23:00",
+    location_country: () => "Belgium",
   },
 }));
 
@@ -36,5 +37,10 @@ describe("LocationInfo component", () => {
     render(<LocationInfo />);
     expect(screen.getByText("Opening Hours")).toBeInTheDocument();
     expect(screen.getByText("Fri-Sun, 10:00-23:00")).toBeInTheDocument();
+  });
+
+  it("renders the localized country name", () => {
+    render(<LocationInfo />);
+    expect(screen.getByText("Belgium")).toBeInTheDocument();
   });
 });

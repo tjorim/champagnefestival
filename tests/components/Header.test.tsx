@@ -6,6 +6,7 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     festival_name: () => "Champagne Festival",
     language_select: () => "Select language",
+    header_logo_alt: () => "Champagne Festival logo",
   },
 }));
 

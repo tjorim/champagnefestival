@@ -124,6 +124,7 @@ function App() {
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <p>{m.what_we_do_description()}</p>
+                <p>{m.what_we_do_for_everyone()}</p>
               </div>
             </div>
             {/* Features in full width to display side by side */}
@@ -160,7 +161,7 @@ function App() {
         <section id="schedule" className="content-section">
           <div className="container">
             {/* Replaced h2 with SectionHeading */}
-            <SectionHeading id="schedule-heading" title={m.schedule_title()} />
+            <SectionHeading id="schedule-heading" title={m.schedule_title()} subtitle={m.schedule_description()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
