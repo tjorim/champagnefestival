@@ -1,14 +1,14 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
-vi.mock('../paraglide/runtime', () => ({
+vi.mock('@/paraglide/runtime', () => ({
   getLocale: vi.fn().mockReturnValue('nl'),
   setLocale: vi.fn(),
   isLocale: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     language_select: () => 'Select language',
   },
@@ -38,7 +38,7 @@ describe('LanguageSwitcher component', () => {
   });
 
   it('calls setLocale when a language is selected', async () => {
-    const { setLocale } = await import('../paraglide/runtime');
+    const { setLocale } = await import('@/paraglide/runtime');
     render(<LanguageSwitcher />);
     await act(async () => {});
     fireEvent.click(screen.getByRole('button', { name: /language selection/i }));

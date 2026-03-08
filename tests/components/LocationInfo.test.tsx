@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import LocationInfo from '../components/LocationInfo';
+import LocationInfo from '@/components/LocationInfo';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     location_address: () => 'Address',
     location_opening_hours: () => 'Opening Hours',

@@ -1,8 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import Schedule from '../components/Schedule';
+import Schedule from '@/components/Schedule';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     schedule_days_friday: () => 'Friday',
     schedule_days_saturday: () => 'Saturday',
@@ -44,13 +44,13 @@ vi.mock('../paraglide/messages', () => ({
   },
 }));
 
-vi.mock('../paraglide/runtime', () => ({
+vi.mock('@/paraglide/runtime', () => ({
   getLocale: vi.fn().mockReturnValue('nl'),
   setLocale: vi.fn(),
   isLocale: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock('../config/schedule', () => ({
+vi.mock('@/config/schedule', () => ({
   festivalDays: [
     { id: 1, date: '2025-10-03', label: 'friday' },
     { id: 2, date: '2025-10-04', label: 'saturday' },

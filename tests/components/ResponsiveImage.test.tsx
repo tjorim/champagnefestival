@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import ResponsiveImage from '../components/ResponsiveImage';
+import ResponsiveImage from '@/components/ResponsiveImage';
 
 describe('ResponsiveImage component', () => {
   it('renders an image with src and alt', () => {

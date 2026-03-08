@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useScrollNavigation } from '../hooks/useScrollNavigation';
+import { useScrollNavigation } from '@/hooks/useScrollNavigation';
 
 // ResizeObserver must be a proper constructor function (not arrow function)
 const MockResizeObserver = vi.fn().mockImplementation(() => ({
@@ -51,6 +51,24 @@ describe('useScrollNavigation hook', () => {
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
     renderHook(() => useScrollNavigation());
     expect(addEventListenerSpy).toHaveBeenCalledWith('hashchange', expect.any(Function));
+  });
+
+  it('removes hashchange event listener on unmount', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+    const { unmount } = renderHook(() => useScrollNavigation());
+    const hashchangeHandler = addEventListenerSpy.mock.calls
+      .filter(([eventName]) => eventName === 'hashchange')
+      .at(-1)?.[1];
+
+    unmount();
+
+    expect(hashchangeHandler).toBeDefined();
+    const removedHashchangeCall = removeEventListenerSpy.mock.calls.find(
+      ([eventName, handler]) => eventName === 'hashchange' && handler === hashchangeHandler
+    );
+    expect(removedHashchangeCall).toBeDefined();
   });
 
   it('handles initial hash without throwing', () => {

@@ -1,8 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import ContactForm from '../components/ContactForm';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import ContactForm from '@/components/ContactForm';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     contact_name: () => 'Name',
     contact_email: () => 'Email',
@@ -22,6 +22,11 @@ vi.mock('../paraglide/messages', () => ({
 
 describe('ContactForm component', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -67,10 +72,11 @@ describe('ContactForm component', () => {
   });
 
   it('shows success message after successful submission', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ message: 'success' }),
-    }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
     render(<ContactForm />);
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: 'name', value: 'John Doe' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { name: 'email', value: 'john@example.com' } });
@@ -79,13 +85,30 @@ describe('ContactForm component', () => {
     await waitFor(() => {
       expect(screen.getByText('Message sent successfully!')).toBeInTheDocument();
     });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = (fetchMock as Mock).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/contact');
+    expect(options).toMatchObject({
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const requestBody = JSON.parse(options.body as string);
+    expect(requestBody).toMatchObject({
+      name: 'John Doe',
+      email: 'john@example.com',
+      message: 'Hello there',
+    });
   });
 
   it('shows error message when submission fails', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       json: async () => ({ message: 'Server error' }),
-    }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
     render(<ContactForm />);
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: 'name', value: 'John' } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { name: 'email', value: 'john@example.com' } });
@@ -93,6 +116,22 @@ describe('ContactForm component', () => {
     fireEvent.submit(screen.getByLabelText(/name/i).closest('form')!);
     await waitFor(() => {
       expect(screen.getByText('Submission error')).toBeInTheDocument();
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = (fetchMock as Mock).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/contact');
+    expect(options).toMatchObject({
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const requestBody = JSON.parse(options.body as string);
+    expect(requestBody).toMatchObject({
+      name: 'John',
+      email: 'john@example.com',
+      message: 'Hello',
     });
   });
 
@@ -110,5 +149,9 @@ describe('ContactForm component', () => {
       expect(screen.getByText('Sending...')).toBeInTheDocument();
     });
     resolvePromise!({ ok: true, json: async () => ({}) });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Sending...')).toBeNull();
+    });
   });
 });

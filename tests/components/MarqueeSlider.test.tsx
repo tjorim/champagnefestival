@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import MarqueeSlider from '../components/MarqueeSlider';
+import MarqueeSlider from '@/components/MarqueeSlider';
 
 vi.mock('swiper/react', () => ({
   Swiper: ({ children }: { children: React.ReactNode }) => <div data-testid="swiper">{children}</div>,
@@ -46,7 +46,7 @@ describe('MarqueeSlider component', () => {
     render(<MarqueeSlider items={items} />);
     // Item is duplicated to have at least 8 slides
     const slides = screen.getAllByTestId('swiper-slide');
-    expect(slides.length).toBeGreaterThanOrEqual(8);
+    expect(slides.length).toBe(8);
   });
 
   it('renders images with alt text', () => {

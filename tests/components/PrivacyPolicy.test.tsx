@@ -1,8 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import PrivacyPolicy from '../components/PrivacyPolicy';
+import PrivacyPolicy from '@/components/PrivacyPolicy';
 
-vi.mock('../paraglide/messages', () => ({
+vi.mock('@/paraglide/messages', () => ({
   m: {
     footer_privacy: () => 'Privacy Policy',
     privacy_title: () => 'Privacy Policy Title',
@@ -10,7 +10,7 @@ vi.mock('../paraglide/messages', () => ({
   },
 }));
 
-vi.mock('../config/privacyPolicy', () => ({
+vi.mock('@/config/privacyPolicy', () => ({
   privacyPolicyConfig: {
     getLastUpdated: () => 'Last updated',
     getLastUpdatedDate: () => '2024-01-01',

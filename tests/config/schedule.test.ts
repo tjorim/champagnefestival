@@ -6,7 +6,7 @@ import {
   getEventsByCategory,
   getAllEventsSorted,
   requiresReservation,
-} from '../config/schedule';
+} from '@/config/schedule';
 
 describe('schedule config', () => {
   it('exports 3 festival days', () => {
@@ -22,6 +22,9 @@ describe('schedule config', () => {
   it('festival days have valid ISO dates', () => {
     festivalDays.forEach(day => {
       expect(day.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const parsedDate = new Date(day.date);
+      expect(Number.isNaN(parsedDate.getTime())).toBe(false);
+      expect(parsedDate.toISOString().slice(0, 10)).toBe(day.date);
     });
   });
 

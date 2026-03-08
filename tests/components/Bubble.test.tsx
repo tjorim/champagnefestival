@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import Bubble from '../components/Bubble';
+import Bubble from '@/components/Bubble';
 
 describe('Bubble component', () => {
   it('renders with correct CSS variables from props', () => {
