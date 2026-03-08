@@ -26,7 +26,7 @@ describe('useServiceWorker hook', () => {
       if (hadServiceWorker && originalDescriptor) {
         Object.defineProperty(navigator, 'serviceWorker', originalDescriptor);
       } else {
-        delete (navigator as Navigator & { serviceWorker?: unknown }).serviceWorker;
+        delete (navigator as unknown as { serviceWorker?: unknown }).serviceWorker;
       }
     }
   });
@@ -50,7 +50,7 @@ describe('useServiceWorker hook', () => {
       if (hadServiceWorker && originalDescriptor) {
         Object.defineProperty(navigator, 'serviceWorker', originalDescriptor);
       } else {
-        delete (navigator as Navigator & { serviceWorker?: unknown }).serviceWorker;
+        delete (navigator as unknown as { serviceWorker?: unknown }).serviceWorker;
       }
     }
   });
