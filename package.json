@@ -28,8 +28,8 @@
     "swiper": "^12.1.2"
   },
   "devDependencies": {
-    "@inlang/paraglide-js": "^2.13.1",
-    "@inlang/plugin-m-function-matcher": "^2.2.1",
+    "@inlang/paraglide-js": "^2.15.0",
+    "@inlang/plugin-m-function-matcher": "^2.2.2",
     "@inlang/plugin-message-format": "^4.3.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
