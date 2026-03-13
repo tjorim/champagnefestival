@@ -14,8 +14,8 @@ const edition = getActiveEdition();
 
 export const festivalYear = edition.year;
 
-/** The month of the active edition ("march" | "october"). */
-export const activeEdition: "march" | "october" = edition.month;
+/** The month of the active edition — type is inferred from the Edition interface. */
+export const activeEdition = edition.month;
 
 // ── Festival start / end dates ────────────────────────────────────────────────
 
@@ -30,14 +30,19 @@ export const festivalDate = new Date(
   0,
 );
 
-export const festivalEndDate = new Date(edition.dates.sunday);
+// End of the festival day — set to 23:59:59.999 so it represents the true day-end.
+// This is the canonical end time used by all consumers (Countdown, JsonLd, etc.).
+const sundayEndOfDay = new Date(edition.dates.sunday);
+sundayEndOfDay.setHours(23, 59, 59, 999);
+export const festivalEndDate = sundayEndOfDay;
 
 // ── Individual festival days ──────────────────────────────────────────────────
 
+// Clone the source Date objects to prevent external mutation of the shared Edition data.
 export const festivalDays = [
-  edition.dates.friday,
-  edition.dates.saturday,
-  edition.dates.sunday,
+  new Date(edition.dates.friday.getTime()),
+  new Date(edition.dates.saturday.getTime()),
+  new Date(edition.dates.sunday.getTime()),
 ] as const;
 
 // ── Localised date-range strings ──────────────────────────────────────────────

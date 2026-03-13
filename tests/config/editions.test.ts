@@ -1,8 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { editions, getActiveEdition } from "@/config/editions";
 import type { Edition } from "@/config/editions";
 
 describe("editions registry", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it("exports a non-empty editions array", () => {
     expect(Array.isArray(editions)).toBe(true);
     expect(editions.length).toBeGreaterThan(0);
@@ -60,8 +63,17 @@ describe("editions registry", () => {
   });
 
   it("getActiveEdition falls back to the most recent edition when all are past", () => {
-    // The fallback should always yield a defined result regardless of date
+    // Mock time to far in the future (after all known editions)
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2099, 11, 31));
+
     const active = getActiveEdition();
     expect(active).toBeDefined();
+
+    // Should return the chronologically last edition
+    const sorted = [...editions].sort(
+      (a, b) => a.dates.friday.getTime() - b.dates.friday.getTime(),
+    );
+    expect(active.id).toBe(sorted[sorted.length - 1]!.id);
   });
 });

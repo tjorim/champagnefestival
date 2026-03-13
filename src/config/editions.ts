@@ -158,7 +158,7 @@ const schedule2026March: ScheduleEvent[] = [
   {
     id: "sat-end",
     title: "Einde festival + party",
-    startTime: "24:00",
+    startTime: "23:59", // midnight closing; "24:00" is not a valid HH:MM value
     description: "Sluiting van het festival en de party op zaterdag.",
     category: "general",
     dayId: 2,
