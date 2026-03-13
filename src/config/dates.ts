@@ -6,7 +6,7 @@
  */
 
 // Festival configuration
-export const festivalYear = 2025; // Current festival year
+export const festivalYear = 2026; // Current festival year
 
 /**
  * Calculates the first Friday of a given month that is part of a full weekend
@@ -43,12 +43,20 @@ function getFirstFullWeekend(year: number, month: number) {
   };
 }
 
+// Explicit date overrides when the auto-calculation doesn't match the actual festival dates.
+// For March 2026 the festival uses the second weekend (13-15 March), not the first (6-8 March).
+const marchDateOverride: { friday: Date; saturday: Date; sunday: Date } | null = {
+  friday: new Date(festivalYear, 2, 13), // March 13, 2026
+  saturday: new Date(festivalYear, 2, 14), // March 14, 2026
+  sunday: new Date(festivalYear, 2, 15), // March 15, 2026
+};
+
 // Calculate March and October festival dates
-const marchWeekend = getFirstFullWeekend(festivalYear, 3); // March
+const marchWeekend = marchDateOverride ?? getFirstFullWeekend(festivalYear, 3); // March
 const octoberWeekend = getFirstFullWeekend(festivalYear, 10); // October
 
 // Currently active festival edition (change this to switch between March/October)
-export const activeEdition: "march" | "october" = "october";
+export const activeEdition: "march" | "october" = "march";
 
 // Get the active weekend
 const activeWeekend =

@@ -10,7 +10,7 @@ import {
 
 describe("dates config", () => {
   it("exports the festival year", () => {
-    expect(festivalYear).toBe(2025);
+    expect(festivalYear).toBe(2026);
   });
 
   it("festival start date is a valid Date", () => {
@@ -57,8 +57,8 @@ describe("dates config", () => {
     expect(festivalDateRange).toHaveProperty("en");
     expect(festivalDateRange).toHaveProperty("nl");
     expect(festivalDateRange).toHaveProperty("fr");
-    expect(festivalDateRange.en).toContain("2025");
-    expect(festivalDateRange.nl).toContain("2025");
+    expect(festivalDateRange.en).toContain("2026");
+    expect(festivalDateRange.nl).toContain("2026");
   });
 
   it("active edition is either march or october", () => {
