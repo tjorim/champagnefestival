@@ -59,6 +59,7 @@ describe("dates config", () => {
     expect(festivalDateRange).toHaveProperty("fr");
     expect(festivalDateRange.en).toContain("2026");
     expect(festivalDateRange.nl).toContain("2026");
+    expect(festivalDateRange.fr).toContain("2026");
   });
 
   it("active edition is either march or october", () => {

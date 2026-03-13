@@ -46,8 +46,8 @@ export const festivalDays: FestivalDay[] = [
   },
 ];
 
-// Schedule events from the active edition
-export const scheduleEvents = activeEdition.schedule;
+// Schedule events from the active edition (shallow copy to protect the registry from external mutation)
+export const scheduleEvents = [...activeEdition.schedule];
 
 /**
  * Helper function to get events for a specific day

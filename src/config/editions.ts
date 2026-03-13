@@ -160,7 +160,7 @@ const schedule2026March: ScheduleEvent[] = [
   {
     id: "sat-end",
     title: "Einde festival + party",
-    startTime: "23:59", // midnight closing; "24:00" is not a valid HH:MM value
+    startTime: "24:00", // display-only midnight marker; sorts correctly as a string after all other Saturday times
     description: "Sluiting van het festival en de party op zaterdag.",
     category: "general",
     dayId: 2,
@@ -240,6 +240,11 @@ export const editions: Edition[] = [
  * editions are in the past.
  */
 export function getActiveEdition(): Edition {
+  if (editions.length === 0) {
+    throw new Error(
+      "No editions registered. Add at least one entry to the editions array in editions.ts.",
+    );
+  }
   const now = new Date();
   const sorted = [...editions].sort(
     (a, b) => a.dates.friday.getTime() - b.dates.friday.getTime(),
