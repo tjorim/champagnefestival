@@ -174,9 +174,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     const calculateStatus = (): CountdownStatus => {
       const now = new Date();
       const festivalStart = targetDateObjRef.current;
-      const festivalEnd = new Date(festivalEndDate);
-
-      festivalEnd.setHours(23, 59, 59);
+      const festivalEnd = new Date(festivalEndDate); // already at 23:59:59.999
 
       if (now < festivalStart) {
         return COUNTDOWN_STATUS.upcoming;

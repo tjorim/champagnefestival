@@ -1,82 +1,52 @@
 /**
- * Central configuration for festival dates
+ * Central configuration for festival dates.
  *
- * This file automatically calculates festival dates based on the rule:
- * "The first full weekend (Friday, Saturday, Sunday) of March and October"
+ * All values are derived from the active edition defined in `editions.ts`.
+ * To change the active dates, add or modify an edition there — no changes
+ * are needed in this file.
  */
 
-// Festival configuration
-export const festivalYear = 2025; // Current festival year
+import { getActiveEdition } from "./editions";
 
-/**
- * Calculates the first Friday of a given month that is part of a full weekend
- * Returns an object with the Friday, Saturday, and Sunday dates
- */
-function getFirstFullWeekend(year: number, month: number) {
-  // Create a date for the 1st of the month
-  const firstDay = new Date(year, month - 1, 1);
+const edition = getActiveEdition();
 
-  // Get the day of the week for the 1st (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-  const firstDayOfWeek = firstDay.getDay();
+// ── Year and edition identifier ───────────────────────────────────────────────
 
-  // Calculate days to add to get to the first Friday
-  let daysToAdd = 0;
-  if (firstDayOfWeek <= 5) {
-    // If the 1st is Sun-Fri, calculate days to the first Friday
-    daysToAdd = 5 - firstDayOfWeek; // Friday is day 5
-  } else {
-    // If the 1st is Saturday, add 6 days to get to the next Friday
-    daysToAdd = 5 + 7 - firstDayOfWeek;
-  }
+export const festivalYear = edition.year;
 
-  // Create the first Friday
-  const firstFriday = new Date(year, month - 1, 1 + daysToAdd);
+/** The month of the active edition — type is inferred from the Edition interface. */
+export const activeEdition = edition.month;
 
-  // Create the following Saturday and Sunday
-  const firstSaturday = new Date(year, month - 1, 1 + daysToAdd + 1);
-  const firstSunday = new Date(year, month - 1, 1 + daysToAdd + 2);
+// ── Festival start / end dates ────────────────────────────────────────────────
 
-  return {
-    friday: firstFriday,
-    saturday: firstSaturday,
-    sunday: firstSunday,
-  };
-}
-
-// Calculate March and October festival dates
-const marchWeekend = getFirstFullWeekend(festivalYear, 3); // March
-const octoberWeekend = getFirstFullWeekend(festivalYear, 10); // October
-
-// Currently active festival edition (change this to switch between March/October)
-export const activeEdition: "march" | "october" = "october";
-
-// Get the active weekend
-const activeWeekend =
-  (activeEdition as "march" | "october") === "march" ? marchWeekend : octoberWeekend;
-const activeMonth = (activeEdition as "march" | "october") === "march" ? 3 : 10;
-
-// Export festival start and end dates
 // Festival opens at 17:00 on Friday
 export const festivalDate = new Date(
-  activeWeekend.friday.getFullYear(),
-  activeWeekend.friday.getMonth(),
-  activeWeekend.friday.getDate(),
+  edition.dates.friday.getFullYear(),
+  edition.dates.friday.getMonth(),
+  edition.dates.friday.getDate(),
   17,
   0,
   0,
-  0, // Set to 17:00:00
+  0,
 );
 
-export const festivalEndDate = new Date(activeWeekend.sunday);
+// End of the festival day — set to 23:59:59.999 so it represents the true day-end.
+// This is the canonical end time used by all consumers (Countdown, JsonLd, etc.).
+const sundayEndOfDay = new Date(edition.dates.sunday);
+sundayEndOfDay.setHours(23, 59, 59, 999);
+export const festivalEndDate = sundayEndOfDay;
 
-// Individual festival days
+// ── Individual festival days ──────────────────────────────────────────────────
+
+// Clone the source Date objects to prevent external mutation of the shared Edition data.
 export const festivalDays = [
-  activeWeekend.friday,
-  activeWeekend.saturday,
-  activeWeekend.sunday,
+  new Date(edition.dates.friday.getTime()),
+  new Date(edition.dates.saturday.getTime()),
+  new Date(edition.dates.sunday.getTime()),
 ] as const;
 
-// Month names for different languages
+// ── Localised date-range strings ──────────────────────────────────────────────
+
 const MONTH_NAMES = {
   en: [
     "January",
@@ -122,19 +92,18 @@ const MONTH_NAMES = {
   ],
 };
 
-// Helper function to generate localized date range strings
 function generateDateRangeStrings() {
-  // Convert JavaScript 0-indexed month to 1-indexed
-  const month = activeMonth - 1; // 0-indexed for arrays
-  const startDay = activeWeekend.friday.getDate();
-  const endDay = activeWeekend.sunday.getDate();
+  const month = edition.dates.friday.getMonth(); // 0-indexed
+  const startDay = edition.dates.friday.getDate();
+  const endDay = edition.dates.sunday.getDate();
+  const year = edition.year;
 
   return {
-    en: `${MONTH_NAMES.en[month]} ${startDay}-${endDay}, ${festivalYear}`,
-    fr: `${startDay}-${endDay} ${MONTH_NAMES.fr[month]} ${festivalYear}`,
-    nl: `${startDay}-${endDay} ${MONTH_NAMES.nl[month]} ${festivalYear}`,
+    en: `${MONTH_NAMES.en[month]} ${startDay}-${endDay}, ${year}`,
+    fr: `${startDay}-${endDay} ${MONTH_NAMES.fr[month]} ${year}`,
+    nl: `${startDay}-${endDay} ${MONTH_NAMES.nl[month]} ${year}`,
   };
 }
 
-// Automatically generated formatted date strings for translations
+// Automatically generated formatted date strings for use in translations
 export const festivalDateRange = generateDateRangeStrings();
