@@ -62,6 +62,21 @@ describe("editions registry", () => {
     expect(editions.some((e) => e.id === active.id)).toBe(true);
   });
 
+  it("getActiveEdition returns the current edition on its last day (Sunday)", () => {
+    // Mock time to noon on the Sunday of the chronologically first edition
+    const firstEdition = [...editions].sort(
+      (a, b) => a.dates.friday.getTime() - b.dates.friday.getTime(),
+    )[0]!;
+    const sunday = firstEdition.dates.sunday;
+    vi.useFakeTimers();
+    vi.setSystemTime(
+      new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 12, 0, 0),
+    );
+
+    const active = getActiveEdition();
+    expect(active.id).toBe(firstEdition.id);
+  });
+
   it("getActiveEdition falls back to the most recent edition when all are past", () => {
     // Mock time to far in the future (after all known editions)
     vi.useFakeTimers();

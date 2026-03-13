@@ -62,6 +62,8 @@ export interface Edition {
 /**
  * Calculates the first Friday of a given month that is part of a full
  * Fri–Sat–Sun weekend.
+ * @param year The full year (e.g. 2026).
+ * @param month The month number (1–12, where 1 = January and 12 = December).
  */
 function getFirstFullWeekend(year: number, month: number): EditionDates {
   const firstDay = new Date(year, month - 1, 1);
@@ -242,5 +244,11 @@ export function getActiveEdition(): Edition {
   const sorted = [...editions].sort(
     (a, b) => a.dates.friday.getTime() - b.dates.friday.getTime(),
   );
-  return sorted.find((e) => e.dates.sunday >= now) ?? sorted[sorted.length - 1]!;
+  return (
+    sorted.find((e) => {
+      const sundayEnd = new Date(e.dates.sunday);
+      sundayEnd.setHours(23, 59, 59, 999);
+      return sundayEnd >= now;
+    }) ?? sorted[sorted.length - 1]!
+  );
 }
