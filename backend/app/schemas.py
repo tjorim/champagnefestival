@@ -119,6 +119,28 @@ class ReservationListOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReservationGuestOut(BaseModel):
+    """Reservation data returned to visitors via the self-lookup endpoint.
+
+    Only safe-to-expose fields — no phone, no internal notes, no checkInToken.
+    Allows a guest to check their own booking status and pre-order summary.
+    """
+
+    id: str
+    event_id: str
+    event_title: str
+    guest_count: int
+    pre_orders: list[OrderItemOut]
+    status: ReservationStatus
+    payment_status: PaymentStatus
+    checked_in: bool
+    checked_in_at: datetime | None
+    strap_issued: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ---------------------------------------------------------------------------
 # Check-in
 # ---------------------------------------------------------------------------

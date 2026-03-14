@@ -4,8 +4,11 @@ import secrets
 import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import EmailStr
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
@@ -13,6 +16,7 @@ from app.database import get_db
 from app.models import Reservation
 from app.schemas import (
     ReservationCreate,
+    ReservationGuestOut,
     ReservationListOut,
     ReservationOut,
     ReservationOutWithToken,
@@ -22,6 +26,7 @@ from app.spam import check_form_timing, check_honeypot
 from app.utils import (
     reservation_to_dict,
     reservation_to_dict_with_token,
+    reservation_to_guest_dict,
     reservation_to_list_dict,
 )
 
@@ -75,7 +80,7 @@ async def create_reservation(
 
 
 # ---------------------------------------------------------------------------
-# Admin: list reservations (check_in_token excluded)
+# Admin: list reservations with optional search / filter
 # ---------------------------------------------------------------------------
 
 
@@ -84,10 +89,68 @@ async def create_reservation(
     response_model=list[ReservationListOut],
     dependencies=[Depends(require_admin)],
 )
-async def list_reservations(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    result = await db.execute(select(Reservation).order_by(Reservation.created_at.desc()))
+async def list_reservations(
+    db: AsyncSession = Depends(get_db),
+    q: str | None = Query(default=None, description="Search by name or email (case-insensitive)"),
+    status_filter: str | None = Query(default=None, alias="status", description="Filter by status: pending | confirmed | cancelled"),
+    event_id: str | None = Query(default=None, description="Filter by event ID"),
+    table_id: str | None = Query(default=None, description="Filter by table ID"),
+) -> list[dict]:
+    """List all reservations.  Supports optional search and filter query params."""
+    stmt = select(Reservation)
+
+    if q:
+        # Escape LIKE special characters so user input is treated as a literal
+        # substring (prevents % and _ from acting as wildcards).
+        q_escaped = q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        stmt = stmt.where(
+            or_(
+                Reservation.name.ilike(f"%{q_escaped}%", escape="\\"),
+                Reservation.email.ilike(f"%{q_escaped}%", escape="\\"),
+            )
+        )
+    if status_filter:
+        stmt = stmt.where(Reservation.status == status_filter)
+    if event_id:
+        stmt = stmt.where(Reservation.event_id == event_id)
+    if table_id:
+        stmt = stmt.where(Reservation.table_id == table_id)
+
+    result = await db.execute(stmt.order_by(Reservation.created_at.desc()))
     rows = result.scalars().all()
     return [reservation_to_list_dict(r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Public: visitor self-lookup by e-mail
+# ---------------------------------------------------------------------------
+
+
+@router.get("/my", response_model=list[ReservationGuestOut])
+async def my_reservations(
+    email: Annotated[EmailStr, Query(description="E-mail address used when making the reservation")],
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Return all reservations belonging to the given e-mail address.
+
+    This endpoint is publicly accessible — no admin token required.
+    It exposes only safe booking-status fields; sensitive fields (phone,
+    internal notes, check-in token) are never returned here.
+
+    This supports two visitor-facing user stories:
+    - **Order overview**: guests can check the status of their bookings
+      across all editions.
+    - **QR retrieval**: once e-mail confirmation is implemented (see
+      README § Planned features), the confirmation e-mail will contain the
+      deep-link; this endpoint provides a fallback for guests who lost it.
+    """
+    result = await db.execute(
+        select(Reservation)
+        .where(Reservation.email == email.lower().strip())
+        .order_by(Reservation.created_at.desc())
+    )
+    rows = result.scalars().all()
+    return [reservation_to_guest_dict(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------

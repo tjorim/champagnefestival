@@ -200,3 +200,129 @@ async def test_table_crud(client):
 
     r = await client.get("/api/tables", headers=ADMIN_HEADERS)
     assert r.json() == []
+
+
+# ---------------------------------------------------------------------------
+# Reservations — search / filter (admin)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_search_by_name(client):
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "name": "Marie Curie", "email": "marie@example.com"},
+    )
+    assert r.status_code == 201
+
+    r = await client.get("/api/reservations", params={"q": "jean"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert items[0]["name"] == "Jean Dupont"
+
+
+@pytest.mark.anyio
+async def test_search_by_email(client):
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+
+    r = await client.get(
+        "/api/reservations", params={"q": "example.com"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+
+@pytest.mark.anyio
+async def test_filter_by_status(client):
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+    r_list = await client.get("/api/reservations", headers=ADMIN_HEADERS)
+    res_id = r_list.json()[0]["id"]
+
+    # Confirm the reservation
+    r = await client.put(
+        f"/api/reservations/{res_id}", json={"status": "confirmed"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+
+    r = await client.get(
+        "/api/reservations", params={"status": "confirmed"}, headers=ADMIN_HEADERS
+    )
+    assert len(r.json()) == 1
+
+    r = await client.get(
+        "/api/reservations", params={"status": "pending"}, headers=ADMIN_HEADERS
+    )
+    assert len(r.json()) == 0
+
+
+@pytest.mark.anyio
+async def test_filter_by_event(client):
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "event_id": "event-sat", "email": "other@example.com"},
+    )
+    assert r.status_code == 201
+
+    r = await client.get(
+        "/api/reservations", params={"event_id": "event-fri"}, headers=ADMIN_HEADERS
+    )
+    assert len(r.json()) == 1
+    assert r.json()[0]["event_id"] == "event-fri"
+
+
+# ---------------------------------------------------------------------------
+# Visitor self-lookup (public /my endpoint)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_my_reservations(client):
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+
+    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    # Must not expose sensitive fields
+    assert "check_in_token" not in items[0]
+    assert "phone" not in items[0]
+    assert "notes" not in items[0]
+    # Must expose booking status fields
+    assert items[0]["status"] == "pending"
+    assert items[0]["event_title"] == "Vrijdagavond"
+
+
+@pytest.mark.anyio
+async def test_my_reservations_no_results(client):
+    r = await client.get("/api/reservations/my", params={"email": "nobody@example.com"})
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+@pytest.mark.anyio
+async def test_my_reservations_invalid_email(client):
+    r = await client.get("/api/reservations/my", params={"email": "not-an-email"})
+    assert r.status_code == 422  # FastAPI/Pydantic validation error
+
+
+@pytest.mark.anyio
+async def test_my_reservations_multiple_editions(client):
+    """A guest with two bookings (different events) sees both."""
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "event_id": "event-sat", "event_title": "Zaterdagavond"},
+    )
+    assert r.status_code == 201
+
+    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    assert len(r.json()) == 2
