@@ -58,11 +58,26 @@ export interface Table {
   id: string;
   name: string;
   capacity: number;
-  /** X position (percentage of hall width) */
+  /** X position (percentage of room width) */
   x: number;
-  /** Y position (percentage of hall height) */
+  /** Y position (percentage of room height) */
   y: number;
+  /** Room this table belongs to (null = unassigned / legacy) */
+  roomId: string | null;
   reservationIds: string[];
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  /** 'main-hall' | 'exchange' */
+  zoneType: string;
+  /** Room width in metres — used to render a proportional canvas */
+  widthM: number;
+  /** Room height in metres */
+  heightM: number;
+  /** CSS colour string for the room badge / canvas border */
+  color: string;
 }
 
 export interface ReservationFormData {

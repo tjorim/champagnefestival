@@ -1,6 +1,6 @@
 """Shared serialisation helpers for ORM → dict conversions."""
 
-from app.models import Reservation, Table
+from app.models import Reservation, Room, Table
 
 
 def reservation_to_dict(r: Reservation) -> dict:
@@ -70,7 +70,21 @@ def table_to_dict(t: Table) -> dict:
         "capacity": t.capacity,
         "x": t.x,
         "y": t.y,
+        "room_id": t.room_id,
         "reservation_ids": t.get_reservation_ids(),
         "created_at": t.created_at,
         "updated_at": t.updated_at,
+    }
+
+
+def room_to_dict(r: Room) -> dict:
+    return {
+        "id": r.id,
+        "name": r.name,
+        "zone_type": r.zone_type,
+        "width_m": r.width_m,
+        "height_m": r.height_m,
+        "color": r.color,
+        "created_at": r.created_at,
+        "updated_at": r.updated_at,
     }

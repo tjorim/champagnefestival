@@ -42,6 +42,7 @@ async def create_table(
         capacity=body.capacity,
         x=body.x,
         y=body.y,
+        room_id=body.room_id,
     )
     t.set_reservation_ids([])
     db.add(t)
@@ -92,6 +93,8 @@ async def update_table(
         t.x = body.x
     if body.y is not None:
         t.y = body.y
+    if body.room_id is not None or (hasattr(body, "model_fields_set") and "room_id" in body.model_fields_set):
+        t.room_id = body.room_id
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
 

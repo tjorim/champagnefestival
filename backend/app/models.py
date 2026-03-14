@@ -85,15 +85,48 @@ class ContentItem(Base):
         self.value = json.dumps(items)
 
 
+class Room(Base):
+    """A physical space within the venue (e.g. main hall or exchange market room).
+
+    Width and height are stored in metres so the frontend can render a
+    proportional canvas.
+    """
+
+    __tablename__ = "rooms"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    zone_type: Mapped[str] = mapped_column(String(50), default="main-hall")
+    """'main-hall' | 'exchange' — grouping for display in the frontend tab bar."""
+
+    width_m: Mapped[float] = mapped_column(default=20.0)
+    """Room width in metres — used to render a proportional canvas."""
+
+    height_m: Mapped[float] = mapped_column(default=15.0)
+    """Room height in metres."""
+
+    color: Mapped[str] = mapped_column(String(20), default="#6c757d")
+    """Accent colour for the room badge / canvas border (CSS colour string)."""
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
 class Table(Base):
     __tablename__ = "tables"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     capacity: Mapped[int] = mapped_column(Integer)
-    # Position as percentage of hall dimensions (0–100)
+    # Position as percentage of room dimensions (0–100)
     x: Mapped[float] = mapped_column(default=50.0)
     y: Mapped[float] = mapped_column(default=50.0)
+    # Optional room assignment (nullable for backward compat)
+    room_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # JSON-encoded list of reservation ID strings
     reservation_ids: Mapped[str] = mapped_column(Text, default="[]")
 

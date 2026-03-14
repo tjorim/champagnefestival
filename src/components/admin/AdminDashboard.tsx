@@ -14,6 +14,7 @@ import TableLayout from "./TableLayout";
 import ContentManagement from "./ContentManagement";
 import type {
   Reservation,
+  Room,
   Table,
   ReservationStatus,
   PaymentStatus,
@@ -22,6 +23,31 @@ import type {
 
 interface AdminDashboardProps {
   visible: boolean;
+}
+
+/** Map FastAPI snake_case room response to frontend camelCase Room type */
+function apiRoomToRoom(d: Record<string, unknown>): Room {
+  return {
+    id: d.id as string,
+    name: d.name as string,
+    zoneType: (d.zone_type ?? d.zoneType) as string,
+    widthM: (d.width_m ?? d.widthM) as number,
+    heightM: (d.height_m ?? d.heightM) as number,
+    color: d.color as string,
+  };
+}
+
+/** Map FastAPI snake_case table response to frontend camelCase Table type */
+function apiTableToTable(d: Record<string, unknown>): Table {
+  return {
+    id: d.id as string,
+    name: d.name as string,
+    capacity: d.capacity as number,
+    x: d.x as number,
+    y: d.y as number,
+    roomId: ((d.room_id ?? d.roomId) as string | null) ?? null,
+    reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
+  };
 }
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
@@ -34,6 +60,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
   const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
@@ -50,9 +77,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setIsLoading(true);
     setError("");
     try {
-      const [resResponse, tablesResponse] = await Promise.all([
+      const [resResponse, tablesResponse, roomsResponse] = await Promise.all([
         fetch("/api/reservations", { headers: authHeaders() }),
         fetch("/api/tables", { headers: authHeaders() }),
+        fetch("/api/rooms", { headers: authHeaders() }),
       ]);
 
       if (resResponse.status === 401 || tablesResponse.status === 401) {
@@ -67,7 +95,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       if (tablesResponse.ok) {
         const data = await tablesResponse.json();
-        setTables(data.tables ?? []);
+        const raw: Record<string, unknown>[] = Array.isArray(data) ? data : (data.tables ?? []);
+        setTables(raw.map(apiTableToTable));
+      }
+      if (roomsResponse.ok) {
+        const data = await roomsResponse.json();
+        setRooms(Array.isArray(data) ? data.map(apiRoomToRoom) : []);
       }
     } catch {
       setError(m.admin_error_load_data());
@@ -108,6 +141,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setToken("");
     setReservations([]);
     setTables([]);
+    setRooms([]);
   }, []);
 
   useEffect(() => {
@@ -202,16 +236,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddTable = useCallback(
-    async (name: string, capacity: number) => {
+    async (name: string, capacity: number, roomId: string | null) => {
       try {
         const response = await fetch("/api/tables", {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ name, capacity, x: 10, y: 10 }),
+          body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId }),
         });
         if (response.ok) {
           const data = await response.json();
-          setTables((prev) => [...prev, data.table]);
+          const table = data.table ?? data;
+          setTables((prev) => [...prev, apiTableToTable(table)]);
         }
       } catch {
         setError(m.admin_error_add_table());
@@ -251,6 +286,46 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         }
       } catch {
         setError(m.admin_error_delete_table());
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleAddRoom = useCallback(
+    async (name: string, zoneType: string, widthM: number, heightM: number, color: string) => {
+      try {
+        const response = await fetch("/api/rooms", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ name, zone_type: zoneType, width_m: widthM, height_m: heightM, color }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setRooms((prev) => [...prev, apiRoomToRoom(data)]);
+        }
+      } catch {
+        setError(m.admin_error_add_room());
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleDeleteRoom = useCallback(
+    async (roomId: string) => {
+      try {
+        const response = await fetch(`/api/rooms/${roomId}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        if (response.ok || response.status === 204) {
+          setRooms((prev) => prev.filter((r) => r.id !== roomId));
+          // Clear room assignment from tables that were in this room
+          setTables((prev) =>
+            prev.map((t) => (t.roomId === roomId ? { ...t, roomId: null } : t)),
+          );
+        }
+      } catch {
+        setError(m.admin_error_delete_room());
       }
     },
     [authHeaders],
@@ -477,9 +552,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     <TableLayout
                       tables={tables}
                       reservations={reservations}
+                      rooms={rooms}
                       onAddTable={handleAddTable}
                       onMoveTable={handleMoveTable}
                       onDeleteTable={handleDeleteTable}
+                      onAddRoom={handleAddRoom}
+                      onDeleteRoom={handleDeleteRoom}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="content">

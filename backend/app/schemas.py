@@ -192,6 +192,7 @@ class TableCreate(BaseModel):
     capacity: int = Field(ge=1, le=50)
     x: float = Field(ge=0, le=100, default=50.0)
     y: float = Field(ge=0, le=100, default=50.0)
+    room_id: str | None = None
 
 
 class TableUpdate(BaseModel):
@@ -199,6 +200,7 @@ class TableUpdate(BaseModel):
     capacity: int | None = Field(default=None, ge=1, le=50)
     x: float | None = Field(default=None, ge=0, le=100)
     y: float | None = Field(default=None, ge=0, le=100)
+    room_id: str | None = None
     reservation_ids: list[str] | None = None
 
 
@@ -208,7 +210,44 @@ class TableOut(BaseModel):
     capacity: int
     x: float
     y: float
+    room_id: str | None
     reservation_ids: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Rooms
+# ---------------------------------------------------------------------------
+
+ZoneType = Literal["main-hall", "exchange"]
+
+
+class RoomCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    zone_type: ZoneType = "main-hall"
+    width_m: float = Field(ge=1, le=500, default=20.0)
+    height_m: float = Field(ge=1, le=500, default=15.0)
+    color: str = Field(default="#6c757d", pattern=r"^#[0-9a-fA-F]{3,8}$")
+
+
+class RoomUpdate(BaseModel):
+    name: str | None = None
+    zone_type: ZoneType | None = None
+    width_m: float | None = Field(default=None, ge=1, le=500)
+    height_m: float | None = Field(default=None, ge=1, le=500)
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{3,8}$")
+
+
+class RoomOut(BaseModel):
+    id: str
+    name: str
+    zone_type: str
+    width_m: float
+    height_m: float
+    color: str
     created_at: datetime
     updated_at: datetime
 
