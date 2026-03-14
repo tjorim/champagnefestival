@@ -298,5 +298,6 @@
   "admin_room_unassigned_tables": "Unassigned",
   "admin_table_room_label": "Room",
   "admin_table_move_hint": "Drag to reposition. Click to view guests.",
-  "admin_room_delete_confirm": "Delete room? Tables will remain but lose their room assignment."
+  "admin_room_delete_confirm": "Delete room? Tables will remain but lose their room assignment.",
+  "back_to_site": "Back to site"
 }

@@ -56,6 +56,24 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
   );
 }
 
+/** Minimal top-bar shown on standalone admin / check-in pages */
+function StandaloneNavBar({ iconClass, title }: { iconClass: string; title: string }) {
+  return (
+    <nav className="navbar bg-dark border-bottom border-secondary px-3 py-2">
+      <div className="container-fluid d-flex justify-content-between align-items-center">
+        <span className="navbar-brand text-warning fw-bold mb-0">
+          <i className={`${iconClass} me-2`} aria-hidden="true" />
+          {title}
+        </span>
+        <a href="#" className="btn btn-sm btn-outline-secondary">
+          <i className="bi bi-arrow-left me-1" aria-hidden="true" />
+          {m.back_to_site()}
+        </a>
+      </div>
+    </nav>
+  );
+}
+
 // Helper component for MarqueeSlider with Suspense and ErrorBoundary
 function SuspendedMarqueeSlider({
   itemsType,
@@ -122,6 +140,45 @@ function App() {
   const reservableEvents = (edition?.schedule ?? [])
     .filter((ev) => ev.reservation)
     .map((ev) => ({ id: ev.id, title: ev.title }));
+
+  // --- Standalone full-page views (no site header/sections/footer) ---
+
+  if (hashState.page === "admin") {
+    return (
+      <div className="App">
+        <a href="#main-content" className="skip-link">
+          {m.accessibility_skip_to_content()}
+        </a>
+        <StandaloneNavBar iconClass="bi bi-shield-lock" title={m.admin_title()} />
+        <main id="main-content">
+          <AppSuspense errorFallbackText="Failed to load admin dashboard">
+            <AdminDashboard visible={true} />
+          </AppSuspense>
+        </main>
+      </div>
+    );
+  }
+
+  if (hashState.page === "check-in") {
+    return (
+      <div className="App">
+        <a href="#main-content" className="skip-link">
+          {m.accessibility_skip_to_content()}
+        </a>
+        <StandaloneNavBar iconClass="bi bi-qr-code-scan" title={m.checkin_title()} />
+        <main id="main-content">
+          <AppSuspense errorFallbackText="Failed to load check-in page">
+            <CheckInPage
+              reservationId={hashState.id}
+              checkInToken={hashState.token}
+            />
+          </AppSuspense>
+        </main>
+      </div>
+    );
+  }
+
+  // --- Main marketing page ---
 
   return (
     <div className="App">
@@ -313,21 +370,6 @@ function App() {
             </button>
           </div>
         </section>
-
-        {/* Admin Dashboard (hidden unless #admin hash is present) */}
-        <AppSuspense errorFallbackText="Failed to load admin dashboard">
-          <AdminDashboard visible={hashState.page === "admin"} />
-        </AppSuspense>
-
-        {/* Check-in page (shown when #check-in?id=…&token=… hash is present) */}
-        {hashState.page === "check-in" && (
-          <AppSuspense errorFallbackText="Failed to load check-in page">
-            <CheckInPage
-              reservationId={hashState.id}
-              checkInToken={hashState.token}
-            />
-          </AppSuspense>
-        )}
       </main>
 
       {/* Footer */}

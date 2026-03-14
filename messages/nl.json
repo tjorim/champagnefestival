@@ -298,5 +298,6 @@
   "admin_room_unassigned_tables": "Niet ingedeeld",
   "admin_table_room_label": "Ruimte",
   "admin_table_move_hint": "Sleep om te verplaatsen. Klik om gasten te zien.",
-  "admin_room_delete_confirm": "Ruimte verwijderen? Tafels blijven bestaan maar verliezen hun ruimte-toewijzing."
+  "admin_room_delete_confirm": "Ruimte verwijderen? Tafels blijven bestaan maar verliezen hun ruimte-toewijzing.",
+  "back_to_site": "Terug naar de site"
 }

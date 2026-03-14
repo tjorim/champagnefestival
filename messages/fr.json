@@ -298,5 +298,6 @@
   "admin_room_unassigned_tables": "Non attribuées",
   "admin_table_room_label": "Salle",
   "admin_table_move_hint": "Glisser pour repositionner. Cliquer pour voir les invités.",
-  "admin_room_delete_confirm": "Supprimer la salle ? Les tables seront conservées mais perdront leur salle."
+  "admin_room_delete_confirm": "Supprimer la salle ? Les tables seront conservées mais perdront leur salle.",
+  "back_to_site": "Retour au site"
 }
