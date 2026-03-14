@@ -263,5 +263,21 @@
   "checkin_not_found": "Réservation introuvable.",
   "checkin_invalid_token": "Code d'enregistrement invalide.",
   "checkin_do_checkin": "Enregistrer & remettre le bracelet",
-  "checkin_error": "Une erreur s'est produite lors de l'enregistrement."
+  "checkin_error": "Une erreur s'est produite lors de l'enregistrement.",
+  "admin_content_tab": "Contenu",
+  "admin_content_producers_section": "Producteurs",
+  "admin_content_sponsors_section": "Sponsors",
+  "admin_content_editions_section": "Éditions du festival",
+  "admin_content_name_label": "Nom",
+  "admin_content_image_url_label": "URL de l'image",
+  "admin_content_name_placeholder": "Nom du producteur",
+  "admin_content_image_url_placeholder": "https://example.com/image.jpg",
+  "admin_content_add_item": "Ajouter un élément",
+  "admin_content_save_section": "Enregistrer les modifications",
+  "admin_content_saved": "Enregistré !",
+  "admin_content_error_save": "Échec de la sauvegarde.",
+  "admin_content_editions_note": "Les données des éditions sont gérées dans le code source. Une API de gestion backend est prévue.",
+  "admin_content_fallback_note": "Les données fictives sont affichées jusqu'à ce que vous enregistriez les vôtres.",
+  "admin_content_loading": "Chargement du contenu…",
+  "admin_content_error_load": "Échec du chargement du contenu."
 }

@@ -59,6 +59,32 @@ class Reservation(Base):
         self.pre_orders = json.dumps(items)
 
 
+class ContentItem(Base):
+    """Key-value store for CMS-managed content (producers, sponsors).
+
+    Each row stores a JSON array under a named key.  Keys are restricted to a
+    known set at the API layer; arbitrary keys are rejected.
+    """
+
+    __tablename__ = "content_items"
+
+    key: Mapped[str] = mapped_column(String(50), primary_key=True)
+    """Identifier, e.g. 'producers' or 'sponsors'."""
+
+    value: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    """JSON-encoded list of SliderItem objects."""
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    def get_items(self) -> list[dict]:
+        return json.loads(self.value) if self.value else []
+
+    def set_items(self, items: list[dict]) -> None:
+        self.value = json.dumps(items)
+
+
 class Table(Base):
     __tablename__ = "tables"
 

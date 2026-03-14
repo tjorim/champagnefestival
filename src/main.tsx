@@ -15,11 +15,11 @@ import ReservationModal from "./components/ReservationModal";
 import { useLanguage } from "./hooks/useLanguage";
 import { useScrollNavigation } from "./hooks/useScrollNavigation";
 import { useServiceWorker } from "./hooks/useServiceWorker";
+import { useContent } from "./hooks/useContent";
 import { m } from "./paraglide/messages";
 import { festivalDate } from "./config/dates";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import { producerItems, sponsorItems } from "./config/marqueeSlider";
 import { getActiveEdition } from "./config/editions";
 import "./index.css";
 
@@ -85,6 +85,9 @@ function App() {
   useLanguage();
   useScrollNavigation();
   useServiceWorker();
+
+  // Fetch CMS-managed producers and sponsors; falls back to config placeholders
+  const { producers, sponsors } = useContent();
 
   const [showReservationModal, setShowReservationModal] = useState(false);
 
@@ -218,7 +221,7 @@ function App() {
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading id="producers-heading" title={m.producers_title()} />
             {/* Removed redundant <p> tag */}
-            <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
+            <SuspendedMarqueeSlider itemsType="producers" items={producers} />
           </div>
         </section>
 
@@ -268,7 +271,7 @@ function App() {
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading id="sponsors-heading" title={m.sponsors_title()} />
             {/* Removed redundant <p> tag */}
-            <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
+            <SuspendedMarqueeSlider itemsType="sponsors" items={sponsors} />
           </div>
         </section>
 

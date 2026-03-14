@@ -263,5 +263,21 @@
   "checkin_not_found": "Reservatie niet gevonden.",
   "checkin_invalid_token": "Ongeldige check-in code.",
   "checkin_do_checkin": "Inchecken & polsband uitreiken",
-  "checkin_error": "Er is een fout opgetreden bij het inchecken."
+  "checkin_error": "Er is een fout opgetreden bij het inchecken.",
+  "admin_content_tab": "Inhoud",
+  "admin_content_producers_section": "Champagne Producenten",
+  "admin_content_sponsors_section": "Sponsors",
+  "admin_content_editions_section": "Festival Edities",
+  "admin_content_name_label": "Naam",
+  "admin_content_image_url_label": "Afbeelding URL",
+  "admin_content_name_placeholder": "Producent naam",
+  "admin_content_image_url_placeholder": "https://example.com/image.jpg",
+  "admin_content_add_item": "Item toevoegen",
+  "admin_content_save_section": "Wijzigingen opslaan",
+  "admin_content_saved": "Opgeslagen!",
+  "admin_content_error_save": "Opslaan mislukt.",
+  "admin_content_editions_note": "Editiegegevens worden beheerd in de broncode. Een backend-beheer API is gepland.",
+  "admin_content_fallback_note": "Tijdelijke aanduidingen worden getoond totdat u uw eigen gegevens opslaat.",
+  "admin_content_loading": "Inhoud laden…",
+  "admin_content_error_load": "Laden van inhoud mislukt."
 }

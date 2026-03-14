@@ -157,6 +157,32 @@ class CheckInOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Content
+# ---------------------------------------------------------------------------
+
+#: Keys that are allowed to be stored via the content API.
+ALLOWED_CONTENT_KEYS = frozenset({"producers", "sponsors"})
+
+
+class SliderItem(BaseModel):
+    id: int
+    name: str = Field(min_length=1, max_length=200)
+    image: str = Field(min_length=1, max_length=500)
+
+
+class ContentItemOut(BaseModel):
+    key: str
+    value: list[SliderItem]
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContentItemUpdate(BaseModel):
+    value: list[SliderItem]
+
+
+# ---------------------------------------------------------------------------
 # Tables
 # ---------------------------------------------------------------------------
 

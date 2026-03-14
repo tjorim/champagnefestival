@@ -263,5 +263,21 @@
   "checkin_not_found": "Reservation not found.",
   "checkin_invalid_token": "Invalid check-in code.",
   "checkin_do_checkin": "Check in & issue strap",
-  "checkin_error": "An error occurred during check-in."
+  "checkin_error": "An error occurred during check-in.",
+  "admin_content_tab": "Content",
+  "admin_content_producers_section": "Producers",
+  "admin_content_sponsors_section": "Sponsors",
+  "admin_content_editions_section": "Festival Editions",
+  "admin_content_name_label": "Name",
+  "admin_content_image_url_label": "Image URL",
+  "admin_content_name_placeholder": "Producer name",
+  "admin_content_image_url_placeholder": "https://example.com/image.jpg",
+  "admin_content_add_item": "Add item",
+  "admin_content_save_section": "Save changes",
+  "admin_content_saved": "Saved!",
+  "admin_content_error_save": "Failed to save.",
+  "admin_content_editions_note": "Edition data is managed in source code. A backend management API is planned.",
+  "admin_content_fallback_note": "Placeholder data is shown until you save your own.",
+  "admin_content_loading": "Loading content…",
+  "admin_content_error_load": "Failed to load content."
 }

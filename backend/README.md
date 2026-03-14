@@ -184,6 +184,8 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | `GET` | `/api/tables/{id}` | admin | Get table |
 | `PUT` | `/api/tables/{id}` | admin | Update table |
 | `DELETE` | `/api/tables/{id}` | admin | Delete table |
+| `GET` | `/api/content/{key}` | public | Get CMS content (producers / sponsors) |
+| `PUT` | `/api/content/{key}` | admin | Save CMS content |
 | `GET` | `/health` | public | Health check |
 
 ---
@@ -270,18 +272,21 @@ today.  A webhook receiver for automated updates is not implemented.
 
 ### 📅 Event management API
 
-**What:** The `event_id` / `event_title` fields on a reservation currently
-reference festival editions defined in the frontend's
-`src/config/editions.ts`.  A backend events API would allow admins to
-manage editions without a frontend code change.
+**What:** Full CRUD for festival editions (dates, venue, schedule events) from
+the admin UI, replacing the current `src/config/editions.ts` source-code
+approach.  The Content Management tab already shows editions read-only;
+saving changes requires this API.
 
-**Status:** No event model or routes exist yet.
+**Status:** The edition list is currently read-only in the admin Content tab
+(backed by `src/config/editions.ts`).  The `event_id` / `event_title` on
+reservations also reference these hardcoded keys.
 
 **To implement:**
-1. Add an `Event` ORM model (id, title, date, venue, capacity, active).
-2. Add `GET /api/events` (public) and `POST/PUT/DELETE /api/events` (admin).
-3. The frontend's `ReservationCreate.event_id` would then reference a backend
-   event ID rather than a hardcoded config key.
+1. Add an `Event` ORM model (id, title, date_from, date_to, venue, active).
+2. Add `ScheduleEvent` child model or embed as JSON on the Event row.
+3. Add `GET /api/events` (public) and `POST/PUT/DELETE /api/events/{id}` (admin).
+4. Extend the Content tab's "Festival Editions" section to call these routes.
+5. Update `ReservationCreate.event_id` to reference backend event IDs.
 
 ---
 

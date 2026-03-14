@@ -11,6 +11,7 @@ import { m } from "../../paraglide/messages";
 import ReservationList from "./ReservationList";
 import ReservationDetail from "./ReservationDetail";
 import TableLayout from "./TableLayout";
+import ContentManagement from "./ContentManagement";
 import type {
   Reservation,
   Table,
@@ -452,6 +453,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       <span className="badge bg-secondary ms-2">{tables.length}</span>
                     </Nav.Link>
                   </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="content" className="text-light">
+                      <i className="bi bi-images me-2" aria-hidden="true" />
+                      {m.admin_content_tab()}
+                    </Nav.Link>
+                  </Nav.Item>
                 </Nav>
                 <Tab.Content>
                   <Tab.Pane eventKey="reservations">
@@ -474,6 +481,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onMoveTable={handleMoveTable}
                       onDeleteTable={handleDeleteTable}
                     />
+                  </Tab.Pane>
+                  <Tab.Pane eventKey="content">
+                    <ContentManagement authHeaders={authHeaders} />
                   </Tab.Pane>
                 </Tab.Content>
               </Tab.Container>

@@ -326,3 +326,102 @@ async def test_my_reservations_multiple_editions(client):
 
     r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
     assert len(r.json()) == 2
+
+
+# ---------------------------------------------------------------------------
+# Content API (producers / sponsors)
+# ---------------------------------------------------------------------------
+
+PRODUCER_ITEMS = [
+    {"id": 1, "name": "Maison Bollinger", "image": "/images/producers/bollinger.jpg"},
+    {"id": 2, "name": "Krug", "image": "/images/producers/krug.jpg"},
+]
+
+SPONSOR_ITEMS = [
+    {"id": 1, "name": "Acme Corp", "image": "/images/sponsors/acme.jpg"},
+]
+
+
+@pytest.mark.anyio
+async def test_content_404_before_save(client):
+    """Before any admin save, the endpoint returns 404 (frontend falls back to placeholders)."""
+    r = await client.get("/api/content/producers")
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_content_upsert_requires_admin(client):
+    r = await client.put("/api/content/producers", json={"value": PRODUCER_ITEMS})
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_content_invalid_key(client):
+    r = await client.put(
+        "/api/content/invalid_key",
+        json={"value": PRODUCER_ITEMS},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_content_producers_crud(client):
+    # Create
+    r = await client.put(
+        "/api/content/producers",
+        json={"value": PRODUCER_ITEMS},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["key"] == "producers"
+    assert len(data["value"]) == 2
+    assert data["value"][0]["name"] == "Maison Bollinger"
+
+    # Read back (public — no auth)
+    r = await client.get("/api/content/producers")
+    assert r.status_code == 200
+    assert len(r.json()["value"]) == 2
+
+    # Update (replace)
+    r = await client.put(
+        "/api/content/producers",
+        json={"value": [PRODUCER_ITEMS[0]]},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert len(r.json()["value"]) == 1
+
+
+@pytest.mark.anyio
+async def test_content_sponsors_independent(client):
+    """Producers and sponsors are stored independently."""
+    await client.put(
+        "/api/content/producers",
+        json={"value": PRODUCER_ITEMS},
+        headers=ADMIN_HEADERS,
+    )
+    r = await client.put(
+        "/api/content/sponsors",
+        json={"value": SPONSOR_ITEMS},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+
+    r_prod = await client.get("/api/content/producers")
+    r_spon = await client.get("/api/content/sponsors")
+    assert len(r_prod.json()["value"]) == 2
+    assert len(r_spon.json()["value"]) == 1
+
+
+@pytest.mark.anyio
+async def test_content_empty_list(client):
+    """Saving an empty list is valid (admin cleared the content)."""
+    r = await client.put(
+        "/api/content/sponsors",
+        json={"value": []},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["value"] == []
