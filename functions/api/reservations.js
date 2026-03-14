@@ -96,11 +96,14 @@ export async function onRequestPost(context) {
           quantity: Math.min(Math.max(1, Number(item.quantity)), 100),
           price: Number(item.price) || 0,
           category: ["champagne", "food", "other"].includes(item.category) ? item.category : "other",
+          delivered: false,
         }))
     : [];
 
   const now = new Date().toISOString();
   const id = generateId();
+  // One-time token for QR-based check-in (not a secret, just prevents casual URL guessing)
+  const checkInToken = generateId().replace("res_", "tok_");
 
   const reservation = {
     id,
@@ -115,6 +118,10 @@ export async function onRequestPost(context) {
     tableId: undefined,
     status: "pending",
     paymentStatus: "unpaid",
+    checkedIn: false,
+    checkedInAt: undefined,
+    strapIssued: false,
+    checkInToken,
     createdAt: now,
     updatedAt: now,
   };
@@ -150,7 +157,10 @@ export async function onRequestGet(context) {
   const reservations = await Promise.all(
     index.map(async (id) => {
       const raw = await env.RESERVATIONS_KV.get(`reservation:${id}`);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      // Strip the checkInToken from the list view; it's only needed in individual GET
+      const { checkInToken: _checkInToken, ...rest } = JSON.parse(raw);
+      return rest;
     }),
   );
 

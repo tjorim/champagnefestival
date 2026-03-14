@@ -87,6 +87,18 @@ export async function onRequestPut(context) {
     reservation.notes = updates.notes.slice(0, 1000);
   }
 
+  // Check-in and strap fields
+  if (typeof updates.checkedIn === "boolean") {
+    reservation.checkedIn = updates.checkedIn;
+    if (updates.checkedIn && !reservation.checkedInAt) {
+      reservation.checkedInAt = new Date().toISOString();
+    }
+  }
+
+  if (typeof updates.strapIssued === "boolean") {
+    reservation.strapIssued = updates.strapIssued;
+  }
+
   reservation.updatedAt = new Date().toISOString();
 
   await env.RESERVATIONS_KV.put(`reservation:${id}`, JSON.stringify(reservation));

@@ -115,6 +115,7 @@ export default function ReservationModal({
         quantity,
         price: product.price,
         category: product.category,
+        delivered: false,
       };
 
       if (existing) {

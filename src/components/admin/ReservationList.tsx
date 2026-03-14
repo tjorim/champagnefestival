@@ -16,6 +16,7 @@ interface ReservationListProps {
   onUpdateStatus: (id: string, status: ReservationStatus) => void;
   onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => void;
   onAssignTable: (reservationId: string, tableId: string | undefined) => void;
+  onViewDetail: (reservation: Reservation) => void;
 }
 
 function statusBadgeVariant(status: ReservationStatus): string {
@@ -70,6 +71,7 @@ export default function ReservationList({
   onUpdateStatus,
   onUpdatePayment,
   onAssignTable,
+  onViewDetail,
 }: ReservationListProps) {
   const filtered = reservations.filter(
     (r) => filter === "all" || r.status === filter,
@@ -123,6 +125,7 @@ export default function ReservationList({
                   <th>{m.admin_guests_count()}</th>
                   <th>{m.admin_status_label()}</th>
                   <th className="d-none d-lg-table-cell">{m.admin_payment_label()}</th>
+                  <th className="d-none d-xl-table-cell">{m.admin_check_in_title()}</th>
                   <th className="d-none d-lg-table-cell">{m.admin_tables_tab()}</th>
                   <th>{m.admin_actions_label()}</th>
                 </tr>
@@ -136,7 +139,8 @@ export default function ReservationList({
                       {res.preOrders.length > 0 && (
                         <div className="text-warning small">
                           <i className="bi bi-cart-fill me-1" aria-hidden="true" />
-                          {res.preOrders.length} {m.admin_pre_orders()}
+                          {res.preOrders.filter((o) => o.delivered).length}/{res.preOrders.length}{" "}
+                          {m.admin_pre_orders()}
                         </div>
                       )}
                     </td>
@@ -151,6 +155,21 @@ export default function ReservationList({
                       <Badge bg={paymentBadgeVariant(res.paymentStatus)}>
                         {paymentLabel(res.paymentStatus)}
                       </Badge>
+                    </td>
+                    <td className="d-none d-xl-table-cell">
+                      {res.checkedIn ? (
+                        <Badge bg="success">
+                          <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
+                          {m.admin_checked_in()}
+                        </Badge>
+                      ) : (
+                        <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
+                      )}
+                      {res.strapIssued && (
+                        <Badge bg="info" className="ms-1">
+                          <i className="bi bi-person-badge-fill" aria-hidden="true" />
+                        </Badge>
+                      )}
                     </td>
                     <td className="d-none d-lg-table-cell">
                       <Form.Select
@@ -170,6 +189,14 @@ export default function ReservationList({
                     </td>
                     <td>
                       <div className="d-flex flex-wrap gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline-light"
+                          onClick={() => onViewDetail(res)}
+                          title={m.admin_qr_code()}
+                        >
+                          <i className="bi bi-qr-code" aria-hidden="true" />
+                        </Button>
                         {res.status === "pending" && (
                           <Button
                             size="sm"

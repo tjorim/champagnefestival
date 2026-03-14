@@ -23,6 +23,8 @@ export interface OrderItem {
   quantity: number;
   price: number;
   category: OrderItemCategory;
+  /** Whether back-of-house has physically delivered/brought this item */
+  delivered: boolean;
 }
 
 export interface Reservation {
@@ -38,6 +40,16 @@ export interface Reservation {
   tableId?: string;
   status: ReservationStatus;
   paymentStatus: PaymentStatus;
+  /** Whether the guest has physically checked in at the entrance */
+  checkedIn: boolean;
+  checkedInAt?: string;
+  /** Whether the guest has received their wristband/strap */
+  strapIssued: boolean;
+  /**
+   * One-time token included in the QR code.
+   * Never exposed to the general public listing; only in individual reservation details.
+   */
+  checkInToken: string;
   createdAt: string;
   updatedAt: string;
 }

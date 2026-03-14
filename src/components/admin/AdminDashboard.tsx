@@ -9,12 +9,14 @@ import Nav from "react-bootstrap/Nav";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "../../paraglide/messages";
 import ReservationList from "./ReservationList";
+import ReservationDetail from "./ReservationDetail";
 import TableLayout from "./TableLayout";
 import type {
   Reservation,
   Table,
   ReservationStatus,
   PaymentStatus,
+  OrderItem,
 } from "../../types/reservation";
 
 interface AdminDashboardProps {
@@ -32,6 +34,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
+  /** Full reservation (with checkInToken) shown in the detail modal */
+  const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
 
   const authHeaders = useCallback(
     () => ({
@@ -251,6 +255,103 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
+  /** Fetch the full reservation (including checkInToken) and open detail modal */
+  const handleViewDetail = useCallback(
+    async (res: Reservation) => {
+      try {
+        const response = await fetch(`/api/reservations/${res.id}`, {
+          headers: authHeaders(),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setDetailReservation(data.reservation);
+        } else {
+          // Fall back to the list version (no token available)
+          setDetailReservation(res);
+        }
+      } catch {
+        setDetailReservation(res);
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleToggleDelivered = useCallback(
+    async (reservationId: string, updatedOrders: OrderItem[]) => {
+      try {
+        const response = await fetch(`/api/reservations/${reservationId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ preOrders: updatedOrders }),
+        });
+        if (response.ok) {
+          setReservations((prev) =>
+            prev.map((r) =>
+              r.id === reservationId
+                ? { ...r, preOrders: updatedOrders, updatedAt: new Date().toISOString() }
+                : r,
+            ),
+          );
+          // Also update the detail modal
+          setDetailReservation((prev) =>
+            prev?.id === reservationId ? { ...prev, preOrders: updatedOrders } : prev,
+          );
+        }
+      } catch {
+        setError(m.admin_error_bottle_delivery());
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleCheckIn = useCallback(
+    async (reservationId: string) => {
+      try {
+        const response = await fetch(`/api/reservations/${reservationId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ checkedIn: true }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const updated = data.reservation as Reservation;
+          setReservations((prev) =>
+            prev.map((r) => (r.id === reservationId ? { ...r, checkedIn: true, checkedInAt: updated.checkedInAt } : r)),
+          );
+          setDetailReservation((prev) =>
+            prev?.id === reservationId ? { ...prev, checkedIn: true, checkedInAt: updated.checkedInAt } : prev,
+          );
+        }
+      } catch {
+        setError(m.admin_error_check_in());
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleIssueStrap = useCallback(
+    async (reservationId: string) => {
+      try {
+        const response = await fetch(`/api/reservations/${reservationId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ strapIssued: true }),
+        });
+        if (response.ok) {
+          setReservations((prev) =>
+            prev.map((r) => (r.id === reservationId ? { ...r, strapIssued: true } : r)),
+          );
+          setDetailReservation((prev) =>
+            prev?.id === reservationId ? { ...prev, strapIssued: true } : prev,
+          );
+        }
+      } catch {
+        setError(m.admin_error_check_in());
+      }
+    },
+    [authHeaders],
+  );
+
   if (!visible) return null;
 
   return (
@@ -362,6 +463,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onUpdateStatus={handleUpdateStatus}
                       onUpdatePayment={handleUpdatePayment}
                       onAssignTable={handleAssignTable}
+                      onViewDetail={handleViewDetail}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="tables">
@@ -377,6 +479,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </Tab.Container>
             )}
           </>
+        )}
+
+        {/* Reservation detail modal (with QR code + bottle delivery) */}
+        {detailReservation && (
+          <ReservationDetail
+            reservation={detailReservation}
+            baseUrl={window.location.origin}
+            onClose={() => setDetailReservation(null)}
+            onToggleDelivered={handleToggleDelivered}
+            onCheckIn={handleCheckIn}
+            onIssueStrap={handleIssueStrap}
+          />
         )}
       </Container>
     </section>

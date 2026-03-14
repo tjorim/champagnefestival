@@ -31,6 +31,7 @@ const FAQ = lazy(() => import("./components/FAQ"));
 const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
+const CheckInPage = lazy(() => import("./components/CheckInPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -86,13 +87,28 @@ function App() {
   useServiceWorker();
 
   const [showReservationModal, setShowReservationModal] = useState(false);
-  const [isAdminVisible, setIsAdminVisible] = useState(
-    () => window.location.hash === "#admin",
-  );
+
+  /** Parse hash to determine which "page" is active */
+  function parseHash() {
+    const hash = window.location.hash;
+    if (hash === "#admin") return { page: "admin" as const };
+    if (hash.startsWith("#check-in")) {
+      const qIndex = hash.indexOf("?");
+      const params = qIndex !== -1 ? new URLSearchParams(hash.slice(qIndex + 1)) : new URLSearchParams();
+      return {
+        page: "check-in" as const,
+        id: params.get("id") ?? undefined,
+        token: params.get("token") ?? undefined,
+      };
+    }
+    return { page: "main" as const };
+  }
+
+  const [hashState, setHashState] = useState(parseHash);
 
   useEffect(() => {
     function handleHashChange() {
-      setIsAdminVisible(window.location.hash === "#admin");
+      setHashState(parseHash());
     }
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
@@ -297,8 +313,18 @@ function App() {
 
         {/* Admin Dashboard (hidden unless #admin hash is present) */}
         <AppSuspense errorFallbackText="Failed to load admin dashboard">
-          <AdminDashboard visible={isAdminVisible} />
+          <AdminDashboard visible={hashState.page === "admin"} />
         </AppSuspense>
+
+        {/* Check-in page (shown when #check-in?id=…&token=… hash is present) */}
+        {hashState.page === "check-in" && (
+          <AppSuspense errorFallbackText="Failed to load check-in page">
+            <CheckInPage
+              reservationId={hashState.id}
+              checkInToken={hashState.token}
+            />
+          </AppSuspense>
+        )}
       </main>
 
       {/* Footer */}
