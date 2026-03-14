@@ -1,4 +1,4 @@
-import React, { lazy } from "react";
+import React, { lazy, useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -10,6 +10,7 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
+import ReservationModal from "./components/ReservationModal";
 
 import { useLanguage } from "./hooks/useLanguage";
 import { useScrollNavigation } from "./hooks/useScrollNavigation";
@@ -19,6 +20,7 @@ import { festivalDate } from "./config/dates";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import { producerItems, sponsorItems } from "./config/marqueeSlider";
+import { getActiveEdition } from "./config/editions";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -28,6 +30,7 @@ const Countdown = lazy(() => import("./components/Countdown"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
+const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -81,6 +84,25 @@ function App() {
   useLanguage();
   useScrollNavigation();
   useServiceWorker();
+
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [isAdminVisible, setIsAdminVisible] = useState(
+    () => window.location.hash === "#admin",
+  );
+
+  useEffect(() => {
+    function handleHashChange() {
+      setIsAdminVisible(window.location.hash === "#admin");
+    }
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  // Collect events that require reservation from the active edition
+  const edition = getActiveEdition();
+  const reservableEvents = (edition?.schedule ?? [])
+    .filter((ev) => ev.reservation)
+    .map((ev) => ({ id: ev.id, title: ev.title }));
 
   return (
     <div className="App">
@@ -253,10 +275,41 @@ function App() {
             </div>
           </div>
         </section>
+
+        {/* VIP Reservations Section */}
+        <section id="reservations" className="content-section highlight-section">
+          <div className="container text-center">
+            <SectionHeading
+              id="reservations-heading"
+              title={m.reservation_title()}
+              subtitle={m.reservation_description()}
+            />
+            <button
+              type="button"
+              className="btn btn-warning btn-lg rounded-pill px-5 fw-bold"
+              onClick={() => setShowReservationModal(true)}
+            >
+              <i className="bi bi-calendar-plus me-2" aria-hidden="true" />
+              {m.reservation_cta()}
+            </button>
+          </div>
+        </section>
+
+        {/* Admin Dashboard (hidden unless #admin hash is present) */}
+        <AppSuspense errorFallbackText="Failed to load admin dashboard">
+          <AdminDashboard visible={isAdminVisible} />
+        </AppSuspense>
       </main>
 
       {/* Footer */}
       <Footer />
+
+      {/* VIP Reservation Modal */}
+      <ReservationModal
+        show={showReservationModal}
+        onHide={() => setShowReservationModal(false)}
+        reservableEvents={reservableEvents}
+      />
     </div>
   );
 }

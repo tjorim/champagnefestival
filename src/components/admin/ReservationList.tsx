@@ -1,0 +1,214 @@
+import { useCallback } from "react";
+import Card from "react-bootstrap/Card";
+import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import Table from "react-bootstrap/Table";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import { m } from "../../paraglide/messages";
+import type { Reservation, Table as TableType, ReservationStatus, PaymentStatus } from "../../types/reservation";
+
+interface ReservationListProps {
+  reservations: Reservation[];
+  tables: TableType[];
+  filter: "all" | ReservationStatus;
+  onFilterChange: (filter: "all" | ReservationStatus) => void;
+  onUpdateStatus: (id: string, status: ReservationStatus) => void;
+  onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => void;
+  onAssignTable: (reservationId: string, tableId: string | undefined) => void;
+}
+
+function statusBadgeVariant(status: ReservationStatus): string {
+  switch (status) {
+    case "confirmed":
+      return "success";
+    case "cancelled":
+      return "danger";
+    default:
+      return "warning";
+  }
+}
+
+function paymentBadgeVariant(payment: PaymentStatus): string {
+  switch (payment) {
+    case "paid":
+      return "success";
+    case "partial":
+      return "warning";
+    default:
+      return "secondary";
+  }
+}
+
+function statusLabel(status: ReservationStatus): string {
+  switch (status) {
+    case "confirmed":
+      return m.admin_status_confirmed();
+    case "cancelled":
+      return m.admin_status_cancelled();
+    default:
+      return m.admin_status_pending();
+  }
+}
+
+function paymentLabel(payment: PaymentStatus): string {
+  switch (payment) {
+    case "paid":
+      return m.admin_payment_paid();
+    case "partial":
+      return m.admin_payment_partial();
+    default:
+      return m.admin_payment_unpaid();
+  }
+}
+
+export default function ReservationList({
+  reservations,
+  tables,
+  filter,
+  onFilterChange,
+  onUpdateStatus,
+  onUpdatePayment,
+  onAssignTable,
+}: ReservationListProps) {
+  const filtered = reservations.filter(
+    (r) => filter === "all" || r.status === filter,
+  );
+
+  const handleAssignTable = useCallback(
+    (reservationId: string, tableId: string) => {
+      onAssignTable(reservationId, tableId || undefined);
+    },
+    [onAssignTable],
+  );
+
+  return (
+    <Card bg="dark" text="white" border="secondary">
+      <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span className="fw-semibold">{m.admin_reservations_tab()}</span>
+        <ButtonGroup size="sm">
+          <Button
+            variant={filter === "all" ? "warning" : "outline-secondary"}
+            onClick={() => onFilterChange("all")}
+          >
+            {m.admin_filter_all()} ({reservations.length})
+          </Button>
+          <Button
+            variant={filter === "pending" ? "warning" : "outline-secondary"}
+            onClick={() => onFilterChange("pending")}
+          >
+            {m.admin_filter_pending()} (
+            {reservations.filter((r) => r.status === "pending").length})
+          </Button>
+          <Button
+            variant={filter === "confirmed" ? "warning" : "outline-secondary"}
+            onClick={() => onFilterChange("confirmed")}
+          >
+            {m.admin_filter_confirmed()} (
+            {reservations.filter((r) => r.status === "confirmed").length})
+          </Button>
+        </ButtonGroup>
+      </Card.Header>
+
+      <Card.Body className="p-0">
+        {filtered.length === 0 ? (
+          <p className="text-secondary text-center py-4 mb-0">{m.admin_no_reservations()}</p>
+        ) : (
+          <div className="table-responsive">
+            <Table variant="dark" hover striped className="mb-0" size="sm">
+              <thead>
+                <tr>
+                  <th>{m.reservation_name()}</th>
+                  <th className="d-none d-md-table-cell">{m.admin_event_label()}</th>
+                  <th>{m.admin_guests_count()}</th>
+                  <th>{m.admin_status_label()}</th>
+                  <th className="d-none d-lg-table-cell">{m.admin_payment_label()}</th>
+                  <th className="d-none d-lg-table-cell">{m.admin_tables_tab()}</th>
+                  <th>{m.admin_actions_label()}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((res) => (
+                  <tr key={res.id}>
+                    <td>
+                      <div className="fw-semibold">{res.name}</div>
+                      <div className="text-secondary small">{res.email}</div>
+                      {res.preOrders.length > 0 && (
+                        <div className="text-warning small">
+                          <i className="bi bi-cart-fill me-1" aria-hidden="true" />
+                          {res.preOrders.length} {m.admin_pre_orders()}
+                        </div>
+                      )}
+                    </td>
+                    <td className="d-none d-md-table-cell small">{res.eventTitle || res.eventId}</td>
+                    <td>{res.guestCount}</td>
+                    <td>
+                      <Badge bg={statusBadgeVariant(res.status)}>
+                        {statusLabel(res.status)}
+                      </Badge>
+                    </td>
+                    <td className="d-none d-lg-table-cell">
+                      <Badge bg={paymentBadgeVariant(res.paymentStatus)}>
+                        {paymentLabel(res.paymentStatus)}
+                      </Badge>
+                    </td>
+                    <td className="d-none d-lg-table-cell">
+                      <Form.Select
+                        size="sm"
+                        className="bg-dark text-light border-secondary"
+                        value={res.tableId ?? ""}
+                        onChange={(e) => handleAssignTable(res.id, e.target.value)}
+                        aria-label={m.admin_action_assign_table()}
+                      >
+                        <option value="">{m.admin_unassigned()}</option>
+                        {tables.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.capacity})
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </td>
+                    <td>
+                      <div className="d-flex flex-wrap gap-1">
+                        {res.status === "pending" && (
+                          <Button
+                            size="sm"
+                            variant="outline-success"
+                            onClick={() => onUpdateStatus(res.id, "confirmed")}
+                            title={m.admin_action_confirm()}
+                          >
+                            <i className="bi bi-check-lg" aria-hidden="true" />
+                          </Button>
+                        )}
+                        {res.status !== "cancelled" && (
+                          <Button
+                            size="sm"
+                            variant="outline-danger"
+                            onClick={() => onUpdateStatus(res.id, "cancelled")}
+                            title={m.admin_action_cancel()}
+                          >
+                            <i className="bi bi-x-lg" aria-hidden="true" />
+                          </Button>
+                        )}
+                        {res.paymentStatus !== "paid" && (
+                          <Button
+                            size="sm"
+                            variant="outline-warning"
+                            onClick={() => onUpdatePayment(res.id, "paid")}
+                            title={m.admin_action_mark_paid()}
+                          >
+                            <i className="bi bi-currency-euro" aria-hidden="true" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
+      </Card.Body>
+    </Card>
+  );
+}
