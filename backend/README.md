@@ -148,9 +148,10 @@ location /api/ {
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ADMIN_TOKEN` | **yes** | — | Bearer token for admin endpoints |
+| `ADMIN_TOKEN` | **yes** | — | Bearer token for admin endpoints (required in production) |
+| `ENVIRONMENT` | no | `development` | `development` or `production` — gates startup safety checks |
 | `DATABASE_URL` | no | `sqlite+aiosqlite:////var/data/champagne/champagne.db` | Async SQLAlchemy URL |
-| `CORS_ORIGINS` | no | `[]` | JSON array of allowed origins |
+| `CORS_ORIGINS` | no | `""` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `MIN_FORM_SECONDS` | no | `3` | Anti-spam: min seconds to fill the form |
 | `SMTP_HOST` | no | — | SMTP server (planned — see below) |
 | `SMTP_PORT` | no | `587` | SMTP port (planned) |

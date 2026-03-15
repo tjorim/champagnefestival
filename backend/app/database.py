@@ -24,6 +24,8 @@ if _is_sqlite:
     def _set_sqlite_pragma(dbapi_conn, connection_record) -> None:  # noqa: ANN001
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.close()
 
 async_session_factory = async_sessionmaker(

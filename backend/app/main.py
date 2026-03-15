@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -10,13 +11,38 @@ from app.config import settings
 from app.database import create_tables
 from app.routers import check_in, contact, content, reservations, rooms, tables
 
+# Configure logging before any other module uses a logger.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Create tables on startup if they don't already exist.
-    # In production you should run Alembic migrations instead.
-    await create_tables()
+    # Startup
+    logger.info("=" * 60)
+    logger.info("Champagne Festival API — starting up")
+    logger.info("=" * 60)
+
+    settings.log_configuration()
+
+    try:
+        await create_tables()
+        logger.info("✓ Database tables verified / created")
+    except Exception as exc:
+        logger.error(f"❌ Database initialisation failed: {exc}")
+        raise
+
+    logger.info("=" * 60)
+    logger.info("Startup complete — server ready to accept connections")
+    logger.info("=" * 60)
+
     yield
+
+    # Shutdown
+    logger.info("Champagne Festival API shutting down...")
 
 
 app = FastAPI(
@@ -29,10 +55,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_cors_origins = settings.get_cors_origins_list()
+
+if not _cors_origins:
+    logger.warning(
+        "No CORS origins configured — all cross-origin requests will be blocked!"
+    )
+else:
+    logger.info(f"CORS middleware configured with origins: {_cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False if "*" in _cors_origins else True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
