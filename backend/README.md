@@ -85,7 +85,15 @@ The interactive API docs are available at <http://localhost:8000/docs>.
 # Build image
 docker build -t champagne-backend .
 
-# Run with a named volume for the database
+# Run migrations first (before the API container starts serving traffic).
+# Use a one-off container so the API is not exposed until the schema is ready.
+docker run --rm \
+  -v champagne-data:/var/data/champagne \
+  --env-file /etc/champagne/.env \
+  champagne-backend \
+  alembic upgrade head
+
+# Start the API container
 docker run -d \
   --name champagne-backend \
   --restart unless-stopped \
@@ -93,9 +101,6 @@ docker run -d \
   -v champagne-data:/var/data/champagne \
   --env-file /etc/champagne/.env \
   champagne-backend
-
-# Run migrations inside the running container
-docker exec champagne-backend alembic upgrade head
 ```
 
 ### Option B — systemd service

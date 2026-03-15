@@ -53,12 +53,18 @@ async def post_check_in(
     r = await _get_by_token_or_401(db, reservation_id, body.token)
 
     already = r.checked_in
+    changed = False
 
     if not already:
         r.checked_in = True
         r.checked_in_at = datetime.now(timezone.utc)
-        if body.issue_strap:
-            r.strap_issued = True
+        changed = True
+
+    if body.issue_strap and not r.strap_issued:
+        r.strap_issued = True
+        changed = True
+
+    if changed:
         await db.commit()
         await db.refresh(r)
 

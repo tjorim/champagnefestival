@@ -21,15 +21,20 @@ export default function CheckInPage() {
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
 
-  const lookUpReservation = useCallback(async () => {
+  const lookUpReservation = useCallback(async (signal: AbortSignal) => {
     if (!reservationId || !checkInToken) return;
 
+    // Reset previous state before fetching to avoid showing stale guest data.
+    setReservation(null);
+    setSuccess(false);
+    setAlreadyCheckedIn(false);
     setIsLoading(true);
     setError("");
 
     try {
       const response = await fetch(
         `/api/check-in/${encodeURIComponent(reservationId)}?token=${encodeURIComponent(checkInToken)}`,
+        { signal },
       );
 
       if (response.status === 401 || response.status === 404) {
@@ -69,7 +74,8 @@ export default function CheckInPage() {
       } else {
         setError(m.checkin_error());
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(m.checkin_error());
     } finally {
       setIsLoading(false);
@@ -77,7 +83,9 @@ export default function CheckInPage() {
   }, [reservationId, checkInToken]);
 
   useEffect(() => {
-    lookUpReservation();
+    const controller = new AbortController();
+    lookUpReservation(controller.signal);
+    return () => controller.abort();
   }, [lookUpReservation]);
 
   const handleCheckIn = useCallback(async () => {

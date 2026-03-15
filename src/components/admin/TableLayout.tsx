@@ -35,11 +35,11 @@ interface TableLayoutProps {
   tables: Table[];
   reservations: Reservation[];
   rooms: Room[];
-  onAddTable: (name: string, capacity: number, roomId: string | null) => void;
+  onAddTable: (name: string, capacity: number, roomId: string | null) => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
-  onDeleteTable: (tableId: string) => void;
-  onAddRoom: (name: string, zoneType: string, widthM: number, heightM: number, color: string) => void;
-  onDeleteRoom: (roomId: string) => void;
+  onDeleteTable: (tableId: string) => Promise<void>;
+  onAddRoom: (name: string, zoneType: string, widthM: number, heightM: number, color: string) => Promise<void>;
+  onDeleteRoom: (roomId: string) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -281,25 +281,45 @@ export default function TableLayout({
     color: "#ffc107",
   });
 
-  const handleAddTable = useCallback(() => {
+  const handleAddTable = useCallback(async () => {
     if (!newTable.name.trim() || newTable.capacity < 1) return;
-    onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null);
-    setNewTable({ name: "", capacity: 4, roomId: "" });
-    setShowAddTable(false);
+    try {
+      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null);
+      setNewTable({ name: "", capacity: 4, roomId: "" });
+      setShowAddTable(false);
+    } catch {
+      // keep modal open so the operator can retry
+    }
   }, [newTable, onAddTable]);
 
-  const handleAddRoom = useCallback(() => {
-    if (!newRoom.name.trim()) return;
-    onAddRoom(newRoom.name.trim(), newRoom.zoneType, newRoom.widthM, newRoom.heightM, newRoom.color);
-    setNewRoom({ name: "", zoneType: "main-hall", widthM: 20, heightM: 15, color: "#ffc107" });
-    setShowAddRoom(false);
+  const handleAddRoom = useCallback(async () => {
+    if (
+      !newRoom.name.trim() ||
+      !Number.isFinite(newRoom.widthM) ||
+      !Number.isFinite(newRoom.heightM) ||
+      newRoom.widthM < 1 ||
+      newRoom.heightM < 1
+    ) {
+      return;
+    }
+    try {
+      await onAddRoom(newRoom.name.trim(), newRoom.zoneType, newRoom.widthM, newRoom.heightM, newRoom.color);
+      setNewRoom({ name: "", zoneType: "main-hall", widthM: 20, heightM: 15, color: "#ffc107" });
+      setShowAddRoom(false);
+    } catch {
+      // keep modal open so the operator can retry
+    }
   }, [newRoom, onAddRoom]);
 
   const handleDeleteRoom = useCallback(
-    (roomId: string) => {
+    async (roomId: string) => {
       if (window.confirm(m.admin_room_delete_confirm())) {
-        onDeleteRoom(roomId);
-        if (activeRoomId === roomId) setActiveRoomId("unassigned");
+        try {
+          await onDeleteRoom(roomId);
+          if (activeRoomId === roomId) setActiveRoomId("unassigned");
+        } catch {
+          // deletion failed; keep current selection
+        }
       }
     },
     [onDeleteRoom, activeRoomId],
@@ -373,12 +393,7 @@ export default function TableLayout({
         </Card.Header>
 
         <Card.Body className="p-2">
-          {rooms.length === 0 ? (
-            <div className="text-secondary text-center py-4">
-              <i className="bi bi-building display-4" aria-hidden="true" />
-              <p className="mt-2">{m.admin_room_no_rooms()}</p>
-            </div>
-          ) : activeRoom ? (
+          {activeRoom ? (
             <div>
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <span className="fw-semibold" style={{ color: activeRoom.color }}>
@@ -413,22 +428,31 @@ export default function TableLayout({
               />
             </div>
           ) : (
-            // Unassigned canvas uses a generic virtual room
-            <RoomCanvas
-              room={{
-                id: "unassigned",
-                name: m.admin_room_unassigned_tables(),
-                zoneType: "main-hall",
-                widthM: 30,
-                heightM: 20,
-                color: "#6c757d",
-              }}
-              roomTables={canvasTables}
-              reservations={reservations}
-              selectedTable={selectedTable}
-              onSelectTable={setSelectedTable}
-              onMoveTable={onMoveTable}
-            />
+            // Unassigned canvas — shown when activeRoomId === "unassigned" or no rooms exist yet.
+            // Always rendered so that tables with roomId === null remain visible and accessible.
+            <div>
+              {rooms.length === 0 && (
+                <p className="text-secondary text-center small mb-2">
+                  <i className="bi bi-info-circle me-1" aria-hidden="true" />
+                  {m.admin_room_no_rooms()}
+                </p>
+              )}
+              <RoomCanvas
+                room={{
+                  id: "unassigned",
+                  name: m.admin_room_unassigned_tables(),
+                  zoneType: "main-hall",
+                  widthM: 30,
+                  heightM: 20,
+                  color: "#6c757d",
+                }}
+                roomTables={canvasTables}
+                reservations={reservations}
+                selectedTable={selectedTable}
+                onSelectTable={setSelectedTable}
+                onMoveTable={onMoveTable}
+              />
+            </div>
           )}
         </Card.Body>
       </Card>
@@ -448,9 +472,13 @@ export default function TableLayout({
               <Button
                 variant="outline-danger"
                 size="sm"
-                onClick={() => {
-                  onDeleteTable(selectedTableData.id);
-                  setSelectedTable(null);
+                onClick={async () => {
+                  try {
+                    await onDeleteTable(selectedTableData.id);
+                    setSelectedTable(null);
+                  } catch {
+                    // deletion failed; keep selection
+                  }
                 }}
                 title={m.admin_delete()}
               >
@@ -633,7 +661,13 @@ export default function TableLayout({
           <Button
             variant="warning"
             onClick={handleAddRoom}
-            disabled={!newRoom.name.trim()}
+            disabled={
+              !newRoom.name.trim() ||
+              !Number.isFinite(newRoom.widthM) ||
+              !Number.isFinite(newRoom.heightM) ||
+              newRoom.widthM < 1 ||
+              newRoom.heightM < 1
+            }
           >
             {m.admin_save()}
           </Button>

@@ -31,7 +31,7 @@ async def submit_contact(body: ContactRequest) -> dict:
         "Contact form submission received",
         extra={
             "contact_name": body.name,
-            "contact_email": body.email,
+            "contact_email_domain": body.email.split("@")[-1],
             "contact_message_length": len(body.message),
         },
     )
