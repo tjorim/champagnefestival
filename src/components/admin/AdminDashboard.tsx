@@ -573,7 +573,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         {detailReservation && (
           <ReservationDetail
             reservation={detailReservation}
-            baseUrl={window.location.origin}
+            baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
             onClose={() => setDetailReservation(null)}
             onToggleDelivered={handleToggleDelivered}
             onCheckIn={handleCheckIn}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -9,13 +10,10 @@ import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "../paraglide/messages";
 import type { Reservation } from "../types/reservation";
 
-interface CheckInPageProps {
-  /** Pre-filled from URL hash params, e.g. #check-in?id=xxx&token=yyy */
-  reservationId?: string;
-  checkInToken?: string;
-}
-
-export default function CheckInPage({ reservationId, checkInToken }: CheckInPageProps) {
+export default function CheckInPage() {
+  const [searchParams] = useSearchParams();
+  const reservationId = searchParams.get("id") ?? undefined;
+  const checkInToken = searchParams.get("token") ?? undefined;
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);

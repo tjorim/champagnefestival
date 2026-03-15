@@ -1,5 +1,6 @@
-import React, { lazy, useState, useEffect } from "react";
+import React, { lazy, useState } from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -65,10 +66,10 @@ function StandaloneNavBar({ iconClass, title }: { iconClass: string; title: stri
           <i className={`${iconClass} me-2`} aria-hidden="true" />
           {title}
         </span>
-        <a href="#" className="btn btn-sm btn-outline-secondary">
+        <Link to="/" className="btn btn-sm btn-outline-secondary">
           <i className="bi bi-arrow-left me-1" aria-hidden="true" />
           {m.back_to_site()}
-        </a>
+        </Link>
       </div>
     </nav>
   );
@@ -98,6 +99,40 @@ function SuspendedMarqueeSlider({
   );
 }
 
+/** Route component for /admin */
+function AdminPage() {
+  return (
+    <div className="App">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-shield-lock" title={m.admin_title()} />
+      <main id="main-content">
+        <AppSuspense errorFallbackText="Failed to load admin dashboard">
+          <AdminDashboard visible={true} />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /check-in */
+function CheckInRoute() {
+  return (
+    <div className="App">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-qr-code-scan" title={m.checkin_title()} />
+      <main id="main-content">
+        <AppSuspense errorFallbackText="Failed to load check-in page">
+          <CheckInPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   // Use custom hooks for language, navigation, and service worker
   useLanguage();
@@ -109,74 +144,11 @@ function App() {
 
   const [showReservationModal, setShowReservationModal] = useState(false);
 
-  /** Parse hash to determine which "page" is active */
-  function parseHash() {
-    const hash = window.location.hash;
-    if (hash === "#admin") return { page: "admin" as const };
-    if (hash.startsWith("#check-in")) {
-      const qIndex = hash.indexOf("?");
-      const params = qIndex !== -1 ? new URLSearchParams(hash.slice(qIndex + 1)) : new URLSearchParams();
-      return {
-        page: "check-in" as const,
-        id: params.get("id") ?? undefined,
-        token: params.get("token") ?? undefined,
-      };
-    }
-    return { page: "main" as const };
-  }
-
-  const [hashState, setHashState] = useState(parseHash);
-
-  useEffect(() => {
-    function handleHashChange() {
-      setHashState(parseHash());
-    }
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
-  }, []);
-
   // Collect events that require reservation from the active edition
   const edition = getActiveEdition();
   const reservableEvents = (edition?.schedule ?? [])
     .filter((ev) => ev.reservation)
     .map((ev) => ({ id: ev.id, title: ev.title }));
-
-  // --- Standalone full-page views (no site header/sections/footer) ---
-
-  if (hashState.page === "admin") {
-    return (
-      <div className="App">
-        <a href="#main-content" className="skip-link">
-          {m.accessibility_skip_to_content()}
-        </a>
-        <StandaloneNavBar iconClass="bi bi-shield-lock" title={m.admin_title()} />
-        <main id="main-content">
-          <AppSuspense errorFallbackText="Failed to load admin dashboard">
-            <AdminDashboard visible={true} />
-          </AppSuspense>
-        </main>
-      </div>
-    );
-  }
-
-  if (hashState.page === "check-in") {
-    return (
-      <div className="App">
-        <a href="#main-content" className="skip-link">
-          {m.accessibility_skip_to_content()}
-        </a>
-        <StandaloneNavBar iconClass="bi bi-qr-code-scan" title={m.checkin_title()} />
-        <main id="main-content">
-          <AppSuspense errorFallbackText="Failed to load check-in page">
-            <CheckInPage
-              reservationId={hashState.id}
-              checkInToken={hashState.token}
-            />
-          </AppSuspense>
-        </main>
-      </div>
-    );
-  }
 
   // --- Main marketing page ---
 
@@ -393,7 +365,13 @@ if (!rootElement) {
 }
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <Routes>
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/check-in" element={<CheckInRoute />} />
+        <Route path="*" element={<App />} />
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>,
 );
 

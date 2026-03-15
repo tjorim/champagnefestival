@@ -28,6 +28,7 @@
     "react-dom": "^19.1.1",
     "react-error-boundary": "^6.1.1",
     "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.13.1",
     "swiper": "^12.1.2"
   },
   "devDependencies": {

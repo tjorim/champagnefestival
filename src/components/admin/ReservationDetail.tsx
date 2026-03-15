@@ -26,7 +26,7 @@ export default function ReservationDetail({
   onIssueStrap,
 }: ReservationDetailProps) {
   const checkInUrl = reservation
-    ? `${baseUrl}/#check-in?id=${reservation.id}&token=${reservation.checkInToken}`
+    ? `${baseUrl}/check-in?id=${reservation.id}&token=${reservation.checkInToken}`
     : "";
 
   const handleToggleDelivered = useCallback(
