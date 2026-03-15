@@ -25,9 +25,11 @@ class Settings(BaseSettings):
     """
 
     # --- CORS ---
-    cors_origins: list[str] = ["*"]
-    """Allowed CORS origins.  In production restrict to your Cloudflare Pages
-    domain, e.g. ["https://champagnefestival.be"].
+    cors_origins: list[str] = []
+    """Allowed CORS origins.  Must be set in production via the CORS_ORIGINS
+    environment variable, e.g. ["https://champagnefestival.be"].
+    An empty list means no browser origins are allowed (safe default).
+    For local development add ["http://localhost:5173"] to your .env file.
     """
 
     # --- Anti-spam ---

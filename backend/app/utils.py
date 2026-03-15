@@ -26,6 +26,27 @@ def reservation_to_dict(r: Reservation) -> dict:
     }
 
 
+def reservation_to_checkin_dict(r: Reservation) -> dict:
+    """Serialise a Reservation for the public check-in GET endpoint.
+
+    Only exposes fields needed on the volunteer tablet.  PII (email, phone) and
+    internal-only fields (payment_status, table_id, timestamps) are omitted.
+    """
+    return {
+        "id": r.id,
+        "name": r.name,
+        "event_id": r.event_id,
+        "event_title": r.event_title,
+        "guest_count": r.guest_count,
+        "pre_orders": r.get_pre_orders(),
+        "notes": r.notes,
+        "status": r.status,
+        "checked_in": r.checked_in,
+        "checked_in_at": r.checked_in_at,
+        "strap_issued": r.strap_issued,
+    }
+
+
 def reservation_to_dict_with_token(r: Reservation) -> dict:
     """Serialise a Reservation ORM row including the sensitive check_in_token.
 

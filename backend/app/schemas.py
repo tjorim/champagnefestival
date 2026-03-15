@@ -146,6 +146,30 @@ class ReservationGuestOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class CheckInGuestOut(BaseModel):
+    """Minimal reservation data returned by the public check-in GET endpoint.
+
+    Only exposes fields needed on the volunteer tablet — guest name, party size,
+    event info, pre-orders, arrival notes, and check-in/strap status.
+    PII fields (email, phone) and internal-only fields (payment_status, table_id,
+    timestamps) are omitted.
+    """
+
+    id: str
+    name: str
+    event_id: str
+    event_title: str
+    guest_count: int
+    pre_orders: list[OrderItemOut]
+    notes: str
+    status: ReservationStatus
+    checked_in: bool
+    checked_in_at: datetime | None
+    strap_issued: bool
+
+    model_config = {"from_attributes": True}
+
+
 class CheckInRequest(BaseModel):
     token: str
     issue_strap: bool = True

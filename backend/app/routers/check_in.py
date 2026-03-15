@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Reservation
-from app.schemas import CheckInOut, CheckInRequest, ReservationOut
-from app.utils import reservation_to_dict
+from app.schemas import CheckInOut, CheckInRequest, CheckInGuestOut
+from app.utils import reservation_to_checkin_dict, reservation_to_dict
 
 router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 
@@ -19,18 +19,20 @@ router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{reservation_id}", response_model=ReservationOut)
+@router.get("/{reservation_id}", response_model=CheckInGuestOut)
 async def get_check_in(
     reservation_id: str,
     token: str,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Return reservation details after validating the one-time check-in token.
+    """Return minimal reservation details after validating the one-time check-in token.
 
     Called by the register-side tablet to display guest info before check-in.
+    Only exposes fields needed on the tablet (name, party size, event, pre-orders,
+    check-in/strap status). PII fields (email, phone) are not included.
     """
     r = await _get_by_token_or_401(db, reservation_id, token)
-    return reservation_to_dict(r)
+    return reservation_to_checkin_dict(r)
 
 
 # ---------------------------------------------------------------------------
