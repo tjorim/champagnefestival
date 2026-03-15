@@ -1,5 +1,6 @@
-import React, { lazy } from "react";
+import React, { lazy, useState } from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route, Link } from "react-router";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -10,15 +11,17 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
+import ReservationModal from "./components/ReservationModal";
 
 import { useLanguage } from "./hooks/useLanguage";
 import { useScrollNavigation } from "./hooks/useScrollNavigation";
 import { useServiceWorker } from "./hooks/useServiceWorker";
+import { useContent } from "./hooks/useContent";
 import { m } from "./paraglide/messages";
 import { festivalDate } from "./config/dates";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import { producerItems, sponsorItems } from "./config/marqueeSlider";
+import { getActiveEdition } from "./config/editions";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -28,6 +31,8 @@ const Countdown = lazy(() => import("./components/Countdown"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
+const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
+const CheckInPage = lazy(() => import("./components/CheckInPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -49,6 +54,24 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
     >
       {children}
     </SuspenseWithBoundary>
+  );
+}
+
+/** Minimal top-bar shown on standalone admin / check-in pages */
+function StandaloneNavBar({ iconClass, title }: { iconClass: string; title: string }) {
+  return (
+    <nav className="navbar bg-dark border-bottom border-secondary px-3 py-2">
+      <div className="container-fluid d-flex justify-content-between align-items-center">
+        <span className="navbar-brand text-warning fw-bold mb-0">
+          <i className={`${iconClass} me-2`} aria-hidden="true" />
+          {title}
+        </span>
+        <Link to="/" className="btn btn-sm btn-outline-secondary">
+          <i className="bi bi-arrow-left me-1" aria-hidden="true" />
+          {m.back_to_site()}
+        </Link>
+      </div>
+    </nav>
   );
 }
 
@@ -76,11 +99,58 @@ function SuspendedMarqueeSlider({
   );
 }
 
+/** Route component for /admin */
+function AdminPage() {
+  return (
+    <div className="App">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-shield-lock" title={m.admin_title()} />
+      <main id="main-content">
+        <AppSuspense errorFallbackText="Failed to load admin dashboard">
+          <AdminDashboard visible={true} />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /check-in */
+function CheckInRoute() {
+  return (
+    <div className="App">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-qr-code-scan" title={m.checkin_title()} />
+      <main id="main-content">
+        <AppSuspense errorFallbackText="Failed to load check-in page">
+          <CheckInPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   // Use custom hooks for language, navigation, and service worker
   useLanguage();
   useScrollNavigation();
   useServiceWorker();
+
+  // Fetch CMS-managed producers and sponsors; falls back to config placeholders
+  const { producers, sponsors } = useContent();
+
+  const [showReservationModal, setShowReservationModal] = useState(false);
+
+  // Collect events that require reservation from the active edition
+  const edition = getActiveEdition();
+  const reservableEvents = (edition?.schedule ?? [])
+    .filter((ev) => ev.reservation)
+    .map((ev) => ({ id: ev.id, title: ev.title }));
+
+  // --- Main marketing page ---
 
   return (
     <div className="App">
@@ -180,7 +250,7 @@ function App() {
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading id="producers-heading" title={m.producers_title()} />
             {/* Removed redundant <p> tag */}
-            <SuspendedMarqueeSlider itemsType="producers" items={producerItems} />
+            <SuspendedMarqueeSlider itemsType="producers" items={producers} />
           </div>
         </section>
 
@@ -230,7 +300,7 @@ function App() {
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading id="sponsors-heading" title={m.sponsors_title()} />
             {/* Removed redundant <p> tag */}
-            <SuspendedMarqueeSlider itemsType="sponsors" items={sponsorItems} />
+            <SuspendedMarqueeSlider itemsType="sponsors" items={sponsors} />
           </div>
         </section>
 
@@ -253,10 +323,36 @@ function App() {
             </div>
           </div>
         </section>
+
+        {/* VIP Reservations Section */}
+        <section id="reservations" className="content-section highlight-section">
+          <div className="container text-center">
+            <SectionHeading
+              id="reservations-heading"
+              title={m.reservation_title()}
+              subtitle={m.reservation_description()}
+            />
+            <button
+              type="button"
+              className="btn btn-warning btn-lg rounded-pill px-5 fw-bold"
+              onClick={() => setShowReservationModal(true)}
+            >
+              <i className="bi bi-calendar-plus me-2" aria-hidden="true" />
+              {m.reservation_cta()}
+            </button>
+          </div>
+        </section>
       </main>
 
       {/* Footer */}
       <Footer />
+
+      {/* VIP Reservation Modal */}
+      <ReservationModal
+        show={showReservationModal}
+        onHide={() => setShowReservationModal(false)}
+        reservableEvents={reservableEvents}
+      />
     </div>
   );
 }
@@ -269,7 +365,13 @@ if (!rootElement) {
 }
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <Routes>
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/check-in" element={<CheckInRoute />} />
+        <Route path="*" element={<App />} />
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>,
 );
 

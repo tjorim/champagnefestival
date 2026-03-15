@@ -85,7 +85,7 @@ const ContactForm: React.FC = () => {
     // If no errors, proceed with submission
     try {
       // Call our Cloudflare Function endpoint
-      const response = await fetch("/contact", {
+      const response = await fetch("/api/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
