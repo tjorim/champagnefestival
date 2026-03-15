@@ -512,3 +512,73 @@ async def test_table_with_room_id(client):
     )
     # room_id can be cleared — we just verify the request succeeds
     assert r.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Contact endpoint
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_contact_submission(client):
+    """Valid contact form submission returns 200 OK."""
+    r = await client.post(
+        "/api/contact",
+        json={"name": "Alice", "email": "alice@example.com", "message": "Hello!"},
+    )
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+
+
+@pytest.mark.anyio
+async def test_contact_invalid_email(client):
+    """Invalid email is rejected with 422."""
+    r = await client.post(
+        "/api/contact",
+        json={"name": "Alice", "email": "not-an-email", "message": "Hello!"},
+    )
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_spam_invalid_timestamp(client):
+    """A non-ISO form_start_time is rejected (bot protection)."""
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "form_start_time": "1234567890"},
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_table_id_can_be_cleared(client):
+    """table_id on a reservation can be explicitly cleared to null."""
+    # Create a reservation
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+    res_id = r.json()["id"]
+
+    # Create a table
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T-Clear", "capacity": 4},
+        headers=ADMIN_HEADERS,
+    )
+    tbl_id = r.json()["id"]
+
+    # Assign the table
+    r = await client.put(
+        f"/api/reservations/{res_id}",
+        json={"table_id": tbl_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["table_id"] == tbl_id
+
+    # Clear the table (set to null)
+    r = await client.put(
+        f"/api/reservations/{res_id}",
+        json={"table_id": None},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["table_id"] is None

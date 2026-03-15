@@ -28,7 +28,11 @@ def check_form_timing(form_start_time: str) -> None:
     try:
         start = datetime.fromisoformat(form_start_time)
     except ValueError:
-        return  # invalid timestamp — skip the check
+        # Unparseable timestamp is suspicious — treat as a bot submission.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submission rejected.",
+        )
 
     # Make timezone-aware if naïve
     if start.tzinfo is None:

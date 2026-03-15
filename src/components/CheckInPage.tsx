@@ -8,7 +8,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "../paraglide/messages";
-import type { Reservation } from "../types/reservation";
+import type { Reservation, OrderItemCategory, ReservationStatus, PaymentStatus } from "../types/reservation";
 
 export default function CheckInPage() {
   const [searchParams] = useSearchParams();
@@ -32,13 +32,36 @@ export default function CheckInPage() {
         `/api/check-in/${encodeURIComponent(reservationId)}?token=${encodeURIComponent(checkInToken)}`,
       );
 
-      if (response.status === 404) {
+      if (response.status === 401 || response.status === 404) {
         setError(m.checkin_not_found());
-      } else if (response.status === 403) {
-        setError(m.checkin_invalid_token());
       } else if (response.ok) {
-        const data = await response.json();
-        const res = data.reservation as Reservation;
+        const data = await response.json() as Record<string, unknown>;
+        const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
+        const res: Reservation = {
+          id: data.id as string,
+          name: data.name as string,
+          email: (data.email ?? "") as string,
+          phone: (data.phone ?? "") as string,
+          eventId: (data.event_id ?? "") as string,
+          eventTitle: (data.event_title ?? "") as string,
+          guestCount: (data.guest_count ?? 1) as number,
+          preOrders: rawOrders.map((item) => ({
+            productId: (item.product_id ?? item.productId) as string,
+            name: item.name as string,
+            quantity: item.quantity as number,
+            price: item.price as number,
+            category: item.category as OrderItemCategory,
+            delivered: (item.delivered ?? false) as boolean,
+          })),
+          notes: (data.notes ?? "") as string,
+          status: (data.status ?? "pending") as ReservationStatus,
+          paymentStatus: (data.payment_status ?? "unpaid") as PaymentStatus,
+          checkedIn: (data.checked_in ?? false) as boolean,
+          checkedInAt: data.checked_in_at as string | undefined,
+          strapIssued: (data.strap_issued ?? false) as boolean,
+          createdAt: (data.created_at ?? "") as string,
+          updatedAt: (data.updated_at ?? "") as string,
+        };
         setReservation(res);
         if (res.checkedIn) {
           setAlreadyCheckedIn(true);
@@ -67,16 +90,43 @@ export default function CheckInPage() {
       const response = await fetch(`/api/check-in/${encodeURIComponent(reservationId)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: checkInToken, issueStrap: true }),
+        body: JSON.stringify({ token: checkInToken, issue_strap: true }),
       });
 
-      if (response.status === 403) {
+      if (response.status === 401) {
         setError(m.checkin_invalid_token());
       } else if (response.ok) {
-        const data = await response.json();
-        setReservation(data.reservation as Reservation);
+        const data = await response.json() as Record<string, unknown>;
+        const rawRes = (data.reservation ?? {}) as Record<string, unknown>;
+        const rawOrders = (rawRes.pre_orders ?? []) as Record<string, unknown>[];
+        const res: Reservation = {
+          id: rawRes.id as string,
+          name: rawRes.name as string,
+          email: (rawRes.email ?? "") as string,
+          phone: (rawRes.phone ?? "") as string,
+          eventId: (rawRes.event_id ?? "") as string,
+          eventTitle: (rawRes.event_title ?? "") as string,
+          guestCount: (rawRes.guest_count ?? 1) as number,
+          preOrders: rawOrders.map((item) => ({
+            productId: (item.product_id ?? item.productId) as string,
+            name: item.name as string,
+            quantity: item.quantity as number,
+            price: item.price as number,
+            category: item.category as OrderItemCategory,
+            delivered: (item.delivered ?? false) as boolean,
+          })),
+          notes: (rawRes.notes ?? "") as string,
+          status: (rawRes.status ?? "pending") as ReservationStatus,
+          paymentStatus: (rawRes.payment_status ?? "unpaid") as PaymentStatus,
+          checkedIn: (rawRes.checked_in ?? false) as boolean,
+          checkedInAt: rawRes.checked_in_at as string | undefined,
+          strapIssued: (rawRes.strap_issued ?? false) as boolean,
+          createdAt: (rawRes.created_at ?? "") as string,
+          updatedAt: (rawRes.updated_at ?? "") as string,
+        };
+        setReservation(res);
         setSuccess(true);
-        setAlreadyCheckedIn(data.alreadyCheckedIn);
+        setAlreadyCheckedIn((data.already_checked_in ?? false) as boolean);
       } else {
         setError(m.checkin_error());
       }

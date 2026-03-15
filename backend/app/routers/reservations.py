@@ -192,7 +192,7 @@ async def update_reservation(
         r.status = body.status
     if body.payment_status is not None:
         r.payment_status = body.payment_status
-    if body.table_id is not None:
+    if "table_id" in body.model_fields_set:
         r.table_id = body.table_id
     if body.notes is not None:
         r.notes = body.notes

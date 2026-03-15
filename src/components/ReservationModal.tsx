@@ -51,7 +51,7 @@ export default function ReservationModal({
     preOrders: [],
     notes: "",
     honeypot: "",
-    formStartTime: Date.now().toString(),
+    formStartTime: new Date().toISOString(),
   });
   const [errors, setErrors] = useState<ReservationFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -143,8 +143,23 @@ export default function ReservationModal({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...formData,
-            eventTitle: selectedEvent?.title ?? "",
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            event_id: formData.eventId,
+            event_title: selectedEvent?.title ?? formData.eventId,
+            guest_count: formData.guestCount,
+            pre_orders: formData.preOrders.map((o) => ({
+              product_id: o.productId,
+              name: o.name,
+              quantity: o.quantity,
+              price: o.price,
+              category: o.category,
+              delivered: o.delivered,
+            })),
+            notes: formData.notes,
+            honeypot: formData.honeypot ?? "",
+            form_start_time: formData.formStartTime,
           }),
         });
 
@@ -173,7 +188,7 @@ export default function ReservationModal({
       preOrders: [],
       notes: "",
       honeypot: "",
-      formStartTime: Date.now().toString(),
+      formStartTime: new Date().toISOString(),
     });
     setErrors({});
     setSubmitSuccess(false);

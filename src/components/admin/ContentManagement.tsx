@@ -95,6 +95,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
   // Load from backend; fall back to placeholder on 404 / error
   useEffect(() => {
@@ -197,23 +198,16 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
                 {item.image && (
                   <span className="d-inline-flex align-items-center justify-content-center"
                         style={{ width: 32, height: 32, flexShrink: 0 }}>
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      style={{ width: 32, height: 32, objectFit: "contain" }}
-                      onError={(e) => {
-                        const img = e.currentTarget as HTMLImageElement;
-                        img.style.display = "none";
-                        const parent = img.parentElement;
-                        if (parent) {
-                          const fallback = document.createElement("span");
-                          fallback.textContent = "🖼";
-                          fallback.setAttribute("aria-label", `Image unavailable for ${item.name}`);
-                          fallback.setAttribute("role", "img");
-                          parent.appendChild(fallback);
-                        }
-                      }}
-                    />
+                    {imageErrors.has(item.id) ? (
+                      <span role="img" aria-label={`Image unavailable for ${item.name}`}>🖼</span>
+                    ) : (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        style={{ width: 32, height: 32, objectFit: "contain" }}
+                        onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
+                      />
+                    )}
                   </span>
                 )}
                 <span className="text-truncate">{item.name}</span>

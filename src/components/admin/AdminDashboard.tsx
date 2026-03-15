@@ -19,6 +19,7 @@ import type {
   ReservationStatus,
   PaymentStatus,
   OrderItem,
+  OrderItemCategory,
 } from "../../types/reservation";
 
 interface AdminDashboardProps {
@@ -47,6 +48,38 @@ function apiTableToTable(d: Record<string, unknown>): Table {
     y: d.y as number,
     roomId: ((d.room_id ?? d.roomId) as string | null) ?? null,
     reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
+  };
+}
+
+/** Map FastAPI snake_case reservation response to frontend camelCase Reservation type */
+function apiReservationToReservation(d: Record<string, unknown>): Reservation {
+  const rawOrders = (d.pre_orders ?? d.preOrders ?? []) as Record<string, unknown>[];
+  return {
+    id: d.id as string,
+    name: d.name as string,
+    email: (d.email ?? "") as string,
+    phone: (d.phone ?? "") as string,
+    eventId: (d.event_id ?? d.eventId) as string,
+    eventTitle: (d.event_title ?? d.eventTitle ?? "") as string,
+    guestCount: (d.guest_count ?? d.guestCount) as number,
+    preOrders: rawOrders.map((item) => ({
+      productId: (item.product_id ?? item.productId) as string,
+      name: item.name as string,
+      quantity: item.quantity as number,
+      price: item.price as number,
+      category: (item.category ?? "other") as OrderItemCategory,
+      delivered: (item.delivered ?? false) as boolean,
+    })),
+    notes: (d.notes ?? "") as string,
+    tableId: (d.table_id ?? d.tableId) as string | undefined,
+    status: (d.status ?? "pending") as ReservationStatus,
+    paymentStatus: (d.payment_status ?? d.paymentStatus ?? "unpaid") as PaymentStatus,
+    checkedIn: (d.checked_in ?? d.checkedIn ?? false) as boolean,
+    checkedInAt: (d.checked_in_at ?? d.checkedInAt) as string | undefined,
+    strapIssued: (d.strap_issued ?? d.strapIssued ?? false) as boolean,
+    checkInToken: (d.check_in_token ?? d.checkInToken) as string | undefined,
+    createdAt: (d.created_at ?? d.createdAt) as string,
+    updatedAt: (d.updated_at ?? d.updatedAt) as string,
   };
 }
 
@@ -91,7 +124,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       if (resResponse.ok) {
         const data = await resResponse.json();
-        setReservations(data.reservations ?? []);
+        const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
+        setReservations(rawRes.map(apiReservationToReservation));
       }
       if (tablesResponse.ok) {
         const data = await tablesResponse.json();
@@ -123,7 +157,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (response.ok || response.status === 200) {
           setIsAuthenticated(true);
           const data = await response.json();
-          setReservations(data.reservations ?? []);
+          const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
+          setReservations(rawRes.map(apiReservationToReservation));
         } else {
           setLoginError(m.admin_login_error());
         }
@@ -178,7 +213,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const response = await fetch(`/api/reservations/${id}`, {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({ paymentStatus }),
+          body: JSON.stringify({ payment_status: paymentStatus }),
         });
         if (response.ok) {
           setReservations((prev) =>
@@ -202,7 +237,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const response = await fetch(`/api/reservations/${reservationId}`, {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({ tableId: tableId ?? null }),
+          body: JSON.stringify({ table_id: tableId ?? null }),
         });
         if (response.ok) {
           setReservations((prev) =>
@@ -340,7 +375,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         });
         if (response.ok) {
           const data = await response.json();
-          setDetailReservation(data.reservation);
+          setDetailReservation(apiReservationToReservation(data as Record<string, unknown>));
         } else {
           // Fall back to the list version (no token available)
           setDetailReservation(res);
@@ -358,7 +393,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const response = await fetch(`/api/reservations/${reservationId}`, {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({ preOrders: updatedOrders }),
+          body: JSON.stringify({
+            pre_orders: updatedOrders.map((o) => ({
+              product_id: o.productId,
+              name: o.name,
+              quantity: o.quantity,
+              price: o.price,
+              category: o.category,
+              delivered: o.delivered,
+            })),
+          }),
         });
         if (response.ok) {
           setReservations((prev) =>
@@ -386,11 +430,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const response = await fetch(`/api/reservations/${reservationId}`, {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({ checkedIn: true }),
+          body: JSON.stringify({ checked_in: true }),
         });
         if (response.ok) {
           const data = await response.json();
-          const updated = data.reservation as Reservation;
+          const updated = apiReservationToReservation(data as Record<string, unknown>);
           setReservations((prev) =>
             prev.map((r) => (r.id === reservationId ? { ...r, checkedIn: true, checkedInAt: updated.checkedInAt } : r)),
           );
@@ -411,7 +455,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const response = await fetch(`/api/reservations/${reservationId}`, {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({ strapIssued: true }),
+          body: JSON.stringify({ strap_issued: true }),
         });
         if (response.ok) {
           setReservations((prev) =>

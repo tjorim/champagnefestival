@@ -202,7 +202,7 @@ function RoomCanvas({
           style={{
             width: canvasW,
             height: canvasH,
-            borderColor: `${room.color} !important`,
+            borderColor: room.color,
             background:
               "repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)," +
               "repeating-linear-gradient(90deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)",

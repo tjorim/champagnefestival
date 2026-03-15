@@ -48,8 +48,9 @@ export interface Reservation {
   /**
    * One-time token included in the QR code.
    * Never exposed to the general public listing; only in individual reservation details.
+   * Optional because the list endpoint omits it — only the admin detail endpoint returns it.
    */
-  checkInToken: string;
+  checkInToken?: string;
   createdAt: string;
   updatedAt: string;
 }
