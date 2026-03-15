@@ -116,7 +116,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fetch("/api/rooms", { headers: authHeaders() }),
       ]);
 
-      if (resResponse.status === 401 || tablesResponse.status === 401) {
+      if (resResponse.status === 401 || tablesResponse.status === 401 || roomsResponse.status === 401) {
         setIsAuthenticated(false);
         setLoginError(m.admin_login_error());
         return;
@@ -154,7 +154,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const response = await fetch("/api/reservations", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (response.ok || response.status === 200) {
+        if (response.ok) {
           setIsAuthenticated(true);
           const data = await response.json();
           const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
@@ -302,8 +302,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           headers: authHeaders(),
           body: JSON.stringify({ x, y }),
         });
-      } catch {
+      } catch (err) {
         // Non-critical: position will persist until next reload
+        console.error("Failed to persist table position", err);
       }
     },
     [authHeaders],
@@ -466,7 +467,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           );
         }
       } catch {
-        setError(m.admin_error_check_in());
+        setError(m.admin_error_issue_strap());
       }
     },
     [authHeaders],

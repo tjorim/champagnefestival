@@ -1,5 +1,7 @@
 """Admin bearer-token authentication dependency."""
 
+import secrets
+
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -17,7 +19,7 @@ def require_admin(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Admin access is not configured on this server.",
         )
-    if credentials is None or credentials.credentials != settings.admin_token:
+    if credentials is None or not secrets.compare_digest(credentials.credentials, settings.admin_token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin token.",

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -57,6 +57,10 @@ export default function ReservationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, eventId: defaultEventId }));
+  }, [defaultEventId]);
 
   const validate = useCallback((): boolean => {
     const newErrors: ReservationFormErrors = {};

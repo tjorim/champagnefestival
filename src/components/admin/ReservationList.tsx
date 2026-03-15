@@ -194,6 +194,7 @@ export default function ReservationList({
                           variant="outline-light"
                           onClick={() => onViewDetail(res)}
                           title={m.admin_qr_code()}
+                          aria-label={m.admin_qr_code()}
                         >
                           <i className="bi bi-qr-code" aria-hidden="true" />
                         </Button>
@@ -203,6 +204,7 @@ export default function ReservationList({
                             variant="outline-success"
                             onClick={() => onUpdateStatus(res.id, "confirmed")}
                             title={m.admin_action_confirm()}
+                            aria-label={m.admin_action_confirm()}
                           >
                             <i className="bi bi-check-lg" aria-hidden="true" />
                           </Button>
@@ -213,6 +215,7 @@ export default function ReservationList({
                             variant="outline-danger"
                             onClick={() => onUpdateStatus(res.id, "cancelled")}
                             title={m.admin_action_cancel()}
+                            aria-label={m.admin_action_cancel()}
                           >
                             <i className="bi bi-x-lg" aria-hidden="true" />
                           </Button>
@@ -223,6 +226,7 @@ export default function ReservationList({
                             variant="outline-warning"
                             onClick={() => onUpdatePayment(res.id, "paid")}
                             title={m.admin_action_mark_paid()}
+                            aria-label={m.admin_action_mark_paid()}
                           >
                             <i className="bi bi-currency-euro" aria-hidden="true" />
                           </Button>

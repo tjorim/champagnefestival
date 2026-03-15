@@ -9,7 +9,13 @@ import type { Reservation, OrderItem } from "../../types/reservation";
 
 interface ReservationDetailProps {
   reservation: Reservation | null;
-  /** Base URL for the check-in link, e.g. https://festival.example.com */
+  /**
+   * Base URL for the check-in link — must include the full origin plus any
+   * router basename (the path prefix up to but not including `/check-in`).
+   * e.g. `https://festival.example.com` or `https://festival.example.com/subpath`
+   * Callers must include the basename; only the origin is not sufficient for
+   * subpath deployments.
+   */
   baseUrl: string;
   onClose: () => void;
   onToggleDelivered: (reservationId: string, updatedOrders: OrderItem[]) => void;

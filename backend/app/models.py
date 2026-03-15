@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -26,7 +26,9 @@ class Reservation(Base):
     # JSON-encoded list of OrderItem dicts
     pre_orders: Mapped[str] = mapped_column(Text, default="[]")
     notes: Mapped[str] = mapped_column(Text, default="")
-    table_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    table_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
+    )
 
     status: Mapped[str] = mapped_column(String(20), default="pending")
     """pending | confirmed | cancelled"""
@@ -126,7 +128,9 @@ class Table(Base):
     x: Mapped[float] = mapped_column(default=50.0)
     y: Mapped[float] = mapped_column(default=50.0)
     # Optional room assignment (nullable for backward compat)
-    room_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    room_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True
+    )
     # JSON-encoded list of reservation ID strings
     reservation_ids: Mapped[str] = mapped_column(Text, default="[]")
 

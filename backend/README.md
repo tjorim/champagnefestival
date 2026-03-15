@@ -233,7 +233,7 @@ marks the call site.  SMTP settings are wired in `app/config.py` and
 1. Add a `send_confirmation_email(reservation, qr_png_bytes)` helper in
    `app/email.py` using `aiosmtplib` + `email.mime`.
 2. Generate the QR PNG with `qrcode[pil]` using the check-in URL
-   `{FRONTEND_URL}/#check-in?id={id}&token={token}`.
+   `{FRONTEND_URL}/check-in?id={id}&token={token}`.
 3. Call the helper after `db.commit()` in `create_reservation`.
 
 ---

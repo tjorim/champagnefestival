@@ -84,7 +84,7 @@ const ContactForm: React.FC = () => {
 
     // If no errors, proceed with submission
     try {
-      // Call our Cloudflare Function endpoint
+      // Call the FastAPI backend endpoint
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: {

@@ -299,5 +299,7 @@
   "admin_table_room_label": "Room",
   "admin_table_move_hint": "Drag to reposition. Click to view guests.",
   "admin_room_delete_confirm": "Delete room? Tables will remain but lose their room assignment.",
+  "admin_table_name_placeholder": "Table A, VIP 1…",
+  "admin_error_issue_strap": "Failed to issue strap.",
   "back_to_site": "Back to site"
 }

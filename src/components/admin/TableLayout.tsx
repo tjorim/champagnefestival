@@ -523,7 +523,7 @@ export default function TableLayout({
               value={newTable.name}
               onChange={(e) => setNewTable((p) => ({ ...p, name: e.target.value }))}
               className="bg-dark text-light border-secondary"
-              placeholder="Table A, VIP 1…"
+              placeholder={m.admin_table_name_placeholder()}
             />
           </Form.Group>
           <Form.Group className="mb-3" controlId="table-capacity">

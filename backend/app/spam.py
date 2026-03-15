@@ -32,7 +32,7 @@ def check_form_timing(form_start_time: str) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Submission rejected.",
-        )
+        ) from None
 
     # Make timezone-aware if naïve
     if start.tzinfo is None:

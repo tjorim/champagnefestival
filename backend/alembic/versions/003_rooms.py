@@ -41,9 +41,17 @@ def upgrade() -> None:
 
     with op.batch_alter_table("tables") as batch_op:
         batch_op.add_column(sa.Column("room_id", sa.String(64), nullable=True))
+        batch_op.create_foreign_key(
+            "fk_tables_room_id_rooms",
+            "rooms",
+            ["room_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
 
 
 def downgrade() -> None:
     with op.batch_alter_table("tables") as batch_op:
+        batch_op.drop_constraint("fk_tables_room_id_rooms", type_="foreignkey")
         batch_op.drop_column("room_id")
     op.drop_table("rooms")

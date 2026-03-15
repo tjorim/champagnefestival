@@ -254,7 +254,7 @@ class RoomCreate(BaseModel):
     zone_type: ZoneType = "main-hall"
     width_m: float = Field(ge=1, le=500, default=20.0)
     height_m: float = Field(ge=1, le=500, default=15.0)
-    color: str = Field(default="#6c757d", pattern=r"^#[0-9a-fA-F]{3,8}$")
+    color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
 class RoomUpdate(BaseModel):
@@ -262,7 +262,7 @@ class RoomUpdate(BaseModel):
     zone_type: ZoneType | None = None
     width_m: float | None = Field(default=None, ge=1, le=500)
     height_m: float | None = Field(default=None, ge=1, le=500)
-    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{3,8}$")
+    color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
 class RoomOut(BaseModel):

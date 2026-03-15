@@ -5,9 +5,12 @@ Email delivery to the organiser is a planned feature (see backend/README.md).
 """
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel, EmailStr, Field
+
+from app.spam import check_form_timing, check_honeypot
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +21,8 @@ class ContactRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     message: str = Field(min_length=1, max_length=5000)
+    honeypot: Optional[str] = None
+    form_start_time: Optional[str] = None
 
 
 @router.post("")
@@ -27,6 +32,9 @@ async def submit_contact(body: ContactRequest) -> dict:
     Currently logs the message server-side. Email delivery to the organiser
     is a planned feature — see the "Planned features" section in README.md.
     """
+    check_honeypot(body.honeypot or "")
+    check_form_timing(body.form_start_time or "")
+
     logger.info(
         "Contact form submission received",
         extra={

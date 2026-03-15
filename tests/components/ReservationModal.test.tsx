@@ -257,7 +257,7 @@ describe("ReservationModal component", () => {
       />,
     );
     const plusButtons = screen.getAllByRole("button", { name: /Increase quantity/i });
-    fireEvent.click(plusButtons[0] as HTMLElement);
+    fireEvent.click(plusButtons[0]);
 
     const quantities = screen.getAllByText("1");
     expect(quantities.length).toBeGreaterThan(0);
