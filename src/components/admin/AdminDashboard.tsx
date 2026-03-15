@@ -155,10 +155,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {
+          // loadData() will be triggered by the useEffect watching isAuthenticated
           setIsAuthenticated(true);
-          const data = await response.json();
-          const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
-          setReservations(rawRes.map(apiReservationToReservation));
         } else {
           setLoginError(m.admin_login_error());
         }

@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -17,6 +18,13 @@ engine = create_async_engine(
     # echo=True,  # uncomment for SQL query logging during development
     **( {"connect_args": {"check_same_thread": False}} if _is_sqlite else {}),
 )
+
+if _is_sqlite:
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_conn, connection_record) -> None:  # noqa: ANN001
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 async_session_factory = async_sessionmaker(
     engine,

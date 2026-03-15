@@ -5,7 +5,6 @@ Email delivery to the organiser is a planned feature (see backend/README.md).
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel, EmailStr, Field
@@ -21,8 +20,8 @@ class ContactRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     message: str = Field(min_length=1, max_length=5000)
-    honeypot: Optional[str] = None
-    form_start_time: Optional[str] = None
+    honeypot: str | None = None
+    form_start_time: str | None = None
 
 
 @router.post("")

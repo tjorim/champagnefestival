@@ -29,7 +29,7 @@ The table below tracks each user story against its current implementation status
 ## Architecture
 
 ```
-Cloudflare Pages (static frontend)
+Static frontend (Vite build / CDN / VPS)
         │
         │  HTTPS API calls
         ▼
@@ -150,7 +150,7 @@ location /api/ {
 |---|---|---|---|
 | `ADMIN_TOKEN` | **yes** | — | Bearer token for admin endpoints |
 | `DATABASE_URL` | no | `sqlite+aiosqlite:////var/data/champagne/champagne.db` | Async SQLAlchemy URL |
-| `CORS_ORIGINS` | no | `["*"]` | JSON array of allowed origins |
+| `CORS_ORIGINS` | no | `[]` | JSON array of allowed origins |
 | `MIN_FORM_SECONDS` | no | `3` | Anti-spam: min seconds to fill the form |
 | `SMTP_HOST` | no | — | SMTP server (planned — see below) |
 | `SMTP_PORT` | no | `587` | SMTP port (planned) |
@@ -197,18 +197,17 @@ Public endpoints (reservation creation, check-in) do not require a token.
 
 ## Frontend integration
 
-Update the Cloudflare Pages frontend to point at the VPS backend instead of
-the Cloudflare Functions.  The API contract is identical, so only the base URL
-needs to change.
+The React (Vite) frontend proxies `/api/*` to the backend during development
+via `vite.config.ts`.  In production, configure your reverse proxy (nginx or
+similar) to route `/api/*` requests to the FastAPI process.
 
-In the React frontend, set an environment variable:
+Set the `CORS_ORIGINS` env var to the origin(s) of your frontend deployment so
+the browser can reach the API:
 
 ```
-# .env (Cloudflare Pages environment settings)
-VITE_API_BASE_URL=https://api.champagnefestival.be
+# /etc/champagne/.env
+CORS_ORIGINS=["https://champagnefestival.be"]
 ```
-
-Then replace hardcoded `/api/` fetch calls with `${import.meta.env.VITE_API_BASE_URL}/api/`.
 
 ---
 

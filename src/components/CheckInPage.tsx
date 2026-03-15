@@ -45,8 +45,8 @@ export default function CheckInPage() {
         const res: Reservation = {
           id: data.id as string,
           name: data.name as string,
-          email: (data.email ?? "") as string,
-          phone: (data.phone ?? "") as string,
+          email: "",
+          phone: "",
           eventId: (data.event_id ?? "") as string,
           eventTitle: (data.event_title ?? "") as string,
           guestCount: (data.guest_count ?? 1) as number,
@@ -60,12 +60,12 @@ export default function CheckInPage() {
           })),
           notes: (data.notes ?? "") as string,
           status: (data.status ?? "pending") as ReservationStatus,
-          paymentStatus: (data.payment_status ?? "unpaid") as PaymentStatus,
+          paymentStatus: "unpaid",  // not included in CheckInGuestOut
           checkedIn: (data.checked_in ?? false) as boolean,
           checkedInAt: data.checked_in_at as string | undefined,
           strapIssued: (data.strap_issued ?? false) as boolean,
-          createdAt: (data.created_at ?? "") as string,
-          updatedAt: (data.updated_at ?? "") as string,
+          createdAt: "",  // not included in CheckInGuestOut
+          updatedAt: "",  // not included in CheckInGuestOut
         };
         setReservation(res);
         if (res.checkedIn) {
@@ -110,8 +110,8 @@ export default function CheckInPage() {
         const res: Reservation = {
           id: rawRes.id as string,
           name: rawRes.name as string,
-          email: (rawRes.email ?? "") as string,
-          phone: (rawRes.phone ?? "") as string,
+          email: "",
+          phone: "",
           eventId: (rawRes.event_id ?? "") as string,
           eventTitle: (rawRes.event_title ?? "") as string,
           guestCount: (rawRes.guest_count ?? 1) as number,
@@ -125,12 +125,12 @@ export default function CheckInPage() {
           })),
           notes: (rawRes.notes ?? "") as string,
           status: (rawRes.status ?? "pending") as ReservationStatus,
-          paymentStatus: (rawRes.payment_status ?? "unpaid") as PaymentStatus,
+          paymentStatus: "unpaid",  // not included in CheckInGuestOut
           checkedIn: (rawRes.checked_in ?? false) as boolean,
           checkedInAt: rawRes.checked_in_at as string | undefined,
           strapIssued: (rawRes.strap_issued ?? false) as boolean,
-          createdAt: (rawRes.created_at ?? "") as string,
-          updatedAt: (rawRes.updated_at ?? "") as string,
+          createdAt: "",  // not included in CheckInGuestOut
+          updatedAt: "",  // not included in CheckInGuestOut
         };
         setReservation(res);
         setSuccess(true);

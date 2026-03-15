@@ -1,8 +1,5 @@
 """Room management endpoints (admin only)."""
 
-import secrets
-import time
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,19 +8,13 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Room
 from app.schemas import RoomCreate, RoomOut, RoomUpdate
-from app.utils import room_to_dict
+from app.utils import make_id, room_to_dict
 
 router = APIRouter(
     prefix="/api/rooms",
     tags=["rooms"],
     dependencies=[Depends(require_admin)],
 )
-
-
-def _make_id() -> str:
-    ts = int(time.time() * 1000)
-    rand = secrets.token_hex(4)
-    return f"room_{ts}_{rand}"
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +28,7 @@ async def create_room(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     r = Room(
-        id=_make_id(),
+        id=make_id("room"),
         name=body.name,
         zone_type=body.zone_type,
         width_m=body.width_m,

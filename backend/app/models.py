@@ -41,7 +41,7 @@ class Reservation(Base):
         DateTime(timezone=True), nullable=True
     )
     strap_issued: Mapped[bool] = mapped_column(Boolean, default=False)
-    check_in_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    check_in_token: Mapped[str] = mapped_column(String(64), unique=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow

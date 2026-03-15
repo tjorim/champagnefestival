@@ -176,7 +176,7 @@ class CheckInRequest(BaseModel):
 
 
 class CheckInOut(BaseModel):
-    reservation: ReservationOut
+    reservation: CheckInGuestOut
     already_checked_in: bool
 
 

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Reservation
 from app.schemas import CheckInOut, CheckInRequest, CheckInGuestOut
-from app.utils import reservation_to_checkin_dict, reservation_to_dict
+from app.utils import reservation_to_checkin_dict
 
 router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 
@@ -69,7 +69,7 @@ async def post_check_in(
         await db.refresh(r)
 
     return {
-        "reservation": reservation_to_dict(r),
+        "reservation": reservation_to_checkin_dict(r),
         "already_checked_in": already,
     }
 

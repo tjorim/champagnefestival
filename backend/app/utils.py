@@ -1,6 +1,16 @@
 """Shared serialisation helpers for ORM → dict conversions."""
 
+import secrets
+import time
+
 from app.models import Reservation, Room, Table
+
+
+def make_id(prefix: str) -> str:
+    """Generate a time-ordered, collision-resistant ID with the given prefix."""
+    ts = int(time.time() * 1000)
+    rand = secrets.token_hex(4)
+    return f"{prefix}_{ts}_{rand}"
 
 
 def reservation_to_dict(r: Reservation) -> dict:

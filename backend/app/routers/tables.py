@@ -1,8 +1,5 @@
 """Table management endpoints (admin only)."""
 
-import secrets
-import time
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,19 +8,13 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Table
 from app.schemas import TableCreate, TableOut, TableUpdate
-from app.utils import table_to_dict
+from app.utils import make_id, table_to_dict
 
 router = APIRouter(
     prefix="/api/tables",
     tags=["tables"],
     dependencies=[Depends(require_admin)],
 )
-
-
-def _make_id() -> str:
-    ts = int(time.time() * 1000)
-    rand = secrets.token_hex(4)
-    return f"tbl_{ts}_{rand}"
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +28,7 @@ async def create_table(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     t = Table(
-        id=_make_id(),
+        id=make_id("tbl"),
         name=body.name,
         capacity=body.capacity,
         x=body.x,
@@ -93,7 +84,7 @@ async def update_table(
         t.x = body.x
     if body.y is not None:
         t.y = body.y
-    if body.room_id is not None or (hasattr(body, "model_fields_set") and "room_id" in body.model_fields_set):
+    if "room_id" in body.model_fields_set:
         t.room_id = body.room_id
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)

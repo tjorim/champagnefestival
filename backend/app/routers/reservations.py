@@ -1,7 +1,5 @@
 """Reservation CRUD endpoints."""
 
-import secrets
-import time
 from datetime import datetime, timezone
 
 from typing import Annotated
@@ -24,6 +22,7 @@ from app.schemas import (
 )
 from app.spam import check_form_timing, check_honeypot
 from app.utils import (
+    make_id,
     reservation_to_dict,
     reservation_to_dict_with_token,
     reservation_to_guest_dict,
@@ -31,12 +30,6 @@ from app.utils import (
 )
 
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
-
-
-def _make_id(prefix: str) -> str:
-    ts = int(time.time() * 1000)
-    rand = secrets.token_hex(4)
-    return f"{prefix}_{ts}_{rand}"
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +51,7 @@ async def create_reservation(
     check_form_timing(body.form_start_time)
 
     reservation = Reservation(
-        id=_make_id("res"),
+        id=make_id("res"),
         name=body.name,
         email=body.email,
         phone=body.phone,
@@ -66,7 +59,7 @@ async def create_reservation(
         event_title=body.event_title,
         guest_count=body.guest_count,
         notes=body.notes,
-        check_in_token=_make_id("tok"),
+        check_in_token=make_id("tok"),
     )
     reservation.set_pre_orders([item.model_dump() for item in body.pre_orders])
 
@@ -136,6 +129,11 @@ async def my_reservations(
     This endpoint is publicly accessible — no admin token required.
     It exposes only safe booking-status fields; sensitive fields (phone,
     internal notes, check-in token) are never returned here.
+
+    **Note on e-mail enumeration:** an empty result (``[]``) for a given
+    address reveals that no reservation exists for that e-mail.  This is
+    intentional — the use-case requires guests to look up their own bookings
+    by e-mail — and is consistent with the visitor-facing UI.
 
     This supports two visitor-facing user stories:
     - **Order overview**: guests can check the status of their bookings
