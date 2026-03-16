@@ -73,7 +73,7 @@ async def create_reservation(
     reservation = Reservation(
         id=make_id("res"),
         name=body.name,
-        email=body.email,
+        email=email_norm,
         phone=body.phone,
         event_id=body.event_id,
         event_title=body.event_title,
