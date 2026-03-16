@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext,
+  KeyboardSensor,
   PointerSensor,
   useDraggable,
   useSensor,
@@ -167,7 +168,10 @@ function RoomCanvas({
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
+  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
