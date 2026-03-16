@@ -10,7 +10,6 @@ import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "../../paraglide/messages";
-import { producerItems, sponsorItems } from "../../config/marqueeSlider";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal, { type ItemDraft } from "./ItemModal";
@@ -33,10 +32,9 @@ interface ContentSectionProps {
 }
 
 function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps) {
-  const fallback = sectionKey === "producers" ? [...producerItems] : [...sponsorItems];
-
-  const [items, setItems] = useState<ItemDraft[]>(fallback);
+  const [items, setItems] = useState<ItemDraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
@@ -51,9 +49,12 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         if (res.ok && !cancelled) {
           const data = (await res.json()) as { value: ItemDraft[] };
           if (Array.isArray(data.value)) setItems(data.value);
+        } else if (!cancelled) {
+          setLoadError(true);
         }
-      } catch {
-        // network error → keep placeholder
+      } catch (err) {
+        console.error(`Failed to load ${sectionKey} content`, err);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -127,6 +128,9 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         </div>
       </div>
 
+      {loadError && (
+        <Alert variant="danger" className="py-1 mb-2">{m.admin_content_error_load()}</Alert>
+      )}
       {saveStatus === "saved" && (
         <Alert variant="success" className="py-1 mb-2">{m.admin_content_saved()}</Alert>
       )}
