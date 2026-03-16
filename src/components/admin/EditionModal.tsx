@@ -153,12 +153,12 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
           </div>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>Cancel</Button>
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>{m.close()}</Button>
           <Button type="submit" variant="warning" size="sm" disabled={saving}>
             {saving
               ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-1" />
               : <i className="bi bi-floppy me-1" aria-hidden="true" />}
-            Save
+            {m.admin_save()}
           </Button>
         </Modal.Footer>
       </Form>
