@@ -1,5 +1,6 @@
 """QR-code check-in endpoints (public, token-gated)."""
 
+import secrets
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -86,7 +87,7 @@ async def _get_by_token_or_401(
         select(Reservation).where(Reservation.id == reservation_id)
     )
     r = result.scalar_one_or_none()
-    if r is None or r.check_in_token != token:
+    if r is None or not secrets.compare_digest(r.check_in_token, token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid reservation ID or token.",
