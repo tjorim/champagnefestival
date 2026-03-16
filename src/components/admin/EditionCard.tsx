@@ -37,7 +37,7 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
     try {
       const res = await fetch(`/api/editions/${edition.id}`, {
         method: "PUT",
-        headers: authHeaders(),
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ schedule: newSchedule }),
       });
       if (res.ok) onUpdated((await res.json()) as Edition);
