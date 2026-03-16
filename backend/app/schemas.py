@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +260,12 @@ class TableCreate(BaseModel):
     width_m: float = Field(ge=0.1, le=20.0, default=1.8)
     length_m: float = Field(ge=0.1, le=20.0, default=0.7)
     rotation: int = Field(ge=0, le=359, default=0)
+
+    @model_validator(mode="after")
+    def ensure_length_gte_width(self) -> "TableCreate":
+        if self.length_m < self.width_m:
+            self.length_m, self.width_m = self.width_m, self.length_m
+        return self
 
 
 class TableUpdate(BaseModel):

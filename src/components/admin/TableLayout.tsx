@@ -622,7 +622,7 @@ export default function TableLayout({
                   <Form.Control
                     type="number" min={0.1} max={20} step={0.1}
                     value={newTable.widthM}
-                    onChange={(e) => setNewTable((p) => ({ ...p, widthM: Number(e.target.value) }))}
+                    onChange={(e) => { const v = Number(e.target.value); setNewTable((p) => v > p.lengthM ? { ...p, widthM: p.lengthM, lengthM: v } : { ...p, widthM: v }); }}
                     className="bg-dark text-light border-secondary"
                   />
                 </Form.Group>
@@ -633,7 +633,7 @@ export default function TableLayout({
                   <Form.Control
                     type="number" min={0.1} max={20} step={0.1}
                     value={newTable.lengthM}
-                    onChange={(e) => setNewTable((p) => ({ ...p, lengthM: Number(e.target.value) }))}
+                    onChange={(e) => { const v = Number(e.target.value); setNewTable((p) => v < p.widthM ? { ...p, lengthM: p.widthM, widthM: v } : { ...p, lengthM: v }); }}
                     className="bg-dark text-light border-secondary"
                   />
                 </Form.Group>

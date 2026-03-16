@@ -97,6 +97,8 @@ async def update_table(
         t.width_m = body.width_m
     if body.length_m is not None:
         t.length_m = body.length_m
+    if t.length_m < t.width_m:
+        t.length_m, t.width_m = t.width_m, t.length_m
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
     # Nullable / zero-valid fields: must use model_fields_set so that an
