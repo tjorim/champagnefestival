@@ -37,9 +37,13 @@ def _validate_help_days(first_help_day, last_help_day) -> None:
 
 
 def _normalise_optional_identity(value: str | None) -> str | None:
+    """Strip separators and normalise case so that e.g. '93.05.18-223.61' and
+    '93051822361' are treated as the same value for uniqueness checks."""
     if value is None:
         return None
-    value = value.strip()
+    for ch in (" ", ".", "-", "/"):
+        value = value.replace(ch, "")
+    value = value.strip().lower()
     return value or None
 
 
