@@ -27,10 +27,8 @@ def upgrade() -> None:
         sa.Column("roles", sa.Text(), nullable=False, server_default="[]"),
         sa.Column("first_help_day", sa.Date(), nullable=True),
         sa.Column("last_help_day", sa.Date(), nullable=True),
-        sa.Column(
-            "national_register_number", sa.String(length=20), nullable=False, server_default=""
-        ),
-        sa.Column("eid_document_number", sa.String(length=50), nullable=False, server_default=""),
+        sa.Column("national_register_number", sa.String(length=20), nullable=True),
+        sa.Column("eid_document_number", sa.String(length=50), nullable=True),
         sa.Column("visits_per_month", sa.Integer(), nullable=True),
         sa.Column("club_name", sa.String(length=200), nullable=False, server_default=""),
         sa.Column("notes", sa.Text(), nullable=False, server_default=""),
@@ -42,6 +40,8 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("national_register_number"),
+        sa.UniqueConstraint("eid_document_number"),
     )
 
     op.add_column(

@@ -168,8 +168,8 @@ class VolunteerOut(BaseModel):
     address: str
     first_help_day: date
     last_help_day: date
-    national_register_number: str
-    eid_document_number: str
+    national_register_number: str | None
+    eid_document_number: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -400,8 +400,8 @@ class PersonCreate(BaseModel):
     roles: list[str] = Field(default_factory=list)
     first_help_day: date | None = None
     last_help_day: date | None = None
-    national_register_number: str = Field(default="", max_length=20)
-    eid_document_number: str = Field(default="", max_length=50)
+    national_register_number: str | None = Field(default=None, max_length=20)
+    eid_document_number: str | None = Field(default=None, max_length=50)
     visits_per_month: int | None = Field(default=None, ge=1, le=31)
     club_name: str = Field(default="", max_length=200)
     notes: str = Field(default="", max_length=2000)
@@ -433,8 +433,8 @@ class PersonOut(BaseModel):
     roles: list[str]
     first_help_day: date | None
     last_help_day: date | None
-    national_register_number: str
-    eid_document_number: str
+    national_register_number: str | None
+    eid_document_number: str | None
     visits_per_month: int | None
     club_name: str
     notes: str

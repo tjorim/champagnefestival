@@ -217,8 +217,12 @@ class Person(Base):
     # Optional compliance/attendance fields
     first_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
     last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
-    national_register_number: Mapped[str] = mapped_column(String(20), default="")
-    eid_document_number: Mapped[str] = mapped_column(String(50), default="")
+    national_register_number: Mapped[str | None] = mapped_column(
+        String(20), unique=True, nullable=True
+    )
+    eid_document_number: Mapped[str | None] = mapped_column(
+        String(50), unique=True, nullable=True
+    )
 
     # Optional club/visitor metadata
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)

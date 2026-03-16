@@ -35,6 +35,13 @@ def _validate_help_days(first_help_day, last_help_day) -> None:
         )
 
 
+def _normalise_optional_identity(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) -> dict:
     _validate_help_days(body.first_help_day, body.last_help_day)
@@ -47,8 +54,8 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         address=body.address,
         first_help_day=body.first_help_day,
         last_help_day=body.last_help_day,
-        national_register_number=body.national_register_number,
-        eid_document_number=body.eid_document_number,
+        national_register_number=_normalise_optional_identity(body.national_register_number),
+        eid_document_number=_normalise_optional_identity(body.eid_document_number),
         visits_per_month=body.visits_per_month,
         club_name=body.club_name,
         notes=body.notes,
@@ -69,38 +76,36 @@ async def list_people(
     role: str | None = Query(default=None, description="Filter by role (case-insensitive)"),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    result = await db.execute(select(Person).order_by(Person.created_at.desc()))
+    stmt = select(Person)
+
+    if active is not None:
+        stmt = stmt.where(Person.active == active)
+
+    if role:
+        role_norm = role.strip().lower()
+        role_escaped = role_norm.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        stmt = stmt.where(Person.roles.ilike(f'%"{role_escaped}"%', escape="\\"))
+
+    if q:
+        q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        q_like = f"%{q_escaped}%"
+        stmt = stmt.where(
+            or_(
+                Person.name.ilike(q_like, escape="\\"),
+                Person.email.ilike(q_like, escape="\\"),
+                Person.phone.ilike(q_like, escape="\\"),
+                Person.address.ilike(q_like, escape="\\"),
+                Person.national_register_number.ilike(q_like, escape="\\"),
+                Person.eid_document_number.ilike(q_like, escape="\\"),
+                Person.club_name.ilike(q_like, escape="\\"),
+                Person.notes.ilike(q_like, escape="\\"),
+                Person.roles.ilike(q_like, escape="\\"),
+            )
+        )
+
+    result = await db.execute(stmt.order_by(Person.created_at.desc()))
     rows = result.scalars().all()
-
-    q_norm = q.strip().lower() if q else None
-    role_norm = role.strip().lower() if role else None
-
-    filtered: list[Person] = []
-    for p in rows:
-        roles = p.get_roles()
-        if active is not None and p.active != active:
-            continue
-        if role_norm and role_norm not in roles:
-            continue
-        if q_norm:
-            haystack = " ".join(
-                [
-                    p.name,
-                    p.email,
-                    p.phone,
-                    p.address,
-                    p.national_register_number,
-                    p.eid_document_number,
-                    p.club_name,
-                    p.notes,
-                    " ".join(roles),
-                ]
-            ).lower()
-            if q_norm not in haystack:
-                continue
-        filtered.append(p)
-
-    return [person_to_dict(p) for p in filtered]
+    return [person_to_dict(p) for p in rows]
 
 
 @router.get("/{person_id}", response_model=PersonOut)
@@ -127,8 +132,6 @@ async def update_person(
         "address",
         "first_help_day",
         "last_help_day",
-        "national_register_number",
-        "eid_document_number",
         "visits_per_month",
         "club_name",
         "notes",
@@ -139,6 +142,11 @@ async def update_person(
 
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""
+
+    if "national_register_number" in body.model_fields_set:
+        person.national_register_number = _normalise_optional_identity(body.national_register_number)
+    if "eid_document_number" in body.model_fields_set:
+        person.eid_document_number = _normalise_optional_identity(body.eid_document_number)
 
     if body.roles is not None:
         person.set_roles(_normalise_roles(body.roles))

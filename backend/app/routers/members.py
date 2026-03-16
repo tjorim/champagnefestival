@@ -47,8 +47,8 @@ async def create_member(
         address=body.address,
         first_help_day=body.first_help_day,
         last_help_day=body.last_help_day,
-        national_register_number=body.national_register_number,
-        eid_document_number=body.eid_document_number,
+        national_register_number=(body.national_register_number or None),
+        eid_document_number=(body.eid_document_number or None),
         visits_per_month=body.visits_per_month,
         club_name=body.club_name,
         notes=body.notes,
@@ -116,8 +116,6 @@ async def update_member(
         "address",
         "first_help_day",
         "last_help_day",
-        "national_register_number",
-        "eid_document_number",
         "visits_per_month",
         "club_name",
         "notes",
@@ -128,6 +126,10 @@ async def update_member(
 
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""
+    if "national_register_number" in body.model_fields_set:
+        person.national_register_number = body.national_register_number or None
+    if "eid_document_number" in body.model_fields_set:
+        person.eid_document_number = body.eid_document_number or None
 
     if body.roles is not None:
         person.set_roles(_normalise_roles(body.roles))
