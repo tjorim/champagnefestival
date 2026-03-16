@@ -217,6 +217,10 @@ class TableCreate(BaseModel):
     x: float = Field(ge=0, le=100, default=50.0)
     y: float = Field(ge=0, le=100, default=50.0)
     room_id: str | None = None
+    shape: Literal["rectangle", "round"] = "rectangle"
+    width_m: float = Field(ge=0.1, le=20.0, default=1.8)
+    height_m: float = Field(ge=0.1, le=20.0, default=0.7)
+    rotation: float = Field(ge=0, le=360, default=0.0)
 
 
 class TableUpdate(BaseModel):
@@ -225,6 +229,10 @@ class TableUpdate(BaseModel):
     x: float | None = Field(default=None, ge=0, le=100)
     y: float | None = Field(default=None, ge=0, le=100)
     room_id: str | None = None
+    shape: Literal["rectangle", "round"] | None = None
+    width_m: float | None = Field(default=None, ge=0.1, le=20.0)
+    height_m: float | None = Field(default=None, ge=0.1, le=20.0)
+    rotation: float | None = Field(default=None, ge=0, le=360)
     reservation_ids: list[str] | None = None
 
 
@@ -235,6 +243,10 @@ class TableOut(BaseModel):
     x: float
     y: float
     room_id: str | None
+    shape: str
+    width_m: float
+    height_m: float
+    rotation: float
     reservation_ids: list[str]
     created_at: datetime
     updated_at: datetime

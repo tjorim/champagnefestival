@@ -34,6 +34,10 @@ async def create_table(
         x=body.x,
         y=body.y,
         room_id=body.room_id,
+        shape=body.shape,
+        width_m=body.width_m,
+        height_m=body.height_m,
+        rotation=body.rotation,
     )
     t.set_reservation_ids([])
     db.add(t)
@@ -86,6 +90,14 @@ async def update_table(
         t.y = body.y
     if "room_id" in body.model_fields_set:
         t.room_id = body.room_id
+    if body.shape is not None:
+        t.shape = body.shape
+    if body.width_m is not None:
+        t.width_m = body.width_m
+    if body.height_m is not None:
+        t.height_m = body.height_m
+    if "rotation" in body.model_fields_set:
+        t.rotation = body.rotation
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
 

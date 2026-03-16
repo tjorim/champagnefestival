@@ -312,6 +312,12 @@
   "admin_table_move_hint": "Glisser pour repositionner. Cliquer pour voir les invités.",
   "admin_room_delete_confirm": "Supprimer la salle ? Les tables seront conservées mais perdront leur salle.",
   "admin_table_name_placeholder": "Table A, VIP 1…",
+  "admin_table_shape_label": "Forme",
+  "admin_table_shape_rectangle": "Rectangle",
+  "admin_table_shape_round": "Rond",
+  "admin_table_width_label": "Largeur (m)",
+  "admin_table_height_label": "Profondeur (m)",
+  "admin_table_diameter_label": "Diamètre (m)",
   "admin_error_issue_strap": "Échec de la remise du bracelet.",
   "back_to_site": "Retour au site"
 }

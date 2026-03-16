@@ -47,6 +47,10 @@ function apiTableToTable(d: Record<string, unknown>): Table {
     x: d.x as number,
     y: d.y as number,
     roomId: ((d.room_id ?? d.roomId) as string | null) ?? null,
+    shape: ((d.shape ?? "rectangle") as "rectangle" | "round"),
+    widthM: ((d.width_m ?? d.widthM ?? 1.8) as number),
+    heightM: ((d.height_m ?? d.heightM ?? 0.7) as number),
+    rotation: ((d.rotation ?? 0) as number),
     reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
   };
 }
@@ -272,12 +276,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddTable = useCallback(
-    async (name: string, capacity: number, roomId: string | null) => {
+    async (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round" = "rectangle", widthM = 1.8, heightM = 0.7) => {
       try {
         const response = await fetch("/api/tables", {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId }),
+          body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, height_m: heightM }),
         });
         if (response.ok) {
           const data = await response.json();
@@ -304,6 +308,26 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         // Non-critical: position will persist until next reload
         console.error("Failed to persist table position", err);
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleRotateTable = useCallback(
+    async (tableId: string, rotation: number) => {
+      // Normalise to [0, 360)
+      const normalised = ((rotation % 360) + 360) % 360;
+      setTables((prev) =>
+        prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)),
+      );
+      try {
+        await fetch(`/api/tables/${tableId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ rotation: normalised }),
+        });
+      } catch (err) {
+        console.error("Failed to persist table rotation", err);
       }
     },
     [authHeaders],
@@ -625,6 +649,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onAddTable={handleAddTable}
                       onMoveTable={handleMoveTable}
                       onDeleteTable={handleDeleteTable}
+                      onRotateTable={handleRotateTable}
                       onAddRoom={handleAddRoom}
                       onDeleteRoom={handleDeleteRoom}
                     />

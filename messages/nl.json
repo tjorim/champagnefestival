@@ -312,6 +312,12 @@
   "admin_table_move_hint": "Sleep om te verplaatsen. Klik om gasten te zien.",
   "admin_room_delete_confirm": "Ruimte verwijderen? Tafels blijven bestaan maar verliezen hun ruimte-toewijzing.",
   "admin_table_name_placeholder": "Tafel A, VIP 1…",
+  "admin_table_shape_label": "Vorm",
+  "admin_table_shape_rectangle": "Rechthoek",
+  "admin_table_shape_round": "Rond",
+  "admin_table_width_label": "Breedte (m)",
+  "admin_table_height_label": "Diepte (m)",
+  "admin_table_diameter_label": "Diameter (m)",
   "admin_error_issue_strap": "Polsband uitreiken mislukt.",
   "back_to_site": "Terug naar de site"
 }

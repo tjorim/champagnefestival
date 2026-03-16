@@ -1,8 +1,8 @@
-"""Initial schema — reservations and tables.
+"""Initial schema — all tables.
 
 Revision ID: 001
 Revises:
-Create Date: 2026-03-14
+Create Date: 2026-03-16
 """
 
 from typing import Sequence, Union
@@ -17,6 +17,29 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # rooms must be created before tables so the FK reference is valid
+    op.create_table(
+        "rooms",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("name", sa.String(200), nullable=False),
+        sa.Column("zone_type", sa.String(50), nullable=False, server_default="main-hall"),
+        sa.Column("width_m", sa.Float, nullable=False, server_default="20.0"),
+        sa.Column("height_m", sa.Float, nullable=False, server_default="15.0"),
+        sa.Column("color", sa.String(20), nullable=False, server_default="#6c757d"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
     # tables must be created before reservations so the FK reference is valid
     op.create_table(
         "tables",
@@ -25,7 +48,12 @@ def upgrade() -> None:
         sa.Column("capacity", sa.Integer, nullable=False),
         sa.Column("x", sa.Float, nullable=False, server_default="50.0"),
         sa.Column("y", sa.Float, nullable=False, server_default="50.0"),
+        sa.Column("room_id", sa.String(64), sa.ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True),
         sa.Column("reservation_ids", sa.Text, nullable=False, server_default="[]"),
+        sa.Column("shape", sa.String(20), nullable=False, server_default="rectangle"),
+        sa.Column("width_m", sa.Float, nullable=False, server_default="1.8"),
+        sa.Column("height_m", sa.Float, nullable=False, server_default="0.7"),
+        sa.Column("rotation", sa.Float, nullable=False, server_default="0"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -77,7 +105,53 @@ def upgrade() -> None:
         ),
     )
 
+    op.create_table(
+        "content_items",
+        sa.Column("key", sa.String(50), primary_key=True),
+        sa.Column("value", sa.Text, nullable=False, server_default="[]"),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
+    op.create_table(
+        "editions",
+        sa.Column("id", sa.String(100), primary_key=True),
+        sa.Column("year", sa.Integer, nullable=False),
+        sa.Column("month", sa.String(20), nullable=False),
+        sa.Column("friday", sa.Date, nullable=False),
+        sa.Column("saturday", sa.Date, nullable=False),
+        sa.Column("sunday", sa.Date, nullable=False),
+        sa.Column("venue_name", sa.String(200), nullable=False, server_default=""),
+        sa.Column("venue_address", sa.String(200), nullable=False, server_default=""),
+        sa.Column("venue_city", sa.String(100), nullable=False, server_default=""),
+        sa.Column("venue_postal_code", sa.String(20), nullable=False, server_default=""),
+        sa.Column("venue_country", sa.String(100), nullable=False, server_default=""),
+        sa.Column("venue_lat", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column("venue_lng", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column("schedule", sa.Text, nullable=False, server_default="[]"),
+        sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("editions")
+    op.drop_table("content_items")
     op.drop_table("reservations")
     op.drop_table("tables")
+    op.drop_table("rooms")

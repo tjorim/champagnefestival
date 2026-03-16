@@ -65,6 +65,14 @@ export interface Table {
   y: number;
   /** Room this table belongs to (null = unassigned / legacy) */
   roomId: string | null;
+  /** Visual shape on the floor plan canvas */
+  shape: "rectangle" | "round";
+  /** Physical width in metres (rectangle) or diameter (round) */
+  widthM: number;
+  /** Physical height in metres (rectangle); equals widthM for round tables */
+  heightM: number;
+  /** Rotation angle in degrees (clockwise) */
+  rotation: number;
   reservationIds: string[];
 }
 

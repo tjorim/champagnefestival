@@ -31,13 +31,21 @@ const PX_PER_M = 28;
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
 
+function getTableSize(table: Table): { w: number; h: number } {
+  return {
+    w: Math.max(32, Math.round(table.widthM * PX_PER_M)),
+    h: Math.max(32, Math.round(table.heightM * PX_PER_M)),
+  };
+}
+
 interface TableLayoutProps {
   tables: Table[];
   reservations: Reservation[];
   rooms: Room[];
-  onAddTable: (name: string, capacity: number, roomId: string | null) => Promise<void>;
+  onAddTable: (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round", widthM: number, heightM: number) => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
+  onRotateTable: (tableId: string, rotation: number) => void;
   onAddRoom: (
     name: string,
     zoneType: string,
@@ -73,8 +81,7 @@ function DraggableTable({
     id: table.id,
   });
 
-  const TABLE_W = 76;
-  const TABLE_H = 64;
+  const { w: TABLE_W, h: TABLE_H } = getTableSize(table);
 
   // Convert percentage to pixel offset within the canvas
   const leftPx = (table.x / 100) * canvasW;
@@ -105,7 +112,7 @@ function DraggableTable({
         e.stopPropagation();
         onClick();
       }}
-      className={`position-absolute d-flex flex-column align-items-center justify-content-center rounded border text-center ${borderCls} ${bgCls}`}
+      className={`position-absolute d-flex flex-column align-items-center justify-content-center border text-center ${table.shape === "round" ? "rounded-circle" : "rounded"} ${borderCls} ${bgCls}`}
       style={{
         left: leftPx,
         top: topPx,
@@ -113,7 +120,7 @@ function DraggableTable({
         height: TABLE_H,
         cursor: isDragging ? "grabbing" : "grab",
         userSelect: "none",
-        transform: CSS.Translate.toString(transform),
+        transform: `${CSS.Translate.toString(transform)} rotate(${table.rotation}deg)`,
         zIndex: isDragging ? 10 : 1,
         opacity: isDragging ? 0.8 : 1,
         transition: isDragging ? undefined : "border-color 0.15s",
@@ -170,8 +177,7 @@ function RoomCanvas({
       const table = roomTables.find((t) => t.id === active.id);
       if (!table) return;
 
-      const TABLE_W = 76;
-      const TABLE_H = 64;
+      const { w: TABLE_W, h: TABLE_H } = getTableSize(table);
 
       // Current pixel position
       const leftPx = (table.x / 100) * canvasW + delta.x;
@@ -255,6 +261,7 @@ export default function TableLayout({
   onAddTable,
   onMoveTable,
   onDeleteTable,
+  onRotateTable,
   onAddRoom,
   onDeleteRoom,
 }: TableLayoutProps) {
@@ -271,7 +278,11 @@ export default function TableLayout({
 
   // Add Table modal
   const [showAddTable, setShowAddTable] = useState(false);
-  const [newTable, setNewTable] = useState({ name: "", capacity: 4, roomId: "" });
+  const [newTable, setNewTable] = useState({
+    name: "", capacity: 4, roomId: "",
+    shape: "rectangle" as "rectangle" | "round",
+    widthM: 1.8, heightM: 0.7,
+  });
 
   // Add Room modal
   const [showAddRoom, setShowAddRoom] = useState(false);
@@ -286,8 +297,8 @@ export default function TableLayout({
   const handleAddTable = useCallback(async () => {
     if (!newTable.name.trim() || newTable.capacity < 1) return;
     try {
-      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null);
-      setNewTable({ name: "", capacity: 4, roomId: "" });
+      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, newTable.widthM, newTable.heightM);
+      setNewTable({ name: "", capacity: 4, roomId: "", shape: "rectangle", widthM: 1.8, heightM: 0.7 });
       setShowAddTable(false);
     } catch {
       // keep modal open so the operator can retry
@@ -483,6 +494,27 @@ export default function TableLayout({
                 {selectedTableData.capacity} {m.admin_guests_count()}
               </Badge>
               <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)}
+                title="Rotate 15° counter-clockwise"
+                aria-label="Rotate 15° counter-clockwise"
+              >
+                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+              </Button>
+              <span className="text-secondary small" style={{ minWidth: "3.5rem", textAlign: "center" }}>
+                {Math.round(selectedTableData.rotation)}°
+              </span>
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)}
+                title="Rotate 15° clockwise"
+                aria-label="Rotate 15° clockwise"
+              >
+                <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+              </Button>
+              <Button
                 variant="outline-danger"
                 size="sm"
                 onClick={async () => {
@@ -550,6 +582,64 @@ export default function TableLayout({
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
+          <Form.Group className="mb-3" controlId="table-shape">
+            <Form.Label>{m.admin_table_shape_label()}</Form.Label>
+            <Form.Select
+              value={newTable.shape}
+              onChange={(e) => {
+                const s = e.target.value as "rectangle" | "round";
+                setNewTable((p) => ({
+                  ...p,
+                  shape: s,
+                  widthM: s === "round" ? 0.9 : 1.8,
+                  heightM: s === "round" ? 0.9 : 0.7,
+                }));
+              }}
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="rectangle">{m.admin_table_shape_rectangle()}</option>
+              <option value="round">{m.admin_table_shape_round()}</option>
+            </Form.Select>
+          </Form.Group>
+          {newTable.shape === "round" ? (
+            <Form.Group className="mb-3" controlId="table-diameter">
+              <Form.Label>{m.admin_table_diameter_label()}</Form.Label>
+              <Form.Control
+                type="number" min={0.1} max={20} step={0.1}
+                value={newTable.widthM}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setNewTable((p) => ({ ...p, widthM: v, heightM: v }));
+                }}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+          ) : (
+            <div className="row g-2 mb-3">
+              <div className="col">
+                <Form.Group controlId="table-width">
+                  <Form.Label>{m.admin_table_width_label()}</Form.Label>
+                  <Form.Control
+                    type="number" min={0.1} max={20} step={0.1}
+                    value={newTable.widthM}
+                    onChange={(e) => setNewTable((p) => ({ ...p, widthM: Number(e.target.value) }))}
+                    className="bg-dark text-light border-secondary"
+                  />
+                </Form.Group>
+              </div>
+              <div className="col">
+                <Form.Group controlId="table-height">
+                  <Form.Label>{m.admin_table_height_label()}</Form.Label>
+                  <Form.Control
+                    type="number" min={0.1} max={20} step={0.1}
+                    value={newTable.heightM}
+                    onChange={(e) => setNewTable((p) => ({ ...p, heightM: Number(e.target.value) }))}
+                    className="bg-dark text-light border-secondary"
+                  />
+                </Form.Group>
+              </div>
+            </div>
+          )}
           {rooms.length > 0 && (
             <Form.Group controlId="table-room">
               <Form.Label>{m.admin_table_room_label()}</Form.Label>
