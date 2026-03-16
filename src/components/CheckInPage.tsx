@@ -263,9 +263,9 @@ export default function CheckInPage() {
                         {m.checkin_pre_orders()}
                       </p>
                       <ListGroup variant="flush">
-                        {reservation.preOrders.map((item) => (
+                        {reservation.preOrders.map((item, idx) => (
                           <ListGroup.Item
-                            key={item.productId}
+                            key={`${item.productId}-${idx}`}
                             className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center"
                           >
                             <span>
