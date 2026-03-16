@@ -25,7 +25,7 @@ The table below tracks each user story against its current implementation status
 | 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/reservations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
 | 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)                                                            |
 | 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, club-member, festival-visitor; one person can have multiple roles        |
-| 15  | Manager   | Quickly manage club members                    | ✅ Convenience CRUD via `/api/clubmembers` (role-filtered view on people)                                                                                    |
+| 15  | Manager   | Quickly manage members                    | ✅ Convenience CRUD via `/api/members` (role-filtered view on people)                                                                                    |
 | 14  | Manager   | Group returning attendees by order history                 | ✅ `GET /api/people/{id}/reservations` groups all reservations for that person (linked by person + e-mail)                                                     |
 
 ---
@@ -201,11 +201,11 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | `GET`    | `/api/volunteers/{id}`       | admin          | Get volunteer detail                                                      |
 | `PUT`    | `/api/volunteers/{id}`       | admin          | Update volunteer profile                                                  |
 | `DELETE` | `/api/volunteers/{id}`       | admin          | Delete volunteer profile                                                  |
-| `POST`   | `/api/clubmembers`           | admin          | Create club member (person with role `club-member`)      |
-| `GET`    | `/api/clubmembers`           | admin          | List club members (supports `?q=`, `?active=`)            |
-| `GET`    | `/api/clubmembers/{id}`      | admin          | Get club member detail                                    |
-| `PUT`    | `/api/clubmembers/{id}`      | admin          | Update club member                                        |
-| `DELETE` | `/api/clubmembers/{id}`      | admin          | Delete club member                                        |
+| `POST`   | `/api/members`           | admin          | Create club member (person with role `club-member`)      |
+| `GET`    | `/api/members`           | admin          | List club members (supports `?q=`, `?active=`)            |
+| `GET`    | `/api/members/{id}`      | admin          | Get club member detail                                    |
+| `PUT`    | `/api/members/{id}`      | admin          | Update club member                                        |
+| `DELETE` | `/api/members/{id}`      | admin          | Delete club member                                        |
 | `POST`   | `/api/people`                | admin          | Create person with role tags                                              |
 | `GET`    | `/api/people`                | admin          | List people (supports `?q=`, `?role=`, `?active=`)                       |
 | `GET`    | `/api/people/{id}`           | admin          | Get person detail                                                         |
