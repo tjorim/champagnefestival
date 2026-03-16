@@ -7,7 +7,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { m } from "../../paraglide/messages";
 import EditionModal from "./EditionModal";
 import EventModal from "./EventModal";
-import { DAY_LABELS, parseEditionDate } from "./editionTypes";
+import { parseEditionDate } from "./editionTypes";
 import type { Edition, ScheduleEvent } from "./editionTypes";
 
 interface EditionCardProps {
@@ -165,7 +165,7 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
                 >
                   <span className="d-flex align-items-center gap-2 flex-wrap">
                     <Badge bg="secondary" className="text-uppercase" style={{ fontSize: "0.65rem" }}>
-                      {DAY_LABELS[ev.day_id] ?? ev.day_id}
+                      {ev.day_id === 1 ? m.admin_content_edition_friday() : ev.day_id === 2 ? m.admin_content_edition_saturday() : m.admin_content_edition_sunday()}
                     </Badge>
                     <span className="text-secondary small">{ev.start_time}</span>
                     <span>{ev.title}</span>

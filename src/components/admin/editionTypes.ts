@@ -34,8 +34,6 @@ export interface Edition {
   updated_at: string;
 }
 
-export const DAY_LABELS: Record<number, string> = { 1: "Fri", 2: "Sat", 3: "Sun" };
-
 export function parseEditionDate(iso: string): Date {
   return new Date(iso + "T00:00:00");
 }
