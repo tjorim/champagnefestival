@@ -23,6 +23,7 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
   const [saveError, setSaveError] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
   const [editionModalOpen, setEditionModalOpen] = useState(false);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
@@ -66,14 +67,19 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
 
   async function handleDelete() {
     setDeleting(true);
+    setDeleteError(false);
     try {
       const res = await fetch(`/api/editions/${edition.id}`, { method: "DELETE", headers: authHeaders() });
-      if (res.ok || res.status === 204) onDeleted(edition.id);
+      if (res.ok || res.status === 204) {
+        setConfirmDelete(false);
+        onDeleted(edition.id);
+      } else {
+        setDeleteError(true);
+      }
     } catch {
-      // ignore
+      setDeleteError(true);
     } finally {
       setDeleting(false);
-      setConfirmDelete(false);
     }
   }
 
@@ -100,6 +106,12 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
         <Badge bg="secondary">{edition.schedule.length} events</Badge>
         {saving && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
+          <span className="text-danger small">
+            <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
+            {m.admin_content_error_save()}
+          </span>
+        )}
+        {deleteError && (
           <span className="text-danger small">
             <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
             {m.admin_content_error_save()}
