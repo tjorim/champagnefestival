@@ -80,6 +80,9 @@ async def update_table(
 ) -> dict:
     t = await _get_or_404(db, table_id)
 
+    # Non-nullable fields: "is not None" is sufficient because the schema
+    # forbids None for these fields, so a missing key and an invalid null
+    # are both rejected by Pydantic before reaching here.
     if body.name is not None:
         t.name = body.name
     if body.capacity is not None:
@@ -88,18 +91,21 @@ async def update_table(
         t.x = body.x
     if body.y is not None:
         t.y = body.y
-    if "room_id" in body.model_fields_set:
-        t.room_id = body.room_id
     if body.shape is not None:
         t.shape = body.shape
     if body.width_m is not None:
         t.width_m = body.width_m
     if body.height_m is not None:
         t.height_m = body.height_m
-    if "rotation" in body.model_fields_set:
-        t.rotation = body.rotation
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
+    # Nullable / zero-valid fields: must use model_fields_set so that an
+    # explicit null (room_id=null to unassign) or an explicit zero
+    # (rotation=0) is honoured even though the value is falsy.
+    if "room_id" in body.model_fields_set:
+        t.room_id = body.room_id
+    if "rotation" in body.model_fields_set:
+        t.rotation = body.rotation
 
     await db.commit()
     await db.refresh(t)
