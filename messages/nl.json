@@ -329,5 +329,16 @@
   "admin_table_length_label": "Lengte (m)",
   "admin_table_diameter_label": "Diameter (m)",
   "admin_error_issue_strap": "Polsband uitreiken mislukt.",
-  "back_to_site": "Terug naar de site"
+  "back_to_site": "Terug naar de site",
+  "admin_content_edition_edit_event": "Evenement bewerken",
+  "admin_content_event_id": "ID",
+  "admin_content_event_title": "Titel",
+  "admin_content_event_day": "Dag",
+  "admin_content_event_start_time": "Starttijd",
+  "admin_content_event_end_time": "Eindtijd",
+  "admin_content_event_category": "Categorie",
+  "admin_content_event_location": "Locatie",
+  "admin_content_event_presenter": "Presentator",
+  "admin_content_event_description": "Beschrijving",
+  "admin_content_event_requires_reservation": "Reservering vereist"
 }

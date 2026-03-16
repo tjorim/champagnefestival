@@ -329,5 +329,16 @@
   "admin_table_length_label": "Longueur (m)",
   "admin_table_diameter_label": "Diamètre (m)",
   "admin_error_issue_strap": "Échec de la remise du bracelet.",
-  "back_to_site": "Retour au site"
+  "back_to_site": "Retour au site",
+  "admin_content_edition_edit_event": "Modifier l'événement",
+  "admin_content_event_id": "ID",
+  "admin_content_event_title": "Titre",
+  "admin_content_event_day": "Jour",
+  "admin_content_event_start_time": "Heure de début",
+  "admin_content_event_end_time": "Heure de fin",
+  "admin_content_event_category": "Catégorie",
+  "admin_content_event_location": "Lieu",
+  "admin_content_event_presenter": "Présentateur",
+  "admin_content_event_description": "Description",
+  "admin_content_event_requires_reservation": "Réservation requise"
 }
