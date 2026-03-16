@@ -3,7 +3,7 @@
 import secrets
 import time
 
-from app.models import Edition, Person, Reservation, Room, Table, Volunteer
+from app.models import Edition, Person, Reservation, Room, Table
 
 
 def make_id(prefix: str) -> str:
@@ -141,20 +141,6 @@ def edition_to_dict(e: Edition) -> dict:
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,
-    }
-
-
-def volunteer_to_dict(v: Volunteer) -> dict:
-    return {
-        "id": v.id,
-        "name": v.name,
-        "address": v.address,
-        "first_help_day": v.first_help_day,
-        "last_help_day": v.last_help_day,
-        "national_register_number": v.national_register_number,
-        "eid_document_number": v.eid_document_number,
-        "created_at": v.created_at,
-        "updated_at": v.updated_at,
     }
 
 

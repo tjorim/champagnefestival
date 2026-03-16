@@ -23,7 +23,7 @@ The table below tracks each user story against its current implementation status
 | 9   | Manager   | Mark orders as (partially) paid                           | ✅ `PUT /api/reservations/{id}` (`payment_status`)                                                                                                                 |
 | 10  | Volunteer | Scan a visitor's QR or search for them to see their order | ✅ QR scan → `GET /api/check-in/{id}?token=`; name/email search via `GET /api/reservations?q=`                                                                     |
 | 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/reservations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
-| 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (name, address, first/last help day, NISS, eID document number)                                                            |
+| 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)                                                            |
 | 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, club-member, festival-visitor; one person can have multiple roles        |
 | 14  | Manager   | Group returning attendees by order history                 | ✅ `GET /api/people/{id}/reservations` groups all reservations for that person (linked by person + e-mail)                                                     |
 
@@ -195,7 +195,7 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | `DELETE` | `/api/tables/{id}`            | admin          | Delete table                                                               |
 | `GET`    | `/api/content/{key}`          | public         | Get CMS content (producers / sponsors)                                     |
 | `PUT`    | `/api/content/{key}`          | admin          | Save CMS content                                                           |
-| `POST`   | `/api/volunteers`            | admin          | Create volunteer insurance/attendance profile                             |
+| `POST`   | `/api/volunteers`            | admin          | Create volunteer profile (person with role `volunteer`)                             |
 | `GET`    | `/api/volunteers`            | admin          | List volunteers (supports `?q=` search)                                  |
 | `GET`    | `/api/volunteers/{id}`       | admin          | Get volunteer detail                                                      |
 | `PUT`    | `/api/volunteers/{id}`       | admin          | Update volunteer profile                                                  |

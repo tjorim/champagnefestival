@@ -200,27 +200,6 @@ class Edition(Base):
         self.schedule = json.dumps(events)
 
 
-class Volunteer(Base):
-    """Volunteer profile for attendance and insurance tracking."""
-
-    __tablename__ = "volunteers"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    name: Mapped[str] = mapped_column(String(200))
-    address: Mapped[str] = mapped_column(String(300))
-    first_help_day: Mapped[date] = mapped_column(Date)
-    last_help_day: Mapped[date] = mapped_column(Date)
-    national_register_number: Mapped[str] = mapped_column(String(20), unique=True)
-    eid_document_number: Mapped[str] = mapped_column(String(50), unique=True)
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
-
-
 class Person(Base):
     """Unified person entity used for members, volunteers, and visitors."""
 
