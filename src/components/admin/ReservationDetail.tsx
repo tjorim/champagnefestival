@@ -69,7 +69,11 @@ export default function ReservationDetail({
                   : "warning"
             }
           >
-            {reservation.status}
+            {reservation.status === "confirmed"
+              ? m.admin_status_confirmed()
+              : reservation.status === "cancelled"
+                ? m.admin_status_cancelled()
+                : m.admin_status_pending()}
           </Badge>
           <Badge
             bg={
@@ -80,7 +84,11 @@ export default function ReservationDetail({
                   : "secondary"
             }
           >
-            {reservation.paymentStatus}
+            {reservation.paymentStatus === "paid"
+              ? m.admin_payment_paid()
+              : reservation.paymentStatus === "partial"
+                ? m.admin_payment_partial()
+                : m.admin_payment_unpaid()}
           </Badge>
           {reservation.checkedIn ? (
             <Badge bg="success">
