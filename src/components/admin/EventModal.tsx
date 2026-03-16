@@ -55,7 +55,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
     onSave({
       id: id.trim(), title: title.trim(), start_time: startTime.trim(),
       end_time: endTime.trim() || null, description: description.trim(),
-      reservation, reservations_open_from: reservationsOpenFrom.trim() || null,
+      reservation, reservations_open_from: reservation ? reservationsOpenFrom.trim() || null : null,
       location: location.trim() || null, presenter: presenter.trim() || null,
       category: category.trim(), day_id: dayId,
     });
