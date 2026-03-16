@@ -582,3 +582,206 @@ async def test_table_id_can_be_cleared(client):
     )
     assert r.status_code == 200
     assert r.json()["table_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Regular visitors (admin)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_regular_visitors_require_auth(client):
+    r = await client.get("/api/regular-visitors")
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_regular_visitor_crud_and_filters(client):
+    payload = {
+        "name": "Luc Van den Bossche",
+        "email": "luc@example.com",
+        "phone": "+32476123456",
+        "visits_per_month": 1,
+        "is_capsule_exchange_member": True,
+        "club_name": "Champagne Lovers De Spui Bredene",
+        "notes": "Brings capsules monthly for exchange night.",
+        "active": True,
+    }
+    r = await client.post(
+        "/api/regular-visitors", json=payload, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 201
+    created = r.json()
+    assert created["is_capsule_exchange_member"] is True
+
+    # duplicate email blocked
+    r = await client.post(
+        "/api/regular-visitors", json=payload, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 409
+
+    visitor_id = created["id"]
+
+    r = await client.get(
+        "/api/regular-visitors", params={"q": "de spui"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.put(
+        f"/api/regular-visitors/{visitor_id}",
+        json={"active": False, "visits_per_month": 2},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["active"] is False
+    assert r.json()["visits_per_month"] == 2
+
+    r = await client.get(
+        "/api/regular-visitors", params={"active": "false"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    # legacy alias remains available for backward compatibility
+    r = await client.get("/api/recurring-visitors", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.delete(
+        f"/api/regular-visitors/{visitor_id}", headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# Volunteers (admin)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_volunteers_require_auth(client):
+    r = await client.get("/api/volunteers")
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_volunteer_crud_and_constraints(client):
+    payload = {
+        "name": "Sofie De Smet",
+        "address": "Dorpsstraat 12, 8450 Bredene",
+        "first_help_day": "2026-03-20",
+        "last_help_day": "2026-03-22",
+        "national_register_number": "91010112345",
+        "eid_document_number": "BEX123456",
+    }
+
+    r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    volunteer = r.json()
+    assert volunteer["name"] == "Sofie De Smet"
+
+    # duplicate insurance identity fields are rejected
+    r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 409
+
+    volunteer_id = volunteer["id"]
+
+    r = await client.get(
+        "/api/volunteers", params={"q": "bredene"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.put(
+        f"/api/volunteers/{volunteer_id}",
+        json={"last_help_day": "2026-03-24"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["last_help_day"] == "2026-03-24"
+
+    # invalid day range should fail
+    r = await client.put(
+        f"/api/volunteers/{volunteer_id}",
+        json={"first_help_day": "2026-03-25", "last_help_day": "2026-03-24"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+    r = await client.delete(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# People (admin)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_people_require_auth(client):
+    r = await client.get("/api/people")
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_people_crud_roles_and_filters(client):
+    payload = {
+        "name": "Anne Dupuis",
+        "email": "anne@example.com",
+        "phone": "+32470111222",
+        "address": "Kapelstraat 8, Bredene",
+        "roles": ["Chairwoman", "Volunteer", "Club-Member"],
+        "first_help_day": "2026-03-20",
+        "last_help_day": "2026-03-22",
+        "national_register_number": "85010199999",
+        "eid_document_number": "BEI998877",
+        "visits_per_month": 1,
+        "club_name": "Champagne Lovers",
+        "notes": "Often helps at entrance.",
+        "active": True,
+    }
+
+    r = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    person = r.json()
+    assert person["roles"] == ["chairwoman", "club-member", "volunteer"]
+
+    person_id = person["id"]
+
+    r = await client.get(
+        "/api/people", params={"role": "volunteer"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.get(
+        "/api/people", params={"q": "treasurer"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 0
+
+    r = await client.put(
+        f"/api/people/{person_id}",
+        json={"roles": ["Treasurer", "Festival-Visitor"], "active": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["roles"] == ["festival-visitor", "treasurer"]
+    assert r.json()["active"] is False
+
+    r = await client.get(
+        "/api/people", params={"role": "treasurer", "active": "false"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.put(
+        f"/api/people/{person_id}",
+        json={"first_help_day": "2026-03-25", "last_help_day": "2026-03-24"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+    r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204

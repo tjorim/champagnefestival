@@ -195,3 +195,93 @@ class Edition(Base):
 
     def set_schedule(self, events: list[dict]) -> None:
         self.schedule = json.dumps(events)
+
+
+class RegularVisitor(Base):
+    """A visitor profile for guests that return frequently."""
+
+    __tablename__ = "regular_visitors"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    email: Mapped[str] = mapped_column(String(200), unique=True)
+    phone: Mapped[str] = mapped_column(String(50), default="")
+    visits_per_month: Mapped[int] = mapped_column(Integer, default=1)
+    is_capsule_exchange_member: Mapped[bool] = mapped_column(Boolean, default=False)
+    club_name: Mapped[str] = mapped_column(String(200), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    last_visit_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    next_expected_visit_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class Volunteer(Base):
+    """Volunteer profile for attendance and insurance tracking."""
+
+    __tablename__ = "volunteers"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    address: Mapped[str] = mapped_column(String(300))
+    first_help_day: Mapped[date] = mapped_column(Date)
+    last_help_day: Mapped[date] = mapped_column(Date)
+    national_register_number: Mapped[str] = mapped_column(String(20), unique=True)
+    eid_document_number: Mapped[str] = mapped_column(String(50), unique=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class Person(Base):
+    """Unified person entity used for members, volunteers, and visitors."""
+
+    __tablename__ = "people"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    email: Mapped[str] = mapped_column(String(200), default="")
+    phone: Mapped[str] = mapped_column(String(50), default="")
+    address: Mapped[str] = mapped_column(String(300), default="")
+    # JSON-encoded list of role strings: volunteer, chairwoman, treasurer,
+    # club-member, festival-visitor, ...
+    roles: Mapped[str] = mapped_column(Text, default="[]")
+
+    # Optional compliance/attendance fields
+    first_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    national_register_number: Mapped[str] = mapped_column(String(20), default="")
+    eid_document_number: Mapped[str] = mapped_column(String(50), default="")
+
+    # Optional club/visitor metadata
+    visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    club_name: Mapped[str] = mapped_column(String(200), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    def get_roles(self) -> list[str]:
+        return json.loads(self.roles) if self.roles else []
+
+    def set_roles(self, roles: list[str]) -> None:
+        self.roles = json.dumps(roles)

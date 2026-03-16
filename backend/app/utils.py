@@ -3,7 +3,7 @@
 import secrets
 import time
 
-from app.models import Edition, Reservation, Room, Table
+from app.models import Edition, Person, RegularVisitor, Reservation, Room, Table, Volunteer
 
 
 def make_id(prefix: str) -> str:
@@ -140,4 +140,57 @@ def edition_to_dict(e: Edition) -> dict:
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,
+    }
+
+
+def regular_visitor_to_dict(v: RegularVisitor) -> dict:
+    return {
+        "id": v.id,
+        "name": v.name,
+        "email": v.email,
+        "phone": v.phone,
+        "visits_per_month": v.visits_per_month,
+        "is_capsule_exchange_member": v.is_capsule_exchange_member,
+        "club_name": v.club_name,
+        "notes": v.notes,
+        "last_visit_at": v.last_visit_at,
+        "next_expected_visit_at": v.next_expected_visit_at,
+        "active": v.active,
+        "created_at": v.created_at,
+        "updated_at": v.updated_at,
+    }
+
+
+def volunteer_to_dict(v: Volunteer) -> dict:
+    return {
+        "id": v.id,
+        "name": v.name,
+        "address": v.address,
+        "first_help_day": v.first_help_day,
+        "last_help_day": v.last_help_day,
+        "national_register_number": v.national_register_number,
+        "eid_document_number": v.eid_document_number,
+        "created_at": v.created_at,
+        "updated_at": v.updated_at,
+    }
+
+
+def person_to_dict(p: Person) -> dict:
+    return {
+        "id": p.id,
+        "name": p.name,
+        "email": p.email,
+        "phone": p.phone,
+        "address": p.address,
+        "roles": p.get_roles(),
+        "first_help_day": p.first_help_day,
+        "last_help_day": p.last_help_day,
+        "national_register_number": p.national_register_number,
+        "eid_document_number": p.eid_document_number,
+        "visits_per_month": p.visits_per_month,
+        "club_name": p.club_name,
+        "notes": p.notes,
+        "active": p.active,
+        "created_at": p.created_at,
+        "updated_at": p.updated_at,
     }

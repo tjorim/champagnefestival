@@ -23,6 +23,9 @@ The table below tracks each user story against its current implementation status
 | 9   | Manager   | Mark orders as (partially) paid                           | ✅ `PUT /api/reservations/{id}` (`payment_status`)                                                                                                                 |
 | 10  | Volunteer | Scan a visitor's QR or search for them to see their order | ✅ QR scan → `GET /api/check-in/{id}?token=`; name/email search via `GET /api/reservations?q=`                                                                     |
 | 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/reservations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
+| 12  | Manager   | Manage regular visitors and capsule-exchange members     | ✅ Admin CRUD via `/api/regular-visitors` (includes monthly frequency + club membership metadata)                                                                |
+| 13  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (name, address, first/last help day, NISS, eID document number)                                                            |
+| 14  | Manager   | Manage all person types using role tags                   | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, club-member, festival-visitor                                            |
 
 ---
 
@@ -192,6 +195,21 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | `DELETE` | `/api/tables/{id}`            | admin          | Delete table                                                               |
 | `GET`    | `/api/content/{key}`          | public         | Get CMS content (producers / sponsors)                                     |
 | `PUT`    | `/api/content/{key}`          | admin          | Save CMS content                                                           |
+| `POST`   | `/api/regular-visitors`     | admin          | Create regular visitor profile                                           |
+| `GET`    | `/api/regular-visitors`     | admin          | List regular visitors (search + active/member filters)                   |
+| `GET`    | `/api/regular-visitors/{id}`| admin          | Get regular visitor detail                                               |
+| `PUT`    | `/api/regular-visitors/{id}`| admin          | Update regular visitor profile                                           |
+| `DELETE` | `/api/regular-visitors/{id}`| admin          | Delete regular visitor profile                                           |
+| `POST`   | `/api/volunteers`            | admin          | Create volunteer insurance/attendance profile                             |
+| `GET`    | `/api/volunteers`            | admin          | List volunteers (supports `?q=` search)                                  |
+| `GET`    | `/api/volunteers/{id}`       | admin          | Get volunteer detail                                                      |
+| `PUT`    | `/api/volunteers/{id}`       | admin          | Update volunteer profile                                                  |
+| `DELETE` | `/api/volunteers/{id}`       | admin          | Delete volunteer profile                                                  |
+| `POST`   | `/api/people`                | admin          | Create person with role tags                                              |
+| `GET`    | `/api/people`                | admin          | List people (supports `?q=`, `?role=`, `?active=`)                       |
+| `GET`    | `/api/people/{id}`           | admin          | Get person detail                                                         |
+| `PUT`    | `/api/people/{id}`           | admin          | Update person + roles                                                     |
+| `DELETE` | `/api/people/{id}`           | admin          | Delete person                                                             |
 | `GET`    | `/health`                     | public         | Health check                                                               |
 
 ---
