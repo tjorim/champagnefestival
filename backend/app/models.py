@@ -26,6 +26,9 @@ class Reservation(Base):
     # JSON-encoded list of OrderItem dicts
     pre_orders: Mapped[str] = mapped_column(Text, default="[]")
     notes: Mapped[str] = mapped_column(Text, default="")
+    person_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    )
     table_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
     )
@@ -206,3 +209,48 @@ class Edition(Base):
 
     def set_schedule(self, events: list[dict]) -> None:
         self.schedule = json.dumps(events)
+
+
+class Person(Base):
+    """Unified person entity used for members, volunteers, and visitors."""
+
+    __tablename__ = "people"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    person_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200))
+    email: Mapped[str] = mapped_column(String(200), default="")
+    phone: Mapped[str] = mapped_column(String(50), default="")
+    address: Mapped[str] = mapped_column(String(300), default="")
+    # JSON-encoded list of role strings: volunteer, chairwoman, treasurer,
+    # member, festival-visitor, ...
+    roles: Mapped[str] = mapped_column(Text, default="[]")
+
+    # Optional compliance/attendance fields
+    first_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    national_register_number: Mapped[str | None] = mapped_column(
+        String(20), unique=True, nullable=True
+    )
+    eid_document_number: Mapped[str | None] = mapped_column(
+        String(50), unique=True, nullable=True
+    )
+
+    # Optional club/visitor metadata
+    visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    club_name: Mapped[str] = mapped_column(String(200), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    def get_roles(self) -> list[str]:
+        return json.loads(self.roles) if self.roles else []
+
+    def set_roles(self, roles: list[str]) -> None:
+        self.roles = json.dumps(roles)

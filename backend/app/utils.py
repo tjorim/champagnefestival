@@ -3,7 +3,7 @@
 import secrets
 import time
 
-from app.models import Edition, Reservation, Room, Table
+from app.models import Edition, Person, Reservation, Room, Table
 
 
 def make_id(prefix: str) -> str:
@@ -15,8 +15,10 @@ def make_id(prefix: str) -> str:
 
 def reservation_to_dict(r: Reservation) -> dict:
     """Serialise a Reservation ORM row to a plain dict (no check_in_token)."""
+    person_key = getattr(getattr(r, "_person", None), "person_key", None)
     return {
         "id": r.id,
+        "person_key": person_key,
         "name": r.name,
         "email": r.email,
         "phone": r.phone,
@@ -25,6 +27,7 @@ def reservation_to_dict(r: Reservation) -> dict:
         "guest_count": r.guest_count,
         "pre_orders": r.get_pre_orders(),
         "notes": r.notes,
+        "person_id": r.person_id,
         "table_id": r.table_id,
         "status": r.status,
         "payment_status": r.payment_status,
@@ -79,8 +82,10 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
     Strips all sensitive / internal fields: phone, notes, checkInToken.
     Returns only safe-to-share booking status information.
     """
+    person_key = getattr(getattr(r, "_person", None), "person_key", None)
     return {
         "id": r.id,
+        "person_key": person_key,
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
@@ -144,4 +149,26 @@ def edition_to_dict(e: Edition) -> dict:
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,
+    }
+
+
+def person_to_dict(p: Person) -> dict:
+    return {
+        "id": p.id,
+        "person_key": p.person_key,
+        "name": p.name,
+        "email": p.email,
+        "phone": p.phone,
+        "address": p.address,
+        "roles": p.get_roles(),
+        "first_help_day": p.first_help_day,
+        "last_help_day": p.last_help_day,
+        "national_register_number": p.national_register_number,
+        "eid_document_number": p.eid_document_number,
+        "visits_per_month": p.visits_per_month,
+        "club_name": p.club_name,
+        "notes": p.notes,
+        "active": p.active,
+        "created_at": p.created_at,
+        "updated_at": p.updated_at,
     }

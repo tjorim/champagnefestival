@@ -39,6 +39,7 @@ class OrderItemOut(OrderItemBase):
 
 
 class ReservationCreate(BaseModel):
+    person_key: str | None = Field(default=None, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
@@ -63,12 +64,14 @@ class ReservationUpdate(BaseModel):
     table_id: str | None = None
     pre_orders: list[OrderItemBase] | None = None
     notes: str | None = None
+    person_id: str | None = None
     checked_in: bool | None = None
     strap_issued: bool | None = None
 
 
 class ReservationOut(BaseModel):
     id: str
+    person_key: str | None
     name: str
     email: str
     phone: str
@@ -77,6 +80,7 @@ class ReservationOut(BaseModel):
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str
+    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -101,12 +105,14 @@ class ReservationListOut(BaseModel):
     check_in_token is intentionally excluded here."""
 
     id: str
+    person_key: str | None
     name: str
     email: str
     event_id: str
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
+    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -120,6 +126,7 @@ class ReservationListOut(BaseModel):
 
 
 class ReservationGuestOut(BaseModel):
+    person_key: str | None
     """Reservation data returned to visitors via the self-lookup endpoint.
 
     Only safe-to-expose fields — no phone, no internal notes, no checkInToken.
@@ -137,6 +144,38 @@ class ReservationGuestOut(BaseModel):
     checked_in_at: datetime | None
     strap_issued: bool
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class VolunteerCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    address: str = Field(min_length=1, max_length=300)
+    first_help_day: date
+    last_help_day: date
+    national_register_number: str = Field(min_length=1, max_length=20)
+    eid_document_number: str = Field(min_length=1, max_length=50)
+
+
+class VolunteerUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    address: str | None = Field(default=None, min_length=1, max_length=300)
+    first_help_day: date | None = None
+    last_help_day: date | None = None
+    national_register_number: str | None = Field(default=None, min_length=1, max_length=20)
+    eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
+
+
+class VolunteerOut(BaseModel):
+    id: str
+    name: str
+    address: str
+    first_help_day: date
+    last_help_day: date
+    national_register_number: str | None
+    eid_document_number: str | None
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -362,6 +401,60 @@ class EditionOut(BaseModel):
     venue_lat: float
     venue_lng: float
     schedule: list[ScheduleEventOut]
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PersonCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    email: EmailStr | None = None
+    phone: str = Field(default="", max_length=50)
+    address: str = Field(default="", max_length=300)
+    roles: list[str] = Field(default_factory=list)
+    first_help_day: date | None = None
+    last_help_day: date | None = None
+    national_register_number: str | None = Field(default=None, max_length=20)
+    eid_document_number: str | None = Field(default=None, max_length=50)
+    visits_per_month: int | None = Field(default=None, ge=1, le=31)
+    club_name: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=2000)
+    active: bool = True
+
+
+class PersonUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=50)
+    address: str | None = Field(default=None, max_length=300)
+    roles: list[str] | None = None
+    first_help_day: date | None = None
+    last_help_day: date | None = None
+    national_register_number: str | None = Field(default=None, max_length=20)
+    eid_document_number: str | None = Field(default=None, max_length=50)
+    visits_per_month: int | None = Field(default=None, ge=1, le=31)
+    club_name: str | None = Field(default=None, max_length=200)
+    notes: str | None = Field(default=None, max_length=2000)
+    active: bool | None = None
+
+
+class PersonOut(BaseModel):
+    id: str
+    person_key: str
+    name: str
+    email: str
+    phone: str
+    address: str
+    roles: list[str]
+    first_help_day: date | None
+    last_help_day: date | None
+    national_register_number: str | None
+    eid_document_number: str | None
+    visits_per_month: int | None
+    club_name: str
+    notes: str
     active: bool
     created_at: datetime
     updated_at: datetime
