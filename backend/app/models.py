@@ -127,7 +127,7 @@ class Table(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     capacity: Mapped[int] = mapped_column(Integer)
-    # Position as percentage of room dimensions (0–100)
+    # Position as percentage of room dimensions (0-100)
     x: Mapped[float] = mapped_column(default=50.0)
     y: Mapped[float] = mapped_column(default=50.0)
     # Optional room assignment (nullable for backward compat)
@@ -143,7 +143,7 @@ class Table(Base):
     """Physical height in metres (for round tables: same as width_m)."""
 
     rotation: Mapped[float] = mapped_column(Float, default=0.0)
-    """Rotation angle in degrees (0–360), clockwise."""
+    """Rotation angle in degrees (0-360), clockwise."""
 
     # JSON-encoded list of reservation ID strings
     reservation_ids: Mapped[str] = mapped_column(Text, default="[]")
