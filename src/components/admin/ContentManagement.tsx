@@ -101,7 +101,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
     try {
       const res = await fetch(`/api/content/${sectionKey}`, {
         method: "PUT",
-        headers: authHeaders(),
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ value: items }),
       });
       setSaveStatus(res.ok ? "saved" : "error");
