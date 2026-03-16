@@ -17,6 +17,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -287,6 +288,7 @@ export default function TableLayout({
     shape: "rectangle" as "rectangle" | "round",
     widthM: 1.8, lengthM: 0.7,
   });
+  const [addTableError, setAddTableError] = useState<string | null>(null);
 
   // Add Room modal
   const [showAddRoom, setShowAddRoom] = useState(false);
@@ -297,6 +299,9 @@ export default function TableLayout({
     heightM: 15,
     color: "#ffc107",
   });
+  const [addRoomError, setAddRoomError] = useState<string | null>(null);
+  const [deleteRoomError, setDeleteRoomError] = useState<string | null>(null);
+  const [deleteTableError, setDeleteTableError] = useState<string | null>(null);
 
   const handleAddTable = useCallback(async () => {
     const widthM = Number(newTable.widthM);
@@ -307,12 +312,14 @@ export default function TableLayout({
       !Number.isFinite(widthM) || widthM <= 0 ||
       !Number.isFinite(lengthM) || lengthM <= 0
     ) return;
+    setAddTableError(null);
     try {
       await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, widthM, lengthM);
       setNewTable({ name: "", capacity: 4, roomId: "", shape: "rectangle", widthM: 1.8, lengthM: 0.7 });
       setShowAddTable(false);
-    } catch {
-      // keep modal open so the operator can retry
+    } catch (err) {
+      console.error("Failed to add table", err);
+      setAddTableError(m.admin_content_error_save());
     }
   }, [newTable, onAddTable]);
 
@@ -326,6 +333,7 @@ export default function TableLayout({
     ) {
       return;
     }
+    setAddRoomError(null);
     try {
       await onAddRoom(
         newRoom.name.trim(),
@@ -336,23 +344,40 @@ export default function TableLayout({
       );
       setNewRoom({ name: "", zoneType: "main-hall", widthM: 20, heightM: 15, color: "#ffc107" });
       setShowAddRoom(false);
-    } catch {
-      // keep modal open so the operator can retry
+    } catch (err) {
+      console.error("Failed to add room", err);
+      setAddRoomError(m.admin_content_error_save());
     }
   }, [newRoom, onAddRoom]);
 
   const handleDeleteRoom = useCallback(
     async (roomId: string) => {
       if (window.confirm(m.admin_room_delete_confirm())) {
+        setDeleteRoomError(null);
         try {
           await onDeleteRoom(roomId);
           if (activeRoomId === roomId) setActiveRoomId("unassigned");
-        } catch {
-          // deletion failed; keep current selection
+        } catch (err) {
+          console.error("Failed to delete room", err);
+          setDeleteRoomError(m.admin_content_error_save());
         }
       }
     },
     [onDeleteRoom, activeRoomId],
+  );
+
+  const handleDeleteTable = useCallback(
+    async (tableId: string) => {
+      setDeleteTableError(null);
+      try {
+        await onDeleteTable(tableId);
+        setSelectedTable(null);
+      } catch (err) {
+        console.error("Failed to delete table", err);
+        setDeleteTableError(m.admin_content_error_save());
+      }
+    },
+    [onDeleteTable],
   );
 
   const selectedTableData = tables.find((t) => t.id === selectedTable);
@@ -416,11 +441,11 @@ export default function TableLayout({
             </Nav.Item>
           </Nav>
           <div className="d-flex gap-2">
-            <Button variant="outline-secondary" size="sm" onClick={() => setShowAddRoom(true)}>
+            <Button variant="outline-secondary" size="sm" onClick={() => { setAddRoomError(null); setShowAddRoom(true); }}>
               <i className="bi bi-building me-1" aria-hidden="true" />
               {m.admin_room_add()}
             </Button>
-            <Button variant="outline-warning" size="sm" onClick={() => setShowAddTable(true)}>
+            <Button variant="outline-warning" size="sm" onClick={() => { setAddTableError(null); setShowAddTable(true); }}>
               <i className="bi bi-plus-lg me-1" aria-hidden="true" />
               {m.admin_add_table()}
             </Button>
@@ -453,6 +478,9 @@ export default function TableLayout({
                   <i className="bi bi-trash" aria-hidden="true" />
                 </Button>
               </div>
+              {deleteRoomError && (
+                <Alert variant="danger" className="py-1 mb-2 small">{deleteRoomError}</Alert>
+              )}
               <RoomCanvas
                 room={activeRoom}
                 roomTables={canvasTables}
@@ -528,14 +556,7 @@ export default function TableLayout({
               <Button
                 variant="outline-danger"
                 size="sm"
-                onClick={async () => {
-                  try {
-                    await onDeleteTable(selectedTableData.id);
-                    setSelectedTable(null);
-                  } catch {
-                    // deletion failed; keep selection
-                  }
-                }}
+                onClick={() => handleDeleteTable(selectedTableData.id)}
                 title={m.admin_delete()}
               >
                 <i className="bi bi-trash" aria-hidden="true" />
@@ -543,6 +564,9 @@ export default function TableLayout({
             </div>
           </Card.Header>
           <Card.Body>
+            {deleteTableError && (
+              <Alert variant="danger" className="py-1 mb-2 small">{deleteTableError}</Alert>
+            )}
             {selectedReservations.length === 0 ? (
               <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
             ) : (
@@ -572,6 +596,9 @@ export default function TableLayout({
           <Modal.Title id="add-table-modal-title">{m.admin_add_table()}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
+          {addTableError && (
+            <Alert variant="danger" className="py-1 mb-3 small">{addTableError}</Alert>
+          )}
           <Form.Group className="mb-3" controlId="table-name">
             <Form.Label>{m.admin_table_name()}</Form.Label>
             <Form.Control
@@ -694,6 +721,9 @@ export default function TableLayout({
           <Modal.Title id="add-room-modal-title">{m.admin_room_add()}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
+          {addRoomError && (
+            <Alert variant="danger" className="py-1 mb-3 small">{addRoomError}</Alert>
+          )}
           <Form.Group className="mb-3" controlId="room-name">
             <Form.Label>{m.admin_room_name_label()}</Form.Label>
             <Form.Control
