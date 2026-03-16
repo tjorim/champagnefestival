@@ -474,6 +474,7 @@ export default function TableLayout({
                   size="sm"
                   onClick={() => handleDeleteRoom(activeRoom.id)}
                   title={m.admin_delete()}
+                  aria-label={m.admin_delete()}
                 >
                   <i className="bi bi-trash" aria-hidden="true" />
                 </Button>
@@ -558,6 +559,7 @@ export default function TableLayout({
                 size="sm"
                 onClick={() => handleDeleteTable(selectedTableData.id)}
                 title={m.admin_delete()}
+                aria-label={m.admin_delete()}
               >
                 <i className="bi bi-trash" aria-hidden="true" />
               </Button>
