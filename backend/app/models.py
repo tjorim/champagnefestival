@@ -206,6 +206,7 @@ class Person(Base):
     __tablename__ = "people"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    person_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), default="")
     phone: Mapped[str] = mapped_column(String(50), default="")

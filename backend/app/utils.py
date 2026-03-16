@@ -15,8 +15,10 @@ def make_id(prefix: str) -> str:
 
 def reservation_to_dict(r: Reservation) -> dict:
     """Serialise a Reservation ORM row to a plain dict (no check_in_token)."""
+    person_key = getattr(getattr(r, "_person", None), "person_key", None)
     return {
         "id": r.id,
+        "person_key": person_key,
         "name": r.name,
         "email": r.email,
         "phone": r.phone,
@@ -80,8 +82,10 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
     Strips all sensitive / internal fields: phone, notes, checkInToken.
     Returns only safe-to-share booking status information.
     """
+    person_key = getattr(getattr(r, "_person", None), "person_key", None)
     return {
         "id": r.id,
+        "person_key": person_key,
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
@@ -147,6 +151,7 @@ def edition_to_dict(e: Edition) -> dict:
 def person_to_dict(p: Person) -> dict:
     return {
         "id": p.id,
+        "person_key": p.person_key,
         "name": p.name,
         "email": p.email,
         "phone": p.phone,

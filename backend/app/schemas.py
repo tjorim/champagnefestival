@@ -39,6 +39,7 @@ class OrderItemOut(OrderItemBase):
 
 
 class ReservationCreate(BaseModel):
+    person_key: str | None = Field(default=None, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
@@ -70,6 +71,7 @@ class ReservationUpdate(BaseModel):
 
 class ReservationOut(BaseModel):
     id: str
+    person_key: str | None
     name: str
     email: str
     phone: str
@@ -103,6 +105,7 @@ class ReservationListOut(BaseModel):
     check_in_token is intentionally excluded here."""
 
     id: str
+    person_key: str | None
     name: str
     email: str
     event_id: str
@@ -123,6 +126,7 @@ class ReservationListOut(BaseModel):
 
 
 class ReservationGuestOut(BaseModel):
+    person_key: str | None
     """Reservation data returned to visitors via the self-lookup endpoint.
 
     Only safe-to-expose fields — no phone, no internal notes, no checkInToken.
@@ -426,6 +430,7 @@ class PersonUpdate(BaseModel):
 
 class PersonOut(BaseModel):
     id: str
+    person_key: str
     name: str
     email: str
     phone: str

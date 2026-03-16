@@ -51,23 +51,24 @@ async def create_reservation(
     check_form_timing(body.form_start_time)
 
     email_norm = str(body.email).lower().strip()
-    person_result = await db.execute(
-        select(Person).where(Person.email == email_norm).order_by(Person.id)
-    )
-    matched_people = person_result.scalars().all()
 
-    if len(matched_people) == 0:
+    person: Person
+    if body.person_key:
+        person_result = await db.execute(
+            select(Person).where(Person.person_key == body.person_key)
+        )
+        person = person_result.scalar_one_or_none()
+        if person is None:
+            raise HTTPException(status_code=404, detail="Person not found for provided person_key.")
+    else:
         person = Person(
             id=make_id("per"),
+            person_key=make_id("pkey"),
             name=body.name,
             email=email_norm,
         )
         db.add(person)
         await db.flush()
-    elif len(matched_people) == 1:
-        person = matched_people[0]
-    else:
-        person = matched_people[0]
 
     reservation = Reservation(
         id=make_id("res"),
@@ -86,6 +87,7 @@ async def create_reservation(
     db.add(reservation)
     await db.commit()
     await db.refresh(reservation)
+    reservation._person = person
 
     # TODO: Send confirmation e-mail to guest (planned — see README § Planned features)
 
@@ -131,6 +133,14 @@ async def list_reservations(
 
     result = await db.execute(stmt.order_by(Reservation.created_at.desc()))
     rows = result.scalars().all()
+    person_ids = {r.person_id for r in rows if r.person_id}
+    person_map: dict[str, Person] = {}
+    if person_ids:
+        people_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
+        person_map = {p.id: p for p in people_result.scalars().all()}
+    for r in rows:
+        if r.person_id:
+            r._person = person_map.get(r.person_id)
     return [reservation_to_list_dict(r) for r in rows]
 
 
@@ -168,6 +178,14 @@ async def my_reservations(
         .order_by(Reservation.created_at.desc())
     )
     rows = result.scalars().all()
+    person_ids = {r.person_id for r in rows if r.person_id}
+    person_map: dict[str, Person] = {}
+    if person_ids:
+        people_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
+        person_map = {p.id: p for p in people_result.scalars().all()}
+    for r in rows:
+        if r.person_id:
+            r._person = person_map.get(r.person_id)
     return [reservation_to_guest_dict(r) for r in rows]
 
 
@@ -186,6 +204,9 @@ async def get_reservation(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     r = await _get_or_404(db, reservation_id)
+    if r.person_id:
+        person_result = await db.execute(select(Person).where(Person.id == r.person_id))
+        r._person = person_result.scalar_one_or_none()
     return reservation_to_dict_with_token(r)
 
 
@@ -234,6 +255,11 @@ async def update_reservation(
 
     await db.commit()
     await db.refresh(r)
+    if r.person_id:
+        person_result = await db.execute(select(Person).where(Person.id == r.person_id))
+        r._person = person_result.scalar_one_or_none()
+    else:
+        r._person = None
     return reservation_to_dict(r)
 
 

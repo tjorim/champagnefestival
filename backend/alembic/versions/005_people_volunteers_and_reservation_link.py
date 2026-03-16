@@ -20,6 +20,7 @@ def upgrade() -> None:
     op.create_table(
         "people",
         sa.Column("id", sa.String(length=64), nullable=False),
+        sa.Column("person_key", sa.String(length=64), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
         sa.Column("email", sa.String(length=200), nullable=False, server_default=""),
         sa.Column("phone", sa.String(length=50), nullable=False, server_default=""),
@@ -40,6 +41,7 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("person_key"),
         sa.UniqueConstraint("national_register_number"),
         sa.UniqueConstraint("eid_document_number"),
     )

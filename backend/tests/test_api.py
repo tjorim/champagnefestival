@@ -717,10 +717,16 @@ async def test_people_crud_roles_and_filters(client):
     # Reservation history is grouped under the person
     r = await client.post(
         "/api/reservations",
-        json={**VALID_RESERVATION, "email": "anne@example.com", "name": "Anne Dupuis"},
+        json={
+            **VALID_RESERVATION,
+            "email": "anne@example.com",
+            "name": "Anne Dupuis",
+            "person_key": person["person_key"],
+        },
     )
     assert r.status_code == 201
     assert r.json()["person_id"] == person_id
+    assert r.json()["person_key"] == person["person_key"]
 
     r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
     assert r.status_code == 200

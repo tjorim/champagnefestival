@@ -85,6 +85,7 @@ async def create_member(
 
     person = Person(
         id=make_id("per"),
+        person_key=make_id("pkey"),
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
         phone=body.phone,
