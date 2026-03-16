@@ -31,10 +31,10 @@ const PX_PER_M = 28;
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
 
-function getTableSize(table: Table): { w: number; h: number } {
+function getTableSize(table: Table): { w: number; l: number } {
   return {
     w: Math.max(32, Math.round(table.widthM * PX_PER_M)),
-    h: Math.max(32, Math.round(table.lengthM * PX_PER_M)),
+    l: Math.max(32, Math.round(table.lengthM * PX_PER_M)),
   };
 }
 
@@ -81,7 +81,7 @@ function DraggableTable({
     id: table.id,
   });
 
-  const { w: TABLE_W, h: TABLE_H } = getTableSize(table);
+  const { w: TABLE_W, l: TABLE_L } = getTableSize(table);
 
   // Convert percentage to pixel offset within the canvas
   const leftPx = (table.x / 100) * canvasW;
@@ -117,7 +117,7 @@ function DraggableTable({
         left: leftPx,
         top: topPx,
         width: TABLE_W,
-        height: TABLE_H,
+        height: TABLE_L,
         cursor: isDragging ? "grabbing" : "grab",
         userSelect: "none",
         transform: `${CSS.Translate.toString(transform)} rotate(${table.rotation}deg)`,
@@ -177,7 +177,7 @@ function RoomCanvas({
       const table = roomTables.find((t) => t.id === active.id);
       if (!table) return;
 
-      const { w: TABLE_W, h: TABLE_H } = getTableSize(table);
+      const { w: TABLE_W, l: TABLE_L } = getTableSize(table);
 
       // Current pixel position
       const leftPx = (table.x / 100) * canvasW + delta.x;
@@ -185,7 +185,7 @@ function RoomCanvas({
 
       // Clamp so table stays within canvas
       const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);
-      const clampedY = Math.min(Math.max(0, topPx), canvasH - TABLE_H);
+      const clampedY = Math.min(Math.max(0, topPx), canvasH - TABLE_L);
 
       const newX = (clampedX / canvasW) * 100;
       const newY = (clampedY / canvasH) * 100;
@@ -628,7 +628,7 @@ export default function TableLayout({
                 </Form.Group>
               </div>
               <div className="col">
-                <Form.Group controlId="table-height">
+                <Form.Group controlId="table-length">
                   <Form.Label>{m.admin_table_length_label()}</Form.Label>
                   <Form.Control
                     type="number" min={0.1} max={20} step={0.1}
