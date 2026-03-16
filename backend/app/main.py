@@ -85,6 +85,7 @@ app.add_middleware(
 
 app.include_router(reservations.router)
 app.include_router(club_members.router)
+app.include_router(club_members.legacy_router_v2)
 app.include_router(club_members.legacy_router)
 app.include_router(check_in.router)
 app.include_router(contact.router)

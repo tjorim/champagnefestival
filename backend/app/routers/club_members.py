@@ -14,12 +14,19 @@ from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import make_id, person_to_dict
 
 router = APIRouter(
-    prefix="/api/club-members",
+    prefix="/api/clubmembers",
     tags=["club-members"],
     dependencies=[Depends(require_admin)],
 )
 
-# Backward-compatible alias; keep temporarily to avoid breaking existing clients.
+# Backward-compatible aliases; keep temporarily to avoid breaking existing clients.
+legacy_router_v2 = APIRouter(
+    prefix="/api/club-members",
+    tags=["club-members"],
+    dependencies=[Depends(require_admin)],
+    deprecated=True,
+)
+
 legacy_router = APIRouter(
     prefix="/api/champagne-lovers",
     tags=["club-members"],
@@ -153,6 +160,7 @@ def _register_routes(api: APIRouter) -> None:
 
 
 _register_routes(router)
+_register_routes(legacy_router_v2)
 _register_routes(legacy_router)
 
 
