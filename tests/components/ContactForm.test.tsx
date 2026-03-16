@@ -100,7 +100,7 @@ describe("ContactForm component", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = (fetchMock as Mock).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/contact");
+    expect(url).toBe("/api/contact");
     expect(options).toMatchObject({
       method: "POST",
       headers: {
@@ -136,7 +136,7 @@ describe("ContactForm component", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = (fetchMock as Mock).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/contact");
+    expect(url).toBe("/api/contact");
     expect(options).toMatchObject({
       method: "POST",
       headers: {
