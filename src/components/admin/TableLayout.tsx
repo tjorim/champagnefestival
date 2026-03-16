@@ -299,9 +299,16 @@ export default function TableLayout({
   });
 
   const handleAddTable = useCallback(async () => {
-    if (!newTable.name.trim() || newTable.capacity < 1) return;
+    const widthM = Number(newTable.widthM);
+    const lengthM = Number(newTable.lengthM);
+    if (
+      !newTable.name.trim() ||
+      newTable.capacity < 1 ||
+      !Number.isFinite(widthM) || widthM <= 0 ||
+      !Number.isFinite(lengthM) || lengthM <= 0
+    ) return;
     try {
-      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, newTable.widthM, newTable.lengthM);
+      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, widthM, lengthM);
       setNewTable({ name: "", capacity: 4, roomId: "", shape: "rectangle", widthM: 1.8, lengthM: 0.7 });
       setShowAddTable(false);
     } catch {
