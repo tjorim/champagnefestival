@@ -6,6 +6,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from app.config import settings
 from app.database import create_tables
@@ -95,7 +96,11 @@ app.include_router(people.router)
 app.include_router(volunteers.router)
 
 
-@app.get("/health", tags=["meta"])
-async def health() -> dict:
+class HealthResponse(BaseModel):
+    status: str
+
+
+@app.get("/health", tags=["meta"], response_model=HealthResponse)
+async def health() -> HealthResponse:
     """Simple health-check endpoint used by the reverse proxy / systemd watchdog."""
-    return {"status": "ok"}
+    return HealthResponse(status="ok")
