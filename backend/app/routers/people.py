@@ -18,7 +18,13 @@ router = APIRouter(
 
 
 def _normalise_roles(roles: list[str]) -> list[str]:
-    return sorted({r.strip().lower() for r in roles if r and r.strip()})
+    normalised: set[str] = set()
+    for role in roles:
+        if not role or not role.strip():
+            continue
+        r = role.strip().lower()
+        normalised.add(r)
+    return sorted(normalised)
 
 
 def _validate_help_days(first_help_day, last_help_day) -> None:

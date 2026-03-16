@@ -662,7 +662,7 @@ async def test_people_crud_roles_and_filters(client):
         "email": "anne@example.com",
         "phone": "+32470111222",
         "address": "Kapelstraat 8, Bredene",
-        "roles": ["Chairwoman", "Volunteer", "Club-Member"],
+        "roles": ["Chairwoman", "Volunteer", "Member"],
         "first_help_day": "2026-03-20",
         "last_help_day": "2026-03-22",
         "national_register_number": "85010199999",
@@ -676,7 +676,7 @@ async def test_people_crud_roles_and_filters(client):
     r = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     person = r.json()
-    assert person["roles"] == ["chairwoman", "club-member", "volunteer"]
+    assert person["roles"] == ["chairwoman", "member", "volunteer"]
 
     person_id = person["id"]
 
@@ -758,7 +758,7 @@ async def test_members_crud(client):
     r = await client.post("/api/members", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     person = r.json()
-    assert "club-member" in person["roles"]
+    assert "member" in person["roles"]
 
     person_id = person["id"]
 
@@ -774,7 +774,7 @@ async def test_members_crud(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
-    assert "club-member" in r.json()["roles"]
+    assert "member" in r.json()["roles"]
     assert r.json()["active"] is False
 
     r = await client.get(

@@ -211,7 +211,7 @@ class Person(Base):
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
     # JSON-encoded list of role strings: volunteer, chairwoman, treasurer,
-    # club-member, festival-visitor, ...
+    # member, festival-visitor, ...
     roles: Mapped[str] = mapped_column(Text, default="[]")
 
     # Optional compliance/attendance fields

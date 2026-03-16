@@ -1,6 +1,6 @@
 """Member CRUD endpoints (admin-only).
 
-Members are stored in the people table as a subset with role='club-member'.
+Members are stored in the people table as a subset with role='member'.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -26,8 +26,12 @@ def _normalise_roles(roles: list[str]) -> list[str]:
 
 def _ensure_member_role(person: Person) -> None:
     roles = set(person.get_roles())
-    roles.add("club-member")
+    roles.add("member")
     person.set_roles(sorted(roles))
+
+
+def _has_member_role(person: Person) -> bool:
+    return "member" in set(person.get_roles())
 
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
@@ -66,7 +70,7 @@ async def list_members(
     active: bool | None = Query(default=None),
 ) -> list[dict]:
     result = await db.execute(select(Person).order_by(Person.created_at.desc()))
-    rows = [p for p in result.scalars().all() if "club-member" in p.get_roles()]
+    rows = [p for p in result.scalars().all() if _has_member_role(p)]
 
     if active is not None:
         rows = [p for p in rows if p.active == active]
@@ -144,6 +148,6 @@ async def delete_member(person_id: str, db: AsyncSession = Depends(get_db)) -> N
 async def _get_or_404(db: AsyncSession, person_id: str) -> Person:
     result = await db.execute(select(Person).where(Person.id == person_id))
     person = result.scalar_one_or_none()
-    if person is None or "club-member" not in person.get_roles():
+    if person is None or not _has_member_role(person):
         raise HTTPException(status_code=404, detail="Member not found.")
     return person
