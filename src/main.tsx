@@ -209,8 +209,7 @@ function App() {
             })
             .map((ev) => ({ id: ev.id, title: ev.title }));
         });
-        // Only replace the static fallback when the backend actually has events.
-        if (events.length > 0) setReservableEvents(events);
+        setReservableEvents(events);
       })
       .catch(() => {
         // Backend unreachable — keep static fallback.
