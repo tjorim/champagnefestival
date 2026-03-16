@@ -32,7 +32,7 @@ The table below tracks each user story against its current implementation status
 
 ## Architecture
 
-```
+```text
 Static frontend (Vite build / CDN / VPS)
         │
         │  HTTPS API calls
@@ -225,7 +225,7 @@ similar) to route `/api/*` requests to the FastAPI process.
 Set the `CORS_ORIGINS` env var to the origin(s) of your frontend deployment so
 the browser can reach the API:
 
-```
+```bash
 # /etc/champagne/.env
 CORS_ORIGINS=["https://champagnefestival.be"]
 ```
