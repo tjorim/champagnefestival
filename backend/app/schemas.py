@@ -343,15 +343,15 @@ class RoomOut(BaseModel):
 class ScheduleEventIn(BaseModel):
     id: str
     title: str
-    start_time: str
-    end_time: str | None = None
+    start_time: str = Field(pattern=r"^\d{2}:\d{2}$")
+    end_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
     description: str = ""
     reservation: bool = False
     reservations_open_from: datetime | None = None
     location: str | None = None
     presenter: str | None = None
     category: str
-    day_id: int
+    day_id: int = Field(ge=1, le=3)
 
 
 ScheduleEventOut = ScheduleEventIn
