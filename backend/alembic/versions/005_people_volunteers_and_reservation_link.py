@@ -51,11 +51,9 @@ def upgrade() -> None:
         sa.Column("person_id", sa.String(length=64), nullable=True),
     )
 
-    bind = op.get_bind()
-    if bind.dialect.name != "sqlite":
-        op.create_foreign_key(
+    with op.batch_alter_table("reservations") as batch_op:
+        batch_op.create_foreign_key(
             "fk_reservations_person_id_people",
-            "reservations",
             "people",
             ["person_id"],
             ["id"],
@@ -64,8 +62,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    bind = op.get_bind()
-    if bind.dialect.name != "sqlite":
-        op.drop_constraint("fk_reservations_person_id_people", "reservations", type_="foreignkey")
+    with op.batch_alter_table("reservations") as batch_op:
+        batch_op.drop_constraint("fk_reservations_person_id_people", type_="foreignkey")
     op.drop_column("reservations", "person_id")
     op.drop_table("people")
