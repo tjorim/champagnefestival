@@ -584,75 +584,6 @@ async def test_table_id_can_be_cleared(client):
     assert r.json()["table_id"] is None
 
 
-# ---------------------------------------------------------------------------
-# Regular visitors (admin)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.anyio
-async def test_regular_visitors_require_auth(client):
-    r = await client.get("/api/regular-visitors")
-    assert r.status_code == 401
-
-
-@pytest.mark.anyio
-async def test_regular_visitor_crud_and_filters(client):
-    payload = {
-        "name": "Luc Van den Bossche",
-        "email": "luc@example.com",
-        "phone": "+32476123456",
-        "visits_per_month": 1,
-        "is_capsule_exchange_member": True,
-        "club_name": "Champagne Lovers De Spui Bredene",
-        "notes": "Brings capsules monthly for exchange night.",
-        "active": True,
-    }
-    r = await client.post(
-        "/api/regular-visitors", json=payload, headers=ADMIN_HEADERS
-    )
-    assert r.status_code == 201
-    created = r.json()
-    assert created["is_capsule_exchange_member"] is True
-
-    # duplicate email blocked
-    r = await client.post(
-        "/api/regular-visitors", json=payload, headers=ADMIN_HEADERS
-    )
-    assert r.status_code == 409
-
-    visitor_id = created["id"]
-
-    r = await client.get(
-        "/api/regular-visitors", params={"q": "de spui"}, headers=ADMIN_HEADERS
-    )
-    assert r.status_code == 200
-    assert len(r.json()) == 1
-
-    r = await client.put(
-        f"/api/regular-visitors/{visitor_id}",
-        json={"active": False, "visits_per_month": 2},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 200
-    assert r.json()["active"] is False
-    assert r.json()["visits_per_month"] == 2
-
-    r = await client.get(
-        "/api/regular-visitors", params={"active": "false"}, headers=ADMIN_HEADERS
-    )
-    assert r.status_code == 200
-    assert len(r.json()) == 1
-
-    # legacy alias remains available for backward compatibility
-    r = await client.get("/api/recurring-visitors", headers=ADMIN_HEADERS)
-    assert r.status_code == 200
-    assert len(r.json()) == 1
-
-    r = await client.delete(
-        f"/api/regular-visitors/{visitor_id}", headers=ADMIN_HEADERS
-    )
-    assert r.status_code == 204
-
 
 # ---------------------------------------------------------------------------
 # Volunteers (admin)
@@ -782,6 +713,19 @@ async def test_people_crud_roles_and_filters(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400
+
+    # Reservation history is grouped under the person
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "email": "anne@example.com", "name": "Anne Dupuis"},
+    )
+    assert r.status_code == 201
+    assert r.json()["person_id"] == person_id
+
+    r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+    assert r.json()[0]["email"] == "anne@example.com"
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204

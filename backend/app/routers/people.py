@@ -1,14 +1,14 @@
 """People CRUD endpoints (admin-only)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Person
+from app.models import Person, Reservation
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
-from app.utils import make_id, person_to_dict
+from app.utils import make_id, person_to_dict, reservation_to_list_dict
 
 router = APIRouter(
     prefix="/api/people",
@@ -140,6 +140,26 @@ async def update_person(
     await db.commit()
     await db.refresh(person)
     return person_to_dict(person)
+
+
+@router.get("/{person_id}/reservations")
+async def list_person_reservations(
+    person_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    person = await _get_or_404(db, person_id)
+
+    stmt = select(Reservation).where(Reservation.person_id == person.id)
+    if person.email:
+        stmt = select(Reservation).where(
+            or_(
+                Reservation.person_id == person.id,
+                Reservation.email == person.email,
+            )
+        )
+
+    result = await db.execute(stmt.order_by(Reservation.created_at.desc()))
+    return [reservation_to_list_dict(r) for r in result.scalars().all()]
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)

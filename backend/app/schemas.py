@@ -63,6 +63,7 @@ class ReservationUpdate(BaseModel):
     table_id: str | None = None
     pre_orders: list[OrderItemBase] | None = None
     notes: str | None = None
+    person_id: str | None = None
     checked_in: bool | None = None
     strap_issued: bool | None = None
 
@@ -77,6 +78,7 @@ class ReservationOut(BaseModel):
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str
+    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -107,6 +109,7 @@ class ReservationListOut(BaseModel):
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
+    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -137,50 +140,6 @@ class ReservationGuestOut(BaseModel):
     checked_in_at: datetime | None
     strap_issued: bool
     created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class RegularVisitorCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    email: EmailStr
-    phone: str = Field(default="", max_length=50)
-    visits_per_month: int = Field(default=1, ge=1, le=31)
-    is_capsule_exchange_member: bool = False
-    club_name: str = Field(default="", max_length=200)
-    notes: str = Field(default="", max_length=2000)
-    last_visit_at: datetime | None = None
-    next_expected_visit_at: datetime | None = None
-    active: bool = True
-
-
-class RegularVisitorUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    email: EmailStr | None = None
-    phone: str | None = Field(default=None, max_length=50)
-    visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    is_capsule_exchange_member: bool | None = None
-    club_name: str | None = Field(default=None, max_length=200)
-    notes: str | None = Field(default=None, max_length=2000)
-    last_visit_at: datetime | None = None
-    next_expected_visit_at: datetime | None = None
-    active: bool | None = None
-
-
-class RegularVisitorOut(BaseModel):
-    id: str
-    name: str
-    email: str
-    phone: str
-    visits_per_month: int
-    is_capsule_exchange_member: bool
-    club_name: str
-    notes: str
-    last_visit_at: datetime | None
-    next_expected_visit_at: datetime | None
-    active: bool
-    created_at: datetime
-    updated_at: datetime
 
     model_config = {"from_attributes": True}
 

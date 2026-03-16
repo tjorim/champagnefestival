@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Reservation
+from app.models import Person, Reservation
 from app.schemas import (
     ReservationCreate,
     ReservationGuestOut,
@@ -50,6 +50,11 @@ async def create_reservation(
     check_honeypot(body.honeypot)
     check_form_timing(body.form_start_time)
 
+    person_result = await db.execute(
+        select(Person).where(Person.email == str(body.email).lower().strip())
+    )
+    person = person_result.scalar_one_or_none()
+
     reservation = Reservation(
         id=make_id("res"),
         name=body.name,
@@ -59,6 +64,7 @@ async def create_reservation(
         event_title=body.event_title,
         guest_count=body.guest_count,
         notes=body.notes,
+        person_id=person.id if person else None,
         check_in_token=make_id("tok"),
     )
     reservation.set_pre_orders([item.model_dump() for item in body.pre_orders])
@@ -194,6 +200,8 @@ async def update_reservation(
         r.table_id = body.table_id
     if body.notes is not None:
         r.notes = body.notes
+    if "person_id" in body.model_fields_set:
+        r.person_id = body.person_id
     if body.pre_orders is not None:
         r.set_pre_orders([item.model_dump() for item in body.pre_orders])
     if body.checked_in is not None:

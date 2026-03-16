@@ -26,6 +26,9 @@ class Reservation(Base):
     # JSON-encoded list of OrderItem dicts
     pre_orders: Mapped[str] = mapped_column(Text, default="[]")
     notes: Mapped[str] = mapped_column(Text, default="")
+    person_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    )
     table_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
     )
@@ -195,35 +198,6 @@ class Edition(Base):
 
     def set_schedule(self, events: list[dict]) -> None:
         self.schedule = json.dumps(events)
-
-
-class RegularVisitor(Base):
-    """A visitor profile for guests that return frequently."""
-
-    __tablename__ = "regular_visitors"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    name: Mapped[str] = mapped_column(String(200))
-    email: Mapped[str] = mapped_column(String(200), unique=True)
-    phone: Mapped[str] = mapped_column(String(50), default="")
-    visits_per_month: Mapped[int] = mapped_column(Integer, default=1)
-    is_capsule_exchange_member: Mapped[bool] = mapped_column(Boolean, default=False)
-    club_name: Mapped[str] = mapped_column(String(200), default="")
-    notes: Mapped[str] = mapped_column(Text, default="")
-    last_visit_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    next_expected_visit_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
 
 
 class Volunteer(Base):

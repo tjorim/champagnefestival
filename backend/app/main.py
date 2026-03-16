@@ -15,7 +15,6 @@ from app.routers import (
     content,
     editions,
     people,
-    regular_visitors,
     reservations,
     rooms,
     tables,
@@ -91,8 +90,6 @@ app.include_router(rooms.router)
 app.include_router(content.router)
 app.include_router(editions.router)
 app.include_router(people.router)
-app.include_router(regular_visitors.router)
-app.include_router(regular_visitors.legacy_router)
 app.include_router(volunteers.router)
 
 

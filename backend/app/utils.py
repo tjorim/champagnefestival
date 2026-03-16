@@ -3,7 +3,7 @@
 import secrets
 import time
 
-from app.models import Edition, Person, RegularVisitor, Reservation, Room, Table, Volunteer
+from app.models import Edition, Person, Reservation, Room, Table, Volunteer
 
 
 def make_id(prefix: str) -> str:
@@ -25,6 +25,7 @@ def reservation_to_dict(r: Reservation) -> dict:
         "guest_count": r.guest_count,
         "pre_orders": r.get_pre_orders(),
         "notes": r.notes,
+        "person_id": r.person_id,
         "table_id": r.table_id,
         "status": r.status,
         "payment_status": r.payment_status,
@@ -140,24 +141,6 @@ def edition_to_dict(e: Edition) -> dict:
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,
-    }
-
-
-def regular_visitor_to_dict(v: RegularVisitor) -> dict:
-    return {
-        "id": v.id,
-        "name": v.name,
-        "email": v.email,
-        "phone": v.phone,
-        "visits_per_month": v.visits_per_month,
-        "is_capsule_exchange_member": v.is_capsule_exchange_member,
-        "club_name": v.club_name,
-        "notes": v.notes,
-        "last_visit_at": v.last_visit_at,
-        "next_expected_visit_at": v.next_expected_visit_at,
-        "active": v.active,
-        "created_at": v.created_at,
-        "updated_at": v.updated_at,
     }
 
 
