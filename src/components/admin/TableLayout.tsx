@@ -48,7 +48,7 @@ interface TableLayoutProps {
   onRotateTable: (tableId: string, rotation: number) => void;
   onAddRoom: (
     name: string,
-    zoneType: string,
+    zoneType: 'main-hall' | 'exchange',
     widthM: number,
     heightM: number,
     color: string,
@@ -697,7 +697,7 @@ export default function TableLayout({
             <Form.Label>{m.admin_room_zone_type_label()}</Form.Label>
             <Form.Select
               value={newRoom.zoneType}
-              onChange={(e) => setNewRoom((p) => ({ ...p, zoneType: e.target.value }))}
+              onChange={(e) => setNewRoom((p) => ({ ...p, zoneType: e.target.value as 'main-hall' | 'exchange' }))}
               className="bg-dark text-light border-secondary"
             >
               <option value="main-hall">{m.admin_room_main_hall()}</option>

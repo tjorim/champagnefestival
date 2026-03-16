@@ -79,8 +79,7 @@ export interface Table {
 export interface Room {
   id: string;
   name: string;
-  /** 'main-hall' | 'exchange' */
-  zoneType: string;
+  zoneType: 'main-hall' | 'exchange';
   /** Room width in metres — used to render a proportional canvas */
   widthM: number;
   /** Room height in metres */

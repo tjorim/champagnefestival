@@ -31,7 +31,7 @@ function apiRoomToRoom(d: Record<string, unknown>): Room {
   return {
     id: d.id as string,
     name: d.name as string,
-    zoneType: (d.zone_type ?? d.zoneType) as string,
+    zoneType: (d.zone_type ?? d.zoneType) as 'main-hall' | 'exchange',
     widthM: (d.width_m ?? d.widthM) as number,
     heightM: (d.height_m ?? d.heightM) as number,
     color: d.color as string,
@@ -351,7 +351,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddRoom = useCallback(
-    async (name: string, zoneType: string, widthM: number, heightM: number, color: string) => {
+    async (name: string, zoneType: 'main-hall' | 'exchange', widthM: number, heightM: number, color: string) => {
       try {
         const response = await fetch("/api/rooms", {
           method: "POST",
