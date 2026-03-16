@@ -69,8 +69,8 @@ export interface Table {
   shape: "rectangle" | "round";
   /** Physical width in metres (rectangle) or diameter (round) */
   widthM: number;
-  /** Physical height in metres (rectangle); equals widthM for round tables */
-  heightM: number;
+  /** Physical length in metres (second tabletop dimension); equals widthM for round tables */
+  lengthM: number;
   /** Rotation angle in whole degrees [0, 359], clockwise */
   rotation: number;
   reservationIds: string[];

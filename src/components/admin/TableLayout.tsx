@@ -34,7 +34,7 @@ const MIN_CANVAS_PX = 280;
 function getTableSize(table: Table): { w: number; h: number } {
   return {
     w: Math.max(32, Math.round(table.widthM * PX_PER_M)),
-    h: Math.max(32, Math.round(table.heightM * PX_PER_M)),
+    h: Math.max(32, Math.round(table.lengthM * PX_PER_M)),
   };
 }
 
@@ -42,7 +42,7 @@ interface TableLayoutProps {
   tables: Table[];
   reservations: Reservation[];
   rooms: Room[];
-  onAddTable: (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round", widthM: number, heightM: number) => Promise<void>;
+  onAddTable: (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round", widthM: number, lengthM: number) => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
@@ -281,7 +281,7 @@ export default function TableLayout({
   const [newTable, setNewTable] = useState({
     name: "", capacity: 4, roomId: "",
     shape: "rectangle" as "rectangle" | "round",
-    widthM: 1.8, heightM: 0.7,
+    widthM: 1.8, lengthM: 0.7,
   });
 
   // Add Room modal
@@ -297,8 +297,8 @@ export default function TableLayout({
   const handleAddTable = useCallback(async () => {
     if (!newTable.name.trim() || newTable.capacity < 1) return;
     try {
-      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, newTable.widthM, newTable.heightM);
-      setNewTable({ name: "", capacity: 4, roomId: "", shape: "rectangle", widthM: 1.8, heightM: 0.7 });
+      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, newTable.widthM, newTable.lengthM);
+      setNewTable({ name: "", capacity: 4, roomId: "", shape: "rectangle", widthM: 1.8, lengthM: 0.7 });
       setShowAddTable(false);
     } catch {
       // keep modal open so the operator can retry
@@ -592,7 +592,7 @@ export default function TableLayout({
                   ...p,
                   shape: s,
                   widthM: s === "round" ? 0.9 : 1.8,
-                  heightM: s === "round" ? 0.9 : 0.7,
+                  lengthM: s === "round" ? 0.9 : 0.7,
                 }));
               }}
               className="bg-dark text-light border-secondary"
@@ -609,7 +609,7 @@ export default function TableLayout({
                 value={newTable.widthM}
                 onChange={(e) => {
                   const v = Number(e.target.value);
-                  setNewTable((p) => ({ ...p, widthM: v, heightM: v }));
+                  setNewTable((p) => ({ ...p, widthM: v, lengthM: v }));
                 }}
                 className="bg-dark text-light border-secondary"
               />
@@ -629,11 +629,11 @@ export default function TableLayout({
               </div>
               <div className="col">
                 <Form.Group controlId="table-height">
-                  <Form.Label>{m.admin_table_height_label()}</Form.Label>
+                  <Form.Label>{m.admin_table_length_label()}</Form.Label>
                   <Form.Control
                     type="number" min={0.1} max={20} step={0.1}
-                    value={newTable.heightM}
-                    onChange={(e) => setNewTable((p) => ({ ...p, heightM: Number(e.target.value) }))}
+                    value={newTable.lengthM}
+                    onChange={(e) => setNewTable((p) => ({ ...p, lengthM: Number(e.target.value) }))}
                     className="bg-dark text-light border-secondary"
                   />
                 </Form.Group>

@@ -318,7 +318,7 @@
   "admin_table_shape_rectangle": "Rechthoek",
   "admin_table_shape_round": "Rond",
   "admin_table_width_label": "Breedte (m)",
-  "admin_table_height_label": "Diepte (m)",
+  "admin_table_length_label": "Lengte (m)",
   "admin_table_diameter_label": "Diameter (m)",
   "admin_error_issue_strap": "Polsband uitreiken mislukt.",
   "back_to_site": "Terug naar de site"

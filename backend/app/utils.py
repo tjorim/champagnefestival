@@ -123,7 +123,7 @@ def table_to_dict(t: Table) -> dict:
         "room_id": t.room_id,
         "shape": t.shape,
         "width_m": t.width_m,
-        "height_m": t.height_m,
+        "length_m": t.length_m,
         "rotation": t.rotation,
         "reservation_ids": t.get_reservation_ids(),
         "created_at": t.created_at,

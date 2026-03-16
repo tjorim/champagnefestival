@@ -258,7 +258,7 @@ class TableCreate(BaseModel):
     room_id: str | None = None
     shape: Literal["rectangle", "round"] = "rectangle"
     width_m: float = Field(ge=0.1, le=20.0, default=1.8)
-    height_m: float = Field(ge=0.1, le=20.0, default=0.7)
+    length_m: float = Field(ge=0.1, le=20.0, default=0.7)
     rotation: int = Field(ge=0, le=359, default=0)
 
 
@@ -270,7 +270,7 @@ class TableUpdate(BaseModel):
     room_id: str | None = None
     shape: Literal["rectangle", "round"] | None = None
     width_m: float | None = Field(default=None, ge=0.1, le=20.0)
-    height_m: float | None = Field(default=None, ge=0.1, le=20.0)
+    length_m: float | None = Field(default=None, ge=0.1, le=20.0)
     rotation: int | None = Field(default=None, ge=0, le=359)
     reservation_ids: list[str] | None = None
 
@@ -284,7 +284,7 @@ class TableOut(BaseModel):
     room_id: str | None
     shape: str
     width_m: float
-    height_m: float
+    length_m: float
     rotation: int
     reservation_ids: list[str]
     created_at: datetime

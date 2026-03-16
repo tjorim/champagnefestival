@@ -49,7 +49,7 @@ function apiTableToTable(d: Record<string, unknown>): Table {
     roomId: ((d.room_id ?? d.roomId) as string | null) ?? null,
     shape: ((d.shape ?? "rectangle") as "rectangle" | "round"),
     widthM: ((d.width_m ?? d.widthM ?? 1.8) as number),
-    heightM: ((d.height_m ?? d.heightM ?? 0.7) as number),
+    lengthM: ((d.length_m ?? d.lengthM ?? 0.7) as number),
     rotation: ((d.rotation ?? 0) as number),
     reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
   };
@@ -281,12 +281,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddTable = useCallback(
-    async (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round" = "rectangle", widthM = 1.8, heightM = 0.7) => {
+    async (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round" = "rectangle", widthM = 1.8, lengthM = 0.7) => {
       try {
         const response = await fetch("/api/tables", {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, height_m: heightM }),
+          body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, length_m: lengthM }),
         });
         if (response.ok) {
           const data = await response.json();

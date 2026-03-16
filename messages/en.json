@@ -318,7 +318,7 @@
   "admin_table_shape_rectangle": "Rectangle",
   "admin_table_shape_round": "Round",
   "admin_table_width_label": "Width (m)",
-  "admin_table_height_label": "Height (m)",
+  "admin_table_length_label": "Length (m)",
   "admin_table_diameter_label": "Diameter (m)",
   "admin_error_issue_strap": "Failed to issue strap.",
   "back_to_site": "Back to site"

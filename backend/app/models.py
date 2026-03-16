@@ -139,8 +139,8 @@ class Table(Base):
     width_m: Mapped[float] = mapped_column(default=1.8)
     """Physical width in metres (for round tables: diameter)."""
 
-    height_m: Mapped[float] = mapped_column(default=0.7)
-    """Physical height in metres (for round tables: same as width_m)."""
+    length_m: Mapped[float] = mapped_column(default=0.7)
+    """Physical length in metres (second tabletop dimension; for round tables: same as width_m)."""
 
     rotation: Mapped[int] = mapped_column(Integer, default=0)
     """Rotation angle in whole degrees [0, 359], clockwise."""
