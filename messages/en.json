@@ -273,6 +273,7 @@
   "admin_content_name_placeholder": "Producer name",
   "admin_content_image_url_placeholder": "https://example.com/image.jpg",
   "admin_content_add_item": "Add item",
+  "admin_content_edit_item": "Edit item",
   "admin_content_save_section": "Save changes",
   "admin_content_saved": "Saved!",
   "admin_content_error_save": "Failed to save.",

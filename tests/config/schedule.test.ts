@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   festivalDays,
   scheduleEvents,
-  getEventsByDay,
   getEventsByCategory,
   getAllEventsSorted,
   requiresReservation,
