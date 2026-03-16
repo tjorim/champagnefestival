@@ -2,8 +2,22 @@
 
 import secrets
 import time
+from typing import Any
 
 from app.models import Edition, Person, Reservation, Room, Table
+
+
+def roles_contains(role: str) -> Any:
+    """Return a SQLAlchemy filter expression that matches Person.roles JSON arrays
+    containing *role* as an exact element (case-insensitive).
+
+    Person.roles is stored as a JSON-encoded list of lowercase strings, e.g.
+    '["member","volunteer"]'.  We match the quoted token so that a role like
+    "member" never accidentally matches "non-member".
+    """
+    role_norm = role.strip().lower()
+    role_escaped = role_norm.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+    return Person.roles.ilike(f'%"{role_escaped}"%', escape="\\")
 
 
 def make_id(prefix: str) -> str:

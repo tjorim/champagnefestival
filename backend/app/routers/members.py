@@ -11,7 +11,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Person
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
-from app.utils import make_id, person_to_dict
+from app.utils import make_id, person_to_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/members",
@@ -114,7 +114,7 @@ async def list_members(
     q: str | None = Query(default=None),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    stmt = select(Person).where(Person.roles.ilike('%"member"%'))
+    stmt = select(Person).where(roles_contains("member"))
 
     if active is not None:
         stmt = stmt.where(Person.active == active)

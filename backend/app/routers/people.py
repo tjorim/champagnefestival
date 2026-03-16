@@ -9,7 +9,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Person, Reservation
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
-from app.utils import make_id, person_to_dict, reservation_to_list_dict
+from app.utils import make_id, person_to_dict, reservation_to_list_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/people",
@@ -128,9 +128,7 @@ async def list_people(
         stmt = stmt.where(Person.active == active)
 
     if role:
-        role_norm = role.strip().lower()
-        role_escaped = role_norm.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        stmt = stmt.where(Person.roles.ilike(f'%"{role_escaped}"%', escape="\\"))
+        stmt = stmt.where(roles_contains(role))
 
     if q:
         q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")

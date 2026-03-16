@@ -11,7 +11,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Person
 from app.schemas import VolunteerCreate, VolunteerOut, VolunteerUpdate
-from app.utils import make_id, person_to_dict
+from app.utils import make_id, person_to_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/volunteers",
@@ -98,7 +98,7 @@ async def list_volunteers(
     q: str | None = Query(default=None, description="Search by name, address, NISS, or eID doc number"),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    stmt = select(Person).where(Person.roles.ilike('%"volunteer"%'))
+    stmt = select(Person).where(roles_contains("volunteer"))
 
     if active is not None:
         stmt = stmt.where(Person.active == active)
