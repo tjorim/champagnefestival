@@ -83,7 +83,7 @@ export default function CheckInPage() {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(m.checkin_error());
       } finally {
-        setIsLoading(false);
+        if (!signal.aborted) setIsLoading(false);
       }
     },
     [reservationId, checkInToken],
