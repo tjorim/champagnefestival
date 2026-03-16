@@ -4,7 +4,7 @@ Volunteers are stored in the people table as a subset with role='volunteer'.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
@@ -98,23 +98,25 @@ async def list_volunteers(
     q: str | None = Query(default=None, description="Search by name, address, NISS, or eID doc number"),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    result = await db.execute(select(Person).order_by(Person.created_at.desc()))
-    rows = [p for p in result.scalars().all() if "volunteer" in p.get_roles()]
+    stmt = select(Person).where(Person.roles.ilike('%"volunteer"%'))
 
     if active is not None:
-        rows = [p for p in rows if p.active == active]
+        stmt = stmt.where(Person.active == active)
 
     if q:
-        q_norm = q.strip().lower()
-        rows = [
-            p for p in rows if q_norm in " ".join([
-                p.name or "",
-                p.address or "",
-                p.national_register_number or "",
-                p.eid_document_number or "",
-            ]).lower()
-        ]
+        q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        q_like = f"%{q_escaped}%"
+        stmt = stmt.where(
+            or_(
+                Person.name.ilike(q_like, escape="\\"),
+                Person.address.ilike(q_like, escape="\\"),
+                Person.national_register_number.ilike(q_like, escape="\\"),
+                Person.eid_document_number.ilike(q_like, escape="\\"),
+            )
+        )
 
+    result = await db.execute(stmt.order_by(Person.created_at.desc()))
+    rows = result.scalars().all()
     return [_to_volunteer_out(v) for v in rows]
 
 
