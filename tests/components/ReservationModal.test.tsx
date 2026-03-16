@@ -197,7 +197,7 @@ describe("ReservationModal component", () => {
   it("increments product quantity", () => {
     render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
     const plusButtons = screen.getAllByRole("button", { name: /Increase quantity/i });
-    fireEvent.click(plusButtons[0]);
+    fireEvent.click(plusButtons[0]!);
 
     const quantities = screen.getAllByText("1");
     expect(quantities.length).toBeGreaterThan(0);

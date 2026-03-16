@@ -12,7 +12,6 @@ import type {
   Reservation,
   OrderItemCategory,
   ReservationStatus,
-  PaymentStatus,
 } from "../types/reservation";
 
 export default function CheckInPage() {
