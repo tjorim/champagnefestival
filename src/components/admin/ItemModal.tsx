@@ -64,10 +64,10 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>Cancel</Button>
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>{m.close()}</Button>
           <Button type="submit" variant="warning" size="sm">
             <i className="bi bi-floppy me-1" aria-hidden="true" />
-            Save
+            {m.admin_save()}
           </Button>
         </Modal.Footer>
       </Form>
