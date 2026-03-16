@@ -40,6 +40,10 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
+
+  const activeItems = items.filter((i) => i.active !== false);
+  const archivedItems = items.filter((i) => i.active === false);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +80,17 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
     setModalOpen(false);
   }
 
-  const handleRemove = useCallback((id: number) => {
+  const handleArchive = useCallback((id: number) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, active: false } : i)));
+    setSaveStatus("idle");
+  }, []);
+
+  const handleRestore = useCallback((id: number) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, active: true } : i)));
+    setSaveStatus("idle");
+  }, []);
+
+  const handleDelete = useCallback((id: number) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
     setSaveStatus("idle");
   }, []);
@@ -98,6 +112,54 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
     }
   }, [sectionKey, items, authHeaders]);
 
+  function renderItemRow(item: ItemDraft, isArchived: boolean) {
+    return (
+      <ListGroup.Item
+        key={item.id}
+        className={`bg-dark border-secondary d-flex justify-content-between align-items-center gap-2${isArchived ? " opacity-50" : ""}`}
+      >
+        <span className="d-flex align-items-center gap-2 flex-grow-1 text-truncate">
+          {item.image && (
+            <span className="d-inline-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
+              {imageErrors.has(item.id) ? (
+                <span role="img" aria-label={`Image unavailable for ${item.name}`}>🖼</span>
+              ) : (
+                <img
+                  src={item.image} alt={item.name}
+                  style={{ width: 32, height: 32, objectFit: "contain" }}
+                  onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
+                />
+              )}
+            </span>
+          )}
+          <span className={`text-truncate ${isArchived ? "text-secondary" : "text-light"}`}>{item.name}</span>
+          <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
+        </span>
+        <span className="d-flex gap-1 flex-shrink-0">
+          {!isArchived && (
+            <Button variant="outline-secondary" size="sm" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}>
+              <i className="bi bi-pencil" aria-hidden="true" />
+            </Button>
+          )}
+          {!isArchived ? (
+            <Button variant="outline-secondary" size="sm" onClick={() => handleArchive(item.id)} aria-label={`${m.admin_content_archive()} ${item.name}`} title={m.admin_content_archive()}>
+              <i className="bi bi-archive" aria-hidden="true" />
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline-success" size="sm" onClick={() => handleRestore(item.id)} aria-label={`${m.admin_content_restore()} ${item.name}`} title={m.admin_content_restore()}>
+                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+              </Button>
+              <Button variant="outline-danger" size="sm" onClick={() => handleDelete(item.id)} aria-label={`${m.admin_delete()} ${item.name}`}>
+                <i className="bi bi-trash" aria-hidden="true" />
+              </Button>
+            </>
+          )}
+        </span>
+      </ListGroup.Item>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="text-center py-3">
@@ -112,7 +174,10 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="mb-0 text-warning">
           {title}
-          <Badge bg="secondary" className="ms-2">{items.length}</Badge>
+          <Badge bg="secondary" className="ms-2">{activeItems.length}</Badge>
+          {archivedItems.length > 0 && (
+            <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">{archivedItems.length} archived</Badge>
+          )}
         </h6>
         <div className="d-flex gap-2">
           <Button variant="outline-secondary" size="sm" onClick={openAdd}>
@@ -139,45 +204,35 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       )}
 
       <ListGroup variant="flush" className="mb-2">
-        {items.length === 0 ? (
+        {activeItems.length === 0 ? (
           <ListGroup.Item className="bg-dark text-secondary fst-italic">
-            {m.admin_content_fallback_note()}
+            {m.admin_content_no_active_items()}
           </ListGroup.Item>
         ) : (
-          items.map((item) => (
-            <ListGroup.Item
-              key={item.id}
-              className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-2"
-            >
-              <span className="d-flex align-items-center gap-2 flex-grow-1 text-truncate">
-                {item.image && (
-                  <span className="d-inline-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
-                    {imageErrors.has(item.id) ? (
-                      <span role="img" aria-label={`Image unavailable for ${item.name}`}>🖼</span>
-                    ) : (
-                      <img
-                        src={item.image} alt={item.name}
-                        style={{ width: 32, height: 32, objectFit: "contain" }}
-                        onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
-                      />
-                    )}
-                  </span>
-                )}
-                <span className="text-truncate">{item.name}</span>
-                <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
-              </span>
-              <span className="d-flex gap-1 flex-shrink-0">
-                <Button variant="outline-secondary" size="sm" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}>
-                  <i className="bi bi-pencil" aria-hidden="true" />
-                </Button>
-                <Button variant="outline-danger" size="sm" onClick={() => handleRemove(item.id)} aria-label={`${m.admin_delete()} ${item.name}`}>
-                  <i className="bi bi-trash" aria-hidden="true" />
-                </Button>
-              </span>
-            </ListGroup.Item>
-          ))
+          activeItems.map((item) => renderItemRow(item, false))
         )}
       </ListGroup>
+
+      {archivedItems.length > 0 && (
+        <div className="mb-1">
+          <Button
+            variant="link"
+            size="sm"
+            className="text-secondary text-decoration-none p-0 mb-1"
+            onClick={() => setArchivedOpen((o) => !o)}
+            aria-expanded={archivedOpen}
+          >
+            <i className={`bi bi-chevron-${archivedOpen ? "down" : "right"} me-1`} aria-hidden="true" />
+            {m.admin_content_archived_section()}
+            <Badge bg="secondary" className="ms-2">{archivedItems.length}</Badge>
+          </Button>
+          {archivedOpen && (
+            <ListGroup variant="flush">
+              {archivedItems.map((item) => renderItemRow(item, true))}
+            </ListGroup>
+          )}
+        </div>
+      )}
 
       <ItemModal show={modalOpen} initial={modalItem} onSave={handleModalSave} onHide={() => setModalOpen(false)} />
     </div>

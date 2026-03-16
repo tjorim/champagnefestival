@@ -4,7 +4,9 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
+import Select, { type MultiValue, type StylesConfig, type GroupBase } from "react-select";
 import { m } from "../../paraglide/messages";
+import type { ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
 
 interface EditionModalProps {
@@ -13,6 +15,41 @@ interface EditionModalProps {
   authHeaders: () => Record<string, string>;
   onSaved: (edition: Edition) => void;
   onHide: () => void;
+}
+
+interface ItemOption {
+  value: number;
+  label: string;
+  isArchived: boolean;
+}
+
+type ItemSelectStyles = StylesConfig<ItemOption, true, GroupBase<ItemOption>>;
+
+const darkSelectStyles: ItemSelectStyles = {
+  control: (base) => ({ ...base, backgroundColor: "#212529", borderColor: "#6c757d", color: "#f8f9fa", minHeight: "34px" }),
+  menu: (base) => ({ ...base, backgroundColor: "#212529", border: "1px solid #6c757d", zIndex: 9999 }),
+  option: (base, state) => ({ ...base, backgroundColor: state.isFocused ? "#343a40" : "#212529", color: state.data.isArchived ? "#6c757d" : "#f8f9fa", cursor: "pointer" }),
+  multiValue: (base, state) => ({ ...base, backgroundColor: state.data.isArchived ? "#343a40" : "#495057" }),
+  multiValueLabel: (base, state) => ({ ...base, color: state.data.isArchived ? "#adb5bd" : "#f8f9fa", fontSize: "0.8rem" }),
+  multiValueRemove: (base) => ({ ...base, color: "#adb5bd", ":hover": { backgroundColor: "#dc3545", color: "white" } }),
+  input: (base) => ({ ...base, color: "#f8f9fa" }),
+  placeholder: (base) => ({ ...base, color: "#6c757d" }),
+  indicatorSeparator: (base) => ({ ...base, backgroundColor: "#6c757d" }),
+  dropdownIndicator: (base) => ({ ...base, color: "#6c757d" }),
+  clearIndicator: (base) => ({ ...base, color: "#6c757d" }),
+  groupHeading: (base) => ({ ...base, color: "#adb5bd", fontSize: "0.7rem" }),
+  noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
+};
+
+function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
+  const active: ItemOption[] = [];
+  const archived: ItemOption[] = [];
+  for (const item of items) {
+    const opt: ItemOption = { value: item.id, label: item.name, isArchived: item.active === false };
+    if (item.active === false) archived.push(opt);
+    else active.push(opt);
+  }
+  return { active, archived };
 }
 
 export default function EditionModal({ show, initial, authHeaders, onSaved, onHide }: EditionModalProps) {
@@ -31,25 +68,81 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [allProducers, setAllProducers] = useState<ItemDraft[]>([]);
+  const [allSponsors, setAllSponsors] = useState<ItemDraft[]>([]);
+  const [selectedProducers, setSelectedProducers] = useState<MultiValue<ItemOption>>([]);
+  const [selectedSponsors, setSelectedSponsors] = useState<MultiValue<ItemOption>>([]);
+
   useEffect(() => {
-    if (show) {
-      setId(initial?.id ?? "");
-      setYear(initial?.year ?? new Date().getFullYear());
-      setMonth(initial?.month ?? "");
-      setFriday(initial?.friday ?? "");
-      setSaturday(initial?.saturday ?? "");
-      setSunday(initial?.sunday ?? "");
-      setVenueName(initial?.venue_name ?? "");
-      setVenueAddress(initial?.venue_address ?? "");
-      setVenueCity(initial?.venue_city ?? "");
-      setVenuePostalCode(initial?.venue_postal_code ?? "");
-      setVenueCountry(initial?.venue_country ?? "");
-      setActive(initial?.active ?? true);
-      setError(null);
+    if (!show) return;
+    setId(initial?.id ?? "");
+    setYear(initial?.year ?? new Date().getFullYear());
+    setMonth(initial?.month ?? "");
+    setFriday(initial?.friday ?? "");
+    setSaturday(initial?.saturday ?? "");
+    setSunday(initial?.sunday ?? "");
+    setVenueName(initial?.venue_name ?? "");
+    setVenueAddress(initial?.venue_address ?? "");
+    setVenueCity(initial?.venue_city ?? "");
+    setVenuePostalCode(initial?.venue_postal_code ?? "");
+    setVenueCountry(initial?.venue_country ?? "");
+    setActive(initial?.active ?? true);
+    setError(null);
+
+    // Fetch item pools when the modal opens
+    async function fetchItems() {
+      try {
+        const [pRes, sRes] = await Promise.all([
+          fetch("/api/content/producers"),
+          fetch("/api/content/sponsors"),
+        ]);
+        if (pRes.ok) {
+          const pData = (await pRes.json()) as { value: ItemDraft[] };
+          if (Array.isArray(pData.value)) setAllProducers(pData.value);
+        }
+        if (sRes.ok) {
+          const sData = (await sRes.json()) as { value: ItemDraft[] };
+          if (Array.isArray(sData.value)) setAllSponsors(sData.value);
+        }
+      } catch {
+        // non-critical; selects will just be empty
+      }
     }
+    fetchItems();
   }, [show, initial]);
 
+  // Sync selections once pools are loaded
+  useEffect(() => {
+    if (allProducers.length === 0) return;
+    const ids = new Set(initial?.producers ?? []);
+    const { active: act, archived: arch } = toOptions(allProducers);
+    setSelectedProducers([...act, ...arch].filter((o) => ids.has(o.value)));
+  }, [allProducers, initial]);
+
+  useEffect(() => {
+    if (allSponsors.length === 0) return;
+    const ids = new Set(initial?.sponsors ?? []);
+    const { active: act, archived: arch } = toOptions(allSponsors);
+    setSelectedSponsors([...act, ...arch].filter((o) => ids.has(o.value)));
+  }, [allSponsors, initial]);
+
   const isEdit = !!initial;
+
+  const producerGroups = (() => {
+    const { active: act, archived: arch } = toOptions(allProducers);
+    const groups = [];
+    if (act.length) groups.push({ label: m.admin_content_producers_section(), options: act });
+    if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
+    return groups;
+  })();
+
+  const sponsorGroups = (() => {
+    const { active: act, archived: arch } = toOptions(allSponsors);
+    const groups = [];
+    if (act.length) groups.push({ label: m.admin_content_sponsors_section(), options: act });
+    if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
+    return groups;
+  })();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,6 +157,8 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
         venue_name: venueName.trim(), venue_address: venueAddress.trim(),
         venue_city: venueCity.trim(), venue_postal_code: venuePostalCode.trim(),
         venue_country: venueCountry.trim(), active,
+        producers: selectedProducers.map((o) => o.value),
+        sponsors: selectedSponsors.map((o) => o.value),
       };
       if (!isEdit) body.id = id.trim();
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
@@ -146,11 +241,37 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
             <Form.Control size="sm" placeholder="Venue name" value={venueName} onChange={(e) => setVenueName(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "180px", flex: "2 1 180px" }} />
             <Form.Control size="sm" placeholder="Address" value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "180px", flex: "2 1 180px" }} />
           </div>
-          <div className="d-flex gap-2 flex-wrap">
+          <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Control size="sm" placeholder="City" value={venueCity} onChange={(e) => setVenueCity(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "120px", flex: "1 1 120px" }} />
             <Form.Control size="sm" placeholder="Postal code" value={venuePostalCode} onChange={(e) => setVenuePostalCode(e.target.value)} className="bg-dark text-light border-secondary" style={{ maxWidth: "110px" }} />
             <Form.Control size="sm" placeholder="Country" value={venueCountry} onChange={(e) => setVenueCountry(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "110px", flex: "1 1 110px" }} />
           </div>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_producers_label()}</Form.Label>
+            <Select<ItemOption, true, GroupBase<ItemOption>>
+              isMulti
+              options={producerGroups}
+              value={selectedProducers}
+              onChange={setSelectedProducers}
+              styles={darkSelectStyles}
+              placeholder={m.admin_content_edition_producers_placeholder()}
+              classNamePrefix="rs"
+            />
+          </Form.Group>
+
+          <Form.Group>
+            <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_sponsors_label()}</Form.Label>
+            <Select<ItemOption, true, GroupBase<ItemOption>>
+              isMulti
+              options={sponsorGroups}
+              value={selectedSponsors}
+              onChange={setSelectedSponsors}
+              styles={darkSelectStyles}
+              placeholder={m.admin_content_edition_sponsors_placeholder()}
+              classNamePrefix="rs"
+            />
+          </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="outline-secondary" size="sm" onClick={onHide}>{m.close()}</Button>

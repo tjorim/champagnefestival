@@ -104,6 +104,12 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
           {edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}
         </Badge>
         <Badge bg="secondary">{edition.schedule.length} events</Badge>
+        {(edition.producers?.length ?? 0) > 0 && (
+          <Badge bg="secondary">{edition.producers!.length} producers</Badge>
+        )}
+        {(edition.sponsors?.length ?? 0) > 0 && (
+          <Badge bg="secondary">{edition.sponsors!.length} sponsors</Badge>
+        )}
         {saving && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
           <span className="text-danger small">

@@ -8,6 +8,7 @@ export interface ItemDraft {
   id: number;
   name: string;
   image: string;
+  active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
 }
 
 interface ItemModalProps {
@@ -31,7 +32,7 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !image.trim()) return;
-    onSave({ id: initial?.id ?? Date.now(), name: name.trim(), image: image.trim() });
+    onSave({ id: initial?.id ?? Date.now(), name: name.trim(), image: image.trim(), active: initial?.active ?? true });
   }
 
   return (
