@@ -66,7 +66,7 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
         venue_country: venueCountry.trim(), active,
       };
       if (!isEdit) body.id = id.trim();
-      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
       if (res.ok) {
         onSaved((await res.json()) as Edition);
       } else {
