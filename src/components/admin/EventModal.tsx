@@ -46,8 +46,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
       setLocation(ev.location ?? "");
       setPresenter(ev.presenter ?? "");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show]);
+  }, [show, initial]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
