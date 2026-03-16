@@ -33,8 +33,8 @@ const MIN_CANVAS_PX = 280;
 
 function getTableSize(table: Table): { w: number; l: number } {
   return {
-    w: Math.max(32, Math.round(table.widthM * PX_PER_M)),
-    l: Math.max(32, Math.round(table.lengthM * PX_PER_M)),
+    w: Math.max(32, Math.round(table.lengthM * PX_PER_M)),
+    l: Math.max(32, Math.round(table.widthM * PX_PER_M)),
   };
 }
 
