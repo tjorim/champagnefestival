@@ -227,6 +227,8 @@
   "admin_actions_label": "Actions",
   "admin_payment_label": "Payment",
   "admin_error_load_data": "Failed to load data. Check your connection.",
+  "admin_error_load_dashboard": "Failed to load admin dashboard",
+  "admin_error_load_checkin": "Failed to load check-in page",
   "admin_error_update_reservation": "Failed to update reservation.",
   "admin_error_update_payment": "Failed to update payment status.",
   "admin_error_assign_table": "Failed to assign table.",

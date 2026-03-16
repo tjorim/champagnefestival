@@ -112,7 +112,7 @@ function AdminPage() {
       </a>
       <StandaloneNavBar iconClass="bi bi-shield-lock" title={m.admin_title()} />
       <main id="main-content">
-        <AppSuspense errorFallbackText="Failed to load admin dashboard">
+        <AppSuspense errorFallbackText={m.admin_error_load_dashboard()}>
           <AdminDashboard visible={true} />
         </AppSuspense>
       </main>
@@ -129,7 +129,7 @@ function CheckInRoute() {
       </a>
       <StandaloneNavBar iconClass="bi bi-qr-code-scan" title={m.checkin_title()} />
       <main id="main-content">
-        <AppSuspense errorFallbackText="Failed to load check-in page">
+        <AppSuspense errorFallbackText={m.admin_error_load_checkin()}>
           <CheckInPage />
         </AppSuspense>
       </main>

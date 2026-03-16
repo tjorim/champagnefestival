@@ -227,6 +227,8 @@
   "admin_actions_label": "Actions",
   "admin_payment_label": "Paiement",
   "admin_error_load_data": "Échec du chargement. Vérifiez votre connexion.",
+  "admin_error_load_dashboard": "Échec du chargement du tableau de bord admin",
+  "admin_error_load_checkin": "Échec du chargement de la page d'enregistrement",
   "admin_error_update_reservation": "Échec de la mise à jour de la réservation.",
   "admin_error_update_payment": "Échec de la mise à jour du statut de paiement.",
   "admin_error_assign_table": "Échec de l'assignation de la table.",

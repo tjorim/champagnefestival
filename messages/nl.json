@@ -227,6 +227,8 @@
   "admin_actions_label": "Acties",
   "admin_payment_label": "Betaling",
   "admin_error_load_data": "Laden mislukt. Controleer uw verbinding.",
+  "admin_error_load_dashboard": "Beheerdersdashboard laden mislukt",
+  "admin_error_load_checkin": "Inchecken pagina laden mislukt",
   "admin_error_update_reservation": "Reservatie bijwerken mislukt.",
   "admin_error_update_payment": "Betalingsstatus bijwerken mislukt.",
   "admin_error_assign_table": "Tafel toewijzen mislukt.",
