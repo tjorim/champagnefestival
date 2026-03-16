@@ -729,3 +729,59 @@ async def test_people_crud_roles_and_filters(client):
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# Champagne lovers (admin convenience endpoint)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_champagne_lovers_require_auth(client):
+    r = await client.get("/api/champagne-lovers")
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_champagne_lovers_crud(client):
+    payload = {
+        "name": "Lieve Janssens",
+        "email": "lieve@example.com",
+        "phone": "+32475555111",
+        "address": "Spuiplein 1, Bredene",
+        "roles": ["festival-visitor"],
+        "club_name": "Champagne Lovers",
+        "notes": "Prefers capsule exchange events.",
+        "active": True,
+    }
+
+    r = await client.post("/api/champagne-lovers", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    person = r.json()
+    assert "club-member" in person["roles"]
+
+    person_id = person["id"]
+
+    r = await client.get(
+        "/api/champagne-lovers", params={"q": "spui"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.put(
+        f"/api/champagne-lovers/{person_id}",
+        json={"roles": ["treasurer"], "active": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert "club-member" in r.json()["roles"]
+    assert r.json()["active"] is False
+
+    r = await client.get(
+        "/api/champagne-lovers", params={"active": "false"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.delete(f"/api/champagne-lovers/{person_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204

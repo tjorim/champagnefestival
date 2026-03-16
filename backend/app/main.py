@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import create_tables
 from app.routers import (
+    champagne_lovers,
     check_in,
     contact,
     content,
@@ -83,6 +84,7 @@ app.add_middleware(
 )
 
 app.include_router(reservations.router)
+app.include_router(champagne_lovers.router)
 app.include_router(check_in.router)
 app.include_router(contact.router)
 app.include_router(tables.router)
