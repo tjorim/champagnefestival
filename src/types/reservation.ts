@@ -71,7 +71,7 @@ export interface Table {
   widthM: number;
   /** Physical height in metres (rectangle); equals widthM for round tables */
   heightM: number;
-  /** Rotation angle in degrees (clockwise) */
+  /** Rotation angle in whole degrees [0, 359], clockwise */
   rotation: number;
   reservationIds: string[];
 }

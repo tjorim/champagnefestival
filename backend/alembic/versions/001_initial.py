@@ -53,7 +53,7 @@ def upgrade() -> None:
         sa.Column("shape", sa.String(20), nullable=False, server_default="rectangle"),
         sa.Column("width_m", sa.Float, nullable=False, server_default="1.8"),
         sa.Column("height_m", sa.Float, nullable=False, server_default="0.7"),
-        sa.Column("rotation", sa.Float, nullable=False, server_default="0"),
+        sa.Column("rotation", sa.Integer, nullable=False, server_default="0"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

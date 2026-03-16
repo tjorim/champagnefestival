@@ -142,8 +142,8 @@ class Table(Base):
     height_m: Mapped[float] = mapped_column(default=0.7)
     """Physical height in metres (for round tables: same as width_m)."""
 
-    rotation: Mapped[float] = mapped_column(Float, default=0.0)
-    """Rotation angle in degrees (0-360), clockwise."""
+    rotation: Mapped[int] = mapped_column(Integer, default=0)
+    """Rotation angle in whole degrees [0, 359], clockwise."""
 
     # JSON-encoded list of reservation ID strings
     reservation_ids: Mapped[str] = mapped_column(Text, default="[]")

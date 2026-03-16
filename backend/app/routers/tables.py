@@ -100,7 +100,7 @@ async def update_table(
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
     # Nullable / zero-valid fields: must use model_fields_set so that an
-    # explicit null (room_id=null to unassign) or an explicit zero
+    # explicit null (room_id=null to unassign) or an explicit zero degrees
     # (rotation=0) is honoured even though the value is falsy.
     if "room_id" in body.model_fields_set:
         t.room_id = body.room_id
