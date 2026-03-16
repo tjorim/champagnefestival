@@ -70,6 +70,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       const idx = prev.findIndex((i) => i.id === item.id);
       return idx >= 0 ? prev.map((i) => (i.id === item.id ? item : i)) : [...prev, item];
     });
+    setImageErrors((prev) => { const copy = new Set(prev); copy.delete(item.id); return copy; });
     setSaveStatus("idle");
     setModalOpen(false);
   }
