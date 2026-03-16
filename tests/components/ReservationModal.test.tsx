@@ -62,24 +62,12 @@ describe("ReservationModal component", () => {
   });
 
   it("does not render when show=false", () => {
-    render(
-      <ReservationModal
-        show={false}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={false} onHide={() => {}} reservableEvents={reservableEvents} />);
     expect(screen.queryByText("VIP Reservation")).not.toBeInTheDocument();
   });
 
   it("renders the modal when show=true", () => {
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
     expect(screen.getByText("VIP Reservation")).toBeInTheDocument();
     expect(screen.getByLabelText(/Name \*/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email \*/i)).toBeInTheDocument();
@@ -87,25 +75,13 @@ describe("ReservationModal component", () => {
   });
 
   it("shows all reservable events in the event dropdown", () => {
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
     expect(screen.getByText("VIP Reception")).toBeInTheDocument();
     expect(screen.getByText("Champagne Party")).toBeInTheDocument();
   });
 
   it("shows validation errors when submitting empty form", async () => {
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
 
@@ -118,13 +94,7 @@ describe("ReservationModal component", () => {
   });
 
   it("shows email validation error for invalid email", async () => {
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), {
       target: { value: "John Doe" },
@@ -141,13 +111,7 @@ describe("ReservationModal component", () => {
   });
 
   it("clears field error when the user starts typing", async () => {
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
 
     fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
     await waitFor(() => {
@@ -166,17 +130,13 @@ describe("ReservationModal component", () => {
       json: async () => ({ success: true, id: "res_123" }),
     });
 
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
-    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), { target: { value: "+32 123 456 789" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
     fireEvent.change(screen.getByLabelText(/Event \*/i), { target: { value: "fri-vip" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
@@ -192,17 +152,13 @@ describe("ReservationModal component", () => {
       json: async () => ({ error: "Server error" }),
     });
 
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
-    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), { target: { value: "+32 123 456 789" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
     fireEvent.change(screen.getByLabelText(/Event \*/i), { target: { value: "fri-vip" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
@@ -215,17 +171,13 @@ describe("ReservationModal component", () => {
   it("shows network error when fetch throws", async () => {
     fetchMock.mockRejectedValueOnce(new Error("Network failure"));
 
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
-    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), { target: { value: "+32 123 456 789" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
     fireEvent.change(screen.getByLabelText(/Event \*/i), { target: { value: "fri-vip" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
@@ -236,26 +188,14 @@ describe("ReservationModal component", () => {
   });
 
   it("shows pre-order products", () => {
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
     expect(screen.getByText("Champagne Bottle (Standard) - EUR65")).toBeInTheDocument();
     expect(screen.getByText("Champagne Bottle (Prestige) - EUR120")).toBeInTheDocument();
     expect(screen.getByText("Glass of Champagne - EUR12")).toBeInTheDocument();
   });
 
   it("increments product quantity", () => {
-    render(
-      <ReservationModal
-        show={true}
-        onHide={() => {}}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
     const plusButtons = screen.getAllByRole("button", { name: /Increase quantity/i });
     fireEvent.click(plusButtons[0]);
 
@@ -265,13 +205,7 @@ describe("ReservationModal component", () => {
 
   it("calls onHide when close button is clicked", () => {
     const onHide = vi.fn();
-    render(
-      <ReservationModal
-        show={true}
-        onHide={onHide}
-        reservableEvents={reservableEvents}
-      />,
-    );
+    render(<ReservationModal show={true} onHide={onHide} reservableEvents={reservableEvents} />);
     const closeButton = screen.getByRole("button", { name: /close/i });
     fireEvent.click(closeButton);
     expect(onHide).toHaveBeenCalled();

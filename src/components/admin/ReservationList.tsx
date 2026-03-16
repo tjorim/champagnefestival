@@ -6,7 +6,12 @@ import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { m } from "../../paraglide/messages";
-import type { Reservation, Table as TableType, ReservationStatus, PaymentStatus } from "../../types/reservation";
+import type {
+  Reservation,
+  Table as TableType,
+  ReservationStatus,
+  PaymentStatus,
+} from "../../types/reservation";
 
 interface ReservationListProps {
   reservations: Reservation[];
@@ -73,9 +78,7 @@ export default function ReservationList({
   onAssignTable,
   onViewDetail,
 }: ReservationListProps) {
-  const filtered = reservations.filter(
-    (r) => filter === "all" || r.status === filter,
-  );
+  const filtered = reservations.filter((r) => filter === "all" || r.status === filter);
 
   const handleAssignTable = useCallback(
     (reservationId: string, tableId: string) => {
@@ -99,8 +102,7 @@ export default function ReservationList({
             variant={filter === "pending" ? "warning" : "outline-secondary"}
             onClick={() => onFilterChange("pending")}
           >
-            {m.admin_filter_pending()} (
-            {reservations.filter((r) => r.status === "pending").length})
+            {m.admin_filter_pending()} ({reservations.filter((r) => r.status === "pending").length})
           </Button>
           <Button
             variant={filter === "confirmed" ? "warning" : "outline-secondary"}
@@ -144,12 +146,12 @@ export default function ReservationList({
                         </div>
                       )}
                     </td>
-                    <td className="d-none d-md-table-cell small">{res.eventTitle || res.eventId}</td>
+                    <td className="d-none d-md-table-cell small">
+                      {res.eventTitle || res.eventId}
+                    </td>
                     <td>{res.guestCount}</td>
                     <td>
-                      <Badge bg={statusBadgeVariant(res.status)}>
-                        {statusLabel(res.status)}
-                      </Badge>
+                      <Badge bg={statusBadgeVariant(res.status)}>{statusLabel(res.status)}</Badge>
                     </td>
                     <td className="d-none d-lg-table-cell">
                       <Badge bg={paymentBadgeVariant(res.paymentStatus)}>

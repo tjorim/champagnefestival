@@ -1,8 +1,11 @@
 """Async SQLAlchemy engine and session factory."""
 
+import logging
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from sqlalchemy import event
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -12,7 +15,22 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 _is_sqlite = settings.database_url.startswith("sqlite")
+
+if _is_sqlite:
+    _db_path = make_url(settings.database_url).database or ""
+    if _db_path and _db_path != ":memory:":
+        _parent = Path(_db_path).parent
+        try:
+            _parent.mkdir(parents=True, exist_ok=True)
+            logger.info(f"✓ SQLite data directory ready: {_parent}")
+        except (PermissionError, OSError) as e:
+            raise RuntimeError(
+                f"Cannot create SQLite data directory {_parent}: {e}"
+            ) from e
+
 engine = create_async_engine(
     settings.database_url,
     # echo=True,  # uncomment for SQL query logging during development

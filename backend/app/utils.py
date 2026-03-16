@@ -3,7 +3,7 @@
 import secrets
 import time
 
-from app.models import Reservation, Room, Table
+from app.models import Edition, Reservation, Room, Table
 
 
 def make_id(prefix: str) -> str:
@@ -118,4 +118,26 @@ def room_to_dict(r: Room) -> dict:
         "color": r.color,
         "created_at": r.created_at,
         "updated_at": r.updated_at,
+    }
+
+
+def edition_to_dict(e: Edition) -> dict:
+    return {
+        "id": e.id,
+        "year": e.year,
+        "month": e.month,
+        "friday": e.friday.isoformat(),
+        "saturday": e.saturday.isoformat(),
+        "sunday": e.sunday.isoformat(),
+        "venue_name": e.venue_name,
+        "venue_address": e.venue_address,
+        "venue_city": e.venue_city,
+        "venue_postal_code": e.venue_postal_code,
+        "venue_country": e.venue_country,
+        "venue_lat": e.venue_lat,
+        "venue_lng": e.venue_lng,
+        "schedule": e.get_schedule(),
+        "active": e.active,
+        "created_at": e.created_at,
+        "updated_at": e.updated_at,
     }

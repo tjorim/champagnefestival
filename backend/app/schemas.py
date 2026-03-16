@@ -1,6 +1,6 @@
 """Pydantic request / response schemas."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -272,6 +272,85 @@ class RoomOut(BaseModel):
     width_m: float
     height_m: float
     color: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Editions
+# ---------------------------------------------------------------------------
+
+
+class ScheduleEventIn(BaseModel):
+    id: str
+    title: str
+    start_time: str
+    end_time: str | None = None
+    description: str = ""
+    reservation: bool = False
+    reservations_open_from: datetime | None = None
+    location: str | None = None
+    presenter: str | None = None
+    category: str
+    day_id: int
+
+
+ScheduleEventOut = ScheduleEventIn
+
+
+class EditionCreate(BaseModel):
+    id: str = Field(min_length=1, max_length=100)
+    year: int = Field(ge=2020, le=2100)
+    month: str
+    friday: date
+    saturday: date
+    sunday: date
+    venue_name: str = ""
+    venue_address: str = ""
+    venue_city: str = ""
+    venue_postal_code: str = ""
+    venue_country: str = ""
+    venue_lat: float = 0.0
+    venue_lng: float = 0.0
+    schedule: list[ScheduleEventIn] = Field(default_factory=list)
+    active: bool = True
+
+
+class EditionUpdate(BaseModel):
+    year: int | None = Field(default=None, ge=2020, le=2100)
+    month: str | None = None
+    friday: date | None = None
+    saturday: date | None = None
+    sunday: date | None = None
+    venue_name: str | None = None
+    venue_address: str | None = None
+    venue_city: str | None = None
+    venue_postal_code: str | None = None
+    venue_country: str | None = None
+    venue_lat: float | None = None
+    venue_lng: float | None = None
+    schedule: list[ScheduleEventIn] | None = None
+    active: bool | None = None
+
+
+class EditionOut(BaseModel):
+    id: str
+    year: int
+    month: str
+    friday: date
+    saturday: date
+    sunday: date
+    venue_name: str
+    venue_address: str
+    venue_city: str
+    venue_postal_code: str
+    venue_country: str
+    venue_lat: float
+    venue_lng: float
+    schedule: list[ScheduleEventOut]
+    active: bool
     created_at: datetime
     updated_at: datetime
 

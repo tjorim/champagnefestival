@@ -347,7 +347,10 @@ export default function ReservationModal({
                       >
                         <i className="bi bi-dash" aria-hidden="true" />
                       </Button>
-                      <span className="text-light" style={{ minWidth: "1.5rem", textAlign: "center" }}>
+                      <span
+                        className="text-light"
+                        style={{ minWidth: "1.5rem", textAlign: "center" }}
+                      >
                         {qty}
                       </span>
                       <Button
@@ -394,7 +397,14 @@ export default function ReservationModal({
             >
               {isSubmitting ? (
                 <>
-                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                    className="me-2"
+                  />
                   {m.reservation_submitting()}
                 </>
               ) : (

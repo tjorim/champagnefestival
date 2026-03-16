@@ -1,9 +1,9 @@
 """SQLAlchemy ORM models."""
 
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -146,3 +146,52 @@ class Table(Base):
 
     def set_reservation_ids(self, ids: list[str]) -> None:
         self.reservation_ids = json.dumps(ids)
+
+
+class Edition(Base):
+    """A festival edition (e.g. 2026-march).
+
+    Stores the dates of the three festival days, venue information, and a
+    JSON-encoded schedule of events.
+    """
+
+    __tablename__ = "editions"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    """Slug-style identifier, e.g. '2026-march'."""
+
+    year: Mapped[int] = mapped_column(Integer)
+    month: Mapped[str] = mapped_column(String(20))
+    friday: Mapped[date] = mapped_column(Date)
+    saturday: Mapped[date] = mapped_column(Date)
+    sunday: Mapped[date] = mapped_column(Date)
+
+    venue_name: Mapped[str] = mapped_column(String(200), default="")
+    venue_address: Mapped[str] = mapped_column(String(200), default="")
+    venue_city: Mapped[str] = mapped_column(String(100), default="")
+    venue_postal_code: Mapped[str] = mapped_column(String(20), default="")
+    venue_country: Mapped[str] = mapped_column(String(100), default="")
+    venue_lat: Mapped[float] = mapped_column(Float, default=0.0)
+    venue_lng: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # JSON-encoded list of schedule event dicts
+    schedule: Mapped[str] = mapped_column(Text, default="[]")
+
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def get_schedule(self) -> list[dict]:
+        return json.loads(self.schedule) if self.schedule else []
+
+    def set_schedule(self, events: list[dict]) -> None:
+        self.schedule = json.dumps(events)

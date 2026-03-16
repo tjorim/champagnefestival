@@ -50,7 +50,4 @@ export const FOOD_PRODUCTS: Product[] = [
   },
 ];
 
-export const ALL_PRODUCTS: Product[] = [
-  ...CHAMPAGNE_PRODUCTS,
-  ...FOOD_PRODUCTS,
-];
+export const ALL_PRODUCTS: Product[] = [...CHAMPAGNE_PRODUCTS, ...FOOD_PRODUCTS];

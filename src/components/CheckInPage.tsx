@@ -8,7 +8,12 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "../paraglide/messages";
-import type { Reservation, OrderItemCategory, ReservationStatus, PaymentStatus } from "../types/reservation";
+import type {
+  Reservation,
+  OrderItemCategory,
+  ReservationStatus,
+  PaymentStatus,
+} from "../types/reservation";
 
 export default function CheckInPage() {
   const [searchParams] = useSearchParams();
@@ -21,66 +26,69 @@ export default function CheckInPage() {
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
 
-  const lookUpReservation = useCallback(async (signal: AbortSignal) => {
-    if (!reservationId || !checkInToken) return;
+  const lookUpReservation = useCallback(
+    async (signal: AbortSignal) => {
+      if (!reservationId || !checkInToken) return;
 
-    // Reset previous state before fetching to avoid showing stale guest data.
-    setReservation(null);
-    setSuccess(false);
-    setAlreadyCheckedIn(false);
-    setIsLoading(true);
-    setError("");
+      // Reset previous state before fetching to avoid showing stale guest data.
+      setReservation(null);
+      setSuccess(false);
+      setAlreadyCheckedIn(false);
+      setIsLoading(true);
+      setError("");
 
-    try {
-      const response = await fetch(
-        `/api/check-in/${encodeURIComponent(reservationId)}?token=${encodeURIComponent(checkInToken)}`,
-        { signal },
-      );
+      try {
+        const response = await fetch(
+          `/api/check-in/${encodeURIComponent(reservationId)}?token=${encodeURIComponent(checkInToken)}`,
+          { signal },
+        );
 
-      if (response.status === 401 || response.status === 404) {
-        setError(m.checkin_not_found());
-      } else if (response.ok) {
-        const data = await response.json() as Record<string, unknown>;
-        const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
-        const res: Reservation = {
-          id: data.id as string,
-          name: data.name as string,
-          email: "",
-          phone: "",
-          eventId: (data.event_id ?? "") as string,
-          eventTitle: (data.event_title ?? "") as string,
-          guestCount: (data.guest_count ?? 1) as number,
-          preOrders: rawOrders.map((item) => ({
-            productId: (item.product_id ?? item.productId) as string,
-            name: item.name as string,
-            quantity: item.quantity as number,
-            price: item.price as number,
-            category: item.category as OrderItemCategory,
-            delivered: (item.delivered ?? false) as boolean,
-          })),
-          notes: (data.notes ?? "") as string,
-          status: (data.status ?? "pending") as ReservationStatus,
-          paymentStatus: "unpaid",  // not included in CheckInGuestOut
-          checkedIn: (data.checked_in ?? false) as boolean,
-          checkedInAt: data.checked_in_at as string | undefined,
-          strapIssued: (data.strap_issued ?? false) as boolean,
-          createdAt: "",  // not included in CheckInGuestOut
-          updatedAt: "",  // not included in CheckInGuestOut
-        };
-        setReservation(res);
-        if (res.checkedIn) {
-          setAlreadyCheckedIn(true);
+        if (response.status === 401 || response.status === 404) {
+          setError(m.checkin_not_found());
+        } else if (response.ok) {
+          const data = (await response.json()) as Record<string, unknown>;
+          const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
+          const res: Reservation = {
+            id: data.id as string,
+            name: data.name as string,
+            email: "",
+            phone: "",
+            eventId: (data.event_id ?? "") as string,
+            eventTitle: (data.event_title ?? "") as string,
+            guestCount: (data.guest_count ?? 1) as number,
+            preOrders: rawOrders.map((item) => ({
+              productId: (item.product_id ?? item.productId) as string,
+              name: item.name as string,
+              quantity: item.quantity as number,
+              price: item.price as number,
+              category: item.category as OrderItemCategory,
+              delivered: (item.delivered ?? false) as boolean,
+            })),
+            notes: (data.notes ?? "") as string,
+            status: (data.status ?? "pending") as ReservationStatus,
+            paymentStatus: "unpaid", // not included in CheckInGuestOut
+            checkedIn: (data.checked_in ?? false) as boolean,
+            checkedInAt: data.checked_in_at as string | undefined,
+            strapIssued: (data.strap_issued ?? false) as boolean,
+            createdAt: "", // not included in CheckInGuestOut
+            updatedAt: "", // not included in CheckInGuestOut
+          };
+          setReservation(res);
+          if (res.checkedIn) {
+            setAlreadyCheckedIn(true);
+          }
+        } else {
+          setError(m.checkin_error());
         }
-      } else {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setError(m.checkin_error());
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(m.checkin_error());
-    } finally {
-      setIsLoading(false);
-    }
-  }, [reservationId, checkInToken]);
+    },
+    [reservationId, checkInToken],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -104,7 +112,7 @@ export default function CheckInPage() {
       if (response.status === 401) {
         setError(m.checkin_invalid_token());
       } else if (response.ok) {
-        const data = await response.json() as Record<string, unknown>;
+        const data = (await response.json()) as Record<string, unknown>;
         const rawRes = (data.reservation ?? {}) as Record<string, unknown>;
         const rawOrders = (rawRes.pre_orders ?? []) as Record<string, unknown>[];
         const res: Reservation = {
@@ -125,12 +133,12 @@ export default function CheckInPage() {
           })),
           notes: (rawRes.notes ?? "") as string,
           status: (rawRes.status ?? "pending") as ReservationStatus,
-          paymentStatus: "unpaid",  // not included in CheckInGuestOut
+          paymentStatus: "unpaid", // not included in CheckInGuestOut
           checkedIn: (rawRes.checked_in ?? false) as boolean,
           checkedInAt: rawRes.checked_in_at as string | undefined,
           strapIssued: (rawRes.strap_issued ?? false) as boolean,
-          createdAt: "",  // not included in CheckInGuestOut
-          updatedAt: "",  // not included in CheckInGuestOut
+          createdAt: "", // not included in CheckInGuestOut
+          updatedAt: "", // not included in CheckInGuestOut
         };
         setReservation(res);
         setSuccess(true);
@@ -193,8 +201,14 @@ export default function CheckInPage() {
             )}
 
             {reservation && !isLoading && (
-              <Card bg="dark" text="white" border={success ? "success" : alreadyCheckedIn ? "warning" : "secondary"}>
-                <Card.Header className={`d-flex align-items-center justify-content-between ${success ? "border-success" : alreadyCheckedIn ? "border-warning" : "border-secondary"}`}>
+              <Card
+                bg="dark"
+                text="white"
+                border={success ? "success" : alreadyCheckedIn ? "warning" : "secondary"}
+              >
+                <Card.Header
+                  className={`d-flex align-items-center justify-content-between ${success ? "border-success" : alreadyCheckedIn ? "border-warning" : "border-secondary"}`}
+                >
                   <span className="fw-semibold fs-5">
                     <i className="bi bi-person-fill me-2" aria-hidden="true" />
                     {reservation.name}
@@ -227,7 +241,8 @@ export default function CheckInPage() {
                   {alreadyCheckedIn && !success && reservation.checkedInAt && (
                     <Alert variant="warning" className="mb-3">
                       <i className="bi bi-exclamation-circle-fill me-2" aria-hidden="true" />
-                      {m.checkin_already_in()} {new Date(reservation.checkedInAt).toLocaleTimeString()}
+                      {m.checkin_already_in()}{" "}
+                      {new Date(reservation.checkedInAt).toLocaleTimeString()}
                     </Alert>
                   )}
 
@@ -255,8 +270,7 @@ export default function CheckInPage() {
                             className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center"
                           >
                             <span>
-                              {item.name}{" "}
-                              <Badge bg="secondary">×{item.quantity}</Badge>
+                              {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
                             </span>
                             {item.delivered ? (
                               <Badge bg="success">
@@ -282,7 +296,14 @@ export default function CheckInPage() {
                       disabled={isCheckingIn}
                     >
                       {isCheckingIn ? (
-                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                        <Spinner
+                          as="span"
+                          animation="border"
+                          size="sm"
+                          role="status"
+                          aria-hidden="true"
+                          className="me-2"
+                        />
                       ) : (
                         <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
                       )}

@@ -40,6 +40,10 @@ export interface ScheduleEvent {
   endTime?: string;
   description: string;
   reservation?: boolean;
+  /** Earliest date/time from which reservations are accepted for this event.
+   *  Omit (or set to a past date) to open immediately.
+   *  Set to a future date to gate early bookings until announced. */
+  reservationsOpenFrom?: Date;
   location?: string;
   presenter?: string;
   category: "tasting" | "vip" | "party" | "breakfast" | "exchange" | "general";
@@ -171,8 +175,7 @@ const schedule2026March: ScheduleEvent[] = [
     id: "sun-breakfast",
     title: "Champagneontbijt",
     startTime: "09:00",
-    description:
-      "Champagneontbijt ten voordele van een lokaal goed doel (enkel op reservatie).",
+    description: "Champagneontbijt ten voordele van een lokaal goed doel (enkel op reservatie).",
     reservation: true,
     category: "breakfast",
     dayId: 3,
@@ -246,9 +249,7 @@ export function getActiveEdition(): Edition {
     );
   }
   const now = new Date();
-  const sorted = [...editions].sort(
-    (a, b) => a.dates.friday.getTime() - b.dates.friday.getTime(),
-  );
+  const sorted = [...editions].sort((a, b) => a.dates.friday.getTime() - b.dates.friday.getTime());
   return (
     sorted.find((e) => {
       const sundayEnd = new Date(e.dates.sunday);

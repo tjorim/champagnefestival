@@ -60,10 +60,26 @@ export default function ReservationDetail({
       <Modal.Body className="bg-dark text-light">
         {/* Status badges */}
         <div className="d-flex flex-wrap gap-2 mb-3">
-          <Badge bg={reservation.status === "confirmed" ? "success" : reservation.status === "cancelled" ? "danger" : "warning"}>
+          <Badge
+            bg={
+              reservation.status === "confirmed"
+                ? "success"
+                : reservation.status === "cancelled"
+                  ? "danger"
+                  : "warning"
+            }
+          >
             {reservation.status}
           </Badge>
-          <Badge bg={reservation.paymentStatus === "paid" ? "success" : reservation.paymentStatus === "partial" ? "warning" : "secondary"}>
+          <Badge
+            bg={
+              reservation.paymentStatus === "paid"
+                ? "success"
+                : reservation.paymentStatus === "partial"
+                  ? "warning"
+                  : "secondary"
+            }
+          >
             {reservation.paymentStatus}
           </Badge>
           {reservation.checkedIn ? (
@@ -93,7 +109,9 @@ export default function ReservationDetail({
         <ListGroup variant="flush" className="mb-3">
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.reservation_email()}</span>
-            <a href={`mailto:${reservation.email}`} className="text-warning">{reservation.email}</a>
+            <a href={`mailto:${reservation.email}`} className="text-warning">
+              {reservation.email}
+            </a>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.reservation_phone()}</span>
@@ -130,7 +148,9 @@ export default function ReservationDetail({
                 >
                   <span>
                     {item.name}{" "}
-                    <Badge bg="secondary" className="ms-1">×{item.quantity}</Badge>
+                    <Badge bg="secondary" className="ms-1">
+                      ×{item.quantity}
+                    </Badge>
                   </span>
                   <Button
                     size="sm"
@@ -164,21 +184,13 @@ export default function ReservationDetail({
           </h6>
           <div className="d-flex gap-2 flex-wrap">
             {!reservation.checkedIn && (
-              <Button
-                variant="outline-success"
-                size="sm"
-                onClick={() => onCheckIn(reservation.id)}
-              >
+              <Button variant="outline-success" size="sm" onClick={() => onCheckIn(reservation.id)}>
                 <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true" />
                 {m.admin_mark_checked_in()}
               </Button>
             )}
             {!reservation.strapIssued && (
-              <Button
-                variant="outline-info"
-                size="sm"
-                onClick={() => onIssueStrap(reservation.id)}
-              >
+              <Button variant="outline-info" size="sm" onClick={() => onIssueStrap(reservation.id)}>
                 <i className="bi bi-person-badge me-1" aria-hidden="true" />
                 {m.admin_issue_strap()}
               </Button>
@@ -195,12 +207,7 @@ export default function ReservationDetail({
             </h6>
             <p className="text-secondary small mb-3">{m.admin_qr_scan_info()}</p>
             <div className="d-inline-block p-3 bg-white rounded">
-              <QRCodeSVG
-                value={checkInUrl}
-                size={180}
-                level="M"
-                includeMargin={false}
-              />
+              <QRCodeSVG value={checkInUrl} size={180} level="M" includeMargin={false} />
             </div>
             <div className="mt-2">
               <a

@@ -1,4 +1,4 @@
-import React, { lazy, useState } from "react";
+import React, { lazy, useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Link } from "react-router";
 
@@ -13,6 +13,7 @@ import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
 import ReservationModal from "./components/ReservationModal";
 
+import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useLanguage } from "./hooks/useLanguage";
 import { useScrollNavigation } from "./hooks/useScrollNavigation";
 import { useServiceWorker } from "./hooks/useServiceWorker";
@@ -21,7 +22,7 @@ import { m } from "./paraglide/messages";
 import { festivalDate } from "./config/dates";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import { getActiveEdition } from "./config/editions";
+import { editions } from "./config/editions";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -66,10 +67,13 @@ function StandaloneNavBar({ iconClass, title }: { iconClass: string; title: stri
           <i className={`${iconClass} me-2`} aria-hidden="true" />
           {title}
         </span>
-        <Link to="/" className="btn btn-sm btn-outline-secondary">
-          <i className="bi bi-arrow-left me-1" aria-hidden="true" />
-          {m.back_to_site()}
-        </Link>
+        <div className="d-flex gap-2 align-items-center">
+          <LanguageSwitcher />
+          <Link to="/" className="btn btn-sm btn-outline-secondary">
+            <i className="bi bi-arrow-left me-1" aria-hidden="true" />
+            {m.back_to_site()}
+          </Link>
+        </div>
       </div>
     </nav>
   );
@@ -144,11 +148,74 @@ function App() {
 
   const [showReservationModal, setShowReservationModal] = useState(false);
 
-  // Collect events that require reservation from the active edition
-  const edition = getActiveEdition();
-  const reservableEvents = (edition?.schedule ?? [])
-    .filter((ev) => ev.reservation)
-    .map((ev) => ({ id: ev.id, title: ev.title }));
+  // Static fallback: reservable events from hardcoded config, used as initial state
+  // and kept when the backend is unreachable. Lazy initializer avoids recomputing
+  // this on every render.
+  const [reservableEvents, setReservableEvents] = useState(() => {
+    const now = new Date();
+    const dayDate = (ed: (typeof editions)[number], dayId: number): Date =>
+      [ed.dates.friday, ed.dates.friday, ed.dates.saturday, ed.dates.sunday][dayId] ??
+      ed.dates.friday;
+    return editions.flatMap((ed) =>
+      ed.schedule
+        .filter((ev) => ev.reservation)
+        .filter((ev) => {
+          const eventEnd = new Date(dayDate(ed, ev.dayId));
+          eventEnd.setHours(23, 59, 59, 999);
+          return eventEnd >= now;
+        })
+        .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)
+        .map((ev) => ({ id: ev.id, title: ev.title })),
+    );
+  });
+
+  // Fetch live editions from the backend and recompute reservable events.
+  // On any error the static fallback computed above remains in state.
+  useEffect(() => {
+    interface ApiScheduleEvent {
+      id: string;
+      title: string;
+      reservation: boolean;
+      reservations_open_from: string | null;
+      day_id: number;
+    }
+    interface ApiEdition {
+      friday: string;
+      saturday: string;
+      sunday: string;
+      schedule: ApiScheduleEvent[];
+    }
+
+    fetch("/api/editions")
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((apiEditions: ApiEdition[]) => {
+        const now = new Date();
+        const events = apiEditions.flatMap((ed) => {
+          const dayDates: Record<number, Date> = {
+            1: new Date(ed.friday),
+            2: new Date(ed.saturday),
+            3: new Date(ed.sunday),
+          };
+          return ed.schedule
+            .filter((ev) => ev.reservation)
+            .filter((ev) => {
+              const eventEnd = new Date(dayDates[ev.day_id] ?? new Date(ed.friday));
+              eventEnd.setHours(23, 59, 59, 999);
+              return eventEnd >= now;
+            })
+            .filter((ev) => {
+              if (!ev.reservations_open_from) return true;
+              return new Date(ev.reservations_open_from) <= now;
+            })
+            .map((ev) => ({ id: ev.id, title: ev.title }));
+        });
+        // Only replace the static fallback when the backend actually has events.
+        if (events.length > 0) setReservableEvents(events);
+      })
+      .catch(() => {
+        // Backend unreachable — keep static fallback.
+      });
+  }, []);
 
   // --- Main marketing page ---
 
@@ -231,7 +298,11 @@ function App() {
         <section id="schedule" className="content-section">
           <div className="container">
             {/* Replaced h2 with SectionHeading */}
-            <SectionHeading id="schedule-heading" title={m.schedule_title()} subtitle={m.schedule_description()} />
+            <SectionHeading
+              id="schedule-heading"
+              title={m.schedule_title()}
+              subtitle={m.schedule_description()}
+            />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">

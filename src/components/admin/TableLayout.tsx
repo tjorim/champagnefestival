@@ -38,7 +38,13 @@ interface TableLayoutProps {
   onAddTable: (name: string, capacity: number, roomId: string | null) => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
-  onAddRoom: (name: string, zoneType: string, widthM: number, heightM: number, color: string) => Promise<void>;
+  onAddRoom: (
+    name: string,
+    zoneType: string,
+    widthM: number,
+    heightM: number,
+    color: string,
+  ) => Promise<void>;
   onDeleteRoom: (roomId: string) => Promise<void>;
 }
 
@@ -154,9 +160,7 @@ function RoomCanvas({
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -221,9 +225,7 @@ function RoomCanvas({
             </div>
           )}
           {roomTables.map((table) => {
-            const assigned = reservations.filter((r) =>
-              table.reservationIds.includes(r.id),
-            ).length;
+            const assigned = reservations.filter((r) => table.reservationIds.includes(r.id)).length;
             return (
               <DraggableTable
                 key={table.id}
@@ -303,7 +305,13 @@ export default function TableLayout({
       return;
     }
     try {
-      await onAddRoom(newRoom.name.trim(), newRoom.zoneType, newRoom.widthM, newRoom.heightM, newRoom.color);
+      await onAddRoom(
+        newRoom.name.trim(),
+        newRoom.zoneType,
+        newRoom.widthM,
+        newRoom.heightM,
+        newRoom.color,
+      );
       setNewRoom({ name: "", zoneType: "main-hall", widthM: 20, heightM: 15, color: "#ffc107" });
       setShowAddRoom(false);
     } catch {
@@ -360,7 +368,12 @@ export default function TableLayout({
                 <Nav.Link eventKey={room.id} className="py-1 px-2 small text-light">
                   <span
                     className="me-1 rounded-circle d-inline-block"
-                    style={{ width: 10, height: 10, background: room.color, verticalAlign: "middle" }}
+                    style={{
+                      width: 10,
+                      height: 10,
+                      background: room.color,
+                      verticalAlign: "middle",
+                    }}
                     aria-hidden="true"
                   />
                   {room.name}
@@ -533,9 +546,7 @@ export default function TableLayout({
               min={1}
               max={50}
               value={newTable.capacity}
-              onChange={(e) =>
-                setNewTable((p) => ({ ...p, capacity: Number(e.target.value) }))
-              }
+              onChange={(e) => setNewTable((p) => ({ ...p, capacity: Number(e.target.value) }))}
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
@@ -612,9 +623,7 @@ export default function TableLayout({
                   min={1}
                   max={500}
                   value={newRoom.widthM}
-                  onChange={(e) =>
-                    setNewRoom((p) => ({ ...p, widthM: Number(e.target.value) }))
-                  }
+                  onChange={(e) => setNewRoom((p) => ({ ...p, widthM: Number(e.target.value) }))}
                   className="bg-dark text-light border-secondary"
                 />
               </Form.Group>
@@ -627,9 +636,7 @@ export default function TableLayout({
                   min={1}
                   max={500}
                   value={newRoom.heightM}
-                  onChange={(e) =>
-                    setNewRoom((p) => ({ ...p, heightM: Number(e.target.value) }))
-                  }
+                  onChange={(e) => setNewRoom((p) => ({ ...p, heightM: Number(e.target.value) }))}
                   className="bg-dark text-light border-secondary"
                 />
               </Form.Group>

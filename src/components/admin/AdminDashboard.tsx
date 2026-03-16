@@ -116,7 +116,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fetch("/api/rooms", { headers: authHeaders() }),
       ]);
 
-      if (resResponse.status === 401 || tablesResponse.status === 401 || roomsResponse.status === 401) {
+      if (
+        resResponse.status === 401 ||
+        tablesResponse.status === 401 ||
+        roomsResponse.status === 401
+      ) {
         setIsAuthenticated(false);
         setLoginError(m.admin_login_error());
         return;
@@ -216,9 +220,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (response.ok) {
           setReservations((prev) =>
             prev.map((r) =>
-              r.id === id
-                ? { ...r, paymentStatus, updatedAt: new Date().toISOString() }
-                : r,
+              r.id === id ? { ...r, paymentStatus, updatedAt: new Date().toISOString() } : r,
             ),
           );
         }
@@ -240,9 +242,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (response.ok) {
           setReservations((prev) =>
             prev.map((r) =>
-              r.id === reservationId
-                ? { ...r, tableId, updatedAt: new Date().toISOString() }
-                : r,
+              r.id === reservationId ? { ...r, tableId, updatedAt: new Date().toISOString() } : r,
             ),
           );
 
@@ -252,7 +252,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               const wasAssigned = t.reservationIds.includes(reservationId);
               const shouldBeAssigned = t.id === tableId;
               if (wasAssigned && !shouldBeAssigned) {
-                return { ...t, reservationIds: t.reservationIds.filter((id) => id !== reservationId) };
+                return {
+                  ...t,
+                  reservationIds: t.reservationIds.filter((id) => id !== reservationId),
+                };
               }
               if (!wasAssigned && shouldBeAssigned) {
                 return { ...t, reservationIds: [...t.reservationIds, reservationId] };
@@ -291,9 +294,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleMoveTable = useCallback(
     async (tableId: string, x: number, y: number) => {
       // Optimistic update
-      setTables((prev) =>
-        prev.map((t) => (t.id === tableId ? { ...t, x, y } : t)),
-      );
+      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, x, y } : t)));
       try {
         await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
@@ -331,7 +332,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const response = await fetch("/api/rooms", {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ name, zone_type: zoneType, width_m: widthM, height_m: heightM, color }),
+          body: JSON.stringify({
+            name,
+            zone_type: zoneType,
+            width_m: widthM,
+            height_m: heightM,
+            color,
+          }),
         });
         if (response.ok) {
           const data = await response.json();
@@ -354,9 +361,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (response.ok || response.status === 204) {
           setRooms((prev) => prev.filter((r) => r.id !== roomId));
           // Clear room assignment from tables that were in this room
-          setTables((prev) =>
-            prev.map((t) => (t.roomId === roomId ? { ...t, roomId: null } : t)),
-          );
+          setTables((prev) => prev.map((t) => (t.roomId === roomId ? { ...t, roomId: null } : t)));
         }
       } catch {
         setError(m.admin_error_delete_room());
@@ -435,10 +440,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           const data = await response.json();
           const updated = apiReservationToReservation(data as Record<string, unknown>);
           setReservations((prev) =>
-            prev.map((r) => (r.id === reservationId ? { ...r, checkedIn: true, checkedInAt: updated.checkedInAt } : r)),
+            prev.map((r) =>
+              r.id === reservationId
+                ? { ...r, checkedIn: true, checkedInAt: updated.checkedInAt }
+                : r,
+            ),
           );
           setDetailReservation((prev) =>
-            prev?.id === reservationId ? { ...prev, checkedIn: true, checkedInAt: updated.checkedInAt } : prev,
+            prev?.id === reservationId
+              ? { ...prev, checkedIn: true, checkedInAt: updated.checkedInAt }
+              : prev,
           );
         }
       } catch {
@@ -505,7 +516,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                         required
                       />
                     </Form.Group>
-                    {loginError && <Alert variant="danger" className="py-2">{loginError}</Alert>}
+                    {loginError && (
+                      <Alert variant="danger" className="py-2">
+                        {loginError}
+                      </Alert>
+                    )}
                     <Button
                       type="submit"
                       variant="warning"
@@ -513,7 +528,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       disabled={isLoggingIn || !token.trim()}
                     >
                       {isLoggingIn ? (
-                        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                        <Spinner
+                          as="span"
+                          animation="border"
+                          size="sm"
+                          role="status"
+                          aria-hidden="true"
+                        />
                       ) : (
                         m.admin_login_button()
                       )}
@@ -531,7 +552,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {m.admin_authenticated()}
               </span>
               <div className="d-flex gap-2">
-                <Button variant="outline-secondary" size="sm" onClick={loadData} disabled={isLoading}>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={loadData}
+                  disabled={isLoading}
+                >
                   <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
                   {m.admin_refresh()}
                 </Button>

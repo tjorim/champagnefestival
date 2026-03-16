@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import create_tables
-from app.routers import check_in, contact, content, reservations, rooms, tables
+from app.routers import check_in, contact, content, editions, reservations, rooms, tables
 
 # Configure logging before any other module uses a logger.
 logging.basicConfig(
@@ -78,6 +78,7 @@ app.include_router(contact.router)
 app.include_router(tables.router)
 app.include_router(rooms.router)
 app.include_router(content.router)
+app.include_router(editions.router)
 
 
 @app.get("/health", tags=["meta"])
