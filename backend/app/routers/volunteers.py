@@ -21,6 +21,8 @@ router = APIRouter(
 
 
 def _validate_help_day_range(first_help_day, last_help_day) -> None:
+    if first_help_day is None or last_help_day is None:
+        return
     if first_help_day > last_help_day:
         raise HTTPException(
             status_code=400,
@@ -101,10 +103,10 @@ async def list_volunteers(
         q_norm = q.strip().lower()
         rows = [
             p for p in rows if q_norm in " ".join([
-                p.name,
-                p.address,
-                p.national_register_number,
-                p.eid_document_number,
+                p.name or "",
+                p.address or "",
+                p.national_register_number or "",
+                p.eid_document_number or "",
             ]).lower()
         ]
 

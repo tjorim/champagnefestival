@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
@@ -42,9 +43,49 @@ def _normalise_optional_identity(value: str | None) -> str | None:
     return value or None
 
 
+def _raise_identity_conflict() -> None:
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "Person with this national register number or eID document number already exists."
+        ),
+    )
+
+
+async def _ensure_unique_identity_fields(
+    db: AsyncSession,
+    national_register_number: str | None = None,
+    eid_document_number: str | None = None,
+    exclude_id: str | None = None,
+) -> None:
+    if national_register_number is not None:
+        stmt = select(Person).where(Person.national_register_number == national_register_number)
+        if exclude_id:
+            stmt = stmt.where(Person.id != exclude_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            _raise_identity_conflict()
+
+    if eid_document_number is not None:
+        stmt = select(Person).where(Person.eid_document_number == eid_document_number)
+        if exclude_id:
+            stmt = stmt.where(Person.id != exclude_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            _raise_identity_conflict()
+
+
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) -> dict:
     _validate_help_days(body.first_help_day, body.last_help_day)
+
+    national_register_number = _normalise_optional_identity(body.national_register_number)
+    eid_document_number = _normalise_optional_identity(body.eid_document_number)
+    await _ensure_unique_identity_fields(
+        db,
+        national_register_number=national_register_number,
+        eid_document_number=eid_document_number,
+    )
 
     person = Person(
         id=make_id("per"),
@@ -54,8 +95,8 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         address=body.address,
         first_help_day=body.first_help_day,
         last_help_day=body.last_help_day,
-        national_register_number=_normalise_optional_identity(body.national_register_number),
-        eid_document_number=_normalise_optional_identity(body.eid_document_number),
+        national_register_number=national_register_number,
+        eid_document_number=eid_document_number,
         visits_per_month=body.visits_per_month,
         club_name=body.club_name,
         notes=body.notes,
@@ -64,7 +105,11 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
     person.set_roles(_normalise_roles(body.roles))
 
     db.add(person)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        _raise_identity_conflict()
     await db.refresh(person)
     return person_to_dict(person)
 
@@ -143,15 +188,37 @@ async def update_person(
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""
 
-    if "national_register_number" in body.model_fields_set:
-        person.national_register_number = _normalise_optional_identity(body.national_register_number)
-    if "eid_document_number" in body.model_fields_set:
-        person.eid_document_number = _normalise_optional_identity(body.eid_document_number)
+    nrr_in_set = "national_register_number" in body.model_fields_set
+    eid_in_set = "eid_document_number" in body.model_fields_set
+    nrr = _normalise_optional_identity(body.national_register_number) if nrr_in_set else None
+    eid = _normalise_optional_identity(body.eid_document_number) if eid_in_set else None
+
+    if nrr_in_set and nrr is not None:
+        await _ensure_unique_identity_fields(
+            db,
+            national_register_number=nrr,
+            exclude_id=person.id,
+        )
+    if eid_in_set and eid is not None:
+        await _ensure_unique_identity_fields(
+            db,
+            eid_document_number=eid,
+            exclude_id=person.id,
+        )
+
+    if nrr_in_set:
+        person.national_register_number = nrr
+    if eid_in_set:
+        person.eid_document_number = eid
 
     if body.roles is not None:
         person.set_roles(_normalise_roles(body.roles))
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        _raise_identity_conflict()
     await db.refresh(person)
     return person_to_dict(person)
 

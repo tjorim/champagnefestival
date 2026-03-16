@@ -4,7 +4,7 @@ Members are stored in the people table as a subset with role='member'.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
@@ -24,6 +24,13 @@ def _normalise_roles(roles: list[str]) -> list[str]:
     return sorted({r.strip().lower() for r in roles if r and r.strip()})
 
 
+def _normalise_optional_identity(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
 def _ensure_member_role(person: Person) -> None:
     roles = set(person.get_roles())
     roles.add("member")
@@ -34,11 +41,48 @@ def _has_member_role(person: Person) -> bool:
     return "member" in set(person.get_roles())
 
 
+async def _ensure_unique_fields(
+    db: AsyncSession,
+    national_register_number: str | None = None,
+    eid_document_number: str | None = None,
+    exclude_id: str | None = None,
+) -> None:
+    if national_register_number is not None:
+        stmt = select(Person).where(Person.national_register_number == national_register_number)
+        if exclude_id:
+            stmt = stmt.where(Person.id != exclude_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Person with this national register number already exists.",
+            )
+
+    if eid_document_number is not None:
+        stmt = select(Person).where(Person.eid_document_number == eid_document_number)
+        if exclude_id:
+            stmt = stmt.where(Person.id != exclude_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Person with this eID document number already exists.",
+            )
+
+
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 async def create_member(
     body: PersonCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    nrr = _normalise_optional_identity(body.national_register_number)
+    eid = _normalise_optional_identity(body.eid_document_number)
+    await _ensure_unique_fields(
+        db,
+        national_register_number=nrr,
+        eid_document_number=eid,
+    )
+
     person = Person(
         id=make_id("per"),
         name=body.name,
@@ -47,8 +91,8 @@ async def create_member(
         address=body.address,
         first_help_day=body.first_help_day,
         last_help_day=body.last_help_day,
-        national_register_number=(body.national_register_number or None),
-        eid_document_number=(body.eid_document_number or None),
+        national_register_number=nrr,
+        eid_document_number=eid,
         visits_per_month=body.visits_per_month,
         club_name=body.club_name,
         notes=body.notes,
@@ -69,30 +113,27 @@ async def list_members(
     q: str | None = Query(default=None),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    result = await db.execute(select(Person).order_by(Person.created_at.desc()))
-    rows = [p for p in result.scalars().all() if _has_member_role(p)]
+    stmt = select(Person).where(Person.roles.ilike('%"member"%'))
 
     if active is not None:
-        rows = [p for p in rows if p.active == active]
+        stmt = stmt.where(Person.active == active)
 
     if q:
-        q_norm = q.strip().lower()
-        rows = [
-            p
-            for p in rows
-            if q_norm
-            in " ".join(
-                [
-                    p.name,
-                    p.email,
-                    p.phone,
-                    p.address,
-                    p.club_name,
-                    p.notes,
-                ]
-            ).lower()
-        ]
+        q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        q_like = f"%{q_escaped}%"
+        stmt = stmt.where(
+            or_(
+                Person.name.ilike(q_like, escape="\\"),
+                Person.email.ilike(q_like, escape="\\"),
+                Person.phone.ilike(q_like, escape="\\"),
+                Person.address.ilike(q_like, escape="\\"),
+                Person.club_name.ilike(q_like, escape="\\"),
+                Person.notes.ilike(q_like, escape="\\"),
+            )
+        )
 
+    result = await db.execute(stmt.order_by(Person.created_at.desc()))
+    rows = result.scalars().all()
     return [person_to_dict(p) for p in rows]
 
 
@@ -126,10 +167,29 @@ async def update_member(
 
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""
-    if "national_register_number" in body.model_fields_set:
-        person.national_register_number = body.national_register_number or None
-    if "eid_document_number" in body.model_fields_set:
-        person.eid_document_number = body.eid_document_number or None
+
+    nrr_in_set = "national_register_number" in body.model_fields_set
+    eid_in_set = "eid_document_number" in body.model_fields_set
+    nrr = _normalise_optional_identity(body.national_register_number) if nrr_in_set else None
+    eid = _normalise_optional_identity(body.eid_document_number) if eid_in_set else None
+
+    if nrr_in_set and nrr is not None:
+        await _ensure_unique_fields(
+            db,
+            national_register_number=nrr,
+            exclude_id=person.id,
+        )
+    if eid_in_set and eid is not None:
+        await _ensure_unique_fields(
+            db,
+            eid_document_number=eid,
+            exclude_id=person.id,
+        )
+
+    if nrr_in_set:
+        person.national_register_number = nrr
+    if eid_in_set:
+        person.eid_document_number = eid
 
     if body.roles is not None:
         person.set_roles(_normalise_roles(body.roles))

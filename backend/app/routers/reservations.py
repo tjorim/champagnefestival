@@ -50,10 +50,24 @@ async def create_reservation(
     check_honeypot(body.honeypot)
     check_form_timing(body.form_start_time)
 
+    email_norm = str(body.email).lower().strip()
     person_result = await db.execute(
-        select(Person).where(Person.email == str(body.email).lower().strip())
+        select(Person).where(Person.email == email_norm).order_by(Person.id)
     )
-    person = person_result.scalar_one_or_none()
+    matched_people = person_result.scalars().all()
+
+    if len(matched_people) == 0:
+        person = Person(
+            id=make_id("per"),
+            name=body.name,
+            email=email_norm,
+        )
+        db.add(person)
+        await db.flush()
+    elif len(matched_people) == 1:
+        person = matched_people[0]
+    else:
+        person = matched_people[0]
 
     reservation = Reservation(
         id=make_id("res"),
@@ -64,7 +78,7 @@ async def create_reservation(
         event_title=body.event_title,
         guest_count=body.guest_count,
         notes=body.notes,
-        person_id=person.id if person else None,
+        person_id=person.id,
         check_in_token=make_id("tok"),
     )
     reservation.set_pre_orders([item.model_dump() for item in body.pre_orders])
@@ -201,7 +215,14 @@ async def update_reservation(
     if body.notes is not None:
         r.notes = body.notes
     if "person_id" in body.model_fields_set:
-        r.person_id = body.person_id
+        if body.person_id is None:
+            r.person_id = None
+        else:
+            person_result = await db.execute(select(Person).where(Person.id == body.person_id))
+            person = person_result.scalar_one_or_none()
+            if person is None:
+                raise HTTPException(status_code=404, detail="Person not found.")
+            r.person_id = person.id
     if body.pre_orders is not None:
         r.set_pre_orders([item.model_dump() for item in body.pre_orders])
     if body.checked_in is not None:
