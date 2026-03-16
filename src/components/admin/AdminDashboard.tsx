@@ -144,7 +144,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const data = await roomsResponse.json();
         setRooms(Array.isArray(data) ? data.map(apiRoomToRoom) : []);
       }
-    } catch {
+    } catch (err) {
+      console.error("Failed to load dashboard data", err);
       setError(m.admin_error_load_data());
     } finally {
       setIsLoading(false);
@@ -168,7 +169,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         } else {
           setLoginError(m.admin_login_error());
         }
-      } catch {
+      } catch (err) {
+        console.error("Login request failed", err);
         setLoginError(m.admin_login_error());
       } finally {
         setIsLoggingIn(false);
@@ -206,7 +208,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             ),
           );
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to update reservation status", err);
         setError(m.admin_error_update_reservation());
       }
     },
@@ -228,7 +231,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             ),
           );
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to update payment status", err);
         setError(m.admin_error_update_payment());
       }
     },
@@ -268,7 +272,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             }),
           );
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to assign table", err);
         setError(m.admin_error_assign_table());
       }
     },
@@ -288,7 +293,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           const table = data.table ?? data;
           setTables((prev) => [...prev, apiTableToTable(table)]);
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to add table", err);
         setError(m.admin_error_add_table());
       }
     },
@@ -343,7 +349,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (response.ok) {
           setTables((prev) => prev.filter((t) => t.id !== tableId));
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to delete table", err);
         setError(m.admin_error_delete_table());
       }
     },
@@ -368,7 +375,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           const data = await response.json();
           setRooms((prev) => [...prev, apiRoomToRoom(data)]);
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to add room", err);
         setError(m.admin_error_add_room());
       }
     },
@@ -387,7 +395,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           // Clear room assignment from tables that were in this room
           setTables((prev) => prev.map((t) => (t.roomId === roomId ? { ...t, roomId: null } : t)));
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to delete room", err);
         setError(m.admin_error_delete_room());
       }
     },
@@ -408,7 +417,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           // Fall back to the list version (no token available)
           setDetailReservation(res);
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to fetch reservation detail, falling back to list data", err);
         setDetailReservation(res);
       }
     },
@@ -445,7 +455,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             prev?.id === reservationId ? { ...prev, preOrders: updatedOrders } : prev,
           );
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to update bottle delivery status", err);
         setError(m.admin_error_bottle_delivery());
       }
     },
@@ -476,7 +487,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               : prev,
           );
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to check in guest", err);
         setError(m.admin_error_check_in());
       }
     },
@@ -499,7 +511,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             prev?.id === reservationId ? { ...prev, strapIssued: true } : prev,
           );
         }
-      } catch {
+      } catch (err) {
+        console.error("Failed to issue strap", err);
         setError(m.admin_error_issue_strap());
       }
     },
