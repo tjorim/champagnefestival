@@ -100,32 +100,15 @@ async def update_edition(
 ) -> dict:
     e = await _get_or_404(db, edition_id)
 
-    if "year" in body.model_fields_set and body.year is not None:
-        e.year = body.year
-    if "month" in body.model_fields_set and body.month is not None:
-        e.month = body.month
-    if "friday" in body.model_fields_set and body.friday is not None:
-        e.friday = body.friday
-    if "saturday" in body.model_fields_set and body.saturday is not None:
-        e.saturday = body.saturday
-    if "sunday" in body.model_fields_set and body.sunday is not None:
-        e.sunday = body.sunday
-    if "venue_name" in body.model_fields_set and body.venue_name is not None:
-        e.venue_name = body.venue_name
-    if "venue_address" in body.model_fields_set and body.venue_address is not None:
-        e.venue_address = body.venue_address
-    if "venue_city" in body.model_fields_set and body.venue_city is not None:
-        e.venue_city = body.venue_city
-    if "venue_postal_code" in body.model_fields_set and body.venue_postal_code is not None:
-        e.venue_postal_code = body.venue_postal_code
-    if "venue_country" in body.model_fields_set and body.venue_country is not None:
-        e.venue_country = body.venue_country
-    if "venue_lat" in body.model_fields_set and body.venue_lat is not None:
-        e.venue_lat = body.venue_lat
-    if "venue_lng" in body.model_fields_set and body.venue_lng is not None:
-        e.venue_lng = body.venue_lng
-    if "active" in body.model_fields_set and body.active is not None:
-        e.active = body.active
+    simple_fields = [
+        "year", "month", "friday", "saturday", "sunday",
+        "venue_name", "venue_address", "venue_city", "venue_postal_code",
+        "venue_country", "venue_lat", "venue_lng", "active",
+    ]
+    for field in simple_fields:
+        if field in body.model_fields_set and getattr(body, field) is not None:
+            setattr(e, field, getattr(body, field))
+
     if "schedule" in body.model_fields_set and body.schedule is not None:
         e.set_schedule([ev.model_dump() for ev in body.schedule])
 
