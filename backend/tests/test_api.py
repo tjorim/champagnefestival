@@ -624,6 +624,26 @@ async def test_volunteer_crud_and_constraints(client):
     assert r.status_code == 200
     assert len(r.json()) == 1
 
+    # active filter support
+    r = await client.get(
+        "/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.put(
+        f"/api/people/{volunteer_id}",
+        json={"active": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+
+    r = await client.get(
+        "/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",
         json={"last_help_day": "2026-03-24"},

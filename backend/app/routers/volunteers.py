@@ -96,9 +96,13 @@ async def create_volunteer(body: VolunteerCreate, db: AsyncSession = Depends(get
 async def list_volunteers(
     db: AsyncSession = Depends(get_db),
     q: str | None = Query(default=None, description="Search by name, address, NISS, or eID doc number"),
+    active: bool | None = Query(default=None),
 ) -> list[dict]:
     result = await db.execute(select(Person).order_by(Person.created_at.desc()))
     rows = [p for p in result.scalars().all() if "volunteer" in p.get_roles()]
+
+    if active is not None:
+        rows = [p for p in rows if p.active == active]
 
     if q:
         q_norm = q.strip().lower()
