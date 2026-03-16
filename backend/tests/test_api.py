@@ -732,18 +732,18 @@ async def test_people_crud_roles_and_filters(client):
 
 
 # ---------------------------------------------------------------------------
-# Champagne lovers (admin convenience endpoint)
+# Club members (admin convenience endpoint)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_champagne_lovers_require_auth(client):
-    r = await client.get("/api/champagne-lovers")
+async def test_club_members_require_auth(client):
+    r = await client.get("/api/club-members")
     assert r.status_code == 401
 
 
 @pytest.mark.anyio
-async def test_champagne_lovers_crud(client):
+async def test_club_members_crud(client):
     payload = {
         "name": "Lieve Janssens",
         "email": "lieve@example.com",
@@ -755,7 +755,7 @@ async def test_champagne_lovers_crud(client):
         "active": True,
     }
 
-    r = await client.post("/api/champagne-lovers", json=payload, headers=ADMIN_HEADERS)
+    r = await client.post("/api/club-members", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     person = r.json()
     assert "club-member" in person["roles"]
@@ -763,13 +763,13 @@ async def test_champagne_lovers_crud(client):
     person_id = person["id"]
 
     r = await client.get(
-        "/api/champagne-lovers", params={"q": "spui"}, headers=ADMIN_HEADERS
+        "/api/club-members", params={"q": "spui"}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 200
     assert len(r.json()) == 1
 
     r = await client.put(
-        f"/api/champagne-lovers/{person_id}",
+        f"/api/club-members/{person_id}",
         json={"roles": ["treasurer"], "active": False},
         headers=ADMIN_HEADERS,
     )
@@ -778,10 +778,15 @@ async def test_champagne_lovers_crud(client):
     assert r.json()["active"] is False
 
     r = await client.get(
-        "/api/champagne-lovers", params={"active": "false"}, headers=ADMIN_HEADERS
+        "/api/club-members", params={"active": "false"}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 200
     assert len(r.json()) == 1
 
-    r = await client.delete(f"/api/champagne-lovers/{person_id}", headers=ADMIN_HEADERS)
+    # legacy alias remains available for backward compatibility
+    r = await client.get("/api/champagne-lovers", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    r = await client.delete(f"/api/club-members/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
