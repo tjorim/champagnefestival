@@ -301,6 +301,18 @@ async def test_my_reservations(client):
 
 
 @pytest.mark.anyio
+async def test_my_reservations_case_insensitive_email(client):
+    """Email stored with mixed case must be retrievable via lowercase lookup."""
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "Jean@Example.com"})
+    assert r.status_code == 201
+
+    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+    assert r.json()[0]["status"] == "pending"
+
+
+@pytest.mark.anyio
 async def test_my_reservations_no_results(client):
     r = await client.get("/api/reservations/my", params={"email": "nobody@example.com"})
     assert r.status_code == 200
