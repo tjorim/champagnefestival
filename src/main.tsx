@@ -1,7 +1,6 @@
 import React, { lazy, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Link } from "react-router";
-import { endOfDay } from "./utils/dateUtils";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -24,6 +23,7 @@ import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import type { FestivalDay } from "./config/schedule";
+import { endOfDay } from "./utils/dateUtils";
 import "./index.css";
 
 // Components - Lazy loaded

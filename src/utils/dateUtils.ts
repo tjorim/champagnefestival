@@ -29,5 +29,5 @@ export const endOfDay = (date: Date): Date => dayjs(date).endOf("day").toDate();
  * localizedMonthName(new Date(2026, 2, 13), "nl") // "maart"
  * localizedMonthName(new Date(2026, 2, 13), "fr") // "mars"
  */
-export const localizedMonthName = (date: Date, locale: string): string =>
+export const localizedMonthName = (date: Date, locale: "en" | "fr" | "nl"): string =>
   dayjs(date).locale(locale).format("MMMM");
