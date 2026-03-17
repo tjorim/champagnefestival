@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Table
+from app.models import Layout, Table, TableType
 from app.schemas import TableCreate, TableOut, TableUpdate
 from app.utils import make_id, table_to_dict
 
@@ -27,17 +27,22 @@ async def create_table(
     body: TableCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
+    if tt.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail=f"TableType '{body.table_type_id}' not found.")
+    lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
+    if lay.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
+
     t = Table(
         id=make_id("tbl"),
         name=body.name,
         capacity=body.capacity,
         x=body.x,
         y=body.y,
-        room_id=body.room_id,
-        shape=body.shape,
-        width_m=body.width_m,
-        length_m=body.length_m,
+        table_type_id=body.table_type_id,
         rotation=body.rotation,
+        layout_id=body.layout_id,
     )
     t.set_reservation_ids([])
     db.add(t)
@@ -80,9 +85,9 @@ async def update_table(
 ) -> dict:
     t = await _get_or_404(db, table_id)
 
-    # Non-nullable fields: "is not None" is sufficient because the schema
-    # forbids None for these fields, so a missing key and an invalid null
-    # are both rejected by Pydantic before reaching here.
+    # All fields in TableUpdate are Optional[…], so an absent key and an
+    # explicit null both arrive here as None and are simply skipped.  Only
+    # fields with a real value are applied to the row.
     if body.name is not None:
         t.name = body.name
     if body.capacity is not None:
@@ -91,23 +96,22 @@ async def update_table(
         t.x = body.x
     if body.y is not None:
         t.y = body.y
-    if body.shape is not None:
-        t.shape = body.shape
-    if body.width_m is not None:
-        t.width_m = body.width_m
-    if body.length_m is not None:
-        t.length_m = body.length_m
-    if t.length_m < t.width_m:
-        t.length_m, t.width_m = t.width_m, t.length_m
+    if body.table_type_id is not None:
+        tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
+        if tt.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail=f"TableType '{body.table_type_id}' not found.")
+        t.table_type_id = body.table_type_id
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
-    # Nullable / zero-valid fields: must use model_fields_set so that an
-    # explicit null (room_id=null to unassign) or an explicit zero degrees
-    # (rotation=0) is honoured even though the value is falsy.
-    if "room_id" in body.model_fields_set:
-        t.room_id = body.room_id
-    if "rotation" in body.model_fields_set:
+    # Zero-valid fields: must use model_fields_set so that an explicit zero
+    # degrees (rotation=0) is honoured even though the value is falsy.
+    if "rotation" in body.model_fields_set and body.rotation is not None:
         t.rotation = body.rotation
+    if "layout_id" in body.model_fields_set and body.layout_id is not None:
+        lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
+        if lay.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
+        t.layout_id = body.layout_id
 
     await db.commit()
     await db.refresh(t)

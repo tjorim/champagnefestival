@@ -16,10 +16,13 @@ from app.routers import (
     contact,
     content,
     editions,
+    layouts,
     people,
     reservations,
     rooms,
+    table_types,
     tables,
+    venues,
     volunteers,
 )
 
@@ -89,7 +92,10 @@ app.include_router(members.router)
 app.include_router(check_in.router)
 app.include_router(contact.router)
 app.include_router(tables.router)
+app.include_router(table_types.router)
+app.include_router(venues.router)
 app.include_router(rooms.router)
+app.include_router(layouts.router)
 app.include_router(content.router)
 app.include_router(editions.router)
 app.include_router(people.router)

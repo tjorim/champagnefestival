@@ -23,10 +23,10 @@ The table below tracks each user story against its current implementation status
 | 9   | Manager   | Mark orders as (partially) paid                           | ✅ `PUT /api/reservations/{id}` (`payment_status`)                                                                                                                 |
 | 10  | Volunteer | Scan a visitor's QR or search for them to see their order | ✅ QR scan → `GET /api/check-in/{id}?token=`; name/email search via `GET /api/reservations?q=`                                                                     |
 | 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/reservations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
-| 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)                                                            |
-| 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, member, festival-visitor; one person can have multiple roles        |
-| 15  | Manager   | Quickly manage members                    | ✅ Convenience CRUD via `/api/members` (role-filtered view on people)                                                                                    |
-| 14  | Manager   | Group returning attendees by order history                 | ✅ `GET /api/people/{id}/reservations` groups all reservations for that person (linked by person + e-mail)                                                     |
+| 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)               |
+| 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, member, festival-visitor; one person can have multiple roles                  |
+| 15  | Manager   | Quickly manage members                                    | ✅ Convenience CRUD via `/api/members` (role-filtered view on people)                                                                                              |
+| 14  | Manager   | Group returning attendees by order history                | ✅ `GET /api/people/{id}/reservations` groups all reservations for that person (linked by person + e-mail)                                                         |
 
 ---
 
@@ -179,40 +179,40 @@ Public endpoints (reservation creation, check-in) do not require a token.
 
 ### Endpoints
 
-| Method   | Path                          | Auth           | Description                                                                |
-| -------- | ----------------------------- | -------------- | -------------------------------------------------------------------------- |
-| `POST`   | `/api/reservations`           | public         | Create a reservation                                                       |
-| `GET`    | `/api/reservations`           | admin          | List reservations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
-| `GET`    | `/api/reservations/my?email=` | public         | Visitor self-lookup — own bookings by e-mail                               |
-| `GET`    | `/api/reservations/{id}`      | admin          | Get reservation detail (token included)                                    |
-| `PUT`    | `/api/reservations/{id}`      | admin          | Update reservation                                                         |
-| `DELETE` | `/api/reservations/{id}`      | admin          | Delete reservation                                                         |
-| `GET`    | `/api/check-in/{id}?token=…`  | public + token | Verify QR token, return guest info                                         |
-| `POST`   | `/api/check-in/{id}`          | public + token | Mark checked-in, issue strap                                               |
-| `POST`   | `/api/tables`                 | admin          | Create table                                                               |
-| `GET`    | `/api/tables`                 | admin          | List tables                                                                |
-| `GET`    | `/api/tables/{id}`            | admin          | Get table                                                                  |
-| `PUT`    | `/api/tables/{id}`            | admin          | Update table                                                               |
-| `DELETE` | `/api/tables/{id}`            | admin          | Delete table                                                               |
-| `GET`    | `/api/content/{key}`          | public         | Get CMS content (producers / sponsors)                                     |
-| `PUT`    | `/api/content/{key}`          | admin          | Save CMS content                                                           |
-| `POST`   | `/api/volunteers`            | admin          | Create volunteer profile (person with role `volunteer`)                             |
-| `GET`    | `/api/volunteers`            | admin          | List volunteers (supports `?q=` search)                                  |
-| `GET`    | `/api/volunteers/{id}`       | admin          | Get volunteer detail                                                      |
-| `PUT`    | `/api/volunteers/{id}`       | admin          | Update volunteer profile                                                  |
-| `DELETE` | `/api/volunteers/{id}`       | admin          | Delete volunteer profile                                                  |
-| `POST`   | `/api/members`           | admin          | Create member (person with role `member`)      |
-| `GET`    | `/api/members`           | admin          | List members (supports `?q=`, `?active=`)            |
-| `GET`    | `/api/members/{id}`      | admin          | Get member detail                                    |
-| `PUT`    | `/api/members/{id}`      | admin          | Update member                                        |
-| `DELETE` | `/api/members/{id}`      | admin          | Delete member                                        |
-| `POST`   | `/api/people`                | admin          | Create person with role tags                                              |
-| `GET`    | `/api/people`                | admin          | List people (supports `?q=`, `?role=`, `?active=`)                       |
-| `GET`    | `/api/people/{id}`           | admin          | Get person detail                                                         |
-| `PUT`    | `/api/people/{id}`           | admin          | Update person + roles                                                     |
-| `DELETE` | `/api/people/{id}`           | admin          | Delete person                                                             |
-| `GET`    | `/api/people/{id}/reservations` | admin       | List grouped reservation history for that person                         |
-| `GET`    | `/health`                     | public         | Health check                                                               |
+| Method   | Path                            | Auth           | Description                                                                |
+| -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| `POST`   | `/api/reservations`             | public         | Create a reservation                                                       |
+| `GET`    | `/api/reservations`             | admin          | List reservations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
+| `GET`    | `/api/reservations/my?email=`   | public         | Visitor self-lookup — own bookings by e-mail                               |
+| `GET`    | `/api/reservations/{id}`        | admin          | Get reservation detail (token included)                                    |
+| `PUT`    | `/api/reservations/{id}`        | admin          | Update reservation                                                         |
+| `DELETE` | `/api/reservations/{id}`        | admin          | Delete reservation                                                         |
+| `GET`    | `/api/check-in/{id}?token=…`    | public + token | Verify QR token, return guest info                                         |
+| `POST`   | `/api/check-in/{id}`            | public + token | Mark checked-in, issue strap                                               |
+| `POST`   | `/api/tables`                   | admin          | Create table                                                               |
+| `GET`    | `/api/tables`                   | admin          | List tables                                                                |
+| `GET`    | `/api/tables/{id}`              | admin          | Get table                                                                  |
+| `PUT`    | `/api/tables/{id}`              | admin          | Update table                                                               |
+| `DELETE` | `/api/tables/{id}`              | admin          | Delete table                                                               |
+| `GET`    | `/api/content/{key}`            | public         | Get CMS content (producers / sponsors)                                     |
+| `PUT`    | `/api/content/{key}`            | admin          | Save CMS content                                                           |
+| `POST`   | `/api/volunteers`               | admin          | Create volunteer profile (person with role `volunteer`)                    |
+| `GET`    | `/api/volunteers`               | admin          | List volunteers (supports `?q=` search)                                    |
+| `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
+| `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
+| `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
+| `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
+| `GET`    | `/api/members`                  | admin          | List members (supports `?q=`, `?active=`)                                  |
+| `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
+| `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
+| `DELETE` | `/api/members/{id}`             | admin          | Delete member                                                              |
+| `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
+| `GET`    | `/api/people`                   | admin          | List people (supports `?q=`, `?role=`, `?active=`)                         |
+| `GET`    | `/api/people/{id}`              | admin          | Get person detail                                                          |
+| `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
+| `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |
+| `GET`    | `/api/people/{id}/reservations` | admin          | List grouped reservation history for that person                           |
+| `GET`    | `/health`                       | public         | Health check                                                               |
 
 ---
 

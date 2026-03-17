@@ -32,7 +32,12 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !image.trim()) return;
-    onSave({ id: initial?.id ?? Date.now(), name: name.trim(), image: image.trim(), active: initial?.active ?? true });
+    onSave({
+      id: initial?.id ?? Date.now(),
+      name: name.trim(),
+      image: image.trim(),
+      active: initial?.active ?? true,
+    });
   }
 
   return (
@@ -45,7 +50,9 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="bg-dark">
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">{m.admin_content_name_placeholder()}</Form.Label>
+            <Form.Label className="text-secondary small">
+              {m.admin_content_name_placeholder()}
+            </Form.Label>
             <Form.Control
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -55,7 +62,9 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
             />
           </Form.Group>
           <Form.Group>
-            <Form.Label className="text-secondary small">{m.admin_content_image_url_placeholder()}</Form.Label>
+            <Form.Label className="text-secondary small">
+              {m.admin_content_image_url_placeholder()}
+            </Form.Label>
             <Form.Control
               value={image}
               onChange={(e) => setImage(e.target.value)}
@@ -65,7 +74,9 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>{m.close()}</Button>
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            {m.close()}
+          </Button>
           <Button type="submit" variant="warning" size="sm">
             <i className="bi bi-floppy me-1" aria-hidden="true" />
             {m.admin_save()}

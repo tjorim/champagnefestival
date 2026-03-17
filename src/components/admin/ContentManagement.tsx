@@ -14,9 +14,11 @@ import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal, { type ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
+import type { Venue } from "../../types/admin";
 
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
+  venues: Venue[];
 }
 
 type ContentKey = "producers" | "sponsors";
@@ -53,6 +55,8 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         if (res.ok && !cancelled) {
           const data = (await res.json()) as { value: ItemDraft[] };
           if (Array.isArray(data.value)) setItems(data.value);
+        } else if (res.status === 404 && !cancelled) {
+          // Backend signals "no content saved yet" with 404 — keep placeholders.
         } else if (!cancelled) {
           setLoadError(true);
         }
@@ -64,18 +68,30 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [sectionKey]);
 
-  function openAdd() { setModalItem(null); setModalOpen(true); }
-  function openEdit(item: ItemDraft) { setModalItem(item); setModalOpen(true); }
+  function openAdd() {
+    setModalItem(null);
+    setModalOpen(true);
+  }
+  function openEdit(item: ItemDraft) {
+    setModalItem(item);
+    setModalOpen(true);
+  }
 
   function handleModalSave(item: ItemDraft) {
     setItems((prev) => {
       const idx = prev.findIndex((i) => i.id === item.id);
       return idx >= 0 ? prev.map((i) => (i.id === item.id ? item : i)) : [...prev, item];
     });
-    setImageErrors((prev) => { const copy = new Set(prev); copy.delete(item.id); return copy; });
+    setImageErrors((prev) => {
+      const copy = new Set(prev);
+      copy.delete(item.id);
+      return copy;
+    });
     setSaveStatus("idle");
     setModalOpen(false);
   }
@@ -120,37 +136,67 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       >
         <span className="d-flex align-items-center gap-2 flex-grow-1 text-truncate">
           {item.image && (
-            <span className="d-inline-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
+            <span
+              className="d-inline-flex align-items-center justify-content-center"
+              style={{ width: 32, height: 32, flexShrink: 0 }}
+            >
               {imageErrors.has(item.id) ? (
-                <span role="img" aria-label={`Image unavailable for ${item.name}`}>🖼</span>
+                <span role="img" aria-label={`Image unavailable for ${item.name}`}>
+                  🖼
+                </span>
               ) : (
                 <img
-                  src={item.image} alt={item.name}
+                  src={item.image}
+                  alt={item.name}
                   style={{ width: 32, height: 32, objectFit: "contain" }}
                   onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
                 />
               )}
             </span>
           )}
-          <span className={`text-truncate ${isArchived ? "text-secondary" : "text-light"}`}>{item.name}</span>
+          <span className={`text-truncate ${isArchived ? "text-secondary" : "text-light"}`}>
+            {item.name}
+          </span>
           <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
         </span>
         <span className="d-flex gap-1 flex-shrink-0">
           {!isArchived && (
-            <Button variant="outline-secondary" size="sm" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => openEdit(item)}
+              aria-label={`Edit ${item.name}`}
+            >
               <i className="bi bi-pencil" aria-hidden="true" />
             </Button>
           )}
           {!isArchived ? (
-            <Button variant="outline-secondary" size="sm" onClick={() => handleArchive(item.id)} aria-label={`${m.admin_content_archive()} ${item.name}`} title={m.admin_content_archive()}>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => handleArchive(item.id)}
+              aria-label={`${m.admin_content_archive()} ${item.name}`}
+              title={m.admin_content_archive()}
+            >
               <i className="bi bi-archive" aria-hidden="true" />
             </Button>
           ) : (
             <>
-              <Button variant="outline-success" size="sm" onClick={() => handleRestore(item.id)} aria-label={`${m.admin_content_restore()} ${item.name}`} title={m.admin_content_restore()}>
+              <Button
+                variant="outline-success"
+                size="sm"
+                onClick={() => handleRestore(item.id)}
+                aria-label={`${m.admin_content_restore()} ${item.name}`}
+                title={m.admin_content_restore()}
+              >
                 <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
               </Button>
-              <Button variant="outline-danger" size="sm" onClick={() => handleDelete(item.id)} aria-label={`${m.admin_delete()} ${item.name}`}>
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={() => handleDelete(item.id)}
+                aria-label={`${m.admin_delete()} ${item.name}`}
+              >
                 <i className="bi bi-trash" aria-hidden="true" />
               </Button>
             </>
@@ -174,9 +220,13 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="mb-0 text-warning">
           {title}
-          <Badge bg="secondary" className="ms-2">{activeItems.length}</Badge>
+          <Badge bg="secondary" className="ms-2">
+            {activeItems.length}
+          </Badge>
           {archivedItems.length > 0 && (
-            <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">{archivedItems.length} archived</Badge>
+            <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">
+              {archivedItems.length} {m.admin_content_archived_section()}
+            </Badge>
           )}
         </h6>
         <div className="d-flex gap-2">
@@ -185,22 +235,37 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
             {m.admin_content_add_item()}
           </Button>
           <Button variant="outline-warning" size="sm" onClick={handleSave} disabled={isSaving}>
-            {isSaving
-              ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-1" />
-              : <i className="bi bi-floppy me-1" aria-hidden="true" />}
+            {isSaving ? (
+              <Spinner
+                as="span"
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+                className="me-1"
+              />
+            ) : (
+              <i className="bi bi-floppy me-1" aria-hidden="true" />
+            )}
             {m.admin_content_save_section()}
           </Button>
         </div>
       </div>
 
       {loadError && (
-        <Alert variant="danger" className="py-1 mb-2">{m.admin_content_error_load()}</Alert>
+        <Alert variant="danger" className="py-1 mb-2">
+          {m.admin_content_error_load()}
+        </Alert>
       )}
       {saveStatus === "saved" && (
-        <Alert variant="success" className="py-1 mb-2">{m.admin_content_saved()}</Alert>
+        <Alert variant="success" className="py-1 mb-2">
+          {m.admin_content_saved()}
+        </Alert>
       )}
       {saveStatus === "error" && (
-        <Alert variant="danger" className="py-1 mb-2">{m.admin_content_error_save()}</Alert>
+        <Alert variant="danger" className="py-1 mb-2">
+          {m.admin_content_error_save()}
+        </Alert>
       )}
 
       <ListGroup variant="flush" className="mb-2">
@@ -222,9 +287,14 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
             onClick={() => setArchivedOpen((o) => !o)}
             aria-expanded={archivedOpen}
           >
-            <i className={`bi bi-chevron-${archivedOpen ? "down" : "right"} me-1`} aria-hidden="true" />
+            <i
+              className={`bi bi-chevron-${archivedOpen ? "down" : "right"} me-1`}
+              aria-hidden="true"
+            />
             {m.admin_content_archived_section()}
-            <Badge bg="secondary" className="ms-2">{archivedItems.length}</Badge>
+            <Badge bg="secondary" className="ms-2">
+              {archivedItems.length}
+            </Badge>
           </Button>
           {archivedOpen && (
             <ListGroup variant="flush">
@@ -234,7 +304,12 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         </div>
       )}
 
-      <ItemModal show={modalOpen} initial={modalItem} onSave={handleModalSave} onHide={() => setModalOpen(false)} />
+      <ItemModal
+        show={modalOpen}
+        initial={modalItem}
+        onSave={handleModalSave}
+        onHide={() => setModalOpen(false)}
+      />
     </div>
   );
 }
@@ -245,9 +320,10 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
 
 interface EditionsSectionProps {
   authHeaders: () => Record<string, string>;
+  venues: Venue[];
 }
 
-function EditionsSection({ authHeaders }: EditionsSectionProps) {
+function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
   const [editions, setEditions] = useState<Edition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -269,7 +345,9 @@ function EditionsSection({ authHeaders }: EditionsSectionProps) {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleCreated = useCallback((edition: Edition) => {
@@ -302,16 +380,34 @@ function EditionsSection({ authHeaders }: EditionsSectionProps) {
         </div>
       )}
       {!isLoading && loadError && (
-        <Alert variant="danger" className="py-2 small">{m.admin_content_error_load()}</Alert>
+        <Alert variant="danger" className="py-2 small">
+          {m.admin_content_error_load()}
+        </Alert>
       )}
       {!isLoading && !loadError && editions.length === 0 && (
         <p className="text-secondary fst-italic small">No editions yet.</p>
       )}
-      {!isLoading && !loadError && editions.map((ed) => (
-        <EditionCard key={ed.id} edition={ed} authHeaders={authHeaders} onDeleted={handleDeleted} onUpdated={handleUpdated} />
-      ))}
+      {!isLoading &&
+        !loadError &&
+        editions.map((ed) => (
+          <EditionCard
+            key={ed.id}
+            edition={ed}
+            venues={venues}
+            authHeaders={authHeaders}
+            onDeleted={handleDeleted}
+            onUpdated={handleUpdated}
+          />
+        ))}
 
-      <EditionModal show={addModalOpen} initial={null} authHeaders={authHeaders} onSaved={handleCreated} onHide={() => setAddModalOpen(false)} />
+      <EditionModal
+        show={addModalOpen}
+        initial={null}
+        venues={venues}
+        authHeaders={authHeaders}
+        onSaved={handleCreated}
+        onHide={() => setAddModalOpen(false)}
+      />
     </div>
   );
 }
@@ -320,16 +416,24 @@ function EditionsSection({ authHeaders }: EditionsSectionProps) {
 // ContentManagement — root export
 // ---------------------------------------------------------------------------
 
-export default function ContentManagement({ authHeaders }: ContentManagementProps) {
+export default function ContentManagement({ authHeaders, venues }: ContentManagementProps) {
   return (
     <div>
       <Card bg="dark" text="white" border="secondary" className="mb-3">
         <Card.Body>
-          <ContentSection sectionKey="producers" title={m.admin_content_producers_section()} authHeaders={authHeaders} />
+          <ContentSection
+            sectionKey="producers"
+            title={m.admin_content_producers_section()}
+            authHeaders={authHeaders}
+          />
           <hr className="border-secondary" />
-          <ContentSection sectionKey="sponsors" title={m.admin_content_sponsors_section()} authHeaders={authHeaders} />
+          <ContentSection
+            sectionKey="sponsors"
+            title={m.admin_content_sponsors_section()}
+            authHeaders={authHeaders}
+          />
           <hr className="border-secondary" />
-          <EditionsSection authHeaders={authHeaders} />
+          <EditionsSection authHeaders={authHeaders} venues={venues} />
         </Card.Body>
       </Card>
     </div>

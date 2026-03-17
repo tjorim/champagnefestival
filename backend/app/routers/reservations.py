@@ -235,6 +235,8 @@ async def update_reservation(
         r.table_id = body.table_id
     if body.notes is not None:
         r.notes = body.notes
+    if body.accessibility_note is not None:
+        r.accessibility_note = body.accessibility_note
     if "person_id" in body.model_fields_set:
         if body.person_id is None:
             r.person_id = None

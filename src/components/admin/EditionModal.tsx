@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -8,10 +8,12 @@ import Select, { type MultiValue, type StylesConfig, type GroupBase } from "reac
 import { m } from "../../paraglide/messages";
 import type { ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
+import type { Venue } from "../../types/admin";
 
 interface EditionModalProps {
   show: boolean;
   initial: Edition | null; // null = new edition
+  venues: Venue[];
   authHeaders: () => Record<string, string>;
   onSaved: (edition: Edition) => void;
   onHide: () => void;
@@ -26,12 +28,39 @@ interface ItemOption {
 type ItemSelectStyles = StylesConfig<ItemOption, true, GroupBase<ItemOption>>;
 
 const darkSelectStyles: ItemSelectStyles = {
-  control: (base) => ({ ...base, backgroundColor: "#212529", borderColor: "#6c757d", color: "#f8f9fa", minHeight: "34px" }),
-  menu: (base) => ({ ...base, backgroundColor: "#212529", border: "1px solid #6c757d", zIndex: 9999 }),
-  option: (base, state) => ({ ...base, backgroundColor: state.isFocused ? "#343a40" : "#212529", color: state.data.isArchived ? "#6c757d" : "#f8f9fa", cursor: "pointer" }),
-  multiValue: (base, state) => ({ ...base, backgroundColor: state.data.isArchived ? "#343a40" : "#495057" }),
-  multiValueLabel: (base, state) => ({ ...base, color: state.data.isArchived ? "#adb5bd" : "#f8f9fa", fontSize: "0.8rem" }),
-  multiValueRemove: (base) => ({ ...base, color: "#adb5bd", ":hover": { backgroundColor: "#dc3545", color: "white" } }),
+  control: (base) => ({
+    ...base,
+    backgroundColor: "#212529",
+    borderColor: "#6c757d",
+    color: "#f8f9fa",
+    minHeight: "34px",
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: "#212529",
+    border: "1px solid #6c757d",
+    zIndex: 9999,
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#343a40" : "#212529",
+    color: state.data.isArchived ? "#6c757d" : "#f8f9fa",
+    cursor: "pointer",
+  }),
+  multiValue: (base, state) => ({
+    ...base,
+    backgroundColor: state.data.isArchived ? "#343a40" : "#495057",
+  }),
+  multiValueLabel: (base, state) => ({
+    ...base,
+    color: state.data.isArchived ? "#adb5bd" : "#f8f9fa",
+    fontSize: "0.8rem",
+  }),
+  multiValueRemove: (base) => ({
+    ...base,
+    color: "#adb5bd",
+    ":hover": { backgroundColor: "#dc3545", color: "white" },
+  }),
   input: (base) => ({ ...base, color: "#f8f9fa" }),
   placeholder: (base) => ({ ...base, color: "#6c757d" }),
   indicatorSeparator: (base) => ({ ...base, backgroundColor: "#6c757d" }),
@@ -52,18 +81,27 @@ function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOp
   return { active, archived };
 }
 
-export default function EditionModal({ show, initial, authHeaders, onSaved, onHide }: EditionModalProps) {
+export default function EditionModal({
+  show,
+  initial,
+  venues,
+  authHeaders,
+  onSaved,
+  onHide,
+}: EditionModalProps) {
+  // Keep a stable ref to venues so the open-modal effect can read the
+  // current list without listing venues as a dependency (which would reset
+  // the whole form whenever a venue is added or archived while the modal is open).
+  const venuesRef = useRef(venues);
+  venuesRef.current = venues;
+
   const [id, setId] = useState("");
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState("");
   const [friday, setFriday] = useState("");
   const [saturday, setSaturday] = useState("");
   const [sunday, setSunday] = useState("");
-  const [venueName, setVenueName] = useState("");
-  const [venueAddress, setVenueAddress] = useState("");
-  const [venueCity, setVenueCity] = useState("");
-  const [venuePostalCode, setVenuePostalCode] = useState("");
-  const [venueCountry, setVenueCountry] = useState("");
+  const [venueId, setVenueId] = useState<string>("");
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,11 +119,7 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
     setFriday(initial?.friday ?? "");
     setSaturday(initial?.saturday ?? "");
     setSunday(initial?.sunday ?? "");
-    setVenueName(initial?.venue_name ?? "");
-    setVenueAddress(initial?.venue_address ?? "");
-    setVenueCity(initial?.venue_city ?? "");
-    setVenuePostalCode(initial?.venue_postal_code ?? "");
-    setVenueCountry(initial?.venue_country ?? "");
+    setVenueId(initial?.venue_id ?? venuesRef.current.find((v) => v.active)?.id ?? "");
     setActive(initial?.active ?? true);
     setError(null);
 
@@ -114,14 +148,14 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
   // Sync selections once pools are loaded
   useEffect(() => {
     if (allProducers.length === 0) return;
-    const ids = new Set(initial?.producers ?? []);
+    const ids = new Set((initial?.producers ?? []).map((p) => p.id));
     const { active: act, archived: arch } = toOptions(allProducers);
     setSelectedProducers([...act, ...arch].filter((o) => ids.has(o.value)));
   }, [allProducers, initial]);
 
   useEffect(() => {
     if (allSponsors.length === 0) return;
-    const ids = new Set(initial?.sponsors ?? []);
+    const ids = new Set((initial?.sponsors ?? []).map((s) => s.id));
     const { active: act, archived: arch } = toOptions(allSponsors);
     setSelectedSponsors([...act, ...arch].filter((o) => ids.has(o.value)));
   }, [allSponsors, initial]);
@@ -146,22 +180,29 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!month.trim() || !friday || !saturday || !sunday) return;
+    if (!month.trim() || !friday || !saturday || !sunday || !venueId) return;
     setSaving(true);
     setError(null);
     try {
       const url = isEdit ? `/api/editions/${initial!.id}` : "/api/editions";
       const method = isEdit ? "PUT" : "POST";
       const body: Record<string, unknown> = {
-        year, month: month.trim(), friday, saturday, sunday,
-        venue_name: venueName.trim(), venue_address: venueAddress.trim(),
-        venue_city: venueCity.trim(), venue_postal_code: venuePostalCode.trim(),
-        venue_country: venueCountry.trim(), active,
-        producers: selectedProducers.map((o) => o.value),
-        sponsors: selectedSponsors.map((o) => o.value),
+        year,
+        month: month.trim(),
+        friday,
+        saturday,
+        sunday,
+        venue_id: venueId,
+        active,
+        producers: selectedProducers.map((o: ItemOption) => o.value),
+        sponsors: selectedSponsors.map((o: ItemOption) => o.value),
       };
       if (!isEdit) body.id = id.trim();
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(body),
+      });
       if (res.ok) {
         onSaved((await res.json()) as Edition);
       } else {
@@ -184,15 +225,22 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="bg-dark">
-          {error && <Alert variant="danger" className="py-1 mb-3 small">{error}</Alert>}
+          {error && (
+            <Alert variant="danger" className="py-1 mb-3 small">
+              {error}
+            </Alert>
+          )}
 
           {!isEdit && (
             <Form.Group className="mb-3">
               <Form.Label className="text-secondary small mb-1">ID</Form.Label>
               <Form.Control
-                value={id} onChange={(e) => setId(e.target.value)}
+                value={id}
+                onChange={(e) => setId(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                placeholder="e.g. 2026-march" required autoFocus
+                placeholder="e.g. 2026-march"
+                required
+                autoFocus
               />
             </Form.Group>
           )}
@@ -201,54 +249,99 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
             <Form.Group style={{ maxWidth: "100px" }}>
               <Form.Label className="text-secondary small mb-1">Year</Form.Label>
               <Form.Control
-                type="number" value={year} onChange={(e) => setYear(Number(e.target.value))}
-                className="bg-dark text-light border-secondary" required
+                type="number"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="bg-dark text-light border-secondary"
+                required
               />
             </Form.Group>
             <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }}>
               <Form.Label className="text-secondary small mb-1">Month</Form.Label>
               <Form.Control
-                value={month} onChange={(e) => setMonth(e.target.value)}
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                placeholder="e.g. march" required
+                placeholder="e.g. march"
+                required
               />
             </Form.Group>
             <Form.Check
-              type="checkbox" id="modal-edition-active"
+              type="checkbox"
+              id="modal-edition-active"
               label={m.admin_content_edition_active()}
-              checked={active} onChange={(e) => setActive(e.target.checked)}
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
               className="text-light align-self-end mb-1"
             />
           </div>
 
           <div className="d-flex gap-3 flex-wrap mb-3">
             <Form.Group>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_friday()}</Form.Label>
-              <Form.Control type="date" value={friday} onChange={(e) => setFriday(e.target.value)} className="bg-dark text-light border-secondary" required />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_edition_friday()}
+              </Form.Label>
+              <Form.Control
+                type="date"
+                value={friday}
+                onChange={(e) => setFriday(e.target.value)}
+                className="bg-dark text-light border-secondary"
+                required
+              />
             </Form.Group>
             <Form.Group>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_saturday()}</Form.Label>
-              <Form.Control type="date" value={saturday} onChange={(e) => setSaturday(e.target.value)} className="bg-dark text-light border-secondary" required />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_edition_saturday()}
+              </Form.Label>
+              <Form.Control
+                type="date"
+                value={saturday}
+                onChange={(e) => setSaturday(e.target.value)}
+                className="bg-dark text-light border-secondary"
+                required
+              />
             </Form.Group>
             <Form.Group>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_sunday()}</Form.Label>
-              <Form.Control type="date" value={sunday} onChange={(e) => setSunday(e.target.value)} className="bg-dark text-light border-secondary" required />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_edition_sunday()}
+              </Form.Label>
+              <Form.Control
+                type="date"
+                value={sunday}
+                onChange={(e) => setSunday(e.target.value)}
+                className="bg-dark text-light border-secondary"
+                required
+              />
             </Form.Group>
-          </div>
-
-          <h6 className="text-secondary small mb-2">{m.admin_content_edition_venue()}</h6>
-          <div className="d-flex gap-2 flex-wrap mb-2">
-            <Form.Control size="sm" placeholder="Venue name" value={venueName} onChange={(e) => setVenueName(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "180px", flex: "2 1 180px" }} />
-            <Form.Control size="sm" placeholder="Address" value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "180px", flex: "2 1 180px" }} />
-          </div>
-          <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Control size="sm" placeholder="City" value={venueCity} onChange={(e) => setVenueCity(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "120px", flex: "1 1 120px" }} />
-            <Form.Control size="sm" placeholder="Postal code" value={venuePostalCode} onChange={(e) => setVenuePostalCode(e.target.value)} className="bg-dark text-light border-secondary" style={{ maxWidth: "110px" }} />
-            <Form.Control size="sm" placeholder="Country" value={venueCountry} onChange={(e) => setVenueCountry(e.target.value)} className="bg-dark text-light border-secondary" style={{ minWidth: "110px", flex: "1 1 110px" }} />
           </div>
 
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_producers_label()}</Form.Label>
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_content_edition_venue()}
+            </Form.Label>
+            <Form.Select
+              size="sm"
+              value={venueId}
+              onChange={(e) => setVenueId(e.target.value)}
+              className="bg-dark text-light border-secondary"
+              required
+            >
+              {venues
+                .filter((v) => v.active || v.id === venueId)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                    {v.city ? ` (${v.city})` : ""}
+                    {!v.active ? ` — ${m.admin_venue_archived_badge()}` : ""}
+                  </option>
+                ))}
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_content_edition_producers_label()}
+            </Form.Label>
             <Select<ItemOption, true, GroupBase<ItemOption>>
               isMulti
               options={producerGroups}
@@ -261,7 +354,9 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
           </Form.Group>
 
           <Form.Group>
-            <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_sponsors_label()}</Form.Label>
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_content_edition_sponsors_label()}
+            </Form.Label>
             <Select<ItemOption, true, GroupBase<ItemOption>>
               isMulti
               options={sponsorGroups}
@@ -274,11 +369,22 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>{m.close()}</Button>
-          <Button type="submit" variant="warning" size="sm" disabled={saving}>
-            {saving
-              ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-1" />
-              : <i className="bi bi-floppy me-1" aria-hidden="true" />}
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            {m.close()}
+          </Button>
+          <Button type="submit" variant="warning" size="sm" disabled={saving || !venueId}>
+            {saving ? (
+              <Spinner
+                as="span"
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+                className="me-1"
+              />
+            ) : (
+              <i className="bi bi-floppy me-1" aria-hidden="true" />
+            )}
             {m.admin_save()}
           </Button>
         </Modal.Footer>

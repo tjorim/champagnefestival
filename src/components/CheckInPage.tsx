@@ -8,11 +8,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "../paraglide/messages";
-import type {
-  Reservation,
-  OrderItemCategory,
-  ReservationStatus,
-} from "../types/reservation";
+import type { Reservation, OrderItemCategory, ReservationStatus } from "../types/reservation";
 
 export default function CheckInPage() {
   const [searchParams] = useSearchParams();

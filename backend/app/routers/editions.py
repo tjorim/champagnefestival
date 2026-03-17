@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Edition
+from app.models import ContentItem, Edition
 from app.schemas import EditionCreate, EditionOut, EditionUpdate
 from app.utils import edition_to_dict
 
@@ -24,7 +24,9 @@ async def list_editions(db: AsyncSession = Depends(get_db)) -> list[dict]:
     result = await db.execute(
         select(Edition).where(Edition.active.is_(True)).order_by(Edition.year, Edition.month)
     )
-    return [edition_to_dict(e) for e in result.scalars().all()]
+    editions = result.scalars().all()
+    pools = await _load_content_pools(db)
+    return [edition_to_dict(e, **_resolve_pools(e, pools)) for e in editions]
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +36,9 @@ async def list_editions(db: AsyncSession = Depends(get_db)) -> list[dict]:
 
 @router.get("/{edition_id}", response_model=EditionOut)
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return edition_to_dict(await _get_or_404(db, edition_id))
+    e = await _get_or_404(db, edition_id)
+    pools = await _load_content_pools(db)
+    return edition_to_dict(e, **_resolve_pools(e, pools))
 
 
 # ---------------------------------------------------------------------------
@@ -67,20 +71,17 @@ async def create_edition(
         friday=body.friday,
         saturday=body.saturday,
         sunday=body.sunday,
-        venue_name=body.venue_name,
-        venue_address=body.venue_address,
-        venue_city=body.venue_city,
-        venue_postal_code=body.venue_postal_code,
-        venue_country=body.venue_country,
-        venue_lat=body.venue_lat,
-        venue_lng=body.venue_lng,
+        venue_id=body.venue_id,
         active=body.active,
     )
     e.set_schedule([ev.model_dump() for ev in body.schedule])
+    e.set_producers(body.producers)
+    e.set_sponsors(body.sponsors)
     db.add(e)
     await db.commit()
     await db.refresh(e)
-    return edition_to_dict(e)
+    pools = await _load_content_pools(db)
+    return edition_to_dict(e, **_resolve_pools(e, pools))
 
 
 # ---------------------------------------------------------------------------
@@ -100,21 +101,25 @@ async def update_edition(
 ) -> dict:
     e = await _get_or_404(db, edition_id)
 
-    simple_fields = [
-        "year", "month", "friday", "saturday", "sunday",
-        "venue_name", "venue_address", "venue_city", "venue_postal_code",
-        "venue_country", "venue_lat", "venue_lng", "active",
-    ]
+    simple_fields = ["year", "month", "friday", "saturday", "sunday", "active"]
     for field in simple_fields:
         if field in body.model_fields_set and getattr(body, field) is not None:
             setattr(e, field, getattr(body, field))
+    # venue_id is non-nullable — only update when a real value is provided
+    if "venue_id" in body.model_fields_set and body.venue_id is not None:
+        e.venue_id = body.venue_id
 
     if "schedule" in body.model_fields_set and body.schedule is not None:
         e.set_schedule([ev.model_dump() for ev in body.schedule])
+    if "producers" in body.model_fields_set and body.producers is not None:
+        e.set_producers(body.producers)
+    if "sponsors" in body.model_fields_set and body.sponsors is not None:
+        e.set_sponsors(body.sponsors)
 
     await db.commit()
     await db.refresh(e)
-    return edition_to_dict(e)
+    pools = await _load_content_pools(db)
+    return edition_to_dict(e, **_resolve_pools(e, pools))
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +139,7 @@ async def delete_edition(edition_id: str, db: AsyncSession = Depends(get_db)) ->
 
 
 # ---------------------------------------------------------------------------
-# Helper
+# Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -144,3 +149,24 @@ async def _get_or_404(db: AsyncSession, edition_id: str) -> Edition:
     if e is None:
         raise HTTPException(status_code=404, detail="Edition not found.")
     return e
+
+
+async def _load_content_pools(db: AsyncSession) -> dict[str, list[dict]]:
+    """Load producers and sponsors content items in one query."""
+    result = await db.execute(
+        select(ContentItem).where(ContentItem.key.in_(["producers", "sponsors"]))
+    )
+    pools: dict[str, list[dict]] = {"producers": [], "sponsors": []}
+    for item in result.scalars().all():
+        pools[item.key] = item.get_items()
+    return pools
+
+
+def _resolve_pools(e: Edition, pools: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    """Filter each pool to the IDs stored on the edition, preserving the edition's saved order."""
+    producer_idx = {i["id"]: i for i in pools["producers"] if "id" in i}
+    sponsor_idx = {i["id"]: i for i in pools["sponsors"] if "id" in i}
+    return {
+        "producers": [producer_idx[pid] for pid in e.get_producers() if pid in producer_idx],
+        "sponsors": [sponsor_idx[sid] for sid in e.get_sponsors() if sid in sponsor_idx],
+    }
