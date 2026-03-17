@@ -1,4 +1,4 @@
-import React, { lazy, useEffect, useState } from "react";
+import React, { lazy, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Link } from "react-router";
 
@@ -18,11 +18,11 @@ import { useLanguage } from "./hooks/useLanguage";
 import { useScrollNavigation } from "./hooks/useScrollNavigation";
 import { useServiceWorker } from "./hooks/useServiceWorker";
 import { useContent } from "./hooks/useContent";
+import { useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
-import { festivalDate } from "./config/dates";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import { editions } from "./config/editions";
+import type { FestivalDay } from "./config/schedule";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -146,77 +146,62 @@ function App() {
   // Fetch CMS-managed producers and sponsors; falls back to config placeholders
   const { producers, sponsors } = useContent();
 
+  // Fetch live edition data; falls back to hardcoded editions.ts on any error
+  const { edition } = useActiveEdition();
+
+  // Derive festival start/end dates from the active edition
+  const festivalDate = useMemo(() => {
+    const d = new Date(edition.dates.friday);
+    d.setHours(17, 0, 0, 0);
+    return d;
+  }, [edition]);
+
+  const festivalEndDate = useMemo(() => {
+    const d = new Date(edition.dates.sunday);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [edition]);
+
+  // Derive festival days for the Schedule component
+  const festivalDays = useMemo<FestivalDay[]>(() => {
+    const toISO = (d: Date) => {
+      const y = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      return `${y}-${mo}-${da}`;
+    };
+    return [
+      { id: 1, date: toISO(edition.dates.friday), label: "friday" },
+      { id: 2, date: toISO(edition.dates.saturday), label: "saturday" },
+      { id: 3, date: toISO(edition.dates.sunday), label: "sunday" },
+    ];
+  }, [edition]);
+
   const [showReservationModal, setShowReservationModal] = useState(false);
 
-  // Static fallback: reservable events from hardcoded config, used as initial state
-  // and kept when the backend is unreachable. Lazy initializer avoids recomputing
-  // this on every render.
-  const [reservableEvents, setReservableEvents] = useState(() => {
-    const now = new Date();
-    const dayDate = (ed: (typeof editions)[number], dayId: number): Date =>
-      [ed.dates.friday, ed.dates.friday, ed.dates.saturday, ed.dates.sunday][dayId] ??
-      ed.dates.friday;
-    return editions.flatMap((ed) =>
-      ed.schedule
-        .filter((ev) => ev.reservation)
-        .filter((ev) => {
-          const eventEnd = new Date(dayDate(ed, ev.dayId));
-          eventEnd.setHours(23, 59, 59, 999);
-          return eventEnd >= now;
-        })
-        .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)
-        .map((ev) => ({ id: ev.id, title: ev.title })),
-    );
-  });
+  const [reservableEvents, setReservableEvents] = useState<Array<{ id: string; title: string }>>(
+    [],
+  );
 
-  // Fetch live editions from the backend and recompute reservable events.
-  // On any error the static fallback computed above remains in state.
+  // Recompute reservable events whenever the active edition changes.
+  // Runs immediately after first mount with the static fallback, then again
+  // if the API response updates the edition.
   useEffect(() => {
-    interface ApiScheduleEvent {
-      id: string;
-      title: string;
-      reservation: boolean;
-      reservations_open_from: string | null;
-      day_id: number;
-    }
-    interface ApiEdition {
-      friday: string;
-      saturday: string;
-      sunday: string;
-      schedule: ApiScheduleEvent[];
-    }
-
-    fetch("/api/editions")
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((apiEditions: ApiEdition[]) => {
-        const now = new Date();
-        const events = apiEditions.flatMap((ed) => {
-          const dayDates: Record<number, Date> = {
-            1: new Date(ed.friday),
-            2: new Date(ed.saturday),
-            3: new Date(ed.sunday),
-          };
-          return ed.schedule
-            .filter((ev) => ev.reservation)
-            .filter((ev) => {
-              const eventEnd = new Date(dayDates[ev.day_id] ?? new Date(ed.friday));
-              eventEnd.setHours(23, 59, 59, 999);
-              return eventEnd >= now;
-            })
-            .filter((ev) => {
-              if (!ev.reservations_open_from) return true;
-              return new Date(ev.reservations_open_from) <= now;
-            })
-            .map((ev) => ({ id: ev.id, title: ev.title }));
-        });
-        // Only replace the static fallback when the backend has actual events.
-        // An empty list means no active editions yet, not an intentional clear.
-        if (events.length > 0) setReservableEvents(events);
+    const now = new Date();
+    const dayDate = (dayId: number): Date =>
+      [edition.dates.friday, edition.dates.saturday, edition.dates.sunday][dayId - 1] ??
+      edition.dates.friday;
+    const events = edition.schedule
+      .filter((ev) => ev.reservation)
+      .filter((ev) => {
+        const eventEnd = new Date(dayDate(ev.dayId));
+        eventEnd.setHours(23, 59, 59, 999);
+        return eventEnd >= now;
       })
-      .catch(() => {
-        // Backend unreachable — keep static fallback.
-      });
-  }, []);
+      .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)
+      .map((ev) => ({ id: ev.id, title: ev.title }));
+    if (events.length > 0) setReservableEvents(events);
+  }, [edition]);
 
   // --- Main marketing page ---
 
@@ -285,7 +270,7 @@ function App() {
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <AppSuspense errorFallbackText={m.error_countdown()}>
-                  <Countdown targetDate={festivalDate} />
+                  <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
                 </AppSuspense>
                 <p className="mb-4" style={{ position: "relative", zIndex: 50 }}>
                   {m.next_festival_description()}
@@ -308,7 +293,7 @@ function App() {
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
                   <AppSuspense errorFallbackText={m.error_schedule()}>
-                    <Schedule />
+                    <Schedule days={festivalDays} events={edition.schedule} />
                   </AppSuspense>
                 </div>
               </div>
@@ -359,7 +344,11 @@ function App() {
                   }
                   errorFallback={<div className="map-error">{m.error_loading_map()}</div>}
                 >
-                  <MapComponent />
+                  <MapComponent
+                    location={edition.venue.venueName}
+                    address={edition.venue.address}
+                    coordinates={edition.venue.coordinates}
+                  />
                 </SuspenseWithBoundary>
               </div>
             </div>

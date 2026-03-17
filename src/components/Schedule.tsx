@@ -2,8 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Tab, Nav, Card, Badge } from "react-bootstrap";
 import { m } from "../paraglide/messages";
 import { getLocale } from "../paraglide/runtime";
-import { festivalDays, scheduleEvents } from "../config/schedule";
-import type { ScheduleEvent } from "../config/schedule";
+import type { FestivalDay, ScheduleEvent } from "../config/schedule";
 
 /**
  * Returns the translated title and description for a schedule event ID.
@@ -70,18 +69,23 @@ function getEventTranslation(
   }
 }
 
+interface ScheduleProps {
+  days: FestivalDay[];
+  events: ScheduleEvent[];
+}
+
 /**
  * Schedule component displays the festival schedule with tabs for each festival day
  * and a list of events with times, descriptions, and category badges.
  */
-const Schedule: React.FC = () => {
-  const [activeDay, setActiveDay] = useState(festivalDays[0]?.id ?? 1);
+const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
+  const [activeDay, setActiveDay] = useState(days[0]?.id ?? 1);
 
   // Get events for the active day and sort them by start time
   const sortedEvents = useMemo(() => {
-    const dayEvents = scheduleEvents.filter((event) => event.dayId === activeDay);
+    const dayEvents = events.filter((event) => event.dayId === activeDay);
     return [...dayEvents].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [activeDay]);
+  }, [activeDay, events]);
 
   // Get category badge color
   const getCategoryColor = (category: ScheduleEvent["category"]) => {
@@ -144,7 +148,7 @@ const Schedule: React.FC = () => {
     <div className="schedule-container">
       <Tab.Container activeKey={activeDay} onSelect={(k) => k && setActiveDay(Number(k))}>
         <Nav variant="tabs" className="mb-4 justify-content-center">
-          {festivalDays.map((day) => (
+          {days.map((day) => (
             <Nav.Item key={day.id}>
               <Nav.Link eventKey={day.id} className="px-4">
                 {getDayName(day.id, day.label)}

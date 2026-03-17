@@ -50,81 +50,80 @@ vi.mock("@/paraglide/runtime", () => ({
   isLocale: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock("@/config/schedule", () => ({
-  festivalDays: [
-    { id: 1, date: "2025-10-03", label: "friday" },
-    { id: 2, date: "2025-10-04", label: "saturday" },
-    { id: 3, date: "2025-10-05", label: "sunday" },
-  ],
-  scheduleEvents: [
-    {
-      id: "fri-tasting",
-      title: "Tasting",
-      startTime: "17:00",
-      endTime: "23:00",
-      description: "Tasting event",
-      category: "tasting",
-      dayId: 1,
-    },
-    {
-      id: "fri-vip",
-      title: "VIP",
-      startTime: "19:30",
-      description: "VIP event",
-      category: "vip",
-      dayId: 1,
-      reservation: true,
-    },
-    {
-      id: "sat-party",
-      title: "Party",
-      startTime: "20:00",
-      description: "Party event",
-      category: "party",
-      dayId: 2,
-    },
-  ],
-}));
+const mockDays = [
+  { id: 1, date: "2025-10-03", label: "friday" },
+  { id: 2, date: "2025-10-04", label: "saturday" },
+  { id: 3, date: "2025-10-05", label: "sunday" },
+];
+
+const mockEvents = [
+  {
+    id: "fri-tasting",
+    title: "Tasting",
+    startTime: "17:00",
+    endTime: "23:00",
+    description: "Tasting event",
+    category: "tasting" as const,
+    dayId: 1,
+  },
+  {
+    id: "fri-vip",
+    title: "VIP",
+    startTime: "19:30",
+    description: "VIP event",
+    category: "vip" as const,
+    dayId: 1,
+    reservation: true,
+  },
+  {
+    id: "sat-party",
+    title: "Party",
+    startTime: "20:00",
+    description: "Party event",
+    category: "party" as const,
+    dayId: 2,
+  },
+];
 
 describe("Schedule component", () => {
   it("renders day tabs", () => {
-    render(<Schedule />);
+    render(<Schedule days={mockDays} events={mockEvents} />);
     expect(screen.getByText("Friday")).toBeInTheDocument();
     expect(screen.getByText("Saturday")).toBeInTheDocument();
     expect(screen.getByText("Sunday")).toBeInTheDocument();
   });
 
   it("renders events for the default active day (Friday)", () => {
-    render(<Schedule />);
+    render(<Schedule days={mockDays} events={mockEvents} />);
     expect(screen.getByText("Champagne Tasting")).toBeInTheDocument();
     expect(screen.getByText("VIP Reception")).toBeInTheDocument();
   });
 
   it("shows reservation badge for events that require reservation", () => {
-    render(<Schedule />);
+    render(<Schedule days={mockDays} events={mockEvents} />);
     expect(screen.getByText("Reservation required")).toBeInTheDocument();
   });
 
   it("shows category badge", () => {
-    render(<Schedule />);
+    render(<Schedule days={mockDays} events={mockEvents} />);
     expect(screen.getByText("Tasting")).toBeInTheDocument();
   });
 
   it("switches to Saturday tab and shows Saturday events", () => {
-    render(<Schedule />);
+    render(<Schedule days={mockDays} events={mockEvents} />);
     fireEvent.click(screen.getByText("Saturday"));
     expect(screen.getByText("Champagne Party")).toBeInTheDocument();
   });
 
   it("shows no events message when a day has no events", () => {
-    render(<Schedule />);
+    render(<Schedule days={mockDays} events={mockEvents} />);
     // Sunday has no events in our mock
     fireEvent.click(screen.getByText("Sunday"));
     expect(screen.getByText("No events")).toBeInTheDocument();
   });
 
   it("displays start and end times for events", () => {
-    render(<Schedule />);
+    render(<Schedule days={mockDays} events={mockEvents} />);
     expect(screen.getByText("17:00")).toBeInTheDocument();
     expect(screen.getByText("23:00")).toBeInTheDocument();
   });

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { m } from "../paraglide/messages";
-import { festivalEndDate } from "../config/dates";
 
 /**
  * Props for the Countdown component
  */
 interface CountdownProps {
   targetDate: string | Date;
+  endDate: Date;
   autoHideAfterDays?: number; // Days after festival end to auto-hide the countdown
 }
 
@@ -54,7 +54,7 @@ type CountdownStatus = (typeof COUNTDOWN_STATUS)[keyof typeof COUNTDOWN_STATUS];
  * - Full accessibility support with ARIA attributes
  * - Client-side only rendering to prevent hydration mismatches
  */
-const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 30 }) => {
+const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfterDays = 30 }) => {
   const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
   const [status, setStatus] = useState<CountdownStatus>(COUNTDOWN_STATUS.upcoming);
@@ -174,7 +174,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     const calculateStatus = (): CountdownStatus => {
       const now = new Date();
       const festivalStart = targetDateObjRef.current;
-      const festivalEnd = new Date(festivalEndDate); // already at 23:59:59.999
+      const festivalEnd = new Date(endDate); // already at 23:59:59.999
 
       if (now < festivalStart) {
         return COUNTDOWN_STATUS.upcoming;
@@ -219,7 +219,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, autoHideAfterDays = 3
     return () => {
       clearInterval(timer);
     };
-  }, [mounted, autoHideAfterDays]);
+  }, [mounted, autoHideAfterDays, endDate]);
 
   // Map time units to display components
   const timerComponents = Object.entries(timeLeft).map(([unit, value]) => (
