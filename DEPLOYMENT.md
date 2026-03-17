@@ -154,7 +154,7 @@ This helps debug any issues with your contact form or other functions.
 
 - The migration from Next.js to React is complete; deployment targets the current React + Vite app.
 - CI quality gates run typecheck, lint, tests, and build before publish in repository workflows.
-- Keep deployment environment variables aligned with `README.md` and this document when onboarding new environments.
+- When onboarding new environments, configure all required environment variables by referring to both this document for deployment settings and `README.md` for application content.
 
 ## Custom Domains
 
