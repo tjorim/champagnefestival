@@ -37,6 +37,8 @@ export interface Reservation {
   guestCount: number;
   preOrders: OrderItem[];
   notes: string;
+  /** Optional accessibility requirements (wheelchair, crutches, low table needed, etc.) */
+  accessibilityNote: string;
   tableId?: string;
   status: ReservationStatus;
   paymentStatus: PaymentStatus;

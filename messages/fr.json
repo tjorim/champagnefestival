@@ -221,6 +221,7 @@
   "admin_assigned": "Assigné",
   "admin_unassigned": "Non assigné",
   "admin_notes": "Remarques",
+  "admin_accessibility_note_label": "Besoins d'accessibilité",
   "admin_authenticated": "Authentifié",
   "admin_refresh": "Actualiser",
   "admin_status_label": "Statut",

@@ -139,6 +139,15 @@ export default function ReservationDetail({
               <span className="small">{reservation.notes}</span>
             </ListGroup.Item>
           )}
+          {reservation.accessibilityNote && (
+            <ListGroup.Item className="bg-dark text-light border-secondary">
+              <span className="text-secondary d-block mb-1">
+                <i className="bi bi-universal-access me-1" aria-hidden="true" />
+                {m.admin_accessibility_note_label()}
+              </span>
+              <span className="small">{reservation.accessibilityNote}</span>
+            </ListGroup.Item>
+          )}
         </ListGroup>
 
         {/* Bottle fulfillment */}
