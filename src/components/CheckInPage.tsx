@@ -60,6 +60,7 @@ export default function CheckInPage() {
               delivered: (item.delivered ?? false) as boolean,
             })),
             notes: (data.notes ?? "") as string,
+            accessibilityNote: (data.accessibility_note ?? "") as string,
             status: (data.status ?? "pending") as ReservationStatus,
             paymentStatus: "unpaid", // not included in CheckInGuestOut
             checkedIn: (data.checked_in ?? false) as boolean,
@@ -127,6 +128,7 @@ export default function CheckInPage() {
             delivered: (item.delivered ?? false) as boolean,
           })),
           notes: (rawRes.notes ?? "") as string,
+          accessibilityNote: (rawRes.accessibility_note ?? "") as string,
           status: (rawRes.status ?? "pending") as ReservationStatus,
           paymentStatus: "unpaid", // not included in CheckInGuestOut
           checkedIn: (rawRes.checked_in ?? false) as boolean,
