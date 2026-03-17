@@ -1,0 +1,10 @@
+# Managed by the GitHub Settings app (probot/settings) when installed.
+# Keeps branch protection required checks aligned with workflow design.
+branches:
+  - name: main
+    protection:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "CI / Typecheck & Lint (Node 20)"
+          - "CI / Test & Build (Node 20)"
