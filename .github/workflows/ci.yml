@@ -29,7 +29,17 @@ jobs:
           node-version: "20"
           cache: npm
 
-      - name: Install dependencies
+      - name: Restore node_modules cache
+        id: quality-node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node20-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node20-modules-
+
+      - name: Install dependencies (cache miss)
+        if: steps.quality-node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Typecheck
@@ -53,7 +63,17 @@ jobs:
           node-version: "20"
           cache: npm
 
-      - name: Install dependencies
+      - name: Restore node_modules cache
+        id: test-build-node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node20-modules-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node20-modules-
+
+      - name: Install dependencies (cache miss)
+        if: steps.test-build-node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Test
