@@ -52,6 +52,7 @@ export interface Venue {
   country: string;
   lat: number;
   lng: number;
+  active: boolean;
 }
 
 export interface Room {

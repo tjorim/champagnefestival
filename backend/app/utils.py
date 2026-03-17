@@ -124,6 +124,7 @@ def venue_to_dict(v: Venue) -> dict:
         "country": v.country,
         "lat": v.lat,
         "lng": v.lng,
+        "active": v.active,
         "created_at": v.created_at,
         "updated_at": v.updated_at,
     }

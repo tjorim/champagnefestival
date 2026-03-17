@@ -26,6 +26,8 @@ async def create_venue(body: VenueCreate, db: AsyncSession = Depends(get_db)) ->
         city=body.city,
         postal_code=body.postal_code,
         country=body.country,
+        lat=body.lat,
+        lng=body.lng,
     )
     db.add(v)
     await db.commit()
@@ -59,6 +61,12 @@ async def update_venue(
         v.postal_code = body.postal_code
     if body.country is not None:
         v.country = body.country
+    if body.lat is not None:
+        v.lat = body.lat
+    if body.lng is not None:
+        v.lng = body.lng
+    if body.active is not None:
+        v.active = body.active
     await db.commit()
     await db.refresh(v)
     return venue_to_dict(v)

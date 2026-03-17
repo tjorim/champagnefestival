@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Table
+from app.models import Layout, Table, TableType
 from app.schemas import TableCreate, TableOut, TableUpdate
 from app.utils import make_id, table_to_dict
 
@@ -27,6 +27,13 @@ async def create_table(
     body: TableCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
+    if tt.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail=f"TableType '{body.table_type_id}' not found.")
+    lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
+    if lay.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
+
     t = Table(
         id=make_id("tbl"),
         name=body.name,
@@ -90,14 +97,20 @@ async def update_table(
     if body.y is not None:
         t.y = body.y
     if body.table_type_id is not None:
+        tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
+        if tt.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail=f"TableType '{body.table_type_id}' not found.")
         t.table_type_id = body.table_type_id
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
     # Zero-valid fields: must use model_fields_set so that an explicit zero
     # degrees (rotation=0) is honoured even though the value is falsy.
-    if "rotation" in body.model_fields_set:
+    if "rotation" in body.model_fields_set and body.rotation is not None:
         t.rotation = body.rotation
-    if "layout_id" in body.model_fields_set:
+    if "layout_id" in body.model_fields_set and body.layout_id is not None:
+        lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
+        if lay.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
         t.layout_id = body.layout_id
 
     await db.commit()

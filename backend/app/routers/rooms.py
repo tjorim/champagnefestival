@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Room
+from app.models import Room, Venue
 from app.schemas import RoomCreate, RoomOut, RoomUpdate
 from app.utils import make_id, room_to_dict
 
@@ -27,6 +27,10 @@ async def create_room(
     body: RoomCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
+    if venue.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail=f"Venue '{body.venue_id}' not found.")
+
     r = Room(
         id=make_id("room"),
         venue_id=body.venue_id,

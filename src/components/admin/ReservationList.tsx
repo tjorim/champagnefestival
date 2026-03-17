@@ -6,11 +6,7 @@ import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { m } from "../../paraglide/messages";
-import type {
-  Reservation,
-  ReservationStatus,
-  PaymentStatus,
-} from "../../types/reservation";
+import type { Reservation, ReservationStatus, PaymentStatus } from "../../types/reservation";
 import type { FloorTable } from "../../types/admin";
 
 interface ReservationListProps {

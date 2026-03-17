@@ -106,6 +106,7 @@ class Venue(Base):
     country: Mapped[str] = mapped_column(String(100), default="")
     lat: Mapped[float] = mapped_column(Float, default=0.0)
     lng: Mapped[float] = mapped_column(Float, default=0.0)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
@@ -250,8 +251,8 @@ class Edition(Base):
     saturday: Mapped[date] = mapped_column(Date)
     sunday: Mapped[date] = mapped_column(Date)
 
-    venue_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("venues.id", ondelete="SET NULL"), nullable=True
+    venue_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
     )
 
     # JSON-encoded list of schedule event dicts

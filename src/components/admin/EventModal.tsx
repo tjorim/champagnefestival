@@ -6,9 +6,17 @@ import { m } from "../../paraglide/messages";
 import type { ScheduleEvent } from "./editionTypes";
 
 const EMPTY_EVENT: ScheduleEvent = {
-  id: "", title: "", start_time: "", end_time: null, description: "",
-  reservation: false, reservations_open_from: null, location: null,
-  presenter: null, category: "other", day_id: 1,
+  id: "",
+  title: "",
+  start_time: "",
+  end_time: null,
+  description: "",
+  reservation: false,
+  reservations_open_from: null,
+  location: null,
+  presenter: null,
+  category: "other",
+  day_id: 1,
 };
 
 interface EventModalProps {
@@ -31,9 +39,9 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
   const [location, setLocation] = useState("");
   const [presenter, setPresenter] = useState("");
 
-  const ev = initial ?? EMPTY_EVENT;
   useEffect(() => {
     if (show) {
+      const ev = initial ?? EMPTY_EVENT;
       setId(ev.id);
       setTitle(ev.title);
       setDayId(ev.day_id);
@@ -52,11 +60,17 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
     e.preventDefault();
     if (!id.trim() || !title.trim() || !startTime.trim()) return;
     onSave({
-      id: id.trim(), title: title.trim(), start_time: startTime.trim(),
-      end_time: endTime.trim() || null, description: description.trim(),
-      reservation, reservations_open_from: reservation ? reservationsOpenFrom.trim() || null : null,
-      location: location.trim() || null, presenter: presenter.trim() || null,
-      category: category.trim(), day_id: dayId,
+      id: id.trim(),
+      title: title.trim(),
+      start_time: startTime.trim(),
+      end_time: endTime.trim() || null,
+      description: description.trim(),
+      reservation,
+      reservations_open_from: reservation ? reservationsOpenFrom.trim() || null : null,
+      location: location.trim() || null,
+      presenter: presenter.trim() || null,
+      category: category.trim(),
+      day_id: dayId,
     });
   }
 
@@ -73,27 +87,42 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
         <Modal.Body className="bg-dark">
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_id()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_id()}
+              </Form.Label>
               <Form.Control
-                size="sm" value={id} onChange={(e) => setId(e.target.value)}
+                size="sm"
+                value={id}
+                onChange={(e) => setId(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                placeholder="e.g. fri-vip" required readOnly={isEdit}
+                placeholder="e.g. fri-vip"
+                required
+                readOnly={isEdit}
               />
             </Form.Group>
             <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_title()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_title()}
+              </Form.Label>
               <Form.Control
-                size="sm" value={title} onChange={(e) => setTitle(e.target.value)}
+                size="sm"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                required autoFocus={!isEdit}
+                required
+                autoFocus={!isEdit}
               />
             </Form.Group>
           </div>
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group style={{ maxWidth: "120px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_day()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_day()}
+              </Form.Label>
               <Form.Select
-                size="sm" value={dayId} onChange={(e) => setDayId(Number(e.target.value))}
+                size="sm"
+                value={dayId}
+                onChange={(e) => setDayId(Number(e.target.value))}
                 className="bg-dark text-light border-secondary"
               >
                 <option value={1}>{m.admin_content_edition_friday()}</option>
@@ -102,58 +131,87 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
               </Form.Select>
             </Form.Group>
             <Form.Group style={{ maxWidth: "120px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_start_time()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_start_time()}
+              </Form.Label>
               <Form.Control
-                size="sm" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+                size="sm"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                placeholder="19:00" required
+                placeholder="19:00"
+                required
               />
             </Form.Group>
             <Form.Group style={{ maxWidth: "120px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_end_time()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_end_time()}
+              </Form.Label>
               <Form.Control
-                size="sm" value={endTime} onChange={(e) => setEndTime(e.target.value)}
+                size="sm"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
                 className="bg-dark text-light border-secondary"
                 placeholder="21:30"
               />
             </Form.Group>
             <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_category()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_category()}
+              </Form.Label>
               <Form.Control
-                size="sm" value={category} onChange={(e) => setCategory(e.target.value)}
+                size="sm"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                placeholder="tasting" required
+                placeholder="tasting"
+                required
               />
             </Form.Group>
           </div>
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_location()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_location()}
+              </Form.Label>
               <Form.Control
-                size="sm" value={location} onChange={(e) => setLocation(e.target.value)}
+                size="sm"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
             <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_presenter()}</Form.Label>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_presenter()}
+              </Form.Label>
               <Form.Control
-                size="sm" value={presenter} onChange={(e) => setPresenter(e.target.value)}
+                size="sm"
+                value={presenter}
+                onChange={(e) => setPresenter(e.target.value)}
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
           </div>
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small mb-1">{m.admin_content_event_description()}</Form.Label>
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_content_event_description()}
+            </Form.Label>
             <Form.Control
-              as="textarea" size="sm" rows={2} value={description}
+              as="textarea"
+              size="sm"
+              rows={2}
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
           <Form.Check
-            type="checkbox" id="modal-event-reservation"
+            type="checkbox"
+            id="modal-event-reservation"
             label={m.admin_content_event_requires_reservation()}
-            checked={reservation} onChange={(e) => setReservation(e.target.checked)}
+            checked={reservation}
+            onChange={(e) => setReservation(e.target.checked)}
             className="text-light mb-2"
           />
           {reservation && (
@@ -162,7 +220,9 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 {m.admin_content_edition_reservation_opens()}
               </Form.Label>
               <Form.Control
-                type="datetime-local" size="sm" value={reservationsOpenFrom}
+                type="datetime-local"
+                size="sm"
+                value={reservationsOpenFrom}
                 onChange={(e) => setReservationsOpenFrom(e.target.value)}
                 className="bg-dark text-light border-secondary"
                 style={{ maxWidth: "240px" }}
@@ -171,7 +231,9 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
           )}
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>{m.close()}</Button>
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            {m.close()}
+          </Button>
           <Button type="submit" variant="warning" size="sm">
             <i className="bi bi-floppy me-1" aria-hidden="true" />
             {m.admin_save()}

@@ -67,7 +67,7 @@ export default function TableTypeManagement({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!form.name.trim() || form.maxCapacity < 1) return;
+    if (!form.name.trim() || form.maxCapacity < 1 || !Number.isInteger(form.maxCapacity)) return;
     setSaving(true);
     setError(null);
     try {
@@ -109,7 +109,9 @@ export default function TableTypeManagement({
         </Card.Header>
         <Card.Body className="p-0">
           {deleteError && (
-            <Alert variant="danger" className="m-3 py-1 small">{deleteError}</Alert>
+            <Alert variant="danger" className="m-3 py-1 small">
+              {deleteError}
+            </Alert>
           )}
           {tableTypes.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_no_table_types()}</p>
@@ -133,14 +135,22 @@ export default function TableTypeManagement({
                       <td className="fw-semibold">{tt.name}</td>
                       <td>
                         <Badge bg="secondary">
-                          {tt.shape === "round" ? m.admin_table_shape_round() : m.admin_table_shape_rectangle()}
+                          {tt.shape === "round"
+                            ? m.admin_table_shape_round()
+                            : m.admin_table_shape_rectangle()}
                         </Badge>
                       </td>
                       <td>{tt.widthM} m</td>
                       <td>{tt.shape === "round" ? "—" : `${tt.lengthM} m`}</td>
                       <td>
-                        <Badge bg={tt.heightType === "high" ? "info" : "dark"} text={tt.heightType === "high" ? "dark" : "secondary"} className="border border-secondary">
-                          {tt.heightType === "high" ? m.admin_table_height_type_high() : m.admin_table_height_type_low()}
+                        <Badge
+                          bg={tt.heightType === "high" ? "info" : "dark"}
+                          text={tt.heightType === "high" ? "dark" : "secondary"}
+                          className="border border-secondary"
+                        >
+                          {tt.heightType === "high"
+                            ? m.admin_table_height_type_high()
+                            : m.admin_table_height_type_low()}
                         </Badge>
                       </td>
                       <td>{tt.maxCapacity}</td>
@@ -175,14 +185,23 @@ export default function TableTypeManagement({
         </Card.Body>
       </Card>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered aria-labelledby="table-type-modal-title">
+      <Modal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        centered
+        aria-labelledby="table-type-modal-title"
+      >
         <Modal.Header closeButton className="bg-dark text-light border-secondary">
           <Modal.Title id="table-type-modal-title">
             {editingId ? m.admin_edit_table_type() : m.admin_add_table_type()}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
-          {error && <Alert variant="danger" className="py-1 mb-3 small">{error}</Alert>}
+          {error && (
+            <Alert variant="danger" className="py-1 mb-3 small">
+              {error}
+            </Alert>
+          )}
           <Form.Group className="mb-3" controlId="tt-name">
             <Form.Label>{m.admin_table_name()}</Form.Label>
             <Form.Control
@@ -216,7 +235,9 @@ export default function TableTypeManagement({
             <Form.Label>{m.admin_table_height_type_label()}</Form.Label>
             <Form.Select
               value={form.heightType}
-              onChange={(e) => setForm((p) => ({ ...p, heightType: e.target.value as "low" | "high" }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, heightType: e.target.value as "low" | "high" }))
+              }
               className="bg-dark text-light border-secondary"
             >
               <option value="low">{m.admin_table_height_type_low()}</option>
@@ -227,9 +248,15 @@ export default function TableTypeManagement({
             <Form.Group className="mb-3" controlId="tt-diameter">
               <Form.Label>{m.admin_table_diameter_label()}</Form.Label>
               <Form.Control
-                type="number" min={0.1} max={20} step={0.1}
+                type="number"
+                min={0.1}
+                max={20}
+                step={0.1}
                 value={form.widthM}
-                onChange={(e) => { const v = Number(e.target.value); setForm((p) => ({ ...p, widthM: v, lengthM: v })); }}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setForm((p) => ({ ...p, widthM: v, lengthM: v }));
+                }}
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
@@ -239,9 +266,19 @@ export default function TableTypeManagement({
                 <Form.Group controlId="tt-width">
                   <Form.Label>{m.admin_table_width_label()}</Form.Label>
                   <Form.Control
-                    type="number" min={0.1} max={20} step={0.1}
+                    type="number"
+                    min={0.1}
+                    max={20}
+                    step={0.1}
                     value={form.widthM}
-                    onChange={(e) => { const v = Number(e.target.value); setForm((p) => v > p.lengthM ? { ...p, widthM: p.lengthM, lengthM: v } : { ...p, widthM: v }); }}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setForm((p) =>
+                        v > p.lengthM
+                          ? { ...p, widthM: p.lengthM, lengthM: v }
+                          : { ...p, widthM: v },
+                      );
+                    }}
                     className="bg-dark text-light border-secondary"
                   />
                 </Form.Group>
@@ -250,9 +287,19 @@ export default function TableTypeManagement({
                 <Form.Group controlId="tt-length">
                   <Form.Label>{m.admin_table_length_label()}</Form.Label>
                   <Form.Control
-                    type="number" min={0.1} max={20} step={0.1}
+                    type="number"
+                    min={0.1}
+                    max={20}
+                    step={0.1}
                     value={form.lengthM}
-                    onChange={(e) => { const v = Number(e.target.value); setForm((p) => v < p.widthM ? { ...p, lengthM: p.widthM, widthM: v } : { ...p, lengthM: v }); }}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setForm((p) =>
+                        v < p.widthM
+                          ? { ...p, lengthM: p.widthM, widthM: v }
+                          : { ...p, lengthM: v },
+                      );
+                    }}
                     className="bg-dark text-light border-secondary"
                   />
                 </Form.Group>
@@ -262,7 +309,9 @@ export default function TableTypeManagement({
           <Form.Group controlId="tt-max-capacity">
             <Form.Label>{m.admin_table_type_max_capacity()}</Form.Label>
             <Form.Control
-              type="number" min={1} max={50}
+              type="number"
+              min={1}
+              max={50}
               value={form.maxCapacity}
               onChange={(e) => setForm((p) => ({ ...p, maxCapacity: Number(e.target.value) }))}
               className="bg-dark text-light border-secondary"
@@ -276,7 +325,12 @@ export default function TableTypeManagement({
           <Button
             variant="warning"
             onClick={handleSave}
-            disabled={saving || !form.name.trim() || form.maxCapacity < 1}
+            disabled={
+              saving ||
+              !form.name.trim() ||
+              form.maxCapacity < 1 ||
+              !Number.isInteger(form.maxCapacity)
+            }
           >
             {m.admin_save()}
           </Button>

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import TableType
+from app.models import Table, TableType
 from app.schemas import TableTypeCreate, TableTypeOut, TableTypeUpdate
 from app.utils import make_id, table_type_to_dict
 
@@ -79,6 +79,12 @@ async def update_table_type(
 @router.delete("/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> None:
     tt = await _get_or_404(db, type_id)
+    in_use = await db.execute(select(Table).where(Table.table_type_id == type_id).limit(1))
+    if in_use.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete: tables are still using this type.",
+        )
     await db.delete(tt)
     await db.commit()
 

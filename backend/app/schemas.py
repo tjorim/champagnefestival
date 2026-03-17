@@ -372,6 +372,7 @@ class VenueCreate(BaseModel):
     country: str = Field(default="", max_length=100)
     lat: float = 0.0
     lng: float = 0.0
+    active: bool = True
 
 
 class VenueUpdate(BaseModel):
@@ -382,6 +383,7 @@ class VenueUpdate(BaseModel):
     country: str | None = Field(default=None, max_length=100)
     lat: float | None = None
     lng: float | None = None
+    active: bool | None = None
 
 
 class VenueOut(BaseModel):
@@ -393,6 +395,7 @@ class VenueOut(BaseModel):
     country: str
     lat: float
     lng: float
+    active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -461,7 +464,7 @@ class EditionCreate(BaseModel):
     friday: date
     saturday: date
     sunday: date
-    venue_id: str | None = None
+    venue_id: str
     schedule: list[ScheduleEventIn] = Field(default_factory=list)
     producers: list[int] = Field(default_factory=list)
     sponsors: list[int] = Field(default_factory=list)
@@ -488,7 +491,7 @@ class EditionOut(BaseModel):
     friday: date
     saturday: date
     sunday: date
-    venue_id: str | None
+    venue_id: str
     schedule: list[ScheduleEventOut]
     producers: list[SliderItem]
     sponsors: list[SliderItem]

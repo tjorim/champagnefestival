@@ -34,10 +34,11 @@ function apiVenueToVenue(d: Record<string, unknown>): Venue {
     name: d.name as string,
     address: (d.address ?? "") as string,
     city: (d.city ?? "") as string,
-    postalCode: ((d.postal_code ?? d.postalCode ?? "") as string),
+    postalCode: (d.postal_code ?? d.postalCode ?? "") as string,
     country: (d.country ?? "") as string,
-    lat: ((d.lat ?? 0) as number),
-    lng: ((d.lng ?? 0) as number),
+    lat: (d.lat ?? 0) as number,
+    lng: (d.lng ?? 0) as number,
+    active: (d.active ?? true) as boolean,
   };
 }
 
@@ -61,7 +62,7 @@ function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
     shape: (d.shape ?? "rectangle") as "rectangle" | "round",
     widthM: (d.width_m ?? d.widthM ?? 1.8) as number,
     lengthM: (d.length_m ?? d.lengthM ?? 0.7) as number,
-    heightType: ((d.height_type ?? d.heightType ?? "low") as "low" | "high"),
+    heightType: (d.height_type ?? d.heightType ?? "low") as "low" | "high",
     maxCapacity: (d.max_capacity ?? d.maxCapacity ?? 4) as number,
   };
 }
@@ -87,7 +88,7 @@ function apiTableToTable(d: Record<string, unknown>): FloorTable {
     x: d.x as number,
     y: d.y as number,
     tableTypeId: (d.table_type_id ?? d.tableTypeId) as string,
-    rotation: ((d.rotation ?? 0) as number),
+    rotation: (d.rotation ?? 0) as number,
     layoutId: (d.layout_id ?? d.layoutId) as string,
     reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
   };
@@ -155,7 +156,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setIsLoading(true);
     setError("");
     try {
-      const [resResponse, tablesResponse, venuesResponse, roomsResponse, tableTypesResponse, layoutsResponse] = await Promise.all([
+      const [
+        resResponse,
+        tablesResponse,
+        venuesResponse,
+        roomsResponse,
+        tableTypesResponse,
+        layoutsResponse,
+      ] = await Promise.all([
         fetch("/api/reservations", { headers: authHeaders() }),
         fetch("/api/tables", { headers: authHeaders() }),
         fetch("/api/venues", { headers: authHeaders() }),
@@ -164,45 +172,55 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fetch("/api/layouts", { headers: authHeaders() }),
       ]);
 
-      if (
-        resResponse.status === 401 ||
-        tablesResponse.status === 401 ||
-        venuesResponse.status === 401 ||
-        roomsResponse.status === 401 ||
-        tableTypesResponse.status === 401 ||
-        layoutsResponse.status === 401
-      ) {
+      const responses = [
+        resResponse,
+        tablesResponse,
+        venuesResponse,
+        roomsResponse,
+        tableTypesResponse,
+        layoutsResponse,
+      ];
+
+      if (responses.some((r) => r.status === 401)) {
         setIsAuthenticated(false);
         setLoginError(m.admin_login_error());
         return;
       }
 
-      if (resResponse.ok) {
-        const data = await resResponse.json();
-        const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
-        setReservations(rawRes.map(apiReservationToReservation));
+      if (responses.some((r) => !r.ok)) {
+        setReservations([]);
+        setTables([]);
+        setVenues([]);
+        setRooms([]);
+        setTableTypes([]);
+        setLayouts([]);
+        setError(m.admin_error_load_data());
+        return;
       }
-      if (tablesResponse.ok) {
-        const data = await tablesResponse.json();
-        const raw: Record<string, unknown>[] = Array.isArray(data) ? data : (data.tables ?? []);
-        setTables(raw.map(apiTableToTable));
-      }
-      if (venuesResponse.ok) {
-        const data = await venuesResponse.json();
-        setVenues(Array.isArray(data) ? data.map(apiVenueToVenue) : []);
-      }
-      if (roomsResponse.ok) {
-        const data = await roomsResponse.json();
-        setRooms(Array.isArray(data) ? data.map(apiRoomToRoom) : []);
-      }
-      if (tableTypesResponse.ok) {
-        const data = await tableTypesResponse.json();
-        setTableTypes(Array.isArray(data) ? data.map(apiTableTypeToTableType) : []);
-      }
-      if (layoutsResponse.ok) {
-        const data = await layoutsResponse.json();
-        setLayouts(Array.isArray(data) ? data.map(apiLayoutToLayout) : []);
-      }
+
+      const data = await resResponse.json();
+      const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
+      setReservations(rawRes.map(apiReservationToReservation));
+
+      const tablesData = await tablesResponse.json();
+      const rawTables: Record<string, unknown>[] = Array.isArray(tablesData)
+        ? tablesData
+        : (tablesData.tables ?? []);
+      setTables(rawTables.map(apiTableToTable));
+
+      const venuesData = await venuesResponse.json();
+      setVenues(Array.isArray(venuesData) ? venuesData.map(apiVenueToVenue) : []);
+
+      const roomsData = await roomsResponse.json();
+      setRooms(Array.isArray(roomsData) ? roomsData.map(apiRoomToRoom) : []);
+
+      const tableTypesData = await tableTypesResponse.json();
+      setTableTypes(
+        Array.isArray(tableTypesData) ? tableTypesData.map(apiTableTypeToTableType) : [],
+      );
+
+      const layoutsData = await layoutsResponse.json();
+      setLayouts(Array.isArray(layoutsData) ? layoutsData.map(apiLayoutToLayout) : []);
     } catch (err) {
       console.error("Failed to load dashboard data", err);
       setError(m.admin_error_load_data());
@@ -345,7 +363,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       const response = await fetch("/api/tables", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ name, capacity, x: 10, y: 10, layout_id: layoutId, table_type_id: tableTypeId }),
+        body: JSON.stringify({
+          name,
+          capacity,
+          x: 10,
+          y: 10,
+          layout_id: layoutId,
+          table_type_id: tableTypeId,
+        }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -380,9 +405,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     async (tableId: string, rotation: number) => {
       // Normalise to [0, 360)
       const normalised = ((rotation % 360) + 360) % 360;
-      setTables((prev) =>
-        prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)),
-      );
+      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)));
       try {
         await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
@@ -428,6 +451,40 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
+  const handleArchiveVenue = useCallback(
+    async (venueId: string) => {
+      const response = await fetch(`/api/venues/${venueId}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({ active: false }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_archive_venue());
+      }
+      const d = await response.json();
+      setVenues((prev) => prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)));
+    },
+    [authHeaders],
+  );
+
+  const handleRestoreVenue = useCallback(
+    async (venueId: string) => {
+      const response = await fetch(`/api/venues/${venueId}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({ active: true }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_restore_venue());
+      }
+      const d = await response.json();
+      setVenues((prev) => prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)));
+    },
+    [authHeaders],
+  );
+
   const handleDeleteVenue = useCallback(
     async (venueId: string) => {
       const response = await fetch(`/api/venues/${venueId}`, {
@@ -442,7 +499,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       // Cascade: remove rooms and their layouts/tables from local state
       const venueRoomIds = rooms.filter((r) => r.venueId === venueId).map((r) => r.id);
       setRooms((prev) => prev.filter((r) => r.venueId !== venueId));
-      const venueLayoutIds = layouts.filter((l) => venueRoomIds.includes(l.roomId ?? "")).map((l) => l.id);
+      const venueLayoutIds = layouts
+        .filter((l) => venueRoomIds.includes(l.roomId ?? ""))
+        .map((l) => l.id);
       setLayouts((prev) => prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")));
       setTables((prev) => prev.filter((t) => !venueLayoutIds.includes(t.layoutId)));
     },
@@ -869,6 +928,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       venues={venues}
                       rooms={rooms}
                       onAdd={handleAddVenue}
+                      onArchive={handleArchiveVenue}
+                      onRestore={handleRestoreVenue}
                       onDelete={handleDeleteVenue}
                       onAddRoom={handleAddRoom}
                       onDeleteRoom={handleDeleteRoom}

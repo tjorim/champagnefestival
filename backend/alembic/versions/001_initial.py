@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column("country", sa.String(100), nullable=False, server_default=""),
         sa.Column("lat", sa.Float, nullable=False, server_default="0.0"),
         sa.Column("lng", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -105,8 +106,8 @@ def upgrade() -> None:
         sa.Column(
             "venue_id",
             sa.String(64),
-            sa.ForeignKey("venues.id", ondelete="SET NULL"),
-            nullable=True,
+            sa.ForeignKey("venues.id", ondelete="RESTRICT"),
+            nullable=False,
         ),
         sa.Column("schedule", sa.Text, nullable=False, server_default="[]"),
         sa.Column("producers", sa.Text, nullable=False, server_default="[]"),

@@ -459,6 +459,7 @@ async def test_room_crud(client):
     data = r.json()
     assert data["name"] == "Main Hall"
     assert data["width_m"] == 25.0
+    assert data["length_m"] == 18.0
     room_id = data["id"]
 
     # List

@@ -55,7 +55,6 @@ export interface Reservation {
   updatedAt: string;
 }
 
-
 export interface ReservationFormData {
   name: string;
   email: string;

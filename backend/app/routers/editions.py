@@ -101,10 +101,13 @@ async def update_edition(
 ) -> dict:
     e = await _get_or_404(db, edition_id)
 
-    simple_fields = ["year", "month", "friday", "saturday", "sunday", "venue_id", "active"]
+    simple_fields = ["year", "month", "friday", "saturday", "sunday", "active"]
     for field in simple_fields:
         if field in body.model_fields_set and getattr(body, field) is not None:
             setattr(e, field, getattr(body, field))
+    # venue_id is non-nullable — only update when a real value is provided
+    if "venue_id" in body.model_fields_set and body.venue_id is not None:
+        e.venue_id = body.venue_id
 
     if "schedule" in body.model_fields_set and body.schedule is not None:
         e.set_schedule([ev.model_dump() for ev in body.schedule])
@@ -160,10 +163,10 @@ async def _load_content_pools(db: AsyncSession) -> dict[str, list[dict]]:
 
 
 def _resolve_pools(e: Edition, pools: dict[str, list[dict]]) -> dict[str, list[dict]]:
-    """Filter each pool to the IDs stored on the edition, preserving order."""
-    producer_ids = set(e.get_producers())
-    sponsor_ids = set(e.get_sponsors())
+    """Filter each pool to the IDs stored on the edition, preserving the edition's saved order."""
+    producer_idx = {i["id"]: i for i in pools["producers"] if "id" in i}
+    sponsor_idx = {i["id"]: i for i in pools["sponsors"] if "id" in i}
     return {
-        "producers": [i for i in pools["producers"] if i.get("id") in producer_ids],
-        "sponsors": [i for i in pools["sponsors"] if i.get("id") in sponsor_ids],
+        "producers": [producer_idx[pid] for pid in e.get_producers() if pid in producer_idx],
+        "sponsors": [sponsor_idx[sid] for sid in e.get_sponsors() if sid in sponsor_idx],
     }

@@ -49,7 +49,12 @@ interface LayoutEditorProps {
   layouts: Layout[];
   reservations: Reservation[];
   rooms: Room[];
-  onAddTable: (name: string, capacity: number, layoutId: string, tableTypeId: string) => Promise<void>;
+  onAddTable: (
+    name: string,
+    capacity: number,
+    layoutId: string,
+    tableTypeId: string,
+  ) => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
@@ -202,7 +207,7 @@ function RoomCanvas({
 
       onMoveTable(table.id as string, newX, newY);
     },
-    [roomTables, canvasW, canvasH, onMoveTable],
+    [roomTables, tableTypes, canvasW, canvasH, onMoveTable],
   );
 
   return (
@@ -339,17 +344,25 @@ export default function LayoutEditor({
   // Add Table modal
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTable, setNewTable] = useState({
-    name: "", capacity: 4, tableTypeId: "",
+    name: "",
+    capacity: 4,
+    tableTypeId: "",
   });
   const [addTableError, setAddTableError] = useState<string | null>(null);
 
   const [deleteTableError, setDeleteTableError] = useState<string | null>(null);
 
   const handleAddTable = useCallback(async () => {
-    if (!newTable.name.trim() || newTable.capacity < 1 || !newTable.tableTypeId || !activeLayoutId) return;
+    if (!newTable.name.trim() || newTable.capacity < 1 || !newTable.tableTypeId || !activeLayoutId)
+      return;
     setAddTableError(null);
     try {
-      await onAddTable(newTable.name.trim(), newTable.capacity, activeLayoutId, newTable.tableTypeId);
+      await onAddTable(
+        newTable.name.trim(),
+        newTable.capacity,
+        activeLayoutId,
+        newTable.tableTypeId,
+      );
       setNewTable({ name: "", capacity: 4, tableTypeId: "" });
       setShowAddTable(false);
     } catch (err) {
@@ -372,7 +385,6 @@ export default function LayoutEditor({
     [onDeleteTable],
   );
 
-
   const selectedTableData = tables.find((t) => t.id === selectedTable);
   const selectedType = tableTypes.find((t) => t.id === selectedTableData?.tableTypeId);
   const selectedReservations = selectedTableData
@@ -381,7 +393,9 @@ export default function LayoutEditor({
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
-  const roomLayouts = layouts.filter((l) => l.roomId === activeRoomId).sort((a, b) => a.dayId - b.dayId);
+  const roomLayouts = layouts
+    .filter((l) => l.roomId === activeRoomId)
+    .sort((a, b) => a.dayId - b.dayId);
   const canvasTables = activeLayoutId ? tables.filter((t) => t.layoutId === activeLayoutId) : [];
 
   const handleSelectRoom = useCallback((k: string | null) => {
@@ -411,7 +425,12 @@ export default function LayoutEditor({
                   <Nav.Link eventKey={room.id} className="py-1 px-2 small text-light">
                     <span
                       className="me-1 rounded-circle d-inline-block"
-                      style={{ width: 10, height: 10, background: room.color, verticalAlign: "middle" }}
+                      style={{
+                        width: 10,
+                        height: 10,
+                        background: room.color,
+                        verticalAlign: "middle",
+                      }}
                       aria-hidden="true"
                     />
                     {room.name}
@@ -426,7 +445,10 @@ export default function LayoutEditor({
           <Button
             variant="outline-warning"
             size="sm"
-            onClick={() => { setAddTableError(null); setShowAddTable(true); }}
+            onClick={() => {
+              setAddTableError(null);
+              setShowAddTable(true);
+            }}
             disabled={!activeLayoutId}
           >
             <i className="bi bi-plus-lg me-1" aria-hidden="true" />
@@ -455,7 +477,10 @@ export default function LayoutEditor({
                         <Button
                           size="sm"
                           variant={activeLayoutId === layout.id ? "warning" : "outline-secondary"}
-                          onClick={() => { setActiveLayoutId(layout.id); setSelectedTable(null); }}
+                          onClick={() => {
+                            setActiveLayoutId(layout.id);
+                            setSelectedTable(null);
+                          }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
                           {layout.label || DAY_LABELS[layout.dayId] || `Day ${layout.dayId}`}
@@ -466,7 +491,11 @@ export default function LayoutEditor({
                           onClick={() => handleDeleteLayout(layout.id)}
                           title={m.admin_delete()}
                           aria-label={m.admin_delete()}
-                          style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: "none" }}
+                          style={{
+                            borderTopLeftRadius: 0,
+                            borderBottomLeftRadius: 0,
+                            borderLeft: "none",
+                          }}
                         >
                           <i className="bi bi-x" aria-hidden="true" />
                         </Button>
@@ -478,7 +507,11 @@ export default function LayoutEditor({
                     <Button
                       size="sm"
                       variant="outline-success"
-                      onClick={() => { setAddLayoutError(null); setNewLayout({ dayId: 1, label: "" }); setShowAddLayout(true); }}
+                      onClick={() => {
+                        setAddLayoutError(null);
+                        setNewLayout({ dayId: 1, label: "" });
+                        setShowAddLayout(true);
+                      }}
                       title={m.admin_add_layout()}
                     >
                       <i className="bi bi-plus-lg me-1" aria-hidden="true" />
@@ -488,7 +521,9 @@ export default function LayoutEditor({
                 </div>
               </div>
               {deleteLayoutError && (
-                <Alert variant="danger" className="py-1 mb-2 small">{deleteLayoutError}</Alert>
+                <Alert variant="danger" className="py-1 mb-2 small">
+                  {deleteLayoutError}
+                </Alert>
               )}
               {activeLayoutId ? (
                 <RoomCanvas
@@ -501,9 +536,7 @@ export default function LayoutEditor({
                   onMoveTable={onMoveTable}
                 />
               ) : (
-                <p className="text-secondary text-center small py-4 mb-0">
-                  {m.admin_no_layouts()}
-                </p>
+                <p className="text-secondary text-center small py-4 mb-0">{m.admin_no_layouts()}</p>
               )}
             </div>
           ) : null}
@@ -528,8 +561,14 @@ export default function LayoutEditor({
                 </Badge>
               )}
               {selectedType && (
-                <Badge bg={selectedType.heightType === "high" ? "info" : "dark"} text={selectedType.heightType === "high" ? "dark" : "secondary"} className="border border-secondary">
-                  {selectedType.heightType === "high" ? m.admin_table_height_type_high() : m.admin_table_height_type_low()}
+                <Badge
+                  bg={selectedType.heightType === "high" ? "info" : "dark"}
+                  text={selectedType.heightType === "high" ? "dark" : "secondary"}
+                  className="border border-secondary"
+                >
+                  {selectedType.heightType === "high"
+                    ? m.admin_table_height_type_high()
+                    : m.admin_table_height_type_low()}
                 </Badge>
               )}
               <Button
@@ -541,7 +580,10 @@ export default function LayoutEditor({
               >
                 <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
               </Button>
-              <span className="text-secondary small" style={{ minWidth: "3.5rem", textAlign: "center" }}>
+              <span
+                className="text-secondary small"
+                style={{ minWidth: "3.5rem", textAlign: "center" }}
+              >
                 {Math.round(selectedTableData.rotation)}°
               </span>
               <Button
@@ -566,7 +608,9 @@ export default function LayoutEditor({
           </Card.Header>
           <Card.Body>
             {deleteTableError && (
-              <Alert variant="danger" className="py-1 mb-2 small">{deleteTableError}</Alert>
+              <Alert variant="danger" className="py-1 mb-2 small">
+                {deleteTableError}
+              </Alert>
             )}
             {selectedReservations.length === 0 ? (
               <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
@@ -598,7 +642,9 @@ export default function LayoutEditor({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addLayoutError && (
-            <Alert variant="danger" className="py-1 mb-3 small">{addLayoutError}</Alert>
+            <Alert variant="danger" className="py-1 mb-3 small">
+              {addLayoutError}
+            </Alert>
           )}
           <Form.Group className="mb-3" controlId="layout-day">
             <Form.Label>{m.admin_layout_day_label()}</Form.Label>
@@ -613,7 +659,9 @@ export default function LayoutEditor({
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3" controlId="layout-label">
-            <Form.Label>{m.admin_table_name()} / {m.admin_layout_day_label()}</Form.Label>
+            <Form.Label>
+              {m.admin_table_name()} / {m.admin_layout_day_label()}
+            </Form.Label>
             <Form.Control
               type="text"
               value={newLayout.label}
@@ -645,7 +693,9 @@ export default function LayoutEditor({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addTableError && (
-            <Alert variant="danger" className="py-1 mb-3 small">{addTableError}</Alert>
+            <Alert variant="danger" className="py-1 mb-3 small">
+              {addTableError}
+            </Alert>
           )}
           <Form.Group className="mb-3" controlId="table-name">
             <Form.Label>{m.admin_table_name()}</Form.Label>
@@ -674,7 +724,12 @@ export default function LayoutEditor({
               <option value="">— {m.admin_table_type_select()} —</option>
               {tableTypes.map((tt) => (
                 <option key={tt.id} value={tt.id}>
-                  {tt.name} ({tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`}, {tt.heightType === "high" ? m.admin_table_height_type_high() : m.admin_table_height_type_low()}, max {tt.maxCapacity})
+                  {tt.name} (
+                  {tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`},{" "}
+                  {tt.heightType === "high"
+                    ? m.admin_table_height_type_high()
+                    : m.admin_table_height_type_low()}
+                  , max {tt.maxCapacity})
                 </option>
               ))}
             </Form.Select>
@@ -704,7 +759,6 @@ export default function LayoutEditor({
           </Button>
         </Modal.Footer>
       </Modal>
-
     </div>
   );
 }
