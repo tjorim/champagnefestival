@@ -2,7 +2,7 @@
 
 Revision ID: 001
 Revises:
-Create Date: 2026-03-16
+Create Date: 2026-03-17
 """
 
 from typing import Sequence, Union
@@ -22,9 +22,8 @@ def upgrade() -> None:
         "rooms",
         sa.Column("id", sa.String(64), primary_key=True),
         sa.Column("name", sa.String(200), nullable=False),
-        sa.Column("zone_type", sa.String(50), nullable=False, server_default="main-hall"),
         sa.Column("width_m", sa.Float, nullable=False, server_default="20.0"),
-        sa.Column("height_m", sa.Float, nullable=False, server_default="15.0"),
+        sa.Column("length_m", sa.Float, nullable=False, server_default="15.0"),
         sa.Column("color", sa.String(20), nullable=False, server_default="#6c757d"),
         sa.Column(
             "created_at",
@@ -52,8 +51,8 @@ def upgrade() -> None:
         sa.Column("reservation_ids", sa.Text, nullable=False, server_default="[]"),
         sa.Column("shape", sa.String(20), nullable=False, server_default="rectangle"),
         sa.Column("width_m", sa.Float, nullable=False, server_default="1.8"),
-        sa.Column("height_m", sa.Float, nullable=False, server_default="0.7"),
-        sa.Column("rotation", sa.Float, nullable=False, server_default="0"),
+        sa.Column("length_m", sa.Float, nullable=False, server_default="0.7"),
+        sa.Column("rotation", sa.Integer, nullable=False, server_default="0"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -66,6 +65,35 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.func.now(),
         ),
+    )
+
+    op.create_table(
+        "people",
+        sa.Column("id", sa.String(length=64), nullable=False),
+        sa.Column("person_key", sa.String(length=64), nullable=False),
+        sa.Column("name", sa.String(length=200), nullable=False),
+        sa.Column("email", sa.String(length=200), nullable=False, server_default=""),
+        sa.Column("phone", sa.String(length=50), nullable=False, server_default=""),
+        sa.Column("address", sa.String(length=300), nullable=False, server_default=""),
+        sa.Column("roles", sa.Text(), nullable=False, server_default="[]"),
+        sa.Column("first_help_day", sa.Date(), nullable=True),
+        sa.Column("last_help_day", sa.Date(), nullable=True),
+        sa.Column("national_register_number", sa.String(length=20), nullable=True),
+        sa.Column("eid_document_number", sa.String(length=50), nullable=True),
+        sa.Column("visits_per_month", sa.Integer(), nullable=True),
+        sa.Column("club_name", sa.String(length=200), nullable=False, server_default=""),
+        sa.Column("notes", sa.Text(), nullable=False, server_default=""),
+        sa.Column("active", sa.Boolean(), nullable=False, server_default="1"),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("person_key"),
+        sa.UniqueConstraint("national_register_number"),
+        sa.UniqueConstraint("eid_document_number"),
     )
 
     op.create_table(
@@ -83,6 +111,12 @@ def upgrade() -> None:
             "table_id",
             sa.String(64),
             sa.ForeignKey("tables.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "person_id",
+            sa.String(64),
+            sa.ForeignKey("people.id", ondelete="SET NULL"),
             nullable=True,
         ),
         sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
@@ -133,6 +167,8 @@ def upgrade() -> None:
         sa.Column("venue_lat", sa.Float, nullable=False, server_default="0.0"),
         sa.Column("venue_lng", sa.Float, nullable=False, server_default="0.0"),
         sa.Column("schedule", sa.Text, nullable=False, server_default="[]"),
+        sa.Column("producers", sa.Text, nullable=False, server_default="[]"),
+        sa.Column("sponsors", sa.Text, nullable=False, server_default="[]"),
         sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
         sa.Column(
             "created_at",
@@ -153,5 +189,6 @@ def downgrade() -> None:
     op.drop_table("editions")
     op.drop_table("content_items")
     op.drop_table("reservations")
+    op.drop_table("people")
     op.drop_table("tables")
     op.drop_table("rooms")

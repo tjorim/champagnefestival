@@ -304,31 +304,25 @@ class TableOut(BaseModel):
 # Rooms
 # ---------------------------------------------------------------------------
 
-ZoneType = Literal["main-hall", "exchange"]
-
-
 class RoomCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    zone_type: ZoneType = "main-hall"
     width_m: float = Field(ge=1, le=500, default=20.0)
-    height_m: float = Field(ge=1, le=500, default=15.0)
+    length_m: float = Field(ge=1, le=500, default=15.0)
     color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
 class RoomUpdate(BaseModel):
     name: str | None = None
-    zone_type: ZoneType | None = None
     width_m: float | None = Field(default=None, ge=1, le=500)
-    height_m: float | None = Field(default=None, ge=1, le=500)
+    length_m: float | None = Field(default=None, ge=1, le=500)
     color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
 class RoomOut(BaseModel):
     id: str
     name: str
-    zone_type: str
     width_m: float
-    height_m: float
+    length_m: float
     color: str
     created_at: datetime
     updated_at: datetime
@@ -373,6 +367,8 @@ class EditionCreate(BaseModel):
     venue_lat: float = 0.0
     venue_lng: float = 0.0
     schedule: list[ScheduleEventIn] = Field(default_factory=list)
+    producers: list[int] = Field(default_factory=list)
+    sponsors: list[int] = Field(default_factory=list)
     active: bool = True
 
 
@@ -390,6 +386,8 @@ class EditionUpdate(BaseModel):
     venue_lat: float | None = None
     venue_lng: float | None = None
     schedule: list[ScheduleEventIn] | None = None
+    producers: list[int] | None = None
+    sponsors: list[int] | None = None
     active: bool | None = None
 
 
@@ -408,6 +406,8 @@ class EditionOut(BaseModel):
     venue_lat: float
     venue_lng: float
     schedule: list[ScheduleEventOut]
+    producers: list[SliderItem]
+    sponsors: list[SliderItem]
     active: bool
     created_at: datetime
     updated_at: datetime

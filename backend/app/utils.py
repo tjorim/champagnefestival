@@ -135,16 +135,19 @@ def room_to_dict(r: Room) -> dict:
     return {
         "id": r.id,
         "name": r.name,
-        "zone_type": r.zone_type,
         "width_m": r.width_m,
-        "height_m": r.height_m,
+        "length_m": r.length_m,
         "color": r.color,
         "created_at": r.created_at,
         "updated_at": r.updated_at,
     }
 
 
-def edition_to_dict(e: Edition) -> dict:
+def edition_to_dict(
+    e: Edition,
+    producers: list[dict] | None = None,
+    sponsors: list[dict] | None = None,
+) -> dict:
     return {
         "id": e.id,
         "year": e.year,
@@ -160,6 +163,8 @@ def edition_to_dict(e: Edition) -> dict:
         "venue_lat": e.venue_lat,
         "venue_lng": e.venue_lng,
         "schedule": e.get_schedule(),
+        "producers": producers if producers is not None else [],
+        "sponsors": sponsors if sponsors is not None else [],
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,

@@ -30,9 +30,8 @@ async def create_room(
     r = Room(
         id=make_id("room"),
         name=body.name,
-        zone_type=body.zone_type,
         width_m=body.width_m,
-        height_m=body.height_m,
+        length_m=body.length_m,
         color=body.color,
     )
     db.add(r)
@@ -77,12 +76,10 @@ async def update_room(
 
     if body.name is not None:
         r.name = body.name
-    if body.zone_type is not None:
-        r.zone_type = body.zone_type
     if body.width_m is not None:
         r.width_m = body.width_m
-    if body.height_m is not None:
-        r.height_m = body.height_m
+    if body.length_m is not None:
+        r.length_m = body.length_m
     if body.color is not None:
         r.color = body.color
 

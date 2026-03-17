@@ -29,8 +29,8 @@ export interface Edition {
   venue_lat: number;
   venue_lng: number;
   schedule: ScheduleEvent[];
-  producers?: number[]; // IDs of ItemDraft entries active for this edition
-  sponsors?: number[];  // IDs of ItemDraft entries active for this edition
+  producers?: { id: number; name: string; image: string; active?: boolean }[];
+  sponsors?: { id: number; name: string; image: string; active?: boolean }[];
   active: boolean;
   created_at: string;
   updated_at: string;

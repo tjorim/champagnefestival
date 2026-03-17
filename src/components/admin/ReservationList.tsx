@@ -8,14 +8,14 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { m } from "../../paraglide/messages";
 import type {
   Reservation,
-  Table as TableType,
   ReservationStatus,
   PaymentStatus,
 } from "../../types/reservation";
+import type { FloorTable } from "../../types/admin";
 
 interface ReservationListProps {
   reservations: Reservation[];
-  tables: TableType[];
+  tables: FloorTable[];
   filter: "all" | ReservationStatus;
   onFilterChange: (filter: "all" | ReservationStatus) => void;
   onUpdateStatus: (id: string, status: ReservationStatus) => void;

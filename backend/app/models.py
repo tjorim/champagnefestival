@@ -91,7 +91,7 @@ class ContentItem(Base):
 
 
 class Room(Base):
-    """A physical space within the venue (e.g. main hall or exchange market room).
+    """A physical space within the venue.
 
     Width and height are stored in metres so the frontend can render a
     proportional canvas.
@@ -101,14 +101,12 @@ class Room(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
-    zone_type: Mapped[str] = mapped_column(String(50), default="main-hall")
-    """'main-hall' | 'exchange' — grouping for display in the frontend tab bar."""
 
     width_m: Mapped[float] = mapped_column(default=20.0)
     """Room width in metres — used to render a proportional canvas."""
 
-    height_m: Mapped[float] = mapped_column(default=15.0)
-    """Room height in metres."""
+    length_m: Mapped[float] = mapped_column(default=15.0)
+    """Room length in metres."""
 
     color: Mapped[str] = mapped_column(String(20), default="#6c757d")
     """Accent colour for the room badge / canvas border (CSS colour string)."""
@@ -191,6 +189,10 @@ class Edition(Base):
     # JSON-encoded list of schedule event dicts
     schedule: Mapped[str] = mapped_column(Text, default="[]")
 
+    # JSON-encoded lists of producer/sponsor IDs participating in this edition
+    producers: Mapped[str] = mapped_column(Text, default="[]")
+    sponsors: Mapped[str] = mapped_column(Text, default="[]")
+
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -209,6 +211,18 @@ class Edition(Base):
 
     def set_schedule(self, events: list[dict]) -> None:
         self.schedule = json.dumps(events)
+
+    def get_producers(self) -> list[str]:
+        return json.loads(self.producers) if self.producers else []
+
+    def set_producers(self, ids: list[str]) -> None:
+        self.producers = json.dumps(ids)
+
+    def get_sponsors(self) -> list[str]:
+        return json.loads(self.sponsors) if self.sponsors else []
+
+    def set_sponsors(self, ids: list[str]) -> None:
+        self.sponsors = json.dumps(ids)
 
 
 class Person(Base):

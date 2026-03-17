@@ -26,14 +26,15 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Nav from "react-bootstrap/Nav";
 import { m } from "../../paraglide/messages";
-import type { Reservation, Room, Table } from "../../types/reservation";
+import type { Reservation } from "../../types/reservation";
+import type { Room, FloorTable } from "../../types/admin";
 
 // How many CSS pixels represent one metre on the canvas
 const PX_PER_M = 28;
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
 
-function getTableSize(table: Table): { w: number; l: number } {
+function getTableSize(table: FloorTable): { w: number; l: number } {
   return {
     w: Math.max(32, Math.round(table.widthM * PX_PER_M)),
     l: Math.max(32, Math.round(table.lengthM * PX_PER_M)),
@@ -41,7 +42,7 @@ function getTableSize(table: Table): { w: number; l: number } {
 }
 
 interface TableLayoutProps {
-  tables: Table[];
+  tables: FloorTable[];
   reservations: Reservation[];
   rooms: Room[];
   onAddTable: (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round", widthM: number, lengthM: number) => Promise<void>;
@@ -50,9 +51,8 @@ interface TableLayoutProps {
   onRotateTable: (tableId: string, rotation: number) => void;
   onAddRoom: (
     name: string,
-    zoneType: 'main-hall' | 'exchange',
     widthM: number,
-    heightM: number,
+    lengthM: number,
     color: string,
   ) => Promise<void>;
   onDeleteRoom: (roomId: string) => Promise<void>;
@@ -63,7 +63,7 @@ interface TableLayoutProps {
 // ---------------------------------------------------------------------------
 
 interface DraggableTableProps {
-  table: Table;
+  table: FloorTable;
   assignedCount: number;
   isSelected: boolean;
   onClick: () => void;
@@ -149,7 +149,7 @@ function DraggableTable({
 
 interface RoomCanvasProps {
   room: Room;
-  roomTables: Table[];
+  roomTables: FloorTable[];
   reservations: Reservation[];
   selectedTable: string | null;
   onSelectTable: (id: string | null) => void;
@@ -165,7 +165,7 @@ function RoomCanvas({
   onMoveTable,
 }: RoomCanvasProps) {
   const canvasW = Math.max(MIN_CANVAS_PX, room.widthM * PX_PER_M);
-  const canvasH = Math.max(180, room.heightM * PX_PER_M);
+  const canvasH = Math.max(180, room.lengthM * PX_PER_M);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -203,7 +203,7 @@ function RoomCanvas({
   return (
     <div className="overflow-auto pb-2">
       <p className="text-secondary small mb-1">
-        {room.widthM} m × {room.heightM} m
+        {room.widthM} m × {room.lengthM} m
         <span className="ms-2">
           <i className="bi bi-info-circle me-1" aria-hidden="true" />
           {m.admin_table_move_hint()}
@@ -294,9 +294,8 @@ export default function TableLayout({
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoom, setNewRoom] = useState({
     name: "",
-    zoneType: "main-hall",
     widthM: 20,
-    heightM: 15,
+    lengthM: 15,
     color: "#ffc107",
   });
   const [addRoomError, setAddRoomError] = useState<string | null>(null);
@@ -319,7 +318,7 @@ export default function TableLayout({
       setShowAddTable(false);
     } catch (err) {
       console.error("Failed to add table", err);
-      setAddTableError(m.admin_content_error_save());
+      setAddTableError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
   }, [newTable, onAddTable]);
 
@@ -327,9 +326,9 @@ export default function TableLayout({
     if (
       !newRoom.name.trim() ||
       !Number.isFinite(newRoom.widthM) ||
-      !Number.isFinite(newRoom.heightM) ||
+      !Number.isFinite(newRoom.lengthM) ||
       newRoom.widthM < 1 ||
-      newRoom.heightM < 1
+      newRoom.lengthM < 1
     ) {
       return;
     }
@@ -337,12 +336,11 @@ export default function TableLayout({
     try {
       await onAddRoom(
         newRoom.name.trim(),
-        newRoom.zoneType,
         newRoom.widthM,
-        newRoom.heightM,
+        newRoom.lengthM,
         newRoom.color,
       );
-      setNewRoom({ name: "", zoneType: "main-hall", widthM: 20, heightM: 15, color: "#ffc107" });
+      setNewRoom({ name: "", widthM: 20, lengthM: 15, color: "#ffc107" });
       setShowAddRoom(false);
     } catch (err) {
       console.error("Failed to add room", err);
@@ -359,7 +357,7 @@ export default function TableLayout({
           if (activeRoomId === roomId) setActiveRoomId("unassigned");
         } catch (err) {
           console.error("Failed to delete room", err);
-          setDeleteRoomError(m.admin_content_error_save());
+          setDeleteRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
         }
       }
     },
@@ -374,7 +372,7 @@ export default function TableLayout({
         setSelectedTable(null);
       } catch (err) {
         console.error("Failed to delete table", err);
-        setDeleteTableError(m.admin_content_error_save());
+        setDeleteTableError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
     [onDeleteTable],
@@ -459,15 +457,6 @@ export default function TableLayout({
                 <span className="fw-semibold" style={{ color: activeRoom.color }}>
                   <i className="bi bi-building me-1" aria-hidden="true" />
                   {activeRoom.name}
-                  <Badge
-                    bg="secondary"
-                    className="ms-2 text-capitalize"
-                    style={{ fontSize: "0.65rem" }}
-                  >
-                    {activeRoom.zoneType === "main-hall"
-                      ? m.admin_room_main_hall()
-                      : m.admin_room_exchange()}
-                  </Badge>
                 </span>
                 <Button
                   variant="outline-danger"
@@ -505,9 +494,8 @@ export default function TableLayout({
                 room={{
                   id: "unassigned",
                   name: m.admin_room_unassigned_tables(),
-                  zoneType: "main-hall",
                   widthM: 30,
-                  heightM: 20,
+                  lengthM: 20,
                   color: "#6c757d",
                 }}
                 roomTables={canvasTables}
@@ -736,17 +724,6 @@ export default function TableLayout({
               placeholder={m.admin_room_name_placeholder()}
             />
           </Form.Group>
-          <Form.Group className="mb-3" controlId="room-zone-type">
-            <Form.Label>{m.admin_room_zone_type_label()}</Form.Label>
-            <Form.Select
-              value={newRoom.zoneType}
-              onChange={(e) => setNewRoom((p) => ({ ...p, zoneType: e.target.value as 'main-hall' | 'exchange' }))}
-              className="bg-dark text-light border-secondary"
-            >
-              <option value="main-hall">{m.admin_room_main_hall()}</option>
-              <option value="exchange">{m.admin_room_exchange()}</option>
-            </Form.Select>
-          </Form.Group>
           <div className="row g-2 mb-3">
             <div className="col">
               <Form.Group controlId="room-width">
@@ -768,8 +745,8 @@ export default function TableLayout({
                   type="number"
                   min={1}
                   max={500}
-                  value={newRoom.heightM}
-                  onChange={(e) => setNewRoom((p) => ({ ...p, heightM: Number(e.target.value) }))}
+                  value={newRoom.lengthM}
+                  onChange={(e) => setNewRoom((p) => ({ ...p, lengthM: Number(e.target.value) }))}
                   className="bg-dark text-light border-secondary"
                 />
               </Form.Group>
@@ -804,9 +781,9 @@ export default function TableLayout({
             disabled={
               !newRoom.name.trim() ||
               !Number.isFinite(newRoom.widthM) ||
-              !Number.isFinite(newRoom.heightM) ||
+              !Number.isFinite(newRoom.lengthM) ||
               newRoom.widthM < 1 ||
-              newRoom.heightM < 1
+              newRoom.lengthM < 1
             }
           >
             {m.admin_save()}

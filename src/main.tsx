@@ -209,8 +209,9 @@ function App() {
             })
             .map((ev) => ({ id: ev.id, title: ev.title }));
         });
+        // Only replace the static fallback when the backend has actual events.
+        // An empty list means no active editions yet, not an intentional clear.
         if (events.length > 0) setReservableEvents(events);
-        // else: keep the static fallback when backend returns no reservable events
       })
       .catch(() => {
         // Backend unreachable — keep static fallback.

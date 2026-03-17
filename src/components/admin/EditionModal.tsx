@@ -114,14 +114,14 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
   // Sync selections once pools are loaded
   useEffect(() => {
     if (allProducers.length === 0) return;
-    const ids = new Set(initial?.producers ?? []);
+    const ids = new Set((initial?.producers ?? []).map((p) => p.id));
     const { active: act, archived: arch } = toOptions(allProducers);
     setSelectedProducers([...act, ...arch].filter((o) => ids.has(o.value)));
   }, [allProducers, initial]);
 
   useEffect(() => {
     if (allSponsors.length === 0) return;
-    const ids = new Set(initial?.sponsors ?? []);
+    const ids = new Set((initial?.sponsors ?? []).map((s) => s.id));
     const { active: act, archived: arch } = toOptions(allSponsors);
     setSelectedSponsors([...act, ...arch].filter((o) => ids.has(o.value)));
   }, [allSponsors, initial]);
@@ -157,6 +157,8 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
         venue_name: venueName.trim(), venue_address: venueAddress.trim(),
         venue_city: venueCity.trim(), venue_postal_code: venuePostalCode.trim(),
         venue_country: venueCountry.trim(), active,
+        producers: selectedProducers.map((o: ItemOption) => o.value),
+        sponsors: selectedSponsors.map((o: ItemOption) => o.value),
       };
       if (!isEdit) body.id = id.trim();
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });

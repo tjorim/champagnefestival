@@ -445,9 +445,8 @@ async def test_content_empty_list(client):
 
 ROOM_PAYLOAD = {
     "name": "Main Hall",
-    "zone_type": "main-hall",
     "width_m": 25.0,
-    "height_m": 18.0,
+    "length_m": 18.0,
     "color": "#ffc107",
 }
 
@@ -459,7 +458,6 @@ async def test_room_crud(client):
     assert r.status_code == 201
     data = r.json()
     assert data["name"] == "Main Hall"
-    assert data["zone_type"] == "main-hall"
     assert data["width_m"] == 25.0
     room_id = data["id"]
 
@@ -473,9 +471,9 @@ async def test_room_crud(client):
 
     # Update
     r = await client.put(
-        f"/api/rooms/{room_id}", json={"height_m": 20.0}, headers=ADMIN_HEADERS
+        f"/api/rooms/{room_id}", json={"length_m": 20.0}, headers=ADMIN_HEADERS
     )
-    assert r.json()["height_m"] == 20.0
+    assert r.json()["length_m"] == 20.0
 
     # Delete
     r = await client.delete(f"/api/rooms/{room_id}", headers=ADMIN_HEADERS)

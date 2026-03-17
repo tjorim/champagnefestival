@@ -14,13 +14,12 @@ import TableLayout from "./TableLayout";
 import ContentManagement from "./ContentManagement";
 import type {
   Reservation,
-  Room,
-  Table,
   ReservationStatus,
   PaymentStatus,
   OrderItem,
   OrderItemCategory,
 } from "../../types/reservation";
+import type { Room, FloorTable } from "../../types/admin";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -31,15 +30,14 @@ function apiRoomToRoom(d: Record<string, unknown>): Room {
   return {
     id: d.id as string,
     name: d.name as string,
-    zoneType: (d.zone_type ?? d.zoneType) as 'main-hall' | 'exchange',
     widthM: (d.width_m ?? d.widthM) as number,
-    heightM: (d.height_m ?? d.heightM) as number,
+    lengthM: (d.length_m ?? d.lengthM) as number,
     color: d.color as string,
   };
 }
 
 /** Map FastAPI snake_case table response to frontend camelCase Table type */
-function apiTableToTable(d: Record<string, unknown>): Table {
+function apiTableToTable(d: Record<string, unknown>): FloorTable {
   return {
     id: d.id as string,
     name: d.name as string,
@@ -96,7 +94,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [error, setError] = useState("");
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [tables, setTables] = useState<Table[]>([]);
+  const [tables, setTables] = useState<FloorTable[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
@@ -352,16 +350,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddRoom = useCallback(
-    async (name: string, zoneType: 'main-hall' | 'exchange', widthM: number, heightM: number, color: string) => {
+    async (name: string, widthM: number, lengthM: number, color: string) => {
       try {
         const response = await fetch("/api/rooms", {
           method: "POST",
           headers: authHeaders(),
           body: JSON.stringify({
             name,
-            zone_type: zoneType,
             width_m: widthM,
-            height_m: heightM,
+            length_m: lengthM,
             color,
           }),
         });
@@ -383,7 +380,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         method: "DELETE",
         headers: authHeaders(),
       });
-      if (!response.ok && response.status !== 204) {
+      if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_room());
       }

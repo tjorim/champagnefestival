@@ -55,38 +55,6 @@ export interface Reservation {
   updatedAt: string;
 }
 
-export interface Table {
-  id: string;
-  name: string;
-  capacity: number;
-  /** X position (percentage of room width) */
-  x: number;
-  /** Y position (percentage of room height) */
-  y: number;
-  /** Room this table belongs to (null = unassigned / legacy) */
-  roomId: string | null;
-  /** Visual shape on the floor plan canvas */
-  shape: "rectangle" | "round";
-  /** Physical width in metres (rectangle) or diameter (round) */
-  widthM: number;
-  /** Physical length in metres (second tabletop dimension); equals widthM for round tables */
-  lengthM: number;
-  /** Rotation angle in whole degrees [0, 359], clockwise */
-  rotation: number;
-  reservationIds: string[];
-}
-
-export interface Room {
-  id: string;
-  name: string;
-  zoneType: 'main-hall' | 'exchange';
-  /** Room width in metres — used to render a proportional canvas */
-  widthM: number;
-  /** Room height in metres */
-  heightM: number;
-  /** CSS colour string for the room badge / canvas border */
-  color: string;
-}
 
 export interface ReservationFormData {
   name: string;

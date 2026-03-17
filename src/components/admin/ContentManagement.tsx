@@ -53,7 +53,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         if (res.ok && !cancelled) {
           const data = (await res.json()) as { value: ItemDraft[] };
           if (Array.isArray(data.value)) setItems(data.value);
-        } else if (res.status === 404) {
+        } else if (res.status === 404 && !cancelled) {
           // Backend signals "no content saved yet" with 404 — keep placeholders.
         } else if (!cancelled) {
           setLoadError(true);
