@@ -200,7 +200,7 @@ function App() {
       })
       .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)
       .map((ev) => ({ id: ev.id, title: ev.title }));
-    if (events.length > 0) setReservableEvents(events);
+    setReservableEvents(events);
   }, [edition]);
 
   // --- Main marketing page ---

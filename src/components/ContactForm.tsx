@@ -90,7 +90,13 @@ const ContactForm: React.FC = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          message: form.message,
+          honeypot: form.honeypot,
+          form_start_time: form.formStartTime,
+        }),
       });
 
       const result = await response.json();

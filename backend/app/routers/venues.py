@@ -1,4 +1,4 @@
-"""Venue management endpoints (admin only)."""
+"""Venue management endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -13,12 +13,15 @@ from app.utils import make_id, venue_to_dict
 router = APIRouter(
     prefix="/api/venues",
     tags=["venues"],
-    dependencies=[Depends(require_admin)],
 )
 
 
 @router.post("", response_model=VenueOut, status_code=status.HTTP_201_CREATED)
-async def create_venue(body: VenueCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_venue(
+    body: VenueCreate,
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     v = Venue(
         id=make_id("venue"),
         name=body.name,
@@ -37,6 +40,7 @@ async def create_venue(body: VenueCreate, db: AsyncSession = Depends(get_db)) ->
 
 @router.get("", response_model=list[VenueOut])
 async def list_venues(
+    _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
     limit: int | None = Query(default=None, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
@@ -55,7 +59,10 @@ async def get_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> dict:
 
 @router.put("/{venue_id}", response_model=VenueOut)
 async def update_venue(
-    venue_id: str, body: VenueUpdate, db: AsyncSession = Depends(get_db)
+    venue_id: str,
+    body: VenueUpdate,
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     v = await _get_or_404(db, venue_id)
     if body.name is not None:
@@ -80,7 +87,11 @@ async def update_venue(
 
 
 @router.delete("/{venue_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_venue(
+    venue_id: str,
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> None:
     v = await _get_or_404(db, venue_id)
     in_use = await db.execute(select(Edition).where(Edition.venue_id == venue_id).limit(1))
     if in_use.scalars().first() is not None:
