@@ -149,6 +149,13 @@ To view logs from your functions in production:
 
 This helps debug any issues with your contact form or other functions.
 
+
+## Project status consistency
+
+- The migration from Next.js to React is complete; deployment targets the current React + Vite app.
+- CI quality gates run typecheck, lint, tests, and build before publish in repository workflows.
+- Keep deployment environment variables aligned with `README.md` and this document when onboarding new environments.
+
 ## Custom Domains
 
 After initial deployment, you can configure a custom domain:

@@ -176,4 +176,14 @@ This will create a production build in the `dist` directory that can be deployed
 
 Don't forget to set the required environment variables in your production environment.
 
+## Quality gates and project status
+
+- The migration from Next.js to React is complete and active development is on the React codebase.
+- Automated quality checks run in GitHub Actions (typecheck, lint, tests, and build).
+- Vitest + React Testing Library are configured and run with:
+
+```bash
+npm run test
+```
+
 For more details on deployment options, see [DEPLOYMENT.md](./DEPLOYMENT.md).
