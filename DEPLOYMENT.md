@@ -1,56 +1,55 @@
-# Deployment (Production): GitHub Pages
+# Deployment guide
 
-This repository's production deployment target is **GitHub Pages**.
+This repository contains:
 
-The canonical deploy pipeline is the GitHub Actions workflow at
-[`./.github/workflows/deploy.yml`](./.github/workflows/deploy.yml), which builds the Vite app and publishes the
-`dist/` output to GitHub Pages.
+- A **React/Vite frontend** in `frontend/`.
+- A **FastAPI backend** in `backend/`.
 
-## How production deploys work
+The chosen deployment target is a **VPS** with frontend and backend combined on one host.
 
-Production deploys are triggered by:
+## Combined deployment on one VPS
 
-1. Publishing a GitHub Release (`release.published`), or
-2. Manually running the workflow (`workflow_dispatch`).
+The pattern is:
 
-On each deploy run, the workflow:
+- Build and serve frontend static assets with nginx.
+- Run FastAPI backend as a separate service/container.
+- Route `/api/*` from nginx to backend.
 
-1. Checks out the repository
-2. Installs dependencies with `npm ci`
-3. Runs linting (`npm run lint`)
-4. Runs tests (`npm run test`)
-5. Builds the site (`npm run build`)
-6. Uploads `dist/` and deploys it to GitHub Pages
+This repo includes starter files:
 
-## Prerequisites
+- `docker-compose.combined.yml`
+- `deploy/nginx/champagne.conf`
 
-- GitHub Pages enabled for this repository
-- GitHub Actions enabled for this repository
-- Node.js 20+ for local validation
-
-## Local pre-deploy check
-
-Run the same core checks locally before creating a release:
+### 1) Prepare environment
 
 ```bash
-npm ci
-npm run lint
-npm run test
-npm run build
+cp backend/.env.example backend/.env
 ```
 
-The production-ready static output is generated in `dist/`.
+Set at least:
 
-## Repository settings
+- `ENVIRONMENT=production`
+- `ADMIN_TOKEN=<long-random-token>`
+- `CORS_ORIGINS=https://your-domain.example`
+- `DATABASE_URL=sqlite+aiosqlite:////var/data/champagne/champagne.db`
 
-In GitHub repository settings:
+### 2) Start the combined stack
 
-1. Go to **Settings → Pages**
-2. Ensure the source is set to **GitHub Actions**
+```bash
+docker compose -f docker-compose.combined.yml up -d --build
+```
 
-## Notes on hosting assumptions
+### 3) Run database migrations (first deploy and each schema change)
 
-- [`vite.config.ts`](./vite.config.ts) uses `base: "/champagnefestival/"` to match GitHub Pages
-  project-site hosting under the repository path.
-- Cloudflare Pages/Wrangler deployment instructions were removed because they
-  are not the production deployment path for this repository.
+```bash
+docker compose -f docker-compose.combined.yml run --rm backend alembic upgrade head
+```
+
+### 4) Verify
+
+```bash
+curl -i http://localhost/health
+curl -i http://localhost/api/health
+```
+
+> TLS note: either terminate TLS in a host-level reverse proxy (recommended) or extend the nginx container to listen on 443 with certificates.
