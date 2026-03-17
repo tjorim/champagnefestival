@@ -1,12 +1,12 @@
 """Venue management endpoints (admin only)."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Venue
+from app.models import Edition, Venue
 from app.schemas import VenueCreate, VenueOut, VenueUpdate
 from app.utils import make_id, venue_to_dict
 
@@ -36,8 +36,15 @@ async def create_venue(body: VenueCreate, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.get("", response_model=list[VenueOut])
-async def list_venues(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    result = await db.execute(select(Venue).order_by(Venue.created_at))
+async def list_venues(
+    db: AsyncSession = Depends(get_db),
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+) -> list[dict]:
+    stmt = select(Venue).order_by(Venue.created_at).offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    result = await db.execute(stmt)
     return [venue_to_dict(v) for v in result.scalars().all()]
 
 
@@ -75,6 +82,12 @@ async def update_venue(
 @router.delete("/{venue_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> None:
     v = await _get_or_404(db, venue_id)
+    in_use = await db.execute(select(Edition).where(Edition.venue_id == venue_id).limit(1))
+    if in_use.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete: editions are still using this venue.",
+        )
     await db.delete(v)
     await db.commit()
 

@@ -171,6 +171,9 @@ class Layout(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
 
 class TableType(Base):
@@ -281,16 +284,16 @@ class Edition(Base):
     def set_schedule(self, events: list[dict]) -> None:
         self.schedule = json.dumps(events)
 
-    def get_producers(self) -> list[str]:
+    def get_producers(self) -> list[int]:
         return json.loads(self.producers) if self.producers else []
 
-    def set_producers(self, ids: list[str]) -> None:
+    def set_producers(self, ids: list[int]) -> None:
         self.producers = json.dumps(ids)
 
-    def get_sponsors(self) -> list[str]:
+    def get_sponsors(self) -> list[int]:
         return json.loads(self.sponsors) if self.sponsors else []
 
-    def set_sponsors(self, ids: list[str]) -> None:
+    def set_sponsors(self, ids: list[int]) -> None:
         self.sponsors = json.dumps(ids)
 
 

@@ -268,6 +268,7 @@ class LayoutOut(BaseModel):
     day_id: int
     label: str
     created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 

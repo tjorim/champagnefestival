@@ -1,6 +1,6 @@
 """Layout snapshot management endpoints (admin only)."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,8 +46,15 @@ async def create_layout(
 
 
 @router.get("", response_model=list[LayoutOut])
-async def list_layouts(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    result = await db.execute(select(Layout).order_by(Layout.created_at))
+async def list_layouts(
+    db: AsyncSession = Depends(get_db),
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+) -> list[dict]:
+    stmt = select(Layout).order_by(Layout.created_at).offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    result = await db.execute(stmt)
     return [layout_to_dict(lay) for lay in result.scalars().all()]
 
 

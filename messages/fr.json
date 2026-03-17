@@ -348,7 +348,7 @@
   "admin_table_type_name_placeholder": "ex. Table ronde à dîner",
   "admin_table_type_max_capacity": "Capacité maximale",
   "admin_table_type_select": "Choisir un type de table",
-  "admin_table_type_delete_confirm": "Supprimer ce type ? Les tables associées perdront leur type.",
+  "admin_table_type_delete_confirm": "Supprimer ce type ? La suppression sera bloquée si des tables l'utilisent encore.",
   "admin_no_table_types": "Aucun type de table défini.",
   "admin_venue_add": "Ajouter un lieu",
   "admin_venue_name_label": "Nom du lieu",

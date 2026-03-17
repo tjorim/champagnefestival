@@ -3,6 +3,11 @@
 Revision ID: 001
 Revises:
 Create Date: 2026-03-17
+
+NOTE: This migration supersedes the earlier incremental migrations (002–005) by
+consolidating the full schema into a single initial revision.  Any database
+previously migrated with those revisions must be dropped and recreated from
+scratch before applying this migration.
 """
 
 from typing import Sequence, Union
@@ -151,6 +156,12 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.func.now(),
         ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
     )
 
     # tables must be created before reservations so the FK reference is valid
@@ -276,6 +287,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Drop in reverse FK-dependency order so that child tables are removed
+    # before their parents (required by PostgreSQL; SQLite is lenient but
+    # we want the migration to be portable):
+    #   reservations → tables, people
+    #   tables       → table_types, layouts
+    #   layouts      → rooms, editions
+    #   editions, rooms → venues
     op.drop_table("content_items")
     op.drop_table("reservations")
     op.drop_table("people")

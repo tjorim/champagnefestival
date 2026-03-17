@@ -152,6 +152,7 @@ def layout_to_dict(lay: Layout) -> dict:
         "day_id": lay.day_id,
         "label": lay.label,
         "created_at": lay.created_at,
+        "updated_at": lay.updated_at,
     }
 
 

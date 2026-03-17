@@ -1,6 +1,6 @@
 """Table type management endpoints (admin only)."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,8 +38,15 @@ async def create_table_type(
 
 
 @router.get("", response_model=list[TableTypeOut])
-async def list_table_types(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    result = await db.execute(select(TableType).order_by(TableType.created_at))
+async def list_table_types(
+    db: AsyncSession = Depends(get_db),
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+) -> list[dict]:
+    stmt = select(TableType).order_by(TableType.created_at).offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    result = await db.execute(stmt)
     return [table_type_to_dict(tt) for tt in result.scalars().all()]
 
 
@@ -63,10 +70,12 @@ async def update_table_type(
         tt.width_m = body.width_m
     if body.length_m is not None:
         tt.length_m = body.length_m
-    if tt.shape == "round":
-        tt.length_m = tt.width_m
-    elif tt.length_m < tt.width_m:
-        tt.length_m, tt.width_m = tt.width_m, tt.length_m
+    # Only normalise dimensions when shape or at least one dimension was updated.
+    if body.shape is not None or body.width_m is not None or body.length_m is not None:
+        if tt.shape == "round":
+            tt.length_m = tt.width_m
+        elif tt.length_m < tt.width_m:
+            tt.length_m, tt.width_m = tt.width_m, tt.length_m
     if body.height_type is not None:
         tt.height_type = body.height_type
     if body.max_capacity is not None:

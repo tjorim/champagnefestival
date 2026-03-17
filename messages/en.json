@@ -348,7 +348,7 @@
   "admin_table_type_name_placeholder": "e.g. Round dinner table",
   "admin_table_type_max_capacity": "Max capacity",
   "admin_table_type_select": "Select table type",
-  "admin_table_type_delete_confirm": "Delete this table type? Tables using it will lose their type.",
+  "admin_table_type_delete_confirm": "Delete this table type? This will be blocked if any tables are still using it.",
   "admin_no_table_types": "No table types defined yet.",
   "admin_venue_add": "Add venue",
   "admin_venue_name_label": "Venue name",

@@ -348,7 +348,7 @@
   "admin_table_type_name_placeholder": "bijv. Ronde eettafel",
   "admin_table_type_max_capacity": "Max. capaciteit",
   "admin_table_type_select": "Kies tafeltype",
-  "admin_table_type_delete_confirm": "Dit tafeltype verwijderen? Tafels die dit type gebruiken verliezen hun type.",
+  "admin_table_type_delete_confirm": "Dit tafeltype verwijderen? Dit wordt geblokkeerd als er nog tafels zijn die dit type gebruiken.",
   "admin_no_table_types": "Nog geen tafeltypen gedefinieerd.",
   "admin_venue_add": "Locatie toevoegen",
   "admin_venue_name_label": "Naam locatie",
