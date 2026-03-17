@@ -1,4 +1,4 @@
-# Migration Plan: Next.js to React
+# Post-migration hardening plan
 
 > **Status**: The project migration from Next.js to a standard React + Vite application is complete. This file now tracks post-migration hardening work only.
 
