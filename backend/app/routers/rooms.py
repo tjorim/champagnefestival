@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Room
+from app.models import Room, Venue
 from app.schemas import RoomCreate, RoomOut, RoomUpdate
 from app.utils import make_id, room_to_dict
 
@@ -27,12 +27,16 @@ async def create_room(
     body: RoomCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
+    if venue.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail=f"Venue '{body.venue_id}' not found.")
+
     r = Room(
         id=make_id("room"),
+        venue_id=body.venue_id,
         name=body.name,
-        zone_type=body.zone_type,
         width_m=body.width_m,
-        height_m=body.height_m,
+        length_m=body.length_m,
         color=body.color,
     )
     db.add(r)
@@ -77,12 +81,10 @@ async def update_room(
 
     if body.name is not None:
         r.name = body.name
-    if body.zone_type is not None:
-        r.zone_type = body.zone_type
     if body.width_m is not None:
         r.width_m = body.width_m
-    if body.height_m is not None:
-        r.height_m = body.height_m
+    if body.length_m is not None:
+        r.length_m = body.length_m
     if body.color is not None:
         r.color = body.color
 

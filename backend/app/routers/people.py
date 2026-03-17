@@ -9,7 +9,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Person, Reservation
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
-from app.utils import make_id, person_to_dict, reservation_to_list_dict
+from app.utils import make_id, person_to_dict, reservation_to_list_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/people",
@@ -37,9 +37,13 @@ def _validate_help_days(first_help_day, last_help_day) -> None:
 
 
 def _normalise_optional_identity(value: str | None) -> str | None:
+    """Strip separators and normalise case so that e.g. '93.05.18-223.61' and
+    '93051822361' are treated as the same value for uniqueness checks."""
     if value is None:
         return None
-    value = value.strip()
+    for ch in (" ", ".", "-", "/"):
+        value = value.replace(ch, "")
+    value = value.strip().lower()
     return value or None
 
 
@@ -128,9 +132,7 @@ async def list_people(
         stmt = stmt.where(Person.active == active)
 
     if role:
-        role_norm = role.strip().lower()
-        role_escaped = role_norm.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        stmt = stmt.where(Person.roles.ilike(f'%"{role_escaped}"%', escape="\\"))
+        stmt = stmt.where(roles_contains(role))
 
     if q:
         q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")

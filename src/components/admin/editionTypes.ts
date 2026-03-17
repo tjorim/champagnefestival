@@ -21,20 +21,14 @@ export interface Edition {
   friday: string;
   saturday: string;
   sunday: string;
-  venue_name: string;
-  venue_address: string;
-  venue_city: string;
-  venue_postal_code: string;
-  venue_country: string;
-  venue_lat: number;
-  venue_lng: number;
+  venue_id: string;
   schedule: ScheduleEvent[];
+  producers?: { id: number; name: string; image: string; active?: boolean }[];
+  sponsors?: { id: number; name: string; image: string; active?: boolean }[];
   active: boolean;
   created_at: string;
   updated_at: string;
 }
-
-export const DAY_LABELS: Record<number, string> = { 1: "Fri", 2: "Sat", 3: "Sun" };
 
 export function parseEditionDate(iso: string): Date {
   return new Date(iso + "T00:00:00");

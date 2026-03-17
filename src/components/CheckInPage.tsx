@@ -8,11 +8,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "../paraglide/messages";
-import type {
-  Reservation,
-  OrderItemCategory,
-  ReservationStatus,
-} from "../types/reservation";
+import type { Reservation, OrderItemCategory, ReservationStatus } from "../types/reservation";
 
 export default function CheckInPage() {
   const [searchParams] = useSearchParams();
@@ -83,7 +79,7 @@ export default function CheckInPage() {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(m.checkin_error());
       } finally {
-        setIsLoading(false);
+        if (!signal.aborted) setIsLoading(false);
       }
     },
     [reservationId, checkInToken],
@@ -263,9 +259,9 @@ export default function CheckInPage() {
                         {m.checkin_pre_orders()}
                       </p>
                       <ListGroup variant="flush">
-                        {reservation.preOrders.map((item) => (
+                        {reservation.preOrders.map((item, idx) => (
                           <ListGroup.Item
-                            key={item.productId}
+                            key={`${item.productId}-${idx}`}
                             className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center"
                           >
                             <span>

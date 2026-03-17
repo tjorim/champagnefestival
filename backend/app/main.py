@@ -6,6 +6,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from app.config import settings
 from app.database import create_tables
@@ -15,10 +16,13 @@ from app.routers import (
     contact,
     content,
     editions,
+    layouts,
     people,
     reservations,
     rooms,
+    table_types,
     tables,
+    venues,
     volunteers,
 )
 
@@ -88,14 +92,21 @@ app.include_router(members.router)
 app.include_router(check_in.router)
 app.include_router(contact.router)
 app.include_router(tables.router)
+app.include_router(table_types.router)
+app.include_router(venues.router)
 app.include_router(rooms.router)
+app.include_router(layouts.router)
 app.include_router(content.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(volunteers.router)
 
 
-@app.get("/health", tags=["meta"])
-async def health() -> dict:
+class HealthResponse(BaseModel):
+    status: str
+
+
+@app.get("/health", tags=["meta"], response_model=HealthResponse)
+async def health() -> HealthResponse:
     """Simple health-check endpoint used by the reverse proxy / systemd watchdog."""
-    return {"status": "ok"}
+    return HealthResponse(status="ok")

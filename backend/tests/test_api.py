@@ -181,7 +181,30 @@ async def test_check_in_wrong_token(client):
 
 @pytest.mark.anyio
 async def test_table_crud(client):
-    payload = {"name": "Table 1", "capacity": 6, "x": 25.0, "y": 30.0}
+    # Tables require a table_type and a layout (which requires a room, which requires a venue)
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    room_id = r.json()["id"]
+    r = await client.post(
+        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+    )
+    layout_id = r.json()["id"]
+    r = await client.post(
+        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
+    )
+    tt_id = r.json()["id"]
+
+    payload = {
+        "name": "Table 1",
+        "capacity": 6,
+        "x": 25.0,
+        "y": 30.0,
+        "table_type_id": tt_id,
+        "layout_id": layout_id,
+    }
 
     r = await client.post("/api/tables", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
@@ -298,6 +321,18 @@ async def test_my_reservations(client):
     # Must expose booking status fields
     assert items[0]["status"] == "pending"
     assert items[0]["event_title"] == "Vrijdagavond"
+
+
+@pytest.mark.anyio
+async def test_my_reservations_case_insensitive_email(client):
+    """Email stored with mixed case must be retrievable via lowercase lookup."""
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "Jean@Example.com"})
+    assert r.status_code == 201
+
+    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+    assert r.json()[0]["status"] == "pending"
 
 
 @pytest.mark.anyio
@@ -431,24 +466,34 @@ async def test_content_empty_list(client):
 # Rooms API
 # ---------------------------------------------------------------------------
 
+VENUE_PAYLOAD = {"name": "Test Venue"}
+
 ROOM_PAYLOAD = {
     "name": "Main Hall",
-    "zone_type": "main-hall",
     "width_m": 25.0,
-    "height_m": 18.0,
+    "length_m": 18.0,
     "color": "#ffc107",
 }
+
+TABLE_TYPE_PAYLOAD = {"name": "Standard", "max_capacity": 6}
 
 
 @pytest.mark.anyio
 async def test_room_crud(client):
+    # Room requires a venue
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    venue_id = r.json()["id"]
+
     # Create
-    r = await client.post("/api/rooms", json=ROOM_PAYLOAD, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     assert r.status_code == 201
     data = r.json()
     assert data["name"] == "Main Hall"
-    assert data["zone_type"] == "main-hall"
     assert data["width_m"] == 25.0
+    assert data["length_m"] == 18.0
     room_id = data["id"]
 
     # List
@@ -461,9 +506,9 @@ async def test_room_crud(client):
 
     # Update
     r = await client.put(
-        f"/api/rooms/{room_id}", json={"height_m": 20.0}, headers=ADMIN_HEADERS
+        f"/api/rooms/{room_id}", json={"length_m": 20.0}, headers=ADMIN_HEADERS
     )
-    assert r.json()["height_m"] == 20.0
+    assert r.json()["length_m"] == 20.0
 
     # Delete
     r = await client.delete(f"/api/rooms/{room_id}", headers=ADMIN_HEADERS)
@@ -490,27 +535,45 @@ async def test_room_invalid_color(client):
 
 
 @pytest.mark.anyio
-async def test_table_with_room_id(client):
-    """Tables can be assigned a room_id and it is persisted."""
-    # Create a room first
-    r = await client.post("/api/rooms", json=ROOM_PAYLOAD, headers=ADMIN_HEADERS)
+async def test_table_with_layout_id(client):
+    """Tables can be assigned a layout_id and it is persisted."""
+    # Build the prerequisite chain: venue → room → layout + table_type
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     room_id = r.json()["id"]
+    r = await client.post(
+        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+    )
+    layout_id = r.json()["id"]
+    r = await client.post(
+        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
+    )
+    tt_id = r.json()["id"]
 
-    # Create a table assigned to that room
+    # Create a table assigned to that layout
     r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "x": 10.0, "y": 10.0, "room_id": room_id},
+        json={
+            "name": "T1",
+            "capacity": 4,
+            "x": 10.0,
+            "y": 10.0,
+            "table_type_id": tt_id,
+            "layout_id": layout_id,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
-    assert r.json()["room_id"] == room_id
+    assert r.json()["layout_id"] == layout_id
 
-    # Update room assignment via PUT
+    # Update layout assignment via PUT
     tbl_id = r.json()["id"]
     r = await client.put(
-        f"/api/tables/{tbl_id}", json={"room_id": None}, headers=ADMIN_HEADERS
+        f"/api/tables/{tbl_id}", json={"layout_id": layout_id}, headers=ADMIN_HEADERS
     )
-    # room_id can be cleared — we just verify the request succeeds
     assert r.status_code == 200
 
 
@@ -557,12 +620,29 @@ async def test_table_id_can_be_cleared(client):
     assert r.status_code == 201
     res_id = r.json()["id"]
 
+    # Create table prerequisites: venue → room → layout + table_type
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    room_id = r.json()["id"]
+    r = await client.post(
+        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+    )
+    layout_id = r.json()["id"]
+    r = await client.post(
+        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
+    )
+    tt_id = r.json()["id"]
+
     # Create a table
     r = await client.post(
         "/api/tables",
-        json={"name": "T-Clear", "capacity": 4},
+        json={"name": "T-Clear", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
+    assert r.status_code == 201
     tbl_id = r.json()["id"]
 
     # Assign the table
