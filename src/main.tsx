@@ -209,7 +209,8 @@ function App() {
             })
             .map((ev) => ({ id: ev.id, title: ev.title }));
         });
-        setReservableEvents(events);
+        if (events.length > 0) setReservableEvents(events);
+        // else: keep the static fallback when backend returns no reservable events
       })
       .catch(() => {
         // Backend unreachable — keep static fallback.

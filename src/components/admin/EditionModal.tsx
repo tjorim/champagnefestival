@@ -157,8 +157,6 @@ export default function EditionModal({ show, initial, authHeaders, onSaved, onHi
         venue_name: venueName.trim(), venue_address: venueAddress.trim(),
         venue_city: venueCity.trim(), venue_postal_code: venuePostalCode.trim(),
         venue_country: venueCountry.trim(), active,
-        producers: selectedProducers.map((o) => o.value),
-        sponsors: selectedSponsors.map((o) => o.value),
       };
       if (!isEdit) body.id = id.trim();
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });

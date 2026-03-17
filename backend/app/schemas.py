@@ -231,6 +231,7 @@ class SliderItem(BaseModel):
     id: int
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(min_length=1, max_length=500)
+    active: bool = True
 
 
 class ContentItemOut(BaseModel):

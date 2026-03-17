@@ -53,6 +53,8 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         if (res.ok && !cancelled) {
           const data = (await res.json()) as { value: ItemDraft[] };
           if (Array.isArray(data.value)) setItems(data.value);
+        } else if (res.status === 404) {
+          // Backend signals "no content saved yet" with 404 — keep placeholders.
         } else if (!cancelled) {
           setLoadError(true);
         }
@@ -176,7 +178,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           {title}
           <Badge bg="secondary" className="ms-2">{activeItems.length}</Badge>
           {archivedItems.length > 0 && (
-            <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">{archivedItems.length} archived</Badge>
+            <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">{archivedItems.length} {m.admin_content_archived_section()}</Badge>
           )}
         </h6>
         <div className="d-flex gap-2">

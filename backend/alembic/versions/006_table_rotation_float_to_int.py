@@ -15,6 +15,11 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Round any existing fractional rotation values into whole degrees within
+    # [0, 359] before converting the column type from Float to Integer.
+    op.execute(
+        "UPDATE tables SET rotation = CAST(ROUND(rotation) % 360 AS INTEGER) WHERE rotation IS NOT NULL"
+    )
     with op.batch_alter_table("tables") as batch_op:
         batch_op.alter_column(
             "rotation",

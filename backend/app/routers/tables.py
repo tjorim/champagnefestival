@@ -80,9 +80,9 @@ async def update_table(
 ) -> dict:
     t = await _get_or_404(db, table_id)
 
-    # Non-nullable fields: "is not None" is sufficient because the schema
-    # forbids None for these fields, so a missing key and an invalid null
-    # are both rejected by Pydantic before reaching here.
+    # All fields in TableUpdate are Optional[…], so an absent key and an
+    # explicit null both arrive here as None and are simply skipped.  Only
+    # fields with a real value are applied to the row.
     if body.name is not None:
         t.name = body.name
     if body.capacity is not None:

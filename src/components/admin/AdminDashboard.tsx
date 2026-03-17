@@ -282,21 +282,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleAddTable = useCallback(
     async (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round" = "rectangle", widthM = 1.8, lengthM = 0.7) => {
-      try {
-        const response = await fetch("/api/tables", {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, length_m: lengthM }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const table = data.table ?? data;
-          setTables((prev) => [...prev, apiTableToTable(table)]);
-        }
-      } catch (err) {
-        console.error("Failed to add table", err);
-        setError(m.admin_error_add_table());
+      const response = await fetch("/api/tables", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, length_m: lengthM }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? m.admin_error_add_table());
       }
+      const data = await response.json();
+      const table = data.table ?? data;
+      setTables((prev) => [...prev, apiTableToTable(table)]);
     },
     [authHeaders],
   );
@@ -341,18 +338,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleDeleteTable = useCallback(
     async (tableId: string) => {
-      try {
-        const response = await fetch(`/api/tables/${tableId}`, {
-          method: "DELETE",
-          headers: authHeaders(),
-        });
-        if (response.ok) {
-          setTables((prev) => prev.filter((t) => t.id !== tableId));
-        }
-      } catch (err) {
-        console.error("Failed to delete table", err);
-        setError(m.admin_error_delete_table());
+      const response = await fetch(`/api/tables/${tableId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_table());
       }
+      setTables((prev) => prev.filter((t) => t.id !== tableId));
     },
     [authHeaders],
   );
@@ -385,20 +379,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleDeleteRoom = useCallback(
     async (roomId: string) => {
-      try {
-        const response = await fetch(`/api/rooms/${roomId}`, {
-          method: "DELETE",
-          headers: authHeaders(),
-        });
-        if (response.ok || response.status === 204) {
-          setRooms((prev) => prev.filter((r) => r.id !== roomId));
-          // Clear room assignment from tables that were in this room
-          setTables((prev) => prev.map((t) => (t.roomId === roomId ? { ...t, roomId: null } : t)));
-        }
-      } catch (err) {
-        console.error("Failed to delete room", err);
-        setError(m.admin_error_delete_room());
+      const response = await fetch(`/api/rooms/${roomId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok && response.status !== 204) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_room());
       }
+      setRooms((prev) => prev.filter((r) => r.id !== roomId));
+      // Clear room assignment from tables that were in this room
+      setTables((prev) => prev.map((t) => (t.roomId === roomId ? { ...t, roomId: null } : t)));
     },
     [authHeaders],
   );
