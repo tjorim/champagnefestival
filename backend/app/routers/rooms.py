@@ -29,6 +29,7 @@ async def create_room(
 ) -> dict:
     r = Room(
         id=make_id("room"),
+        venue_id=body.venue_id,
         name=body.name,
         width_m=body.width_m,
         length_m=body.length_m,

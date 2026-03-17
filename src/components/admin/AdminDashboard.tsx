@@ -10,7 +10,9 @@ import Spinner from "react-bootstrap/Spinner";
 import { m } from "../../paraglide/messages";
 import ReservationList from "./ReservationList";
 import ReservationDetail from "./ReservationDetail";
-import TableLayout from "./TableLayout";
+import LayoutEditor from "./LayoutEditor";
+import TableTypeManagement from "./TableTypeManagement";
+import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
 import type {
   Reservation,
@@ -19,16 +21,56 @@ import type {
   OrderItem,
   OrderItemCategory,
 } from "../../types/reservation";
-import type { Room, FloorTable } from "../../types/admin";
+import type { Room, FloorTable, TableType, Layout, Venue } from "../../types/admin";
 
 interface AdminDashboardProps {
   visible: boolean;
+}
+
+/** Map FastAPI snake_case venue response to frontend camelCase Venue type */
+function apiVenueToVenue(d: Record<string, unknown>): Venue {
+  return {
+    id: d.id as string,
+    name: d.name as string,
+    address: (d.address ?? "") as string,
+    city: (d.city ?? "") as string,
+    postalCode: ((d.postal_code ?? d.postalCode ?? "") as string),
+    country: (d.country ?? "") as string,
+    lat: ((d.lat ?? 0) as number),
+    lng: ((d.lng ?? 0) as number),
+  };
+}
+
+/** Map FastAPI snake_case layout response to frontend camelCase Layout type */
+function apiLayoutToLayout(d: Record<string, unknown>): Layout {
+  return {
+    id: d.id as string,
+    editionId: ((d.edition_id ?? d.editionId) as string | null) ?? null,
+    roomId: (d.room_id ?? d.roomId) as string,
+    dayId: (d.day_id ?? d.dayId) as number,
+    label: (d.label ?? "") as string,
+    createdAt: (d.created_at ?? d.createdAt) as string,
+  };
+}
+
+/** Map FastAPI snake_case table type response to frontend camelCase TableType type */
+function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
+  return {
+    id: d.id as string,
+    name: d.name as string,
+    shape: (d.shape ?? "rectangle") as "rectangle" | "round",
+    widthM: (d.width_m ?? d.widthM ?? 1.8) as number,
+    lengthM: (d.length_m ?? d.lengthM ?? 0.7) as number,
+    heightType: ((d.height_type ?? d.heightType ?? "low") as "low" | "high"),
+    maxCapacity: (d.max_capacity ?? d.maxCapacity ?? 4) as number,
+  };
 }
 
 /** Map FastAPI snake_case room response to frontend camelCase Room type */
 function apiRoomToRoom(d: Record<string, unknown>): Room {
   return {
     id: d.id as string,
+    venueId: (d.venue_id ?? d.venueId) as string,
     name: d.name as string,
     widthM: (d.width_m ?? d.widthM) as number,
     lengthM: (d.length_m ?? d.lengthM) as number,
@@ -44,13 +86,9 @@ function apiTableToTable(d: Record<string, unknown>): FloorTable {
     capacity: d.capacity as number,
     x: d.x as number,
     y: d.y as number,
-    roomId: ((d.room_id ?? d.roomId) as string | null) ?? null,
-    shape: ((d.shape ?? "rectangle") as "rectangle" | "round"),
-    widthM: ((d.width_m ?? d.widthM ?? 1.8) as number),
-    lengthM: ((d.length_m ?? d.lengthM ?? 0.7) as number),
+    tableTypeId: (d.table_type_id ?? d.tableTypeId) as string,
     rotation: ((d.rotation ?? 0) as number),
-    heightType: ((d.height_type ?? d.heightType ?? "low") as "low" | "high"),
-    layoutId: ((d.layout_id ?? d.layoutId) as string | null) ?? null,
+    layoutId: (d.layout_id ?? d.layoutId) as string,
     reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
   };
 }
@@ -97,7 +135,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<FloorTable[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [tableTypes, setTableTypes] = useState<TableType[]>([]);
+  const [layouts, setLayouts] = useState<Layout[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
   const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
@@ -114,16 +155,22 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setIsLoading(true);
     setError("");
     try {
-      const [resResponse, tablesResponse, roomsResponse] = await Promise.all([
+      const [resResponse, tablesResponse, venuesResponse, roomsResponse, tableTypesResponse, layoutsResponse] = await Promise.all([
         fetch("/api/reservations", { headers: authHeaders() }),
         fetch("/api/tables", { headers: authHeaders() }),
+        fetch("/api/venues", { headers: authHeaders() }),
         fetch("/api/rooms", { headers: authHeaders() }),
+        fetch("/api/table-types", { headers: authHeaders() }),
+        fetch("/api/layouts", { headers: authHeaders() }),
       ]);
 
       if (
         resResponse.status === 401 ||
         tablesResponse.status === 401 ||
-        roomsResponse.status === 401
+        venuesResponse.status === 401 ||
+        roomsResponse.status === 401 ||
+        tableTypesResponse.status === 401 ||
+        layoutsResponse.status === 401
       ) {
         setIsAuthenticated(false);
         setLoginError(m.admin_login_error());
@@ -140,9 +187,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const raw: Record<string, unknown>[] = Array.isArray(data) ? data : (data.tables ?? []);
         setTables(raw.map(apiTableToTable));
       }
+      if (venuesResponse.ok) {
+        const data = await venuesResponse.json();
+        setVenues(Array.isArray(data) ? data.map(apiVenueToVenue) : []);
+      }
       if (roomsResponse.ok) {
         const data = await roomsResponse.json();
         setRooms(Array.isArray(data) ? data.map(apiRoomToRoom) : []);
+      }
+      if (tableTypesResponse.ok) {
+        const data = await tableTypesResponse.json();
+        setTableTypes(Array.isArray(data) ? data.map(apiTableTypeToTableType) : []);
+      }
+      if (layoutsResponse.ok) {
+        const data = await layoutsResponse.json();
+        setLayouts(Array.isArray(data) ? data.map(apiLayoutToLayout) : []);
       }
     } catch (err) {
       console.error("Failed to load dashboard data", err);
@@ -185,6 +244,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setReservations([]);
     setTables([]);
     setRooms([]);
+    setTableTypes([]);
   }, []);
 
   useEffect(() => {
@@ -281,11 +341,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddTable = useCallback(
-    async (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round" = "rectangle", widthM = 1.8, lengthM = 0.7, heightType: "low" | "high" = "low") => {
+    async (name: string, capacity: number, layoutId: string, tableTypeId: string) => {
       const response = await fetch("/api/tables", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, length_m: lengthM, height_type: heightType }),
+        body: JSON.stringify({ name, capacity, x: 10, y: 10, layout_id: layoutId, table_type_id: tableTypeId }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -351,12 +411,51 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
+  const handleAddVenue = useCallback(
+    async (name: string, address: string, city: string, postalCode: string, country: string) => {
+      const response = await fetch("/api/venues", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ name, address, city, postal_code: postalCode, country }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_venue());
+      }
+      const d = await response.json();
+      setVenues((prev) => [...prev, apiVenueToVenue(d)]);
+    },
+    [authHeaders],
+  );
+
+  const handleDeleteVenue = useCallback(
+    async (venueId: string) => {
+      const response = await fetch(`/api/venues/${venueId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_venue());
+      }
+      setVenues((prev) => prev.filter((v) => v.id !== venueId));
+      // Cascade: remove rooms and their layouts/tables from local state
+      const venueRoomIds = rooms.filter((r) => r.venueId === venueId).map((r) => r.id);
+      setRooms((prev) => prev.filter((r) => r.venueId !== venueId));
+      const venueLayoutIds = layouts.filter((l) => venueRoomIds.includes(l.roomId ?? "")).map((l) => l.id);
+      setLayouts((prev) => prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")));
+      setTables((prev) => prev.filter((t) => !venueLayoutIds.includes(t.layoutId)));
+    },
+    [authHeaders, rooms, layouts],
+  );
+
   const handleAddRoom = useCallback(
-    async (name: string, widthM: number, lengthM: number, color: string) => {
+    async (venueId: string, name: string, widthM: number, lengthM: number, color: string) => {
       const response = await fetch("/api/rooms", {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({
+          venue_id: venueId,
           name,
           width_m: widthM,
           length_m: lengthM,
@@ -384,8 +483,105 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_room());
       }
       setRooms((prev) => prev.filter((r) => r.id !== roomId));
-      // Clear room assignment from tables that were in this room
-      setTables((prev) => prev.map((t) => (t.roomId === roomId ? { ...t, roomId: null } : t)));
+      const roomLayoutIds = layouts.filter((l) => l.roomId === roomId).map((l) => l.id);
+      setLayouts((prev) => prev.filter((l) => l.roomId !== roomId));
+      setTables((prev) => prev.filter((t) => !roomLayoutIds.includes(t.layoutId)));
+    },
+    [authHeaders, layouts],
+  );
+
+  const handleAddLayout = useCallback(
+    async (roomId: string, dayId: number, label: string) => {
+      const response = await fetch("/api/layouts", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ room_id: roomId, day_id: dayId, label }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_layout());
+      }
+      const d = await response.json();
+      setLayouts((prev) => [...prev, apiLayoutToLayout(d)]);
+    },
+    [authHeaders],
+  );
+
+  const handleDeleteLayout = useCallback(
+    async (layoutId: string) => {
+      const response = await fetch(`/api/layouts/${layoutId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_layout());
+      }
+      setLayouts((prev) => prev.filter((l) => l.id !== layoutId));
+      setTables((prev) => prev.filter((t) => t.layoutId !== layoutId));
+    },
+    [authHeaders],
+  );
+
+  const handleAddTableType = useCallback(
+    async (data: Omit<TableType, "id">) => {
+      const response = await fetch("/api/table-types", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: data.name,
+          shape: data.shape,
+          width_m: data.widthM,
+          length_m: data.lengthM,
+          height_type: data.heightType,
+          max_capacity: data.maxCapacity,
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_table_type());
+      }
+      const d = await response.json();
+      setTableTypes((prev) => [...prev, apiTableTypeToTableType(d)]);
+    },
+    [authHeaders],
+  );
+
+  const handleUpdateTableType = useCallback(
+    async (id: string, data: Partial<Omit<TableType, "id">>) => {
+      const response = await fetch(`/api/table-types/${id}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.shape !== undefined && { shape: data.shape }),
+          ...(data.widthM !== undefined && { width_m: data.widthM }),
+          ...(data.lengthM !== undefined && { length_m: data.lengthM }),
+          ...(data.heightType !== undefined && { height_type: data.heightType }),
+          ...(data.maxCapacity !== undefined && { max_capacity: data.maxCapacity }),
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_update_table_type());
+      }
+      const d = await response.json();
+      setTableTypes((prev) => prev.map((tt) => (tt.id === id ? apiTableTypeToTableType(d) : tt)));
+    },
+    [authHeaders],
+  );
+
+  const handleDeleteTableType = useCallback(
+    async (id: string) => {
+      const response = await fetch(`/api/table-types/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_table_type());
+      }
+      setTableTypes((prev) => prev.filter((tt) => tt.id !== id));
     },
     [authHeaders],
   );
@@ -622,6 +818,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
+                    <Nav.Link eventKey="venues" className="text-light">
+                      <i className="bi bi-geo-alt me-2" aria-hidden="true" />
+                      {m.admin_venue_add()}
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="table-types" className="text-light">
+                      <i className="bi bi-grid me-2" aria-hidden="true" />
+                      {m.admin_table_types_tab()}
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
                     <Nav.Link eventKey="content" className="text-light">
                       <i className="bi bi-images me-2" aria-hidden="true" />
                       {m.admin_content_tab()}
@@ -642,20 +850,40 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="tables">
-                    <TableLayout
+                    <LayoutEditor
                       tables={tables}
+                      tableTypes={tableTypes}
+                      layouts={layouts}
                       reservations={reservations}
                       rooms={rooms}
                       onAddTable={handleAddTable}
                       onMoveTable={handleMoveTable}
                       onDeleteTable={handleDeleteTable}
                       onRotateTable={handleRotateTable}
+                      onAddLayout={handleAddLayout}
+                      onDeleteLayout={handleDeleteLayout}
+                    />
+                  </Tab.Pane>
+                  <Tab.Pane eventKey="venues">
+                    <VenueManagement
+                      venues={venues}
+                      rooms={rooms}
+                      onAdd={handleAddVenue}
+                      onDelete={handleDeleteVenue}
                       onAddRoom={handleAddRoom}
                       onDeleteRoom={handleDeleteRoom}
                     />
                   </Tab.Pane>
+                  <Tab.Pane eventKey="table-types">
+                    <TableTypeManagement
+                      tableTypes={tableTypes}
+                      onAdd={handleAddTableType}
+                      onUpdate={handleUpdateTableType}
+                      onDelete={handleDeleteTableType}
+                    />
+                  </Tab.Pane>
                   <Tab.Pane eventKey="content">
-                    <ContentManagement authHeaders={authHeaders} />
+                    <ContentManagement authHeaders={authHeaders} venues={venues} />
                   </Tab.Pane>
                 </Tab.Content>
               </Tab.Container>

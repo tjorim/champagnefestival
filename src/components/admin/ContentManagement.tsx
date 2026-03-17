@@ -14,9 +14,11 @@ import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal, { type ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
+import type { Venue } from "../../types/admin";
 
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
+  venues: Venue[];
 }
 
 type ContentKey = "producers" | "sponsors";
@@ -247,9 +249,10 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
 
 interface EditionsSectionProps {
   authHeaders: () => Record<string, string>;
+  venues: Venue[];
 }
 
-function EditionsSection({ authHeaders }: EditionsSectionProps) {
+function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
   const [editions, setEditions] = useState<Edition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -310,10 +313,10 @@ function EditionsSection({ authHeaders }: EditionsSectionProps) {
         <p className="text-secondary fst-italic small">No editions yet.</p>
       )}
       {!isLoading && !loadError && editions.map((ed) => (
-        <EditionCard key={ed.id} edition={ed} authHeaders={authHeaders} onDeleted={handleDeleted} onUpdated={handleUpdated} />
+        <EditionCard key={ed.id} edition={ed} venues={venues} authHeaders={authHeaders} onDeleted={handleDeleted} onUpdated={handleUpdated} />
       ))}
 
-      <EditionModal show={addModalOpen} initial={null} authHeaders={authHeaders} onSaved={handleCreated} onHide={() => setAddModalOpen(false)} />
+      <EditionModal show={addModalOpen} initial={null} venues={venues} authHeaders={authHeaders} onSaved={handleCreated} onHide={() => setAddModalOpen(false)} />
     </div>
   );
 }
@@ -322,7 +325,7 @@ function EditionsSection({ authHeaders }: EditionsSectionProps) {
 // ContentManagement — root export
 // ---------------------------------------------------------------------------
 
-export default function ContentManagement({ authHeaders }: ContentManagementProps) {
+export default function ContentManagement({ authHeaders, venues }: ContentManagementProps) {
   return (
     <div>
       <Card bg="dark" text="white" border="secondary" className="mb-3">
@@ -331,7 +334,7 @@ export default function ContentManagement({ authHeaders }: ContentManagementProp
           <hr className="border-secondary" />
           <ContentSection sectionKey="sponsors" title={m.admin_content_sponsors_section()} authHeaders={authHeaders} />
           <hr className="border-secondary" />
-          <EditionsSection authHeaders={authHeaders} />
+          <EditionsSection authHeaders={authHeaders} venues={venues} />
         </Card.Body>
       </Card>
     </div>

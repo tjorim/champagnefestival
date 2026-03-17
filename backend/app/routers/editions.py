@@ -71,13 +71,7 @@ async def create_edition(
         friday=body.friday,
         saturday=body.saturday,
         sunday=body.sunday,
-        venue_name=body.venue_name,
-        venue_address=body.venue_address,
-        venue_city=body.venue_city,
-        venue_postal_code=body.venue_postal_code,
-        venue_country=body.venue_country,
-        venue_lat=body.venue_lat,
-        venue_lng=body.venue_lng,
+        venue_id=body.venue_id,
         active=body.active,
     )
     e.set_schedule([ev.model_dump() for ev in body.schedule])
@@ -107,11 +101,7 @@ async def update_edition(
 ) -> dict:
     e = await _get_or_404(db, edition_id)
 
-    simple_fields = [
-        "year", "month", "friday", "saturday", "sunday",
-        "venue_name", "venue_address", "venue_city", "venue_postal_code",
-        "venue_country", "venue_lat", "venue_lng", "active",
-    ]
+    simple_fields = ["year", "month", "friday", "saturday", "sunday", "venue_id", "active"]
     for field in simple_fields:
         if field in body.model_fields_set and getattr(body, field) is not None:
             setattr(e, field, getattr(body, field))

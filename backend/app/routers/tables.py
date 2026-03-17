@@ -33,12 +33,8 @@ async def create_table(
         capacity=body.capacity,
         x=body.x,
         y=body.y,
-        room_id=body.room_id,
-        shape=body.shape,
-        width_m=body.width_m,
-        length_m=body.length_m,
+        table_type_id=body.table_type_id,
         rotation=body.rotation,
-        height_type=body.height_type,
         layout_id=body.layout_id,
     )
     t.set_reservation_ids([])
@@ -93,23 +89,12 @@ async def update_table(
         t.x = body.x
     if body.y is not None:
         t.y = body.y
-    if body.shape is not None:
-        t.shape = body.shape
-    if body.width_m is not None:
-        t.width_m = body.width_m
-    if body.length_m is not None:
-        t.length_m = body.length_m
-    if t.length_m < t.width_m:
-        t.length_m, t.width_m = t.width_m, t.length_m
-    if body.height_type is not None:
-        t.height_type = body.height_type
+    if body.table_type_id is not None:
+        t.table_type_id = body.table_type_id
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
-    # Nullable / zero-valid fields: must use model_fields_set so that an
-    # explicit null (room_id=null to unassign) or an explicit zero degrees
-    # (rotation=0) is honoured even though the value is falsy.
-    if "room_id" in body.model_fields_set:
-        t.room_id = body.room_id
+    # Zero-valid fields: must use model_fields_set so that an explicit zero
+    # degrees (rotation=0) is honoured even though the value is falsy.
     if "rotation" in body.model_fields_set:
         t.rotation = body.rotation
     if "layout_id" in body.model_fields_set:

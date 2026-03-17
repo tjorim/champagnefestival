@@ -17,14 +17,68 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # rooms must be created before tables so the FK reference is valid
+    # venues must be created before rooms so the FK reference is valid
+    op.create_table(
+        "venues",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("name", sa.String(200), nullable=False),
+        sa.Column("address", sa.String(200), nullable=False, server_default=""),
+        sa.Column("city", sa.String(100), nullable=False, server_default=""),
+        sa.Column("postal_code", sa.String(20), nullable=False, server_default=""),
+        sa.Column("country", sa.String(100), nullable=False, server_default=""),
+        sa.Column("lat", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column("lng", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
+    # rooms must be created before layouts so the FK reference is valid
     op.create_table(
         "rooms",
         sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column(
+            "venue_id",
+            sa.String(64),
+            sa.ForeignKey("venues.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("width_m", sa.Float, nullable=False, server_default="20.0"),
         sa.Column("length_m", sa.Float, nullable=False, server_default="15.0"),
         sa.Column("color", sa.String(20), nullable=False, server_default="#6c757d"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
+    op.create_table(
+        "table_types",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("name", sa.String(200), nullable=False),
+        sa.Column("shape", sa.String(20), nullable=False, server_default="rectangle"),
+        sa.Column("width_m", sa.Float, nullable=False, server_default="0.7"),
+        sa.Column("length_m", sa.Float, nullable=False, server_default="1.8"),
+        sa.Column("height_type", sa.String(20), nullable=False, server_default="low"),
+        sa.Column("max_capacity", sa.Integer, nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -48,13 +102,12 @@ def upgrade() -> None:
         sa.Column("friday", sa.Date, nullable=False),
         sa.Column("saturday", sa.Date, nullable=False),
         sa.Column("sunday", sa.Date, nullable=False),
-        sa.Column("venue_name", sa.String(200), nullable=False, server_default=""),
-        sa.Column("venue_address", sa.String(200), nullable=False, server_default=""),
-        sa.Column("venue_city", sa.String(100), nullable=False, server_default=""),
-        sa.Column("venue_postal_code", sa.String(20), nullable=False, server_default=""),
-        sa.Column("venue_country", sa.String(100), nullable=False, server_default=""),
-        sa.Column("venue_lat", sa.Float, nullable=False, server_default="0.0"),
-        sa.Column("venue_lng", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column(
+            "venue_id",
+            sa.String(64),
+            sa.ForeignKey("venues.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("schedule", sa.Text, nullable=False, server_default="[]"),
         sa.Column("producers", sa.Text, nullable=False, server_default="[]"),
         sa.Column("sponsors", sa.Text, nullable=False, server_default="[]"),
@@ -86,8 +139,8 @@ def upgrade() -> None:
         sa.Column(
             "room_id",
             sa.String(64),
-            sa.ForeignKey("rooms.id", ondelete="SET NULL"),
-            nullable=True,
+            sa.ForeignKey("rooms.id", ondelete="CASCADE"),
+            nullable=False,
         ),
         sa.Column("day_id", sa.Integer, nullable=False),
         sa.Column("label", sa.String(200), nullable=False, server_default=""),
@@ -108,22 +161,18 @@ def upgrade() -> None:
         sa.Column("x", sa.Float, nullable=False, server_default="50.0"),
         sa.Column("y", sa.Float, nullable=False, server_default="50.0"),
         sa.Column(
-            "room_id",
+            "table_type_id",
             sa.String(64),
-            sa.ForeignKey("rooms.id", ondelete="SET NULL"),
-            nullable=True,
+            sa.ForeignKey("table_types.id", ondelete="RESTRICT"),
+            nullable=False,
         ),
         sa.Column("reservation_ids", sa.Text, nullable=False, server_default="[]"),
-        sa.Column("shape", sa.String(20), nullable=False, server_default="rectangle"),
-        sa.Column("width_m", sa.Float, nullable=False, server_default="1.8"),
-        sa.Column("length_m", sa.Float, nullable=False, server_default="0.7"),
         sa.Column("rotation", sa.Integer, nullable=False, server_default="0"),
-        sa.Column("height_type", sa.String(20), nullable=False, server_default="low"),
         sa.Column(
             "layout_id",
             sa.String(64),
-            sa.ForeignKey("layouts.id", ondelete="SET NULL"),
-            nullable=True,
+            sa.ForeignKey("layouts.id", ondelete="CASCADE"),
+            nullable=False,
         ),
         sa.Column(
             "created_at",
@@ -230,6 +279,8 @@ def downgrade() -> None:
     op.drop_table("reservations")
     op.drop_table("people")
     op.drop_table("tables")
+    op.drop_table("table_types")
     op.drop_table("layouts")
     op.drop_table("editions")
     op.drop_table("rooms")
+    op.drop_table("venues")

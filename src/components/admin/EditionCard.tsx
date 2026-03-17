@@ -9,15 +9,17 @@ import EditionModal from "./EditionModal";
 import EventModal from "./EventModal";
 import { parseEditionDate } from "./editionTypes";
 import type { Edition, ScheduleEvent } from "./editionTypes";
+import type { Venue } from "../../types/admin";
 
 interface EditionCardProps {
   edition: Edition;
+  venues: Venue[];
   authHeaders: () => Record<string, string>;
   onDeleted: (id: string) => void;
   onUpdated: (edition: Edition) => void;
 }
 
-export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated }: EditionCardProps) {
+export default function EditionCard({ edition, venues, authHeaders, onDeleted, onUpdated }: EditionCardProps) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -145,12 +147,15 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
 
       {open && (
         <Card.Body id={collapseId} className="pt-2 pb-2">
-          {(edition.venue_name || edition.venue_city) && (
-            <p className="text-secondary small mb-2">
-              <i className="bi bi-geo-alt me-1" aria-hidden="true" />
-              {[edition.venue_name, edition.venue_address, edition.venue_city, edition.venue_country].filter(Boolean).join(", ")}
-            </p>
-          )}
+          {edition.venue_id && (() => {
+            const venue = venues.find((v) => v.id === edition.venue_id);
+            return venue ? (
+              <p className="text-secondary small mb-2">
+                <i className="bi bi-geo-alt me-1" aria-hidden="true" />
+                {[venue.name, venue.address, venue.city, venue.country].filter(Boolean).join(", ")}
+              </p>
+            ) : null;
+          })()}
 
           <div className="d-flex justify-content-between align-items-center mb-1">
             <h6 className="text-warning mb-0 small">{m.admin_content_edition_schedule()}</h6>
@@ -196,6 +201,7 @@ export default function EditionCard({ edition, authHeaders, onDeleted, onUpdated
       <EditionModal
         show={editionModalOpen}
         initial={edition}
+        venues={venues}
         authHeaders={authHeaders}
         onSaved={(updated) => { onUpdated(updated); setEditionModalOpen(false); }}
         onHide={() => setEditionModalOpen(false)}

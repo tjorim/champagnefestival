@@ -21,13 +21,7 @@ export interface Edition {
   friday: string;
   saturday: string;
   sunday: string;
-  venue_name: string;
-  venue_address: string;
-  venue_city: string;
-  venue_postal_code: string;
-  venue_country: string;
-  venue_lat: number;
-  venue_lng: number;
+  venue_id: string | null;
   schedule: ScheduleEvent[];
   producers?: { id: number; name: string; image: string; active?: boolean }[];
   sponsors?: { id: number; name: string; image: string; active?: boolean }[];

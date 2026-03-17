@@ -4,7 +4,7 @@ import secrets
 import time
 from typing import Any
 
-from app.models import Edition, Layout, Person, Reservation, Room, Table
+from app.models import Edition, Layout, Person, Reservation, Room, Table, TableType, Venue
 
 
 def roles_contains(role: str) -> Any:
@@ -114,6 +114,35 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
     }
 
 
+def venue_to_dict(v: Venue) -> dict:
+    return {
+        "id": v.id,
+        "name": v.name,
+        "address": v.address,
+        "city": v.city,
+        "postal_code": v.postal_code,
+        "country": v.country,
+        "lat": v.lat,
+        "lng": v.lng,
+        "created_at": v.created_at,
+        "updated_at": v.updated_at,
+    }
+
+
+def table_type_to_dict(tt: TableType) -> dict:
+    return {
+        "id": tt.id,
+        "name": tt.name,
+        "shape": tt.shape,
+        "width_m": tt.width_m,
+        "length_m": tt.length_m,
+        "height_type": tt.height_type,
+        "max_capacity": tt.max_capacity,
+        "created_at": tt.created_at,
+        "updated_at": tt.updated_at,
+    }
+
+
 def layout_to_dict(lay: Layout) -> dict:
     return {
         "id": lay.id,
@@ -132,12 +161,8 @@ def table_to_dict(t: Table) -> dict:
         "capacity": t.capacity,
         "x": t.x,
         "y": t.y,
-        "room_id": t.room_id,
-        "shape": t.shape,
-        "width_m": t.width_m,
-        "length_m": t.length_m,
+        "table_type_id": t.table_type_id,
         "rotation": t.rotation,
-        "height_type": t.height_type,
         "layout_id": t.layout_id,
         "reservation_ids": t.get_reservation_ids(),
         "created_at": t.created_at,
@@ -148,6 +173,7 @@ def table_to_dict(t: Table) -> dict:
 def room_to_dict(r: Room) -> dict:
     return {
         "id": r.id,
+        "venue_id": r.venue_id,
         "name": r.name,
         "width_m": r.width_m,
         "length_m": r.length_m,
@@ -169,13 +195,7 @@ def edition_to_dict(
         "friday": e.friday.isoformat(),
         "saturday": e.saturday.isoformat(),
         "sunday": e.sunday.isoformat(),
-        "venue_name": e.venue_name,
-        "venue_address": e.venue_address,
-        "venue_city": e.venue_city,
-        "venue_postal_code": e.venue_postal_code,
-        "venue_country": e.venue_country,
-        "venue_lat": e.venue_lat,
-        "venue_lng": e.venue_lng,
+        "venue_id": e.venue_id,
         "schedule": e.get_schedule(),
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],

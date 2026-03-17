@@ -2,6 +2,19 @@
  * Types for the admin floor plan and room management.
  */
 
+export interface TableType {
+  id: string;
+  name: string;
+  shape: "rectangle" | "round";
+  /** Physical width in metres (rectangle) or diameter (round) */
+  widthM: number;
+  /** Physical length in metres; equals widthM for round tables */
+  lengthM: number;
+  heightType: "low" | "high";
+  /** Physical maximum number of seats */
+  maxCapacity: number;
+}
+
 export interface FloorTable {
   id: string;
   name: string;
@@ -10,20 +23,12 @@ export interface FloorTable {
   x: number;
   /** Y position (percentage of room height) */
   y: number;
-  /** Room this table belongs to (null = unassigned / legacy) */
-  roomId: string | null;
-  /** Visual shape on the floor plan canvas */
-  shape: "rectangle" | "round";
-  /** Physical width in metres (rectangle) or diameter (round) */
-  widthM: number;
-  /** Physical length in metres (second tabletop dimension); equals widthM for round tables */
-  lengthM: number;
+  /** Table type defining shape/dimensions */
+  tableTypeId: string;
   /** Rotation angle in whole degrees [0, 359], clockwise */
   rotation: number;
-  /** Whether this is a low or high-top table */
-  heightType: "low" | "high";
-  /** Layout snapshot this table belongs to (null = global / unversioned) */
-  layoutId: string | null;
+  /** Layout this table belongs to */
+  layoutId: string;
   reservationIds: string[];
 }
 
@@ -31,15 +36,27 @@ export interface Layout {
   id: string;
   editionId: string | null;
   /** Room this layout applies to */
-  roomId: string | null;
+  roomId: string;
   /** 1 = Friday, 2 = Saturday, 3 = Sunday */
   dayId: number;
   label: string;
   createdAt: string;
 }
 
+export interface Venue {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  lat: number;
+  lng: number;
+}
+
 export interface Room {
   id: string;
+  venueId: string;
   name: string;
   /** Room width in metres — used to render a proportional canvas */
   widthM: number;
