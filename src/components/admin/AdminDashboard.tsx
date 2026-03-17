@@ -114,6 +114,7 @@ function apiReservationToReservation(d: Record<string, unknown>): Reservation {
       delivered: (item.delivered ?? false) as boolean,
     })),
     notes: (d.notes ?? "") as string,
+    accessibilityNote: (d.accessibility_note ?? d.accessibilityNote ?? "") as string,
     tableId: (d.table_id ?? d.tableId) as string | undefined,
     status: (d.status ?? "pending") as ReservationStatus,
     paymentStatus: (d.payment_status ?? d.paymentStatus ?? "unpaid") as PaymentStatus,

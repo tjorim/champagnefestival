@@ -221,6 +221,7 @@
   "admin_assigned": "Toegewezen",
   "admin_unassigned": "Niet toegewezen",
   "admin_notes": "Opmerkingen",
+  "admin_accessibility_note_label": "Toegankelijkheidsbehoeften",
   "admin_authenticated": "Geverifieerd",
   "admin_refresh": "Vernieuwen",
   "admin_status_label": "Status",
