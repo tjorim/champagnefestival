@@ -1,0 +1,345 @@
+/**
+ * TableTypeManagement — CRUD for table type templates.
+ *
+ * Managers define reusable table templates (shape, dimensions, height, max
+ * capacity) here. The Layout component then picks a type when placing a table.
+ */
+
+import { useCallback, useState } from "react";
+import Alert from "react-bootstrap/Alert";
+import Badge from "react-bootstrap/Badge";
+import Button from "react-bootstrap/Button";
+import Card from "react-bootstrap/Card";
+import Form from "react-bootstrap/Form";
+import Modal from "react-bootstrap/Modal";
+import Table from "react-bootstrap/Table";
+import { m } from "../../paraglide/messages";
+import type { TableType } from "../../types/admin";
+
+interface TableTypeManagementProps {
+  tableTypes: TableType[];
+  onAdd: (data: Omit<TableType, "id">) => Promise<void>;
+  onUpdate: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}
+
+const emptyForm = {
+  name: "",
+  shape: "rectangle" as "rectangle" | "round",
+  widthM: 0.7,
+  lengthM: 1.8,
+  heightType: "low" as "low" | "high",
+  maxCapacity: 4,
+};
+
+export default function TableTypeManagement({
+  tableTypes,
+  onAdd,
+  onUpdate,
+  onDelete,
+}: TableTypeManagementProps) {
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const openAdd = useCallback(() => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setError(null);
+    setShowModal(true);
+  }, []);
+
+  const openEdit = useCallback((tt: TableType) => {
+    setEditingId(tt.id);
+    setForm({
+      name: tt.name,
+      shape: tt.shape,
+      widthM: tt.widthM,
+      lengthM: tt.lengthM,
+      heightType: tt.heightType,
+      maxCapacity: tt.maxCapacity,
+    });
+    setError(null);
+    setShowModal(true);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!form.name.trim() || form.maxCapacity < 1 || !Number.isInteger(form.maxCapacity)) return;
+    if (!Number.isFinite(form.widthM) || form.widthM <= 0 || !Number.isFinite(form.lengthM) || form.lengthM <= 0) {
+      setError("Width and length must be positive numbers.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      if (editingId) {
+        await onUpdate(editingId, form);
+      } else {
+        await onAdd(form);
+      }
+      setShowModal(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : m.admin_content_error_save());
+    } finally {
+      setSaving(false);
+    }
+  }, [form, editingId, onAdd, onUpdate]);
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      if (!window.confirm(m.admin_table_type_delete_confirm())) return;
+      setDeleteError(null);
+      try {
+        await onDelete(id);
+      } catch (err) {
+        setDeleteError(err instanceof Error ? err.message : m.admin_content_error_save());
+      }
+    },
+    [onDelete],
+  );
+
+  return (
+    <>
+      <Card bg="dark" text="white" border="secondary">
+        <Card.Header className="d-flex align-items-center justify-content-between">
+          <span className="fw-semibold">{m.admin_table_types_tab()}</span>
+          <Button variant="outline-warning" size="sm" onClick={openAdd}>
+            <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+            {m.admin_add_table_type()}
+          </Button>
+        </Card.Header>
+        <Card.Body className="p-0">
+          {deleteError && (
+            <Alert variant="danger" className="m-3 py-1 small">
+              {deleteError}
+            </Alert>
+          )}
+          {tableTypes.length === 0 ? (
+            <p className="text-secondary text-center py-4 mb-0">{m.admin_no_table_types()}</p>
+          ) : (
+            <div className="table-responsive">
+              <Table variant="dark" hover striped className="mb-0" size="sm">
+                <thead>
+                  <tr>
+                    <th>{m.admin_table_name()}</th>
+                    <th>{m.admin_table_shape_label()}</th>
+                    <th>{m.admin_table_width_label()}</th>
+                    <th>{m.admin_table_length_label()}</th>
+                    <th>{m.admin_table_height_type_label()}</th>
+                    <th>{m.admin_table_type_max_capacity()}</th>
+                    <th>{m.admin_actions_label()}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableTypes.map((tt) => (
+                    <tr key={tt.id}>
+                      <td className="fw-semibold">{tt.name}</td>
+                      <td>
+                        <Badge bg="secondary">
+                          {tt.shape === "round"
+                            ? m.admin_table_shape_round()
+                            : m.admin_table_shape_rectangle()}
+                        </Badge>
+                      </td>
+                      <td>{tt.widthM} m</td>
+                      <td>{tt.shape === "round" ? "—" : `${tt.lengthM} m`}</td>
+                      <td>
+                        <Badge
+                          bg={tt.heightType === "high" ? "info" : "dark"}
+                          text={tt.heightType === "high" ? "dark" : "secondary"}
+                          className="border border-secondary"
+                        >
+                          {tt.heightType === "high"
+                            ? m.admin_table_height_type_high()
+                            : m.admin_table_height_type_low()}
+                        </Badge>
+                      </td>
+                      <td>{tt.maxCapacity}</td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline-secondary"
+                            onClick={() => openEdit(tt)}
+                            aria-label={m.admin_edit()}
+                            title={m.admin_edit()}
+                          >
+                            <i className="bi bi-pencil" aria-hidden="true" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline-danger"
+                            onClick={() => handleDelete(tt.id)}
+                            aria-label={m.admin_delete()}
+                            title={m.admin_delete()}
+                          >
+                            <i className="bi bi-trash" aria-hidden="true" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
+
+      <Modal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        centered
+        aria-labelledby="table-type-modal-title"
+      >
+        <Modal.Header closeButton className="bg-dark text-light border-secondary">
+          <Modal.Title id="table-type-modal-title">
+            {editingId ? m.admin_edit_table_type() : m.admin_add_table_type()}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="bg-dark text-light">
+          {error && (
+            <Alert variant="danger" className="py-1 mb-3 small">
+              {error}
+            </Alert>
+          )}
+          <Form.Group className="mb-3" controlId="tt-name">
+            <Form.Label>{m.admin_table_name()}</Form.Label>
+            <Form.Control
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              className="bg-dark text-light border-secondary"
+              placeholder={m.admin_table_type_name_placeholder()}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="tt-shape">
+            <Form.Label>{m.admin_table_shape_label()}</Form.Label>
+            <Form.Select
+              value={form.shape}
+              onChange={(e) => {
+                const s = e.target.value as "rectangle" | "round";
+                setForm((p) => ({
+                  ...p,
+                  shape: s,
+                  widthM: s === "round" ? 0.9 : 0.7,
+                  lengthM: s === "round" ? 0.9 : 1.8,
+                }));
+              }}
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="rectangle">{m.admin_table_shape_rectangle()}</option>
+              <option value="round">{m.admin_table_shape_round()}</option>
+            </Form.Select>
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="tt-height-type">
+            <Form.Label>{m.admin_table_height_type_label()}</Form.Label>
+            <Form.Select
+              value={form.heightType}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, heightType: e.target.value as "low" | "high" }))
+              }
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="low">{m.admin_table_height_type_low()}</option>
+              <option value="high">{m.admin_table_height_type_high()}</option>
+            </Form.Select>
+          </Form.Group>
+          {form.shape === "round" ? (
+            <Form.Group className="mb-3" controlId="tt-diameter">
+              <Form.Label>{m.admin_table_diameter_label()}</Form.Label>
+              <Form.Control
+                type="number"
+                min={0.1}
+                max={20}
+                step={0.1}
+                value={form.widthM}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setForm((p) => ({ ...p, widthM: v, lengthM: v }));
+                }}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+          ) : (
+            <div className="row g-2 mb-3">
+              <div className="col">
+                <Form.Group controlId="tt-width">
+                  <Form.Label>{m.admin_table_width_label()}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={0.1}
+                    max={20}
+                    step={0.1}
+                    value={form.widthM}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setForm((p) =>
+                        v > p.lengthM
+                          ? { ...p, widthM: p.lengthM, lengthM: v }
+                          : { ...p, widthM: v },
+                      );
+                    }}
+                    className="bg-dark text-light border-secondary"
+                  />
+                </Form.Group>
+              </div>
+              <div className="col">
+                <Form.Group controlId="tt-length">
+                  <Form.Label>{m.admin_table_length_label()}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={0.1}
+                    max={20}
+                    step={0.1}
+                    value={form.lengthM}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setForm((p) =>
+                        v < p.widthM
+                          ? { ...p, lengthM: p.widthM, widthM: v }
+                          : { ...p, lengthM: v },
+                      );
+                    }}
+                    className="bg-dark text-light border-secondary"
+                  />
+                </Form.Group>
+              </div>
+            </div>
+          )}
+          <Form.Group controlId="tt-max-capacity">
+            <Form.Label>{m.admin_table_type_max_capacity()}</Form.Label>
+            <Form.Control
+              type="number"
+              min={1}
+              max={50}
+              value={form.maxCapacity}
+              onChange={(e) => setForm((p) => ({ ...p, maxCapacity: Number(e.target.value) }))}
+              className="bg-dark text-light border-secondary"
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer className="bg-dark border-secondary">
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            {m.admin_action_cancel()}
+          </Button>
+          <Button
+            variant="warning"
+            onClick={handleSave}
+            disabled={
+              saving ||
+              !form.name.trim() ||
+              form.maxCapacity < 1 ||
+              !Number.isInteger(form.maxCapacity)
+            }
+          >
+            {m.admin_save()}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
+  );
+}

@@ -32,8 +32,7 @@
 
 ## React Specific Guidelines
 
-- Use hash-based navigation with anchor links (no React Router - single-page application)
-- Navigation is handled by the custom `useScrollNavigation` hook for smooth scrolling and URL updates
+- The main marketing site uses hash-based navigation with anchor links handled by the `useScrollNavigation` hook. **Exception**: dedicated sub-pages (`/admin`, `/check-in`) use React Router v7 (`react-router`) with `BrowserRouter` and real URL paths.
 - Use navigation configuration from `src/config/navigation.ts` for consistent routing
 - Implement code splitting with React.lazy and Suspense
 - Use Paraglide (`@inlang/paraglide-js`) for internationalization
@@ -43,14 +42,15 @@
 
 ## Navigation Guidelines
 
-- **Single-Page Application**: All content is rendered in one page with section-based navigation
-- **Hash Links**: Use anchor links with `href="#section-id"` format for navigation
+- **Single-Page Application**: The main marketing page (`/`) uses section-based navigation with hash fragments.
+- **Hash Links**: Use anchor links with `href="#section-id"` format for navigation within the main page.
 - **Navigation Config**: Add new navigation items to `src/config/navigation.ts`
 - **Scroll Navigation**: The `useScrollNavigation` hook automatically handles:
   - Smooth scrolling to target sections
   - URL hash updates when scrolling between sections
   - ARIA attributes for accessibility
   - Performance-optimized scroll event handling
+- **React Router routes**: `/admin` and `/check-in` are standalone React Router routes rendered outside the main SPA. The check-in route uses `useSearchParams()` to read `?id=...&token=...` query parameters — this is intentional and correct for QR-code deep-link URLs (real path + query string, not hash fragments).
 - **Section IDs**: Ensure all main sections have unique `id` attributes for navigation
 - **Modal Navigation**: Special hash links like `#privacy-policy` can trigger modals
 

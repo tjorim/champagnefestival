@@ -41,12 +41,8 @@ describe("editions registry", () => {
       expect(edition.dates.friday.getDay()).toBe(5);
       expect(edition.dates.saturday.getDay()).toBe(6);
       expect(edition.dates.sunday.getDay()).toBe(0);
-      expect(edition.dates.saturday.getTime()).toBeGreaterThan(
-        edition.dates.friday.getTime(),
-      );
-      expect(edition.dates.sunday.getTime()).toBeGreaterThan(
-        edition.dates.saturday.getTime(),
-      );
+      expect(edition.dates.saturday.getTime()).toBeGreaterThan(edition.dates.friday.getTime());
+      expect(edition.dates.sunday.getTime()).toBeGreaterThan(edition.dates.saturday.getTime());
     });
   });
 
@@ -69,9 +65,7 @@ describe("editions registry", () => {
     )[0]!;
     const sunday = firstEdition.dates.sunday;
     vi.useFakeTimers();
-    vi.setSystemTime(
-      new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 12, 0, 0),
-    );
+    vi.setSystemTime(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 12, 0, 0));
 
     const active = getActiveEdition();
     expect(active.id).toBe(firstEdition.id);

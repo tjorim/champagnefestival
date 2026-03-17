@@ -16,18 +16,9 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
-let mockFestivalEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-vi.mock("@/config/dates", () => ({
-  get festivalEndDate() {
-    return mockFestivalEndDate;
-  },
-}));
-
 describe("Countdown component", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockFestivalEndDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   });
 
   afterEach(() => {
@@ -36,7 +27,8 @@ describe("Countdown component", () => {
 
   it("renders countdown div with aria-live polite attribute", async () => {
     const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-    const { container } = render(<Countdown targetDate={futureDate} />);
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const { container } = render(<Countdown targetDate={futureDate} endDate={endDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
@@ -47,16 +39,18 @@ describe("Countdown component", () => {
 
   it("shows upcoming countdown after mounting for far future date", async () => {
     const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-    const { container } = render(<Countdown targetDate={futureDate} />);
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const { container } = render(<Countdown targetDate={futureDate} endDate={endDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
     expect(container.querySelector(".countdown-upcoming")).toBeInTheDocument();
   });
 
-  it('shows "happening now" when targetDate is past but festivalEndDate is in the future', async () => {
+  it('shows "happening now" when targetDate is past but endDate is in the future', async () => {
     const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    render(<Countdown targetDate={pastDate} />);
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    render(<Countdown targetDate={pastDate} endDate={endDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
@@ -64,9 +58,9 @@ describe("Countdown component", () => {
   });
 
   it('shows "concluded" when festival has ended but is within autoHideAfterDays', async () => {
-    mockFestivalEndDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const endDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
     const pastStartDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-    render(<Countdown targetDate={pastStartDate} />);
+    render(<Countdown targetDate={pastStartDate} endDate={endDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
@@ -74,9 +68,9 @@ describe("Countdown component", () => {
   });
 
   it("renders nothing when festival ended and autoHideAfterDays has passed", async () => {
-    mockFestivalEndDate = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
+    const endDate = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
     const pastStartDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
-    const { container } = render(<Countdown targetDate={pastStartDate} />);
+    const { container } = render(<Countdown targetDate={pastStartDate} endDate={endDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
@@ -84,12 +78,14 @@ describe("Countdown component", () => {
   });
 
   it("throws error for invalid date string", () => {
-    expect(() => render(<Countdown targetDate="not-a-date" />)).toThrow();
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    expect(() => render(<Countdown targetDate="not-a-date" endDate={endDate} />)).toThrow();
   });
 
   it("accepts a Date object as targetDate", async () => {
     const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const { container } = render(<Countdown targetDate={futureDate} />);
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const { container } = render(<Countdown targetDate={futureDate} endDate={endDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
@@ -98,7 +94,10 @@ describe("Countdown component", () => {
 
   it("uses autoHideAfterDays prop", async () => {
     const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
-    const { container } = render(<Countdown targetDate={futureDate} autoHideAfterDays={60} />);
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const { container } = render(
+      <Countdown targetDate={futureDate} endDate={endDate} autoHideAfterDays={60} />,
+    );
     await act(async () => {
       vi.advanceTimersByTime(100);
     });
@@ -107,7 +106,8 @@ describe("Countdown component", () => {
 
   it("renders countdown container with correct class", async () => {
     const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
-    const { container } = render(<Countdown targetDate={futureDate} />);
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const { container } = render(<Countdown targetDate={futureDate} endDate={endDate} />);
     await act(async () => {
       vi.advanceTimersByTime(100);
     });

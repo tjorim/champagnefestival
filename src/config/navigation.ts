@@ -18,4 +18,5 @@ export const mainNavLinks: NavLink[] = [
   { getLabel: m.location_title, href: "#map" },
   { getLabel: m.faq_title, href: "#faq" },
   { getLabel: m.contact_title, href: "#contact" },
+  { getLabel: m.reservation_title, href: "#reservations" },
 ];
