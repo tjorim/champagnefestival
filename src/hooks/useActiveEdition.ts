@@ -11,7 +11,7 @@ import { getActiveEdition, type Edition } from "../config/editions";
 
 export interface ActiveEditionState {
   edition: Edition;
-  /** True once the API responded successfully with live data. */
+  /** True once the fetch has settled (success or failure). */
   isLoaded: boolean;
 }
 
@@ -31,7 +31,10 @@ export function useActiveEdition(): ActiveEditionState {
     async function load() {
       try {
         const editionsRes = await fetch("/api/editions");
-        if (!editionsRes.ok) return;
+        if (!editionsRes.ok) {
+          setIsLoaded(true);
+          return;
+        }
 
         interface ApiScheduleEvent {
           id: string;
@@ -58,7 +61,10 @@ export function useActiveEdition(): ActiveEditionState {
         }
 
         const apiEditions = (await editionsRes.json()) as ApiEdition[];
-        if (!Array.isArray(apiEditions) || apiEditions.length === 0) return;
+        if (!Array.isArray(apiEditions) || apiEditions.length === 0) {
+          setIsLoaded(true);
+          return;
+        }
 
         // Same active-edition logic as getActiveEdition() in editions.ts
         const now = new Date();
@@ -73,7 +79,10 @@ export function useActiveEdition(): ActiveEditionState {
           }) ?? sorted[sorted.length - 1]!;
 
         const venueRes = await fetch(`/api/venues/${activeApi.venue_id}`);
-        if (!venueRes.ok) return;
+        if (!venueRes.ok) {
+          setIsLoaded(true);
+          return;
+        }
 
         interface ApiVenue {
           name: string;
@@ -126,6 +135,7 @@ export function useActiveEdition(): ActiveEditionState {
         setIsLoaded(true);
       } catch {
         // Network error or parse failure — keep static fallback silently.
+        setIsLoaded(true);
       }
     }
 

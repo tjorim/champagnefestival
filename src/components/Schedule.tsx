@@ -155,7 +155,7 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
                 <span className="d-block small">
                   {(() => {
                     try {
-                      return new Date(day.date).toLocaleDateString(getLocale(), {
+                      return new Date(day.date + "T00:00:00").toLocaleDateString(getLocale(), {
                         month: "short",
                         day: "numeric",
                       });

@@ -120,12 +120,12 @@ export default function EditionCard({
         <Badge bg={edition.active ? "success" : "secondary"}>
           {edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}
         </Badge>
-        <Badge bg="secondary">{edition.schedule.length} events</Badge>
+        <Badge bg="secondary">{edition.schedule.length} {m.admin_edition_events()}</Badge>
         {(edition.producers?.length ?? 0) > 0 && (
-          <Badge bg="secondary">{edition.producers!.length} producers</Badge>
+          <Badge bg="secondary">{edition.producers!.length} {m.admin_edition_producers()}</Badge>
         )}
         {(edition.sponsors?.length ?? 0) > 0 && (
-          <Badge bg="secondary">{edition.sponsors!.length} sponsors</Badge>
+          <Badge bg="secondary">{edition.sponsors!.length} {m.admin_edition_sponsors()}</Badge>
         )}
         {saving && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
@@ -153,10 +153,10 @@ export default function EditionCard({
                   className="me-1"
                 />
               )}
-              Confirm delete
+              {m.admin_action_confirm()}
             </Button>
             <Button size="sm" variant="outline-secondary" onClick={() => setConfirmDelete(false)}>
-              Cancel
+              {m.admin_action_cancel()}
             </Button>
           </span>
         ) : (
@@ -165,7 +165,7 @@ export default function EditionCard({
               size="sm"
               variant="outline-secondary"
               onClick={() => setEditionModalOpen(true)}
-              aria-label={`Edit edition ${edition.id}`}
+              aria-label={`${m.admin_edit()} ${edition.id}`}
             >
               <i className="bi bi-pencil" aria-hidden="true" />
             </Button>
@@ -173,7 +173,7 @@ export default function EditionCard({
               size="sm"
               variant="outline-danger"
               onClick={() => setConfirmDelete(true)}
-              aria-label={`Delete edition ${edition.id}`}
+              aria-label={`${m.admin_delete()} ${edition.id}`}
             >
               <i className="bi bi-trash" aria-hidden="true" />
             </Button>
@@ -240,7 +240,7 @@ export default function EditionCard({
                     </Badge>
                     {ev.reservation && (
                       <Badge bg="warning" text="dark" style={{ fontSize: "0.65rem" }}>
-                        reservation
+                        {m.schedule_reservation()}
                       </Badge>
                     )}
                   </span>

@@ -41,7 +41,11 @@ function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; 
   };
 }
 
-const DAY_LABELS: Record<number, string> = { 1: "Friday", 2: "Saturday", 3: "Sunday" };
+function getDayLabel(dayId: number): string {
+  if (dayId === 1) return m.admin_content_edition_friday();
+  if (dayId === 2) return m.admin_content_edition_saturday();
+  return m.admin_content_edition_sunday();
+}
 
 interface LayoutEditorProps {
   tables: FloorTable[];
@@ -298,7 +302,9 @@ export default function LayoutEditor({
   useEffect(() => {
     if (activeRoomId) {
       const roomLayouts = layouts.filter((l) => l.roomId === activeRoomId);
-      if (roomLayouts.length > 0 && !roomLayouts.find((l) => l.id === activeLayoutId)) {
+      if (roomLayouts.length === 0) {
+        setActiveLayoutId(null);
+      } else if (!roomLayouts.find((l) => l.id === activeLayoutId)) {
         setActiveLayoutId(roomLayouts[0]?.id ?? null);
       }
     }
@@ -483,7 +489,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {layout.label || DAY_LABELS[layout.dayId] || `Day ${layout.dayId}`}
+                          {layout.label || getDayLabel(layout.dayId)}
                         </Button>
                         <Button
                           size="sm"
@@ -575,8 +581,8 @@ export default function LayoutEditor({
                 variant="outline-secondary"
                 size="sm"
                 onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)}
-                title="Rotate 15° counter-clockwise"
-                aria-label="Rotate 15° counter-clockwise"
+                title={m.admin_layout_rotate_ccw()}
+                aria-label={m.admin_layout_rotate_ccw()}
               >
                 <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
               </Button>
@@ -590,8 +596,8 @@ export default function LayoutEditor({
                 variant="outline-secondary"
                 size="sm"
                 onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)}
-                title="Rotate 15° clockwise"
-                aria-label="Rotate 15° clockwise"
+                title={m.admin_layout_rotate_cw()}
+                aria-label={m.admin_layout_rotate_cw()}
               >
                 <i className="bi bi-arrow-clockwise" aria-hidden="true" />
               </Button>
@@ -653,9 +659,9 @@ export default function LayoutEditor({
               onChange={(e) => setNewLayout((p) => ({ ...p, dayId: Number(e.target.value) }))}
               className="bg-dark text-light border-secondary"
             >
-              <option value={1}>{DAY_LABELS[1]}</option>
-              <option value={2}>{DAY_LABELS[2]}</option>
-              <option value={3}>{DAY_LABELS[3]}</option>
+              <option value={1}>{m.admin_content_edition_friday()}</option>
+              <option value={2}>{m.admin_content_edition_saturday()}</option>
+              <option value={3}>{m.admin_content_edition_sunday()}</option>
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3" controlId="layout-label">
@@ -729,7 +735,7 @@ export default function LayoutEditor({
                   {tt.heightType === "high"
                     ? m.admin_table_height_type_high()
                     : m.admin_table_height_type_low()}
-                  , max {tt.maxCapacity})
+                  , {m.admin_layout_capacity_max()} {tt.maxCapacity})
                 </option>
               ))}
             </Form.Select>

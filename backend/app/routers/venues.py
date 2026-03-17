@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Edition, Venue
+from app.models import Edition, Room, Venue
 from app.schemas import VenueCreate, VenueOut, VenueUpdate
 from app.utils import make_id, venue_to_dict
 
@@ -87,6 +87,12 @@ async def delete_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> Non
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Cannot delete: editions are still using this venue.",
+        )
+    rooms_in_use = await db.execute(select(Room).where(Room.venue_id == venue_id).limit(1))
+    if rooms_in_use.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete: rooms are still using this venue.",
         )
     await db.delete(v)
     await db.commit()

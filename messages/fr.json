@@ -343,8 +343,8 @@
   "admin_content_event_description": "Description",
   "admin_content_event_requires_reservation": "Réservation requise",
   "admin_table_types_tab": "Types de tables",
-  "admin_add_table_type": "Ajouter un type",
-  "admin_edit_table_type": "Modifier le type",
+  "admin_add_table_type": "Ajouter un type de table",
+  "admin_edit_table_type": "Modifier le type de table",
   "admin_table_type_name_placeholder": "ex. Table ronde à dîner",
   "admin_table_type_max_capacity": "Capacité maximale",
   "admin_table_type_select": "Choisir un type de table",
@@ -375,5 +375,14 @@
   "admin_error_add_table_type": "Impossible d'ajouter le type.",
   "admin_error_update_table_type": "Impossible de modifier le type.",
   "admin_error_delete_table_type": "Impossible de supprimer le type.",
-  "admin_edit": "Modifier"
+  "admin_edit": "Modifier",
+  "admin_venues_tab": "Lieux",
+  "admin_edition_events": "événements",
+  "admin_edition_producers": "producteurs",
+  "admin_edition_sponsors": "sponsors",
+  "admin_event_id_placeholder": "ex. ven-vip",
+  "admin_event_category_placeholder": "dégustation",
+  "admin_layout_rotate_cw": "Tourner 15° dans le sens horaire",
+  "admin_layout_rotate_ccw": "Tourner 15° dans le sens antihoraire",
+  "admin_layout_capacity_max": "max"
 }

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Layout
+from app.models import Layout, Table
 from app.schemas import LayoutCreate, LayoutOut
 from app.utils import layout_to_dict, make_id
 
@@ -76,6 +76,12 @@ async def get_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> dict
 @router.delete("/{layout_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> None:
     lay = await _get_or_404(db, layout_id)
+    tables_in_use = await db.execute(select(Table).where(Table.layout_id == layout_id).limit(1))
+    if tables_in_use.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete: tables are still assigned to this layout.",
+        )
     await db.delete(lay)
     await db.commit()
 

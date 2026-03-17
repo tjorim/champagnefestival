@@ -879,7 +879,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Nav.Item>
                     <Nav.Link eventKey="venues" className="text-light">
                       <i className="bi bi-geo-alt me-2" aria-hidden="true" />
-                      {m.admin_venue_add()}
+                      {m.admin_venues_tab()}
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>

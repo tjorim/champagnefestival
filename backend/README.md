@@ -227,7 +227,7 @@ the browser can reach the API:
 
 ```bash
 # /etc/champagne/.env
-CORS_ORIGINS=["https://champagnefestival.be"]
+CORS_ORIGINS=https://champagnefestival.be
 ```
 
 ---

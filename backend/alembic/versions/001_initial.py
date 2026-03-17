@@ -4,7 +4,7 @@ Revision ID: 001
 Revises:
 Create Date: 2026-03-17
 
-NOTE: This migration supersedes the earlier incremental migrations (002–005) by
+NOTE: This migration supersedes the earlier incremental migrations (002-005) by
 consolidating the full schema into a single initial revision.  Any database
 previously migrated with those revisions must be dropped and recreated from
 scratch before applying this migration.

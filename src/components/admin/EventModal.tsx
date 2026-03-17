@@ -86,7 +86,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="bg-dark">
           <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }}>
+            <Form.Group controlId="event-id" style={{ minWidth: "140px", flex: "1 1 140px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_id()}
               </Form.Label>
@@ -95,12 +95,12 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 value={id}
                 onChange={(e) => setId(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                placeholder="e.g. fri-vip"
+                placeholder={m.admin_event_id_placeholder()}
                 required
                 readOnly={isEdit}
               />
             </Form.Group>
-            <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }}>
+            <Form.Group controlId="event-title" style={{ minWidth: "200px", flex: "2 1 200px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_title()}
               </Form.Label>
@@ -115,7 +115,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
             </Form.Group>
           </div>
           <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group style={{ maxWidth: "120px" }}>
+            <Form.Group controlId="event-day" style={{ maxWidth: "120px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_day()}
               </Form.Label>
@@ -130,7 +130,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 <option value={3}>{m.admin_content_edition_sunday()}</option>
               </Form.Select>
             </Form.Group>
-            <Form.Group style={{ maxWidth: "120px" }}>
+            <Form.Group controlId="event-start-time" style={{ maxWidth: "120px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_start_time()}
               </Form.Label>
@@ -143,7 +143,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 required
               />
             </Form.Group>
-            <Form.Group style={{ maxWidth: "120px" }}>
+            <Form.Group controlId="event-end-time" style={{ maxWidth: "120px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_end_time()}
               </Form.Label>
@@ -155,7 +155,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 placeholder="21:30"
               />
             </Form.Group>
-            <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }}>
+            <Form.Group controlId="event-category" style={{ minWidth: "140px", flex: "1 1 140px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_category()}
               </Form.Label>
@@ -164,13 +164,13 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="bg-dark text-light border-secondary"
-                placeholder="tasting"
+                placeholder={m.admin_event_category_placeholder()}
                 required
               />
             </Form.Group>
           </div>
           <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
+            <Form.Group controlId="event-location" style={{ minWidth: "160px", flex: "1 1 160px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_location()}
               </Form.Label>
@@ -181,7 +181,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
-            <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
+            <Form.Group controlId="event-presenter" style={{ minWidth: "160px", flex: "1 1 160px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_presenter()}
               </Form.Label>
@@ -193,7 +193,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
               />
             </Form.Group>
           </div>
-          <Form.Group className="mb-3">
+          <Form.Group controlId="event-description" className="mb-3">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_content_event_description()}
             </Form.Label>

@@ -115,7 +115,7 @@ class Venue(Base):
 class Room(Base):
     """A physical space within a venue.
 
-    Width and height are stored in metres so the frontend can render a
+    Width and length are stored in metres so the frontend can render a
     proportional canvas.
     """
 

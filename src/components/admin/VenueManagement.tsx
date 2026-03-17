@@ -252,7 +252,7 @@ export default function VenueManagement({
                               {room.name}
                               <button
                                 type="button"
-                                className="btn-close btn-close-white"
+                                className={`btn-close${contrastColor(room.color) === "#fff" ? " btn-close-white" : ""}`}
                                 style={{ fontSize: "0.55rem" }}
                                 onClick={() => handleDeleteRoom(room.id)}
                                 aria-label={m.admin_delete()}

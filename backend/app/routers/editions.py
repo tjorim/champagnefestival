@@ -1,6 +1,6 @@
 """Festival edition management endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,11 +19,19 @@ router = APIRouter(prefix="/api/editions", tags=["editions"])
 
 
 @router.get("", response_model=list[EditionOut])
-async def list_editions(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    """Return all active festival editions, ordered by year and month."""
-    result = await db.execute(
-        select(Edition).where(Edition.active.is_(True)).order_by(Edition.year, Edition.month)
-    )
+async def list_editions(
+    db: AsyncSession = Depends(get_db),
+    include_inactive: bool = Query(False),
+) -> list[dict]:
+    """Return festival editions, ordered by year and month.
+
+    By default only active editions are returned. Admin clients may pass
+    ``include_inactive=true`` to receive all editions regardless of status.
+    """
+    stmt = select(Edition).order_by(Edition.year, Edition.month)
+    if not include_inactive:
+        stmt = stmt.where(Edition.active.is_(True))
+    result = await db.execute(stmt)
     editions = result.scalars().all()
     pools = await _load_content_pools(db)
     return [edition_to_dict(e, **_resolve_pools(e, pools)) for e in editions]
@@ -36,6 +44,22 @@ async def list_editions(db: AsyncSession = Depends(get_db)) -> list[dict]:
 
 @router.get("/{edition_id}", response_model=EditionOut)
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+    e = await _get_active_or_404(db, edition_id)
+    pools = await _load_content_pools(db)
+    return edition_to_dict(e, **_resolve_pools(e, pools))
+
+
+# ---------------------------------------------------------------------------
+# Admin: get single edition (including inactive)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/admin/{edition_id}",
+    response_model=EditionOut,
+    dependencies=[Depends(require_admin)],
+)
+async def admin_get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     e = await _get_or_404(db, edition_id)
     pools = await _load_content_pools(db)
     return edition_to_dict(e, **_resolve_pools(e, pools))
@@ -145,6 +169,16 @@ async def delete_edition(edition_id: str, db: AsyncSession = Depends(get_db)) ->
 
 async def _get_or_404(db: AsyncSession, edition_id: str) -> Edition:
     result = await db.execute(select(Edition).where(Edition.id == edition_id))
+    e = result.scalar_one_or_none()
+    if e is None:
+        raise HTTPException(status_code=404, detail="Edition not found.")
+    return e
+
+
+async def _get_active_or_404(db: AsyncSession, edition_id: str) -> Edition:
+    result = await db.execute(
+        select(Edition).where(Edition.id == edition_id, Edition.active.is_(True))
+    )
     e = result.scalar_one_or_none()
     if e is None:
         raise HTTPException(status_code=404, detail="Edition not found.")

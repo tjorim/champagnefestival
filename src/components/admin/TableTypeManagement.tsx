@@ -68,6 +68,10 @@ export default function TableTypeManagement({
 
   const handleSave = useCallback(async () => {
     if (!form.name.trim() || form.maxCapacity < 1 || !Number.isInteger(form.maxCapacity)) return;
+    if (!Number.isFinite(form.widthM) || form.widthM <= 0 || !Number.isFinite(form.lengthM) || form.lengthM <= 0) {
+      setError("Width and length must be positive numbers.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

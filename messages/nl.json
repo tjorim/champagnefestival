@@ -228,7 +228,7 @@
   "admin_payment_label": "Betaling",
   "admin_error_load_data": "Laden mislukt. Controleer uw verbinding.",
   "admin_error_load_dashboard": "Beheerdersdashboard laden mislukt",
-  "admin_error_load_checkin": "Inchecken pagina laden mislukt",
+  "admin_error_load_checkin": "Incheckpagina laden mislukt",
   "admin_error_update_reservation": "Reservatie bijwerken mislukt.",
   "admin_error_update_payment": "Betalingsstatus bijwerken mislukt.",
   "admin_error_assign_table": "Tafel toewijzen mislukt.",
@@ -375,5 +375,14 @@
   "admin_error_add_table_type": "Tafeltype toevoegen mislukt.",
   "admin_error_update_table_type": "Tafeltype bijwerken mislukt.",
   "admin_error_delete_table_type": "Tafeltype verwijderen mislukt.",
-  "admin_edit": "Bewerken"
+  "admin_edit": "Bewerken",
+  "admin_venues_tab": "Locaties",
+  "admin_edition_events": "evenementen",
+  "admin_edition_producers": "producenten",
+  "admin_edition_sponsors": "sponsors",
+  "admin_event_id_placeholder": "bijv. vri-vip",
+  "admin_event_category_placeholder": "proeverij",
+  "admin_layout_rotate_cw": "15° met de klok mee draaien",
+  "admin_layout_rotate_ccw": "15° tegen de klok in draaien",
+  "admin_layout_capacity_max": "max"
 }

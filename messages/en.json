@@ -375,5 +375,14 @@
   "admin_error_add_table_type": "Failed to add table type.",
   "admin_error_update_table_type": "Failed to update table type.",
   "admin_error_delete_table_type": "Failed to delete table type.",
-  "admin_edit": "Edit"
+  "admin_edit": "Edit",
+  "admin_venues_tab": "Venues",
+  "admin_edition_events": "events",
+  "admin_edition_producers": "producers",
+  "admin_edition_sponsors": "sponsors",
+  "admin_event_id_placeholder": "e.g. fri-vip",
+  "admin_event_category_placeholder": "tasting",
+  "admin_layout_rotate_cw": "Rotate 15° clockwise",
+  "admin_layout_rotate_ccw": "Rotate 15° counter-clockwise",
+  "admin_layout_capacity_max": "max"
 }

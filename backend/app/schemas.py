@@ -444,8 +444,8 @@ class RoomOut(BaseModel):
 class ScheduleEventIn(BaseModel):
     id: str
     title: str
-    start_time: str = Field(pattern=r"^\d{2}:\d{2}$")
-    end_time: str | None = Field(default=None, pattern=r"^\d{2}:\d{2}$")
+    start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     description: str = ""
     reservation: bool = False
     reservations_open_from: datetime | None = None
