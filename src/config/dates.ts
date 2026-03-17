@@ -6,6 +6,7 @@
  * are needed in this file.
  */
 
+import { dayjs, endOfDay, localizedMonthName } from "../utils/dateUtils";
 import { getActiveEdition } from "./editions";
 
 const edition = getActiveEdition();
@@ -30,11 +31,9 @@ export const festivalDate = new Date(
   0,
 );
 
-// End of the festival day — set to 23:59:59.999 so it represents the true day-end.
+// End of the festival day — set to end of day so it represents the true day-end.
 // This is the canonical end time used by all consumers (Countdown, JsonLd, etc.).
-const sundayEndOfDay = new Date(edition.dates.sunday);
-sundayEndOfDay.setHours(23, 59, 59, 999);
-export const festivalEndDate = sundayEndOfDay;
+export const festivalEndDate = endOfDay(edition.dates.sunday);
 
 // ── Individual festival days ──────────────────────────────────────────────────
 
@@ -47,61 +46,16 @@ export const festivalDays = [
 
 // ── Localised date-range strings ──────────────────────────────────────────────
 
-const MONTH_NAMES = {
-  en: [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ],
-  fr: [
-    "janvier",
-    "février",
-    "mars",
-    "avril",
-    "mai",
-    "juin",
-    "juillet",
-    "août",
-    "septembre",
-    "octobre",
-    "novembre",
-    "décembre",
-  ],
-  nl: [
-    "januari",
-    "februari",
-    "maart",
-    "april",
-    "mei",
-    "juni",
-    "juli",
-    "augustus",
-    "september",
-    "oktober",
-    "november",
-    "december",
-  ],
-};
-
 function generateDateRangeStrings() {
-  const month = edition.dates.friday.getMonth(); // 0-indexed
-  const startDay = edition.dates.friday.getDate();
-  const endDay = edition.dates.sunday.getDate();
+  const friday = edition.dates.friday;
+  const startDay = dayjs(friday).date();
+  const endDay = dayjs(edition.dates.sunday).date();
   const year = edition.year;
 
   return {
-    en: `${MONTH_NAMES.en[month]} ${startDay}-${endDay}, ${year}`,
-    fr: `${startDay}-${endDay} ${MONTH_NAMES.fr[month]} ${year}`,
-    nl: `${startDay}-${endDay} ${MONTH_NAMES.nl[month]} ${year}`,
+    en: `${localizedMonthName(friday, "en")} ${startDay}-${endDay}, ${year}`,
+    fr: `${startDay}-${endDay} ${localizedMonthName(friday, "fr")} ${year}`,
+    nl: `${startDay}-${endDay} ${localizedMonthName(friday, "nl")} ${year}`,
   };
 }
 

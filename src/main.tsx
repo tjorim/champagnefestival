@@ -23,6 +23,7 @@ import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import type { FestivalDay } from "./config/schedule";
+import { endOfDay } from "./utils/dateUtils";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -157,9 +158,7 @@ function App() {
   }, [edition]);
 
   const festivalEndDate = useMemo(() => {
-    const d = new Date(edition.dates.sunday);
-    d.setHours(23, 59, 59, 999);
-    return d;
+    return endOfDay(edition.dates.sunday);
   }, [edition]);
 
   // Derive festival days for the Schedule component
@@ -194,8 +193,7 @@ function App() {
     const events = edition.schedule
       .filter((ev) => ev.reservation)
       .filter((ev) => {
-        const eventEnd = new Date(dayDate(ev.dayId));
-        eventEnd.setHours(23, 59, 59, 999);
+        const eventEnd = endOfDay(dayDate(ev.dayId));
         return eventEnd >= now;
       })
       .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)

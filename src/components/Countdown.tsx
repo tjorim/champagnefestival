@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { dayjs } from "../utils/dateUtils";
 import { m } from "../paraglide/messages";
 
 /**
@@ -122,26 +123,13 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfte
       const difference = targetDate.getTime() - now;
 
       if (difference > 0) {
-        // Calculate months using proper date arithmetic
-        const targetMonth = targetDate.getMonth();
-        const targetYear = targetDate.getFullYear();
-        const nowDate = new Date(now);
-        const nowMonth = nowDate.getMonth();
-        const nowYear = nowDate.getFullYear();
+        // Calculate months using dayjs date arithmetic
+        const target = dayjs(targetDate);
+        const nowDayjs = dayjs(now);
+        const months = target.diff(nowDayjs, "month");
+        const afterMonths = nowDayjs.add(months, "month");
 
-        let months = (targetYear - nowYear) * 12 + (targetMonth - nowMonth);
-
-        // Create a date that's 'months' away from now for accurate day calculation
-        const tempDate = new Date(nowDate);
-        tempDate.setMonth(tempDate.getMonth() + months);
-
-        // If tempDate is after targetDate, we need to reduce months by 1
-        if (tempDate.getTime() > targetDate.getTime()) {
-          months = months - 1;
-          tempDate.setMonth(nowDate.getMonth() + months);
-        }
-
-        const remainingMs = targetDate.getTime() - tempDate.getTime();
+        const remainingMs = target.diff(afterMonths, "millisecond");
         const days = Math.floor(remainingMs / TIME_UNITS.day);
         const hours = Math.floor((remainingMs % TIME_UNITS.day) / TIME_UNITS.hour);
         const minutes = Math.floor((remainingMs % TIME_UNITS.hour) / TIME_UNITS.minute);
