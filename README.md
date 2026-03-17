@@ -166,14 +166,19 @@ import MapComponent from "../components/MapComponent";
 
 ## Deployment
 
-The project is configured for deployment on Cloudflare Pages or any other static site hosting provider.
+Production deployment is standardized on **GitHub Pages** via the GitHub Actions workflow in `.github/workflows/deploy.yml`.
+
+Deploys are triggered when you publish a GitHub Release (or by manually running the workflow from the Actions tab).
+
+For local validation before release, run:
 
 ```bash
+npm ci
+npm run lint
+npm run test
 npm run build
 ```
 
-This will create a production build in the `dist` directory that can be deployed to your preferred hosting provider.
+This creates a production build in `dist/`.
 
-Don't forget to set the required environment variables in your production environment.
-
-For more details on deployment options, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+For the exact production deployment flow and required GitHub repository settings, see [DEPLOYMENT.md](./DEPLOYMENT.md).

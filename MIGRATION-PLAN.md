@@ -27,7 +27,7 @@ This section documents the completed migration from Next.js back to a standard R
 - ✅ Swiper integrated for improved carousel functionality
 - ✅ Vite configured for development and production builds with optimal chunk splitting
 - ✅ Environment variable handling configured for different deployment environments
-- ✅ Cloudflare Pages deployment configured via wrangler.toml
+- ✅ GitHub Pages deployment configured via GitHub Actions
 - ✅ Remove Next.js specific code and dependencies
 - ❌ Comprehensive testing of all components in the React environment
 - ❌ Performance monitoring and comparison with previous implementation
@@ -75,7 +75,7 @@ This section documents the completed migration from Next.js back to a standard R
 - ✅ Configure Vite for development and production builds
 - ✅ Optimize bundle size with chunk splitting and minification
 - ✅ Set up environment variables for different deployment environments
-- ✅ Configure Cloudflare Pages deployment via wrangler.toml
+- ✅ Configure GitHub Pages deployment via GitHub Actions
 - ❌ Set up CI/CD pipeline for automated testing and deployment
 - ❌ Configure proper caching strategies for static assets
 
