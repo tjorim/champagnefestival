@@ -49,6 +49,8 @@ function apiTableToTable(d: Record<string, unknown>): FloorTable {
     widthM: ((d.width_m ?? d.widthM ?? 1.8) as number),
     lengthM: ((d.length_m ?? d.lengthM ?? 0.7) as number),
     rotation: ((d.rotation ?? 0) as number),
+    heightType: ((d.height_type ?? d.heightType ?? "low") as "low" | "high"),
+    layoutId: ((d.layout_id ?? d.layoutId) as string | null) ?? null,
     reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
   };
 }
@@ -279,11 +281,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddTable = useCallback(
-    async (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round" = "rectangle", widthM = 1.8, lengthM = 0.7) => {
+    async (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round" = "rectangle", widthM = 1.8, lengthM = 0.7, heightType: "low" | "high" = "low") => {
       const response = await fetch("/api/tables", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, length_m: lengthM }),
+        body: JSON.stringify({ name, capacity, x: 10, y: 10, room_id: roomId, shape, width_m: widthM, length_m: lengthM, height_type: heightType }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -351,25 +353,22 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleAddRoom = useCallback(
     async (name: string, widthM: number, lengthM: number, color: string) => {
-      try {
-        const response = await fetch("/api/rooms", {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify({
-            name,
-            width_m: widthM,
-            length_m: lengthM,
-            color,
-          }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setRooms((prev) => [...prev, apiRoomToRoom(data)]);
-        }
-      } catch (err) {
-        console.error("Failed to add room", err);
-        setError(m.admin_error_add_room());
+      const response = await fetch("/api/rooms", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name,
+          width_m: widthM,
+          length_m: lengthM,
+          color,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? m.admin_error_add_room());
       }
+      const data = await response.json();
+      setRooms((prev) => [...prev, apiRoomToRoom(data)]);
     },
     [authHeaders],
   );

@@ -26,6 +26,9 @@ class Reservation(Base):
     # JSON-encoded list of OrderItem dicts
     pre_orders: Mapped[str] = mapped_column(Text, default="[]")
     notes: Mapped[str] = mapped_column(Text, default="")
+    accessibility_note: Mapped[str] = mapped_column(Text, default="")
+    """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
+
     person_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
     )
@@ -119,6 +122,34 @@ class Room(Base):
     )
 
 
+class Layout(Base):
+    """A named floor-plan snapshot for a specific room and festival day.
+
+    Each snapshot captures the table configuration for one room on one of the
+    three festival days (Friday=1, Saturday=2, Sunday=3), allowing managers
+    to maintain different floor plans per day and restore previous versions.
+    """
+
+    __tablename__ = "layouts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    edition_id: Mapped[str | None] = mapped_column(
+        String(100), ForeignKey("editions.id", ondelete="SET NULL"), nullable=True
+    )
+    room_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True
+    )
+    day_id: Mapped[int] = mapped_column(Integer)
+    """1 = Friday, 2 = Saturday, 3 = Sunday."""
+
+    label: Mapped[str] = mapped_column(String(200), default="")
+    """Human-readable version label, e.g. 'pre-event', 'after cancellations'."""
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+
+
 class Table(Base):
     __tablename__ = "tables"
 
@@ -142,6 +173,14 @@ class Table(Base):
 
     rotation: Mapped[int] = mapped_column(Integer, default=0)
     """Rotation angle in whole degrees [0, 359], clockwise."""
+
+    height_type: Mapped[str] = mapped_column(String(20), default="low")
+    """'standard' | 'high' — used for accessibility planning."""
+
+    layout_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("layouts.id", ondelete="SET NULL"), nullable=True
+    )
+    """Optional FK to a Layout snapshot this table belongs to."""
 
     # JSON-encoded list of reservation ID strings
     reservation_ids: Mapped[str] = mapped_column(Text, default="[]")

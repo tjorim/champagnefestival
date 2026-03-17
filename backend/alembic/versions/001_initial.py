@@ -39,6 +39,66 @@ def upgrade() -> None:
         ),
     )
 
+    # editions must be created before layouts so the FK reference is valid
+    op.create_table(
+        "editions",
+        sa.Column("id", sa.String(100), primary_key=True),
+        sa.Column("year", sa.Integer, nullable=False),
+        sa.Column("month", sa.String(20), nullable=False),
+        sa.Column("friday", sa.Date, nullable=False),
+        sa.Column("saturday", sa.Date, nullable=False),
+        sa.Column("sunday", sa.Date, nullable=False),
+        sa.Column("venue_name", sa.String(200), nullable=False, server_default=""),
+        sa.Column("venue_address", sa.String(200), nullable=False, server_default=""),
+        sa.Column("venue_city", sa.String(100), nullable=False, server_default=""),
+        sa.Column("venue_postal_code", sa.String(20), nullable=False, server_default=""),
+        sa.Column("venue_country", sa.String(100), nullable=False, server_default=""),
+        sa.Column("venue_lat", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column("venue_lng", sa.Float, nullable=False, server_default="0.0"),
+        sa.Column("schedule", sa.Text, nullable=False, server_default="[]"),
+        sa.Column("producers", sa.Text, nullable=False, server_default="[]"),
+        sa.Column("sponsors", sa.Text, nullable=False, server_default="[]"),
+        sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
+    # layouts must be created before tables so the FK reference is valid
+    op.create_table(
+        "layouts",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column(
+            "edition_id",
+            sa.String(100),
+            sa.ForeignKey("editions.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "room_id",
+            sa.String(64),
+            sa.ForeignKey("rooms.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("day_id", sa.Integer, nullable=False),
+        sa.Column("label", sa.String(200), nullable=False, server_default=""),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
     # tables must be created before reservations so the FK reference is valid
     op.create_table(
         "tables",
@@ -47,12 +107,24 @@ def upgrade() -> None:
         sa.Column("capacity", sa.Integer, nullable=False),
         sa.Column("x", sa.Float, nullable=False, server_default="50.0"),
         sa.Column("y", sa.Float, nullable=False, server_default="50.0"),
-        sa.Column("room_id", sa.String(64), sa.ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "room_id",
+            sa.String(64),
+            sa.ForeignKey("rooms.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("reservation_ids", sa.Text, nullable=False, server_default="[]"),
         sa.Column("shape", sa.String(20), nullable=False, server_default="rectangle"),
         sa.Column("width_m", sa.Float, nullable=False, server_default="1.8"),
         sa.Column("length_m", sa.Float, nullable=False, server_default="0.7"),
         sa.Column("rotation", sa.Integer, nullable=False, server_default="0"),
+        sa.Column("height_type", sa.String(20), nullable=False, server_default="low"),
+        sa.Column(
+            "layout_id",
+            sa.String(64),
+            sa.ForeignKey("layouts.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -107,6 +179,7 @@ def upgrade() -> None:
         sa.Column("guest_count", sa.Integer, nullable=False),
         sa.Column("pre_orders", sa.Text, nullable=False, server_default="[]"),
         sa.Column("notes", sa.Text, nullable=False, server_default=""),
+        sa.Column("accessibility_note", sa.Text, nullable=False, server_default=""),
         sa.Column(
             "table_id",
             sa.String(64),
@@ -151,44 +224,12 @@ def upgrade() -> None:
         ),
     )
 
-    op.create_table(
-        "editions",
-        sa.Column("id", sa.String(100), primary_key=True),
-        sa.Column("year", sa.Integer, nullable=False),
-        sa.Column("month", sa.String(20), nullable=False),
-        sa.Column("friday", sa.Date, nullable=False),
-        sa.Column("saturday", sa.Date, nullable=False),
-        sa.Column("sunday", sa.Date, nullable=False),
-        sa.Column("venue_name", sa.String(200), nullable=False, server_default=""),
-        sa.Column("venue_address", sa.String(200), nullable=False, server_default=""),
-        sa.Column("venue_city", sa.String(100), nullable=False, server_default=""),
-        sa.Column("venue_postal_code", sa.String(20), nullable=False, server_default=""),
-        sa.Column("venue_country", sa.String(100), nullable=False, server_default=""),
-        sa.Column("venue_lat", sa.Float, nullable=False, server_default="0.0"),
-        sa.Column("venue_lng", sa.Float, nullable=False, server_default="0.0"),
-        sa.Column("schedule", sa.Text, nullable=False, server_default="[]"),
-        sa.Column("producers", sa.Text, nullable=False, server_default="[]"),
-        sa.Column("sponsors", sa.Text, nullable=False, server_default="[]"),
-        sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-    )
-
 
 def downgrade() -> None:
-    op.drop_table("editions")
     op.drop_table("content_items")
     op.drop_table("reservations")
     op.drop_table("people")
     op.drop_table("tables")
+    op.drop_table("layouts")
+    op.drop_table("editions")
     op.drop_table("rooms")

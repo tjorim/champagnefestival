@@ -20,7 +20,22 @@ export interface FloorTable {
   lengthM: number;
   /** Rotation angle in whole degrees [0, 359], clockwise */
   rotation: number;
+  /** Whether this is a low or high-top table */
+  heightType: "low" | "high";
+  /** Layout snapshot this table belongs to (null = global / unversioned) */
+  layoutId: string | null;
   reservationIds: string[];
+}
+
+export interface Layout {
+  id: string;
+  editionId: string | null;
+  /** Room this layout applies to */
+  roomId: string | null;
+  /** 1 = Friday, 2 = Saturday, 3 = Sunday */
+  dayId: number;
+  label: string;
+  createdAt: string;
 }
 
 export interface Room {

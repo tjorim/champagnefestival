@@ -4,7 +4,7 @@ import secrets
 import time
 from typing import Any
 
-from app.models import Edition, Person, Reservation, Room, Table
+from app.models import Edition, Layout, Person, Reservation, Room, Table
 
 
 def roles_contains(role: str) -> Any:
@@ -41,6 +41,7 @@ def reservation_to_dict(r: Reservation) -> dict:
         "guest_count": r.guest_count,
         "pre_orders": r.get_pre_orders(),
         "notes": r.notes,
+        "accessibility_note": r.accessibility_note,
         "person_id": r.person_id,
         "table_id": r.table_id,
         "status": r.status,
@@ -113,6 +114,17 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
     }
 
 
+def layout_to_dict(lay: Layout) -> dict:
+    return {
+        "id": lay.id,
+        "edition_id": lay.edition_id,
+        "room_id": lay.room_id,
+        "day_id": lay.day_id,
+        "label": lay.label,
+        "created_at": lay.created_at,
+    }
+
+
 def table_to_dict(t: Table) -> dict:
     return {
         "id": t.id,
@@ -125,6 +137,8 @@ def table_to_dict(t: Table) -> dict:
         "width_m": t.width_m,
         "length_m": t.length_m,
         "rotation": t.rotation,
+        "height_type": t.height_type,
+        "layout_id": t.layout_id,
         "reservation_ids": t.get_reservation_ids(),
         "created_at": t.created_at,
         "updated_at": t.updated_at,

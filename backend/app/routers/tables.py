@@ -38,6 +38,8 @@ async def create_table(
         width_m=body.width_m,
         length_m=body.length_m,
         rotation=body.rotation,
+        height_type=body.height_type,
+        layout_id=body.layout_id,
     )
     t.set_reservation_ids([])
     db.add(t)
@@ -99,6 +101,8 @@ async def update_table(
         t.length_m = body.length_m
     if t.length_m < t.width_m:
         t.length_m, t.width_m = t.width_m, t.length_m
+    if body.height_type is not None:
+        t.height_type = body.height_type
     if body.reservation_ids is not None:
         t.set_reservation_ids(body.reservation_ids)
     # Nullable / zero-valid fields: must use model_fields_set so that an
@@ -108,6 +112,8 @@ async def update_table(
         t.room_id = body.room_id
     if "rotation" in body.model_fields_set:
         t.rotation = body.rotation
+    if "layout_id" in body.model_fields_set:
+        t.layout_id = body.layout_id
 
     await db.commit()
     await db.refresh(t)

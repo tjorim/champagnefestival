@@ -33,7 +33,6 @@ import type { Room, FloorTable } from "../../types/admin";
 const PX_PER_M = 28;
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
-
 function getTableSize(table: FloorTable): { w: number; l: number } {
   return {
     w: Math.max(32, Math.round(table.widthM * PX_PER_M)),
@@ -45,7 +44,7 @@ interface TableLayoutProps {
   tables: FloorTable[];
   reservations: Reservation[];
   rooms: Room[];
-  onAddTable: (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round", widthM: number, lengthM: number) => Promise<void>;
+  onAddTable: (name: string, capacity: number, roomId: string | null, shape: "rectangle" | "round", widthM: number, lengthM: number, heightType: "low" | "high") => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
@@ -287,6 +286,7 @@ export default function TableLayout({
     name: "", capacity: 4, roomId: "",
     shape: "rectangle" as "rectangle" | "round",
     widthM: 1.8, lengthM: 0.7,
+    heightType: "low" as "low" | "high",
   });
   const [addTableError, setAddTableError] = useState<string | null>(null);
 
@@ -313,8 +313,8 @@ export default function TableLayout({
     ) return;
     setAddTableError(null);
     try {
-      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, widthM, lengthM);
-      setNewTable({ name: "", capacity: 4, roomId: "", shape: "rectangle", widthM: 1.8, lengthM: 0.7 });
+      await onAddTable(newTable.name.trim(), newTable.capacity, newTable.roomId || null, newTable.shape, widthM, lengthM, newTable.heightType);
+      setNewTable({ name: "", capacity: 4, roomId: "", shape: "rectangle", widthM: 1.8, lengthM: 0.7, heightType: "low" });
       setShowAddTable(false);
     } catch (err) {
       console.error("Failed to add table", err);
@@ -521,6 +521,9 @@ export default function TableLayout({
               <Badge bg="secondary">
                 {selectedTableData.capacity} {m.admin_guests_count()}
               </Badge>
+              <Badge bg={selectedTableData.heightType === "high" ? "info" : "dark"} text={selectedTableData.heightType === "high" ? "dark" : "secondary"} className="border border-secondary">
+                {selectedTableData.heightType === "high" ? m.admin_table_height_type_high() : m.admin_table_height_type_low()}
+              </Badge>
               <Button
                 variant="outline-secondary"
                 size="sm"
@@ -627,6 +630,17 @@ export default function TableLayout({
             >
               <option value="rectangle">{m.admin_table_shape_rectangle()}</option>
               <option value="round">{m.admin_table_shape_round()}</option>
+            </Form.Select>
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="table-height-type">
+            <Form.Label>{m.admin_table_height_type_label()}</Form.Label>
+            <Form.Select
+              value={newTable.heightType}
+              onChange={(e) => setNewTable((p) => ({ ...p, heightType: e.target.value as "low" | "high" }))}
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="low">{m.admin_table_height_type_low()}</option>
+              <option value="high">{m.admin_table_height_type_high()}</option>
             </Form.Select>
           </Form.Group>
           {newTable.shape === "round" ? (

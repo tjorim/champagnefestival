@@ -64,6 +64,7 @@ class ReservationUpdate(BaseModel):
     table_id: str | None = None
     pre_orders: list[OrderItemBase] | None = None
     notes: str | None = None
+    accessibility_note: str | None = None
     person_id: str | None = None
     checked_in: bool | None = None
     strap_issued: bool | None = None
@@ -80,6 +81,7 @@ class ReservationOut(BaseModel):
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str
+    accessibility_note: str
     person_id: str | None
     table_id: str | None
     status: ReservationStatus
@@ -112,6 +114,7 @@ class ReservationListOut(BaseModel):
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
+    accessibility_note: str
     person_id: str | None
     table_id: str | None
     status: ReservationStatus
@@ -247,6 +250,29 @@ class ContentItemUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Layouts
+# ---------------------------------------------------------------------------
+
+
+class LayoutCreate(BaseModel):
+    edition_id: str | None = Field(default=None, max_length=100)
+    room_id: str | None = Field(default=None, max_length=64)
+    day_id: int = Field(ge=1, le=3)
+    label: str = Field(default="", max_length=200)
+
+
+class LayoutOut(BaseModel):
+    id: str
+    edition_id: str | None
+    room_id: str | None
+    day_id: int
+    label: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
 # Tables
 # ---------------------------------------------------------------------------
 
@@ -261,6 +287,8 @@ class TableCreate(BaseModel):
     width_m: float = Field(ge=0.1, le=20.0, default=1.8)
     length_m: float = Field(ge=0.1, le=20.0, default=0.7)
     rotation: int = Field(ge=0, le=359, default=0)
+    height_type: Literal["low", "high"] = "low"
+    layout_id: str | None = None
 
     @model_validator(mode="after")
     def ensure_length_gte_width(self) -> "TableCreate":
@@ -279,6 +307,8 @@ class TableUpdate(BaseModel):
     width_m: float | None = Field(default=None, ge=0.1, le=20.0)
     length_m: float | None = Field(default=None, ge=0.1, le=20.0)
     rotation: int | None = Field(default=None, ge=0, le=359)
+    height_type: Literal["low", "high"] | None = None
+    layout_id: str | None = None
     reservation_ids: list[str] | None = None
 
 
@@ -293,6 +323,8 @@ class TableOut(BaseModel):
     width_m: float
     length_m: float
     rotation: int
+    height_type: str
+    layout_id: str | None
     reservation_ids: list[str]
     created_at: datetime
     updated_at: datetime
