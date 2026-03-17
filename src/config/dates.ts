@@ -6,9 +6,7 @@
  * are needed in this file.
  */
 
-import dayjs from "dayjs";
-import "dayjs/locale/nl";
-import "dayjs/locale/fr";
+import { dayjs, endOfDay, localizedMonthName } from "../utils/dateUtils";
 import { getActiveEdition } from "./editions";
 
 const edition = getActiveEdition();
@@ -35,7 +33,7 @@ export const festivalDate = new Date(
 
 // End of the festival day — set to end of day so it represents the true day-end.
 // This is the canonical end time used by all consumers (Countdown, JsonLd, etc.).
-export const festivalEndDate = dayjs(edition.dates.sunday).endOf("day").toDate();
+export const festivalEndDate = endOfDay(edition.dates.sunday);
 
 // ── Individual festival days ──────────────────────────────────────────────────
 
@@ -49,15 +47,15 @@ export const festivalDays = [
 // ── Localised date-range strings ──────────────────────────────────────────────
 
 function generateDateRangeStrings() {
-  const friday = dayjs(edition.dates.friday);
-  const startDay = friday.date();
+  const friday = edition.dates.friday;
+  const startDay = dayjs(friday).date();
   const endDay = dayjs(edition.dates.sunday).date();
   const year = edition.year;
 
   return {
-    en: `${friday.locale("en").format("MMMM")} ${startDay}-${endDay}, ${year}`,
-    fr: `${startDay}-${endDay} ${friday.locale("fr").format("MMMM")} ${year}`,
-    nl: `${startDay}-${endDay} ${friday.locale("nl").format("MMMM")} ${year}`,
+    en: `${localizedMonthName(friday, "en")} ${startDay}-${endDay}, ${year}`,
+    fr: `${startDay}-${endDay} ${localizedMonthName(friday, "fr")} ${year}`,
+    nl: `${startDay}-${endDay} ${localizedMonthName(friday, "nl")} ${year}`,
   };
 }
 

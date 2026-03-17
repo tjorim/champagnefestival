@@ -1,7 +1,7 @@
 import React, { lazy, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Link } from "react-router";
-import dayjs from "dayjs";
+import { endOfDay } from "./utils/dateUtils";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -158,7 +158,7 @@ function App() {
   }, [edition]);
 
   const festivalEndDate = useMemo(() => {
-    return dayjs(edition.dates.sunday).endOf("day").toDate();
+    return endOfDay(edition.dates.sunday);
   }, [edition]);
 
   // Derive festival days for the Schedule component
@@ -193,7 +193,7 @@ function App() {
     const events = edition.schedule
       .filter((ev) => ev.reservation)
       .filter((ev) => {
-        const eventEnd = dayjs(dayDate(ev.dayId)).endOf("day").toDate();
+        const eventEnd = endOfDay(dayDate(ev.dayId));
         return eventEnd >= now;
       })
       .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)

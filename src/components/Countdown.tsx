@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import dayjs from "dayjs";
+import { dayjs } from "../utils/dateUtils";
 import { m } from "../paraglide/messages";
 
 /**

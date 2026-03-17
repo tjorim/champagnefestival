@@ -13,7 +13,7 @@
  * `contact.ts` all derive their values from `getActiveEdition()`.
  */
 
-import dayjs from "dayjs";
+import { endOfDay } from "../utils/dateUtils";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -254,7 +254,7 @@ export function getActiveEdition(): Edition {
   const sorted = [...editions].sort((a, b) => a.dates.friday.getTime() - b.dates.friday.getTime());
   return (
     sorted.find((e) => {
-      const sundayEnd = dayjs(e.dates.sunday).endOf("day").toDate();
+      const sundayEnd = endOfDay(e.dates.sunday);
       return sundayEnd >= now;
     }) ?? sorted[sorted.length - 1]!
   );
