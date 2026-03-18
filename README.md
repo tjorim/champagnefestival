@@ -166,7 +166,7 @@ import MapComponent from "../components/MapComponent";
 
 ## Deployment
 
-Production deployment is standardized on **GitHub Pages** via the GitHub Actions workflow in `.github/workflows/deploy.yml`.
+Production deployment is standardized on **GitHub Pages** via the GitHub Actions workflow in [`./.github/workflows/deploy.yml`](./.github/workflows/deploy.yml).
 
 Deploys are triggered when you publish a GitHub Release (or by manually running the workflow from the Actions tab).
 
