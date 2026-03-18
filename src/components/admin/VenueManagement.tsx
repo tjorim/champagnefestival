@@ -36,7 +36,8 @@ interface VenueManagementProps {
     lengthM: number,
     color: string,
   ) => Promise<void>;
-  onDeleteRoom: (roomId: string) => Promise<void>;
+  onArchiveRoom: (roomId: string) => Promise<void>;
+  onRestoreRoom: (roomId: string) => Promise<void>;
 }
 
 const emptyVenueForm = { name: "", address: "", city: "", postalCode: "", country: "" };
@@ -60,7 +61,8 @@ export default function VenueManagement({
   onRestore,
   onDelete,
   onAddRoom,
-  onDeleteRoom,
+  onArchiveRoom,
+  onRestoreRoom,
 }: VenueManagementProps) {
   // Venue add
   const [showVenueModal, setShowVenueModal] = useState(false);
@@ -157,17 +159,28 @@ export default function VenueManagement({
     }
   }, [roomVenueId, roomForm, onAddRoom]);
 
-  const handleDeleteRoom = useCallback(
+  const handleArchiveRoom = useCallback(
     async (roomId: string) => {
-      if (!window.confirm(m.admin_room_delete_confirm())) return;
       setDeleteRoomError(null);
       try {
-        await onDeleteRoom(roomId);
+        await onArchiveRoom(roomId);
       } catch (err) {
         setDeleteRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
-    [onDeleteRoom],
+    [onArchiveRoom],
+  );
+
+  const handleRestoreRoom = useCallback(
+    async (roomId: string) => {
+      setDeleteRoomError(null);
+      try {
+        await onRestoreRoom(roomId);
+      } catch (err) {
+        setDeleteRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
+      }
+    },
+    [onRestoreRoom],
   );
 
   return (
@@ -243,20 +256,35 @@ export default function VenueManagement({
                             <Badge
                               key={room.id}
                               style={{
-                                background: room.color,
-                                color: contrastColor(room.color),
+                                background: room.active ? room.color : undefined,
                                 fontSize: "0.75rem",
+                                opacity: room.active ? 1 : 0.5,
                               }}
+                              bg={room.active ? undefined : "secondary"}
                               className="d-inline-flex align-items-center gap-1"
                             >
-                              {room.name}
-                              <button
-                                type="button"
-                                className={`btn-close${contrastColor(room.color) === "#fff" ? " btn-close-white" : ""}`}
-                                style={{ fontSize: "0.55rem" }}
-                                onClick={() => handleDeleteRoom(room.id)}
-                                aria-label={m.admin_delete()}
-                              />
+                              <span style={{ color: room.active ? contrastColor(room.color) : undefined }}>
+                                {room.name}
+                              </span>
+                              {room.active ? (
+                                <button
+                                  type="button"
+                                  className={`btn-close${contrastColor(room.color) === "#fff" ? " btn-close-white" : ""}`}
+                                  style={{ fontSize: "0.55rem" }}
+                                  onClick={() => handleArchiveRoom(room.id)}
+                                  aria-label={m.admin_content_archive()}
+                                  title={m.admin_content_archive()}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="btn-close btn-close-white"
+                                  style={{ fontSize: "0.55rem", transform: "rotate(45deg)" }}
+                                  onClick={() => handleRestoreRoom(room.id)}
+                                  aria-label={m.admin_content_restore()}
+                                  title={m.admin_content_restore()}
+                                />
+                              )}
                             </Badge>
                           ))}
                           <Button

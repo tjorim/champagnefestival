@@ -24,6 +24,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("image", sa.String(500), nullable=False, server_default=""),
         sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
+        sa.Column("contact_person_id", sa.String(64), sa.ForeignKey("people.id", ondelete="SET NULL"), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -44,6 +45,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("image", sa.String(500), nullable=False, server_default=""),
         sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
+        sa.Column("contact_person_id", sa.String(64), sa.ForeignKey("people.id", ondelete="SET NULL"), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

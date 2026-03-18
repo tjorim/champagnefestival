@@ -76,6 +76,9 @@ class Producer(Base):
     name: Mapped[str] = mapped_column(String(200))
     image: Mapped[str] = mapped_column(String(500), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    contact_person_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -92,6 +95,9 @@ class Sponsor(Base):
     name: Mapped[str] = mapped_column(String(200))
     image: Mapped[str] = mapped_column(String(500), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    contact_person_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -130,7 +136,7 @@ class Room(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     venue_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("venues.id", ondelete="CASCADE"), nullable=False
+        String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
     )
     """FK to the Venue this room belongs to."""
 
@@ -142,6 +148,8 @@ class Room(Base):
 
     color: Mapped[str] = mapped_column(String(20), default="#6c757d")
     """Accent colour for the room badge / canvas border (CSS colour string)."""
+
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -199,6 +207,7 @@ class TableType(Base):
     """'low' | 'high'"""
     max_capacity: Mapped[int] = mapped_column(Integer)
     """Physical maximum number of seats for this table shape/size."""
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 

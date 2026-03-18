@@ -6,17 +6,34 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Edition, Sponsor
+from app.models import Edition, Person, Sponsor
 from app.schemas import SponsorCreate, SponsorOut, SponsorUpdate
 from app.utils import sponsor_to_dict
 
 router = APIRouter(prefix="/api/sponsors", tags=["sponsors"])
 
 
+async def _load_contact(db: AsyncSession, person_id: str | None) -> Person | None:
+    if not person_id:
+        return None
+    result = await db.execute(select(Person).where(Person.id == person_id))
+    return result.scalar_one_or_none()
+
+
+async def _load_contacts_by_ids(db: AsyncSession, ids: list[str]) -> dict[str, Person]:
+    if not ids:
+        return {}
+    result = await db.execute(select(Person).where(Person.id.in_(ids)))
+    return {p.id: p for p in result.scalars().all()}
+
+
 @router.get("", response_model=list[SponsorOut], dependencies=[Depends(require_admin)])
 async def list_sponsors(db: AsyncSession = Depends(get_db)) -> list[dict]:
     result = await db.execute(select(Sponsor).order_by(Sponsor.id))
-    return [sponsor_to_dict(s) for s in result.scalars().all()]
+    sponsors = result.scalars().all()
+    person_ids = [s.contact_person_id for s in sponsors if s.contact_person_id]
+    contacts = await _load_contacts_by_ids(db, person_ids)
+    return [sponsor_to_dict(s, contacts.get(s.contact_person_id)) for s in sponsors]
 
 
 @router.post(
@@ -26,11 +43,12 @@ async def list_sponsors(db: AsyncSession = Depends(get_db)) -> list[dict]:
     dependencies=[Depends(require_admin)],
 )
 async def create_sponsor(body: SponsorCreate, db: AsyncSession = Depends(get_db)) -> dict:
-    s = Sponsor(name=body.name, image=body.image, active=body.active)
+    s = Sponsor(name=body.name, image=body.image, active=body.active, contact_person_id=body.contact_person_id)
     db.add(s)
     await db.commit()
     await db.refresh(s)
-    return sponsor_to_dict(s)
+    contact = await _load_contact(db, s.contact_person_id)
+    return sponsor_to_dict(s, contact)
 
 
 @router.put("/{sponsor_id}", response_model=SponsorOut, dependencies=[Depends(require_admin)])
@@ -44,9 +62,12 @@ async def update_sponsor(
         s.image = body.image
     if body.active is not None:
         s.active = body.active
+    if "contact_person_id" in body.model_fields_set:
+        s.contact_person_id = body.contact_person_id
     await db.commit()
     await db.refresh(s)
-    return sponsor_to_dict(s)
+    contact = await _load_contact(db, s.contact_person_id)
+    return sponsor_to_dict(s, contact)
 
 
 @router.delete(

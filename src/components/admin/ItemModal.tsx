@@ -1,33 +1,116 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { m } from "../../paraglide/messages";
+
+export interface ContactPerson {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
 
 export interface ItemDraft {
   id: number;
   name: string;
   image: string;
   active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
+  contact_person_id?: string | null;
+  contact_person?: ContactPerson | null;
 }
+
+interface PersonOption {
+  value: string;
+  label: string;
+  sub: string;
+}
+
+const darkSelectStyles: StylesConfig<PersonOption, false> = {
+  control: (base) => ({
+    ...base,
+    backgroundColor: "#212529",
+    borderColor: "#6c757d",
+    color: "#f8f9fa",
+    minHeight: "34px",
+  }),
+  menu: (base) => ({ ...base, backgroundColor: "#212529", border: "1px solid #6c757d", zIndex: 9999 }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#343a40" : "#212529",
+    color: "#f8f9fa",
+    cursor: "pointer",
+  }),
+  singleValue: (base) => ({ ...base, color: "#f8f9fa" }),
+  input: (base) => ({ ...base, color: "#f8f9fa" }),
+  placeholder: (base) => ({ ...base, color: "#6c757d" }),
+  indicatorSeparator: (base) => ({ ...base, backgroundColor: "#6c757d" }),
+  dropdownIndicator: (base) => ({ ...base, color: "#6c757d" }),
+  clearIndicator: (base) => ({ ...base, color: "#6c757d" }),
+  noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
+};
 
 interface ItemModalProps {
   show: boolean;
   initial: ItemDraft | null; // null = new item
+  authHeaders: () => Record<string, string>;
   onSave: (item: ItemDraft) => void;
   onHide: () => void;
 }
 
-export default function ItemModal({ show, initial, onSave, onHide }: ItemModalProps) {
+export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
+  const [contactOption, setContactOption] = useState<SingleValue<PersonOption>>(null);
+  const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
+  const [personQuery, setPersonQuery] = useState("");
+  const [loadingPersons, setLoadingPersons] = useState(false);
 
   useEffect(() => {
     if (show) {
       setName(initial?.name ?? "");
       setImage(initial?.image ?? "");
+      const cp = initial?.contact_person;
+      setContactOption(
+        cp ? { value: cp.id, label: cp.name, sub: [cp.email, cp.phone].filter(Boolean).join(" · ") } : null,
+      );
+      setPersonQuery("");
+      setPersonOptions([]);
     }
   }, [show, initial]);
+
+  const searchPersons = useCallback(
+    async (q: string) => {
+      setLoadingPersons(true);
+      try {
+        const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&active=true`, {
+          headers: authHeaders(),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { id: string; name: string; email: string; phone: string }[];
+          setPersonOptions(
+            data.map((p) => ({
+              value: p.id,
+              label: p.name,
+              sub: [p.email, p.phone].filter(Boolean).join(" · "),
+            })),
+          );
+        }
+      } finally {
+        setLoadingPersons(false);
+      }
+    },
+    [authHeaders],
+  );
+
+  useEffect(() => {
+    if (!show) return;
+    const timer = setTimeout(() => {
+      searchPersons(personQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [personQuery, show, searchPersons]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +120,15 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
       name: name.trim(),
       image: image.trim(),
       active: initial?.active ?? true,
+      contact_person_id: contactOption?.value ?? null,
+      contact_person: contactOption
+        ? {
+            id: contactOption.value,
+            name: contactOption.label,
+            email: "",
+            phone: "",
+          }
+        : null,
     });
   }
 
@@ -61,7 +153,7 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
               autoFocus
             />
           </Form.Group>
-          <Form.Group>
+          <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
               {m.admin_content_image_url_placeholder()}
             </Form.Label>
@@ -70,6 +162,28 @@ export default function ItemModal({ show, initial, onSave, onHide }: ItemModalPr
               onChange={(e) => setImage(e.target.value)}
               className="bg-dark text-light border-secondary"
               required
+            />
+          </Form.Group>
+          <Form.Group>
+            <Form.Label className="text-secondary small">Contact person</Form.Label>
+            <Select<PersonOption, false>
+              isClearable
+              options={personOptions}
+              value={contactOption}
+              onChange={setContactOption}
+              onInputChange={(v) => setPersonQuery(v)}
+              inputValue={personQuery}
+              isLoading={loadingPersons}
+              filterOption={null}
+              styles={darkSelectStyles}
+              placeholder="Search by name, email, phone…"
+              classNamePrefix="rs"
+              formatOptionLabel={(opt) => (
+                <div>
+                  <div>{opt.label}</div>
+                  {opt.sub && <small className="text-secondary">{opt.sub}</small>}
+                </div>
+              )}
             />
           </Form.Group>
         </Modal.Body>

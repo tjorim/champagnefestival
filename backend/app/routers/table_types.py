@@ -30,6 +30,7 @@ async def create_table_type(
         length_m=body.length_m,
         height_type=body.height_type,
         max_capacity=body.max_capacity,
+        active=body.active,
     )
     db.add(tt)
     await db.commit()
@@ -80,6 +81,8 @@ async def update_table_type(
         tt.height_type = body.height_type
     if body.max_capacity is not None:
         tt.max_capacity = body.max_capacity
+    if body.active is not None:
+        tt.active = body.active
     await db.commit()
     await db.refresh(tt)
     return table_type_to_dict(tt)

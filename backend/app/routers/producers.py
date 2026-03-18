@@ -6,17 +6,34 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Edition, Producer
+from app.models import Edition, Person, Producer
 from app.schemas import ProducerCreate, ProducerOut, ProducerUpdate
 from app.utils import producer_to_dict
 
 router = APIRouter(prefix="/api/producers", tags=["producers"])
 
 
+async def _load_contact(db: AsyncSession, person_id: str | None) -> Person | None:
+    if not person_id:
+        return None
+    result = await db.execute(select(Person).where(Person.id == person_id))
+    return result.scalar_one_or_none()
+
+
+async def _load_contacts_by_ids(db: AsyncSession, ids: list[str]) -> dict[str, Person]:
+    if not ids:
+        return {}
+    result = await db.execute(select(Person).where(Person.id.in_(ids)))
+    return {p.id: p for p in result.scalars().all()}
+
+
 @router.get("", response_model=list[ProducerOut], dependencies=[Depends(require_admin)])
 async def list_producers(db: AsyncSession = Depends(get_db)) -> list[dict]:
     result = await db.execute(select(Producer).order_by(Producer.id))
-    return [producer_to_dict(p) for p in result.scalars().all()]
+    producers = result.scalars().all()
+    person_ids = [p.contact_person_id for p in producers if p.contact_person_id]
+    contacts = await _load_contacts_by_ids(db, person_ids)
+    return [producer_to_dict(p, contacts.get(p.contact_person_id)) for p in producers]
 
 
 @router.post(
@@ -26,11 +43,12 @@ async def list_producers(db: AsyncSession = Depends(get_db)) -> list[dict]:
     dependencies=[Depends(require_admin)],
 )
 async def create_producer(body: ProducerCreate, db: AsyncSession = Depends(get_db)) -> dict:
-    p = Producer(name=body.name, image=body.image, active=body.active)
+    p = Producer(name=body.name, image=body.image, active=body.active, contact_person_id=body.contact_person_id)
     db.add(p)
     await db.commit()
     await db.refresh(p)
-    return producer_to_dict(p)
+    contact = await _load_contact(db, p.contact_person_id)
+    return producer_to_dict(p, contact)
 
 
 @router.put("/{producer_id}", response_model=ProducerOut, dependencies=[Depends(require_admin)])
@@ -44,9 +62,12 @@ async def update_producer(
         p.image = body.image
     if body.active is not None:
         p.active = body.active
+    if "contact_person_id" in body.model_fields_set:
+        p.contact_person_id = body.contact_person_id
     await db.commit()
     await db.refresh(p)
-    return producer_to_dict(p)
+    contact = await _load_contact(db, p.contact_person_id)
+    return producer_to_dict(p, contact)
 
 
 @router.delete(

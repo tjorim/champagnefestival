@@ -114,23 +114,27 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
     }
 
 
-def producer_to_dict(p: Producer) -> dict:
+def producer_to_dict(p: Producer, contact_person: Person | None = None) -> dict:
     return {
         "id": p.id,
         "name": p.name,
         "image": p.image,
         "active": p.active,
+        "contact_person_id": p.contact_person_id,
+        "contact_person": person_to_dict(contact_person) if contact_person else None,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }
 
 
-def sponsor_to_dict(s: Sponsor) -> dict:
+def sponsor_to_dict(s: Sponsor, contact_person: Person | None = None) -> dict:
     return {
         "id": s.id,
         "name": s.name,
         "image": s.image,
         "active": s.active,
+        "contact_person_id": s.contact_person_id,
+        "contact_person": person_to_dict(contact_person) if contact_person else None,
         "created_at": s.created_at,
         "updated_at": s.updated_at,
     }
@@ -161,6 +165,7 @@ def table_type_to_dict(tt: TableType) -> dict:
         "length_m": tt.length_m,
         "height_type": tt.height_type,
         "max_capacity": tt.max_capacity,
+        "active": tt.active,
         "created_at": tt.created_at,
         "updated_at": tt.updated_at,
     }
@@ -202,6 +207,7 @@ def room_to_dict(r: Room) -> dict:
         "width_m": r.width_m,
         "length_m": r.length_m,
         "color": r.color,
+        "active": r.active,
         "created_at": r.created_at,
         "updated_at": r.updated_at,
     }
