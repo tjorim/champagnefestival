@@ -2,7 +2,8 @@
  * useActiveEdition — fetches the active festival edition from the backend API.
  *
  * Initialises with the static fallback from `editions.ts` (immediate, no flash),
- * then fetches `/api/editions` and `/api/venues/{id}` to get live data.
+ * then fetches `/api/editions/active` to get live data including embedded venue,
+ * producers, and sponsors.
  * Silently keeps the static fallback on any network or parse error.
  */
 
@@ -30,8 +31,8 @@ export function useActiveEdition(): ActiveEditionState {
 
     async function load() {
       try {
-        const editionsRes = await fetch("/api/editions");
-        if (!editionsRes.ok) {
+        const res = await fetch("/api/editions/active");
+        if (!res.ok) {
           setIsLoaded(true);
           return;
         }
@@ -49,44 +50,8 @@ export function useActiveEdition(): ActiveEditionState {
           category: "tasting" | "vip" | "party" | "breakfast" | "exchange" | "general";
           day_id: number;
         }
-        interface ApiEdition {
-          id: string;
-          year: number;
-          month: string;
-          friday: string;
-          saturday: string;
-          sunday: string;
-          venue_id: string;
-          schedule: ApiScheduleEvent[];
-          producers: SliderItem[];
-          sponsors: SliderItem[];
-        }
-
-        const apiEditions = (await editionsRes.json()) as ApiEdition[];
-        if (!Array.isArray(apiEditions) || apiEditions.length === 0) {
-          setIsLoaded(true);
-          return;
-        }
-
-        // Same active-edition logic as getActiveEdition() in editions.ts
-        const now = new Date();
-        const sorted = [...apiEditions].sort(
-          (a, b) => parseLocalDate(a.friday).getTime() - parseLocalDate(b.friday).getTime(),
-        );
-        const activeApi =
-          sorted.find((e) => {
-            const sundayEnd = parseLocalDate(e.sunday);
-            sundayEnd.setHours(23, 59, 59, 999);
-            return sundayEnd >= now;
-          }) ?? sorted[sorted.length - 1]!;
-
-        const venueRes = await fetch(`/api/venues/${activeApi.venue_id}`);
-        if (!venueRes.ok) {
-          setIsLoaded(true);
-          return;
-        }
-
         interface ApiVenue {
+          id: string;
           name: string;
           address: string;
           city: string;
@@ -95,28 +60,40 @@ export function useActiveEdition(): ActiveEditionState {
           lat: number;
           lng: number;
         }
-        const apiVenue = (await venueRes.json()) as ApiVenue;
+        interface ApiEdition {
+          id: string;
+          year: number;
+          month: string;
+          friday: string;
+          saturday: string;
+          sunday: string;
+          venue: ApiVenue;
+          schedule: ApiScheduleEvent[];
+          producers: SliderItem[];
+          sponsors: SliderItem[];
+        }
 
+        const api = (await res.json()) as ApiEdition;
         if (cancelled) return;
 
-        const friday = parseLocalDate(activeApi.friday);
-        const saturday = parseLocalDate(activeApi.saturday);
-        const sunday = parseLocalDate(activeApi.sunday);
-
         const newEdition: Edition = {
-          id: activeApi.id,
-          year: activeApi.year,
-          month: activeApi.month as "march" | "october",
-          dates: { friday, saturday, sunday },
-          venue: {
-            venueName: apiVenue.name,
-            address: apiVenue.address,
-            city: apiVenue.city,
-            postalCode: apiVenue.postal_code,
-            country: apiVenue.country,
-            coordinates: { lat: apiVenue.lat, lng: apiVenue.lng },
+          id: api.id,
+          year: api.year,
+          month: api.month as "march" | "october",
+          dates: {
+            friday: parseLocalDate(api.friday),
+            saturday: parseLocalDate(api.saturday),
+            sunday: parseLocalDate(api.sunday),
           },
-          schedule: activeApi.schedule.map((ev) => ({
+          venue: {
+            venueName: api.venue.name,
+            address: api.venue.address,
+            city: api.venue.city,
+            postalCode: api.venue.postal_code,
+            country: api.venue.country,
+            coordinates: { lat: api.venue.lat, lng: api.venue.lng },
+          },
+          schedule: api.schedule.map((ev) => ({
             id: ev.id,
             title: ev.title,
             startTime: ev.start_time,
@@ -131,8 +108,8 @@ export function useActiveEdition(): ActiveEditionState {
             category: ev.category,
             dayId: ev.day_id,
           })),
-          producers: (activeApi.producers ?? []).filter((p) => p.active !== false),
-          sponsors: (activeApi.sponsors ?? []).filter((s) => s.active !== false),
+          producers: (api.producers ?? []).filter((p) => p.active !== false),
+          sponsors: (api.sponsors ?? []).filter((s) => s.active !== false),
         };
 
         setEdition(newEdition);

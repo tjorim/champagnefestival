@@ -4,7 +4,7 @@ import secrets
 import time
 from typing import Any
 
-from app.models import Edition, Layout, Person, Reservation, Room, Table, TableType, Venue
+from app.models import Edition, Layout, Person, Producer, Reservation, Room, Sponsor, Table, TableType, Venue
 
 
 def roles_contains(role: str) -> Any:
@@ -114,6 +114,28 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
     }
 
 
+def producer_to_dict(p: Producer) -> dict:
+    return {
+        "id": p.id,
+        "name": p.name,
+        "image": p.image,
+        "active": p.active,
+        "created_at": p.created_at,
+        "updated_at": p.updated_at,
+    }
+
+
+def sponsor_to_dict(s: Sponsor) -> dict:
+    return {
+        "id": s.id,
+        "name": s.name,
+        "image": s.image,
+        "active": s.active,
+        "created_at": s.created_at,
+        "updated_at": s.updated_at,
+    }
+
+
 def venue_to_dict(v: Venue) -> dict:
     return {
         "id": v.id,
@@ -187,6 +209,7 @@ def room_to_dict(r: Room) -> dict:
 
 def edition_to_dict(
     e: Edition,
+    venue: dict,
     producers: list[dict] | None = None,
     sponsors: list[dict] | None = None,
 ) -> dict:
@@ -197,7 +220,7 @@ def edition_to_dict(
         "friday": e.friday.isoformat(),
         "saturday": e.saturday.isoformat(),
         "sunday": e.sunday.isoformat(),
-        "venue_id": e.venue_id,
+        "venue": venue,
         "schedule": e.get_schedule(),
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],

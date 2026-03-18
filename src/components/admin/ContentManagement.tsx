@@ -37,8 +37,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [actionError, setActionError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -47,21 +46,21 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
   const activeItems = items.filter((i) => i.active !== false);
   const archivedItems = items.filter((i) => i.active === false);
 
+  const apiBase = `/api/${sectionKey}`;
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch(`/api/content/${sectionKey}`);
+        const res = await fetch(apiBase, { headers: authHeaders() });
         if (res.ok && !cancelled) {
-          const data = (await res.json()) as { value: ItemDraft[] };
-          if (Array.isArray(data.value)) setItems(data.value);
-        } else if (res.status === 404 && !cancelled) {
-          // Backend signals "no content saved yet" with 404 — keep placeholders.
+          const data = (await res.json()) as ItemDraft[];
+          if (Array.isArray(data)) setItems(data);
         } else if (!cancelled) {
           setLoadError(true);
         }
       } catch (err) {
-        console.error(`Failed to load ${sectionKey} content`, err);
+        console.error(`Failed to load ${sectionKey}`, err);
         if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -71,7 +70,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
     return () => {
       cancelled = true;
     };
-  }, [sectionKey]);
+  }, [sectionKey, apiBase, authHeaders]);
 
   function openAdd() {
     setModalItem(null);
@@ -82,51 +81,108 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
     setModalOpen(true);
   }
 
-  function handleModalSave(item: ItemDraft) {
-    setItems((prev) => {
-      const idx = prev.findIndex((i) => i.id === item.id);
-      return idx >= 0 ? prev.map((i) => (i.id === item.id ? item : i)) : [...prev, item];
-    });
-    setImageErrors((prev) => {
-      const copy = new Set(prev);
-      copy.delete(item.id);
-      return copy;
-    });
-    setSaveStatus("idle");
-    setModalOpen(false);
-  }
+  const handleModalSave = useCallback(
+    async (draft: ItemDraft) => {
+      setActionError(null);
+      try {
+        const isNew = !items.find((i) => i.id === draft.id);
+        const res = isNew
+          ? await fetch(apiBase, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...authHeaders() },
+              body: JSON.stringify({ name: draft.name, image: draft.image }),
+            })
+          : await fetch(`${apiBase}/${draft.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json", ...authHeaders() },
+              body: JSON.stringify({ name: draft.name, image: draft.image }),
+            });
+        if (!res.ok) {
+          setActionError(m.admin_content_error_save());
+          return;
+        }
+        const saved = (await res.json()) as ItemDraft;
+        setItems((prev) => {
+          const idx = prev.findIndex((i) => i.id === saved.id);
+          return idx >= 0 ? prev.map((i) => (i.id === saved.id ? saved : i)) : [...prev, saved];
+        });
+        setImageErrors((prev) => {
+          const copy = new Set(prev);
+          copy.delete(saved.id);
+          return copy;
+        });
+      } catch {
+        setActionError(m.admin_content_error_save());
+      }
+      setModalOpen(false);
+    },
+    [items, apiBase, authHeaders],
+  );
 
-  const handleArchive = useCallback((id: number) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, active: false } : i)));
-    setSaveStatus("idle");
-  }, []);
+  const handleArchive = useCallback(
+    async (id: number) => {
+      setActionError(null);
+      try {
+        const res = await fetch(`${apiBase}/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ active: false }),
+        });
+        if (res.ok) {
+          const saved = (await res.json()) as ItemDraft;
+          setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
+        } else {
+          setActionError(m.admin_content_error_save());
+        }
+      } catch {
+        setActionError(m.admin_content_error_save());
+      }
+    },
+    [apiBase, authHeaders],
+  );
 
-  const handleRestore = useCallback((id: number) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, active: true } : i)));
-    setSaveStatus("idle");
-  }, []);
+  const handleRestore = useCallback(
+    async (id: number) => {
+      setActionError(null);
+      try {
+        const res = await fetch(`${apiBase}/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ active: true }),
+        });
+        if (res.ok) {
+          const saved = (await res.json()) as ItemDraft;
+          setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
+        } else {
+          setActionError(m.admin_content_error_save());
+        }
+      } catch {
+        setActionError(m.admin_content_error_save());
+      }
+    },
+    [apiBase, authHeaders],
+  );
 
-  const handleDelete = useCallback((id: number) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setSaveStatus("idle");
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    setIsSaving(true);
-    setSaveStatus("idle");
-    try {
-      const res = await fetch(`/api/content/${sectionKey}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ value: items }),
-      });
-      setSaveStatus(res.ok ? "saved" : "error");
-    } catch {
-      setSaveStatus("error");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [sectionKey, items, authHeaders]);
+  const handleDelete = useCallback(
+    async (id: number) => {
+      setActionError(null);
+      try {
+        const res = await fetch(`${apiBase}/${id}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        if (res.ok || res.status === 204) {
+          setItems((prev) => prev.filter((i) => i.id !== id));
+        } else {
+          const data = await res.json().catch(() => ({}));
+          setActionError((data as { detail?: string }).detail ?? m.admin_content_error_save());
+        }
+      } catch {
+        setActionError(m.admin_content_error_save());
+      }
+    },
+    [apiBase, authHeaders],
+  );
 
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
     return (
@@ -229,27 +285,10 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
             </Badge>
           )}
         </h6>
-        <div className="d-flex gap-2">
-          <Button variant="outline-secondary" size="sm" onClick={openAdd}>
-            <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-            {m.admin_content_add_item()}
-          </Button>
-          <Button variant="outline-warning" size="sm" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-1"
-              />
-            ) : (
-              <i className="bi bi-floppy me-1" aria-hidden="true" />
-            )}
-            {m.admin_content_save_section()}
-          </Button>
-        </div>
+        <Button variant="outline-secondary" size="sm" onClick={openAdd}>
+          <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+          {m.admin_content_add_item()}
+        </Button>
       </div>
 
       {loadError && (
@@ -257,14 +296,9 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           {m.admin_content_error_load()}
         </Alert>
       )}
-      {saveStatus === "saved" && (
-        <Alert variant="success" className="py-1 mb-2">
-          {m.admin_content_saved()}
-        </Alert>
-      )}
-      {saveStatus === "error" && (
-        <Alert variant="danger" className="py-1 mb-2">
-          {m.admin_content_error_save()}
+      {actionError && (
+        <Alert variant="danger" className="py-1 mb-2" dismissible onClose={() => setActionError(null)}>
+          {actionError}
         </Alert>
       )}
 
@@ -335,7 +369,7 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
       setIsLoading(true);
       setLoadError(false);
       try {
-        const res = await fetch("/api/editions");
+        const res = await fetch("/api/editions?include_inactive=true", { headers: authHeaders() });
         if (res.ok && !cancelled) setEditions((await res.json()) as Edition[]);
         else if (!cancelled) setLoadError(true);
       } catch {

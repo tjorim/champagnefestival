@@ -223,30 +223,59 @@ class CheckInOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Content
+# Producers
 # ---------------------------------------------------------------------------
 
-#: Keys that are allowed to be stored via the content API.
-ALLOWED_CONTENT_KEYS = frozenset({"producers", "sponsors"})
 
-
-class SliderItem(BaseModel):
-    id: int
+class ProducerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    image: str = Field(min_length=1, max_length=500)
+    image: str = Field(default="", max_length=500)
     active: bool = True
 
 
-class ContentItemOut(BaseModel):
-    key: str
-    value: list[SliderItem]
+class ProducerUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    image: str | None = Field(default=None, max_length=500)
+    active: bool | None = None
+
+
+class ProducerOut(BaseModel):
+    id: int
+    name: str
+    image: str
+    active: bool
+    created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class ContentItemUpdate(BaseModel):
-    value: list[SliderItem]
+# ---------------------------------------------------------------------------
+# Sponsors
+# ---------------------------------------------------------------------------
+
+
+class SponsorCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    image: str = Field(default="", max_length=500)
+    active: bool = True
+
+
+class SponsorUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    image: str | None = Field(default=None, max_length=500)
+    active: bool | None = None
+
+
+class SponsorOut(BaseModel):
+    id: int
+    name: str
+    image: str
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 # ---------------------------------------------------------------------------
@@ -492,10 +521,10 @@ class EditionOut(BaseModel):
     friday: date
     saturday: date
     sunday: date
-    venue_id: str
+    venue: VenueOut
     schedule: list[ScheduleEventOut]
-    producers: list[SliderItem]
-    sponsors: list[SliderItem]
+    producers: list[ProducerOut]
+    sponsors: list[SponsorOut]
     active: bool
     created_at: datetime
     updated_at: datetime

@@ -184,7 +184,7 @@ export default function EditionCard({
       {open && (
         <Card.Body id={collapseId} className="pt-2 pb-2">
           {(() => {
-            const venue = venues.find((v) => v.id === edition.venue_id);
+            const venue = venues.find((v) => v.id === edition.venue.id);
             if (!venue) return null;
             return (
               <p className="text-secondary small mb-2">
