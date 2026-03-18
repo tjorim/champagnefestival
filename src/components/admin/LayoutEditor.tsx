@@ -985,7 +985,7 @@ export default function LayoutEditor({
               <ListGroup variant="flush">
                 {selectedReservations.map((r) => (
                   <ListGroup.Item key={r.id} className="bg-dark text-light border-secondary">
-                    <span className="fw-semibold">{r.name}</span>
+                    <span className="fw-semibold">{r.person.name}</span>
                     <span className="text-secondary ms-2 small">
                       ({r.guestCount} {m.admin_guests_count()})
                     </span>

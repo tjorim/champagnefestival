@@ -53,7 +53,7 @@ export default function ReservationDetail({
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
         <Modal.Title id="res-detail-modal-title">
           <i className="bi bi-person-fill me-2" aria-hidden="true" />
-          {reservation.name}
+          {reservation.person.name}
         </Modal.Title>
       </Modal.Header>
 
@@ -117,13 +117,13 @@ export default function ReservationDetail({
         <ListGroup variant="flush" className="mb-3">
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.reservation_email()}</span>
-            <a href={`mailto:${reservation.email}`} className="text-warning">
-              {reservation.email}
+            <a href={`mailto:${reservation.person.email}`} className="text-warning">
+              {reservation.person.email}
             </a>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.reservation_phone()}</span>
-            <span>{reservation.phone}</span>
+            <span>{reservation.person.phone}</span>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.admin_event_label()}</span>

@@ -34,7 +34,7 @@ function apiVenueToVenue(d: Record<string, unknown>): Venue {
     name: d.name as string,
     address: (d.address ?? "") as string,
     city: (d.city ?? "") as string,
-    postalCode: (d.postal_code ?? d.postalCode ?? "") as string,
+    postalCode: (d.postal_code ?? "") as string,
     country: (d.country ?? "") as string,
     lat: (d.lat ?? 0) as number,
     lng: (d.lng ?? 0) as number,
@@ -46,11 +46,11 @@ function apiVenueToVenue(d: Record<string, unknown>): Venue {
 function apiLayoutToLayout(d: Record<string, unknown>): Layout {
   return {
     id: d.id as string,
-    editionId: ((d.edition_id ?? d.editionId) as string | null) ?? null,
-    roomId: (d.room_id ?? d.roomId) as string,
-    dayId: (d.day_id ?? d.dayId) as number,
+    editionId: (d.edition_id as string | null) ?? null,
+    roomId: d.room_id as string,
+    dayId: d.day_id as number,
     label: (d.label ?? "") as string,
-    createdAt: (d.created_at ?? d.createdAt) as string,
+    createdAt: d.created_at as string,
   };
 }
 
@@ -60,10 +60,10 @@ function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
     id: d.id as string,
     name: d.name as string,
     shape: (d.shape ?? "rectangle") as "rectangle" | "round",
-    widthM: (d.width_m ?? d.widthM ?? 1.8) as number,
-    lengthM: (d.length_m ?? d.lengthM ?? 0.7) as number,
-    heightType: (d.height_type ?? d.heightType ?? "low") as "low" | "high",
-    maxCapacity: (d.max_capacity ?? d.maxCapacity ?? 4) as number,
+    widthM: (d.width_m ?? 1.8) as number,
+    lengthM: (d.length_m ?? 0.7) as number,
+    heightType: (d.height_type ?? "low") as "low" | "high",
+    maxCapacity: (d.max_capacity ?? 4) as number,
     active: (d.active ?? true) as boolean,
   };
 }
@@ -72,10 +72,10 @@ function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
 function apiRoomToRoom(d: Record<string, unknown>): Room {
   return {
     id: d.id as string,
-    venueId: (d.venue_id ?? d.venueId) as string,
+    venueId: d.venue_id as string,
     name: d.name as string,
-    widthM: (d.width_m ?? d.widthM) as number,
-    lengthM: (d.length_m ?? d.lengthM) as number,
+    widthM: d.width_m as number,
+    lengthM: d.length_m as number,
     color: d.color as string,
     active: (d.active ?? true) as boolean,
   };
@@ -89,10 +89,10 @@ function apiTableToTable(d: Record<string, unknown>): FloorTable {
     capacity: d.capacity as number,
     x: d.x as number,
     y: d.y as number,
-    tableTypeId: (d.table_type_id ?? d.tableTypeId) as string,
+    tableTypeId: d.table_type_id as string,
     rotation: (d.rotation ?? 0) as number,
-    layoutId: (d.layout_id ?? d.layoutId) as string,
-    reservationIds: ((d.reservation_ids ?? d.reservationIds) as string[]) ?? [],
+    layoutId: d.layout_id as string,
+    reservationIds: (d.reservation_ids as string[]) ?? [],
   };
 }
 
@@ -100,33 +100,38 @@ function apiTableToTable(d: Record<string, unknown>): FloorTable {
 function apiAreaToArea(d: Record<string, unknown>): FloorArea {
   return {
     id: d.id as string,
-    layoutId: (d.layout_id ?? d.layoutId) as string,
+    layoutId: d.layout_id as string,
     icon: (d.icon ?? "bi-shop") as string,
-    producerId: ((d.producer_id ?? d.producerId) as number | null) ?? null,
-    sponsorId: ((d.sponsor_id ?? d.sponsorId) as number | null) ?? null,
-    exhibitorId: ((d.exhibitor_id ?? d.exhibitorId) as number | null) ?? null,
+    producerId: (d.producer_id as number | null) ?? null,
+    sponsorId: (d.sponsor_id as number | null) ?? null,
+    exhibitorId: (d.exhibitor_id as number | null) ?? null,
     label: (d.label ?? "") as string,
     x: (d.x ?? 50) as number,
     y: (d.y ?? 50) as number,
     rotation: (d.rotation ?? 0) as number,
-    widthM: (d.width_m ?? d.widthM ?? 1.5) as number,
-    lengthM: (d.length_m ?? d.lengthM ?? 1.0) as number,
+    widthM: (d.width_m ?? 1.5) as number,
+    lengthM: (d.length_m ?? 1.0) as number,
   };
 }
 
 /** Map FastAPI snake_case reservation response to frontend camelCase Reservation type */
 function apiReservationToReservation(d: Record<string, unknown>): Reservation {
-  const rawOrders = (d.pre_orders ?? d.preOrders ?? []) as Record<string, unknown>[];
+  const rawOrders = (d.pre_orders ?? []) as Record<string, unknown>[];
+  const rawPerson = (d.person ?? {}) as Record<string, unknown>;
   return {
     id: d.id as string,
-    name: d.name as string,
-    email: (d.email ?? "") as string,
-    phone: (d.phone ?? "") as string,
-    eventId: (d.event_id ?? d.eventId) as string,
-    eventTitle: (d.event_title ?? d.eventTitle ?? "") as string,
-    guestCount: (d.guest_count ?? d.guestCount) as number,
+    personId: d.person_id as string,
+    person: {
+      id: (rawPerson.id ?? "") as string,
+      name: (rawPerson.name ?? "") as string,
+      email: (rawPerson.email ?? "") as string,
+      phone: (rawPerson.phone ?? "") as string,
+    },
+    eventId: d.event_id as string,
+    eventTitle: (d.event_title ?? "") as string,
+    guestCount: d.guest_count as number,
     preOrders: rawOrders.map((item) => ({
-      productId: (item.product_id ?? item.productId) as string,
+      productId: item.product_id as string,
       name: item.name as string,
       quantity: item.quantity as number,
       price: item.price as number,
@@ -134,16 +139,16 @@ function apiReservationToReservation(d: Record<string, unknown>): Reservation {
       delivered: (item.delivered ?? false) as boolean,
     })),
     notes: (d.notes ?? "") as string,
-    accessibilityNote: (d.accessibility_note ?? d.accessibilityNote ?? "") as string,
-    tableId: (d.table_id ?? d.tableId) as string | undefined,
+    accessibilityNote: (d.accessibility_note ?? "") as string,
+    tableId: d.table_id as string | undefined,
     status: (d.status ?? "pending") as ReservationStatus,
-    paymentStatus: (d.payment_status ?? d.paymentStatus ?? "unpaid") as PaymentStatus,
-    checkedIn: (d.checked_in ?? d.checkedIn ?? false) as boolean,
-    checkedInAt: (d.checked_in_at ?? d.checkedInAt) as string | undefined,
-    strapIssued: (d.strap_issued ?? d.strapIssued ?? false) as boolean,
-    checkInToken: (d.check_in_token ?? d.checkInToken) as string | undefined,
-    createdAt: (d.created_at ?? d.createdAt) as string,
-    updatedAt: (d.updated_at ?? d.updatedAt) as string,
+    paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
+    checkedIn: (d.checked_in ?? false) as boolean,
+    checkedInAt: d.checked_in_at as string | undefined,
+    strapIssued: (d.strap_issued ?? false) as boolean,
+    checkInToken: d.check_in_token as string | undefined,
+    createdAt: d.created_at as string,
+    updatedAt: d.updated_at as string,
   };
 }
 
@@ -270,7 +275,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               id: p.id as number,
               name: p.name as string,
               active: (p.active ?? true) as boolean,
-              contactPersonId: ((p.contact_person_id ?? p.contactPersonId) as string | null) ?? null,
+              contactPersonId: (p.contact_person_id as string | null) ?? null,
             }))
           : [],
       );
@@ -282,7 +287,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               id: s.id as number,
               name: s.name as string,
               active: (s.active ?? true) as boolean,
-              contactPersonId: ((s.contact_person_id ?? s.contactPersonId) as string | null) ?? null,
+              contactPersonId: (s.contact_person_id as string | null) ?? null,
             }))
           : [],
       );
@@ -294,7 +299,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               id: e.id as number,
               name: e.name as string,
               active: (e.active ?? true) as boolean,
-              contactPersonId: ((e.contact_person_id ?? e.contactPersonId) as string | null) ?? null,
+              contactPersonId: (e.contact_person_id as string | null) ?? null,
             }))
           : [],
       );
@@ -1162,7 +1167,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onRotateTable={handleRotateTable}
                       onAddLayout={handleAddLayout}
                       onDeleteLayout={handleDeleteLayout}
-                      onAssignItem={handleAssignTableToItem}
                       onAddArea={handleAddArea}
                       onMoveArea={handleMoveArea}
                       onDeleteArea={handleDeleteArea}

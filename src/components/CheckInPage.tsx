@@ -8,13 +8,28 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "../paraglide/messages";
-import type { Reservation, OrderItemCategory, ReservationStatus } from "../types/reservation";
+import type { OrderItemCategory, ReservationStatus } from "../types/reservation";
+
+interface CheckInData {
+  id: string;
+  name: string;
+  eventId: string;
+  eventTitle: string;
+  guestCount: number;
+  preOrders: { productId: string; name: string; quantity: number; price: number; category: OrderItemCategory; delivered: boolean }[];
+  notes: string;
+  accessibilityNote: string;
+  status: ReservationStatus;
+  checkedIn: boolean;
+  checkedInAt?: string;
+  strapIssued: boolean;
+}
 
 export default function CheckInPage() {
   const [searchParams] = useSearchParams();
   const reservationId = searchParams.get("id") ?? undefined;
   const checkInToken = searchParams.get("token") ?? undefined;
-  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [reservation, setReservation] = useState<CheckInData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [error, setError] = useState("");
@@ -43,16 +58,14 @@ export default function CheckInPage() {
         } else if (response.ok) {
           const data = (await response.json()) as Record<string, unknown>;
           const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
-          const res: Reservation = {
+          const res: CheckInData = {
             id: data.id as string,
-            name: data.name as string,
-            email: "",
-            phone: "",
+            name: (data.name ?? "") as string,
             eventId: (data.event_id ?? "") as string,
             eventTitle: (data.event_title ?? "") as string,
             guestCount: (data.guest_count ?? 1) as number,
             preOrders: rawOrders.map((item) => ({
-              productId: (item.product_id ?? item.productId) as string,
+              productId: item.product_id as string,
               name: item.name as string,
               quantity: item.quantity as number,
               price: item.price as number,
@@ -62,12 +75,9 @@ export default function CheckInPage() {
             notes: (data.notes ?? "") as string,
             accessibilityNote: (data.accessibility_note ?? "") as string,
             status: (data.status ?? "pending") as ReservationStatus,
-            paymentStatus: "unpaid", // not included in CheckInGuestOut
             checkedIn: (data.checked_in ?? false) as boolean,
             checkedInAt: data.checked_in_at as string | undefined,
             strapIssued: (data.strap_issued ?? false) as boolean,
-            createdAt: "", // not included in CheckInGuestOut
-            updatedAt: "", // not included in CheckInGuestOut
           };
           setReservation(res);
           if (res.checkedIn) {
@@ -111,11 +121,9 @@ export default function CheckInPage() {
         const data = (await response.json()) as Record<string, unknown>;
         const rawRes = (data.reservation ?? {}) as Record<string, unknown>;
         const rawOrders = (rawRes.pre_orders ?? []) as Record<string, unknown>[];
-        const res: Reservation = {
+        const res: CheckInData = {
           id: rawRes.id as string,
-          name: rawRes.name as string,
-          email: "",
-          phone: "",
+          name: (rawRes.name ?? "") as string,
           eventId: (rawRes.event_id ?? "") as string,
           eventTitle: (rawRes.event_title ?? "") as string,
           guestCount: (rawRes.guest_count ?? 1) as number,
@@ -130,12 +138,9 @@ export default function CheckInPage() {
           notes: (rawRes.notes ?? "") as string,
           accessibilityNote: (rawRes.accessibility_note ?? "") as string,
           status: (rawRes.status ?? "pending") as ReservationStatus,
-          paymentStatus: "unpaid", // not included in CheckInGuestOut
           checkedIn: (rawRes.checked_in ?? false) as boolean,
           checkedInAt: rawRes.checked_in_at as string | undefined,
           strapIssued: (rawRes.strap_issued ?? false) as boolean,
-          createdAt: "", // not included in CheckInGuestOut
-          updatedAt: "", // not included in CheckInGuestOut
         };
         setReservation(res);
         setSuccess(true);

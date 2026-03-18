@@ -29,20 +29,17 @@ def make_id(prefix: str) -> str:
 
 def reservation_to_dict(r: Reservation) -> dict:
     """Serialise a Reservation ORM row to a plain dict (no check_in_token)."""
-    person_key = getattr(getattr(r, "_person", None), "person_key", None)
+    person: Person | None = getattr(r, "_person", None)
     return {
         "id": r.id,
-        "person_key": person_key,
-        "name": r.name,
-        "email": r.email,
-        "phone": r.phone,
+        "person_id": r.person_id,
+        "person": person_to_dict(person) if person else {},
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
         "pre_orders": r.get_pre_orders(),
         "notes": r.notes,
         "accessibility_note": r.accessibility_note,
-        "person_id": r.person_id,
         "table_id": r.table_id,
         "status": r.status,
         "payment_status": r.payment_status,
@@ -60,9 +57,10 @@ def reservation_to_checkin_dict(r: Reservation) -> dict:
     Only exposes fields needed on the volunteer tablet.  PII (email, phone) and
     internal-only fields (payment_status, table_id, timestamps) are omitted.
     """
+    person: Person | None = getattr(r, "_person", None)
     return {
         "id": r.id,
-        "name": r.name,
+        "name": person.name if person else "",
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
@@ -84,9 +82,8 @@ def reservation_to_dict_with_token(r: Reservation) -> dict:
 
 
 def reservation_to_list_dict(r: Reservation) -> dict:
-    """Serialise a Reservation for the list endpoint (drops phone/notes)."""
+    """Serialise a Reservation for the list endpoint (drops notes)."""
     d = reservation_to_dict(r)
-    d.pop("phone", None)
     d.pop("notes", None)
     return d
 
@@ -94,13 +91,13 @@ def reservation_to_list_dict(r: Reservation) -> dict:
 def reservation_to_guest_dict(r: Reservation) -> dict:
     """Serialise a Reservation for the visitor self-lookup endpoint.
 
-    Strips all sensitive / internal fields: phone, notes, checkInToken.
+    Strips all sensitive / internal fields: notes, checkInToken.
     Returns only safe-to-share booking status information.
     """
-    person_key = getattr(getattr(r, "_person", None), "person_key", None)
+    person: Person | None = getattr(r, "_person", None)
     return {
         "id": r.id,
-        "person_key": person_key,
+        "name": person.name if person else "",
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
@@ -274,7 +271,6 @@ def edition_to_dict(
 def person_to_dict(p: Person) -> dict:
     return {
         "id": p.id,
-        "person_key": p.person_key,
         "name": p.name,
         "email": p.email,
         "phone": p.phone,

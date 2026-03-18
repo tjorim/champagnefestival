@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Reservation
+from app.models import Person, Reservation
 from app.schemas import CheckInOut, CheckInRequest, CheckInGuestOut
 from app.utils import reservation_to_checkin_dict
 
@@ -33,6 +33,8 @@ async def get_check_in(
     check-in/strap status). PII fields (email, phone) are not included.
     """
     r = await _get_by_token_or_401(db, reservation_id, token)
+    person_result = await db.execute(select(Person).where(Person.id == r.person_id))
+    r._person = person_result.scalar_one_or_none()
     return reservation_to_checkin_dict(r)
 
 
@@ -52,6 +54,8 @@ async def post_check_in(
     Returns ``already_checked_in: true`` if the guest scanned their QR twice.
     """
     r = await _get_by_token_or_401(db, reservation_id, body.token)
+    person_result = await db.execute(select(Person).where(Person.id == r.person_id))
+    r._person = person_result.scalar_one_or_none()
 
     already = r.checked_in
     changed = False

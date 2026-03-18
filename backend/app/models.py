@@ -17,9 +17,6 @@ class Reservation(Base):
     __tablename__ = "reservations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    name: Mapped[str] = mapped_column(String(200))
-    email: Mapped[str] = mapped_column(String(200))
-    phone: Mapped[str] = mapped_column(String(50))
     event_id: Mapped[str] = mapped_column(String(100))
     event_title: Mapped[str] = mapped_column(String(200))
     guest_count: Mapped[int] = mapped_column(Integer)
@@ -29,8 +26,8 @@ class Reservation(Base):
     accessibility_note: Mapped[str] = mapped_column(Text, default="")
     """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
 
-    person_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    person_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="RESTRICT"), nullable=False
     )
     table_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
@@ -374,7 +371,6 @@ class Person(Base):
     __tablename__ = "people"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    person_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), default="")
     phone: Mapped[str] = mapped_column(String(50), default="")

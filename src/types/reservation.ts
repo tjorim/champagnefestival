@@ -27,12 +27,17 @@ export interface OrderItem {
   delivered: boolean;
 }
 
-export interface Reservation {
+export interface PersonSummary {
   id: string;
-  personId?: string | null;
   name: string;
   email: string;
   phone: string;
+}
+
+export interface Reservation {
+  id: string;
+  personId: string;
+  person: PersonSummary;
   eventId: string;
   eventTitle: string;
   guestCount: number;

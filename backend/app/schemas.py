@@ -1,7 +1,7 @@
 """Pydantic request / response schemas."""
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
@@ -34,12 +34,37 @@ class OrderItemOut(OrderItemBase):
 
 
 # ---------------------------------------------------------------------------
+# People (output — defined early so reservation schemas can reference it)
+# ---------------------------------------------------------------------------
+
+
+class PersonOut(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: str
+    address: str
+    roles: list[str]
+    first_help_day: date | None
+    last_help_day: date | None
+    national_register_number: str | None
+    eid_document_number: str | None
+    visits_per_month: int | None
+    club_name: str
+    notes: str
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
 # Reservations
 # ---------------------------------------------------------------------------
 
 
 class ReservationCreate(BaseModel):
-    person_key: str | None = Field(default=None, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
@@ -65,24 +90,21 @@ class ReservationUpdate(BaseModel):
     pre_orders: list[OrderItemBase] | None = None
     notes: str | None = None
     accessibility_note: str | None = None
-    person_id: str | None = None
+    person_id: str | None = Field(default=None, min_length=1)
     checked_in: bool | None = None
     strap_issued: bool | None = None
 
 
 class ReservationOut(BaseModel):
     id: str
-    person_key: str | None
-    name: str
-    email: str
-    phone: str
+    person_id: str
+    person: PersonOut
     event_id: str
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str
     accessibility_note: str
-    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -107,15 +129,13 @@ class ReservationListOut(BaseModel):
     check_in_token is intentionally excluded here."""
 
     id: str
-    person_key: str | None
-    name: str
-    email: str
+    person_id: str
+    person: PersonOut
     event_id: str
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
     accessibility_note: str
-    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -129,14 +149,14 @@ class ReservationListOut(BaseModel):
 
 
 class ReservationGuestOut(BaseModel):
-    person_key: str | None
     """Reservation data returned to visitors via the self-lookup endpoint.
 
-    Only safe-to-expose fields — no phone, no internal notes, no checkInToken.
+    Only safe-to-expose fields — no internal notes, no checkInToken.
     Allows a guest to check their own booking status and pre-order summary.
     """
 
     id: str
+    name: str
     event_id: str
     event_title: str
     guest_count: int
@@ -154,10 +174,7 @@ class ReservationGuestOut(BaseModel):
 class ReservationAdminCreate(BaseModel):
     """Admin-only reservation creation — skips spam checks, accepts person_id directly."""
 
-    person_id: str | None = None
-    name: str = Field(min_length=1, max_length=200)
-    email: EmailStr
-    phone: str = Field(default="", max_length=50)
+    person_id: str = Field(min_length=1, max_length=64)
     event_id: str = Field(min_length=1, max_length=100)
     event_title: str = Field(min_length=1, max_length=200)
     guest_count: int = Field(ge=1, le=20)
@@ -166,7 +183,7 @@ class ReservationAdminCreate(BaseModel):
     accessibility_note: str = Field(default="", max_length=2000)
     status: ReservationStatus = "confirmed"
 
-    @field_validator("name", "phone", "event_id", "event_title", "notes", mode="before")
+    @field_validator("event_id", "event_title", "notes", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip() if isinstance(v, str) else v
@@ -278,28 +295,6 @@ class PersonUpdate(BaseModel):
     club_name: str | None = Field(default=None, max_length=200)
     notes: str | None = Field(default=None, max_length=2000)
     active: bool | None = None
-
-
-class PersonOut(BaseModel):
-    id: str
-    person_key: str
-    name: str
-    email: str
-    phone: str
-    address: str
-    roles: list[str]
-    first_help_day: date | None
-    last_help_day: date | None
-    national_register_number: str | None
-    eid_document_number: str | None
-    visits_per_month: int | None
-    club_name: str
-    notes: str
-    active: bool
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 # ---------------------------------------------------------------------------
@@ -446,7 +441,7 @@ class TableTypeCreate(BaseModel):
     active: bool = True
 
     @model_validator(mode="after")
-    def normalise_dimensions(self) -> "TableTypeCreate":
+    def normalise_dimensions(self) -> Self:
         if self.shape == "round":
             self.length_m = self.width_m
         elif self.length_m < self.width_m:

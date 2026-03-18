@@ -1,7 +1,7 @@
 """People CRUD endpoints (admin-only)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select  # or_ used in list_people search
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,7 +93,6 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
 
     person = Person(
         id=make_id("per"),
-        person_key=make_id("pkey"),
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
         phone=body.phone,
@@ -233,17 +232,15 @@ async def list_person_reservations(
 ) -> list[dict]:
     person = await _get_or_404(db, person_id)
 
-    stmt = select(Reservation).where(Reservation.person_id == person.id)
-    if person.email:
-        stmt = select(Reservation).where(
-            or_(
-                Reservation.person_id == person.id,
-                Reservation.email == person.email,
-            )
-        )
-
-    result = await db.execute(stmt.order_by(Reservation.created_at.desc()))
-    return [reservation_to_list_dict(r) for r in result.scalars().all()]
+    result = await db.execute(
+        select(Reservation)
+        .where(Reservation.person_id == person.id)
+        .order_by(Reservation.created_at.desc())
+    )
+    rows = result.scalars().all()
+    for r in rows:
+        r._person = person
+    return [reservation_to_list_dict(r) for r in rows]
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
