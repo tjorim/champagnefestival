@@ -67,30 +67,36 @@ class Reservation(Base):
         self.pre_orders = json.dumps(items)
 
 
-class ContentItem(Base):
-    """Key-value store for CMS-managed content (producers, sponsors).
+class Producer(Base):
+    """A champagne producer participating in the festival."""
 
-    Each row stores a JSON array under a named key.  Keys are restricted to a
-    known set at the API layer; arbitrary keys are rejected.
-    """
+    __tablename__ = "producers"
 
-    __tablename__ = "content_items"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200))
+    image: Mapped[str] = mapped_column(String(500), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    key: Mapped[str] = mapped_column(String(50), primary_key=True)
-    """Identifier, e.g. 'producers' or 'sponsors'."""
-
-    value: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
-    """JSON-encoded list of SliderItem objects."""
-
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
-    def get_items(self) -> list[dict]:
-        return json.loads(self.value) if self.value else []
 
-    def set_items(self, items: list[dict]) -> None:
-        self.value = json.dumps(items)
+class Sponsor(Base):
+    """A sponsor of the festival."""
+
+    __tablename__ = "sponsors"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200))
+    image: Mapped[str] = mapped_column(String(500), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
 
 class Venue(Base):

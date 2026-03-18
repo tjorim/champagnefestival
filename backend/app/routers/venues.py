@@ -52,7 +52,7 @@ async def list_venues(
     return [venue_to_dict(v) for v in result.scalars().all()]
 
 
-@router.get("/{venue_id}", response_model=VenueOut)
+@router.get("/{venue_id}", response_model=VenueOut, dependencies=[Depends(require_admin)])
 async def get_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     return venue_to_dict(await _get_or_404(db, venue_id))
 

@@ -119,7 +119,7 @@ export default function EditionModal({
     setFriday(initial?.friday ?? "");
     setSaturday(initial?.saturday ?? "");
     setSunday(initial?.sunday ?? "");
-    setVenueId(initial?.venue_id ?? venuesRef.current.find((v) => v.active)?.id ?? "");
+    setVenueId(initial?.venue?.id ?? venuesRef.current.find((v) => v.active)?.id ?? "");
     setActive(initial?.active ?? true);
     setError(null);
 
@@ -127,16 +127,16 @@ export default function EditionModal({
     async function fetchItems() {
       try {
         const [pRes, sRes] = await Promise.all([
-          fetch("/api/content/producers"),
-          fetch("/api/content/sponsors"),
+          fetch("/api/producers", { headers: authHeaders() }),
+          fetch("/api/sponsors", { headers: authHeaders() }),
         ]);
         if (pRes.ok) {
-          const pData = (await pRes.json()) as { value: ItemDraft[] };
-          if (Array.isArray(pData.value)) setAllProducers(pData.value);
+          const pData = (await pRes.json()) as ItemDraft[];
+          if (Array.isArray(pData)) setAllProducers(pData);
         }
         if (sRes.ok) {
-          const sData = (await sRes.json()) as { value: ItemDraft[] };
-          if (Array.isArray(sData.value)) setAllSponsors(sData.value);
+          const sData = (await sRes.json()) as ItemDraft[];
+          if (Array.isArray(sData)) setAllSponsors(sData);
         }
       } catch {
         // non-critical; selects will just be empty
