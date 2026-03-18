@@ -8,7 +8,7 @@
 - ✅ All core UI components migrated from Next.js to React
 - ✅ Paraglide compile-time i18n implemented for `nl`, `en`, and `fr`
 - ✅ Vite build pipeline and environment-based configuration in place
-- ✅ Cloudflare Pages deployment configuration (`wrangler.toml`) in place
+- ✅ GitHub Pages deployment configured via GitHub Actions workflow
 - ✅ Next.js-specific code and dependencies removed
 
 ## Validation and delivery status
