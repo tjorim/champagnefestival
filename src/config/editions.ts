@@ -52,6 +52,13 @@ export interface ScheduleEvent {
   dayId: number;
 }
 
+export interface SliderItem {
+  id: number;
+  name: string;
+  image: string;
+  active?: boolean;
+}
+
 export interface Edition {
   /** Unique identifier, e.g. "2026-march" */
   id: string;
@@ -61,6 +68,10 @@ export interface Edition {
   venue: EditionVenue;
   /** Schedule events for this edition. Empty array means TBD. */
   schedule: ScheduleEvent[];
+  /** Producers participating in this edition. */
+  producers: SliderItem[];
+  /** Sponsors participating in this edition. */
+  sponsors: SliderItem[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -221,6 +232,8 @@ export const editions: Edition[] = [
     },
     venue: venueBredene2026,
     schedule: schedule2026March,
+    producers: [],
+    sponsors: [],
   },
 
   // ── 2026 October ───────────────────────────────────────────────────────────
@@ -232,6 +245,8 @@ export const editions: Edition[] = [
     dates: getFirstFullWeekend(2026, 10),
     venue: venueBredene2026,
     schedule: [], // TBD – update when the programme is confirmed
+    producers: [],
+    sponsors: [],
   },
 ];
 

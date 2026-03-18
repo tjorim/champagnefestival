@@ -17,7 +17,6 @@ import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useLanguage } from "./hooks/useLanguage";
 import { useScrollNavigation } from "./hooks/useScrollNavigation";
 import { useServiceWorker } from "./hooks/useServiceWorker";
-import { useContent } from "./hooks/useContent";
 import { useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
@@ -144,11 +143,9 @@ function App() {
   useScrollNavigation();
   useServiceWorker();
 
-  // Fetch CMS-managed producers and sponsors; falls back to config placeholders
-  const { producers, sponsors } = useContent();
-
   // Fetch live edition data; falls back to hardcoded editions.ts on any error
   const { edition } = useActiveEdition();
+  const { producers, sponsors } = edition;
 
   // Derive festival start/end dates from the active edition
   const festivalDate = useMemo(() => {

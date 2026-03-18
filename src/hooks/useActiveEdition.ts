@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { getActiveEdition, type Edition } from "../config/editions";
+import { getActiveEdition, type Edition, type SliderItem } from "../config/editions";
 
 export interface ActiveEditionState {
   edition: Edition;
@@ -58,6 +58,8 @@ export function useActiveEdition(): ActiveEditionState {
           sunday: string;
           venue_id: string;
           schedule: ApiScheduleEvent[];
+          producers: SliderItem[];
+          sponsors: SliderItem[];
         }
 
         const apiEditions = (await editionsRes.json()) as ApiEdition[];
@@ -129,6 +131,8 @@ export function useActiveEdition(): ActiveEditionState {
             category: ev.category,
             dayId: ev.day_id,
           })),
+          producers: (activeApi.producers ?? []).filter((p) => p.active !== false),
+          sponsors: (activeApi.sponsors ?? []).filter((s) => s.active !== false),
         };
 
         setEdition(newEdition);
