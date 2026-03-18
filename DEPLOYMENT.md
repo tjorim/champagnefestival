@@ -50,7 +50,7 @@ In GitHub repository settings:
 
 ## Notes on hosting assumptions
 
-- `vite.config.ts` uses `base: "/champagnefestival/"` to match GitHub Pages
+- [`vite.config.ts`](./vite.config.ts) uses `base: "/champagnefestival/"` to match GitHub Pages
   project-site hosting under the repository path.
 - Cloudflare Pages/Wrangler deployment instructions were removed because they
   are not the production deployment path for this repository.
