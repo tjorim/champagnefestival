@@ -18,6 +18,7 @@ export interface ItemDraft {
   image: string;
   website?: string;
   active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
+  type?: string;
   contact_person_id?: string | null;
   contact_person?: ContactPerson | null;
 }
@@ -64,6 +65,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
   const [website, setWebsite] = useState("");
+  const [type, setType] = useState<string>("vendor");
   const [contactOption, setContactOption] = useState<SingleValue<PersonOption>>(null);
   const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
   const [personQuery, setPersonQuery] = useState("");
@@ -74,6 +76,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
       setName(initial?.name ?? "");
       setImage(initial?.image ?? "");
       setWebsite(initial?.website ?? "");
+      setType(initial?.type ?? "vendor");
       const cp = initial?.contact_person;
       setContactOption(
         cp ? { value: cp.id, label: cp.name, sub: [cp.email, cp.phone].filter(Boolean).join(" · ") } : null,
@@ -124,6 +127,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
       image: image.trim(),
       website: website.trim(),
       active: initial?.active ?? true,
+      type,
       contact_person_id: contactOption?.value ?? null,
       contact_person: contactOption
         ? {
@@ -177,6 +181,18 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               className="bg-dark text-light border-secondary"
               placeholder="https://…"
             />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="text-secondary small">Type</Form.Label>
+            <Form.Select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="vendor">Vendor</option>
+              <option value="producer">Producer</option>
+              <option value="sponsor">Sponsor</option>
+            </Form.Select>
           </Form.Group>
           <Form.Group>
             <Form.Label className="text-secondary small">Contact person</Form.Label>

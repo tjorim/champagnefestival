@@ -102,8 +102,6 @@ function apiAreaToArea(d: Record<string, unknown>): FloorArea {
     id: d.id as string,
     layoutId: d.layout_id as string,
     icon: (d.icon ?? "bi-shop") as string,
-    producerId: (d.producer_id as number | null) ?? null,
-    sponsorId: (d.sponsor_id as number | null) ?? null,
     exhibitorId: (d.exhibitor_id as number | null) ?? null,
     label: (d.label ?? "") as string,
     x: (d.x ?? 50) as number,
@@ -166,8 +164,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tableTypes, setTableTypes] = useState<TableType[]>([]);
   const [layouts, setLayouts] = useState<Layout[]>([]);
-  const [producers, setProducers] = useState<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]>([]);
-  const [sponsors, setSponsors] = useState<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]>([]);
   const [exhibitors, setExhibitors] = useState<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]>([]);
   const [areas, setAreas] = useState<FloorArea[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
@@ -193,8 +189,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         roomsResponse,
         tableTypesResponse,
         layoutsResponse,
-        producersResponse,
-        sponsorsResponse,
         exhibitorsResponse,
         areasResponse,
       ] = await Promise.all([
@@ -204,8 +198,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fetch("/api/rooms", { headers: authHeaders() }),
         fetch("/api/table-types", { headers: authHeaders() }),
         fetch("/api/layouts", { headers: authHeaders() }),
-        fetch("/api/producers", { headers: authHeaders() }),
-        fetch("/api/sponsors", { headers: authHeaders() }),
         fetch("/api/exhibitors", { headers: authHeaders() }),
         fetch("/api/areas", { headers: authHeaders() }),
       ]);
@@ -217,8 +209,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         roomsResponse,
         tableTypesResponse,
         layoutsResponse,
-        producersResponse,
-        sponsorsResponse,
         exhibitorsResponse,
         areasResponse,
       ];
@@ -236,8 +226,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setRooms([]);
         setTableTypes([]);
         setLayouts([]);
-        setProducers([]);
-        setSponsors([]);
         setExhibitors([]);
         setAreas([]);
         setError(m.admin_error_load_data());
@@ -267,30 +255,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       const layoutsData = await layoutsResponse.json();
       setLayouts(Array.isArray(layoutsData) ? layoutsData.map(apiLayoutToLayout) : []);
-
-      const producersData = await producersResponse.json();
-      setProducers(
-        Array.isArray(producersData)
-          ? producersData.map((p: Record<string, unknown>) => ({
-              id: p.id as number,
-              name: p.name as string,
-              active: (p.active ?? true) as boolean,
-              contactPersonId: (p.contact_person_id as string | null) ?? null,
-            }))
-          : [],
-      );
-
-      const sponsorsData = await sponsorsResponse.json();
-      setSponsors(
-        Array.isArray(sponsorsData)
-          ? sponsorsData.map((s: Record<string, unknown>) => ({
-              id: s.id as number,
-              name: s.name as string,
-              active: (s.active ?? true) as boolean,
-              contactPersonId: (s.contact_person_id as string | null) ?? null,
-            }))
-          : [],
-      );
 
       const exhibitorsData = await exhibitorsResponse.json();
       setExhibitors(
@@ -691,8 +655,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       layoutId: string,
       widthM: number,
       lengthM: number,
-      producerId?: number,
-      sponsorId?: number,
       exhibitorId?: number,
     ) => {
       const response = await fetch("/api/areas", {
@@ -706,8 +668,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           length_m: lengthM,
           x: 10,
           y: 10,
-          producer_id: producerId ?? null,
-          sponsor_id: sponsorId ?? null,
           exhibitor_id: exhibitorId ?? null,
         }),
       });
@@ -772,15 +732,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleAssignAreaToItem = useCallback(
     async (
       areaId: string,
-      producerId: number | null,
-      sponsorId: number | null,
       exhibitorId: number | null,
       label?: string,
       icon?: string,
     ) => {
       const body: Record<string, unknown> = {
-        producer_id: producerId,
-        sponsor_id: sponsorId,
         exhibitor_id: exhibitorId,
       };
       if (label !== undefined) body.label = label;
@@ -1137,8 +1093,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     <ReservationList
                       reservations={reservations}
                       tables={tables}
-                      producers={producers}
-                      sponsors={sponsors}
                       exhibitors={exhibitors}
                       filter={filter}
                       onFilterChange={setFilter}
@@ -1157,8 +1111,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       layouts={layouts}
                       reservations={reservations}
                       rooms={rooms}
-                      producers={producers}
-                      sponsors={sponsors}
                       exhibitors={exhibitors}
                       areas={areas}
                       onAddTable={handleAddTable}

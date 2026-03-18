@@ -4,7 +4,7 @@ import secrets
 import time
 from typing import Any
 
-from app.models import Area, Edition, Exhibitor, Layout, Person, Producer, Reservation, Room, Sponsor, Table, TableType, Venue
+from app.models import Area, Edition, Exhibitor, Layout, Person, Reservation, Room, Table, TableType, Venue
 
 
 def roles_contains(role: str) -> Any:
@@ -111,34 +111,6 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
     }
 
 
-def producer_to_dict(p: Producer, contact_person: Person | None = None) -> dict:
-    return {
-        "id": p.id,
-        "name": p.name,
-        "image": p.image,
-        "website": p.website,
-        "active": p.active,
-        "contact_person_id": p.contact_person_id,
-        "contact_person": person_to_dict(contact_person) if contact_person else None,
-        "created_at": p.created_at,
-        "updated_at": p.updated_at,
-    }
-
-
-def sponsor_to_dict(s: Sponsor, contact_person: Person | None = None) -> dict:
-    return {
-        "id": s.id,
-        "name": s.name,
-        "image": s.image,
-        "website": s.website,
-        "active": s.active,
-        "contact_person_id": s.contact_person_id,
-        "contact_person": person_to_dict(contact_person) if contact_person else None,
-        "created_at": s.created_at,
-        "updated_at": s.updated_at,
-    }
-
-
 def exhibitor_to_dict(e: Exhibitor, contact_person: Person | None = None) -> dict:
     return {
         "id": e.id,
@@ -146,6 +118,7 @@ def exhibitor_to_dict(e: Exhibitor, contact_person: Person | None = None) -> dic
         "image": e.image,
         "website": e.website,
         "active": e.active,
+        "type": e.type,
         "contact_person_id": e.contact_person_id,
         "contact_person": person_to_dict(contact_person) if contact_person else None,
         "created_at": e.created_at,
@@ -157,8 +130,6 @@ def area_to_dict(a: Area) -> dict:
     return {
         "id": a.id,
         "layout_id": a.layout_id,
-        "producer_id": a.producer_id,
-        "sponsor_id": a.sponsor_id,
         "exhibitor_id": a.exhibitor_id,
         "label": a.label,
         "icon": a.icon,

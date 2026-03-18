@@ -298,76 +298,6 @@ class PersonUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Producers
-# ---------------------------------------------------------------------------
-
-
-class ProducerCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    image: str = Field(default="", max_length=500)
-    website: str = Field(default="", max_length=500)
-    active: bool = True
-    contact_person_id: str | None = None
-
-
-class ProducerUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    image: str | None = Field(default=None, max_length=500)
-    website: str | None = Field(default=None, max_length=500)
-    active: bool | None = None
-    contact_person_id: str | None = None
-
-
-class ProducerOut(BaseModel):
-    id: int
-    name: str
-    image: str
-    website: str
-    active: bool
-    contact_person_id: str | None
-    contact_person: PersonOut | None
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
-# Sponsors
-# ---------------------------------------------------------------------------
-
-
-class SponsorCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    image: str = Field(default="", max_length=500)
-    website: str = Field(default="", max_length=500)
-    active: bool = True
-    contact_person_id: str | None = None
-
-
-class SponsorUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    image: str | None = Field(default=None, max_length=500)
-    website: str | None = Field(default=None, max_length=500)
-    active: bool | None = None
-    contact_person_id: str | None = None
-
-
-class SponsorOut(BaseModel):
-    id: int
-    name: str
-    image: str
-    website: str
-    active: bool
-    contact_person_id: str | None
-    contact_person: PersonOut | None
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
 # Exhibitors
 # ---------------------------------------------------------------------------
 
@@ -377,6 +307,7 @@ class ExhibitorCreate(BaseModel):
     image: str = Field(default="", max_length=500)
     website: str = Field(default="", max_length=500)
     active: bool = True
+    type: Literal["producer", "sponsor", "vendor"] = "vendor"
     contact_person_id: str | None = None
 
 
@@ -385,6 +316,7 @@ class ExhibitorUpdate(BaseModel):
     image: str | None = Field(default=None, max_length=500)
     website: str | None = Field(default=None, max_length=500)
     active: bool | None = None
+    type: Literal["producer", "sponsor", "vendor"] | None = None
     contact_person_id: str | None = None
 
 
@@ -394,6 +326,7 @@ class ExhibitorOut(BaseModel):
     image: str
     website: str
     active: bool
+    type: str
     contact_person_id: str | None
     contact_person: PersonOut | None
     created_at: datetime
@@ -522,8 +455,6 @@ class AreaCreate(BaseModel):
     layout_id: str = Field(max_length=64)
     label: str = Field(min_length=1, max_length=200)
     icon: str = Field(default="bi-shop", max_length=50)
-    producer_id: int | None = None
-    sponsor_id: int | None = None
     exhibitor_id: int | None = None
     width_m: float = Field(ge=0.1, le=50.0, default=1.5)
     length_m: float = Field(ge=0.1, le=50.0, default=1.0)
@@ -535,8 +466,6 @@ class AreaCreate(BaseModel):
 class AreaUpdate(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=200)
     icon: str | None = Field(default=None, max_length=50)
-    producer_id: int | None = None
-    sponsor_id: int | None = None
     exhibitor_id: int | None = None
     width_m: float | None = Field(default=None, ge=0.1, le=50.0)
     length_m: float | None = Field(default=None, ge=0.1, le=50.0)
@@ -549,8 +478,6 @@ class AreaOut(BaseModel):
     id: str
     layout_id: str
     icon: str
-    producer_id: int | None
-    sponsor_id: int | None
     exhibitor_id: int | None
     label: str
     x: float
@@ -674,8 +601,7 @@ class EditionCreate(BaseModel):
     sunday: date
     venue_id: str
     schedule: list[ScheduleEventIn] = Field(default_factory=list)
-    producers: list[int] = Field(default_factory=list)
-    sponsors: list[int] = Field(default_factory=list)
+    exhibitors: list[int] = Field(default_factory=list)
     active: bool = True
 
 
@@ -687,13 +613,12 @@ class EditionUpdate(BaseModel):
     sunday: date | None = None
     venue_id: str | None = None
     schedule: list[ScheduleEventIn] | None = None
-    producers: list[int] | None = None
-    sponsors: list[int] | None = None
+    exhibitors: list[int] | None = None
     active: bool | None = None
 
 
 class EditionItemOut(BaseModel):
-    """Slim producer/sponsor shape embedded in the public edition response.
+    """Slim exhibitor shape embedded in the public edition response.
     Only active items are included; contact person and active flag are
     intentionally excluded — they are internal admin data."""
 
@@ -701,6 +626,7 @@ class EditionItemOut(BaseModel):
     name: str
     image: str
     website: str
+    type: str
 
     model_config = {"from_attributes": True}
 

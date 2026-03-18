@@ -106,10 +106,8 @@ export default function EditionModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [allProducers, setAllProducers] = useState<ItemDraft[]>([]);
-  const [allSponsors, setAllSponsors] = useState<ItemDraft[]>([]);
-  const [selectedProducers, setSelectedProducers] = useState<MultiValue<ItemOption>>([]);
-  const [selectedSponsors, setSelectedSponsors] = useState<MultiValue<ItemOption>>([]);
+  const [allExhibitors, setAllExhibitors] = useState<ItemDraft[]>([]);
+  const [selectedExhibitors, setSelectedExhibitors] = useState<MultiValue<ItemOption>>([]);
 
   useEffect(() => {
     if (!show) return;
@@ -126,54 +124,32 @@ export default function EditionModal({
     // Fetch item pools when the modal opens
     async function fetchItems() {
       try {
-        const [pRes, sRes] = await Promise.all([
-          fetch("/api/producers", { headers: authHeaders() }),
-          fetch("/api/sponsors", { headers: authHeaders() }),
-        ]);
-        if (pRes.ok) {
-          const pData = (await pRes.json()) as ItemDraft[];
-          if (Array.isArray(pData)) setAllProducers(pData);
-        }
-        if (sRes.ok) {
-          const sData = (await sRes.json()) as ItemDraft[];
-          if (Array.isArray(sData)) setAllSponsors(sData);
+        const eRes = await fetch("/api/exhibitors", { headers: authHeaders() });
+        if (eRes.ok) {
+          const eData = (await eRes.json()) as ItemDraft[];
+          if (Array.isArray(eData)) setAllExhibitors(eData);
         }
       } catch {
-        // non-critical; selects will just be empty
+        // non-critical; select will just be empty
       }
     }
     fetchItems();
   }, [show, initial]);
 
-  // Sync selections once pools are loaded
+  // Sync selections once pool is loaded
   useEffect(() => {
-    if (allProducers.length === 0) return;
-    const ids = new Set((initial?.producers ?? []).map((p) => p.id));
-    const { active: act, archived: arch } = toOptions(allProducers);
-    setSelectedProducers([...act, ...arch].filter((o) => ids.has(o.value)));
-  }, [allProducers, initial]);
-
-  useEffect(() => {
-    if (allSponsors.length === 0) return;
-    const ids = new Set((initial?.sponsors ?? []).map((s) => s.id));
-    const { active: act, archived: arch } = toOptions(allSponsors);
-    setSelectedSponsors([...act, ...arch].filter((o) => ids.has(o.value)));
-  }, [allSponsors, initial]);
+    if (allExhibitors.length === 0) return;
+    const ids = new Set([...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id));
+    const { active: act, archived: arch } = toOptions(allExhibitors);
+    setSelectedExhibitors([...act, ...arch].filter((o) => ids.has(o.value)));
+  }, [allExhibitors, initial]);
 
   const isEdit = !!initial;
 
-  const producerGroups = (() => {
-    const { active: act, archived: arch } = toOptions(allProducers);
+  const exhibitorGroups = (() => {
+    const { active: act, archived: arch } = toOptions(allExhibitors);
     const groups = [];
-    if (act.length) groups.push({ label: m.admin_content_producers_section(), options: act });
-    if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
-    return groups;
-  })();
-
-  const sponsorGroups = (() => {
-    const { active: act, archived: arch } = toOptions(allSponsors);
-    const groups = [];
-    if (act.length) groups.push({ label: m.admin_content_sponsors_section(), options: act });
+    if (act.length) groups.push({ label: "Exhibitors", options: act });
     if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
     return groups;
   })();
@@ -194,8 +170,7 @@ export default function EditionModal({
         sunday,
         venue_id: venueId,
         active,
-        producers: selectedProducers.map((o: ItemOption) => o.value),
-        sponsors: selectedSponsors.map((o: ItemOption) => o.value),
+        exhibitors: selectedExhibitors.map((o: ItemOption) => o.value),
       };
       if (!isEdit) body.id = id.trim();
       const res = await fetch(url, {
@@ -338,32 +313,17 @@ export default function EditionModal({
             </Form.Select>
           </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small mb-1">
-              {m.admin_content_edition_producers_label()}
-            </Form.Label>
-            <Select<ItemOption, true, GroupBase<ItemOption>>
-              isMulti
-              options={producerGroups}
-              value={selectedProducers}
-              onChange={setSelectedProducers}
-              styles={darkSelectStyles}
-              placeholder={m.admin_content_edition_producers_placeholder()}
-              classNamePrefix="rs"
-            />
-          </Form.Group>
-
           <Form.Group>
             <Form.Label className="text-secondary small mb-1">
-              {m.admin_content_edition_sponsors_label()}
+              Exhibitors
             </Form.Label>
             <Select<ItemOption, true, GroupBase<ItemOption>>
               isMulti
-              options={sponsorGroups}
-              value={selectedSponsors}
-              onChange={setSelectedSponsors}
+              options={exhibitorGroups}
+              value={selectedExhibitors}
+              onChange={setSelectedExhibitors}
               styles={darkSelectStyles}
-              placeholder={m.admin_content_edition_sponsors_placeholder()}
+              placeholder="Select exhibitors…"
               classNamePrefix="rs"
             />
           </Form.Group>

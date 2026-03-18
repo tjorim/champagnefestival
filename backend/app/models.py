@@ -64,48 +64,8 @@ class Reservation(Base):
         self.pre_orders = json.dumps(items)
 
 
-class Producer(Base):
-    """A champagne producer participating in the festival."""
-
-    __tablename__ = "producers"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(200))
-    image: Mapped[str] = mapped_column(String(500), default="")
-    website: Mapped[str] = mapped_column(String(500), default="")
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
-    contact_person_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
-    )
-
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
-
-
-class Sponsor(Base):
-    """A sponsor of the festival."""
-
-    __tablename__ = "sponsors"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(200))
-    image: Mapped[str] = mapped_column(String(500), default="")
-    website: Mapped[str] = mapped_column(String(500), default="")
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
-    contact_person_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
-    )
-
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
-
-
 class Exhibitor(Base):
-    """A vendor that is not a champagne producer and does not financially sponsor the festival."""
+    """A unified exhibitor: champagne producer, sponsor, or vendor."""
 
     __tablename__ = "exhibitors"
 
@@ -114,6 +74,8 @@ class Exhibitor(Base):
     image: Mapped[str] = mapped_column(String(500), default="")
     website: Mapped[str] = mapped_column(String(500), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    type: Mapped[str] = mapped_column(String(20), default="vendor")
+    """'producer' | 'sponsor' | 'vendor'"""
     contact_person_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
     )
@@ -279,12 +241,6 @@ class Area(Base):
     layout_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False
     )
-    producer_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("producers.id", ondelete="SET NULL"), nullable=True
-    )
-    sponsor_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("sponsors.id", ondelete="SET NULL"), nullable=True
-    )
     exhibitor_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
     )
@@ -329,9 +285,8 @@ class Edition(Base):
     # JSON-encoded list of schedule event dicts
     schedule: Mapped[str] = mapped_column(Text, default="[]")
 
-    # JSON-encoded lists of producer/sponsor IDs participating in this edition
-    producers: Mapped[str] = mapped_column(Text, default="[]")
-    sponsors: Mapped[str] = mapped_column(Text, default="[]")
+    # JSON-encoded list of exhibitor IDs participating in this edition
+    exhibitors: Mapped[str] = mapped_column(Text, default="[]")
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -352,17 +307,11 @@ class Edition(Base):
     def set_schedule(self, events: list[dict]) -> None:
         self.schedule = json.dumps(events)
 
-    def get_producers(self) -> list[int]:
-        return json.loads(self.producers) if self.producers else []
+    def get_exhibitors(self) -> list[int]:
+        return json.loads(self.exhibitors) if self.exhibitors else []
 
-    def set_producers(self, ids: list[int]) -> None:
-        self.producers = json.dumps(ids)
-
-    def get_sponsors(self) -> list[int]:
-        return json.loads(self.sponsors) if self.sponsors else []
-
-    def set_sponsors(self, ids: list[int]) -> None:
-        self.sponsors = json.dumps(ids)
+    def set_exhibitors(self, ids: list[int]) -> None:
+        self.exhibitors = json.dumps(ids)
 
 
 class Person(Base):

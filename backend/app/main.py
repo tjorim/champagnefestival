@@ -16,8 +16,6 @@ from app.routers import (
     check_in,
     contact,
     exhibitors,
-    producers,
-    sponsors,
     editions,
     layouts,
     people,
@@ -99,8 +97,6 @@ app.include_router(table_types.router)
 app.include_router(venues.router)
 app.include_router(rooms.router)
 app.include_router(layouts.router)
-app.include_router(producers.router)
-app.include_router(sponsors.router)
 app.include_router(exhibitors.router)
 app.include_router(editions.router)
 app.include_router(people.router)

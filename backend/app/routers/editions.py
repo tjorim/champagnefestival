@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Edition, Producer, Sponsor, Venue
+from app.models import Edition, Exhibitor, Venue
 from app.schemas import EditionCreate, EditionOut, EditionUpdate
 from app.utils import edition_to_dict, venue_to_dict
 
@@ -22,8 +22,8 @@ router = APIRouter(prefix="/api/editions", tags=["editions"])
 
 @router.get("/active", response_model=EditionOut)
 async def get_active_edition(db: AsyncSession = Depends(get_db)) -> dict:
-    """Return the current or next upcoming active edition with embedded venue,
-    producers, and sponsors.  Falls back to the most-recent past edition when
+    """Return the current or next upcoming active edition with embedded venue
+    and exhibitors.  Falls back to the most-recent past edition when
     all known editions are in the past.
     """
     result = await db.execute(
@@ -37,8 +37,9 @@ async def get_active_edition(db: AsyncSession = Depends(get_db)) -> dict:
     active = next((e for e in editions if e.sunday >= now), editions[-1])
 
     venue = await _load_venue(db, active.venue_id)
-    pools = await _load_pools(db)
-    return edition_to_dict(active, venue=venue, **_resolve_pools(active, pools))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(active.get_exhibitors()))
+    producers, sponsors = _resolve_exhibitors(active, exhibitor_map)
+    return edition_to_dict(active, venue=venue, producers=producers, sponsors=sponsors)
 
 
 # ---------------------------------------------------------------------------
@@ -58,12 +59,15 @@ async def list_editions(
     editions = result.scalars().all()
 
     venues = await _load_venues_by_ids(db, {e.venue_id for e in editions})
-    pools = await _load_pools(db)
-    return [
-        edition_to_dict(e, venue=venues[e.venue_id], **_resolve_pools(e, pools))
-        for e in editions
-        if e.venue_id in venues
-    ]
+    all_ids = {eid for e in editions for eid in e.get_exhibitors()}
+    exhibitor_map = await _load_exhibitors_by_ids(db, all_ids)
+    result_list = []
+    for e in editions:
+        if e.venue_id not in venues:
+            continue
+        producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
+        result_list.append(edition_to_dict(e, venue=venues[e.venue_id], producers=producers, sponsors=sponsors))
+    return result_list
 
 
 # ---------------------------------------------------------------------------
@@ -75,8 +79,9 @@ async def list_editions(
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     e = await _get_or_404(db, edition_id)
     venue = await _load_venue(db, e.venue_id)
-    pools = await _load_pools(db)
-    return edition_to_dict(e, venue=venue, **_resolve_pools(e, pools))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.get_exhibitors()))
+    producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
+    return edition_to_dict(e, venue=venue, producers=producers, sponsors=sponsors)
 
 
 @router.post(
@@ -103,14 +108,14 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
         active=body.active,
     )
     e.set_schedule([ev.model_dump() for ev in body.schedule])
-    e.set_producers(body.producers)
-    e.set_sponsors(body.sponsors)
+    e.set_exhibitors(body.exhibitors)
     db.add(e)
     await db.commit()
     await db.refresh(e)
     venue = await _load_venue(db, e.venue_id)
-    pools = await _load_pools(db)
-    return edition_to_dict(e, venue=venue, **_resolve_pools(e, pools))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.get_exhibitors()))
+    producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
+    return edition_to_dict(e, venue=venue, producers=producers, sponsors=sponsors)
 
 
 @router.put("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
@@ -126,16 +131,15 @@ async def update_edition(
         e.venue_id = body.venue_id
     if "schedule" in body.model_fields_set and body.schedule is not None:
         e.set_schedule([ev.model_dump() for ev in body.schedule])
-    if "producers" in body.model_fields_set and body.producers is not None:
-        e.set_producers(body.producers)
-    if "sponsors" in body.model_fields_set and body.sponsors is not None:
-        e.set_sponsors(body.sponsors)
+    if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
+        e.set_exhibitors(body.exhibitors)
 
     await db.commit()
     await db.refresh(e)
     venue = await _load_venue(db, e.venue_id)
-    pools = await _load_pools(db)
-    return edition_to_dict(e, venue=venue, **_resolve_pools(e, pools))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.get_exhibitors()))
+    producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
+    return edition_to_dict(e, venue=venue, producers=producers, sponsors=sponsors)
 
 
 @router.delete(
@@ -177,27 +181,25 @@ async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, dict
     return {v.id: venue_to_dict(v) for v in result.scalars().all()}
 
 
-async def _load_pools(db: AsyncSession) -> dict[str, list[dict]]:
-    """Load only active producers and sponsors in two queries."""
-    p_result = await db.execute(select(Producer).where(Producer.active.is_(True)).order_by(Producer.id))
-    s_result = await db.execute(select(Sponsor).where(Sponsor.active.is_(True)).order_by(Sponsor.id))
+async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, dict]:
+    if not ids:
+        return {}
+    result = await db.execute(select(Exhibitor).where(Exhibitor.id.in_(ids)))
     return {
-        "producers": [
-            {"id": p.id, "name": p.name, "image": p.image, "website": p.website}
-            for p in p_result.scalars().all()
-        ],
-        "sponsors": [
-            {"id": s.id, "name": s.name, "image": s.image, "website": s.website}
-            for s in s_result.scalars().all()
-        ],
+        e.id: {"id": e.id, "name": e.name, "image": e.image, "website": e.website, "type": e.type}
+        for e in result.scalars().all()
     }
 
 
-def _resolve_pools(e: Edition, pools: dict[str, list[dict]]) -> dict[str, list[dict]]:
-    """Filter each pool to the IDs stored on the edition, preserving order."""
-    producer_idx = {i["id"]: i for i in pools["producers"]}
-    sponsor_idx = {i["id"]: i for i in pools["sponsors"]}
-    return {
-        "producers": [producer_idx[pid] for pid in e.get_producers() if pid in producer_idx],
-        "sponsors": [sponsor_idx[sid] for sid in e.get_sponsors() if sid in sponsor_idx],
-    }
+def _resolve_exhibitors(e: Edition, exhibitor_map: dict[int, dict]) -> tuple[list[dict], list[dict]]:
+    producers = []
+    sponsors = []
+    for eid in e.get_exhibitors():
+        item = exhibitor_map.get(eid)
+        if item is None:
+            continue
+        if item["type"] == "producer":
+            producers.append(item)
+        elif item["type"] == "sponsor":
+            sponsors.append(item)
+    return producers, sponsors
