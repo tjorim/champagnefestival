@@ -23,8 +23,8 @@ export interface Edition {
   sunday: string;
   venue: { id: string; name: string; city: string; active: boolean };
   schedule: ScheduleEvent[];
-  producers?: { id: number; name: string; image: string; active?: boolean }[];
-  sponsors?: { id: number; name: string; image: string; active?: boolean }[];
+  producers?: { id: number; name: string; image: string; website: string }[];
+  sponsors?: { id: number; name: string; image: string; website: string }[];
   active: boolean;
   created_at: string;
   updated_at: string;

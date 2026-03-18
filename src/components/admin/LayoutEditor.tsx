@@ -101,8 +101,6 @@ interface LayoutEditorProps {
   layouts: Layout[];
   reservations: Reservation[];
   rooms: Room[];
-  producers: ItemRef[];
-  sponsors: ItemRef[];
   exhibitors: ItemRef[];
   areas: FloorArea[];
   onAddTable: (
@@ -122,8 +120,6 @@ interface LayoutEditorProps {
     layoutId: string,
     widthM: number,
     lengthM: number,
-    producerId?: number,
-    sponsorId?: number,
     exhibitorId?: number,
   ) => Promise<void>;
   onMoveArea: (areaId: string, x: number, y: number) => void;
@@ -131,8 +127,6 @@ interface LayoutEditorProps {
   onRotateArea: (areaId: string, rotation: number) => void;
   onAssignAreaToItem: (
     areaId: string,
-    producerId: number | null,
-    sponsorId: number | null,
     exhibitorId: number | null,
     label?: string,
     icon?: string,
@@ -336,8 +330,6 @@ interface RoomCanvasProps {
   roomAreas: FloorArea[];
   tableTypes: TableType[];
   reservations: Reservation[];
-  producers: ItemRef[];
-  sponsors: ItemRef[];
   exhibitors: ItemRef[];
   layer: "seating" | "areas";
   selectedTable: string | null;
@@ -354,8 +346,6 @@ function RoomCanvas({
   roomAreas,
   tableTypes,
   reservations,
-  producers,
-  sponsors,
   exhibitors,
   layer,
   selectedTable,
@@ -477,13 +467,9 @@ function RoomCanvas({
             );
           })}
           {roomAreas.map((area) => {
-            const assignedLabel = area.producerId
-              ? (producers.find((p) => p.id === area.producerId)?.name ?? `Producer #${area.producerId}`)
-              : area.sponsorId
-                ? (sponsors.find((s) => s.id === area.sponsorId)?.name ?? `Sponsor #${area.sponsorId}`)
-                : area.exhibitorId
-                  ? (exhibitors.find((e) => e.id === area.exhibitorId)?.name ?? `Exhibitor #${area.exhibitorId}`)
-                  : null;
+            const assignedLabel = area.exhibitorId
+              ? (exhibitors.find((e) => e.id === area.exhibitorId)?.name ?? `Exhibitor #${area.exhibitorId}`)
+              : null;
             return (
               <DraggableArea
                 key={area.id}
@@ -516,8 +502,6 @@ export default function LayoutEditor({
   layouts,
   reservations,
   rooms,
-  producers,
-  sponsors,
   exhibitors,
   areas,
   onAddTable,
@@ -613,7 +597,7 @@ export default function LayoutEditor({
     icon: "bi-shop",
     widthM: 1.5,
     lengthM: 1.0,
-    assignedType: "" as "" | "p" | "s" | "e",
+    assignedType: "" as "" | "e",
     assignedId: 0,
   });
   const [addAreaError, setAddAreaError] = useState<string | null>(null);
@@ -657,8 +641,6 @@ export default function LayoutEditor({
     if (!newArea.label.trim() || !activeLayoutId) return;
     setAddAreaError(null);
     try {
-      const producerId = newArea.assignedType === "p" ? newArea.assignedId : undefined;
-      const sponsorId = newArea.assignedType === "s" ? newArea.assignedId : undefined;
       const exhibitorId = newArea.assignedType === "e" ? newArea.assignedId : undefined;
       await onAddArea(
         newArea.label.trim(),
@@ -666,8 +648,6 @@ export default function LayoutEditor({
         activeLayoutId,
         newArea.widthM,
         newArea.lengthM,
-        producerId,
-        sponsorId,
         exhibitorId,
       );
       setNewArea({ label: "", icon: "bi-shop", widthM: 1.5, lengthM: 1.0, assignedType: "", assignedId: 0 });
@@ -891,8 +871,6 @@ export default function LayoutEditor({
                   roomAreas={canvasAreas}
                   tableTypes={tableTypes}
                   reservations={reservations}
-                  producers={producers}
-                  sponsors={sponsors}
                   exhibitors={exhibitors}
                   layer={layer}
                   selectedTable={selectedTable}
@@ -1079,8 +1057,6 @@ export default function LayoutEditor({
                     try {
                       await onAssignAreaToItem(
                         selectedAreaData.id,
-                        selectedAreaData.producerId,
-                        selectedAreaData.sponsorId,
                         selectedAreaData.exhibitorId,
                         undefined,
                         newIcon,
@@ -1102,54 +1078,24 @@ export default function LayoutEditor({
               <Form.Select
                 size="sm"
                 className="bg-dark text-light border-secondary"
-                value={
-                  selectedAreaData.producerId
-                    ? `p:${selectedAreaData.producerId}`
-                    : selectedAreaData.sponsorId
-                      ? `s:${selectedAreaData.sponsorId}`
-                      : selectedAreaData.exhibitorId
-                        ? `e:${selectedAreaData.exhibitorId}`
-                        : ""
-                }
+                value={selectedAreaData.exhibitorId ? `e:${selectedAreaData.exhibitorId}` : ""}
                 onChange={async (ev) => {
                   const val = ev.target.value;
                   setAssignAreaError(null);
                   try {
-                    let pId: number | null = null;
-                    let sId: number | null = null;
                     let eId: number | null = null;
                     let newLabel: string | undefined;
-                    if (val.startsWith("p:")) {
-                      pId = Number(val.slice(2));
-                      newLabel = producers.find((p) => p.id === pId)?.name;
-                    } else if (val.startsWith("s:")) {
-                      sId = Number(val.slice(2));
-                      newLabel = sponsors.find((s) => s.id === sId)?.name;
-                    } else if (val.startsWith("e:")) {
+                    if (val.startsWith("e:")) {
                       eId = Number(val.slice(2));
                       newLabel = exhibitors.find((e) => e.id === eId)?.name;
                     }
-                    await onAssignAreaToItem(selectedAreaData.id, pId, sId, eId, newLabel);
+                    await onAssignAreaToItem(selectedAreaData.id, eId, newLabel);
                   } catch (err) {
                     setAssignAreaError(err instanceof Error ? err.message : "Failed to assign area.");
                   }
                 }}
               >
                 <option value="">— None —</option>
-                {producers.filter((p) => p.active).length > 0 && (
-                  <optgroup label="Producers">
-                    {producers.filter((p) => p.active).map((p) => (
-                      <option key={p.id} value={`p:${p.id}`}>{p.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {sponsors.filter((s) => s.active).length > 0 && (
-                  <optgroup label="Sponsors">
-                    {sponsors.filter((s) => s.active).map((s) => (
-                      <option key={s.id} value={`s:${s.id}`}>{s.name}</option>
-                    ))}
-                  </optgroup>
-                )}
                 {exhibitors.filter((e) => e.active).length > 0 && (
                   <optgroup label="Exhibitors">
                     {exhibitors.filter((e) => e.active).map((e) => (
@@ -1293,13 +1239,10 @@ export default function LayoutEditor({
                   setNewArea((p) => ({ ...p, assignedType: "", assignedId: 0 }));
                 } else {
                   const [t, id] = val.split(":");
-                  const entityName =
-                    t === "p" ? producers.find((x) => x.id === Number(id))?.name
-                    : t === "s" ? sponsors.find((x) => x.id === Number(id))?.name
-                    : exhibitors.find((x) => x.id === Number(id))?.name;
+                  const entityName = exhibitors.find((x) => x.id === Number(id))?.name;
                   setNewArea((p) => ({
                     ...p,
-                    assignedType: t as "p" | "s" | "e",
+                    assignedType: t as "e",
                     assignedId: Number(id),
                     label: p.label || (entityName ?? p.label),
                   }));
@@ -1308,20 +1251,6 @@ export default function LayoutEditor({
               className="bg-dark text-light border-secondary"
             >
               <option value="">— None —</option>
-              {producers.filter((p) => p.active).length > 0 && (
-                <optgroup label="Producers">
-                  {producers.filter((p) => p.active).map((p) => (
-                    <option key={p.id} value={`p:${p.id}`}>{p.name}</option>
-                  ))}
-                </optgroup>
-              )}
-              {sponsors.filter((s) => s.active).length > 0 && (
-                <optgroup label="Sponsors">
-                  {sponsors.filter((s) => s.active).map((s) => (
-                    <option key={s.id} value={`s:${s.id}`}>{s.name}</option>
-                  ))}
-                </optgroup>
-              )}
               {exhibitors.filter((e) => e.active).length > 0 && (
                 <optgroup label="Exhibitors">
                   {exhibitors.filter((e) => e.active).map((e) => (

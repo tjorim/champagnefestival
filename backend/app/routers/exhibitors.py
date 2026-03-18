@@ -1,6 +1,6 @@
 """Exhibitor management endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,8 +28,14 @@ async def _load_contacts_by_ids(db: AsyncSession, ids: list[str]) -> dict[str, P
 
 
 @router.get("", response_model=list[ExhibitorOut], dependencies=[Depends(require_admin)])
-async def list_exhibitors(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    result = await db.execute(select(Exhibitor).order_by(Exhibitor.id))
+async def list_exhibitors(
+    type: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    stmt = select(Exhibitor).order_by(Exhibitor.id)
+    if type is not None:
+        stmt = stmt.where(Exhibitor.type == type)
+    result = await db.execute(stmt)
     exhibitors = result.scalars().all()
     person_ids = [e.contact_person_id for e in exhibitors if e.contact_person_id]
     contacts = await _load_contacts_by_ids(db, person_ids)
@@ -48,6 +54,7 @@ async def create_exhibitor(body: ExhibitorCreate, db: AsyncSession = Depends(get
         image=body.image,
         website=body.website,
         active=body.active,
+        type=body.type,
         contact_person_id=body.contact_person_id,
     )
     db.add(e)
@@ -70,6 +77,8 @@ async def update_exhibitor(
         e.website = body.website
     if body.active is not None:
         e.active = body.active
+    if body.type is not None:
+        e.type = body.type
     if "contact_person_id" in body.model_fields_set:
         e.contact_person_id = body.contact_person_id
     await db.commit()

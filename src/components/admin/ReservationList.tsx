@@ -19,8 +19,6 @@ interface AllocationRef {
 interface ReservationListProps {
   reservations: Reservation[];
   tables: FloorTable[];
-  producers: AllocationRef[];
-  sponsors: AllocationRef[];
   exhibitors: AllocationRef[];
   filter: "all" | ReservationStatus;
   onFilterChange: (filter: "all" | ReservationStatus) => void;
@@ -79,8 +77,6 @@ function paymentLabel(payment: PaymentStatus): string {
 export default function ReservationList({
   reservations,
   tables,
-  producers,
-  sponsors,
   exhibitors,
   filter,
   onFilterChange,
@@ -97,21 +93,13 @@ export default function ReservationList({
   // Build allocation entities that appear in the current reservation list
   const reservationPersonIds = new Set(reservations.map((r) => r.personId));
   const allocationOptions: { key: string; label: string; personId: string }[] = [
-    ...producers
-      .filter((p) => p.contactPersonId && reservationPersonIds.has(p.contactPersonId))
-      .map((p) => ({ key: `p:${p.id}`, label: `Producer: ${p.name}`, personId: p.contactPersonId! })),
-    ...sponsors
-      .filter((s) => s.contactPersonId && reservationPersonIds.has(s.contactPersonId))
-      .map((s) => ({ key: `s:${s.id}`, label: `Sponsor: ${s.name}`, personId: s.contactPersonId! })),
     ...exhibitors
       .filter((e) => e.contactPersonId && reservationPersonIds.has(e.contactPersonId))
       .map((e) => ({ key: `e:${e.id}`, label: `Exhibitor: ${e.name}`, personId: e.contactPersonId! })),
   ];
 
-  // Find which reservations are linked to a producer/sponsor/exhibitor contact person
+  // Find which reservations are linked to an exhibitor contact person
   const allContactPersonIds = new Set([
-    ...producers.map((p) => p.contactPersonId),
-    ...sponsors.map((s) => s.contactPersonId),
     ...exhibitors.map((e) => e.contactPersonId),
   ]);
 

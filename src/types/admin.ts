@@ -37,8 +37,6 @@ export interface FloorArea {
   id: string;
   layoutId: string;
   icon: string;
-  producerId: number | null;
-  sponsorId: number | null;
   exhibitorId: number | null;
   label: string;
   x: number;

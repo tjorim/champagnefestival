@@ -108,8 +108,8 @@ export function useActiveEdition(): ActiveEditionState {
             category: ev.category,
             dayId: ev.day_id,
           })),
-          producers: (api.producers ?? []).filter((p) => p.active !== false),
-          sponsors: (api.sponsors ?? []).filter((s) => s.active !== false),
+          producers: api.producers ?? [],
+          sponsors: api.sponsors ?? [],
         };
 
         setEdition(newEdition);
