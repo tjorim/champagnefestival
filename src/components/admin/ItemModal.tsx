@@ -16,6 +16,7 @@ export interface ItemDraft {
   id: number;
   name: string;
   image: string;
+  website?: string;
   active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
   contact_person_id?: string | null;
   contact_person?: ContactPerson | null;
@@ -62,6 +63,7 @@ interface ItemModalProps {
 export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
+  const [website, setWebsite] = useState("");
   const [contactOption, setContactOption] = useState<SingleValue<PersonOption>>(null);
   const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
   const [personQuery, setPersonQuery] = useState("");
@@ -71,6 +73,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
     if (show) {
       setName(initial?.name ?? "");
       setImage(initial?.image ?? "");
+      setWebsite(initial?.website ?? "");
       const cp = initial?.contact_person;
       setContactOption(
         cp ? { value: cp.id, label: cp.name, sub: [cp.email, cp.phone].filter(Boolean).join(" · ") } : null,
@@ -119,6 +122,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
       id: initial?.id ?? Date.now(),
       name: name.trim(),
       image: image.trim(),
+      website: website.trim(),
       active: initial?.active ?? true,
       contact_person_id: contactOption?.value ?? null,
       contact_person: contactOption
@@ -162,6 +166,16 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               onChange={(e) => setImage(e.target.value)}
               className="bg-dark text-light border-secondary"
               required
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="text-secondary small">Website URL</Form.Label>
+            <Form.Control
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className="bg-dark text-light border-secondary"
+              placeholder="https://…"
             />
           </Form.Group>
           <Form.Group>

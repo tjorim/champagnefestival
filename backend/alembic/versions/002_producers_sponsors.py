@@ -23,6 +23,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("image", sa.String(500), nullable=False, server_default=""),
+        sa.Column("website", sa.String(500), nullable=False, server_default=""),
         sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
         sa.Column("contact_person_id", sa.String(64), sa.ForeignKey("people.id", ondelete="SET NULL"), nullable=True),
         sa.Column(
@@ -44,6 +45,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("image", sa.String(500), nullable=False, server_default=""),
+        sa.Column("website", sa.String(500), nullable=False, server_default=""),
         sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
         sa.Column("contact_person_id", sa.String(64), sa.ForeignKey("people.id", ondelete="SET NULL"), nullable=True),
         sa.Column(
@@ -85,6 +87,81 @@ def upgrade() -> None:
 
     op.drop_table("content_items")
 
+    op.create_table(
+        "exhibitors",
+        sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+        sa.Column("name", sa.String(200), nullable=False),
+        sa.Column("image", sa.String(500), nullable=False, server_default=""),
+        sa.Column("website", sa.String(500), nullable=False, server_default=""),
+        sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
+        sa.Column(
+            "contact_person_id",
+            sa.String(64),
+            sa.ForeignKey("people.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
+    op.create_table(
+        "areas",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column(
+            "layout_id",
+            sa.String(64),
+            sa.ForeignKey("layouts.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "producer_id",
+            sa.Integer,
+            sa.ForeignKey("producers.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "sponsor_id",
+            sa.Integer,
+            sa.ForeignKey("sponsors.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "exhibitor_id",
+            sa.Integer,
+            sa.ForeignKey("exhibitors.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("label", sa.String(200), nullable=False),
+        sa.Column("icon", sa.String(50), nullable=False, server_default="bi-shop"),
+        sa.Column("x", sa.Float, nullable=False, server_default="50"),
+        sa.Column("y", sa.Float, nullable=False, server_default="50"),
+        sa.Column("rotation", sa.Integer, nullable=False, server_default="0"),
+        sa.Column("width_m", sa.Float, nullable=False, server_default="1.5"),
+        sa.Column("length_m", sa.Float, nullable=False, server_default="1.0"),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+    )
+
 
 def downgrade() -> None:
     op.create_table(
@@ -113,5 +190,7 @@ def downgrade() -> None:
             {"key": key, "value": json.dumps(items)},
         )
 
+    op.drop_table("areas")
+    op.drop_table("exhibitors")
     op.drop_table("producers")
     op.drop_table("sponsors")

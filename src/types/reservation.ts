@@ -29,6 +29,7 @@ export interface OrderItem {
 
 export interface Reservation {
   id: string;
+  personId?: string | null;
   name: string;
   email: string;
   phone: string;

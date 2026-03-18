@@ -178,16 +178,16 @@ async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, dict
 
 
 async def _load_pools(db: AsyncSession) -> dict[str, list[dict]]:
-    """Load all producers and sponsors in two queries."""
-    p_result = await db.execute(select(Producer).order_by(Producer.id))
-    s_result = await db.execute(select(Sponsor).order_by(Sponsor.id))
+    """Load only active producers and sponsors in two queries."""
+    p_result = await db.execute(select(Producer).where(Producer.active.is_(True)).order_by(Producer.id))
+    s_result = await db.execute(select(Sponsor).where(Sponsor.active.is_(True)).order_by(Sponsor.id))
     return {
         "producers": [
-            {"id": p.id, "name": p.name, "image": p.image, "active": p.active}
+            {"id": p.id, "name": p.name, "image": p.image, "website": p.website}
             for p in p_result.scalars().all()
         ],
         "sponsors": [
-            {"id": s.id, "name": s.name, "image": s.image, "active": s.active}
+            {"id": s.id, "name": s.name, "image": s.image, "website": s.website}
             for s in s_result.scalars().all()
         ],
     }

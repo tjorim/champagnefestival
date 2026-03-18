@@ -112,7 +112,6 @@ async def update_table(
         if lay.scalar_one_or_none() is None:
             raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
         t.layout_id = body.layout_id
-
     await db.commit()
     await db.refresh(t)
     return table_to_dict(t)

@@ -27,10 +27,52 @@ import Modal from "react-bootstrap/Modal";
 import Nav from "react-bootstrap/Nav";
 import { m } from "../../paraglide/messages";
 import type { Reservation } from "../../types/reservation";
-import type { Room, FloorTable, TableType, Layout } from "../../types/admin";
+import type { Room, FloorTable, FloorArea, TableType, Layout } from "../../types/admin";
 
 // How many CSS pixels represent one metre on the canvas
 const PX_PER_M = 28;
+
+/**
+ * Returns the tables whose centre point falls within the area's bounding rectangle.
+ * Both table and area positions are percentages of canvas dimensions.
+ */
+function getTablesInArea(
+  area: FloorArea,
+  tables: FloorTable[],
+  tableTypes: TableType[],
+  canvasW: number,
+  canvasH: number,
+): FloorTable[] {
+  const areaLeft = (area.x / 100) * canvasW;
+  const areaTop = (area.y / 100) * canvasH;
+  const areaRight = areaLeft + area.widthM * PX_PER_M;
+  const areaBottom = areaTop + area.lengthM * PX_PER_M;
+
+  return tables.filter((t) => {
+    const { w, l } = getTableSize(t, tableTypes);
+    const cx = (t.x / 100) * canvasW + w / 2;
+    const cy = (t.y / 100) * canvasH + l / 2;
+    return cx >= areaLeft && cx <= areaRight && cy >= areaTop && cy <= areaBottom;
+  });
+}
+
+// Preset icons available for floor areas
+const AREA_ICONS: { value: string; label: string }[] = [
+  { value: "bi-shop", label: "Stand / Shop" },
+  { value: "bi-glass-champagne", label: "Champagne" },
+  { value: "bi-music-note-beamed", label: "Music / DJ" },
+  { value: "bi-cup-hot", label: "Catering / Café" },
+  { value: "bi-egg-fried", label: "Food" },
+  { value: "bi-gift", label: "Gift Shop" },
+  { value: "bi-door-open", label: "Entrance / Exit" },
+  { value: "bi-info-circle", label: "Info Desk" },
+  { value: "bi-camera", label: "Photo Booth" },
+  { value: "bi-award", label: "Award / VIP" },
+  { value: "bi-people-fill", label: "Meeting Point" },
+  { value: "bi-tools", label: "Technical / Staff" },
+  { value: "bi-star", label: "Feature" },
+  { value: "bi-bar-chart-line", label: "Exhibition" },
+];
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
 function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
@@ -47,12 +89,22 @@ function getDayLabel(dayId: number): string {
   return m.admin_content_edition_sunday();
 }
 
+interface ItemRef {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
 interface LayoutEditorProps {
   tables: FloorTable[];
   tableTypes: TableType[];
   layouts: Layout[];
   reservations: Reservation[];
   rooms: Room[];
+  producers: ItemRef[];
+  sponsors: ItemRef[];
+  exhibitors: ItemRef[];
+  areas: FloorArea[];
   onAddTable: (
     name: string,
     capacity: number,
@@ -64,6 +116,28 @@ interface LayoutEditorProps {
   onRotateTable: (tableId: string, rotation: number) => void;
   onAddLayout: (roomId: string, dayId: number, label: string) => Promise<void>;
   onDeleteLayout: (layoutId: string) => Promise<void>;
+  onAddArea: (
+    label: string,
+    icon: string,
+    layoutId: string,
+    widthM: number,
+    lengthM: number,
+    producerId?: number,
+    sponsorId?: number,
+    exhibitorId?: number,
+  ) => Promise<void>;
+  onMoveArea: (areaId: string, x: number, y: number) => void;
+  onDeleteArea: (areaId: string) => Promise<void>;
+  onRotateArea: (areaId: string, rotation: number) => void;
+  onAssignAreaToItem: (
+    areaId: string,
+    producerId: number | null,
+    sponsorId: number | null,
+    exhibitorId: number | null,
+    label?: string,
+    icon?: string,
+  ) => Promise<void>;
+  onUpdateAreaLabel: (areaId: string, label: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +149,8 @@ interface DraggableTableProps {
   tableTypes: TableType[];
   assignedCount: number;
   isSelected: boolean;
+  isInteractive: boolean;
+  isInSelectedArea: boolean;
   onClick: () => void;
   canvasW: number;
   canvasH: number;
@@ -85,12 +161,15 @@ function DraggableTable({
   tableTypes,
   assignedCount,
   isSelected,
+  isInteractive,
+  isInSelectedArea,
   onClick,
   canvasW,
   canvasH,
 }: DraggableTableProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: table.id,
+    disabled: !isInteractive,
   });
 
   const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
@@ -123,6 +202,7 @@ function DraggableTable({
       {...listeners}
       {...attributes}
       onClick={(e) => {
+        if (!isInteractive) return;
         e.stopPropagation();
         onClick();
       }}
@@ -132,16 +212,17 @@ function DraggableTable({
         top: topPx,
         width: TABLE_W,
         height: TABLE_L,
-        cursor: isDragging ? "grabbing" : "grab",
+        cursor: isDragging ? "grabbing" : isInteractive ? "grab" : "default",
         userSelect: "none",
         transform: `${CSS.Translate.toString(transform)} rotate(${table.rotation}deg)`,
         zIndex: isDragging ? 10 : 1,
-        opacity: isDragging ? 0.8 : 1,
-        transition: isDragging ? undefined : "border-color 0.15s",
+        opacity: isInteractive ? (isDragging ? 0.8 : 1) : isInSelectedArea ? 0.7 : 0.25,
+        transition: isDragging ? undefined : "border-color 0.15s, opacity 0.15s",
+        pointerEvents: isInteractive ? undefined : "none",
       }}
       title={`${table.name} — ${assignedCount}/${table.capacity}`}
-      role="button"
-      aria-pressed={isSelected}
+      role={isInteractive ? "button" : undefined}
+      aria-pressed={isInteractive ? isSelected : undefined}
       aria-label={`${m.admin_table_label()} ${table.name}`}
     >
       <i className="bi bi-people-fill fs-5" aria-hidden="true" />
@@ -156,27 +237,133 @@ function DraggableTable({
 }
 
 // ---------------------------------------------------------------------------
+// DraggableArea
+// ---------------------------------------------------------------------------
+
+interface DraggableAreaProps {
+  area: FloorArea;
+  assignedLabel: string | null;
+  isSelected: boolean;
+  isInteractive: boolean;
+  onClick: () => void;
+  canvasW: number;
+  canvasH: number;
+}
+
+function DraggableArea({
+  area,
+  assignedLabel,
+  isSelected,
+  isInteractive,
+  onClick,
+  canvasW,
+  canvasH,
+}: DraggableAreaProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: area.id,
+    disabled: !isInteractive,
+  });
+
+  const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
+  const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+
+  const leftPx = (area.x / 100) * canvasW;
+  const topPx = (area.y / 100) * canvasH;
+
+  const borderCls = isSelected ? "border-warning" : "border-info";
+  const bgCls = isSelected
+    ? "bg-warning bg-opacity-25 text-warning"
+    : "bg-info bg-opacity-10 text-info";
+  const fadedStyle = !isInteractive ? { opacity: 0.25, pointerEvents: "none" as const } : {};
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onClick={(e) => {
+        if (!isInteractive) return;
+        e.stopPropagation();
+        onClick();
+      }}
+      className={`position-absolute d-flex flex-column align-items-center justify-content-center border text-center rounded ${borderCls} ${bgCls}`}
+      style={{
+        left: leftPx,
+        top: topPx,
+        width: AREA_W,
+        height: AREA_H,
+        cursor: isDragging ? "grabbing" : isInteractive ? "grab" : "default",
+        userSelect: "none",
+        transform: `${CSS.Translate.toString(transform)} rotate(${area.rotation}deg)`,
+        zIndex: isDragging ? 10 : 2,
+        opacity: isDragging ? 0.8 : 1,
+        transition: isDragging ? undefined : "border-color 0.15s",
+        ...fadedStyle,
+      }}
+      title={area.label}
+      role={isInteractive ? "button" : undefined}
+      aria-pressed={isInteractive ? isSelected : undefined}
+      aria-label={`Area: ${area.label}`}
+    >
+      <i
+        className={`bi ${area.icon || "bi-shop"}`}
+        style={{ fontSize: "0.8rem" }}
+        aria-hidden="true"
+      />
+      <span className="fw-semibold text-truncate w-100 text-center px-1" style={{ fontSize: "0.65rem" }}>
+        {area.label}
+      </span>
+      {assignedLabel && (
+        <span
+          className="text-truncate w-100 text-center px-1"
+          style={{ fontSize: "0.55rem", opacity: 0.85 }}
+          title={assignedLabel}
+        >
+          {assignedLabel}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // RoomCanvas — the drag target for one room
 // ---------------------------------------------------------------------------
 
 interface RoomCanvasProps {
   room: Room;
   roomTables: FloorTable[];
+  roomAreas: FloorArea[];
   tableTypes: TableType[];
   reservations: Reservation[];
+  producers: ItemRef[];
+  sponsors: ItemRef[];
+  exhibitors: ItemRef[];
+  layer: "seating" | "areas";
   selectedTable: string | null;
+  selectedArea: string | null;
   onSelectTable: (id: string | null) => void;
+  onSelectArea: (id: string | null) => void;
   onMoveTable: (tableId: string, x: number, y: number) => void;
+  onMoveArea: (areaId: string, x: number, y: number) => void;
 }
 
 function RoomCanvas({
   room,
   roomTables,
+  roomAreas,
   tableTypes,
   reservations,
+  producers,
+  sponsors,
+  exhibitors,
+  layer,
   selectedTable,
+  selectedArea,
   onSelectTable,
+  onSelectArea,
   onMoveTable,
+  onMoveArea,
 }: RoomCanvasProps) {
   const canvasW = Math.max(MIN_CANVAS_PX, room.widthM * PX_PER_M);
   const canvasH = Math.max(180, room.lengthM * PX_PER_M);
@@ -193,26 +380,35 @@ function RoomCanvas({
       const { active, delta } = event;
       if (!canvasRef.current) return;
 
-      const table = roomTables.find((t) => t.id === active.id);
-      if (!table) return;
+      const activeId = active.id as string;
 
-      const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
-
-      // Current pixel position
-      const leftPx = (table.x / 100) * canvasW + delta.x;
-      const topPx = (table.y / 100) * canvasH + delta.y;
-
-      // Clamp so table stays within canvas
-      const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);
-      const clampedY = Math.min(Math.max(0, topPx), canvasH - TABLE_L);
-
-      const newX = (clampedX / canvasW) * 100;
-      const newY = (clampedY / canvasH) * 100;
-
-      onMoveTable(table.id as string, newX, newY);
+      if (activeId.startsWith("area_")) {
+        // Area drag
+        const area = roomAreas.find((a) => a.id === activeId);
+        if (!area) return;
+        const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
+        const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+        const leftPx = (area.x / 100) * canvasW + delta.x;
+        const topPx = (area.y / 100) * canvasH + delta.y;
+        const clampedX = Math.min(Math.max(0, leftPx), canvasW - AREA_W);
+        const clampedY = Math.min(Math.max(0, topPx), canvasH - AREA_H);
+        onMoveArea(area.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
+      } else {
+        // Table drag
+        const table = roomTables.find((t) => t.id === activeId);
+        if (!table) return;
+        const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
+        const leftPx = (table.x / 100) * canvasW + delta.x;
+        const topPx = (table.y / 100) * canvasH + delta.y;
+        const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);
+        const clampedY = Math.min(Math.max(0, topPx), canvasH - TABLE_L);
+        onMoveTable(table.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
+      }
     },
-    [roomTables, tableTypes, canvasW, canvasH, onMoveTable],
+    [roomTables, roomAreas, tableTypes, canvasW, canvasH, onMoveTable, onMoveArea],
   );
+
+  const isEmpty = roomTables.length === 0 && roomAreas.length === 0;
 
   return (
     <div className="overflow-auto pb-2">
@@ -226,7 +422,10 @@ function RoomCanvas({
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div
           ref={canvasRef}
-          onClick={() => onSelectTable(null)}
+          onClick={() => {
+            onSelectTable(null);
+            onSelectArea(null);
+          }}
           className="position-relative border rounded"
           style={{
             width: canvasW,
@@ -240,7 +439,7 @@ function RoomCanvas({
           }}
           aria-label={room.name}
         >
-          {roomTables.length === 0 && (
+          {isEmpty && (
             <div
               className="position-absolute top-50 start-50 translate-middle text-secondary text-center"
               style={{ pointerEvents: "none" }}
@@ -251,6 +450,14 @@ function RoomCanvas({
           )}
           {roomTables.map((table) => {
             const assigned = reservations.filter((r) => table.reservationIds.includes(r.id)).length;
+            const isInSelectedArea = selectedArea
+              ? (() => {
+                  const area = roomAreas.find((a) => a.id === selectedArea);
+                  if (!area) return false;
+                  const [ts] = getTablesInArea(area, [table], tableTypes, canvasW, canvasH);
+                  return ts !== undefined;
+                })()
+              : false;
             return (
               <DraggableTable
                 key={table.id}
@@ -258,7 +465,36 @@ function RoomCanvas({
                 tableTypes={tableTypes}
                 assignedCount={assigned}
                 isSelected={selectedTable === table.id}
-                onClick={() => onSelectTable(selectedTable === table.id ? null : table.id)}
+                isInteractive={layer === "seating"}
+                isInSelectedArea={isInSelectedArea}
+                onClick={() => {
+                  onSelectArea(null);
+                  onSelectTable(selectedTable === table.id ? null : table.id);
+                }}
+                canvasW={canvasW}
+                canvasH={canvasH}
+              />
+            );
+          })}
+          {roomAreas.map((area) => {
+            const assignedLabel = area.producerId
+              ? (producers.find((p) => p.id === area.producerId)?.name ?? `Producer #${area.producerId}`)
+              : area.sponsorId
+                ? (sponsors.find((s) => s.id === area.sponsorId)?.name ?? `Sponsor #${area.sponsorId}`)
+                : area.exhibitorId
+                  ? (exhibitors.find((e) => e.id === area.exhibitorId)?.name ?? `Exhibitor #${area.exhibitorId}`)
+                  : null;
+            return (
+              <DraggableArea
+                key={area.id}
+                area={area}
+                assignedLabel={assignedLabel}
+                isSelected={selectedArea === area.id}
+                isInteractive={layer === "areas"}
+                onClick={() => {
+                  onSelectTable(null);
+                  onSelectArea(selectedArea === area.id ? null : area.id);
+                }}
                 canvasW={canvasW}
                 canvasH={canvasH}
               />
@@ -280,16 +516,28 @@ export default function LayoutEditor({
   layouts,
   reservations,
   rooms,
+  producers,
+  sponsors,
+  exhibitors,
+  areas,
   onAddTable,
   onMoveTable,
   onDeleteTable,
   onRotateTable,
   onAddLayout,
   onDeleteLayout,
+  onAddArea,
+  onMoveArea,
+  onDeleteArea,
+  onRotateArea,
+  onAssignAreaToItem,
+  onUpdateAreaLabel,
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [layer, setLayer] = useState<"seating" | "areas">("seating");
 
   // Auto-select first room
   useEffect(() => {
@@ -338,6 +586,7 @@ export default function LayoutEditor({
         if (activeLayoutId === layoutId) {
           setActiveLayoutId(null);
           setSelectedTable(null);
+          setSelectedArea(null);
         }
       } catch (err) {
         console.error("Failed to delete layout", err);
@@ -357,6 +606,19 @@ export default function LayoutEditor({
   const [addTableError, setAddTableError] = useState<string | null>(null);
 
   const [deleteTableError, setDeleteTableError] = useState<string | null>(null);
+  // Add Area modal
+  const [showAddArea, setShowAddArea] = useState(false);
+  const [newArea, setNewArea] = useState({
+    label: "",
+    icon: "bi-shop",
+    widthM: 1.5,
+    lengthM: 1.0,
+    assignedType: "" as "" | "p" | "s" | "e",
+    assignedId: 0,
+  });
+  const [addAreaError, setAddAreaError] = useState<string | null>(null);
+  const [deleteAreaError, setDeleteAreaError] = useState<string | null>(null);
+  const [assignAreaError, setAssignAreaError] = useState<string | null>(null);
 
   const handleAddTable = useCallback(async () => {
     if (!newTable.name.trim() || newTable.capacity < 1 || !newTable.tableTypeId || !activeLayoutId)
@@ -391,11 +653,52 @@ export default function LayoutEditor({
     [onDeleteTable],
   );
 
+  const handleAddArea = useCallback(async () => {
+    if (!newArea.label.trim() || !activeLayoutId) return;
+    setAddAreaError(null);
+    try {
+      const producerId = newArea.assignedType === "p" ? newArea.assignedId : undefined;
+      const sponsorId = newArea.assignedType === "s" ? newArea.assignedId : undefined;
+      const exhibitorId = newArea.assignedType === "e" ? newArea.assignedId : undefined;
+      await onAddArea(
+        newArea.label.trim(),
+        newArea.icon || "bi-shop",
+        activeLayoutId,
+        newArea.widthM,
+        newArea.lengthM,
+        producerId,
+        sponsorId,
+        exhibitorId,
+      );
+      setNewArea({ label: "", icon: "bi-shop", widthM: 1.5, lengthM: 1.0, assignedType: "", assignedId: 0 });
+      setShowAddArea(false);
+    } catch (err) {
+      console.error("Failed to add area", err);
+      setAddAreaError(err instanceof Error ? err.message : m.admin_content_error_save());
+    }
+  }, [newArea, onAddArea, activeLayoutId]);
+
+  const handleDeleteArea = useCallback(
+    async (areaId: string) => {
+      setDeleteAreaError(null);
+      try {
+        await onDeleteArea(areaId);
+        setSelectedArea(null);
+      } catch (err) {
+        console.error("Failed to delete area", err);
+        setDeleteAreaError(err instanceof Error ? err.message : m.admin_content_error_save());
+      }
+    },
+    [onDeleteArea],
+  );
+
   const selectedTableData = tables.find((t) => t.id === selectedTable);
   const selectedType = tableTypes.find((t) => t.id === selectedTableData?.tableTypeId);
   const selectedReservations = selectedTableData
     ? reservations.filter((r) => selectedTableData.reservationIds.includes(r.id))
     : [];
+
+  const selectedAreaData = areas.find((a) => a.id === selectedArea);
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
@@ -403,11 +706,19 @@ export default function LayoutEditor({
     .filter((l) => l.roomId === activeRoomId)
     .sort((a, b) => a.dayId - b.dayId);
   const canvasTables = activeLayoutId ? tables.filter((t) => t.layoutId === activeLayoutId) : [];
+  const canvasAreas = activeLayoutId ? areas.filter((a) => a.layoutId === activeLayoutId) : [];
+
+  const areaCanvasW = activeRoom ? Math.max(MIN_CANVAS_PX, activeRoom.widthM * PX_PER_M) : 0;
+  const areaCanvasH = activeRoom ? Math.max(180, activeRoom.lengthM * PX_PER_M) : 0;
+  const tablesInSelectedArea = selectedAreaData
+    ? getTablesInArea(selectedAreaData, canvasTables, tableTypes, areaCanvasW, areaCanvasH)
+    : [];
 
   const handleSelectRoom = useCallback((k: string | null) => {
     if (k) {
       setActiveRoomId(k);
       setSelectedTable(null);
+      setSelectedArea(null);
     }
   }, []);
 
@@ -448,18 +759,60 @@ export default function LayoutEditor({
               );
             })}
           </Nav>
-          <Button
-            variant="outline-warning"
-            size="sm"
-            onClick={() => {
-              setAddTableError(null);
-              setShowAddTable(true);
-            }}
-            disabled={!activeLayoutId}
-          >
-            <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-            {m.admin_add_table()}
-          </Button>
+          <div className="d-flex gap-2 align-items-center">
+            <div className="btn-group btn-group-sm" role="group" aria-label="Layer">
+              <Button
+                variant={layer === "seating" ? "warning" : "outline-secondary"}
+                size="sm"
+                onClick={() => {
+                  setLayer("seating");
+                  setSelectedArea(null);
+                }}
+              >
+                <i className="bi bi-people-fill me-1" aria-hidden="true" />
+                Seating
+              </Button>
+              <Button
+                variant={layer === "areas" ? "info" : "outline-secondary"}
+                size="sm"
+                onClick={() => {
+                  setLayer("areas");
+                  setSelectedTable(null);
+                }}
+              >
+                <i className="bi bi-shop me-1" aria-hidden="true" />
+                Areas
+              </Button>
+            </div>
+            {layer === "seating" ? (
+              <Button
+                variant="outline-warning"
+                size="sm"
+                onClick={() => {
+                  setAddTableError(null);
+                  setShowAddTable(true);
+                }}
+                disabled={!activeLayoutId}
+              >
+                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                {m.admin_add_table()}
+              </Button>
+            ) : (
+              <Button
+                variant="outline-info"
+                size="sm"
+                onClick={() => {
+                  setAddAreaError(null);
+                  setNewArea({ label: "", icon: "bi-shop", widthM: 1.5, lengthM: 1.0, assignedType: "", assignedId: 0 });
+                  setShowAddArea(true);
+                }}
+                disabled={!activeLayoutId}
+              >
+                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                Add Area
+              </Button>
+            )}
+          </div>
         </Card.Header>
 
         <Card.Body className="p-2">
@@ -535,11 +888,19 @@ export default function LayoutEditor({
                 <RoomCanvas
                   room={activeRoom}
                   roomTables={canvasTables}
+                  roomAreas={canvasAreas}
                   tableTypes={tableTypes}
                   reservations={reservations}
+                  producers={producers}
+                  sponsors={sponsors}
+                  exhibitors={exhibitors}
+                  layer={layer}
                   selectedTable={selectedTable}
+                  selectedArea={selectedArea}
                   onSelectTable={setSelectedTable}
+                  onSelectArea={setSelectedArea}
                   onMoveTable={onMoveTable}
+                  onMoveArea={onMoveArea}
                 />
               ) : (
                 <p className="text-secondary text-center small py-4 mb-0">{m.admin_no_layouts()}</p>
@@ -636,6 +997,200 @@ export default function LayoutEditor({
         </Card>
       )}
 
+      {/* Selected area detail */}
+      {selectedAreaData && (
+        <Card bg="dark" text="white" border="info" className="mb-3">
+          <Card.Header className="d-flex align-items-center justify-content-between border-info">
+            <span className="fw-semibold">
+              <i className={`bi ${selectedAreaData.icon || "bi-shop"} me-2`} aria-hidden="true" />
+              Area: {selectedAreaData.label}
+            </span>
+            <div className="d-flex gap-2 align-items-center">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => onRotateArea(selectedAreaData.id, selectedAreaData.rotation - 15)}
+                title={m.admin_layout_rotate_ccw()}
+                aria-label={m.admin_layout_rotate_ccw()}
+              >
+                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+              </Button>
+              <span className="text-secondary small" style={{ minWidth: "3.5rem", textAlign: "center" }}>
+                {Math.round(selectedAreaData.rotation)}°
+              </span>
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => onRotateArea(selectedAreaData.id, selectedAreaData.rotation + 15)}
+                title={m.admin_layout_rotate_cw()}
+                aria-label={m.admin_layout_rotate_cw()}
+              >
+                <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+              </Button>
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={() => handleDeleteArea(selectedAreaData.id)}
+                title={m.admin_delete()}
+                aria-label={m.admin_delete()}
+              >
+                <i className="bi bi-trash" aria-hidden="true" />
+              </Button>
+            </div>
+          </Card.Header>
+          <Card.Body>
+            {deleteAreaError && (
+              <Alert variant="danger" className="py-1 mb-2 small">
+                {deleteAreaError}
+              </Alert>
+            )}
+            {assignAreaError && (
+              <Alert variant="danger" className="py-1 mb-2 small" dismissible onClose={() => setAssignAreaError(null)}>
+                {assignAreaError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="area-label">
+              <Form.Label className="text-secondary small">Label</Form.Label>
+              <Form.Control
+                size="sm"
+                type="text"
+                className="bg-dark text-light border-secondary"
+                defaultValue={selectedAreaData.label}
+                onBlur={(e) => {
+                  const newLabel = e.target.value.trim();
+                  if (newLabel && newLabel !== selectedAreaData.label) {
+                    onUpdateAreaLabel(selectedAreaData.id, newLabel);
+                  }
+                }}
+                key={selectedAreaData.id}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="area-icon">
+              <Form.Label className="text-secondary small">Icon</Form.Label>
+              <div className="d-flex gap-2 align-items-center">
+                <i className={`bi ${selectedAreaData.icon || "bi-shop"} text-info`} aria-hidden="true" />
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={selectedAreaData.icon || "bi-shop"}
+                  onChange={async (e) => {
+                    const newIcon = e.target.value;
+                    setAssignAreaError(null);
+                    try {
+                      await onAssignAreaToItem(
+                        selectedAreaData.id,
+                        selectedAreaData.producerId,
+                        selectedAreaData.sponsorId,
+                        selectedAreaData.exhibitorId,
+                        undefined,
+                        newIcon,
+                      );
+                    } catch (err) {
+                      setAssignAreaError(err instanceof Error ? err.message : "Failed to update icon.");
+                    }
+                  }}
+                  key={`icon-${selectedAreaData.id}`}
+                >
+                  {AREA_ICONS.map((ic) => (
+                    <option key={ic.value} value={ic.value}>{ic.label}</option>
+                  ))}
+                </Form.Select>
+              </div>
+            </Form.Group>
+            <Form.Group controlId="area-assign-item">
+              <Form.Label className="text-secondary small">Assigned to</Form.Label>
+              <Form.Select
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                value={
+                  selectedAreaData.producerId
+                    ? `p:${selectedAreaData.producerId}`
+                    : selectedAreaData.sponsorId
+                      ? `s:${selectedAreaData.sponsorId}`
+                      : selectedAreaData.exhibitorId
+                        ? `e:${selectedAreaData.exhibitorId}`
+                        : ""
+                }
+                onChange={async (ev) => {
+                  const val = ev.target.value;
+                  setAssignAreaError(null);
+                  try {
+                    let pId: number | null = null;
+                    let sId: number | null = null;
+                    let eId: number | null = null;
+                    let newLabel: string | undefined;
+                    if (val.startsWith("p:")) {
+                      pId = Number(val.slice(2));
+                      newLabel = producers.find((p) => p.id === pId)?.name;
+                    } else if (val.startsWith("s:")) {
+                      sId = Number(val.slice(2));
+                      newLabel = sponsors.find((s) => s.id === sId)?.name;
+                    } else if (val.startsWith("e:")) {
+                      eId = Number(val.slice(2));
+                      newLabel = exhibitors.find((e) => e.id === eId)?.name;
+                    }
+                    await onAssignAreaToItem(selectedAreaData.id, pId, sId, eId, newLabel);
+                  } catch (err) {
+                    setAssignAreaError(err instanceof Error ? err.message : "Failed to assign area.");
+                  }
+                }}
+              >
+                <option value="">— None —</option>
+                {producers.filter((p) => p.active).length > 0 && (
+                  <optgroup label="Producers">
+                    {producers.filter((p) => p.active).map((p) => (
+                      <option key={p.id} value={`p:${p.id}`}>{p.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {sponsors.filter((s) => s.active).length > 0 && (
+                  <optgroup label="Sponsors">
+                    {sponsors.filter((s) => s.active).map((s) => (
+                      <option key={s.id} value={`s:${s.id}`}>{s.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {exhibitors.filter((e) => e.active).length > 0 && (
+                  <optgroup label="Exhibitors">
+                    {exhibitors.filter((e) => e.active).map((e) => (
+                      <option key={e.id} value={`e:${e.id}`}>{e.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </Form.Select>
+            </Form.Group>
+            {tablesInSelectedArea.length > 0 && (
+              <div className="mt-3 pt-3 border-top border-secondary">
+                <p className="text-secondary small mb-2">
+                  <i className="bi bi-grid-3x3-gap me-1" aria-hidden="true" />
+                  Tables in this stand:{" "}
+                  <Badge bg="info" text="dark">
+                    {tablesInSelectedArea.length}
+                  </Badge>
+                  <span className="ms-2 text-secondary">
+                    {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)} places total
+                  </span>
+                </p>
+                <ListGroup variant="flush">
+                  {tablesInSelectedArea.map((t) => (
+                    <ListGroup.Item
+                      key={t.id}
+                      className="bg-dark text-light border-secondary py-1 px-2 small"
+                    >
+                      <i className="bi bi-grid-3x3 me-1 text-secondary" aria-hidden="true" />
+                      {t.name}
+                      <Badge bg="secondary" className="ms-2" style={{ fontSize: "0.65rem" }}>
+                        {t.capacity} pl.
+                      </Badge>
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+      )}
+
       {/* Add Layout Modal */}
       <Modal
         show={showAddLayout}
@@ -682,6 +1237,140 @@ export default function LayoutEditor({
             {m.admin_action_cancel()}
           </Button>
           <Button variant="success" onClick={handleAddLayout}>
+            {m.admin_save()}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Add Area Modal */}
+      <Modal
+        show={showAddArea}
+        onHide={() => setShowAddArea(false)}
+        centered
+        aria-labelledby="add-area-modal-title"
+      >
+        <Modal.Header closeButton className="bg-dark text-light border-secondary">
+          <Modal.Title id="add-area-modal-title">Add Area</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="bg-dark text-light">
+          {addAreaError && (
+            <Alert variant="danger" className="py-1 mb-3 small">
+              {addAreaError}
+            </Alert>
+          )}
+          <Form.Group className="mb-3" controlId="area-new-label">
+            <Form.Label>Label</Form.Label>
+            <Form.Control
+              type="text"
+              value={newArea.label}
+              onChange={(e) => setNewArea((p) => ({ ...p, label: e.target.value }))}
+              className="bg-dark text-light border-secondary"
+              placeholder="e.g. DJ Stage, Oyster Bar…"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="area-new-icon">
+            <Form.Label>Icon</Form.Label>
+            <div className="d-flex gap-2 align-items-center">
+              <i className={`bi ${newArea.icon} fs-4 text-info`} aria-hidden="true" />
+              <Form.Select
+                value={newArea.icon}
+                onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              >
+                {AREA_ICONS.map((ic) => (
+                  <option key={ic.value} value={ic.value}>{ic.label}</option>
+                ))}
+              </Form.Select>
+            </div>
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="area-new-assign">
+            <Form.Label>Assigned to (optional)</Form.Label>
+            <Form.Select
+              value={newArea.assignedType ? `${newArea.assignedType}:${newArea.assignedId}` : ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) {
+                  setNewArea((p) => ({ ...p, assignedType: "", assignedId: 0 }));
+                } else {
+                  const [t, id] = val.split(":");
+                  const entityName =
+                    t === "p" ? producers.find((x) => x.id === Number(id))?.name
+                    : t === "s" ? sponsors.find((x) => x.id === Number(id))?.name
+                    : exhibitors.find((x) => x.id === Number(id))?.name;
+                  setNewArea((p) => ({
+                    ...p,
+                    assignedType: t as "p" | "s" | "e",
+                    assignedId: Number(id),
+                    label: p.label || (entityName ?? p.label),
+                  }));
+                }
+              }}
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="">— None —</option>
+              {producers.filter((p) => p.active).length > 0 && (
+                <optgroup label="Producers">
+                  {producers.filter((p) => p.active).map((p) => (
+                    <option key={p.id} value={`p:${p.id}`}>{p.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {sponsors.filter((s) => s.active).length > 0 && (
+                <optgroup label="Sponsors">
+                  {sponsors.filter((s) => s.active).map((s) => (
+                    <option key={s.id} value={`s:${s.id}`}>{s.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              {exhibitors.filter((e) => e.active).length > 0 && (
+                <optgroup label="Exhibitors">
+                  {exhibitors.filter((e) => e.active).map((e) => (
+                    <option key={e.id} value={`e:${e.id}`}>{e.name}</option>
+                  ))}
+                </optgroup>
+              )}
+            </Form.Select>
+          </Form.Group>
+          <div className="row g-3">
+            <div className="col">
+              <Form.Group controlId="area-new-width">
+                <Form.Label>Width (m)</Form.Label>
+                <Form.Control
+                  type="number"
+                  min={0.1}
+                  max={50}
+                  step={0.5}
+                  value={newArea.widthM}
+                  onChange={(e) => setNewArea((p) => ({ ...p, widthM: Number(e.target.value) }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
+            </div>
+            <div className="col">
+              <Form.Group controlId="area-new-length">
+                <Form.Label>Length (m)</Form.Label>
+                <Form.Control
+                  type="number"
+                  min={0.1}
+                  max={50}
+                  step={0.5}
+                  value={newArea.lengthM}
+                  onChange={(e) => setNewArea((p) => ({ ...p, lengthM: Number(e.target.value) }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="bg-dark border-secondary">
+          <Button variant="secondary" onClick={() => setShowAddArea(false)}>
+            {m.admin_action_cancel()}
+          </Button>
+          <Button
+            variant="info"
+            onClick={handleAddArea}
+            disabled={!newArea.label.trim()}
+          >
             {m.admin_save()}
           </Button>
         </Modal.Footer>

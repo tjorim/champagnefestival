@@ -75,6 +75,7 @@ class Producer(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
     image: Mapped[str] = mapped_column(String(500), default="")
+    website: Mapped[str] = mapped_column(String(500), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     contact_person_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
@@ -94,6 +95,27 @@ class Sponsor(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
     image: Mapped[str] = mapped_column(String(500), default="")
+    website: Mapped[str] = mapped_column(String(500), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    contact_person_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class Exhibitor(Base):
+    """A vendor that is not a champagne producer and does not financially sponsor the festival."""
+
+    __tablename__ = "exhibitors"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200))
+    image: Mapped[str] = mapped_column(String(500), default="")
+    website: Mapped[str] = mapped_column(String(500), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     contact_person_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
@@ -249,6 +271,40 @@ class Table(Base):
 
     def set_reservation_ids(self, ids: list[str]) -> None:
         self.reservation_ids = json.dumps(ids)
+
+
+class Area(Base):
+    """A non-seating zone on the floor plan (stand, stage, catering, etc.)."""
+
+    __tablename__ = "areas"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    layout_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False
+    )
+    producer_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("producers.id", ondelete="SET NULL"), nullable=True
+    )
+    sponsor_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("sponsors.id", ondelete="SET NULL"), nullable=True
+    )
+    exhibitor_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
+    )
+    label: Mapped[str] = mapped_column(String(200))
+    icon: Mapped[str] = mapped_column(String(50), default="bi-shop")
+    """Bootstrap Icons class name, e.g. 'bi-shop', 'bi-music-note-beamed'."""
+
+    x: Mapped[float] = mapped_column(default=50.0)
+    y: Mapped[float] = mapped_column(default=50.0)
+    rotation: Mapped[int] = mapped_column(Integer, default=0)
+    width_m: Mapped[float] = mapped_column(default=1.5)
+    length_m: Mapped[float] = mapped_column(default=1.0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
 
 class Edition(Base):

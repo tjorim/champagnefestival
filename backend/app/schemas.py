@@ -151,6 +151,27 @@ class ReservationGuestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReservationAdminCreate(BaseModel):
+    """Admin-only reservation creation — skips spam checks, accepts person_id directly."""
+
+    person_id: str | None = None
+    name: str = Field(min_length=1, max_length=200)
+    email: EmailStr
+    phone: str = Field(default="", max_length=50)
+    event_id: str = Field(min_length=1, max_length=100)
+    event_title: str = Field(min_length=1, max_length=200)
+    guest_count: int = Field(ge=1, le=20)
+    pre_orders: list[OrderItemBase] = Field(default_factory=list)
+    notes: str = Field(default="", max_length=2000)
+    accessibility_note: str = Field(default="", max_length=2000)
+    status: ReservationStatus = "confirmed"
+
+    @field_validator("name", "phone", "event_id", "event_title", "notes", mode="before")
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        return v.strip() if isinstance(v, str) else v
+
+
 class VolunteerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     address: str = Field(min_length=1, max_length=300)
@@ -289,6 +310,7 @@ class PersonOut(BaseModel):
 class ProducerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(default="", max_length=500)
+    website: str = Field(default="", max_length=500)
     active: bool = True
     contact_person_id: str | None = None
 
@@ -296,6 +318,7 @@ class ProducerCreate(BaseModel):
 class ProducerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     image: str | None = Field(default=None, max_length=500)
+    website: str | None = Field(default=None, max_length=500)
     active: bool | None = None
     contact_person_id: str | None = None
 
@@ -304,6 +327,7 @@ class ProducerOut(BaseModel):
     id: int
     name: str
     image: str
+    website: str
     active: bool
     contact_person_id: str | None
     contact_person: PersonOut | None
@@ -321,6 +345,7 @@ class ProducerOut(BaseModel):
 class SponsorCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(default="", max_length=500)
+    website: str = Field(default="", max_length=500)
     active: bool = True
     contact_person_id: str | None = None
 
@@ -328,6 +353,7 @@ class SponsorCreate(BaseModel):
 class SponsorUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     image: str | None = Field(default=None, max_length=500)
+    website: str | None = Field(default=None, max_length=500)
     active: bool | None = None
     contact_person_id: str | None = None
 
@@ -336,6 +362,42 @@ class SponsorOut(BaseModel):
     id: int
     name: str
     image: str
+    website: str
+    active: bool
+    contact_person_id: str | None
+    contact_person: PersonOut | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Exhibitors
+# ---------------------------------------------------------------------------
+
+
+class ExhibitorCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    image: str = Field(default="", max_length=500)
+    website: str = Field(default="", max_length=500)
+    active: bool = True
+    contact_person_id: str | None = None
+
+
+class ExhibitorUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    image: str | None = Field(default=None, max_length=500)
+    website: str | None = Field(default=None, max_length=500)
+    active: bool | None = None
+    contact_person_id: str | None = None
+
+
+class ExhibitorOut(BaseModel):
+    id: int
+    name: str
+    image: str
+    website: str
     active: bool
     contact_person_id: str | None
     contact_person: PersonOut | None
@@ -430,8 +492,6 @@ class TableCreate(BaseModel):
     table_type_id: str
     rotation: int = Field(ge=0, le=359, default=0)
     layout_id: str
-
-
 class TableUpdate(BaseModel):
     name: str | None = None
     capacity: int | None = Field(default=None, ge=1, le=50)
@@ -453,6 +513,56 @@ class TableOut(BaseModel):
     rotation: int
     layout_id: str
     reservation_ids: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Areas
+# ---------------------------------------------------------------------------
+
+class AreaCreate(BaseModel):
+    layout_id: str = Field(max_length=64)
+    label: str = Field(min_length=1, max_length=200)
+    icon: str = Field(default="bi-shop", max_length=50)
+    producer_id: int | None = None
+    sponsor_id: int | None = None
+    exhibitor_id: int | None = None
+    width_m: float = Field(ge=0.1, le=50.0, default=1.5)
+    length_m: float = Field(ge=0.1, le=50.0, default=1.0)
+    x: float = Field(ge=0, le=100, default=50.0)
+    y: float = Field(ge=0, le=100, default=50.0)
+    rotation: int = Field(ge=0, le=359, default=0)
+
+
+class AreaUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    icon: str | None = Field(default=None, max_length=50)
+    producer_id: int | None = None
+    sponsor_id: int | None = None
+    exhibitor_id: int | None = None
+    width_m: float | None = Field(default=None, ge=0.1, le=50.0)
+    length_m: float | None = Field(default=None, ge=0.1, le=50.0)
+    x: float | None = Field(default=None, ge=0, le=100)
+    y: float | None = Field(default=None, ge=0, le=100)
+    rotation: int | None = Field(default=None, ge=0, le=359)
+
+
+class AreaOut(BaseModel):
+    id: str
+    layout_id: str
+    icon: str
+    producer_id: int | None
+    sponsor_id: int | None
+    exhibitor_id: int | None
+    label: str
+    x: float
+    y: float
+    rotation: int
+    width_m: float
+    length_m: float
     created_at: datetime
     updated_at: datetime
 
@@ -589,12 +699,13 @@ class EditionUpdate(BaseModel):
 
 class EditionItemOut(BaseModel):
     """Slim producer/sponsor shape embedded in the public edition response.
-    Contact person is intentionally excluded — it is internal admin data."""
+    Only active items are included; contact person and active flag are
+    intentionally excluded — they are internal admin data."""
 
     id: int
     name: str
     image: str
-    active: bool
+    website: str
 
     model_config = {"from_attributes": True}
 
