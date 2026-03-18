@@ -3,7 +3,7 @@
 This repository's production deployment target is **GitHub Pages**.
 
 The canonical deploy pipeline is the GitHub Actions workflow at
-`.github/workflows/deploy.yml`, which builds the Vite app and publishes the
+[`./.github/workflows/deploy.yml`](./.github/workflows/deploy.yml), which builds the Vite app and publishes the
 `dist/` output to GitHub Pages.
 
 ## How production deploys work
