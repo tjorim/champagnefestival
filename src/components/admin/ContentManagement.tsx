@@ -21,7 +21,7 @@ interface ContentManagementProps {
   venues: Venue[];
 }
 
-type ContentKey = "producers" | "sponsors";
+type ContentKey = "producers" | "sponsors" | "exhibitors";
 
 // ---------------------------------------------------------------------------
 // ContentSection — one list (producers or sponsors)
@@ -91,12 +91,12 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           ? await fetch(apiBase, {
               method: "POST",
               headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({ name: draft.name, image: draft.image, contact_person_id: draft.contact_person_id ?? null }),
+              body: JSON.stringify({ name: draft.name, image: draft.image, website: draft.website ?? "", contact_person_id: draft.contact_person_id ?? null }),
             })
           : await fetch(`${apiBase}/${draft.id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({ name: draft.name, image: draft.image, contact_person_id: draft.contact_person_id ?? null }),
+              body: JSON.stringify({ name: draft.name, image: draft.image, website: draft.website ?? "", contact_person_id: draft.contact_person_id ?? null }),
             });
         if (!res.ok) {
           setActionError(m.admin_content_error_save());
@@ -472,6 +472,12 @@ export default function ContentManagement({ authHeaders, venues }: ContentManage
           <ContentSection
             sectionKey="sponsors"
             title={m.admin_content_sponsors_section()}
+            authHeaders={authHeaders}
+          />
+          <hr className="border-secondary" />
+          <ContentSection
+            sectionKey="exhibitors"
+            title="Exhibitors"
             authHeaders={authHeaders}
           />
           <hr className="border-secondary" />

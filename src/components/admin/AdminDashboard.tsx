@@ -21,7 +21,7 @@ import type {
   OrderItem,
   OrderItemCategory,
 } from "../../types/reservation";
-import type { Room, FloorTable, TableType, Layout, Venue } from "../../types/admin";
+import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "../../types/admin";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -96,6 +96,24 @@ function apiTableToTable(d: Record<string, unknown>): FloorTable {
   };
 }
 
+/** Map FastAPI snake_case area response to frontend camelCase FloorArea type */
+function apiAreaToArea(d: Record<string, unknown>): FloorArea {
+  return {
+    id: d.id as string,
+    layoutId: (d.layout_id ?? d.layoutId) as string,
+    icon: (d.icon ?? "bi-shop") as string,
+    producerId: ((d.producer_id ?? d.producerId) as number | null) ?? null,
+    sponsorId: ((d.sponsor_id ?? d.sponsorId) as number | null) ?? null,
+    exhibitorId: ((d.exhibitor_id ?? d.exhibitorId) as number | null) ?? null,
+    label: (d.label ?? "") as string,
+    x: (d.x ?? 50) as number,
+    y: (d.y ?? 50) as number,
+    rotation: (d.rotation ?? 0) as number,
+    widthM: (d.width_m ?? d.widthM ?? 1.5) as number,
+    lengthM: (d.length_m ?? d.lengthM ?? 1.0) as number,
+  };
+}
+
 /** Map FastAPI snake_case reservation response to frontend camelCase Reservation type */
 function apiReservationToReservation(d: Record<string, unknown>): Reservation {
   const rawOrders = (d.pre_orders ?? d.preOrders ?? []) as Record<string, unknown>[];
@@ -143,6 +161,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tableTypes, setTableTypes] = useState<TableType[]>([]);
   const [layouts, setLayouts] = useState<Layout[]>([]);
+  const [producers, setProducers] = useState<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]>([]);
+  const [sponsors, setSponsors] = useState<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]>([]);
+  const [exhibitors, setExhibitors] = useState<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]>([]);
+  const [areas, setAreas] = useState<FloorArea[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
   const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
@@ -166,6 +188,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         roomsResponse,
         tableTypesResponse,
         layoutsResponse,
+        producersResponse,
+        sponsorsResponse,
+        exhibitorsResponse,
+        areasResponse,
       ] = await Promise.all([
         fetch("/api/reservations", { headers: authHeaders() }),
         fetch("/api/tables", { headers: authHeaders() }),
@@ -173,6 +199,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fetch("/api/rooms", { headers: authHeaders() }),
         fetch("/api/table-types", { headers: authHeaders() }),
         fetch("/api/layouts", { headers: authHeaders() }),
+        fetch("/api/producers", { headers: authHeaders() }),
+        fetch("/api/sponsors", { headers: authHeaders() }),
+        fetch("/api/exhibitors", { headers: authHeaders() }),
+        fetch("/api/areas", { headers: authHeaders() }),
       ]);
 
       const responses = [
@@ -182,6 +212,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         roomsResponse,
         tableTypesResponse,
         layoutsResponse,
+        producersResponse,
+        sponsorsResponse,
+        exhibitorsResponse,
+        areasResponse,
       ];
 
       if (responses.some((r) => r.status === 401)) {
@@ -197,6 +231,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setRooms([]);
         setTableTypes([]);
         setLayouts([]);
+        setProducers([]);
+        setSponsors([]);
+        setExhibitors([]);
+        setAreas([]);
         setError(m.admin_error_load_data());
         return;
       }
@@ -224,6 +262,45 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       const layoutsData = await layoutsResponse.json();
       setLayouts(Array.isArray(layoutsData) ? layoutsData.map(apiLayoutToLayout) : []);
+
+      const producersData = await producersResponse.json();
+      setProducers(
+        Array.isArray(producersData)
+          ? producersData.map((p: Record<string, unknown>) => ({
+              id: p.id as number,
+              name: p.name as string,
+              active: (p.active ?? true) as boolean,
+              contactPersonId: ((p.contact_person_id ?? p.contactPersonId) as string | null) ?? null,
+            }))
+          : [],
+      );
+
+      const sponsorsData = await sponsorsResponse.json();
+      setSponsors(
+        Array.isArray(sponsorsData)
+          ? sponsorsData.map((s: Record<string, unknown>) => ({
+              id: s.id as number,
+              name: s.name as string,
+              active: (s.active ?? true) as boolean,
+              contactPersonId: ((s.contact_person_id ?? s.contactPersonId) as string | null) ?? null,
+            }))
+          : [],
+      );
+
+      const exhibitorsData = await exhibitorsResponse.json();
+      setExhibitors(
+        Array.isArray(exhibitorsData)
+          ? exhibitorsData.map((e: Record<string, unknown>) => ({
+              id: e.id as number,
+              name: e.name as string,
+              active: (e.active ?? true) as boolean,
+              contactPersonId: ((e.contact_person_id ?? e.contactPersonId) as string | null) ?? null,
+            }))
+          : [],
+      );
+
+      const areasData = await areasResponse.json();
+      setAreas(Array.isArray(areasData) ? areasData.map(apiAreaToArea) : []);
     } catch (err) {
       console.error("Failed to load dashboard data", err);
       setError(m.admin_error_load_data());
@@ -597,8 +674,148 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       setLayouts((prev) => prev.filter((l) => l.id !== layoutId));
       setTables((prev) => prev.filter((t) => t.layoutId !== layoutId));
+      setAreas((prev) => prev.filter((a) => a.layoutId !== layoutId));
     },
     [authHeaders],
+  );
+
+  const handleAddArea = useCallback(
+    async (
+      label: string,
+      icon: string,
+      layoutId: string,
+      widthM: number,
+      lengthM: number,
+      producerId?: number,
+      sponsorId?: number,
+      exhibitorId?: number,
+    ) => {
+      const response = await fetch("/api/areas", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          label,
+          icon,
+          layout_id: layoutId,
+          width_m: widthM,
+          length_m: lengthM,
+          x: 10,
+          y: 10,
+          producer_id: producerId ?? null,
+          sponsor_id: sponsorId ?? null,
+          exhibitor_id: exhibitorId ?? null,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? "Failed to add area.");
+      }
+      const data = await response.json();
+      setAreas((prev) => [...prev, apiAreaToArea(data)]);
+    },
+    [authHeaders],
+  );
+
+  const handleMoveArea = useCallback(
+    async (areaId: string, x: number, y: number) => {
+      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, x, y } : a)));
+      try {
+        await fetch(`/api/areas/${areaId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ x, y }),
+        });
+      } catch (err) {
+        console.error("Failed to persist area position", err);
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleRotateArea = useCallback(
+    async (areaId: string, rotation: number) => {
+      const normalised = ((rotation % 360) + 360) % 360;
+      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)));
+      try {
+        await fetch(`/api/areas/${areaId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ rotation: normalised }),
+        });
+      } catch (err) {
+        console.error("Failed to persist area rotation", err);
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleDeleteArea = useCallback(
+    async (areaId: string) => {
+      const response = await fetch(`/api/areas/${areaId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? "Failed to delete area.");
+      }
+      setAreas((prev) => prev.filter((a) => a.id !== areaId));
+    },
+    [authHeaders],
+  );
+
+  const handleAssignAreaToItem = useCallback(
+    async (
+      areaId: string,
+      producerId: number | null,
+      sponsorId: number | null,
+      exhibitorId: number | null,
+      label?: string,
+      icon?: string,
+    ) => {
+      const body: Record<string, unknown> = {
+        producer_id: producerId,
+        sponsor_id: sponsorId,
+        exhibitor_id: exhibitorId,
+      };
+      if (label !== undefined) body.label = label;
+      if (icon !== undefined) body.icon = icon;
+      const response = await fetch(`/api/areas/${areaId}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? "Failed to assign area.");
+      }
+      const d = await response.json();
+      setAreas((prev) => prev.map((a) => (a.id === areaId ? apiAreaToArea(d) : a)));
+    },
+    [authHeaders],
+  );
+
+  const handleUpdateAreaLabel = useCallback(
+    async (areaId: string, label: string) => {
+      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, label } : a)));
+      try {
+        await fetch(`/api/areas/${areaId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ label }),
+        });
+      } catch (err) {
+        console.error("Failed to persist area label", err);
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleAddReservation = useCallback(
+    (reservation: import("../../types/reservation").Reservation) => {
+      setReservations((prev) => [reservation, ...prev]);
+    },
+    [],
   );
 
   const handleAddTableType = useCallback(
@@ -915,12 +1132,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     <ReservationList
                       reservations={reservations}
                       tables={tables}
+                      producers={producers}
+                      sponsors={sponsors}
+                      exhibitors={exhibitors}
                       filter={filter}
                       onFilterChange={setFilter}
                       onUpdateStatus={handleUpdateStatus}
                       onUpdatePayment={handleUpdatePayment}
                       onAssignTable={handleAssignTable}
                       onViewDetail={handleViewDetail}
+                      onAddReservation={handleAddReservation}
+                      authHeaders={authHeaders}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="tables">
@@ -930,12 +1152,23 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       layouts={layouts}
                       reservations={reservations}
                       rooms={rooms}
+                      producers={producers}
+                      sponsors={sponsors}
+                      exhibitors={exhibitors}
+                      areas={areas}
                       onAddTable={handleAddTable}
                       onMoveTable={handleMoveTable}
                       onDeleteTable={handleDeleteTable}
                       onRotateTable={handleRotateTable}
                       onAddLayout={handleAddLayout}
                       onDeleteLayout={handleDeleteLayout}
+                      onAssignItem={handleAssignTableToItem}
+                      onAddArea={handleAddArea}
+                      onMoveArea={handleMoveArea}
+                      onDeleteArea={handleDeleteArea}
+                      onRotateArea={handleRotateArea}
+                      onAssignAreaToItem={handleAssignAreaToItem}
+                      onUpdateAreaLabel={handleUpdateAreaLabel}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="venues">

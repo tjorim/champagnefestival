@@ -33,6 +33,21 @@ export interface FloorTable {
   reservationIds: string[];
 }
 
+export interface FloorArea {
+  id: string;
+  layoutId: string;
+  icon: string;
+  producerId: number | null;
+  sponsorId: number | null;
+  exhibitorId: number | null;
+  label: string;
+  x: number;
+  y: number;
+  rotation: number;
+  widthM: number;
+  lengthM: number;
+}
+
 export interface Layout {
   id: string;
   editionId: string | null;

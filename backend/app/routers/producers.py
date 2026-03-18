@@ -43,7 +43,7 @@ async def list_producers(db: AsyncSession = Depends(get_db)) -> list[dict]:
     dependencies=[Depends(require_admin)],
 )
 async def create_producer(body: ProducerCreate, db: AsyncSession = Depends(get_db)) -> dict:
-    p = Producer(name=body.name, image=body.image, active=body.active, contact_person_id=body.contact_person_id)
+    p = Producer(name=body.name, image=body.image, website=body.website, active=body.active, contact_person_id=body.contact_person_id)
     db.add(p)
     await db.commit()
     await db.refresh(p)
@@ -60,6 +60,8 @@ async def update_producer(
         p.name = body.name
     if body.image is not None:
         p.image = body.image
+    if body.website is not None:
+        p.website = body.website
     if body.active is not None:
         p.active = body.active
     if "contact_person_id" in body.model_fields_set:

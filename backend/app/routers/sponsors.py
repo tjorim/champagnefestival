@@ -43,7 +43,7 @@ async def list_sponsors(db: AsyncSession = Depends(get_db)) -> list[dict]:
     dependencies=[Depends(require_admin)],
 )
 async def create_sponsor(body: SponsorCreate, db: AsyncSession = Depends(get_db)) -> dict:
-    s = Sponsor(name=body.name, image=body.image, active=body.active, contact_person_id=body.contact_person_id)
+    s = Sponsor(name=body.name, image=body.image, website=body.website, active=body.active, contact_person_id=body.contact_person_id)
     db.add(s)
     await db.commit()
     await db.refresh(s)
@@ -60,6 +60,8 @@ async def update_sponsor(
         s.name = body.name
     if body.image is not None:
         s.image = body.image
+    if body.website is not None:
+        s.website = body.website
     if body.active is not None:
         s.active = body.active
     if "contact_person_id" in body.model_fields_set:

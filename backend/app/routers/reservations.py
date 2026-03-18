@@ -13,6 +13,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Person, Reservation
 from app.schemas import (
+    ReservationAdminCreate,
     ReservationCreate,
     ReservationGuestOut,
     ReservationListOut,
@@ -90,6 +91,69 @@ async def create_reservation(
     reservation._person = person
 
     # TODO: Send confirmation e-mail to guest (planned — see README § Planned features)
+
+    return reservation_to_dict(reservation)
+
+
+# ---------------------------------------------------------------------------
+# Admin: create reservation (bypasses anti-spam, accepts person_id directly)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/admin",
+    response_model=ReservationOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
+async def admin_create_reservation(
+    body: ReservationAdminCreate,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Admin-only reservation creation.
+
+    Skips honeypot / timing checks.  If ``person_id`` is provided the
+    reservation is linked to that person; otherwise a new Person record is
+    created from the supplied name / e-mail.
+    """
+    email_norm = str(body.email).lower().strip()
+
+    if body.person_id:
+        person_result = await db.execute(select(Person).where(Person.id == body.person_id))
+        person = person_result.scalar_one_or_none()
+        if person is None:
+            raise HTTPException(status_code=404, detail="Person not found.")
+    else:
+        person = Person(
+            id=make_id("per"),
+            person_key=make_id("pkey"),
+            name=body.name,
+            email=email_norm,
+            phone=body.phone,
+        )
+        db.add(person)
+        await db.flush()
+
+    reservation = Reservation(
+        id=make_id("res"),
+        name=body.name,
+        email=email_norm,
+        phone=body.phone,
+        event_id=body.event_id,
+        event_title=body.event_title,
+        guest_count=body.guest_count,
+        notes=body.notes,
+        accessibility_note=body.accessibility_note,
+        status=body.status,
+        person_id=person.id,
+        check_in_token=make_id("tok"),
+    )
+    reservation.set_pre_orders([item.model_dump() for item in body.pre_orders])
+
+    db.add(reservation)
+    await db.commit()
+    await db.refresh(reservation)
+    reservation._person = person
 
     return reservation_to_dict(reservation)
 
