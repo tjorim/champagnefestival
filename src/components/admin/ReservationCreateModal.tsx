@@ -56,12 +56,16 @@ interface ReservationCreateModalProps {
 
 function apiResToReservation(d: Record<string, unknown>): Reservation {
   const rawOrders = (d.pre_orders ?? []) as Record<string, unknown>[];
+  const rawPerson = (d.person ?? {}) as Record<string, unknown>;
   return {
     id: d.id as string,
-    personId: (d.person_id as string | null) ?? null,
-    name: d.name as string,
-    email: (d.email ?? "") as string,
-    phone: (d.phone ?? "") as string,
+    personId: (d.person_id ?? "") as string,
+    person: {
+      id: (rawPerson.id ?? "") as string,
+      name: (rawPerson.name ?? "") as string,
+      email: (rawPerson.email ?? "") as string,
+      phone: (rawPerson.phone ?? "") as string,
+    },
     eventId: (d.event_id ?? "") as string,
     eventTitle: (d.event_title ?? "") as string,
     guestCount: (d.guest_count ?? 1) as number,
@@ -92,9 +96,6 @@ export default function ReservationCreateModal({
   onSaved,
   onHide,
 }: ReservationCreateModalProps) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [guestCount, setGuestCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [eventId, setEventId] = useState("");
@@ -111,9 +112,6 @@ export default function ReservationCreateModal({
 
   useEffect(() => {
     if (!show) return;
-    setName("");
-    setEmail("");
-    setPhone("");
     setGuestCount(1);
     setNotes("");
     setEventId("");
@@ -182,16 +180,11 @@ export default function ReservationCreateModal({
 
   function handlePersonChange(opt: SingleValue<PersonOption>) {
     setPersonOption(opt);
-    if (opt) {
-      if (!name) setName(opt.name);
-      if (!email) setEmail(opt.email);
-      if (!phone) setPhone(opt.phone);
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !eventId) return;
+    if (!personOption || !eventId) return;
     setSaving(true);
     setError(null);
     try {
@@ -199,10 +192,7 @@ export default function ReservationCreateModal({
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
-          person_id: personOption?.value ?? null,
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
+          person_id: personOption.value,
           event_id: eventId,
           event_title: eventTitle,
           guest_count: guestCount,
@@ -279,7 +269,7 @@ export default function ReservationCreateModal({
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Person link (optional)</Form.Label>
+            <Form.Label className="text-secondary small">Person *</Form.Label>
             <Select<PersonOption, false>
               isClearable
               options={personOptions}
@@ -298,37 +288,6 @@ export default function ReservationCreateModal({
                   {opt.sub && <small className="text-secondary">{opt.sub}</small>}
                 </div>
               )}
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Name *</Form.Label>
-            <Form.Control
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              required
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Email *</Form.Label>
-            <Form.Control
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              required
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Phone</Form.Label>
-            <Form.Control
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="bg-dark text-light border-secondary"
             />
           </Form.Group>
 
@@ -363,7 +322,7 @@ export default function ReservationCreateModal({
             type="submit"
             variant="warning"
             size="sm"
-            disabled={saving || !name.trim() || !email.trim() || !eventId}
+            disabled={saving || !personOption || !eventId}
           >
             {saving ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />

@@ -205,7 +205,6 @@ def upgrade() -> None:
     op.create_table(
         "people",
         sa.Column("id", sa.String(length=64), nullable=False),
-        sa.Column("person_key", sa.String(length=64), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
         sa.Column("email", sa.String(length=200), nullable=False, server_default=""),
         sa.Column("phone", sa.String(length=50), nullable=False, server_default=""),
@@ -226,7 +225,6 @@ def upgrade() -> None:
             "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("person_key"),
         sa.UniqueConstraint("national_register_number"),
         sa.UniqueConstraint("eid_document_number"),
     )
@@ -234,9 +232,6 @@ def upgrade() -> None:
     op.create_table(
         "reservations",
         sa.Column("id", sa.String(64), primary_key=True),
-        sa.Column("name", sa.String(200), nullable=False),
-        sa.Column("email", sa.String(200), nullable=False),
-        sa.Column("phone", sa.String(50), nullable=False),
         sa.Column("event_id", sa.String(100), nullable=False),
         sa.Column("event_title", sa.String(200), nullable=False),
         sa.Column("guest_count", sa.Integer, nullable=False),
@@ -252,8 +247,8 @@ def upgrade() -> None:
         sa.Column(
             "person_id",
             sa.String(64),
-            sa.ForeignKey("people.id", ondelete="SET NULL"),
-            nullable=True,
+            sa.ForeignKey("people.id", ondelete="RESTRICT"),
+            nullable=False,
         ),
         sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
         sa.Column("payment_status", sa.String(20), nullable=False, server_default="unpaid"),

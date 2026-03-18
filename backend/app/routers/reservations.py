@@ -53,29 +53,20 @@ async def create_reservation(
 
     email_norm = str(body.email).lower().strip()
 
-    person: Person
-    if body.person_key:
-        person_result = await db.execute(
-            select(Person).where(Person.person_key == body.person_key)
-        )
-        person = person_result.scalar_one_or_none()
-        if person is None:
-            raise HTTPException(status_code=404, detail="Person not found for provided person_key.")
-    else:
+    person_result = await db.execute(select(Person).where(Person.email == email_norm))
+    person = person_result.scalar_one_or_none()
+    if person is None:
         person = Person(
             id=make_id("per"),
-            person_key=make_id("pkey"),
             name=body.name,
             email=email_norm,
+            phone=body.phone,
         )
         db.add(person)
         await db.flush()
 
     reservation = Reservation(
         id=make_id("res"),
-        name=body.name,
-        email=email_norm,
-        phone=body.phone,
         event_id=body.event_id,
         event_title=body.event_title,
         guest_count=body.guest_count,
@@ -116,29 +107,13 @@ async def admin_create_reservation(
     reservation is linked to that person; otherwise a new Person record is
     created from the supplied name / e-mail.
     """
-    email_norm = str(body.email).lower().strip()
-
-    if body.person_id:
-        person_result = await db.execute(select(Person).where(Person.id == body.person_id))
-        person = person_result.scalar_one_or_none()
-        if person is None:
-            raise HTTPException(status_code=404, detail="Person not found.")
-    else:
-        person = Person(
-            id=make_id("per"),
-            person_key=make_id("pkey"),
-            name=body.name,
-            email=email_norm,
-            phone=body.phone,
-        )
-        db.add(person)
-        await db.flush()
+    person_result = await db.execute(select(Person).where(Person.id == body.person_id))
+    person = person_result.scalar_one_or_none()
+    if person is None:
+        raise HTTPException(status_code=404, detail="Person not found.")
 
     reservation = Reservation(
         id=make_id("res"),
-        name=body.name,
-        email=email_norm,
-        phone=body.phone,
         event_id=body.event_id,
         event_title=body.event_title,
         guest_count=body.guest_count,
@@ -182,12 +157,14 @@ async def list_reservations(
         # Escape LIKE special characters so user input is treated as a literal
         # substring (prevents % and _ from acting as wildcards).
         q_escaped = q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        stmt = stmt.where(
+        q_like = f"%{q_escaped}%"
+        person_subquery = select(Person.id).where(
             or_(
-                Reservation.name.ilike(f"%{q_escaped}%", escape="\\"),
-                Reservation.email.ilike(f"%{q_escaped}%", escape="\\"),
+                Person.name.ilike(q_like, escape="\\"),
+                Person.email.ilike(q_like, escape="\\"),
             )
         )
+        stmt = stmt.where(Reservation.person_id.in_(person_subquery))
     if status_filter:
         stmt = stmt.where(Reservation.status == status_filter)
     if event_id:
@@ -197,14 +174,13 @@ async def list_reservations(
 
     result = await db.execute(stmt.order_by(Reservation.created_at.desc()))
     rows = result.scalars().all()
-    person_ids = {r.person_id for r in rows if r.person_id}
+    person_ids = {r.person_id for r in rows}
     person_map: dict[str, Person] = {}
     if person_ids:
         people_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
         person_map = {p.id: p for p in people_result.scalars().all()}
     for r in rows:
-        if r.person_id:
-            r._person = person_map.get(r.person_id)
+        r._person = person_map.get(r.person_id)
     return [reservation_to_list_dict(r) for r in rows]
 
 
@@ -236,20 +212,21 @@ async def my_reservations(
       README § Planned features), the confirmation e-mail will contain the
       deep-link; this endpoint provides a fallback for guests who lost it.
     """
+    email_norm = email.lower().strip()
+    persons_result = await db.execute(select(Person).where(Person.email == email_norm))
+    persons = persons_result.scalars().all()
+    if not persons:
+        return []
+
+    person_map: dict[str, Person] = {p.id: p for p in persons}
     result = await db.execute(
         select(Reservation)
-        .where(Reservation.email == email.lower().strip())
+        .where(Reservation.person_id.in_(list(person_map.keys())))
         .order_by(Reservation.created_at.desc())
     )
     rows = result.scalars().all()
-    person_ids = {r.person_id for r in rows if r.person_id}
-    person_map: dict[str, Person] = {}
-    if person_ids:
-        people_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
-        person_map = {p.id: p for p in people_result.scalars().all()}
     for r in rows:
-        if r.person_id:
-            r._person = person_map.get(r.person_id)
+        r._person = person_map.get(r.person_id)
     return [reservation_to_guest_dict(r) for r in rows]
 
 
@@ -303,13 +280,12 @@ async def update_reservation(
         r.accessibility_note = body.accessibility_note
     if "person_id" in body.model_fields_set:
         if body.person_id is None:
-            r.person_id = None
-        else:
-            person_result = await db.execute(select(Person).where(Person.id == body.person_id))
-            person = person_result.scalar_one_or_none()
-            if person is None:
-                raise HTTPException(status_code=404, detail="Person not found.")
-            r.person_id = person.id
+            raise HTTPException(status_code=400, detail="person_id cannot be removed; every reservation requires a person.")
+        person_result = await db.execute(select(Person).where(Person.id == body.person_id))
+        person = person_result.scalar_one_or_none()
+        if person is None:
+            raise HTTPException(status_code=404, detail="Person not found.")
+        r.person_id = person.id
     if body.pre_orders is not None:
         r.set_pre_orders([item.model_dump() for item in body.pre_orders])
     if body.checked_in is not None:
@@ -321,11 +297,8 @@ async def update_reservation(
 
     await db.commit()
     await db.refresh(r)
-    if r.person_id:
-        person_result = await db.execute(select(Person).where(Person.id == r.person_id))
-        r._person = person_result.scalar_one_or_none()
-    else:
-        r._person = None
+    person_result = await db.execute(select(Person).where(Person.id == r.person_id))
+    r._person = person_result.scalar_one_or_none()
     return reservation_to_dict(r)
 
 

@@ -95,7 +95,7 @@ export default function ReservationList({
   const [allocationFilter, setAllocationFilter] = useState("");
 
   // Build allocation entities that appear in the current reservation list
-  const reservationPersonIds = new Set(reservations.map((r) => r.personId).filter(Boolean));
+  const reservationPersonIds = new Set(reservations.map((r) => r.personId));
   const allocationOptions: { key: string; label: string; personId: string }[] = [
     ...producers
       .filter((p) => p.contactPersonId && reservationPersonIds.has(p.contactPersonId))
@@ -121,7 +121,7 @@ export default function ReservationList({
 
   const filtered = reservations.filter((r) => {
     if (filter !== "all" && r.status !== filter) return false;
-    if (filterPersonId && r.personId !== filterPersonId) return false;
+    if (filterPersonId && r.person.id !== filterPersonId) return false;
     return true;
   });
 
@@ -207,12 +207,12 @@ export default function ReservationList({
                 </thead>
                 <tbody>
                   {filtered.map((res) => {
-                    const isLinked = res.personId && allContactPersonIds.has(res.personId);
+                    const isLinked = allContactPersonIds.has(res.person.id);
                     return (
                       <tr key={res.id}>
                         <td>
                           <div className="fw-semibold d-flex align-items-center gap-1">
-                            {res.name}
+                            {res.person.name}
                             {isLinked && (
                               <i
                                 className="bi bi-person-badge text-info"
@@ -221,7 +221,7 @@ export default function ReservationList({
                               />
                             )}
                           </div>
-                          <div className="text-secondary small">{res.email}</div>
+                          <div className="text-secondary small">{res.person.email}</div>
                           {res.preOrders.length > 0 && (
                             <div className="text-warning small">
                               <i className="bi bi-cart-fill me-1" aria-hidden="true" />

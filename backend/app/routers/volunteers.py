@@ -76,7 +76,6 @@ async def create_volunteer(body: VolunteerCreate, db: AsyncSession = Depends(get
 
     person = Person(
         id=make_id("per"),
-        person_key=make_id("pkey"),
         name=body.name,
         address=body.address,
         first_help_day=body.first_help_day,
