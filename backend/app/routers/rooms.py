@@ -38,6 +38,7 @@ async def create_room(
         width_m=body.width_m,
         length_m=body.length_m,
         color=body.color,
+        active=body.active,
     )
     db.add(r)
     await db.commit()
@@ -87,6 +88,8 @@ async def update_room(
         r.length_m = body.length_m
     if body.color is not None:
         r.color = body.color
+    if body.active is not None:
+        r.active = body.active
 
     await db.commit()
     await db.refresh(r)

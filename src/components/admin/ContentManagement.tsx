@@ -33,6 +33,7 @@ interface ContentSectionProps {
   authHeaders: () => Record<string, string>;
 }
 
+
 function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps) {
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,12 +91,12 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           ? await fetch(apiBase, {
               method: "POST",
               headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({ name: draft.name, image: draft.image }),
+              body: JSON.stringify({ name: draft.name, image: draft.image, contact_person_id: draft.contact_person_id ?? null }),
             })
           : await fetch(`${apiBase}/${draft.id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({ name: draft.name, image: draft.image }),
+              body: JSON.stringify({ name: draft.name, image: draft.image, contact_person_id: draft.contact_person_id ?? null }),
             });
         if (!res.ok) {
           setActionError(m.admin_content_error_save());
@@ -214,6 +215,12 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
             {item.name}
           </span>
           <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
+          {item.contact_person && (
+            <small className="text-secondary text-truncate d-none d-lg-inline">
+              <i className="bi bi-person me-1" aria-hidden="true" />
+              {item.contact_person.name}
+            </small>
+          )}
         </span>
         <span className="d-flex gap-1 flex-shrink-0">
           {!isArchived && (
@@ -341,6 +348,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       <ItemModal
         show={modalOpen}
         initial={modalItem}
+        authHeaders={authHeaders}
         onSave={handleModalSave}
         onHide={() => setModalOpen(false)}
       />

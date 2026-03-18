@@ -55,13 +55,14 @@ def upgrade() -> None:
         sa.Column(
             "venue_id",
             sa.String(64),
-            sa.ForeignKey("venues.id", ondelete="CASCADE"),
+            sa.ForeignKey("venues.id", ondelete="RESTRICT"),
             nullable=False,
         ),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("width_m", sa.Float, nullable=False, server_default="20.0"),
         sa.Column("length_m", sa.Float, nullable=False, server_default="15.0"),
         sa.Column("color", sa.String(20), nullable=False, server_default="#6c757d"),
+        sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -85,6 +86,7 @@ def upgrade() -> None:
         sa.Column("length_m", sa.Float, nullable=False, server_default="1.8"),
         sa.Column("height_type", sa.String(20), nullable=False, server_default="low"),
         sa.Column("max_capacity", sa.Integer, nullable=False),
+        sa.Column("active", sa.Boolean, nullable=False, server_default="1"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

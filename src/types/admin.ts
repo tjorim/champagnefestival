@@ -13,6 +13,7 @@ export interface TableType {
   heightType: "low" | "high";
   /** Physical maximum number of seats */
   maxCapacity: number;
+  active: boolean;
 }
 
 export interface FloorTable {
@@ -65,4 +66,5 @@ export interface Room {
   lengthM: number;
   /** CSS colour string for the room badge / canvas border */
   color: string;
+  active: boolean;
 }

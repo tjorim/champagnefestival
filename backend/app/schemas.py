@@ -223,6 +223,65 @@ class CheckInOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# People
+# ---------------------------------------------------------------------------
+
+
+class PersonCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    email: EmailStr | None = None
+    phone: str = Field(default="", max_length=50)
+    address: str = Field(default="", max_length=300)
+    roles: list[str] = Field(default_factory=list)
+    first_help_day: date | None = None
+    last_help_day: date | None = None
+    national_register_number: str | None = Field(default=None, max_length=20)
+    eid_document_number: str | None = Field(default=None, max_length=50)
+    visits_per_month: int | None = Field(default=None, ge=1, le=31)
+    club_name: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=2000)
+    active: bool = True
+
+
+class PersonUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=50)
+    address: str | None = Field(default=None, max_length=300)
+    roles: list[str] | None = None
+    first_help_day: date | None = None
+    last_help_day: date | None = None
+    national_register_number: str | None = Field(default=None, max_length=20)
+    eid_document_number: str | None = Field(default=None, max_length=50)
+    visits_per_month: int | None = Field(default=None, ge=1, le=31)
+    club_name: str | None = Field(default=None, max_length=200)
+    notes: str | None = Field(default=None, max_length=2000)
+    active: bool | None = None
+
+
+class PersonOut(BaseModel):
+    id: str
+    person_key: str
+    name: str
+    email: str
+    phone: str
+    address: str
+    roles: list[str]
+    first_help_day: date | None
+    last_help_day: date | None
+    national_register_number: str | None
+    eid_document_number: str | None
+    visits_per_month: int | None
+    club_name: str
+    notes: str
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
 # Producers
 # ---------------------------------------------------------------------------
 
@@ -231,12 +290,14 @@ class ProducerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(default="", max_length=500)
     active: bool = True
+    contact_person_id: str | None = None
 
 
 class ProducerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     image: str | None = Field(default=None, max_length=500)
     active: bool | None = None
+    contact_person_id: str | None = None
 
 
 class ProducerOut(BaseModel):
@@ -244,6 +305,8 @@ class ProducerOut(BaseModel):
     name: str
     image: str
     active: bool
+    contact_person_id: str | None
+    contact_person: PersonOut | None
     created_at: datetime
     updated_at: datetime
 
@@ -259,12 +322,14 @@ class SponsorCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(default="", max_length=500)
     active: bool = True
+    contact_person_id: str | None = None
 
 
 class SponsorUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     image: str | None = Field(default=None, max_length=500)
     active: bool | None = None
+    contact_person_id: str | None = None
 
 
 class SponsorOut(BaseModel):
@@ -272,6 +337,8 @@ class SponsorOut(BaseModel):
     name: str
     image: str
     active: bool
+    contact_person_id: str | None
+    contact_person: PersonOut | None
     created_at: datetime
     updated_at: datetime
 
@@ -314,6 +381,7 @@ class TableTypeCreate(BaseModel):
     length_m: float = Field(ge=0.1, le=20.0, default=1.8)
     height_type: Literal["low", "high"] = "low"
     max_capacity: int = Field(ge=1, le=50)
+    active: bool = True
 
     @model_validator(mode="after")
     def normalise_dimensions(self) -> "TableTypeCreate":
@@ -331,6 +399,7 @@ class TableTypeUpdate(BaseModel):
     length_m: float | None = Field(default=None, ge=0.1, le=20.0)
     height_type: Literal["low", "high"] | None = None
     max_capacity: int | None = Field(default=None, ge=1, le=50)
+    active: bool | None = None
 
 
 class TableTypeOut(BaseModel):
@@ -341,6 +410,7 @@ class TableTypeOut(BaseModel):
     length_m: float
     height_type: str
     max_capacity: int
+    active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -443,6 +513,7 @@ class RoomCreate(BaseModel):
     width_m: float = Field(ge=1, le=500, default=20.0)
     length_m: float = Field(ge=1, le=500, default=15.0)
     color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    active: bool = True
 
 
 class RoomUpdate(BaseModel):
@@ -450,6 +521,7 @@ class RoomUpdate(BaseModel):
     width_m: float | None = Field(default=None, ge=1, le=500)
     length_m: float | None = Field(default=None, ge=1, le=500)
     color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    active: bool | None = None
 
 
 class RoomOut(BaseModel):
@@ -459,6 +531,7 @@ class RoomOut(BaseModel):
     width_m: float
     length_m: float
     color: str
+    active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -514,6 +587,18 @@ class EditionUpdate(BaseModel):
     active: bool | None = None
 
 
+class EditionItemOut(BaseModel):
+    """Slim producer/sponsor shape embedded in the public edition response.
+    Contact person is intentionally excluded — it is internal admin data."""
+
+    id: int
+    name: str
+    image: str
+    active: bool
+
+    model_config = {"from_attributes": True}
+
+
 class EditionOut(BaseModel):
     id: str
     year: int
@@ -523,8 +608,8 @@ class EditionOut(BaseModel):
     sunday: date
     venue: VenueOut
     schedule: list[ScheduleEventOut]
-    producers: list[ProducerOut]
-    sponsors: list[SponsorOut]
+    producers: list[EditionItemOut]
+    sponsors: list[EditionItemOut]
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -532,55 +617,3 @@ class EditionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class PersonCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    email: EmailStr | None = None
-    phone: str = Field(default="", max_length=50)
-    address: str = Field(default="", max_length=300)
-    roles: list[str] = Field(default_factory=list)
-    first_help_day: date | None = None
-    last_help_day: date | None = None
-    national_register_number: str | None = Field(default=None, max_length=20)
-    eid_document_number: str | None = Field(default=None, max_length=50)
-    visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    club_name: str = Field(default="", max_length=200)
-    notes: str = Field(default="", max_length=2000)
-    active: bool = True
-
-
-class PersonUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    email: EmailStr | None = None
-    phone: str | None = Field(default=None, max_length=50)
-    address: str | None = Field(default=None, max_length=300)
-    roles: list[str] | None = None
-    first_help_day: date | None = None
-    last_help_day: date | None = None
-    national_register_number: str | None = Field(default=None, max_length=20)
-    eid_document_number: str | None = Field(default=None, max_length=50)
-    visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    club_name: str | None = Field(default=None, max_length=200)
-    notes: str | None = Field(default=None, max_length=2000)
-    active: bool | None = None
-
-
-class PersonOut(BaseModel):
-    id: str
-    person_key: str
-    name: str
-    email: str
-    phone: str
-    address: str
-    roles: list[str]
-    first_help_day: date | None
-    last_help_day: date | None
-    national_register_number: str | None
-    eid_document_number: str | None
-    visits_per_month: int | None
-    club_name: str
-    notes: str
-    active: bool
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}

@@ -64,6 +64,7 @@ function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
     lengthM: (d.length_m ?? d.lengthM ?? 0.7) as number,
     heightType: (d.height_type ?? d.heightType ?? "low") as "low" | "high",
     maxCapacity: (d.max_capacity ?? d.maxCapacity ?? 4) as number,
+    active: (d.active ?? true) as boolean,
   };
 }
 
@@ -76,6 +77,7 @@ function apiRoomToRoom(d: Record<string, unknown>): Room {
     widthM: (d.width_m ?? d.widthM) as number,
     lengthM: (d.length_m ?? d.lengthM) as number,
     color: d.color as string,
+    active: (d.active ?? true) as boolean,
   };
 }
 
@@ -532,22 +534,38 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
-  const handleDeleteRoom = useCallback(
+  const handleArchiveRoom = useCallback(
     async (roomId: string) => {
       const response = await fetch(`/api/rooms/${roomId}`, {
-        method: "DELETE",
+        method: "PUT",
         headers: authHeaders(),
+        body: JSON.stringify({ active: false }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_room());
       }
-      setRooms((prev) => prev.filter((r) => r.id !== roomId));
-      const roomLayoutIds = layouts.filter((l) => l.roomId === roomId).map((l) => l.id);
-      setLayouts((prev) => prev.filter((l) => l.roomId !== roomId));
-      setTables((prev) => prev.filter((t) => !roomLayoutIds.includes(t.layoutId)));
+      const data = await response.json();
+      setRooms((prev) => prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)));
     },
-    [authHeaders, layouts],
+    [authHeaders],
+  );
+
+  const handleRestoreRoom = useCallback(
+    async (roomId: string) => {
+      const response = await fetch(`/api/rooms/${roomId}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({ active: true }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
+      }
+      const data = await response.json();
+      setRooms((prev) => prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)));
+    },
+    [authHeaders],
   );
 
   const handleAddLayout = useCallback(
@@ -619,6 +637,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           ...(data.lengthM !== undefined && { length_m: data.lengthM }),
           ...(data.heightType !== undefined && { height_type: data.heightType }),
           ...(data.maxCapacity !== undefined && { max_capacity: data.maxCapacity }),
+          ...(data.active !== undefined && { active: data.active }),
         }),
       });
       if (!response.ok) {
@@ -631,19 +650,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
-  const handleDeleteTableType = useCallback(
-    async (id: string) => {
-      const response = await fetch(`/api/table-types/${id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_table_type());
-      }
-      setTableTypes((prev) => prev.filter((tt) => tt.id !== id));
-    },
-    [authHeaders],
+  const handleArchiveTableType = useCallback(
+    (id: string) => handleUpdateTableType(id, { active: false }),
+    [handleUpdateTableType],
+  );
+
+  const handleRestoreTableType = useCallback(
+    (id: string) => handleUpdateTableType(id, { active: true }),
+    [handleUpdateTableType],
   );
 
   /** Fetch the full reservation (including checkInToken) and open detail modal */
@@ -933,7 +947,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onRestore={handleRestoreVenue}
                       onDelete={handleDeleteVenue}
                       onAddRoom={handleAddRoom}
-                      onDeleteRoom={handleDeleteRoom}
+                      onArchiveRoom={handleArchiveRoom}
+                      onRestoreRoom={handleRestoreRoom}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="table-types">
@@ -941,7 +956,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       tableTypes={tableTypes}
                       onAdd={handleAddTableType}
                       onUpdate={handleUpdateTableType}
-                      onDelete={handleDeleteTableType}
+                      onArchive={handleArchiveTableType}
+                      onRestore={handleRestoreTableType}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="content">

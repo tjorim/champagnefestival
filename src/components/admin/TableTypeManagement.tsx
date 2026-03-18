@@ -20,7 +20,8 @@ interface TableTypeManagementProps {
   tableTypes: TableType[];
   onAdd: (data: Omit<TableType, "id">) => Promise<void>;
   onUpdate: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onArchive: (id: string) => Promise<void>;
+  onRestore: (id: string) => Promise<void>;
 }
 
 const emptyForm = {
@@ -30,13 +31,15 @@ const emptyForm = {
   lengthM: 1.8,
   heightType: "low" as "low" | "high",
   maxCapacity: 4,
+  active: true,
 };
 
 export default function TableTypeManagement({
   tableTypes,
   onAdd,
   onUpdate,
-  onDelete,
+  onArchive,
+  onRestore,
 }: TableTypeManagementProps) {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -61,6 +64,7 @@ export default function TableTypeManagement({
       lengthM: tt.lengthM,
       heightType: tt.heightType,
       maxCapacity: tt.maxCapacity,
+      active: tt.active,
     });
     setError(null);
     setShowModal(true);
@@ -88,17 +92,28 @@ export default function TableTypeManagement({
     }
   }, [form, editingId, onAdd, onUpdate]);
 
-  const handleDelete = useCallback(
+  const handleArchive = useCallback(
     async (id: string) => {
-      if (!window.confirm(m.admin_table_type_delete_confirm())) return;
       setDeleteError(null);
       try {
-        await onDelete(id);
+        await onArchive(id);
       } catch (err) {
         setDeleteError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
-    [onDelete],
+    [onArchive],
+  );
+
+  const handleRestore = useCallback(
+    async (id: string) => {
+      setDeleteError(null);
+      try {
+        await onRestore(id);
+      } catch (err) {
+        setDeleteError(err instanceof Error ? err.message : m.admin_content_error_save());
+      }
+    },
+    [onRestore],
   );
 
   return (
@@ -135,8 +150,15 @@ export default function TableTypeManagement({
                 </thead>
                 <tbody>
                   {tableTypes.map((tt) => (
-                    <tr key={tt.id}>
-                      <td className="fw-semibold">{tt.name}</td>
+                    <tr key={tt.id} className={tt.active ? undefined : "opacity-50"}>
+                      <td className="fw-semibold">
+                        {tt.name}
+                        {!tt.active && (
+                          <Badge bg="secondary" className="ms-2" style={{ fontSize: "0.7rem" }}>
+                            {m.admin_venue_archived_badge()}
+                          </Badge>
+                        )}
+                      </td>
                       <td>
                         <Badge bg="secondary">
                           {tt.shape === "round"
@@ -160,24 +182,38 @@ export default function TableTypeManagement({
                       <td>{tt.maxCapacity}</td>
                       <td>
                         <div className="d-flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline-secondary"
-                            onClick={() => openEdit(tt)}
-                            aria-label={m.admin_edit()}
-                            title={m.admin_edit()}
-                          >
-                            <i className="bi bi-pencil" aria-hidden="true" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline-danger"
-                            onClick={() => handleDelete(tt.id)}
-                            aria-label={m.admin_delete()}
-                            title={m.admin_delete()}
-                          >
-                            <i className="bi bi-trash" aria-hidden="true" />
-                          </Button>
+                          {tt.active && (
+                            <Button
+                              size="sm"
+                              variant="outline-secondary"
+                              onClick={() => openEdit(tt)}
+                              aria-label={m.admin_edit()}
+                              title={m.admin_edit()}
+                            >
+                              <i className="bi bi-pencil" aria-hidden="true" />
+                            </Button>
+                          )}
+                          {tt.active ? (
+                            <Button
+                              size="sm"
+                              variant="outline-secondary"
+                              onClick={() => handleArchive(tt.id)}
+                              aria-label={m.admin_content_archive()}
+                              title={m.admin_content_archive()}
+                            >
+                              <i className="bi bi-archive" aria-hidden="true" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline-success"
+                              onClick={() => handleRestore(tt.id)}
+                              aria-label={m.admin_content_restore()}
+                              title={m.admin_content_restore()}
+                            >
+                              <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
