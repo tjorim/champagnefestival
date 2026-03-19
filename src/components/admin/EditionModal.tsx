@@ -315,7 +315,7 @@ export default function EditionModal({
 
           <Form.Group>
             <Form.Label className="text-secondary small mb-1">
-              Exhibitors
+              {m.admin_content_edition_exhibitors_label()}
             </Form.Label>
             <Select<ItemOption, true, GroupBase<ItemOption>>
               isMulti
@@ -323,7 +323,7 @@ export default function EditionModal({
               value={selectedExhibitors}
               onChange={setSelectedExhibitors}
               styles={darkSelectStyles}
-              placeholder="Select exhibitors…"
+              placeholder={m.admin_content_edition_exhibitors_placeholder()}
               classNamePrefix="rs"
             />
           </Form.Group>

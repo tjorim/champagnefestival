@@ -46,8 +46,9 @@ function getTablesInArea(
 ): FloorTable[] {
   const areaLeft = (area.x / 100) * canvasW;
   const areaTop = (area.y / 100) * canvasH;
-  const areaW = area.widthM * PX_PER_M;
-  const areaH = area.lengthM * PX_PER_M;
+  // Match DraggableArea's rendered dimensions (Math.round + minimums)
+  const areaW = Math.max(40, Math.round(area.widthM * PX_PER_M));
+  const areaH = Math.max(24, Math.round(area.lengthM * PX_PER_M));
 
   // Centre of the (unrotated) area bounding box
   const acx = areaLeft + areaW / 2;
@@ -767,7 +768,7 @@ export default function LayoutEditor({
                 }}
               >
                 <i className="bi bi-people-fill me-1" aria-hidden="true" />
-                Seating
+                {m.admin_layout_seating()}
               </Button>
               <Button
                 variant={layer === "areas" ? "info" : "outline-secondary"}
@@ -778,7 +779,7 @@ export default function LayoutEditor({
                 }}
               >
                 <i className="bi bi-shop me-1" aria-hidden="true" />
-                Areas
+                {m.admin_layout_areas()}
               </Button>
             </div>
             {layer === "seating" ? (
@@ -806,7 +807,7 @@ export default function LayoutEditor({
                 disabled={!activeLayoutId}
               >
                 <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-                Add Area
+                {m.admin_layout_add_area()}
               </Button>
             )}
           </div>
@@ -998,7 +999,7 @@ export default function LayoutEditor({
           <Card.Header className="d-flex align-items-center justify-content-between border-info">
             <span className="fw-semibold">
               <i className={`bi ${selectedAreaData.icon || "bi-shop"} me-2`} aria-hidden="true" />
-              Area: {selectedAreaData.label}
+              {m.admin_layout_area_label_prefix()} {selectedAreaData.label}
             </span>
             <div className="d-flex gap-2 align-items-center">
               <Button
@@ -1045,7 +1046,7 @@ export default function LayoutEditor({
               </Alert>
             )}
             <Form.Group className="mb-3" controlId="area-label">
-              <Form.Label className="text-secondary small">Label</Form.Label>
+              <Form.Label className="text-secondary small">{m.admin_layout_area_form_label()}</Form.Label>
               <Form.Control
                 size="sm"
                 type="text"
@@ -1061,7 +1062,7 @@ export default function LayoutEditor({
               />
             </Form.Group>
             <Form.Group className="mb-3" controlId="area-icon">
-              <Form.Label className="text-secondary small">Icon</Form.Label>
+              <Form.Label className="text-secondary small">{m.admin_layout_area_form_icon()}</Form.Label>
               <div className="d-flex gap-2 align-items-center">
                 <i className={`bi ${selectedAreaData.icon || "bi-shop"} text-info`} aria-hidden="true" />
                 <Form.Select
@@ -1091,7 +1092,7 @@ export default function LayoutEditor({
               </div>
             </Form.Group>
             <Form.Group controlId="area-assign-item">
-              <Form.Label className="text-secondary small">Assigned to</Form.Label>
+              <Form.Label className="text-secondary small">{m.admin_layout_area_assigned_to()}</Form.Label>
               <Form.Select
                 size="sm"
                 className="bg-dark text-light border-secondary"
@@ -1112,9 +1113,9 @@ export default function LayoutEditor({
                   }
                 }}
               >
-                <option value="">— None —</option>
+                <option value="">{m.admin_layout_area_none()}</option>
                 {exhibitors.filter((e) => e.active).length > 0 && (
-                  <optgroup label="Exhibitors">
+                  <optgroup label={m.admin_layout_area_exhibitors_group()}>
                     {exhibitors.filter((e) => e.active).map((e) => (
                       <option key={e.id} value={`e:${e.id}`}>{e.name}</option>
                     ))}
@@ -1126,12 +1127,12 @@ export default function LayoutEditor({
               <div className="mt-3 pt-3 border-top border-secondary">
                 <p className="text-secondary small mb-2">
                   <i className="bi bi-grid-3x3-gap me-1" aria-hidden="true" />
-                  Tables in this stand:{" "}
+                  {m.admin_layout_tables_in_stand()}{" "}
                   <Badge bg="info" text="dark">
                     {tablesInSelectedArea.length}
                   </Badge>
                   <span className="ms-2 text-secondary">
-                    {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)} places total
+                    {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)} {m.admin_layout_places_total()}
                   </span>
                 </p>
                 <ListGroup variant="flush">
@@ -1143,7 +1144,7 @@ export default function LayoutEditor({
                       <i className="bi bi-grid-3x3 me-1 text-secondary" aria-hidden="true" />
                       {t.name}
                       <Badge bg="secondary" className="ms-2" style={{ fontSize: "0.65rem" }}>
-                        {t.capacity} pl.
+                        {t.capacity} {m.admin_layout_capacity_abbrev()}
                       </Badge>
                     </ListGroup.Item>
                   ))}
@@ -1213,7 +1214,7 @@ export default function LayoutEditor({
         aria-labelledby="add-area-modal-title"
       >
         <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="add-area-modal-title">Add Area</Modal.Title>
+          <Modal.Title id="add-area-modal-title">{m.admin_layout_add_area()}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addAreaError && (
@@ -1222,17 +1223,17 @@ export default function LayoutEditor({
             </Alert>
           )}
           <Form.Group className="mb-3" controlId="area-new-label">
-            <Form.Label>Label</Form.Label>
+            <Form.Label>{m.admin_layout_area_form_label()}</Form.Label>
             <Form.Control
               type="text"
               value={newArea.label}
               onChange={(e) => setNewArea((p) => ({ ...p, label: e.target.value }))}
               className="bg-dark text-light border-secondary"
-              placeholder="e.g. DJ Stage, Oyster Bar…"
+              placeholder={m.admin_layout_area_label_placeholder()}
             />
           </Form.Group>
           <Form.Group className="mb-3" controlId="area-new-icon">
-            <Form.Label>Icon</Form.Label>
+            <Form.Label>{m.admin_layout_area_form_icon()}</Form.Label>
             <div className="d-flex gap-2 align-items-center">
               <i className={`bi ${newArea.icon} fs-4 text-info`} aria-hidden="true" />
               <Form.Select
@@ -1247,7 +1248,7 @@ export default function LayoutEditor({
             </div>
           </Form.Group>
           <Form.Group className="mb-3" controlId="area-new-assign">
-            <Form.Label>Assigned to (optional)</Form.Label>
+            <Form.Label>{m.admin_layout_area_assigned_to_optional()}</Form.Label>
             <Form.Select
               value={newArea.assignedType ? `${newArea.assignedType}:${newArea.assignedId}` : ""}
               onChange={(e) => {
@@ -1267,9 +1268,9 @@ export default function LayoutEditor({
               }}
               className="bg-dark text-light border-secondary"
             >
-              <option value="">— None —</option>
+              <option value="">{m.admin_layout_area_none()}</option>
               {exhibitors.filter((e) => e.active).length > 0 && (
-                <optgroup label="Exhibitors">
+                <optgroup label={m.admin_layout_area_exhibitors_group()}>
                   {exhibitors.filter((e) => e.active).map((e) => (
                     <option key={e.id} value={`e:${e.id}`}>{e.name}</option>
                   ))}
@@ -1280,7 +1281,7 @@ export default function LayoutEditor({
           <div className="row g-3">
             <div className="col">
               <Form.Group controlId="area-new-width">
-                <Form.Label>Width (m)</Form.Label>
+                <Form.Label>{m.admin_layout_area_width_m()}</Form.Label>
                 <Form.Control
                   type="number"
                   min={0.1}
@@ -1294,7 +1295,7 @@ export default function LayoutEditor({
             </div>
             <div className="col">
               <Form.Group controlId="area-new-length">
-                <Form.Label>Length (m)</Form.Label>
+                <Form.Label>{m.admin_layout_area_length_m()}</Form.Label>
                 <Form.Control
                   type="number"
                   min={0.1}
