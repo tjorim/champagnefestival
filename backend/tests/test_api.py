@@ -89,7 +89,7 @@ async def test_create_reservation(client):
     r = await client.post("/api/reservations", json=VALID_RESERVATION)
     assert r.status_code == 201
     data = r.json()
-    assert data["name"] == "Jean Dupont"
+    assert data["person"]["name"] == "Jean Dupont"
     assert data["status"] == "pending"
     assert "check_in_token" not in data  # must not be returned here
 
@@ -244,7 +244,7 @@ async def test_search_by_name(client):
     assert r.status_code == 200
     items = r.json()
     assert len(items) == 1
-    assert items[0]["name"] == "Jean Dupont"
+    assert items[0]["person"]["name"] == "Jean Dupont"
 
 
 @pytest.mark.anyio

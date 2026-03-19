@@ -149,7 +149,7 @@ export default function EditionModal({
   const exhibitorGroups = (() => {
     const { active: act, archived: arch } = toOptions(allExhibitors);
     const groups = [];
-    if (act.length) groups.push({ label: "Exhibitors", options: act });
+    if (act.length) groups.push({ label: m.admin_edition_exhibitors(), options: act });
     if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
     return groups;
   })();

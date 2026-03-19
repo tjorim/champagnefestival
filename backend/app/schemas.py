@@ -38,6 +38,21 @@ class OrderItemOut(OrderItemBase):
 # ---------------------------------------------------------------------------
 
 
+class PersonSummaryOut(BaseModel):
+    """Minimal person projection used in public-facing reservation responses.
+
+    Omits sensitive/admin-only fields so that the public reservation endpoints
+    cannot leak PII (address, roles, national register number, notes, etc.).
+    """
+
+    id: str
+    name: str
+    email: str
+    phone: str
+
+    model_config = {"from_attributes": True}
+
+
 class PersonOut(BaseModel):
     id: str
     name: str
@@ -98,7 +113,7 @@ class ReservationUpdate(BaseModel):
 class ReservationOut(BaseModel):
     id: str
     person_id: str
-    person: PersonOut
+    person: PersonSummaryOut
     event_id: str
     event_title: str
     guest_count: int
@@ -130,7 +145,7 @@ class ReservationListOut(BaseModel):
 
     id: str
     person_id: str
-    person: PersonOut
+    person: PersonSummaryOut
     event_id: str
     event_title: str
     guest_count: int

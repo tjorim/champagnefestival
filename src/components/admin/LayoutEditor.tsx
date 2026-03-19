@@ -33,8 +33,9 @@ import type { Room, FloorTable, FloorArea, TableType, Layout } from "../../types
 const PX_PER_M = 28;
 
 /**
- * Returns the tables whose centre point falls within the area's bounding rectangle.
- * Both table and area positions are percentages of canvas dimensions.
+ * Returns the tables whose centre point falls within the area's bounding rectangle,
+ * accounting for the area's rotation by transforming table centres into the area's
+ * local coordinate space before the containment check.
  */
 function getTablesInArea(
   area: FloorArea,
@@ -45,14 +46,30 @@ function getTablesInArea(
 ): FloorTable[] {
   const areaLeft = (area.x / 100) * canvasW;
   const areaTop = (area.y / 100) * canvasH;
-  const areaRight = areaLeft + area.widthM * PX_PER_M;
-  const areaBottom = areaTop + area.lengthM * PX_PER_M;
+  const areaW = area.widthM * PX_PER_M;
+  const areaH = area.lengthM * PX_PER_M;
+
+  // Centre of the (unrotated) area bounding box
+  const acx = areaLeft + areaW / 2;
+  const acy = areaTop + areaH / 2;
+
+  // Rotate points into the area's local space by applying -rotation
+  const rad = -((area.rotation ?? 0) * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
 
   return tables.filter((t) => {
     const { w, l } = getTableSize(t, tableTypes);
     const cx = (t.x / 100) * canvasW + w / 2;
     const cy = (t.y / 100) * canvasH + l / 2;
-    return cx >= areaLeft && cx <= areaRight && cy >= areaTop && cy <= areaBottom;
+
+    // Translate to area-centre-relative coordinates, then rotate
+    const dx = cx - acx;
+    const dy = cy - acy;
+    const lx = cos * dx - sin * dy;
+    const ly = sin * dx + cos * dy;
+
+    return Math.abs(lx) <= areaW / 2 && Math.abs(ly) <= areaH / 2;
   });
 }
 

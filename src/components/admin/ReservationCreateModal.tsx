@@ -6,6 +6,7 @@ import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import type { Reservation } from "../../types/reservation";
+import { m } from "../../paraglide/messages";
 
 interface PersonOption {
   value: string;
@@ -202,14 +203,14 @@ export default function ReservationCreateModal({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        setError((d as { detail?: string }).detail ?? "Failed to create reservation.");
+        setError((d as { detail?: string }).detail ?? m.admin_error_create_reservation());
         return;
       }
       const data = await res.json();
       onSaved(apiResToReservation(data as Record<string, unknown>));
       onHide();
     } catch {
-      setError("Failed to create reservation.");
+      setError(m.admin_error_create_reservation());
     } finally {
       setSaving(false);
     }
@@ -218,7 +219,7 @@ export default function ReservationCreateModal({
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">Create Reservation</Modal.Title>
+        <Modal.Title className="text-warning fs-6">{m.admin_create_reservation()}</Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="bg-dark">
@@ -229,11 +230,11 @@ export default function ReservationCreateModal({
           )}
 
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Event</Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_event_label()}</Form.Label>
             {loadingEvents ? (
               <div className="text-secondary small">
                 <Spinner animation="border" size="sm" className="me-2" />
-                Loading events…
+                {m.admin_loading_events()}
               </div>
             ) : events.length > 0 ? (
               <Form.Select
@@ -246,7 +247,7 @@ export default function ReservationCreateModal({
                 className="bg-dark text-light border-secondary"
                 required
               >
-                <option value="">— Select event —</option>
+                <option value="">{m.admin_select_event_placeholder()}</option>
                 {events.map((ev) => (
                   <option key={ev.id} value={ev.id}>
                     {ev.title}
@@ -262,14 +263,14 @@ export default function ReservationCreateModal({
                   setEventTitle(ev.target.value);
                 }}
                 className="bg-dark text-light border-secondary"
-                placeholder="Event ID / title"
+                placeholder={m.admin_event_id_title_placeholder()}
                 required
               />
             )}
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Person *</Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_person_label()} *</Form.Label>
             <Select<PersonOption, false>
               isClearable
               options={personOptions}
@@ -280,7 +281,7 @@ export default function ReservationCreateModal({
               isLoading={loadingPersons}
               filterOption={null}
               styles={darkSelectStyles}
-              placeholder="Search by name, email, phone…"
+              placeholder={m.admin_search_person_placeholder()}
               classNamePrefix="rs"
               formatOptionLabel={(opt) => (
                 <div>
@@ -292,7 +293,7 @@ export default function ReservationCreateModal({
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Guests</Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_guests_count()}</Form.Label>
             <Form.Control
               type="number"
               min={1}
@@ -304,7 +305,7 @@ export default function ReservationCreateModal({
           </Form.Group>
 
           <Form.Group>
-            <Form.Label className="text-secondary small">Notes</Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
             <Form.Control
               as="textarea"
               rows={2}
@@ -316,7 +317,7 @@ export default function ReservationCreateModal({
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="outline-secondary" size="sm" onClick={onHide}>
-            Cancel
+            {m.admin_action_cancel()}
           </Button>
           <Button
             type="submit"
@@ -329,7 +330,7 @@ export default function ReservationCreateModal({
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />
             )}
-            Create
+            {m.admin_create_action()}
           </Button>
         </Modal.Footer>
       </Form>

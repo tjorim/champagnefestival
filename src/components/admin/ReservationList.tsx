@@ -133,9 +133,9 @@ export default function ReservationList({
                 style={{ maxWidth: 200 }}
                 value={allocationFilter}
                 onChange={(e) => setAllocationFilter(e.target.value)}
-                aria-label="Filter by allocation"
+                aria-label={m.admin_filter_allocation_aria()}
               >
-                <option value="">All allocations</option>
+                <option value="">{m.admin_all_allocations()}</option>
                 {allocationOptions.map((o) => (
                   <option key={o.key} value={o.key}>
                     {o.label}
@@ -170,7 +170,7 @@ export default function ReservationList({
               onClick={() => setShowCreateModal(true)}
             >
               <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              Add Reservation
+              {m.admin_add_reservation()}
             </Button>
           </div>
         </Card.Header>
@@ -204,8 +204,8 @@ export default function ReservationList({
                             {isLinked && (
                               <i
                                 className="bi bi-person-badge text-info"
-                                title="Linked to producer/sponsor/exhibitor contact"
-                                aria-label="Allocation contact"
+                                title={m.admin_linked_exhibitor_title()}
+                                aria-label={m.admin_allocation_contact_aria()}
                               />
                             )}
                           </div>

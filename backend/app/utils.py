@@ -33,7 +33,7 @@ def reservation_to_dict(r: Reservation) -> dict:
     return {
         "id": r.id,
         "person_id": r.person_id,
-        "person": person_to_dict(person) if person else {},
+        "person": person_summary_to_dict(person) if person else {},
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
@@ -236,6 +236,20 @@ def edition_to_dict(
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,
+    }
+
+
+def person_summary_to_dict(p: Person) -> dict:
+    """Serialise only public-safe person fields for embedding in reservation responses.
+
+    Omits sensitive/admin-only fields (address, roles, national register number,
+    notes, etc.) so that the public reservation endpoints cannot leak PII.
+    """
+    return {
+        "id": p.id,
+        "name": p.name,
+        "email": p.email,
+        "phone": p.phone,
     }
 
 
