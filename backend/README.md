@@ -216,6 +216,18 @@ Public endpoints (reservation creation, check-in) do not require a token.
 
 ---
 
+
+## Can this backend run on Cloudflare Workers?
+
+Not directly in its current form. This backend assumes a long-running FastAPI/uvicorn process and a file-backed SQLite database, while Workers use a request-driven runtime without persistent local filesystem semantics.
+
+Practical path:
+
+- Keep this backend on VPS/container hosting (as documented above), and use Cloudflare for CDN/WAF/proxy in front.
+- If full Workers-native hosting is desired, treat it as a replatforming project (runtime + database + migration flow changes).
+
+---
+
 ## Frontend integration
 
 The React (Vite) frontend proxies `/api/*` to the backend during development
