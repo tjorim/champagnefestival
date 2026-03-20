@@ -42,3 +42,17 @@ jobs:
           name: pr-preview-${{ github.event.pull_request.number }}
           path: dist/
           retention-days: 7
+
+      - name: Comment PR with preview link
+        if: github.event.pull_request.head.repo.fork == false
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: preview-build
+          message: |
+            ## Preview Build
+
+            A preview build for this PR is available as a downloadable artifact.
+
+            **[Download preview build](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})** (select `pr-preview-${{ github.event.pull_request.number }}` from Artifacts)
+
+            Built from ${{ github.event.pull_request.head.sha }}
