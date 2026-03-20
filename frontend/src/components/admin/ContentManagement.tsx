@@ -17,6 +17,28 @@ import ItemModal, { type ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
 import type { Venue } from "@/types/admin";
 
+function typeBadgeVariant(type: string | undefined): string {
+  switch (type) {
+    case "producer":
+      return "warning";
+    case "sponsor":
+      return "info";
+    default:
+      return "secondary";
+  }
+}
+
+function typeLabel(type: string | undefined): string {
+  switch (type) {
+    case "producer":
+      return m.admin_item_producer();
+    case "sponsor":
+      return m.admin_item_sponsor();
+    default:
+      return m.admin_item_vendor();
+  }
+}
+
 function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
   const cp = (d.contact_person ?? null) as {
     id: string;
@@ -246,6 +268,13 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
             {item.name}
           </span>
+          <Badge
+            bg={typeBadgeVariant(item.type)}
+            className="flex-shrink-0"
+            aria-label={`${m.admin_item_type()}: ${typeLabel(item.type)}`}
+          >
+            {typeLabel(item.type)}
+          </Badge>
           <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
           {item.contactPerson && (
             <small className="text-secondary text-truncate d-none d-lg-inline">

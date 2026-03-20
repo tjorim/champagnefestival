@@ -9,13 +9,13 @@ This is the official website for the Champagne Festival, built with React and Re
 First, install the dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Then, run the development server:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173) with your browser to see the result.
@@ -74,7 +74,7 @@ To switch locale at runtime, use the runtime helpers:
 import { getLocale, setLocale } from "../paraglide/runtime.js";
 ```
 
-To add or update translations, edit the files in `messages/` and run `npm run paraglide:compile`.
+To add or update translations, edit the files in `messages/` and run `pnpm paraglide:compile`.
 
 ## Development Guidelines
 
@@ -173,10 +173,10 @@ Deploys are triggered when you publish a GitHub Release (or by manually running 
 For local validation before release, run:
 
 ```bash
-npm ci
-npm run lint
-npm run test
-npm run build
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm test
+pnpm build
 ```
 
 This creates a production build in `dist/`.

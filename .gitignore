@@ -1,6 +1,9 @@
 # Claude Code local settings
 .claude/
 
+# npm lockfile — project uses pnpm; package-lock.json should not be committed
+package-lock.json
+
 # Logs
 logs
 *.log
