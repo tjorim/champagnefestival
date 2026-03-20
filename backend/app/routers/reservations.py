@@ -57,16 +57,18 @@ async def create_reservation(
 
     phone_norm = normalize_phone(body.phone)
 
-    existing = (
+    candidates = (
         await db.execute(
             select(Person).where(Person.email == email_norm, Person.phone == phone_norm)
         )
-    ).scalar_one_or_none()
+    ).scalars().all()
 
-    if existing is not None and " ".join(existing.name.lower().split()) == name_norm:
-        # Certain match — same email + phone + name: link to existing person.
-        person = existing
-    else:
+    person = next(
+        (c for c in candidates if " ".join(c.name.lower().split()) == name_norm),
+        None,
+    )
+
+    if person is None:
         # Uncertain or new: create a fresh person record.
         # If email or phone matches but name differs, the admin People tab will
         # surface the duplicate for manual review and merging.
