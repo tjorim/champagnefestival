@@ -16,6 +16,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import Alert from "react-bootstrap/Alert";
@@ -96,6 +97,11 @@ function getAreaIcons(): { value: string; label: string }[] {
 }
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
+
+// Stable sensor options — defined outside the component so the object reference
+// never changes between renders, preventing @dnd-kit from reinitialising the
+// sensor mid-drag (which would corrupt the active drag's internal state).
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 6 } } as const;
 function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
   const type = tableTypes.find((t) => t.id === table.tableTypeId);
   return {
@@ -153,6 +159,8 @@ interface LayoutEditorProps {
     icon?: string,
   ) => Promise<void>;
   onUpdateAreaLabel: (areaId: string, label: string) => void;
+  onChangeTableType: (tableId: string, tableTypeId: string) => Promise<void>;
+  onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -382,9 +390,58 @@ function RoomCanvas({
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Stores the element's canvas-local position AND canvas viewport position
+  // captured at the moment the drag activates.  Using the actual DOM position
+  // (rather than re-deriving it from React state) ensures that a state update
+  // that fires after the first drag completes cannot corrupt the base position
+  // for a subsequent drag that starts before the re-render settles.
+  interface DragInitial {
+    elementLeft: number; // element left edge relative to canvas, in px
+    elementTop: number; // element top edge relative to canvas, in px
+    canvasLeft: number; // canvas left edge in viewport, at drag start
+    canvasTop: number; // canvas top edge in viewport, at drag start
+  }
+  const dragInitialRef = useRef<DragInitial | null>(null);
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
     useSensor(KeyboardSensor),
+  );
+
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      if (!canvasRef.current) return;
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const activeId = event.active.id as string;
+
+      // Snapshot the element's canvas-local position from current state.
+      // State is guaranteed up-to-date here: onDragStart fires only after the
+      // activation threshold (6 px), which is well after any previous drag's
+      // state update has committed.  We snapshot rather than reading in
+      // handleDragEnd to avoid any stale-closure risk there.
+      let elementLeft: number;
+      let elementTop: number;
+
+      if (activeId.startsWith("area_")) {
+        const area = roomAreas.find((a) => a.id === activeId);
+        if (!area) return;
+        elementLeft = (area.x / 100) * canvasW;
+        elementTop = (area.y / 100) * canvasH;
+      } else {
+        const table = roomTables.find((t) => t.id === activeId);
+        if (!table) return;
+        elementLeft = (table.x / 100) * canvasW;
+        elementTop = (table.y / 100) * canvasH;
+      }
+
+      dragInitialRef.current = {
+        elementLeft,
+        elementTop,
+        canvasLeft: canvasRect.left,
+        canvasTop: canvasRect.top,
+      };
+    },
+    [roomTables, roomAreas, canvasW, canvasH],
   );
 
   const handleDragEnd = useCallback(
@@ -392,32 +449,43 @@ function RoomCanvas({
       const { active, delta } = event;
       if (!canvasRef.current) return;
 
+      const di = dragInitialRef.current;
+      dragInitialRef.current = null;
+      if (!di) return;
+
+      // delta from @dnd-kit = scrollAdjustedTranslation (pointer movement +
+      // scroll compensation).  Subtract the change in the canvas's own viewport
+      // position to get the net canvas-local displacement.
+      const endCanvasRect = canvasRef.current.getBoundingClientRect();
+      const moveX = delta.x - (di.canvasLeft - endCanvasRect.left);
+      const moveY = delta.y - (di.canvasTop - endCanvasRect.top);
+
       const activeId = active.id as string;
 
       if (activeId.startsWith("area_")) {
-        // Area drag
+        // Area drag — use DOM position captured at drag start, not derived from state
         const area = roomAreas.find((a) => a.id === activeId);
         if (!area) return;
         const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
         const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
-        const leftPx = (area.x / 100) * canvasW + delta.x;
-        const topPx = (area.y / 100) * canvasH + delta.y;
+        const leftPx = di.elementLeft + moveX;
+        const topPx = di.elementTop + moveY;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - AREA_W);
         const clampedY = Math.min(Math.max(0, topPx), canvasH - AREA_H);
         onMoveArea(area.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
       } else {
-        // Table drag
+        // Table drag — same: use DOM position, not state-derived position
         const table = roomTables.find((t) => t.id === activeId);
         if (!table) return;
         const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
-        const leftPx = (table.x / 100) * canvasW + delta.x;
-        const topPx = (table.y / 100) * canvasH + delta.y;
+        const leftPx = di.elementLeft + moveX;
+        const topPx = di.elementTop + moveY;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);
         const clampedY = Math.min(Math.max(0, topPx), canvasH - TABLE_L);
         onMoveTable(table.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
       }
     },
-    [roomTables, roomAreas, tableTypes, canvasW, canvasH, onMoveTable, onMoveArea],
+    [roomAreas, roomTables, tableTypes, canvasW, canvasH, onMoveArea, onMoveTable],
   );
 
   const isEmpty = roomTables.length === 0 && roomAreas.length === 0;
@@ -431,7 +499,7 @@ function RoomCanvas({
           {m.admin_table_move_hint()}
         </span>
       </p>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div
           ref={canvasRef}
           onClick={() => {
@@ -536,6 +604,8 @@ export default function LayoutEditor({
   onRotateArea,
   onAssignAreaToItem,
   onUpdateAreaLabel,
+  onChangeTableType,
+  onResizeArea,
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
@@ -950,30 +1020,34 @@ export default function LayoutEditor({
                     : m.admin_table_height_type_low()}
                 </Badge>
               )}
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)}
-                title={m.admin_layout_rotate_ccw()}
-                aria-label={m.admin_layout_rotate_ccw()}
-              >
-                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-              </Button>
-              <span
-                className="text-secondary small"
-                style={{ minWidth: "3.5rem", textAlign: "center" }}
-              >
-                {Math.round(selectedTableData.rotation)}°
-              </span>
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)}
-                title={m.admin_layout_rotate_cw()}
-                aria-label={m.admin_layout_rotate_cw()}
-              >
-                <i className="bi bi-arrow-clockwise" aria-hidden="true" />
-              </Button>
+              {selectedType?.shape !== "round" && (
+                <>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)}
+                    title={m.admin_layout_rotate_ccw()}
+                    aria-label={m.admin_layout_rotate_ccw()}
+                  >
+                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                  </Button>
+                  <span
+                    className="text-secondary small"
+                    style={{ minWidth: "3.5rem", textAlign: "center" }}
+                  >
+                    {Math.round(selectedTableData.rotation)}°
+                  </span>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)}
+                    title={m.admin_layout_rotate_cw()}
+                    aria-label={m.admin_layout_rotate_cw()}
+                  >
+                    <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+                  </Button>
+                </>
+              )}
               <Button
                 variant="outline-danger"
                 size="sm"
@@ -991,6 +1065,26 @@ export default function LayoutEditor({
                 {deleteTableError}
               </Alert>
             )}
+            <Form.Group className="mb-3" controlId="table-type-select">
+              <Form.Label className="text-secondary small">
+                {m.admin_layout_table_type_label()}
+              </Form.Label>
+              <Form.Select
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                value={selectedTableData.tableTypeId}
+                onChange={async (e) => {
+                  await onChangeTableType(selectedTableData.id, e.target.value);
+                }}
+                key={`type-${selectedTableData.id}`}
+              >
+                {tableTypes.filter((tt) => tt.active).map((tt) => (
+                  <option key={tt.id} value={tt.id}>
+                    {tt.name}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
             {selectedReservations.length === 0 ? (
               <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
             ) : (
@@ -1090,6 +1184,50 @@ export default function LayoutEditor({
                 key={selectedAreaData.id}
               />
             </Form.Group>
+            <div className="d-flex gap-2 mb-3">
+              <Form.Group controlId="area-width" className="flex-fill">
+                <Form.Label className="text-secondary small">
+                  {m.admin_layout_area_width_m()}
+                </Form.Label>
+                <Form.Control
+                  size="sm"
+                  type="number"
+                  min={0.1}
+                  max={50}
+                  step={0.1}
+                  className="bg-dark text-light border-secondary"
+                  defaultValue={selectedAreaData.widthM}
+                  onBlur={async (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val > 0 && val !== selectedAreaData.widthM) {
+                      await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
+                    }
+                  }}
+                  key={`w-${selectedAreaData.id}`}
+                />
+              </Form.Group>
+              <Form.Group controlId="area-length" className="flex-fill">
+                <Form.Label className="text-secondary small">
+                  {m.admin_layout_area_length_m()}
+                </Form.Label>
+                <Form.Control
+                  size="sm"
+                  type="number"
+                  min={0.1}
+                  max={50}
+                  step={0.1}
+                  className="bg-dark text-light border-secondary"
+                  defaultValue={selectedAreaData.lengthM}
+                  onBlur={async (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val > 0 && val !== selectedAreaData.lengthM) {
+                      await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
+                    }
+                  }}
+                  key={`l-${selectedAreaData.id}`}
+                />
+              </Form.Group>
+            </div>
             <Form.Group className="mb-3" controlId="area-icon">
               <Form.Label className="text-secondary small">
                 {m.admin_layout_area_form_icon()}

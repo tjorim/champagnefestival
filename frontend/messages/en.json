@@ -416,6 +416,7 @@
   "admin_create_action": "Create",
   "admin_event_id_placeholder": "e.g. fri-vip",
   "admin_event_category_placeholder": "tasting",
+  "admin_layout_table_type_label": "Table type",
   "admin_layout_rotate_cw": "Rotate 15° clockwise",
   "admin_layout_rotate_ccw": "Rotate 15° counter-clockwise",
   "admin_layout_capacity_max": "max",

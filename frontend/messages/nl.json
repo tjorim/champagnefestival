@@ -416,6 +416,7 @@
   "admin_create_action": "Aanmaken",
   "admin_event_id_placeholder": "bijv. vri-vip",
   "admin_event_category_placeholder": "proeverij",
+  "admin_layout_table_type_label": "Tafeltype",
   "admin_layout_rotate_cw": "15° met de klok mee draaien",
   "admin_layout_rotate_ccw": "15° tegen de klok in draaien",
   "admin_layout_capacity_max": "max",

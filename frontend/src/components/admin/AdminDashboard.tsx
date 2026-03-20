@@ -750,6 +750,38 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
+  const handleChangeTableType = useCallback(
+    async (tableId: string, tableTypeId: string) => {
+      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t)));
+      try {
+        await fetch(`/api/tables/${tableId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ table_type_id: tableTypeId }),
+        });
+      } catch (err) {
+        console.error("Failed to persist table type change", err);
+      }
+    },
+    [authHeaders],
+  );
+
+  const handleResizeArea = useCallback(
+    async (areaId: string, widthM: number, lengthM: number) => {
+      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM } : a)));
+      try {
+        await fetch(`/api/areas/${areaId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ width_m: widthM, length_m: lengthM }),
+        });
+      } catch (err) {
+        console.error("Failed to persist area resize", err);
+      }
+    },
+    [authHeaders],
+  );
+
   const handleAddReservation = useCallback((reservation: Reservation) => {
     setReservations((prev) => [reservation, ...prev]);
   }, []);
@@ -1100,6 +1132,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onRotateArea={handleRotateArea}
                       onAssignAreaToItem={handleAssignAreaToItem}
                       onUpdateAreaLabel={handleUpdateAreaLabel}
+                      onChangeTableType={handleChangeTableType}
+                      onResizeArea={handleResizeArea}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="venues">
