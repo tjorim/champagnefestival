@@ -505,5 +505,7 @@
   "admin_volunteers_error_create": "Échec de la création du bénévole.",
   "admin_volunteers_error_update": "Échec de la mise à jour du bénévole.",
   "admin_volunteers_error_delete": "Échec de la suppression du bénévole.",
-  "admin_volunteers_validation_help_day_range": "Le premier jour d’aide doit être antérieur ou égal au dernier jour d’aide."
+  "admin_volunteers_validation_help_day_range": "Le dernier jour d’aide doit être postérieur ou égal au premier jour d’aide.",
+  "admin_volunteers_last_help_day_help_text": "Laissez vide tant que le bénévole ne connaît pas encore son dernier jour d’aide.",
+  "admin_volunteers_no_last_help_day": "Non défini"
 }

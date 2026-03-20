@@ -22,7 +22,7 @@ export interface VolunteerFormData {
   nationalRegisterNumber: string;
   eidDocumentNumber: string;
   firstHelpDay: string;
-  lastHelpDay: string;
+  lastHelpDay: string | null;
   active: boolean;
 }
 
@@ -77,12 +77,11 @@ export default function VolunteerFormModal({
       !name.trim() ||
       !nationalRegisterNumber.trim() ||
       !eidDocumentNumber.trim() ||
-      !firstHelpDay ||
-      !lastHelpDay
+      !firstHelpDay
     ) {
       return;
     }
-    if (firstHelpDay > lastHelpDay) {
+    if (lastHelpDay && firstHelpDay > lastHelpDay) {
       setError(m.admin_volunteers_validation_help_day_range());
       return;
     }
@@ -96,7 +95,7 @@ export default function VolunteerFormModal({
         nationalRegisterNumber: nationalRegisterNumber.trim(),
         eidDocumentNumber: eidDocumentNumber.trim(),
         firstHelpDay,
-        lastHelpDay,
+        lastHelpDay: lastHelpDay || null,
         active,
       });
       onHide();
@@ -211,15 +210,18 @@ export default function VolunteerFormModal({
             <Col xs={12} md={6}>
               <Form.Group controlId="volunteer-last-help-day">
                 <Form.Label className="text-secondary small">
-                  {m.admin_people_last_help_day_label()} *
+                  {m.admin_people_last_help_day_label()}
                 </Form.Label>
                 <Form.Control
                   type="date"
                   value={lastHelpDay}
                   onChange={(e) => setLastHelpDay(e.target.value)}
                   className="bg-dark text-light border-secondary"
-                  required
+                  min={firstHelpDay || undefined}
                 />
+                <Form.Text className="text-secondary">
+                  {m.admin_volunteers_last_help_day_help_text()}
+                </Form.Text>
               </Form.Group>
             </Col>
           </Row>
@@ -247,8 +249,7 @@ export default function VolunteerFormModal({
               !name.trim() ||
               !nationalRegisterNumber.trim() ||
               !eidDocumentNumber.trim() ||
-              !firstHelpDay ||
-              !lastHelpDay
+              !firstHelpDay
             }
           >
             {saving ? (

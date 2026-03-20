@@ -193,7 +193,9 @@ export default function VolunteersManagement({
                       <td className="small">{volunteer.nationalRegisterNumber}</td>
                       <td className="small">{volunteer.eidDocumentNumber}</td>
                       <td className="small">{volunteer.firstHelpDay}</td>
-                      <td className="small">{volunteer.lastHelpDay}</td>
+                      <td className="small">
+                        {volunteer.lastHelpDay || m.admin_volunteers_no_last_help_day()}
+                      </td>
                       <td>
                         <div className="d-flex flex-wrap gap-1">
                           <Button

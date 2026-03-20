@@ -505,5 +505,7 @@
   "admin_volunteers_error_create": "Failed to create volunteer.",
   "admin_volunteers_error_update": "Failed to update volunteer.",
   "admin_volunteers_error_delete": "Failed to delete volunteer.",
-  "admin_volunteers_validation_help_day_range": "First help day must be on or before the last help day."
+  "admin_volunteers_validation_help_day_range": "Last help day must be on or after the first help day.",
+  "admin_volunteers_last_help_day_help_text": "Leave blank until the volunteer knows their last help day.",
+  "admin_volunteers_no_last_help_day": "Not set"
 }
