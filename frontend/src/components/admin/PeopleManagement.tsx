@@ -36,11 +36,12 @@ export default function PeopleManagement({
 
   const filtered = q.trim()
     ? people.filter((p) => {
-        const s = q.toLowerCase();
+        const s = q.trim().toLowerCase();
+        const phoneQ = s.replace(/[\s\-().+]/g, "");
         return (
           p.name.toLowerCase().includes(s) ||
           p.email.toLowerCase().includes(s) ||
-          p.phone.includes(s)
+          p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ)
         );
       })
     : people;
