@@ -221,14 +221,6 @@ function DraggableTable({
         e.stopPropagation();
         onClick();
       }}
-      onKeyDown={(e) => {
-        if (!isInteractive) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      tabIndex={isInteractive ? 0 : undefined}
       className={clsx(
         "position-absolute d-flex flex-column align-items-center justify-content-center border text-center",
         shape === "round" ? "rounded-circle" : "rounded",
@@ -310,14 +302,6 @@ function DraggableArea({
         e.stopPropagation();
         onClick();
       }}
-      onKeyDown={(e) => {
-        if (!isInteractive) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      tabIndex={isInteractive ? 0 : undefined}
       className={clsx(
         "position-absolute d-flex flex-column align-items-center justify-content-center border text-center rounded",
         borderCls,
