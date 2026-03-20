@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
@@ -236,25 +237,26 @@ async def request_my_reservations_access(
     request_id = _guest_access_log_id(email_norm)
     token_hash = _hash_guest_access_token(token)
 
-    existing_token = await db.scalar(
-        select(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
-    )
-    if existing_token is None:
-        db.add(
-            ReservationAccessToken(
-                id=make_id("rat"),
-                email=email_norm,
-                token_hash=token_hash,
-                expires_at=expires_at,
-                created_at=now,
-                last_used_at=None,
-            )
+    await db.execute(
+        sqlite_insert(ReservationAccessToken)
+        .values(
+            id=make_id("rat"),
+            email=email_norm,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            created_at=now,
+            last_used_at=None,
         )
-    else:
-        existing_token.token_hash = token_hash
-        existing_token.expires_at = expires_at
-        existing_token.created_at = now
-        existing_token.last_used_at = None
+        .on_conflict_do_update(
+            index_elements=["email"],
+            set_={
+                "token_hash": token_hash,
+                "expires_at": expires_at,
+                "created_at": now,
+                "last_used_at": None,
+            },
+        )
+    )
     await db.commit()
 
     logger.info(

@@ -168,6 +168,7 @@ export default function MyReservationsPage() {
   const [isLoadingReservations, setIsLoadingReservations] = useState(false);
   const [showRecoveryCTA, setShowRecoveryCTA] = useState(false);
   const [error, setError] = useState("");
+  const [isEmailInvalid, setIsEmailInvalid] = useState(false);
 
   const resetToRequestForm = useCallback(() => {
     setSearchParams({}, { replace: true });
@@ -175,6 +176,7 @@ export default function MyReservationsPage() {
     setReservations(null);
     setShowRecoveryCTA(false);
     setError("");
+    setIsEmailInvalid(false);
   }, [setSearchParams]);
 
   const handleEmailSubmit = useCallback(
@@ -184,12 +186,14 @@ export default function MyReservationsPage() {
       if (!trimmed) return;
       if (!EMAIL_PATTERN.test(trimmed)) {
         setError(m.my_reservations_invalid_email());
+        setIsEmailInvalid(true);
         setRequestSent(false);
         return;
       }
 
       setIsSubmittingEmail(true);
       setError("");
+      setIsEmailInvalid(false);
       setRequestSent(false);
 
       try {
@@ -199,11 +203,9 @@ export default function MyReservationsPage() {
           body: JSON.stringify({ email: trimmed }),
         });
         if (!response.ok) {
-          setError(
-            response.status === 422
-              ? m.my_reservations_invalid_email()
-              : m.my_reservations_error(),
-          );
+          const isEmailError = response.status === 422;
+          setError(isEmailError ? m.my_reservations_invalid_email() : m.my_reservations_error());
+          setIsEmailInvalid(isEmailError);
           return;
         }
         parseReservationLookupRequestAccepted(await response.json());
@@ -292,7 +294,7 @@ export default function MyReservationsPage() {
                       required
                       disabled={isSubmittingEmail}
                       autoComplete="email"
-                      isInvalid={Boolean(error)}
+                      isInvalid={isEmailInvalid}
                       className="bg-dark text-light border-secondary"
                     />
                   </Form.Group>

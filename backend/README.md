@@ -188,7 +188,7 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | `POST`   | `/api/reservations`             | public         | Create a reservation                                                       |
 | `GET`    | `/api/reservations`             | admin          | List reservations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
-| `POST`   | `/api/reservations/my/request`  | public         | Prepare a short-lived visitor access link for out-of-band delivery    |
+| `POST`   | `/api/reservations/my/request`  | public         | Prepare a short-lived visitor access link for out-of-band delivery.       |
 | `POST`   | `/api/reservations/my/access`   | public + token | View visitor reservations using a short-lived secure token                 |
 | `GET`    | `/api/reservations/{id}`        | admin          | Get reservation detail (token included)                                    |
 | `PUT`    | `/api/reservations/{id}`        | admin          | Update reservation                                                         |
