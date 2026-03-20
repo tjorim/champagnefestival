@@ -5,51 +5,49 @@ This repository contains:
 - A **React/Vite frontend** in `frontend/`.
 - A **FastAPI backend** in `backend/`.
 
-The chosen deployment target is a **VPS** with frontend and backend combined on one host.
+Production runs on a **VPS** with Caddy as the reverse proxy.
 
-## Combined deployment on one VPS
+## Architecture
 
-The pattern is:
-
-- Build and serve frontend static assets with nginx.
-- Run FastAPI backend as a separate service/container.
-- Route `/api/*` from nginx to backend.
-
-This repo includes starter files:
-
-- `docker-compose.combined.yml`
-- `deploy/nginx/champagne.conf`
-
-### 1) Prepare environment
-
-```bash
-cp backend/.env.example backend/.env
+```
+VPS
+├── Caddy  (TLS termination + reverse proxy)
+│   └── champagnefestival.be  →  frontend static files + /api/* → backend
+└── champagnefestival-api  (FastAPI, port 8000, internal only)
 ```
 
-Set at least:
+Caddy handles HTTPS certificates automatically via Let's Encrypt.
 
-- `ENVIRONMENT=production`
-- `ADMIN_TOKEN=<long-random-token>`
-- `CORS_ORIGINS=https://your-domain.example`
-- `DATABASE_URL=sqlite+aiosqlite:////var/data/champagne/champagne.db`
+## Frontend build
 
-### 2) Start the combined stack
+Build the frontend and ensure `frontend/dist/` is up to date before deploying:
 
 ```bash
-docker compose -f docker-compose.combined.yml up -d --build
+cd frontend
+pnpm install
+pnpm build
 ```
 
-### 3) Run database migrations (first deploy and each schema change)
+The `frontend/dist/` output is served as static files by Caddy.
+
+## Backend environment
+
+The backend reads configuration from environment variables — see `backend/.env.example` for all options.
+
+Key variables:
+
+| Variable | Description |
+|---|---|
+| `ENVIRONMENT` | Set to `production` |
+| `ADMIN_TOKEN` | Long random string for admin bearer auth |
+| `DATABASE_URL` | e.g. `sqlite+aiosqlite:////var/data/champagne/champagne.db` |
+| `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
+| `SMTP_*` | Optional — reservation confirmation emails |
+
+## Database migrations
+
+Run Alembic migrations on first deploy and after each schema change:
 
 ```bash
-docker compose -f docker-compose.combined.yml run --rm backend alembic upgrade head
+docker compose run --rm champagnefestival-api alembic upgrade head
 ```
-
-### 4) Verify
-
-```bash
-curl -i http://localhost/health
-curl -i http://localhost/api/health
-```
-
-> TLS note: either terminate TLS in a host-level reverse proxy (recommended) or extend the nginx container to listen on 443 with certificates.
