@@ -192,7 +192,6 @@
   "admin_logout": "Afmelden",
   "admin_reservations_tab": "Reservaties",
   "admin_tables_tab": "Zaalindeling",
-  "admin_members_tab": "Leden",
   "admin_volunteers_tab": "Vrijwilligers",
   "admin_status_pending": "In behandeling",
   "admin_status_confirmed": "Bevestigd",
@@ -510,6 +509,7 @@
   "admin_volunteers_add_help_period": "Helpperiode toevoegen",
   "admin_volunteers_remove_help_period": "Periode verwijderen",
   "admin_volunteers_no_help_periods": "Nog geen helpperiodes toegevoegd.",
+  "admin_volunteers_table_caption": "Overzicht van vrijwilligers met identiteitsgegevens, activiteitsstatus en opgeslagen helpperiodes.",
   "admin_volunteers_validation_help_period_required": "Voeg minstens één helpperiode toe voor elke vrijwilliger.",
   "admin_volunteers_validation_help_period_range": "Elke helpperiode moet op of vóór de einddatum beginnen."
 }

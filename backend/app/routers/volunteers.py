@@ -71,6 +71,10 @@ async def _replace_help_periods(
     volunteer_id: str,
     help_periods: list[VolunteerHelpPeriodIn],
 ) -> None:
+    volunteer = await db.get(Person, volunteer_id)
+    if volunteer is None:
+        raise HTTPException(status_code=404, detail="Volunteer not found.")
+
     await db.execute(
         delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)
     )
@@ -82,6 +86,16 @@ async def _replace_help_periods(
                 last_help_day=period.last_help_day,
             )
         )
+
+    volunteer.first_help_day = min(period.first_help_day for period in help_periods) if help_periods else None
+    volunteer.last_help_day = (
+        max(
+            (period.last_help_day for period in help_periods if period.last_help_day is not None),
+            default=None,
+        )
+        if help_periods
+        else None
+    )
 
 
 async def _load_periods_map(

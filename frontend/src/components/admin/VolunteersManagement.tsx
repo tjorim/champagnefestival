@@ -176,6 +176,9 @@ export default function VolunteersManagement({
           ) : (
             <div className="table-responsive">
               <Table variant="dark" hover striped className="mb-0" size="sm">
+                <caption className="visually-hidden">
+                  {m.admin_volunteers_table_caption()}
+                </caption>
                 <thead>
                   <tr>
                     <th>{m.reservation_name()}</th>

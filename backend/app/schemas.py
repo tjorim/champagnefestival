@@ -233,7 +233,7 @@ class VolunteerUpdate(BaseModel):
     )
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
     active: bool | None = None
-    help_periods: list[VolunteerHelpPeriodIn] | None = None
+    help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
 
 
 class VolunteerPeriodOut(BaseModel):

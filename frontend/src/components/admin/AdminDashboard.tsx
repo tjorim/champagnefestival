@@ -112,6 +112,66 @@ function apiAreaToArea(d: Record<string, unknown>): FloorArea {
   };
 }
 
+function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): Person {
+  const roles = new Set(existing?.roles ?? volunteer.roles);
+  roles.add("volunteer");
+  return {
+    ...(existing ?? volunteer),
+    ...volunteer,
+    email: existing?.email ?? volunteer.email,
+    phone: existing?.phone ?? volunteer.phone,
+    firstHelpDay: existing?.firstHelpDay ?? volunteer.firstHelpDay,
+    lastHelpDay: existing?.lastHelpDay ?? volunteer.lastHelpDay,
+    visitsPerMonth: existing?.visitsPerMonth ?? volunteer.visitsPerMonth,
+    clubName: existing?.clubName ?? volunteer.clubName,
+    notes: existing?.notes ?? volunteer.notes,
+    roles: [...roles],
+    helpPeriods: volunteer.helpPeriods,
+  };
+}
+
+function mergePeopleWithVolunteers(people: Person[], volunteers: Person[]): Person[] {
+  const volunteerById = new Map(volunteers.map((volunteer) => [volunteer.id, volunteer]));
+  const mergedPeople = people.map((person) => {
+    const volunteer = volunteerById.get(person.id);
+    return volunteer ? mergeVolunteerPerson(person, volunteer) : person;
+  });
+
+  const knownIds = new Set(mergedPeople.map((person) => person.id));
+  const volunteerOnly = volunteers
+    .filter((volunteer) => !knownIds.has(volunteer.id))
+    .map((volunteer) => mergeVolunteerPerson(undefined, volunteer));
+
+  return [...mergedPeople, ...volunteerOnly];
+}
+
+function mergePersonUpdate(existing: Person | undefined, updated: Person): Person {
+  if (!existing) {
+    return updated;
+  }
+
+  if (!updated.roles.includes("volunteer")) {
+    return updated;
+  }
+
+  return {
+    ...updated,
+    helpPeriods: existing.helpPeriods,
+  };
+}
+
+function replacePersonById(people: Person[], updated: Person): Person[] {
+  return people.map((person) =>
+    person.id === updated.id ? mergePersonUpdate(person, updated) : person,
+  );
+}
+
+function replaceVolunteerById(people: Person[], updatedVolunteer: Person): Person[] {
+  return people.map((person) =>
+    person.id === updatedVolunteer.id ? mergeVolunteerPerson(person, updatedVolunteer) : person,
+  );
+}
+
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [token, setToken] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -131,7 +191,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   >([]);
   const [areas, setAreas] = useState<FloorArea[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
-  const [volunteers, setVolunteers] = useState<Person[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
   const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
@@ -144,7 +203,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [token],
   );
 
-  const loadVolunteers = useCallback(async () => {
+  const loadVolunteers = useCallback(async (): Promise<Person[]> => {
     const response = await fetch("/api/volunteers", { headers: authHeaders() });
     if (response.status === 401) {
       throw new Error("unauthorized");
@@ -154,7 +213,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       throw new Error((d as { detail?: string }).detail ?? m.admin_error_load_data());
     }
     const data = await response.json();
-    setVolunteers(Array.isArray(data) ? data.map(apiToPerson) : []);
+    return Array.isArray(data) ? data.map(apiToPerson) : [];
   }, [authHeaders]);
 
   const loadData = useCallback(async () => {
@@ -246,9 +305,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       setAreas(Array.isArray(areasData) ? areasData.map(apiAreaToArea) : []);
 
       const peopleData = await peopleResponse.json();
-      setPeople(Array.isArray(peopleData) ? peopleData.map(apiToPerson) : []);
-
-      await loadVolunteers();
+      const nextPeople = Array.isArray(peopleData) ? peopleData.map(apiToPerson) : [];
+      const volunteersData = await loadVolunteers();
+      setPeople(mergePeopleWithVolunteers(nextPeople, volunteersData));
     } catch (err) {
       if (err instanceof Error && err.message === "unauthorized") {
         setIsAuthenticated(false);
@@ -297,7 +356,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setRooms([]);
     setTableTypes([]);
     setPeople([]);
-    setVolunteers([]);
   }, []);
 
   const handleMergePeople = useCallback(
@@ -312,12 +370,24 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const updated = await response.json();
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
-      // Replace both the canonical and duplicate in the people list
-      setPeople((prev) =>
-        prev
+      // Replace both the canonical and duplicate in the canonical people list.
+      setPeople((prev) => {
+        const duplicate = prev.find((p) => p.id === duplicateId);
+        const existingCanonical = prev.find((p) => p.id === canonicalId);
+        const shouldPreserveVolunteerData =
+          canonicalPerson.roles.includes("volunteer") ||
+          existingCanonical?.roles.includes("volunteer") ||
+          duplicate?.roles.includes("volunteer");
+        const mergedCanonical = shouldPreserveVolunteerData
+          ? mergeVolunteerPerson(existingCanonical, {
+              ...canonicalPerson,
+              helpPeriods: existingCanonical?.helpPeriods ?? duplicate?.helpPeriods ?? [],
+            })
+          : canonicalPerson;
+        return prev
           .filter((p) => p.id !== duplicateId)
-          .map((p) => (p.id === canonicalId ? canonicalPerson : p)),
-      );
+          .map((p) => (p.id === canonicalId ? mergedCanonical : p));
+      });
       // Re-point any reservations in state that were on the duplicate;
       // also refresh person data on any already-canonical reservations (merged fields may have changed).
       setReservations((prev) =>
@@ -387,7 +457,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const updated = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      setPeople((prev) => replacePersonById(prev, updated));
       setReservations((prev) =>
         prev.map((r) =>
           r.personId === id
@@ -457,7 +527,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_create());
       }
       const d = await response.json();
-      setVolunteers((prev) => [apiToPerson(d as Record<string, unknown>), ...prev]);
+      const createdVolunteer = apiToPerson(d as Record<string, unknown>);
+      setPeople((prev) => [mergeVolunteerPerson(undefined, createdVolunteer), ...prev]);
     },
     [authHeaders],
   );
@@ -484,8 +555,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_update());
       }
       const d = await response.json();
-      const updated = apiToPerson(d as Record<string, unknown>);
-      setVolunteers((prev) => prev.map((volunteer) => (volunteer.id === id ? updated : volunteer)));
+      const updatedVolunteer = apiToPerson(d as Record<string, unknown>);
+      setPeople((prev) => replaceVolunteerById(prev, updatedVolunteer));
     },
     [authHeaders],
   );
@@ -500,9 +571,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_delete());
       }
-      setVolunteers((prev) => prev.filter((volunteer) => volunteer.id !== id));
+      setPeople((prev) => prev.filter((person) => person.id !== id));
     },
     [authHeaders],
+  );
+
+  const volunteers = useMemo(
+    () => people.filter((person) => person.roles.includes("volunteer")),
+    [people],
   );
 
   useEffect(() => {

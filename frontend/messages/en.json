@@ -192,7 +192,6 @@
   "admin_logout": "Logout",
   "admin_reservations_tab": "Reservations",
   "admin_tables_tab": "Hall Layout",
-  "admin_members_tab": "Members",
   "admin_volunteers_tab": "Volunteers",
   "admin_status_pending": "Pending",
   "admin_status_confirmed": "Confirmed",
@@ -510,6 +509,7 @@
   "admin_volunteers_add_help_period": "Add help period",
   "admin_volunteers_remove_help_period": "Remove period",
   "admin_volunteers_no_help_periods": "No help periods added yet.",
+  "admin_volunteers_table_caption": "Volunteer records with identity fields, active status, and stored help periods.",
   "admin_volunteers_validation_help_period_required": "Add at least one help period for each volunteer.",
   "admin_volunteers_validation_help_period_range": "Each help period must start on or before its end date."
 }

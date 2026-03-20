@@ -252,7 +252,7 @@ export default function VolunteerFormModal({
               <div className="d-flex flex-column gap-2">
                 {helpPeriods.map((period, index) => (
                   <div
-                    key={`${index}-${period.firstHelpDay}-${period.lastHelpDay ?? ""}`}
+                    key={index}
                     className="border border-secondary rounded p-3"
                   >
                     <div className="d-flex justify-content-between align-items-center mb-2">
