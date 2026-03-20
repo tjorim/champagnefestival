@@ -128,7 +128,7 @@ export default function CheckInPage() {
           eventTitle: (rawRes.event_title ?? "") as string,
           guestCount: (rawRes.guest_count ?? 1) as number,
           preOrders: rawOrders.map((item) => ({
-            productId: (item.product_id ?? item.productId) as string,
+            productId: item.product_id as string,
             name: item.name as string,
             quantity: item.quantity as number,
             price: item.price as number,

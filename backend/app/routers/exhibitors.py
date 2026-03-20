@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Exhibitor, Person
+from app.models import Edition, Exhibitor, Person
 from app.schemas import ExhibitorCreate, ExhibitorOut, ExhibitorUpdate
 from app.utils import exhibitor_to_dict
 
@@ -100,6 +100,10 @@ async def update_exhibitor(
 )
 async def delete_exhibitor(exhibitor_id: int, db: AsyncSession = Depends(get_db)) -> None:
     e = await _get_or_404(db, exhibitor_id)
+    editions_result = await db.execute(select(Edition))
+    for edition in editions_result.scalars().all():
+        if exhibitor_id in edition.exhibitors:
+            edition.exhibitors = [eid for eid in edition.exhibitors if eid != exhibitor_id]
     await db.delete(e)
     await db.commit()
 

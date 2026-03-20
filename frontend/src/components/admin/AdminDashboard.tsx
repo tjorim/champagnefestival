@@ -683,35 +683,47 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleMoveArea = useCallback(
     async (areaId: string, x: number, y: number) => {
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, x, y } : a)));
+      const prev = areas.find((a) => a.id === areaId);
+      setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, x, y } : a)));
       try {
-        await fetch(`/api/areas/${areaId}`, {
+        const response = await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ x, y }),
         });
+        if (!response.ok) {
+          if (prev) setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, x: prev.x, y: prev.y } : a)));
+          const data = await response.json().catch(() => ({}));
+          throw new Error((data as { detail?: string }).detail ?? "Failed to persist area position.");
+        }
       } catch (err) {
         console.error("Failed to persist area position", err);
       }
     },
-    [authHeaders],
+    [authHeaders, areas],
   );
 
   const handleRotateArea = useCallback(
     async (areaId: string, rotation: number) => {
+      const prev = areas.find((a) => a.id === areaId);
       const normalised = ((rotation % 360) + 360) % 360;
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)));
+      setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)));
       try {
-        await fetch(`/api/areas/${areaId}`, {
+        const response = await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ rotation: normalised }),
         });
+        if (!response.ok) {
+          if (prev) setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: prev.rotation } : a)));
+          const data = await response.json().catch(() => ({}));
+          throw new Error((data as { detail?: string }).detail ?? "Failed to persist area rotation.");
+        }
       } catch (err) {
         console.error("Failed to persist area rotation", err);
       }
     },
-    [authHeaders],
+    [authHeaders, areas],
   );
 
   const handleDeleteArea = useCallback(

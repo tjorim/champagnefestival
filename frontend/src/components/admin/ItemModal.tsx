@@ -89,12 +89,18 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   }, [show, initial]);
 
   const searchPersons = useCallback(
-    async (q: string) => {
+    async (q: string, signal: AbortSignal) => {
+      if (!q) {
+        setPersonOptions([]);
+        return;
+      }
       setLoadingPersons(true);
       try {
         const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&active=true`, {
           headers: authHeaders(),
+          signal,
         });
+        if (signal.aborted) return;
         if (res.ok) {
           const data = (await res.json()) as { id: string; name: string; email: string; phone: string }[];
           setPersonOptions(
@@ -107,8 +113,12 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             })),
           );
         }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Failed to search persons", err);
+        }
       } finally {
-        setLoadingPersons(false);
+        if (!signal.aborted) setLoadingPersons(false);
       }
     },
     [authHeaders],
@@ -116,10 +126,14 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
 
   useEffect(() => {
     if (!show) return;
+    const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchPersons(personQuery);
+      searchPersons(personQuery, controller.signal);
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [personQuery, show, searchPersons]);
 
   function handleSubmit(e: React.FormEvent) {

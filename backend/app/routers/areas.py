@@ -23,6 +23,11 @@ async def create_area(body: AreaCreate, db: AsyncSession = Depends(get_db)) -> d
     if lay.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
 
+    if body.exhibitor_id is not None:
+        ex = await db.execute(select(Exhibitor).where(Exhibitor.id == body.exhibitor_id))
+        if ex.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail=f"Exhibitor '{body.exhibitor_id}' not found.")
+
     a = Area(
         id=make_id("area"),
         layout_id=body.layout_id,

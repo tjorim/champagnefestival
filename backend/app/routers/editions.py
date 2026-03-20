@@ -97,6 +97,7 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Edition '{body.id}' already exists.",
         )
+    venue = await _load_venue(db, body.venue_id)
     e = Edition(
         id=body.id,
         year=body.year,
@@ -122,7 +123,6 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
     db.add(e)
     await db.commit()
     await db.refresh(e)
-    venue = await _load_venue(db, e.venue_id)
     exhibitor_map = await _load_exhibitors_by_ids(db, set(e.exhibitors))
     producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
     return edition_to_dict(e, venue=venue, producers=producers, sponsors=sponsors)
@@ -138,6 +138,7 @@ async def update_edition(
         if field in body.model_fields_set and getattr(body, field) is not None:
             setattr(e, field, getattr(body, field))
     if "venue_id" in body.model_fields_set and body.venue_id is not None:
+        await _load_venue(db, body.venue_id)
         e.venue_id = body.venue_id
     if "schedule" in body.model_fields_set and body.schedule is not None:
         e.schedule = [ev.model_dump() for ev in body.schedule]
