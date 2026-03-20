@@ -16,7 +16,7 @@ The table below tracks each user story against its current implementation status
 | 2   | Visitor   | Register for special events (VIP, breakfast, …)           | ✅ `ReservationModal` + `POST /api/reservations`                                                                                                                   |
 | 3   | Manager   | Overview of all registered guests                         | ✅ Admin dashboard + `GET /api/reservations`                                                                                                                       |
 | 4   | Manager   | Approve, edit, or cancel registrations                    | ✅ `PUT /api/reservations/{id}` (status, notes, pre-orders)                                                                                                        |
-| 5   | Visitor   | Overview of own orders across all editions                | ✅ `POST /api/reservations/my/request` + `GET /api/reservations/my/access?token=`                                                                                  |
+| 5   | Visitor   | Overview of own orders across all editions                | ✅ `POST /api/reservations/my/request` + `POST /api/reservations/my/access`                                                                                         |
 | 6   | Visitor   | Show personal QR code / order identifier                  | ⚠️ Partial — secure access links are prepared server-side, but SMTP delivery is still pending                                                                       |
 | 7   | Manager   | Create / move / delete tables on the floor plan           | ✅ Hall Layout tab + `POST/PUT/DELETE /api/tables/{id}`                                                                                                            |
 | 8   | Manager   | Assign guests (and their orders) to tables                | ✅ `PUT /api/reservations/{id}` (`table_id`)                                                                                                                       |
@@ -187,8 +187,8 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | `POST`   | `/api/reservations`             | public         | Create a reservation                                                       |
 | `GET`    | `/api/reservations`             | admin          | List reservations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
-| `POST`   | `/api/reservations/my/request`  | public         | Prepare a secure e-mail access link for visitor reservations               |
-| `GET`    | `/api/reservations/my/access`   | public + token | View visitor reservations using a short-lived secure token                 |
+| `POST`   | `/api/reservations/my/request`  | public         | Prepare a short-lived visitor access link; returns it inline until SMTP is wired up |
+| `POST`   | `/api/reservations/my/access`   | public + token | View visitor reservations using a short-lived secure token                 |
 | `GET`    | `/api/reservations/{id}`        | admin          | Get reservation detail (token included)                                    |
 | `PUT`    | `/api/reservations/{id}`        | admin          | Update reservation                                                         |
 | `DELETE` | `/api/reservations/{id}`        | admin          | Delete reservation                                                         |

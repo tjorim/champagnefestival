@@ -491,6 +491,7 @@
   "my_reservations_requesting": "Preparing secure link...",
   "my_reservations_request_success": "If we found reservations for that email address, we prepared a secure link.",
   "my_reservations_request_pending_notice": "Automatic email sending is not connected yet.",
+  "my_reservations_open_inline_link": "Open my reservations now",
   "my_reservations_loading": "Loading your reservations...",
   "my_reservations_invalid_token": "This secure link is invalid or has expired. Please request a new one.",
   "my_reservations_no_results": "No reservations were found for this secure link.",

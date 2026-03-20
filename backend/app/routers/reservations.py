@@ -4,7 +4,6 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import delete, or_, select
@@ -17,6 +16,7 @@ from app.models import Person, Reservation, ReservationAccessToken
 from app.routers.people import normalize_phone
 from app.schemas import (
     ReservationAdminCreate,
+    ReservationAccessLookupRequest,
     ReservationCreate,
     ReservationGuestOut,
     ReservationLookupRequest,
@@ -230,51 +230,45 @@ async def request_my_reservations_access(
     was prepared — never the raw token itself.
     """
     email_norm = str(body.email).lower().strip()
-    rows = await _load_guest_reservations_by_email(db, email_norm)
-    delivery_mode = "disabled"
+    token = secrets.token_urlsafe(24)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(minutes=settings.guest_access_token_ttl_minutes)
+    request_id = _guest_access_log_id(email_norm)
 
-    if rows:
-        token = secrets.token_urlsafe(24)
-        now = datetime.now(timezone.utc)
-        expires_at = now + timedelta(minutes=settings.guest_access_token_ttl_minutes)
+    await db.execute(
+        delete(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
+    )
+    db.add(
+        ReservationAccessToken(
+            id=make_id("rat"),
+            email=email_norm,
+            token_hash=_hash_guest_access_token(token),
+            expires_at=expires_at,
+        )
+    )
+    await db.commit()
 
-        await db.execute(
-            delete(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
-        )
-        db.add(
-            ReservationAccessToken(
-                id=make_id("rat"),
-                email=email_norm,
-                token_hash=_hash_guest_access_token(token),
-                expires_at=expires_at,
-            )
-        )
-        await db.commit()
-
-        logger.info(
-            "Prepared guest reservation access link for %s (SMTP pending). Token expires %s.",
-            email_norm,
-            expires_at.isoformat(),
-        )
-    else:
-        logger.info(
-            "Guest reservation access requested for %s, but no reservations matched.",
-            email_norm,
-        )
+    logger.info(
+        "Prepared guest reservation access token request_id=%s delivery_mode=inline expires_at=%s",
+        request_id,
+        expires_at.isoformat(),
+    )
 
     return ReservationLookupRequestAccepted(
-        delivery_mode=delivery_mode,
-        expires_in_minutes=settings.guest_access_token_ttl_minutes
+        delivery_mode="inline",
+        expires_in_minutes=settings.guest_access_token_ttl_minutes,
+        access_token=token,
+        access_url=f"/my-reservations?token={token}",
     )
 
 
-@router.get("/my/access", response_model=list[ReservationGuestOut])
+@router.post("/my/access", response_model=list[ReservationGuestOut])
 async def access_my_reservations(
-    token: Annotated[str, Query(min_length=20, description="Secure reservation access token")],
+    body: ReservationAccessLookupRequest,
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """Return visitor reservations after validating a short-lived access token."""
-    token_row = await _get_guest_access_token_or_401(db, token)
+    token_row = await _get_guest_access_token_or_401(db, body.token)
     token_row.last_used_at = datetime.now(timezone.utc)
     rows = await _load_guest_reservations_by_email(db, token_row.email)
     await db.commit()
@@ -283,6 +277,10 @@ async def access_my_reservations(
 
 def _hash_guest_access_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _guest_access_log_id(email: str) -> str:
+    return hashlib.sha256(email.encode("utf-8")).hexdigest()[:12]
 
 
 async def _get_guest_access_token_or_401(

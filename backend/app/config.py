@@ -82,6 +82,13 @@ class Settings(BaseSettings):
             )
         return v
 
+    @field_validator("guest_access_token_ttl_minutes")
+    @classmethod
+    def validate_guest_access_token_ttl_minutes(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0.")
+        return v
+
     @model_validator(mode="after")
     def validate_production_admin_token(self) -> "Settings":
         """Refuse to start in production with an empty admin token."""

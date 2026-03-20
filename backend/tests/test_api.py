@@ -5,9 +5,11 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.config import Settings
 from app.database import Base, get_db
 from app.main import app
 from app.models import ReservationAccessToken
@@ -82,6 +84,11 @@ async def test_health(client):
     r = await client.get("/health")
     assert r.status_code == 200
     assert r.json() == {"status": "ok"}
+
+
+def test_settings_reject_nonpositive_guest_access_token_ttl():
+    with pytest.raises(ValidationError, match="GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0."):
+        Settings(guest_access_token_ttl_minutes=0)
 
 
 # ---------------------------------------------------------------------------
@@ -320,8 +327,13 @@ async def test_request_my_reservations_access_is_generic(client):
 
     assert found.status_code == 202
     assert missing.status_code == 202
-    assert found.json() == missing.json()
-    assert found.json()["delivery_mode"] == "disabled"
+    assert found.json()["delivery_mode"] == "inline"
+    assert missing.json()["delivery_mode"] == "inline"
+    assert found.json()["expires_in_minutes"] == missing.json()["expires_in_minutes"]
+    assert found.json()["access_token"]
+    assert missing.json()["access_token"]
+    assert found.json()["access_url"].startswith("/my-reservations?token=")
+    assert missing.json()["access_url"].startswith("/my-reservations?token=")
 
 
 @pytest.mark.anyio
@@ -335,6 +347,7 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
 
     r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
+    assert r.json()["access_token"] == token
 
     token_rows = (
         await db_session.execute(select(ReservationAccessToken))
@@ -343,8 +356,8 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     assert token_rows[0].email == "jean@example.com"
     assert token_rows[0].token_hash != token
 
-    r = await client.get(
-        "/api/reservations/my/access", params={"token": token}
+    r = await client.post(
+        "/api/reservations/my/access", json={"token": token}
     )
     assert r.status_code == 200
     items = r.json()
@@ -360,9 +373,9 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
 
 @pytest.mark.anyio
 async def test_my_reservations_access_requires_valid_token(client):
-    r = await client.get(
+    r = await client.post(
         "/api/reservations/my/access",
-        params={"token": "invalid-token-value-12345"},
+        json={"token": "invalid-token-value-12345"},
     )
     assert r.status_code == 401
 
@@ -388,9 +401,9 @@ async def test_my_reservations_access_expired_token(client, db_session):
     )
     await db_session.commit()
 
-    r = await client.get(
+    r = await client.post(
         "/api/reservations/my/access",
-        params={"token": "expired-token-value-12345"},
+        json={"token": "expired-token-value-12345"},
     )
     assert r.status_code == 401
 
@@ -411,9 +424,10 @@ async def test_my_reservations_access_multiple_editions(client, monkeypatch):
     r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
-    r = await client.get(
-        "/api/reservations/my/access", params={"token": token}
+    r = await client.post(
+        "/api/reservations/my/access", json={"token": token}
     )
+    assert r.status_code == 200
     assert len(r.json()) == 2
 
 

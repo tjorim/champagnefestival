@@ -197,8 +197,14 @@ class ReservationLookupRequest(BaseModel):
 
 class ReservationLookupRequestAccepted(BaseModel):
     ok: bool = True
-    delivery_mode: Literal["disabled"] = "disabled"
+    delivery_mode: Literal["inline"] = "inline"
     expires_in_minutes: int
+    access_token: str
+    access_url: str
+
+
+class ReservationAccessLookupRequest(BaseModel):
+    token: str = Field(min_length=20)
 
 
 class ReservationAdminCreate(BaseModel):

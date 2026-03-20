@@ -57,8 +57,10 @@ interface GuestReservationResponse {
 
 interface ReservationLookupRequestAcceptedResponse {
   ok: boolean;
-  delivery_mode: "disabled";
+  delivery_mode: "inline";
   expires_in_minutes: number;
+  access_token: string;
+  access_url: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -117,8 +119,10 @@ function parseReservationLookupRequestAccepted(
   if (
     !isRecord(value) ||
     typeof value.ok !== "boolean" ||
-    value.delivery_mode !== "disabled" ||
-    typeof value.expires_in_minutes !== "number"
+    value.delivery_mode !== "inline" ||
+    typeof value.expires_in_minutes !== "number" ||
+    typeof value.access_token !== "string" ||
+    typeof value.access_url !== "string"
   ) {
     throw new Error("Invalid reservation lookup request response.");
   }
@@ -126,6 +130,8 @@ function parseReservationLookupRequestAccepted(
     ok: value.ok,
     delivery_mode: value.delivery_mode,
     expires_in_minutes: value.expires_in_minutes,
+    access_token: value.access_token,
+    access_url: value.access_url,
   };
 }
 
@@ -161,15 +167,19 @@ export default function MyReservationsPage() {
 
   const [email, setEmail] = useState("");
   const [requestSent, setRequestSent] = useState(false);
+  const [inlineAccessUrl, setInlineAccessUrl] = useState<string | null>(null);
   const [reservations, setReservations] = useState<GuestReservation[] | null>(null);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isLoadingReservations, setIsLoadingReservations] = useState(false);
+  const [showRecoveryCTA, setShowRecoveryCTA] = useState(false);
   const [error, setError] = useState("");
 
   const resetToRequestForm = useCallback(() => {
     setSearchParams({}, { replace: true });
     setRequestSent(false);
+    setInlineAccessUrl(null);
     setReservations(null);
+    setShowRecoveryCTA(false);
     setError("");
   }, [setSearchParams]);
 
@@ -182,6 +192,7 @@ export default function MyReservationsPage() {
       setIsSubmittingEmail(true);
       setError("");
       setRequestSent(false);
+      setInlineAccessUrl(null);
 
       try {
         const response = await fetch("/api/reservations/my/request", {
@@ -193,7 +204,8 @@ export default function MyReservationsPage() {
           setError(m.my_reservations_error());
           return;
         }
-        parseReservationLookupRequestAccepted(await response.json());
+        const data = parseReservationLookupRequestAccepted(await response.json());
+        setInlineAccessUrl(data.access_url);
         setRequestSent(true);
       } catch {
         setError(m.my_reservations_error());
@@ -214,16 +226,20 @@ export default function MyReservationsPage() {
     setIsLoadingReservations(true);
     setError("");
     setRequestSent(false);
+    setInlineAccessUrl(null);
+    setShowRecoveryCTA(false);
 
     void (async () => {
       try {
-        const response = await fetch(
-          `/api/reservations/my/access?token=${encodeURIComponent(token)}`,
-        );
+        const response = await fetch("/api/reservations/my/access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
 
         if (!response.ok) {
           if (!isActive) return;
-          setReservations(null);
+          setShowRecoveryCTA(response.status === 401);
           setError(
             response.status === 401
               ? m.my_reservations_invalid_token()
@@ -235,6 +251,7 @@ export default function MyReservationsPage() {
         const data = parseGuestReservationsResponse(await response.json());
         if (!isActive) return;
         setReservations(mapGuestReservations(data));
+        setShowRecoveryCTA(false);
       } catch {
         if (!isActive) return;
         setReservations(null);
@@ -290,6 +307,18 @@ export default function MyReservationsPage() {
                     <Alert variant="info" className="mb-3">
                       <div className="fw-semibold mb-1">{m.my_reservations_request_success()}</div>
                       <div>{m.my_reservations_request_pending_notice()}</div>
+                      {inlineAccessUrl && (
+                        <Button
+                          as="a"
+                          href={inlineAccessUrl}
+                          variant="outline-warning"
+                          size="sm"
+                          className="mt-3"
+                        >
+                          <i className="bi bi-box-arrow-up-right me-2" aria-hidden="true" />
+                          {m.my_reservations_open_inline_link()}
+                        </Button>
+                      )}
                     </Alert>
                   )}
 
@@ -338,14 +367,14 @@ export default function MyReservationsPage() {
                   </Alert>
                 )}
 
-                {!isLoadingReservations && reservations !== null && (
+                {!isLoadingReservations && (reservations !== null || showRecoveryCTA) && (
                   <>
-                    {reservations.length === 0 ? (
+                    {reservations !== null && reservations.length === 0 ? (
                       <Alert variant="info" className="text-center">
                         <i className="bi bi-inbox me-2" aria-hidden="true" />
                         {m.my_reservations_no_results()}
                       </Alert>
-                    ) : (
+                    ) : reservations !== null ? (
                       <div className="d-flex flex-column gap-3">
                         {reservations.map((reservation) => (
                           <Card
@@ -424,7 +453,7 @@ export default function MyReservationsPage() {
                           </Card>
                         ))}
                       </div>
-                    )}
+                    ) : null}
 
                     <Button
                       variant="outline-secondary"
