@@ -13,6 +13,7 @@ from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.database import Base, get_db
 from app.main import app
 from app.models import ReservationAccessToken
+import app.routers.reservations as reservations_module
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
@@ -22,6 +23,12 @@ ADMIN_TOKEN = "test-admin-token"
 def set_admin_token(monkeypatch):
     monkeypatch.setattr("app.config.settings.admin_token", ADMIN_TOKEN)
     monkeypatch.setattr("app.auth.settings.admin_token", ADMIN_TOKEN)
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter(monkeypatch):
+    """Reset the in-memory rate limiter before every test for isolation."""
+    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
 
 
 @pytest.fixture()
@@ -464,6 +471,42 @@ async def test_my_reservations_request_reuses_existing_token_row(client, db_sess
     assert token_rows[0].token_hash == hashlib.sha256(
         b"guest-access-token-67890"
     ).hexdigest()
+
+
+@pytest.mark.anyio
+async def test_my_reservations_access_token_reuse(client, monkeypatch):
+    """A valid token can be used more than once within its TTL window."""
+    token = "guest-access-token-12345"
+    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+    first = await client.post("/api/reservations/my/access", json={"token": token})
+    second = await client.post("/api/reservations/my/access", json={"token": token})
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert len(first.json()) == 1
+    assert len(second.json()) == 1
+
+
+@pytest.mark.anyio
+async def test_my_reservations_request_rate_limited(client, monkeypatch):
+    """After exceeding the per-IP request limit the endpoint returns 429."""
+    # Reset the in-process rate limiter state so prior tests don't affect this one.
+    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
+
+    limit = reservations_module._RATE_LIMIT_MAX_REQUESTS
+    for _ in range(limit):
+        r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+        assert r.status_code == 202
+
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 429
 
 
 # ---------------------------------------------------------------------------

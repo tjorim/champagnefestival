@@ -23,6 +23,39 @@ interface PersonReservation {
   createdAt: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isReservationStatus(value: unknown): value is ReservationStatus {
+  return value === "pending" || value === "confirmed" || value === "cancelled";
+}
+
+function isPaymentStatus(value: unknown): value is PaymentStatus {
+  return value === "unpaid" || value === "partial" || value === "paid";
+}
+
+function isPersonReservationRecord(value: unknown): value is Record<string, unknown> & {
+  id: string;
+  event_title: string;
+  guest_count: number;
+  status: ReservationStatus;
+  payment_status: PaymentStatus;
+  checked_in: boolean;
+  created_at: string;
+} {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.event_title === "string" &&
+    typeof value.guest_count === "number" &&
+    isReservationStatus(value.status) &&
+    isPaymentStatus(value.payment_status) &&
+    typeof value.checked_in === "boolean" &&
+    typeof value.created_at === "string"
+  );
+}
+
 interface PeopleManagementProps {
   people: Person[];
   reservationCountByPersonId: Record<string, number>;
@@ -190,19 +223,23 @@ export default function PeopleManagement({
           return;
         }
         if (res.ok) {
-          const data = (await res.json()) as Record<string, unknown>[];
+          const raw: unknown = await res.json();
           if (reservationsFetchControllerRef.current !== controller) {
             return;
           }
+          if (!Array.isArray(raw) || !raw.every(isPersonReservationRecord)) {
+            setPersonReservationsError(true);
+            return;
+          }
           setPersonReservations(
-            data.map((d) => ({
-              id: d.id as string,
-              eventTitle: (d.event_title ?? "") as string,
-              guestCount: (d.guest_count ?? 1) as number,
-              status: (d.status ?? "pending") as ReservationStatus,
-              paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
-              checkedIn: (d.checked_in ?? false) as boolean,
-              createdAt: (d.created_at ?? "") as string,
+            raw.map((d) => ({
+              id: d.id,
+              eventTitle: d.event_title,
+              guestCount: d.guest_count,
+              status: d.status,
+              paymentStatus: d.payment_status,
+              checkedIn: d.checked_in,
+              createdAt: d.created_at,
             })),
           );
         } else {

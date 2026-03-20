@@ -1,13 +1,14 @@
 """Reservation CRUD endpoints."""
 
+import collections
 import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import delete, or_, select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert  # NOTE: SQLite-specific upsert; update if switching databases
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
@@ -38,6 +39,34 @@ from app.utils import (
 
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# In-memory rate limiter for /my/request (per client IP, sliding window)
+# ---------------------------------------------------------------------------
+
+_RATE_LIMIT_MAX_REQUESTS = 5
+_RATE_LIMIT_WINDOW_SECONDS = 600  # 10 minutes
+
+# Maps client IP → deque of request timestamps within the current window.
+_rate_limit_buckets: dict[str, collections.deque[datetime]] = {}
+
+
+def _check_rate_limit(client_ip: str) -> bool:
+    """Return True if the request is within the allowed rate, False otherwise."""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=_RATE_LIMIT_WINDOW_SECONDS)
+
+    bucket = _rate_limit_buckets.setdefault(client_ip, collections.deque())
+
+    # Evict timestamps that have fallen outside the window.
+    while bucket and bucket[0] < cutoff:
+        bucket.popleft()
+
+    if len(bucket) >= _RATE_LIMIT_MAX_REQUESTS:
+        return False
+
+    bucket.append(now)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +250,7 @@ async def list_reservations(
 )
 async def request_my_reservations_access(
     body: ReservationLookupRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> ReservationLookupRequestAccepted:
     """Prepare a secure visitor access link for later e-mail delivery.
@@ -230,6 +260,13 @@ async def request_my_reservations_access(
     SMTP delivery is not wired up yet, so the server only stores the token
     server-side and logs that a link was prepared — never the raw token itself.
     """
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please try again later.",
+        )
+
     email_norm = str(body.email).lower().strip()
     token = secrets.token_urlsafe(24)
     now = datetime.now(timezone.utc)
@@ -237,6 +274,16 @@ async def request_my_reservations_access(
     request_id = _guest_access_log_id(email_norm)
     token_hash = _hash_guest_access_token(token)
 
+    # Opportunistically delete expired tokens to keep the table from growing
+    # unboundedly. Runs on every request, which is acceptable at this scale.
+    await db.execute(
+        delete(ReservationAccessToken).where(
+            ReservationAccessToken.expires_at < now
+        )
+    )
+
+    # NOTE: sqlite_insert is SQLite-specific; the on_conflict_do_update call
+    # enforces one-token-per-email — a new request invalidates the previous one.
     await db.execute(
         sqlite_insert(ReservationAccessToken)
         .values(
@@ -276,7 +323,13 @@ async def access_my_reservations(
     body: ReservationAccessLookupRequest,
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """Return visitor reservations after validating a short-lived access token."""
+    """Return visitor reservations after validating a short-lived access token.
+
+    Tokens are intentionally *not* consumed on use — guests can reload the page
+    and re-present the same token until it expires (TTL set by
+    GUEST_ACCESS_TOKEN_TTL_MINUTES).  A new /my/request call invalidates the
+    current token by overwriting it in the database.
+    """
     token_row = await _get_guest_access_token_or_401(db, body.token)
     token_row.last_used_at = datetime.now(timezone.utc)
     rows = await _load_guest_reservations_by_email(db, token_row.email)
