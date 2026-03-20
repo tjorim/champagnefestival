@@ -74,8 +74,9 @@ cp .env.example .env
 alembic upgrade head
 
 # Note: only SQLAlchemy model/table changes require a new Alembic revision.
-# API-only changes (for example narrowing which shared Person fields a router
-# reads/writes) do not need a migration by themselves.
+# API-only changes do not need a migration by themselves, but removing or
+# replacing persisted volunteer fields such as `people.first_help_day` /
+# `people.last_help_day` would require one.
 
 # 5. Start the development server
 uvicorn app.main:app --reload
