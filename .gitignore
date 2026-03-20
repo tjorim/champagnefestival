@@ -141,5 +141,7 @@ dist
 # Build output
 build
 
-# Runtime data directory (SQLite DB, uploads, etc.)
-data/
+# Database files
+*.db
+*.db-wal
+*.db-shm
