@@ -206,30 +206,29 @@ class ReservationAdminCreate(BaseModel):
 
 class VolunteerCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    address: str = Field(min_length=1, max_length=300)
-    first_help_day: date
-    last_help_day: date
+    address: str = Field(default="", max_length=300)
     national_register_number: str = Field(min_length=1, max_length=20)
     eid_document_number: str = Field(min_length=1, max_length=50)
+    active: bool = True
 
 
 class VolunteerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
-    address: str | None = Field(default=None, min_length=1, max_length=300)
-    first_help_day: date | None = None
-    last_help_day: date | None = None
-    national_register_number: str | None = Field(default=None, min_length=1, max_length=20)
+    address: str | None = Field(default=None, max_length=300)
+    national_register_number: str | None = Field(
+        default=None, min_length=1, max_length=20
+    )
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
+    active: bool | None = None
 
 
 class VolunteerOut(BaseModel):
     id: str
     name: str
     address: str
-    first_help_day: date
-    last_help_day: date
     national_register_number: str | None
     eid_document_number: str | None
+    active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -468,6 +467,7 @@ class TableOut(BaseModel):
 # Areas
 # ---------------------------------------------------------------------------
 
+
 class AreaCreate(BaseModel):
     layout_id: str = Field(max_length=64)
     label: str = Field(min_length=1, max_length=200)
@@ -561,7 +561,9 @@ class RoomCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     width_m: float = Field(ge=1, le=500, default=20.0)
     length_m: float = Field(ge=1, le=500, default=15.0)
-    color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    color: str = Field(
+        default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    )
     active: bool = True
 
 
@@ -569,7 +571,9 @@ class RoomUpdate(BaseModel):
     name: str | None = None
     width_m: float | None = Field(default=None, ge=1, le=500)
     length_m: float | None = Field(default=None, ge=1, le=500)
-    color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    color: str | None = Field(
+        default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    )
     active: bool | None = None
 
 
@@ -664,5 +668,3 @@ class EditionOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-

@@ -171,8 +171,6 @@ export default function VolunteersManagement({
                     <th>{m.admin_people_address_label()}</th>
                     <th>{m.admin_people_national_register_number_label()}</th>
                     <th>{m.admin_people_eid_document_number_label()}</th>
-                    <th>{m.admin_people_first_help_day_label()}</th>
-                    <th>{m.admin_people_last_help_day_label()}</th>
                     <th>{m.admin_actions_label()}</th>
                   </tr>
                 </thead>
@@ -192,10 +190,6 @@ export default function VolunteersManagement({
                       <td className="small">{volunteer.address}</td>
                       <td className="small">{volunteer.nationalRegisterNumber}</td>
                       <td className="small">{volunteer.eidDocumentNumber}</td>
-                      <td className="small">{volunteer.firstHelpDay}</td>
-                      <td className="small">
-                        {volunteer.lastHelpDay || m.admin_volunteers_no_last_help_day()}
-                      </td>
                       <td>
                         <div className="d-flex flex-wrap gap-1">
                           <Button

@@ -504,8 +504,5 @@
   "admin_volunteers_filter_inactive": "Alleen inactief",
   "admin_volunteers_error_create": "Aanmaken van vrijwilliger mislukt.",
   "admin_volunteers_error_update": "Bijwerken van vrijwilliger mislukt.",
-  "admin_volunteers_error_delete": "Verwijderen van vrijwilliger mislukt.",
-  "admin_volunteers_validation_help_day_range": "De laatste helpdag moet op of na de eerste helpdag liggen.",
-  "admin_volunteers_last_help_day_help_text": "Laat leeg tot de vrijwilliger weet wat de laatste helpdag is.",
-  "admin_volunteers_no_last_help_day": "Niet ingevuld"
+  "admin_volunteers_error_delete": "Verwijderen van vrijwilliger mislukt."
 }

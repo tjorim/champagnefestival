@@ -21,8 +21,6 @@ export interface VolunteerFormData {
   address: string;
   nationalRegisterNumber: string;
   eidDocumentNumber: string;
-  firstHelpDay: string;
-  lastHelpDay: string | null;
   active: boolean;
 }
 
@@ -38,8 +36,6 @@ export default function VolunteerFormModal({
   const [address, setAddress] = useState("");
   const [nationalRegisterNumber, setNationalRegisterNumber] = useState("");
   const [eidDocumentNumber, setEidDocumentNumber] = useState("");
-  const [firstHelpDay, setFirstHelpDay] = useState("");
-  const [lastHelpDay, setLastHelpDay] = useState("");
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,16 +47,12 @@ export default function VolunteerFormModal({
       setAddress(volunteer.address ?? "");
       setNationalRegisterNumber(volunteer.nationalRegisterNumber ?? "");
       setEidDocumentNumber(volunteer.eidDocumentNumber ?? "");
-      setFirstHelpDay(volunteer.firstHelpDay ?? "");
-      setLastHelpDay(volunteer.lastHelpDay ?? "");
       setActive(volunteer.active);
     } else {
       setName("");
       setAddress("");
       setNationalRegisterNumber("");
       setEidDocumentNumber("");
-      setFirstHelpDay("");
-      setLastHelpDay("");
       setActive(true);
     }
     setError(null);
@@ -69,20 +61,11 @@ export default function VolunteerFormModal({
 
   useEffect(() => {
     setError(null);
-  }, [name, address, nationalRegisterNumber, eidDocumentNumber, firstHelpDay, lastHelpDay, active]);
+  }, [name, address, nationalRegisterNumber, eidDocumentNumber, active]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (
-      !name.trim() ||
-      !nationalRegisterNumber.trim() ||
-      !eidDocumentNumber.trim() ||
-      !firstHelpDay
-    ) {
-      return;
-    }
-    if (lastHelpDay && firstHelpDay > lastHelpDay) {
-      setError(m.admin_volunteers_validation_help_day_range());
+    if (!name.trim() || !nationalRegisterNumber.trim() || !eidDocumentNumber.trim()) {
       return;
     }
 
@@ -94,8 +77,6 @@ export default function VolunteerFormModal({
         address: address.trim(),
         nationalRegisterNumber: nationalRegisterNumber.trim(),
         eidDocumentNumber: eidDocumentNumber.trim(),
-        firstHelpDay,
-        lastHelpDay: lastHelpDay || null,
         active,
       });
       onHide();
@@ -192,40 +173,6 @@ export default function VolunteerFormModal({
             </Col>
           </Row>
 
-          <Row className="mb-3">
-            <Col xs={12} md={6}>
-              <Form.Group controlId="volunteer-first-help-day">
-                <Form.Label className="text-secondary small">
-                  {m.admin_people_first_help_day_label()} *
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={firstHelpDay}
-                  onChange={(e) => setFirstHelpDay(e.target.value)}
-                  className="bg-dark text-light border-secondary"
-                  required
-                />
-              </Form.Group>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Group controlId="volunteer-last-help-day">
-                <Form.Label className="text-secondary small">
-                  {m.admin_people_last_help_day_label()}
-                </Form.Label>
-                <Form.Control
-                  type="date"
-                  value={lastHelpDay}
-                  onChange={(e) => setLastHelpDay(e.target.value)}
-                  className="bg-dark text-light border-secondary"
-                  min={firstHelpDay || undefined}
-                />
-                <Form.Text className="text-secondary">
-                  {m.admin_volunteers_last_help_day_help_text()}
-                </Form.Text>
-              </Form.Group>
-            </Col>
-          </Row>
-
           <Form.Check
             id="volunteer-active"
             type="switch"
@@ -245,11 +192,7 @@ export default function VolunteerFormModal({
             variant="warning"
             size="sm"
             disabled={
-              saving ||
-              !name.trim() ||
-              !nationalRegisterNumber.trim() ||
-              !eidDocumentNumber.trim() ||
-              !firstHelpDay
+              saving || !name.trim() || !nationalRegisterNumber.trim() || !eidDocumentNumber.trim()
             }
           >
             {saving ? (

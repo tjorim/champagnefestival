@@ -445,8 +445,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           address: data.address,
           national_register_number: data.nationalRegisterNumber,
           eid_document_number: data.eidDocumentNumber,
-          first_help_day: data.firstHelpDay,
-          last_help_day: data.lastHelpDay,
           active: data.active,
         }),
       });
@@ -470,8 +468,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           address: data.address,
           national_register_number: data.nationalRegisterNumber,
           eid_document_number: data.eidDocumentNumber,
-          first_help_day: data.firstHelpDay,
-          last_help_day: data.lastHelpDay,
           active: data.active,
         }),
       });
