@@ -405,6 +405,7 @@
   "admin_filter_allocation_aria": "Filtrer par allocation",
   "admin_linked_exhibitor_title": "Lié au contact du producteur/sponsor/exposant",
   "admin_allocation_contact_aria": "Contact d'allocation",
+  "admin_allocation_exhibitor_label": "Exposant",
   "admin_create_reservation": "Créer une réservation",
   "admin_person_label": "Personne",
   "admin_error_create_reservation": "Impossible de créer la réservation.",

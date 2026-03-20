@@ -405,6 +405,7 @@
   "admin_filter_allocation_aria": "Filteren op toewijzing",
   "admin_linked_exhibitor_title": "Gekoppeld aan producent/sponsor/exposant contactpersoon",
   "admin_allocation_contact_aria": "Toewijzingscontact",
+  "admin_allocation_exhibitor_label": "Exposant",
   "admin_create_reservation": "Reservatie aanmaken",
   "admin_person_label": "Persoon",
   "admin_error_create_reservation": "Reservatie aanmaken mislukt.",

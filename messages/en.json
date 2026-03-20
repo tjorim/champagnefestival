@@ -405,6 +405,7 @@
   "admin_filter_allocation_aria": "Filter by allocation",
   "admin_linked_exhibitor_title": "Linked to producer/sponsor/exhibitor contact",
   "admin_allocation_contact_aria": "Allocation contact",
+  "admin_allocation_exhibitor_label": "Exhibitor",
   "admin_create_reservation": "Create Reservation",
   "admin_person_label": "Person",
   "admin_error_create_reservation": "Failed to create reservation.",

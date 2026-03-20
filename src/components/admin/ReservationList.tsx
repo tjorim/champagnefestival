@@ -95,7 +95,7 @@ export default function ReservationList({
   const allocationOptions: { key: string; label: string; personId: string }[] = [
     ...exhibitors
       .filter((e) => e.contactPersonId && reservationPersonIds.has(e.contactPersonId))
-      .map((e) => ({ key: `e:${e.id}`, label: `Exhibitor: ${e.name}`, personId: e.contactPersonId! })),
+      .map((e) => ({ key: `e:${e.id}`, label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`, personId: e.contactPersonId! })),
   ];
 
   // Find which reservations are linked to an exhibitor contact person
