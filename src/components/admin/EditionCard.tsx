@@ -122,10 +122,10 @@ export default function EditionCard({
         </Badge>
         <Badge bg="secondary">{edition.schedule.length} {m.admin_edition_events()}</Badge>
         {(edition.producers?.length ?? 0) > 0 && (
-          <Badge bg="secondary">{edition.producers!.length} producers</Badge>
+          <Badge bg="secondary">{edition.producers!.length} {m.admin_edition_producers()}</Badge>
         )}
         {(edition.sponsors?.length ?? 0) > 0 && (
-          <Badge bg="secondary">{edition.sponsors!.length} sponsors</Badge>
+          <Badge bg="secondary">{edition.sponsors!.length} {m.admin_edition_sponsors()}</Badge>
         )}
         {saving && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
