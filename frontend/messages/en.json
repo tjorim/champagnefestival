@@ -482,5 +482,15 @@
   "admin_people_view_reservations": "View reservations",
   "admin_people_reservations_modal_title": "Reservations",
   "admin_people_reservations_empty": "No reservations found for this person.",
-  "admin_people_reservations_load_error": "Failed to load reservations."
+  "admin_people_reservations_load_error": "Failed to load reservations.",
+  "my_reservations_title": "My Reservations",
+  "my_reservations_description": "Enter your email address to view your reservations.",
+  "my_reservations_email_label": "Email address",
+  "my_reservations_email_placeholder": "your@email.com",
+  "my_reservations_search": "Look up",
+  "my_reservations_searching": "Looking up...",
+  "my_reservations_no_results": "No reservations found for this email address.",
+  "my_reservations_error": "An error occurred while looking up your reservations.",
+  "my_reservations_guests_label": "guests",
+  "my_reservations_search_again": "Search again"
 }
