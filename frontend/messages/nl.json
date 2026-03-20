@@ -488,5 +488,22 @@
   "admin_people_emails_copied": "E-mailadressen gekopieerd!",
   "admin_people_no_emails": "Geen e-mailadressen beschikbaar.",
   "admin_people_error_create": "Aanmaken van persoon mislukt.",
-  "admin_people_error_update": "Bijwerken van persoon mislukt."
+  "admin_people_error_update": "Bijwerken van persoon mislukt.",
+  "admin_volunteers_add": "Vrijwilliger toevoegen",
+  "admin_volunteers_create_title": "Nieuwe vrijwilliger aanmaken",
+  "admin_volunteers_edit_title": "Vrijwilliger bewerken",
+  "admin_volunteers_create_success": "Vrijwilliger aangemaakt.",
+  "admin_volunteers_update_success": "Vrijwilliger bijgewerkt.",
+  "admin_volunteers_delete_title": "Vrijwilliger verwijderen",
+  "admin_volunteers_delete_confirm": "Weet je zeker dat je deze vrijwilliger wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "admin_volunteers_delete_success": "Vrijwilliger verwijderd.",
+  "admin_volunteers_no_results": "Geen vrijwilligers gevonden.",
+  "admin_volunteers_search_placeholder": "Zoek op naam, adres of identiteitsvelden…",
+  "admin_volunteers_filter_all": "Alle vrijwilligers",
+  "admin_volunteers_filter_active": "Alleen actief",
+  "admin_volunteers_filter_inactive": "Alleen inactief",
+  "admin_volunteers_error_create": "Aanmaken van vrijwilliger mislukt.",
+  "admin_volunteers_error_update": "Bijwerken van vrijwilliger mislukt.",
+  "admin_volunteers_error_delete": "Verwijderen van vrijwilliger mislukt.",
+  "admin_volunteers_validation_help_day_range": "De eerste helpdag moet op of vóór de laatste helpdag liggen."
 }

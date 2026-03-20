@@ -15,7 +15,9 @@ import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
 import PeopleManagement from "./PeopleManagement";
+import VolunteersManagement from "./VolunteersManagement";
 import type { PersonFormData } from "./PersonFormModal";
+import type { VolunteerFormData } from "./VolunteerFormModal";
 import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@/types/reservation";
 import { apiToReservation } from "@/types/reservationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
@@ -129,6 +131,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   >([]);
   const [areas, setAreas] = useState<FloorArea[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [volunteers, setVolunteers] = useState<Person[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
   const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
@@ -140,6 +143,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }),
     [token],
   );
+
+  const loadVolunteers = useCallback(async () => {
+    const response = await fetch("/api/volunteers", { headers: authHeaders() });
+    if (response.status === 401) {
+      throw new Error("unauthorized");
+    }
+    if (!response.ok) {
+      const d = await response.json().catch(() => ({}));
+      throw new Error((d as { detail?: string }).detail ?? m.admin_error_load_data());
+    }
+    const data = await response.json();
+    setVolunteers(Array.isArray(data) ? data.map(apiToPerson) : []);
+  }, [authHeaders]);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -231,13 +247,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       const peopleData = await peopleResponse.json();
       setPeople(Array.isArray(peopleData) ? peopleData.map(apiToPerson) : []);
+
+      await loadVolunteers();
     } catch (err) {
+      if (err instanceof Error && err.message === "unauthorized") {
+        setIsAuthenticated(false);
+        setLoginError(m.admin_login_error());
+        return;
+      }
       console.error("Failed to load dashboard data", err);
       setError(m.admin_error_load_data());
     } finally {
       setIsLoading(false);
     }
-  }, [authHeaders]);
+  }, [authHeaders, loadVolunteers]);
 
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
@@ -274,6 +297,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setRooms([]);
     setTableTypes([]);
     setPeople([]);
+    setVolunteers([]);
   }, []);
 
   const handleMergePeople = useCallback(
@@ -301,8 +325,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           r.personId === duplicateId
             ? { ...r, personId: canonicalId, person: canonicalPerson }
             : r.personId === canonicalId
-            ? { ...r, person: canonicalPerson }
-            : r,
+              ? { ...r, person: canonicalPerson }
+              : r,
         ),
       );
       // Re-point any exhibitors in state that were linked to the duplicate contact person
@@ -367,13 +391,29 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       setReservations((prev) =>
         prev.map((r) =>
           r.personId === id
-            ? { ...r, person: { id: updated.id, name: updated.name, email: updated.email, phone: updated.phone } }
+            ? {
+                ...r,
+                person: {
+                  id: updated.id,
+                  name: updated.name,
+                  email: updated.email,
+                  phone: updated.phone,
+                },
+              }
             : r,
         ),
       );
       setDetailReservation((prev) =>
         prev?.person.id === id
-          ? { ...prev, person: { id: updated.id, name: updated.name, email: updated.email, phone: updated.phone } }
+          ? {
+              ...prev,
+              person: {
+                id: updated.id,
+                name: updated.name,
+                email: updated.email,
+                phone: updated.phone,
+              },
+            }
           : prev,
       );
     },
@@ -391,6 +431,72 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_person());
       }
       setPeople((prev) => prev.filter((p) => p.id !== id));
+    },
+    [authHeaders],
+  );
+
+  const handleCreateVolunteer = useCallback(
+    async (data: VolunteerFormData) => {
+      const response = await fetch("/api/volunteers", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: data.name,
+          address: data.address,
+          national_register_number: data.nationalRegisterNumber,
+          eid_document_number: data.eidDocumentNumber,
+          first_help_day: data.firstHelpDay,
+          last_help_day: data.lastHelpDay,
+          active: data.active,
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_create());
+      }
+      const d = await response.json();
+      setVolunteers((prev) => [apiToPerson(d as Record<string, unknown>), ...prev]);
+    },
+    [authHeaders],
+  );
+
+  const handleUpdateVolunteer = useCallback(
+    async (id: string, data: VolunteerFormData) => {
+      const response = await fetch(`/api/volunteers/${id}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: data.name,
+          address: data.address,
+          national_register_number: data.nationalRegisterNumber,
+          eid_document_number: data.eidDocumentNumber,
+          first_help_day: data.firstHelpDay,
+          last_help_day: data.lastHelpDay,
+          active: data.active,
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_update());
+      }
+      const d = await response.json();
+      const updated = apiToPerson(d as Record<string, unknown>);
+      setVolunteers((prev) => prev.map((volunteer) => (volunteer.id === id ? updated : volunteer)));
+    },
+    [authHeaders],
+  );
+
+  const handleDeleteVolunteer = useCallback(
+    async (id: string) => {
+      const response = await fetch(`/api/volunteers/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_delete());
+      }
+      setVolunteers((prev) => prev.filter((volunteer) => volunteer.id !== id));
     },
     [authHeaders],
   );
@@ -1316,6 +1422,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       <span className="badge bg-secondary ms-2">{people.length}</span>
                     </Nav.Link>
                   </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="volunteers" className="text-light">
+                      <i className="bi bi-hand-thumbs-up me-2" aria-hidden="true" />
+                      {m.admin_volunteers_tab()}
+                      <span className="badge bg-secondary ms-2">{volunteers.length}</span>
+                    </Nav.Link>
+                  </Nav.Item>
                 </Nav>
                 <Tab.Content>
                   <Tab.Pane eventKey="reservations">
@@ -1393,6 +1506,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onCreate={handleCreatePerson}
                       onUpdate={handleUpdatePerson}
                       onDelete={handleDeletePerson}
+                    />
+                  </Tab.Pane>
+                  <Tab.Pane eventKey="volunteers">
+                    <VolunteersManagement
+                      volunteers={volunteers}
+                      isLoading={isLoading}
+                      onCreate={handleCreateVolunteer}
+                      onUpdate={handleUpdateVolunteer}
+                      onDelete={handleDeleteVolunteer}
                     />
                   </Tab.Pane>
                 </Tab.Content>

@@ -488,5 +488,22 @@
   "admin_people_emails_copied": "Adresses e-mail copiées !",
   "admin_people_no_emails": "Aucune adresse e-mail disponible.",
   "admin_people_error_create": "Échec de la création de la personne.",
-  "admin_people_error_update": "Échec de la mise à jour de la personne."
+  "admin_people_error_update": "Échec de la mise à jour de la personne.",
+  "admin_volunteers_add": "Ajouter un bénévole",
+  "admin_volunteers_create_title": "Créer un nouveau bénévole",
+  "admin_volunteers_edit_title": "Modifier le bénévole",
+  "admin_volunteers_create_success": "Bénévole créé.",
+  "admin_volunteers_update_success": "Bénévole mis à jour.",
+  "admin_volunteers_delete_title": "Supprimer le bénévole",
+  "admin_volunteers_delete_confirm": "Êtes-vous sûr de vouloir supprimer ce bénévole ? Cette action est irréversible.",
+  "admin_volunteers_delete_success": "Bénévole supprimé.",
+  "admin_volunteers_no_results": "Aucun bénévole trouvé.",
+  "admin_volunteers_search_placeholder": "Rechercher par nom, adresse ou champs d’identité…",
+  "admin_volunteers_filter_all": "Tous les bénévoles",
+  "admin_volunteers_filter_active": "Actifs uniquement",
+  "admin_volunteers_filter_inactive": "Inactifs uniquement",
+  "admin_volunteers_error_create": "Échec de la création du bénévole.",
+  "admin_volunteers_error_update": "Échec de la mise à jour du bénévole.",
+  "admin_volunteers_error_delete": "Échec de la suppression du bénévole.",
+  "admin_volunteers_validation_help_day_range": "Le premier jour d’aide doit être antérieur ou égal au dernier jour d’aide."
 }

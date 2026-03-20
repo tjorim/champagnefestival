@@ -488,5 +488,22 @@
   "admin_people_emails_copied": "Email addresses copied!",
   "admin_people_no_emails": "No email addresses available.",
   "admin_people_error_create": "Failed to create person.",
-  "admin_people_error_update": "Failed to update person."
+  "admin_people_error_update": "Failed to update person.",
+  "admin_volunteers_add": "Add volunteer",
+  "admin_volunteers_create_title": "Create new volunteer",
+  "admin_volunteers_edit_title": "Edit volunteer",
+  "admin_volunteers_create_success": "Volunteer created.",
+  "admin_volunteers_update_success": "Volunteer updated.",
+  "admin_volunteers_delete_title": "Delete volunteer",
+  "admin_volunteers_delete_confirm": "Are you sure you want to delete this volunteer? This cannot be undone.",
+  "admin_volunteers_delete_success": "Volunteer deleted.",
+  "admin_volunteers_no_results": "No volunteers found.",
+  "admin_volunteers_search_placeholder": "Search by name, address, or ID fields…",
+  "admin_volunteers_filter_all": "All volunteers",
+  "admin_volunteers_filter_active": "Active only",
+  "admin_volunteers_filter_inactive": "Inactive only",
+  "admin_volunteers_error_create": "Failed to create volunteer.",
+  "admin_volunteers_error_update": "Failed to update volunteer.",
+  "admin_volunteers_error_delete": "Failed to delete volunteer.",
+  "admin_volunteers_validation_help_day_range": "First help day must be on or before the last help day."
 }
