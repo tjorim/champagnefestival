@@ -10,6 +10,7 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
+import { z } from "zod";
 import { m } from "@/paraglide/messages";
 import type { PaymentStatus, ReservationStatus } from "@/types/reservation";
 
@@ -33,25 +34,57 @@ interface GuestReservation {
   }[];
 }
 
-function mapGuestReservations(data: Record<string, unknown>[]): GuestReservation[] {
+const orderItemSchema = z.object({
+  product_id: z.string(),
+  name: z.string(),
+  quantity: z.number(),
+  price: z.number(),
+  category: z.string(),
+  delivered: z.boolean(),
+});
+
+const guestReservationSchema = z.object({
+  id: z.string(),
+  event_title: z.string(),
+  guest_count: z.number(),
+  status: z.enum(["pending", "confirmed", "cancelled"]),
+  payment_status: z.enum(["unpaid", "partial", "paid"]),
+  checked_in: z.boolean(),
+  checked_in_at: z.string().nullable().optional(),
+  strap_issued: z.boolean(),
+  created_at: z.string(),
+  pre_orders: z.array(orderItemSchema),
+});
+
+const guestReservationsResponseSchema = z.array(guestReservationSchema);
+
+const reservationLookupRequestAcceptedSchema = z.object({
+  ok: z.boolean(),
+  delivery_mode: z.literal("disabled"),
+  expires_in_minutes: z.number(),
+});
+
+function mapGuestReservations(
+  data: z.infer<typeof guestReservationsResponseSchema>,
+): GuestReservation[] {
   return data.map((reservation) => ({
-    id: reservation.id as string,
-    eventTitle: (reservation.event_title ?? "") as string,
-    guestCount: (reservation.guest_count ?? 1) as number,
-    status: (reservation.status ?? "pending") as ReservationStatus,
-    paymentStatus: (reservation.payment_status ?? "unpaid") as PaymentStatus,
-    checkedIn: (reservation.checked_in ?? false) as boolean,
-    checkedInAt: reservation.checked_in_at as string | undefined,
-    strapIssued: (reservation.strap_issued ?? false) as boolean,
-    createdAt: (reservation.created_at ?? "") as string,
-    preOrders: ((reservation.pre_orders ?? []) as Record<string, unknown>[]).map(
+    id: reservation.id,
+    eventTitle: reservation.event_title,
+    guestCount: reservation.guest_count,
+    status: reservation.status as ReservationStatus,
+    paymentStatus: reservation.payment_status as PaymentStatus,
+    checkedIn: reservation.checked_in,
+    checkedInAt: reservation.checked_in_at ?? undefined,
+    strapIssued: reservation.strap_issued,
+    createdAt: reservation.created_at,
+    preOrders: reservation.pre_orders.map(
       (item) => ({
-        productId: item.product_id as string,
-        name: item.name as string,
-        quantity: item.quantity as number,
-        price: item.price as number,
-        category: item.category as string,
-        delivered: (item.delivered ?? false) as boolean,
+        productId: item.product_id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        category: item.category,
+        delivered: item.delivered,
       }),
     ),
   }));
@@ -95,6 +128,7 @@ export default function MyReservationsPage() {
           setError(m.my_reservations_error());
           return;
         }
+        reservationLookupRequestAcceptedSchema.parse(await response.json());
         setRequestSent(true);
       } catch {
         setError(m.my_reservations_error());
@@ -133,7 +167,7 @@ export default function MyReservationsPage() {
           return;
         }
 
-        const data = (await response.json()) as Record<string, unknown>[];
+        const data = guestReservationsResponseSchema.parse(await response.json());
         if (!isActive) return;
         setReservations(mapGuestReservations(data));
       } catch {
