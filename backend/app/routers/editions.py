@@ -37,7 +37,7 @@ async def get_active_edition(db: AsyncSession = Depends(get_db)) -> dict:
     active = next((e for e in editions if e.sunday >= now), editions[-1])
 
     venue = await _load_venue(db, active.venue_id)
-    exhibitor_map = await _load_exhibitors_by_ids(db, set(active.get_exhibitors()))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(active.exhibitors))
     producers, sponsors = _resolve_exhibitors(active, exhibitor_map)
     return edition_to_dict(active, venue=venue, producers=producers, sponsors=sponsors)
 
@@ -59,7 +59,7 @@ async def list_editions(
     editions = result.scalars().all()
 
     venues = await _load_venues_by_ids(db, {e.venue_id for e in editions})
-    all_ids = {eid for e in editions for eid in e.get_exhibitors()}
+    all_ids = {eid for e in editions for eid in e.exhibitors}
     exhibitor_map = await _load_exhibitors_by_ids(db, all_ids)
     result_list = []
     for e in editions:
@@ -79,7 +79,7 @@ async def list_editions(
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     e = await _get_or_404(db, edition_id)
     venue = await _load_venue(db, e.venue_id)
-    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.get_exhibitors()))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.exhibitors))
     producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
     return edition_to_dict(e, venue=venue, producers=producers, sponsors=sponsors)
 
@@ -107,13 +107,13 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
         venue_id=body.venue_id,
         active=body.active,
     )
-    e.set_schedule([ev.model_dump() for ev in body.schedule])
-    e.set_exhibitors(body.exhibitors)
+    e.schedule = [ev.model_dump() for ev in body.schedule]
+    e.exhibitors = body.exhibitors
     db.add(e)
     await db.commit()
     await db.refresh(e)
     venue = await _load_venue(db, e.venue_id)
-    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.get_exhibitors()))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.exhibitors))
     producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
     return edition_to_dict(e, venue=venue, producers=producers, sponsors=sponsors)
 
@@ -130,14 +130,14 @@ async def update_edition(
     if "venue_id" in body.model_fields_set and body.venue_id is not None:
         e.venue_id = body.venue_id
     if "schedule" in body.model_fields_set and body.schedule is not None:
-        e.set_schedule([ev.model_dump() for ev in body.schedule])
+        e.schedule = [ev.model_dump() for ev in body.schedule]
     if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
-        e.set_exhibitors(body.exhibitors)
+        e.exhibitors = body.exhibitors
 
     await db.commit()
     await db.refresh(e)
     venue = await _load_venue(db, e.venue_id)
-    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.get_exhibitors()))
+    exhibitor_map = await _load_exhibitors_by_ids(db, set(e.exhibitors))
     producers, sponsors = _resolve_exhibitors(e, exhibitor_map)
     return edition_to_dict(e, venue=venue, producers=producers, sponsors=sponsors)
 
@@ -194,7 +194,7 @@ async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, 
 def _resolve_exhibitors(e: Edition, exhibitor_map: dict[int, dict]) -> tuple[list[dict], list[dict]]:
     producers = []
     sponsors = []
-    for eid in e.get_exhibitors():
+    for eid in e.exhibitors:
         item = exhibitor_map.get(eid)
         if item is None:
             continue

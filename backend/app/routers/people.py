@@ -1,7 +1,7 @@
 """People CRUD endpoints (admin-only)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select  # or_ used in list_people search
+from sqlalchemy import Text, cast, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,7 +106,7 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         notes=body.notes,
         active=body.active,
     )
-    person.set_roles(_normalise_roles(body.roles))
+    person.roles = _normalise_roles(body.roles)
 
     db.add(person)
     try:
@@ -146,7 +146,7 @@ async def list_people(
                 Person.eid_document_number.ilike(q_like, escape="\\"),
                 Person.club_name.ilike(q_like, escape="\\"),
                 Person.notes.ilike(q_like, escape="\\"),
-                Person.roles.ilike(q_like, escape="\\"),
+                cast(Person.roles, Text).ilike(q_like, escape="\\"),
             )
         )
 
@@ -214,7 +214,7 @@ async def update_person(
         person.eid_document_number = eid
 
     if body.roles is not None:
-        person.set_roles(_normalise_roles(body.roles))
+        person.roles = _normalise_roles(body.roles)
 
     try:
         await db.commit()

@@ -1,9 +1,8 @@
 """SQLAlchemy ORM models."""
 
-import json
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -20,8 +19,7 @@ class Reservation(Base):
     event_id: Mapped[str] = mapped_column(String(100))
     event_title: Mapped[str] = mapped_column(String(200))
     guest_count: Mapped[int] = mapped_column(Integer)
-    # JSON-encoded list of OrderItem dicts
-    pre_orders: Mapped[str] = mapped_column(Text, default="[]")
+    pre_orders: Mapped[list[dict]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     accessibility_note: Mapped[str] = mapped_column(Text, default="")
     """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
@@ -52,17 +50,6 @@ class Reservation(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    def get_pre_orders(self) -> list[dict]:
-        return json.loads(self.pre_orders) if self.pre_orders else []
-
-    def set_pre_orders(self, items: list[dict]) -> None:
-        self.pre_orders = json.dumps(items)
-
 
 class Exhibitor(Base):
     """A unified exhibitor: champagne producer, sponsor, or vendor."""
@@ -215,8 +202,7 @@ class Table(Base):
     )
     """FK to the Layout this table belongs to."""
 
-    # JSON-encoded list of reservation ID strings
-    reservation_ids: Mapped[str] = mapped_column(Text, default="[]")
+    reservation_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -224,12 +210,6 @@ class Table(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
-
-    def get_reservation_ids(self) -> list[str]:
-        return json.loads(self.reservation_ids) if self.reservation_ids else []
-
-    def set_reservation_ids(self, ids: list[str]) -> None:
-        self.reservation_ids = json.dumps(ids)
 
 
 class Area(Base):
@@ -282,11 +262,8 @@ class Edition(Base):
         String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
     )
 
-    # JSON-encoded list of schedule event dicts
-    schedule: Mapped[str] = mapped_column(Text, default="[]")
-
-    # JSON-encoded list of exhibitor IDs participating in this edition
-    exhibitors: Mapped[str] = mapped_column(Text, default="[]")
+    schedule: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -296,23 +273,6 @@ class Edition(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    def get_schedule(self) -> list[dict]:
-        return json.loads(self.schedule) if self.schedule else []
-
-    def set_schedule(self, events: list[dict]) -> None:
-        self.schedule = json.dumps(events)
-
-    def get_exhibitors(self) -> list[int]:
-        return json.loads(self.exhibitors) if self.exhibitors else []
-
-    def set_exhibitors(self, ids: list[int]) -> None:
-        self.exhibitors = json.dumps(ids)
-
 
 class Person(Base):
     """Unified person entity used for members, volunteers, and visitors."""
@@ -324,9 +284,7 @@ class Person(Base):
     email: Mapped[str] = mapped_column(String(200), default="")
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
-    # JSON-encoded list of role strings: volunteer, chairwoman, treasurer,
-    # member, festival-visitor, ...
-    roles: Mapped[str] = mapped_column(Text, default="[]")
+    roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     # Optional compliance/attendance fields
     first_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -351,8 +309,3 @@ class Person(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
-    def get_roles(self) -> list[str]:
-        return json.loads(self.roles) if self.roles else []
-
-    def set_roles(self, roles: list[str]) -> None:
-        self.roles = json.dumps(roles)

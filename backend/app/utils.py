@@ -4,6 +4,8 @@ import secrets
 import time
 from typing import Any
 
+from sqlalchemy import Text, cast
+
 from app.models import Area, Edition, Exhibitor, Layout, Person, Reservation, Room, Table, TableType, Venue
 
 
@@ -11,13 +13,13 @@ def roles_contains(role: str) -> Any:
     """Return a SQLAlchemy filter expression that matches Person.roles JSON arrays
     containing *role* as an exact element (case-insensitive).
 
-    Person.roles is stored as a JSON-encoded list of lowercase strings, e.g.
-    '["member","volunteer"]'.  We match the quoted token so that a role like
-    "member" never accidentally matches "non-member".
+    Casts the JSON column to Text so the LIKE works on both SQLite and PostgreSQL.
+    We match the quoted token so that a role like "member" never accidentally
+    matches "non-member".
     """
     role_norm = role.strip().lower()
     role_escaped = role_norm.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-    return Person.roles.ilike(f'%"{role_escaped}"%', escape="\\")
+    return cast(Person.roles, Text).ilike(f'%"{role_escaped}"%', escape="\\")
 
 
 def make_id(prefix: str) -> str:
@@ -37,7 +39,7 @@ def reservation_to_dict(r: Reservation) -> dict:
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
-        "pre_orders": r.get_pre_orders(),
+        "pre_orders": r.pre_orders,
         "notes": r.notes,
         "accessibility_note": r.accessibility_note,
         "table_id": r.table_id,
@@ -64,7 +66,7 @@ def reservation_to_checkin_dict(r: Reservation) -> dict:
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
-        "pre_orders": r.get_pre_orders(),
+        "pre_orders": r.pre_orders,
         "notes": r.notes,
         "status": r.status,
         "checked_in": r.checked_in,
@@ -101,7 +103,7 @@ def reservation_to_guest_dict(r: Reservation) -> dict:
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,
-        "pre_orders": r.get_pre_orders(),
+        "pre_orders": r.pre_orders,
         "status": r.status,
         "payment_status": r.payment_status,
         "checked_in": r.checked_in,
@@ -196,7 +198,7 @@ def table_to_dict(t: Table) -> dict:
         "table_type_id": t.table_type_id,
         "rotation": t.rotation,
         "layout_id": t.layout_id,
-        "reservation_ids": t.get_reservation_ids(),
+        "reservation_ids": t.reservation_ids,
         "created_at": t.created_at,
         "updated_at": t.updated_at,
     }
@@ -230,7 +232,7 @@ def edition_to_dict(
         "saturday": e.saturday.isoformat(),
         "sunday": e.sunday.isoformat(),
         "venue": venue,
-        "schedule": e.get_schedule(),
+        "schedule": e.schedule,
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],
         "active": e.active,
@@ -260,7 +262,7 @@ def person_to_dict(p: Person) -> dict:
         "email": p.email,
         "phone": p.phone,
         "address": p.address,
-        "roles": p.get_roles(),
+        "roles": p.roles,
         "first_help_day": p.first_help_day,
         "last_help_day": p.last_help_day,
         "national_register_number": p.national_register_number,

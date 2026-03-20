@@ -74,7 +74,7 @@ async def create_reservation(
         person_id=person.id,
         check_in_token=make_id("tok"),
     )
-    reservation.set_pre_orders([item.model_dump() for item in body.pre_orders])
+    reservation.pre_orders = [item.model_dump() for item in body.pre_orders]
 
     db.add(reservation)
     await db.commit()
@@ -123,7 +123,7 @@ async def admin_create_reservation(
         person_id=person.id,
         check_in_token=make_id("tok"),
     )
-    reservation.set_pre_orders([item.model_dump() for item in body.pre_orders])
+    reservation.pre_orders = [item.model_dump() for item in body.pre_orders]
 
     db.add(reservation)
     await db.commit()
@@ -287,7 +287,7 @@ async def update_reservation(
             raise HTTPException(status_code=404, detail="Person not found.")
         r.person_id = person.id
     if body.pre_orders is not None:
-        r.set_pre_orders([item.model_dump() for item in body.pre_orders])
+        r.pre_orders = [item.model_dump() for item in body.pre_orders]
     if body.checked_in is not None:
         if body.checked_in and not r.checked_in:
             r.checked_in_at = datetime.now(timezone.utc)

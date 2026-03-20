@@ -32,13 +32,13 @@ def _normalise_optional_identity(value: str | None) -> str | None:
 
 
 def _ensure_member_role(person: Person) -> None:
-    roles = set(person.get_roles())
+    roles = set(person.roles)
     roles.add("member")
-    person.set_roles(sorted(roles))
+    person.roles = sorted(roles)
 
 
 def _has_member_role(person: Person) -> bool:
-    return "member" in set(person.get_roles())
+    return "member" in person.roles
 
 
 async def _ensure_unique_fields(
@@ -98,7 +98,7 @@ async def create_member(
         notes=body.notes,
         active=body.active,
     )
-    person.set_roles(_normalise_roles(body.roles))
+    person.roles = _normalise_roles(body.roles)
     _ensure_member_role(person)
 
     db.add(person)
@@ -192,7 +192,7 @@ async def update_member(
         person.eid_document_number = eid
 
     if body.roles is not None:
-        person.set_roles(_normalise_roles(body.roles))
+        person.roles = _normalise_roles(body.roles)
     _ensure_member_role(person)
 
     await db.commit()
