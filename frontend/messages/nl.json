@@ -484,13 +484,17 @@
   "admin_people_reservations_empty": "Geen reservaties gevonden voor deze persoon.",
   "admin_people_reservations_load_error": "Laden van reservaties mislukt.",
   "my_reservations_title": "Mijn Reservaties",
-  "my_reservations_description": "Vul je e-mailadres in om je reservaties te bekijken.",
+  "my_reservations_description": "Vraag een veilige inloglink aan om je reservaties te bekijken.",
   "my_reservations_email_label": "E-mailadres",
   "my_reservations_email_placeholder": "jouw@email.be",
-  "my_reservations_search": "Opzoeken",
-  "my_reservations_searching": "Opzoeken...",
-  "my_reservations_no_results": "Geen reservaties gevonden voor dit e-mailadres.",
-  "my_reservations_error": "Er is een fout opgetreden bij het opzoeken van je reservaties.",
+  "my_reservations_request_link": "Mail mij een veilige link",
+  "my_reservations_requesting": "Veilige link voorbereiden...",
+  "my_reservations_request_success": "Als we reservaties voor dit e-mailadres vonden, hebben we een veilige link voorbereid.",
+  "my_reservations_request_pending_notice": "Automatische e-mailverzending is nog niet aangesloten, daarom logt de server de veilige link voorlopig.",
+  "my_reservations_loading": "Je reservaties laden...",
+  "my_reservations_invalid_token": "Deze veilige link is ongeldig of vervallen. Vraag een nieuwe aan.",
+  "my_reservations_no_results": "Er zijn geen reservaties gevonden voor deze veilige link.",
+  "my_reservations_error": "Er is een fout opgetreden bij het laden van je reservaties.",
   "my_reservations_guests_label": "gasten",
-  "my_reservations_search_again": "Opnieuw zoeken"
+  "my_reservations_request_new_link": "Nog een veilige link aanvragen"
 }

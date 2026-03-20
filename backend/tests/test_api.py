@@ -1,11 +1,16 @@
 """Integration tests for the reservation API."""
 
+import hashlib
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.database import Base, get_db
 from app.main import app
+from app.models import ReservationAccessToken
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
@@ -301,56 +306,99 @@ async def test_filter_by_event(client):
 
 
 # ---------------------------------------------------------------------------
-# Visitor self-lookup (public /my endpoint)
+# Visitor self-lookup (public token-based flow)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_my_reservations(client):
+async def test_request_my_reservations_access_is_generic(client):
     r = await client.post("/api/reservations", json=VALID_RESERVATION)
     assert r.status_code == 201
 
-    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
-    assert r.status_code == 200
-    items = r.json()
-    assert len(items) == 1
-    # Must not expose sensitive fields
-    assert "check_in_token" not in items[0]
-    assert "phone" not in items[0]
-    assert "notes" not in items[0]
-    # Must expose booking status fields
-    assert items[0]["status"] == "pending"
-    assert items[0]["event_title"] == "Vrijdagavond"
+    found = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    missing = await client.post("/api/reservations/my/request", json={"email": "nobody@example.com"})
+
+    assert found.status_code == 202
+    assert missing.status_code == 202
+    assert found.json() == missing.json()
+    assert found.json()["delivery_mode"] == "log_only"
 
 
 @pytest.mark.anyio
-async def test_my_reservations_case_insensitive_email(client):
-    """Email stored with mixed case must be retrievable via lowercase lookup."""
+async def test_my_reservations_access_token_flow(client, db_session, monkeypatch):
+    """Guest reservations are only returned after presenting a valid token."""
+    token = "guest-access-token-12345"
+    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+
     r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "Jean@Example.com"})
     assert r.status_code == 201
 
-    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+    token_rows = (
+        await db_session.execute(select(ReservationAccessToken))
+    ).scalars().all()
+    assert len(token_rows) == 1
+    assert token_rows[0].email == "jean@example.com"
+    assert token_rows[0].token_hash != token
+
+    r = await client.get(
+        "/api/reservations/my/access", params={"token": token}
+    )
     assert r.status_code == 200
-    assert len(r.json()) == 1
-    assert r.json()[0]["status"] == "pending"
+    items = r.json()
+    assert len(items) == 1
+    assert "check_in_token" not in items[0]
+    assert "phone" not in items[0]
+    assert "notes" not in items[0]
+    assert items[0]["status"] == "pending"
+    assert items[0]["event_title"] == "Vrijdagavond"
+    assert token_rows[0].last_used_at is not None
 
 
 @pytest.mark.anyio
-async def test_my_reservations_no_results(client):
-    r = await client.get("/api/reservations/my", params={"email": "nobody@example.com"})
-    assert r.status_code == 200
-    assert r.json() == []
+async def test_my_reservations_access_requires_valid_token(client):
+    r = await client.get(
+        "/api/reservations/my/access",
+        params={"token": "invalid-token-value-12345"},
+    )
+    assert r.status_code == 401
 
 
 @pytest.mark.anyio
-async def test_my_reservations_invalid_email(client):
-    r = await client.get("/api/reservations/my", params={"email": "not-an-email"})
-    assert r.status_code == 422  # FastAPI/Pydantic validation error
+async def test_my_reservations_request_invalid_email(client):
+    r = await client.post("/api/reservations/my/request", json={"email": "not-an-email"})
+    assert r.status_code == 422
 
 
 @pytest.mark.anyio
-async def test_my_reservations_multiple_editions(client):
-    """A guest with two bookings (different events) sees both."""
+async def test_my_reservations_access_expired_token(client, db_session):
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+
+    db_session.add(
+        ReservationAccessToken(
+            id="rat_expired",
+            email="jean@example.com",
+            token_hash=hashlib.sha256(b"expired-token-value-12345").hexdigest(),
+            expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+        )
+    )
+    await db_session.commit()
+
+    r = await client.get(
+        "/api/reservations/my/access",
+        params={"token": "expired-token-value-12345"},
+    )
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_my_reservations_access_multiple_editions(client, monkeypatch):
+    token = "guest-access-token-12345"
+    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+
     r = await client.post("/api/reservations", json=VALID_RESERVATION)
     assert r.status_code == 201
     r = await client.post(
@@ -359,7 +407,12 @@ async def test_my_reservations_multiple_editions(client):
     )
     assert r.status_code == 201
 
-    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+    r = await client.get(
+        "/api/reservations/my/access", params={"token": token}
+    )
     assert len(r.json()) == 2
 
 

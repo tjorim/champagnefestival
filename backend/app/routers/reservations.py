@@ -1,22 +1,26 @@
 """Reservation CRUD endpoints."""
 
-from datetime import datetime, timezone
-
+import hashlib
+import logging
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import EmailStr
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
+from app.config import settings
 from app.database import get_db
-from app.models import Person, Reservation
+from app.models import Person, Reservation, ReservationAccessToken
 from app.routers.people import normalize_phone
 from app.schemas import (
     ReservationAdminCreate,
     ReservationCreate,
     ReservationGuestOut,
+    ReservationLookupRequest,
+    ReservationLookupRequestAccepted,
     ReservationListOut,
     ReservationOut,
     ReservationOutWithToken,
@@ -32,6 +36,7 @@ from app.utils import (
 )
 
 router = APIRouter(prefix="/api/reservations", tags=["reservations"])
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -201,34 +206,106 @@ async def list_reservations(
 
 
 # ---------------------------------------------------------------------------
-# Public: visitor self-lookup by e-mail
+# Public: visitor self-lookup via e-mail link
 # ---------------------------------------------------------------------------
 
 
-@router.get("/my", response_model=list[ReservationGuestOut])
-async def my_reservations(
-    email: Annotated[EmailStr, Query(description="E-mail address used when making the reservation")],
+@router.post(
+    "/my/request",
+    response_model=ReservationLookupRequestAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_my_reservations_access(
+    body: ReservationLookupRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ReservationLookupRequestAccepted:
+    """Prepare a secure visitor access link and log it until SMTP is wired up.
+
+    The response is intentionally identical whether or not the e-mail exists,
+    so callers cannot enumerate reservations by trying many addresses.
+    """
+    email_norm = str(body.email).lower().strip()
+    rows = await _load_guest_reservations_by_email(db, email_norm)
+
+    if rows:
+        token = secrets.token_urlsafe(24)
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(minutes=settings.guest_access_token_ttl_minutes)
+
+        await db.execute(
+            delete(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
+        )
+        db.add(
+            ReservationAccessToken(
+                id=make_id("rat"),
+                email=email_norm,
+                token_hash=_hash_guest_access_token(token),
+                expires_at=expires_at,
+            )
+        )
+        await db.commit()
+
+        logger.info(
+            "Prepared guest reservation access link for %s (SMTP pending): /my-reservations?token=%s (expires %s)",
+            email_norm,
+            token,
+            expires_at.isoformat(),
+        )
+    else:
+        logger.info(
+            "Guest reservation access requested for %s, but no reservations matched.",
+            email_norm,
+        )
+
+    return ReservationLookupRequestAccepted(
+        expires_in_minutes=settings.guest_access_token_ttl_minutes
+    )
+
+
+@router.get("/my/access", response_model=list[ReservationGuestOut])
+async def access_my_reservations(
+    token: Annotated[str, Query(min_length=20, description="Secure reservation access token")],
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """Return all reservations belonging to the given e-mail address.
+    """Return visitor reservations after validating a short-lived access token."""
+    token_row = await _get_guest_access_token_or_401(db, token)
+    token_row.last_used_at = datetime.now(timezone.utc)
+    rows = await _load_guest_reservations_by_email(db, token_row.email)
+    await db.commit()
+    return [reservation_to_guest_dict(r) for r in rows]
 
-    This endpoint is publicly accessible — no admin token required.
-    It exposes only safe booking-status fields; sensitive fields (phone,
-    internal notes, check-in token) are never returned here.
 
-    **Note on e-mail enumeration:** an empty result (``[]``) for a given
-    address reveals that no reservation exists for that e-mail.  This is
-    intentional — the use-case requires guests to look up their own bookings
-    by e-mail — and is consistent with the visitor-facing UI.
+def _hash_guest_access_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-    This supports two visitor-facing user stories:
-    - **Order overview**: guests can check the status of their bookings
-      across all editions.
-    - **QR retrieval**: once e-mail confirmation is implemented (see
-      README § Planned features), the confirmation e-mail will contain the
-      deep-link; this endpoint provides a fallback for guests who lost it.
-    """
-    email_norm = email.lower().strip()
+
+async def _get_guest_access_token_or_401(
+    db: AsyncSession,
+    token: str,
+) -> ReservationAccessToken:
+    token_hash = _hash_guest_access_token(token)
+    result = await db.execute(
+        select(ReservationAccessToken).where(
+            ReservationAccessToken.token_hash == token_hash
+        )
+    )
+    token_row = result.scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    expires_at = token_row.expires_at if token_row else None
+    if expires_at and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if token_row is None or expires_at is None or expires_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired reservation access token.",
+        )
+    return token_row
+
+
+async def _load_guest_reservations_by_email(
+    db: AsyncSession,
+    email_norm: str,
+) -> list[Reservation]:
     persons_result = await db.execute(select(Person).where(Person.email == email_norm))
     persons = persons_result.scalars().all()
     if not persons:
@@ -241,9 +318,9 @@ async def my_reservations(
         .order_by(Reservation.created_at.desc())
     )
     rows = result.scalars().all()
-    for r in rows:
-        r._person = person_map.get(r.person_id)
-    return [reservation_to_guest_dict(r) for r in rows]
+    for reservation in rows:
+        reservation._person = person_map.get(reservation.person_id)
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -349,4 +426,3 @@ async def _get_or_404(db: AsyncSession, reservation_id: str) -> Reservation:
     if r is None:
         raise HTTPException(status_code=404, detail="Reservation not found.")
     return r
-

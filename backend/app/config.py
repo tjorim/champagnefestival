@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     min_form_seconds: int = 3
     """Minimum seconds between form load and submission (bot protection)."""
 
+    guest_access_token_ttl_minutes: int = 30
+    """How long a visitor reservation access link remains valid."""
+
     # --- TODO: Email notifications (planned, not yet implemented) ---
     smtp_host: str = ""
     smtp_port: int = 587
