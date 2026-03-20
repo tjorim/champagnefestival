@@ -73,6 +73,10 @@ cp .env.example .env
 # 4. Run database migrations
 alembic upgrade head
 
+# Note: only SQLAlchemy model/table changes require a new Alembic revision.
+# API-only changes (for example narrowing which shared Person fields a router
+# reads/writes) do not need a migration by themselves.
+
 # 5. Start the development server
 uvicorn app.main:app --reload
 ```

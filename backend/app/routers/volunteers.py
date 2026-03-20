@@ -1,6 +1,8 @@
 """Volunteer CRUD endpoints (admin-only).
 
 Volunteers are stored in the people table as a subset with role='volunteer'.
+This router only narrows which shared `Person` fields the volunteer admin UI
+reads/writes; it does not define separate volunteer-only database columns.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
