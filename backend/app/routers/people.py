@@ -267,13 +267,18 @@ async def merge_people(
     duplicate = await _get_or_404(db, duplicate_id)
 
     # Guard unique identity fields before making any changes.
+    field_labels = {
+        "national_register_number": "national register number",
+        "eid_document_number": "eID document number",
+    }
     for field in ("national_register_number", "eid_document_number"):
         canon_val = getattr(canonical, field)
         dup_val = getattr(duplicate, field)
         if canon_val and dup_val and canon_val != dup_val:
+            label = field_labels[field]
             raise HTTPException(
                 status_code=409,
-                detail=f"Both persons have a different {field}; resolve manually before merging.",
+                detail=f"Both persons have a different {label}; resolve manually before merging.",
             )
 
     # Fill blank string fields on canonical from duplicate.

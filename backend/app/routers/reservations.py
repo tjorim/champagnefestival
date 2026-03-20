@@ -54,7 +54,7 @@ async def create_reservation(
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
 
-    phone_norm = body.phone.strip()
+    phone_norm = "".join(c for c in (body.phone or "") if c.isdigit() or c == "+")
 
     existing = (
         await db.execute(

@@ -441,6 +441,8 @@
   "admin_layout_area_icon_feature": "Feature",
   "admin_layout_area_icon_exhibition": "Exhibition",
   "admin_people_tab": "People",
+  "admin_people_inactive_badge_label": "inactive",
+  "admin_people_merge_swap_label": "Swap canonical and duplicate person",
   "admin_people_no_results": "No people found.",
   "admin_people_reservations_count": "reservations",
   "admin_people_roles_label": "Roles",

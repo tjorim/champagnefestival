@@ -441,6 +441,8 @@
   "admin_layout_area_icon_feature": "Attractie",
   "admin_layout_area_icon_exhibition": "Tentoonstelling",
   "admin_people_tab": "Personen",
+  "admin_people_inactive_badge_label": "inactief",
+  "admin_people_merge_swap_label": "Wissel canonieke en duplicaat persoon",
   "admin_people_no_results": "Geen personen gevonden.",
   "admin_people_reservations_count": "reservaties",
   "admin_people_roles_label": "Rollen",
