@@ -296,16 +296,18 @@ async def _get_guest_access_token_or_401(
         )
     )
     token_row = result.scalar_one_or_none()
-    now = datetime.now(timezone.utc)
-    expires_at = token_row.expires_at if token_row else None
-    if expires_at and expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if token_row is None or expires_at is None or expires_at <= now:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired reservation access token.",
-        )
-    return token_row
+    if token_row:
+        now = datetime.now(timezone.utc)
+        expires_at = token_row.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at > now:
+            return token_row
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired reservation access token.",
+    )
 
 
 async def _load_guest_reservations_by_email(
