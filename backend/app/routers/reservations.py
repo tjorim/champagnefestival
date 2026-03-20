@@ -226,14 +226,12 @@ async def request_my_reservations_access(
 
     The response is intentionally identical whether or not the e-mail exists,
     so callers cannot enumerate reservations by trying many addresses.
-    In development we log a preview link because SMTP is not wired up yet;
-    in production we do not log the raw token.
+    SMTP delivery is not wired up yet, so the server only logs that a link
+    was prepared — never the raw token itself.
     """
     email_norm = str(body.email).lower().strip()
     rows = await _load_guest_reservations_by_email(db, email_norm)
-    delivery_mode = (
-        "development_log" if settings.environment == "development" else "disabled"
-    )
+    delivery_mode = "disabled"
 
     if rows:
         token = secrets.token_urlsafe(24)
@@ -253,18 +251,11 @@ async def request_my_reservations_access(
         )
         await db.commit()
 
-        if delivery_mode == "development_log":
-            logger.info(
-                "Prepared guest reservation access link for %s (development preview only): /my-reservations?token=%s (expires %s)",
-                email_norm,
-                token,
-                expires_at.isoformat(),
-            )
-        else:
-            logger.info(
-                "Prepared guest reservation access link for %s, but SMTP delivery is not enabled yet.",
-                email_norm,
-            )
+        logger.info(
+            "Prepared guest reservation access link for %s (SMTP pending). Token expires %s.",
+            email_norm,
+            expires_at.isoformat(),
+        )
     else:
         logger.info(
             "Guest reservation access requested for %s, but no reservations matched.",

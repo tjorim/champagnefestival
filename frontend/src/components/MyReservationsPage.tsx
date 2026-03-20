@@ -33,8 +33,6 @@ interface GuestReservation {
   }[];
 }
 
-type DeliveryMode = "development_log" | "disabled";
-
 function mapGuestReservations(data: Record<string, unknown>[]): GuestReservation[] {
   return data.map((reservation) => ({
     id: reservation.id as string,
@@ -65,7 +63,6 @@ export default function MyReservationsPage() {
 
   const [email, setEmail] = useState("");
   const [requestSent, setRequestSent] = useState(false);
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("disabled");
   const [reservations, setReservations] = useState<GuestReservation[] | null>(null);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isLoadingReservations, setIsLoadingReservations] = useState(false);
@@ -74,7 +71,6 @@ export default function MyReservationsPage() {
   const resetToRequestForm = useCallback(() => {
     setSearchParams({}, { replace: true });
     setRequestSent(false);
-    setDeliveryMode("disabled");
     setReservations(null);
     setError("");
   }, [setSearchParams]);
@@ -99,10 +95,6 @@ export default function MyReservationsPage() {
           setError(m.my_reservations_error());
           return;
         }
-        const data = (await response.json()) as {
-          delivery_mode?: DeliveryMode;
-        };
-        setDeliveryMode(data.delivery_mode ?? "disabled");
         setRequestSent(true);
       } catch {
         setError(m.my_reservations_error());
@@ -198,11 +190,7 @@ export default function MyReservationsPage() {
                   {requestSent && (
                     <Alert variant="info" className="mb-3">
                       <div className="fw-semibold mb-1">{m.my_reservations_request_success()}</div>
-                      <div>
-                        {deliveryMode === "development_log"
-                          ? m.my_reservations_request_dev_notice()
-                          : m.my_reservations_request_pending_notice()}
-                      </div>
+                      <div>{m.my_reservations_request_pending_notice()}</div>
                     </Alert>
                   )}
 

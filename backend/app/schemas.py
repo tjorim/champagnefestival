@@ -197,7 +197,7 @@ class ReservationLookupRequest(BaseModel):
 
 class ReservationLookupRequestAccepted(BaseModel):
     ok: bool = True
-    delivery_mode: Literal["disabled", "development_log"] = "disabled"
+    delivery_mode: Literal["disabled"] = "disabled"
     expires_in_minutes: int
 
 

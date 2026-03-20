@@ -490,7 +490,6 @@
   "my_reservations_request_link": "Mail mij een veilige link",
   "my_reservations_requesting": "Veilige link voorbereiden...",
   "my_reservations_request_success": "Als we reservaties voor dit e-mailadres vonden, hebben we een veilige link voorbereid.",
-  "my_reservations_request_dev_notice": "Enkel in ontwikkelmodus: de server logt de veilige link voorlopig.",
   "my_reservations_request_pending_notice": "Automatische e-mailverzending is nog niet aangesloten.",
   "my_reservations_loading": "Je reservaties laden...",
   "my_reservations_invalid_token": "Deze veilige link is ongeldig of vervallen. Vraag een nieuwe aan.",

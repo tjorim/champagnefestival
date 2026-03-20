@@ -321,7 +321,7 @@ async def test_request_my_reservations_access_is_generic(client):
     assert found.status_code == 202
     assert missing.status_code == 202
     assert found.json() == missing.json()
-    assert found.json()["delivery_mode"] == "development_log"
+    assert found.json()["delivery_mode"] == "disabled"
 
 
 @pytest.mark.anyio

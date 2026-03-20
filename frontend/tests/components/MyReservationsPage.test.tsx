@@ -12,8 +12,6 @@ vi.mock("@/paraglide/messages", () => ({
     my_reservations_request_link: () => "Email me a secure link",
     my_reservations_requesting: () => "Preparing secure link...",
     my_reservations_request_success: () => "If we found reservations for that email, we prepared a secure link.",
-    my_reservations_request_dev_notice: () =>
-      "Development mode only: the server logs the secure link for now.",
     my_reservations_request_pending_notice: () =>
       "Automatic email sending is not enabled yet.",
     my_reservations_loading: () => "Loading reservations...",
@@ -60,7 +58,7 @@ describe("MyReservationsPage", () => {
       ok: true,
       json: async () => ({
         ok: true,
-        delivery_mode: "development_log",
+        delivery_mode: "disabled",
         expires_in_minutes: 30,
       }),
     });
@@ -76,9 +74,7 @@ describe("MyReservationsPage", () => {
       expect(
         screen.getByText(/if we found reservations for that email/i),
       ).toBeInTheDocument();
-      expect(
-        screen.getByText(/development mode only: the server logs the secure link/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Automatic email sending is not enabled yet.")).toBeInTheDocument();
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/reservations/my/request", {

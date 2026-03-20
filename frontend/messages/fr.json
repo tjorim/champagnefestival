@@ -490,7 +490,6 @@
   "my_reservations_request_link": "Recevoir un lien sécurisé",
   "my_reservations_requesting": "Préparation du lien sécurisé...",
   "my_reservations_request_success": "Si des réservations existent pour cette adresse e-mail, un lien sécurisé a été préparé.",
-  "my_reservations_request_dev_notice": "Mode développement uniquement : le serveur journalise pour l'instant le lien sécurisé.",
   "my_reservations_request_pending_notice": "L'envoi automatique d'e-mails n'est pas encore connecté.",
   "my_reservations_loading": "Chargement de vos réservations...",
   "my_reservations_invalid_token": "Ce lien sécurisé est invalide ou expiré. Veuillez en demander un nouveau.",
