@@ -287,7 +287,7 @@ async def update_reservation(
         person = person_result.scalar_one_or_none()
         if person is None:
             raise HTTPException(status_code=404, detail="Person not found.")
-        r.person_id = person.id
+        r.person_id = body.person_id
     if body.pre_orders is not None:
         r.pre_orders = [item.model_dump() for item in body.pre_orders]
     if body.checked_in is not None:

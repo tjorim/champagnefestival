@@ -282,12 +282,14 @@ export default function VenueManagement({
                               ) : (
                                 <button
                                   type="button"
-                                  className="btn-close btn-close-white"
-                                  style={{ fontSize: "0.55rem", transform: "rotate(45deg)" }}
+                                  className="btn btn-sm p-0 border-0 bg-transparent text-white"
+                                  style={{ fontSize: "0.55rem", lineHeight: 1 }}
                                   onClick={() => handleRestoreRoom(room.id)}
                                   aria-label={m.admin_content_restore()}
                                   title={m.admin_content_restore()}
-                                />
+                                >
+                                  <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                                </button>
                               )}
                             </Badge>
                           ))}

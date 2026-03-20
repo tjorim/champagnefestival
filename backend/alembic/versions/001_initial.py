@@ -43,6 +43,8 @@ def upgrade() -> None:
         sa.Column("active", sa.Boolean, nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_rooms_venue_id", "venue_id"),
+        sa.Index("ix_rooms_active", "active"),
     )
 
     op.create_table(
@@ -57,6 +59,7 @@ def upgrade() -> None:
         sa.Column("active", sa.Boolean, nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_table_types_active", "active"),
     )
 
     op.create_table(
@@ -73,6 +76,8 @@ def upgrade() -> None:
         sa.Column("active", sa.Boolean, nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_editions_venue_id", "venue_id"),
+        sa.Index("ix_editions_active", "active"),
     )
 
     op.create_table(
@@ -84,6 +89,8 @@ def upgrade() -> None:
         sa.Column("label", sa.String(200), nullable=False, server_default=""),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_layouts_edition_id", "edition_id"),
+        sa.Index("ix_layouts_room_id", "room_id"),
     )
 
     op.create_table(
@@ -99,6 +106,8 @@ def upgrade() -> None:
         sa.Column("layout_id", sa.String(64), sa.ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_tables_layout_id", "layout_id"),
+        sa.Index("ix_tables_table_type_id", "table_type_id"),
     )
 
     op.create_table(
@@ -122,6 +131,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("national_register_number"),
         sa.UniqueConstraint("eid_document_number"),
+        sa.Index("ix_persons_name", "name"),
+        sa.Index("ix_persons_email", "email"),
+        sa.Index("ix_persons_phone", "phone"),
+        sa.Index("ix_persons_active", "active"),
     )
 
     op.create_table(
@@ -143,6 +156,10 @@ def upgrade() -> None:
         sa.Column("check_in_token", sa.String(64), nullable=False, unique=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_reservations_person_id", "person_id"),
+        sa.Index("ix_reservations_event_id", "event_id"),
+        sa.Index("ix_reservations_status", "status"),
+        sa.Index("ix_reservations_table_id", "table_id"),
     )
 
     op.create_table(
@@ -156,6 +173,9 @@ def upgrade() -> None:
         sa.Column("contact_person_id", sa.String(64), sa.ForeignKey("people.id", ondelete="SET NULL"), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_exhibitors_contact_person_id", "contact_person_id"),
+        sa.Index("ix_exhibitors_type", "type"),
+        sa.Index("ix_exhibitors_active", "active"),
     )
 
     op.create_table(
@@ -172,8 +192,9 @@ def upgrade() -> None:
         sa.Column("length_m", sa.Float, nullable=False, server_default="1.0"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Index("ix_areas_layout_id", "layout_id"),
+        sa.Index("ix_areas_exhibitor_id", "exhibitor_id"),
     )
-
 
 def downgrade() -> None:
     op.drop_table("areas")

@@ -317,7 +317,7 @@ function DraggableArea({
       title={area.label}
       role={isInteractive ? "button" : undefined}
       aria-pressed={isInteractive ? isSelected : undefined}
-      aria-label={`Area: ${area.label}`}
+      aria-label={`${m.admin_layout_area_label_prefix()} ${area.label}`}
     >
       <i
         className={`bi ${area.icon || "bi-shop"}`}
@@ -1116,7 +1116,7 @@ export default function LayoutEditor({
                       );
                     } catch (err) {
                       setAssignAreaError(
-                        err instanceof Error ? err.message : "Failed to update icon.",
+                        err instanceof Error ? err.message : m.admin_content_error_save(),
                       );
                     }
                   }}
@@ -1151,7 +1151,7 @@ export default function LayoutEditor({
                     await onAssignAreaToItem(selectedAreaData.id, eId, newLabel);
                   } catch (err) {
                     setAssignAreaError(
-                      err instanceof Error ? err.message : "Failed to assign area.",
+                      err instanceof Error ? err.message : m.admin_content_error_save(),
                     );
                   }
                 }}

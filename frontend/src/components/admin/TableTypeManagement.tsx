@@ -85,7 +85,8 @@ export default function TableTypeManagement({
     setError(null);
     try {
       if (editingId) {
-        await onUpdate(editingId, form);
+        const { active: _active, ...updateData } = form;
+        await onUpdate(editingId, updateData);
       } else {
         await onAdd(form);
       }
