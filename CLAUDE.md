@@ -4,10 +4,10 @@
 
 ## Build Commands
 
-- `npm run dev`: Start React development server
-- `npm run build`: Create production build
-- `npm run lint`: Run ESLint on the codebase
-- `npm run typecheck`: Run TypeScript check with no emit
+- `pnpm dev`: Start React development server
+- `pnpm build`: Create production build
+- `pnpm lint`: Run ESLint on the codebase
+- `pnpm typecheck`: Run TypeScript check with no emit
 
 ## Important Notes
 
