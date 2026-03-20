@@ -62,9 +62,11 @@ def reservation_to_checkin_dict(r: Reservation) -> dict:
     internal-only fields (payment_status, table_id, timestamps) are omitted.
     """
     person: Person | None = getattr(r, "_person", None)
+    if person is None:
+        raise ValueError(f"Reservation {r.id!r} has no attached _person; caller must set r._person before serialising.")
     return {
         "id": r.id,
-        "name": person.name if person else "",
+        "name": person.name,
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,

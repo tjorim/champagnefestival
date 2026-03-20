@@ -114,6 +114,8 @@ export default function ReservationCreateModal({
   const searchPersons = useCallback(
     async (q: string) => {
       if (!q) {
+        abortRef.current?.abort();
+        abortRef.current = null;
         setPersonOptions([]);
         return;
       }
