@@ -9,12 +9,16 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 
 interface PeopleManagementProps {
   people: Person[];
   reservationCountByPersonId: Record<string, number>;
   isLoading: boolean;
   onMerge: (canonicalId: string, duplicateId: string) => Promise<void>;
+  onCreate: (data: PersonFormData) => Promise<void>;
+  onUpdate: (id: string, data: PersonFormData) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 interface MergeState {
@@ -27,22 +31,38 @@ export default function PeopleManagement({
   reservationCountByPersonId,
   isLoading,
   onMerge,
+  onCreate,
+  onUpdate,
+  onDelete,
 }: PeopleManagementProps) {
   const [q, setQ] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [mergeState, setMergeState] = useState<MergeState | null>(null);
   const [merging, setMerging] = useState(false);
   const [mergeError, setMergeError] = useState("");
   const [mergeSuccess, setMergeSuccess] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
 
-  const filtered = q.trim()
+  const filtered = q.trim() || roleFilter !== "all"
     ? people.filter((p) => {
         const s = q.trim().toLowerCase();
         const phoneQ = s.replace(/[\s\-().+]/g, "");
-        return (
+        const matchesQ =
+          !s ||
           p.name.toLowerCase().includes(s) ||
           p.email.toLowerCase().includes(s) ||
-          (phoneQ.length > 0 && p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ))
-        );
+          (phoneQ.length > 0 && p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ));
+        const matchesRole =
+          roleFilter === "all" || p.roles.includes(roleFilter);
+        return matchesQ && matchesRole;
       })
     : people;
 
@@ -58,6 +78,23 @@ export default function PeopleManagement({
   const duplicateEmails = new Set(
     [...emailGroups.entries()].filter(([, g]) => g.length > 1).map(([email]) => email),
   );
+
+  // Collect all unique roles across all people for the filter dropdown
+  const allRoles = [...new Set(people.flatMap((p) => p.roles))].sort();
+
+  // Collect emails for the currently filtered set (for copy button)
+  const filteredEmails = filtered.map((p) => p.email).filter(Boolean);
+
+  const handleCopyEmails = async () => {
+    if (filteredEmails.length === 0) return;
+    try {
+      await navigator.clipboard.writeText(filteredEmails.join(", "));
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2500);
+    } catch {
+      // Clipboard API unavailable — nothing to do in this admin context
+    }
+  };
 
   const handleMergeConfirm = async () => {
     if (!mergeState) return;
@@ -83,20 +120,84 @@ export default function PeopleManagement({
     setMergeSuccess(false);
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!deletingId) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await onDelete(deletingId);
+      setDeleteSuccess(true);
+      setDeletingId(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : m.admin_error_delete_person());
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleSavePerson = async (data: PersonFormData) => {
+    if (editingPerson) {
+      await onUpdate(editingPerson.id, data);
+      setUpdateSuccess(true);
+    } else {
+      await onCreate(data);
+      setCreateSuccess(true);
+    }
+  };
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
           <span className="fw-semibold">{m.admin_people_tab()}</span>
-          <Form.Control
-            size="sm"
-            type="search"
-            placeholder={m.admin_search_person_placeholder()}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="bg-dark text-light border-secondary"
-            style={{ maxWidth: 280 }}
-          />
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            <Form.Select
+              size="sm"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="bg-dark text-light border-secondary"
+              style={{ maxWidth: 160 }}
+              aria-label={m.admin_people_roles_label()}
+            >
+              <option value="all">{m.admin_people_all_roles()}</option>
+              {allRoles.map((role) => (
+                <option key={role} value={role} className="text-capitalize">
+                  {role}
+                </option>
+              ))}
+            </Form.Select>
+            <Button
+              size="sm"
+              variant={copySuccess ? "success" : "outline-secondary"}
+              onClick={handleCopyEmails}
+              disabled={filteredEmails.length === 0}
+              title={m.admin_people_copy_emails_tooltip()}
+              aria-label={`${m.admin_people_copy_emails_tooltip()} (${filteredEmails.length})`}
+            >
+              <i className={`bi ${copySuccess ? "bi-check2" : "bi-clipboard-fill"} me-1`} aria-hidden="true" />
+              {copySuccess ? m.admin_people_emails_copied() : `${filteredEmails.length}`}
+            </Button>
+            <Form.Control
+              size="sm"
+              type="search"
+              placeholder={m.admin_search_person_placeholder()}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="bg-dark text-light border-secondary"
+              style={{ maxWidth: 240 }}
+            />
+            <Button
+              size="sm"
+              variant="warning"
+              onClick={() => {
+                setEditingPerson(null);
+                setShowForm(true);
+              }}
+            >
+              <i className="bi bi-person-plus me-1" aria-hidden="true" />
+              {m.admin_people_add_person()}
+            </Button>
+          </div>
         </Card.Header>
 
         <Card.Body className="p-0">
@@ -108,6 +209,36 @@ export default function PeopleManagement({
               onClose={() => setMergeSuccess(false)}
             >
               {m.admin_people_merge_success()}
+            </Alert>
+          )}
+          {createSuccess && (
+            <Alert
+              variant="success"
+              dismissible
+              className="m-3 mb-0"
+              onClose={() => setCreateSuccess(false)}
+            >
+              {m.admin_people_create_success()}
+            </Alert>
+          )}
+          {updateSuccess && (
+            <Alert
+              variant="success"
+              dismissible
+              className="m-3 mb-0"
+              onClose={() => setUpdateSuccess(false)}
+            >
+              {m.admin_people_update_success()}
+            </Alert>
+          )}
+          {deleteSuccess && (
+            <Alert
+              variant="success"
+              dismissible
+              className="m-3 mb-0"
+              onClose={() => setDeleteSuccess(false)}
+            >
+              {m.admin_people_delete_success()}
             </Alert>
           )}
 
@@ -176,6 +307,30 @@ export default function PeopleManagement({
                         </td>
                         <td>
                           <div className="d-flex flex-wrap gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline-light"
+                              onClick={() => {
+                                setEditingPerson(person);
+                                setShowForm(true);
+                              }}
+                              title={m.admin_people_edit_title()}
+                              aria-label={m.admin_people_edit_title()}
+                            >
+                              <i className="bi bi-pencil" aria-hidden="true" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              onClick={() => {
+                                setDeletingId(person.id);
+                                setDeleteError("");
+                              }}
+                              title={m.admin_people_delete_title()}
+                              aria-label={m.admin_people_delete_title()}
+                            >
+                              <i className="bi bi-trash" aria-hidden="true" />
+                            </Button>
                             {duplicates.map((dup) => (
                               <Button
                                 key={dup.id}
@@ -281,6 +436,46 @@ export default function PeopleManagement({
           </Modal.Footer>
         </Modal>
       )}
+
+      {/* Delete confirm modal */}
+      {deletingId && (
+        <Modal show onHide={() => setDeletingId(null)} centered data-bs-theme="dark">
+          <Modal.Header closeButton className="bg-dark border-secondary">
+            <Modal.Title className="text-danger fs-6">
+              <i className="bi bi-trash me-2" aria-hidden="true" />
+              {m.admin_people_delete_title()}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="bg-dark text-light">
+            {deleteError && <Alert variant="danger">{deleteError}</Alert>}
+            <p>{m.admin_people_delete_confirm()}</p>
+          </Modal.Body>
+          <Modal.Footer className="bg-dark border-secondary">
+            <Button variant="outline-secondary" size="sm" onClick={() => setDeletingId(null)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
+              {deleting ? (
+                <Spinner as="span" animation="border" size="sm" className="me-1" />
+              ) : (
+                <i className="bi bi-trash me-1" aria-hidden="true" />
+              )}
+              {m.admin_action_confirm()}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
+
+      {/* Create / edit person modal */}
+      <PersonFormModal
+        show={showForm}
+        person={editingPerson}
+        onSave={handleSavePerson}
+        onHide={() => {
+          setShowForm(false);
+          setEditingPerson(null);
+        }}
+      />
     </>
   );
 }

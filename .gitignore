@@ -148,3 +148,5 @@ build
 *.db
 *.db-wal
 *.db-shm
+nohup.out
+frontend/package-lock.json
