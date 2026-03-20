@@ -470,6 +470,7 @@
   "admin_people_club_name_label": "Club name",
   "admin_people_all_roles": "All roles",
   "admin_people_copy_emails_tooltip": "Copy all email addresses in this group",
+  "admin_people_roles_placeholder": "member, volunteer, …",
   "admin_people_emails_copied": "Email addresses copied!",
   "admin_people_no_emails": "No email addresses available.",
   "admin_people_error_create": "Failed to create person.",

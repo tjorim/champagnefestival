@@ -236,7 +236,7 @@ export default function PersonFormModal({
               value={rolesInput}
               onChange={(e) => setRolesInput(e.target.value)}
               className="bg-dark text-light border-secondary"
-              placeholder="member, volunteer, ..."
+              placeholder={m.admin_people_roles_placeholder()}
             />
           </Form.Group>
 

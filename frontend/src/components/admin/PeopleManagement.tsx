@@ -172,6 +172,7 @@ export default function PeopleManagement({
               onClick={handleCopyEmails}
               disabled={filteredEmails.length === 0}
               title={m.admin_people_copy_emails_tooltip()}
+              aria-label={`${m.admin_people_copy_emails_tooltip()} (${filteredEmails.length})`}
             >
               <i className={`bi ${copySuccess ? "bi-check2" : "bi-clipboard-fill"} me-1`} aria-hidden="true" />
               {copySuccess ? m.admin_people_emails_copied() : `${filteredEmails.length}`}

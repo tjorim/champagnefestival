@@ -470,6 +470,7 @@
   "admin_people_club_name_label": "Clubnaam",
   "admin_people_all_roles": "Alle rollen",
   "admin_people_copy_emails_tooltip": "Kopieer alle e-mailadressen van deze groep",
+  "admin_people_roles_placeholder": "member, vrijwilliger, …",
   "admin_people_emails_copied": "E-mailadressen gekopieerd!",
   "admin_people_no_emails": "Geen e-mailadressen beschikbaar.",
   "admin_people_error_create": "Aanmaken van persoon mislukt.",
