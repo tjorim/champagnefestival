@@ -30,6 +30,10 @@ The table below tracks each user story against its current implementation status
 
 ---
 
+**Reservation access strategy:** confirmation e-mails should contain the guest's reservation details directly. Any link back into the site should be a freshly issued, short-lived access link rather than a permanent bearer token.
+
+---
+
 ## Architecture
 
 ```text

@@ -197,7 +197,7 @@ class ReservationLookupRequest(BaseModel):
 
 class ReservationLookupRequestAccepted(BaseModel):
     ok: bool = True
-    delivery_mode: Literal["log_only"] = "log_only"
+    delivery_mode: Literal["disabled", "development_log"] = "disabled"
     expires_in_minutes: int
 
 
@@ -679,4 +679,3 @@ class EditionOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-

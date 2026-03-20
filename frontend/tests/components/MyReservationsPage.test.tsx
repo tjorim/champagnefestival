@@ -12,8 +12,10 @@ vi.mock("@/paraglide/messages", () => ({
     my_reservations_request_link: () => "Email me a secure link",
     my_reservations_requesting: () => "Preparing secure link...",
     my_reservations_request_success: () => "If we found reservations for that email, we prepared a secure link.",
+    my_reservations_request_dev_notice: () =>
+      "Development mode only: the server logs the secure link for now.",
     my_reservations_request_pending_notice: () =>
-      "Automatic email sending is not enabled yet, so the server logs the link for now.",
+      "Automatic email sending is not enabled yet.",
     my_reservations_loading: () => "Loading reservations...",
     my_reservations_invalid_token: () => "This secure link is invalid or expired.",
     my_reservations_no_results: () => "No reservations found.",
@@ -56,7 +58,11 @@ describe("MyReservationsPage", () => {
   it("requests a secure link instead of looking reservations up by email", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ ok: true, delivery_mode: "log_only", expires_in_minutes: 30 }),
+      json: async () => ({
+        ok: true,
+        delivery_mode: "development_log",
+        expires_in_minutes: 30,
+      }),
     });
 
     renderPage();
@@ -69,6 +75,9 @@ describe("MyReservationsPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(/if we found reservations for that email/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/development mode only: the server logs the secure link/i),
       ).toBeInTheDocument();
     });
 

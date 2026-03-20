@@ -102,7 +102,10 @@ async def create_reservation(
     await db.refresh(reservation)
     reservation._person = person
 
-    # TODO: Send confirmation e-mail to guest (planned — see README § Planned features)
+    # TODO: Send confirmation e-mail to guest.
+    # Planned approach: include the reservation details directly in the e-mail,
+    # and send/re-issue short-lived access links only when the guest needs to
+    # review or adjust their reservation online.
 
     return reservation_to_dict(reservation)
 
@@ -219,13 +222,18 @@ async def request_my_reservations_access(
     body: ReservationLookupRequest,
     db: AsyncSession = Depends(get_db),
 ) -> ReservationLookupRequestAccepted:
-    """Prepare a secure visitor access link and log it until SMTP is wired up.
+    """Prepare a secure visitor access link for later e-mail delivery.
 
     The response is intentionally identical whether or not the e-mail exists,
     so callers cannot enumerate reservations by trying many addresses.
+    In development we log a preview link because SMTP is not wired up yet;
+    in production we do not log the raw token.
     """
     email_norm = str(body.email).lower().strip()
     rows = await _load_guest_reservations_by_email(db, email_norm)
+    delivery_mode = (
+        "development_log" if settings.environment == "development" else "disabled"
+    )
 
     if rows:
         token = secrets.token_urlsafe(24)
@@ -245,12 +253,18 @@ async def request_my_reservations_access(
         )
         await db.commit()
 
-        logger.info(
-            "Prepared guest reservation access link for %s (SMTP pending): /my-reservations?token=%s (expires %s)",
-            email_norm,
-            token,
-            expires_at.isoformat(),
-        )
+        if delivery_mode == "development_log":
+            logger.info(
+                "Prepared guest reservation access link for %s (development preview only): /my-reservations?token=%s (expires %s)",
+                email_norm,
+                token,
+                expires_at.isoformat(),
+            )
+        else:
+            logger.info(
+                "Prepared guest reservation access link for %s, but SMTP delivery is not enabled yet.",
+                email_norm,
+            )
     else:
         logger.info(
             "Guest reservation access requested for %s, but no reservations matched.",
@@ -258,6 +272,7 @@ async def request_my_reservations_access(
         )
 
     return ReservationLookupRequestAccepted(
+        delivery_mode=delivery_mode,
         expires_in_minutes=settings.guest_access_token_ttl_minutes
     )
 
