@@ -224,6 +224,11 @@ class VolunteerCreate(BaseModel):
     active: bool = True
     help_periods: list[VolunteerHelpPeriodIn] = Field(min_length=1)
 
+    @field_validator("name", "national_register_number", "eid_document_number", mode="before")
+    @classmethod
+    def strip_required_strings(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
+
 
 class VolunteerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
@@ -234,6 +239,14 @@ class VolunteerUpdate(BaseModel):
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
     active: bool | None = None
     help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
+
+    @field_validator("name", "national_register_number", "eid_document_number", mode="before")
+    @classmethod
+    def strip_optional_strings(cls, value: str | None) -> str | None:
+        if not isinstance(value, str):
+            return value
+        stripped = value.strip()
+        return stripped or None
 
 
 class VolunteerPeriodOut(BaseModel):

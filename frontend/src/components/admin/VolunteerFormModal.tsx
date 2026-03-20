@@ -206,10 +206,10 @@ export default function VolunteerFormModal({
                 <Form.Control
                   type="text"
                   value={nationalRegisterNumber}
-                  onChange={(e) => setNationalRegisterNumber(e.target.value)}
+                  onChange={(e) => setNationalRegisterNumber(e.target.value.slice(0, 20))}
                   className="bg-dark text-light border-secondary"
                   required
-                  maxLength={50}
+                  maxLength={20}
                 />
               </Form.Group>
             </Col>

@@ -35,12 +35,21 @@ def _ensure_volunteer_role(person: Person) -> None:
     person.roles = sorted(roles)
 
 
+def _remove_volunteer_role(person: Person) -> None:
+    person.roles = sorted(role for role in (person.roles or []) if role != "volunteer")
+
+
 async def _ensure_unique_fields(
     db: AsyncSession,
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
     exclude_id: str | None = None,
 ) -> None:
+    if national_register_number is not None:
+        national_register_number = national_register_number.strip() or None
+    if eid_document_number is not None:
+        eid_document_number = eid_document_number.strip() or None
+
     if national_register_number is not None:
         stmt = select(Person).where(
             Person.national_register_number == national_register_number
@@ -248,7 +257,10 @@ async def delete_volunteer(
     await db.execute(
         delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)
     )
-    await db.delete(volunteer)
+    _remove_volunteer_role(volunteer)
+    volunteer.first_help_day = None
+    volunteer.last_help_day = None
+    db.add(volunteer)
     await db.commit()
 
 
