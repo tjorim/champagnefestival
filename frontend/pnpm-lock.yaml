@@ -56,9 +56,6 @@ importers:
       swiper:
         specifier: ^12.1.2
         version: 12.1.2
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
     devDependencies:
       '@inlang/paraglide-js':
         specifier: ^2.15.0
@@ -1496,9 +1493,6 @@ packages:
     resolution: {integrity: sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==}
     engines: {node: '>= 6'}
 
-  zod@4.3.6:
-    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
-
 snapshots:
 
   '@adobe/css-tools@4.4.4': {}
@@ -2691,5 +2685,3 @@ snapshots:
   ws@8.19.0: {}
 
   yaml@1.10.2: {}
-
-  zod@4.3.6: {}

@@ -10,7 +10,6 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
-import { z } from "zod";
 import { m } from "@/paraglide/messages";
 import type { PaymentStatus, ReservationStatus } from "@/types/reservation";
 
@@ -34,38 +33,104 @@ interface GuestReservation {
   }[];
 }
 
-const orderItemSchema = z.object({
-  product_id: z.string(),
-  name: z.string(),
-  quantity: z.number(),
-  price: z.number(),
-  category: z.string(),
-  delivered: z.boolean(),
-});
+interface GuestOrderItemResponse {
+  product_id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  category: string;
+  delivered: boolean;
+}
 
-const guestReservationSchema = z.object({
-  id: z.string(),
-  event_title: z.string(),
-  guest_count: z.number(),
-  status: z.enum(["pending", "confirmed", "cancelled"]),
-  payment_status: z.enum(["unpaid", "partial", "paid"]),
-  checked_in: z.boolean(),
-  checked_in_at: z.string().nullable().optional(),
-  strap_issued: z.boolean(),
-  created_at: z.string(),
-  pre_orders: z.array(orderItemSchema),
-});
+interface GuestReservationResponse {
+  id: string;
+  event_title: string;
+  guest_count: number;
+  status: ReservationStatus;
+  payment_status: PaymentStatus;
+  checked_in: boolean;
+  checked_in_at?: string | null;
+  strap_issued: boolean;
+  created_at: string;
+  pre_orders: GuestOrderItemResponse[];
+}
 
-const guestReservationsResponseSchema = z.array(guestReservationSchema);
+interface ReservationLookupRequestAcceptedResponse {
+  ok: boolean;
+  delivery_mode: "disabled";
+  expires_in_minutes: number;
+}
 
-const reservationLookupRequestAcceptedSchema = z.object({
-  ok: z.boolean(),
-  delivery_mode: z.literal("disabled"),
-  expires_in_minutes: z.number(),
-});
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isReservationStatus(value: unknown): value is ReservationStatus {
+  return value === "pending" || value === "confirmed" || value === "cancelled";
+}
+
+function isPaymentStatus(value: unknown): value is PaymentStatus {
+  return value === "unpaid" || value === "partial" || value === "paid";
+}
+
+function isGuestOrderItemResponse(value: unknown): value is GuestOrderItemResponse {
+  return (
+    isRecord(value) &&
+    typeof value.product_id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.quantity === "number" &&
+    typeof value.price === "number" &&
+    typeof value.category === "string" &&
+    typeof value.delivered === "boolean"
+  );
+}
+
+function isGuestReservationResponse(value: unknown): value is GuestReservationResponse {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.event_title === "string" &&
+    typeof value.guest_count === "number" &&
+    isReservationStatus(value.status) &&
+    isPaymentStatus(value.payment_status) &&
+    typeof value.checked_in === "boolean" &&
+    (value.checked_in_at === undefined ||
+      value.checked_in_at === null ||
+      typeof value.checked_in_at === "string") &&
+    typeof value.strap_issued === "boolean" &&
+    typeof value.created_at === "string" &&
+    Array.isArray(value.pre_orders) &&
+    value.pre_orders.every(isGuestOrderItemResponse)
+  );
+}
+
+function parseGuestReservationsResponse(value: unknown): GuestReservationResponse[] {
+  if (!Array.isArray(value) || !value.every(isGuestReservationResponse)) {
+    throw new Error("Invalid guest reservations response.");
+  }
+  return value;
+}
+
+function parseReservationLookupRequestAccepted(
+  value: unknown,
+): ReservationLookupRequestAcceptedResponse {
+  if (
+    !isRecord(value) ||
+    typeof value.ok !== "boolean" ||
+    value.delivery_mode !== "disabled" ||
+    typeof value.expires_in_minutes !== "number"
+  ) {
+    throw new Error("Invalid reservation lookup request response.");
+  }
+  return {
+    ok: value.ok,
+    delivery_mode: value.delivery_mode,
+    expires_in_minutes: value.expires_in_minutes,
+  };
+}
 
 function mapGuestReservations(
-  data: z.infer<typeof guestReservationsResponseSchema>,
+  data: GuestReservationResponse[],
 ): GuestReservation[] {
   return data.map((reservation) => ({
     id: reservation.id,
@@ -128,7 +193,7 @@ export default function MyReservationsPage() {
           setError(m.my_reservations_error());
           return;
         }
-        reservationLookupRequestAcceptedSchema.parse(await response.json());
+        parseReservationLookupRequestAccepted(await response.json());
         setRequestSent(true);
       } catch {
         setError(m.my_reservations_error());
@@ -167,7 +232,7 @@ export default function MyReservationsPage() {
           return;
         }
 
-        const data = guestReservationsResponseSchema.parse(await response.json());
+        const data = parseGuestReservationsResponse(await response.json());
         if (!isActive) return;
         setReservations(mapGuestReservations(data));
       } catch {
