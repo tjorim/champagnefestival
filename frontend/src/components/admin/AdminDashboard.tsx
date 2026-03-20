@@ -15,6 +15,7 @@ import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
 import PeopleManagement from "./PeopleManagement";
+import type { PersonFormData } from "./PersonFormModal";
 import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@/types/reservation";
 import { apiToReservation } from "@/types/reservationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
@@ -310,6 +311,74 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           ex.contactPersonId === duplicateId ? { ...ex, contactPersonId: canonicalId } : ex,
         ),
       );
+    },
+    [authHeaders],
+  );
+
+  const handleCreatePerson = useCallback(
+    async (data: PersonFormData) => {
+      const response = await fetch("/api/people", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone,
+          address: data.address,
+          roles: data.roles,
+          notes: data.notes,
+          club_name: data.clubName,
+          active: data.active,
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_people_error_create());
+      }
+      const d = await response.json();
+      setPeople((prev) => [apiToPerson(d as Record<string, unknown>), ...prev]);
+    },
+    [authHeaders],
+  );
+
+  const handleUpdatePerson = useCallback(
+    async (id: string, data: PersonFormData) => {
+      const response = await fetch(`/api/people/${id}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone,
+          address: data.address,
+          roles: data.roles,
+          notes: data.notes,
+          club_name: data.clubName,
+          active: data.active,
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_people_error_update());
+      }
+      const d = await response.json();
+      const updated = apiToPerson(d as Record<string, unknown>);
+      setPeople((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    },
+    [authHeaders],
+  );
+
+  const handleDeletePerson = useCallback(
+    async (id: string) => {
+      const response = await fetch(`/api/people/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_person());
+      }
+      setPeople((prev) => prev.filter((p) => p.id !== id));
     },
     [authHeaders],
   );
@@ -1192,6 +1261,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       reservationCountByPersonId={reservationCountByPersonId}
                       isLoading={isLoading}
                       onMerge={handleMergePeople}
+                      onCreate={handleCreatePerson}
+                      onUpdate={handleUpdatePerson}
+                      onDelete={handleDeletePerson}
                     />
                   </Tab.Pane>
                 </Tab.Content>
