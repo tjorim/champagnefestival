@@ -766,20 +766,59 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
+  const handleUpdateTable = useCallback(
+    async (tableId: string, updates: { name?: string; capacity?: number }) => {
+      setTables((prev) =>
+        prev.map((t) => (t.id === tableId ? { ...t, ...updates } : t)),
+      );
+      try {
+        await fetch(`/api/tables/${tableId}`, {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            ...(updates.name !== undefined && { name: updates.name }),
+            ...(updates.capacity !== undefined && { capacity: updates.capacity }),
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to persist table update", err);
+      }
+    },
+    [authHeaders],
+  );
+
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM } : a)));
+      // Must match LayoutEditor/RoomCanvas constants
+      const PX_PER_M = 28;
+      const area = areas.find((a) => a.id === areaId);
+      const layout = layouts.find((l) => l.id === area?.layoutId);
+      const room = rooms.find((r) => r.id === layout?.roomId);
+
+      // Clamp the area's position so it stays within the canvas after resize.
+      let x = area?.x ?? 0;
+      let y = area?.y ?? 0;
+      if (area && room) {
+        const canvasW = Math.max(280, room.widthM * PX_PER_M);
+        const canvasH = Math.max(180, room.lengthM * PX_PER_M);
+        const areaW = Math.max(40, Math.round(widthM * PX_PER_M));
+        const areaH = Math.max(24, Math.round(lengthM * PX_PER_M));
+        x = (Math.max(0, Math.min((area.x / 100) * canvasW, canvasW - areaW)) / canvasW) * 100;
+        y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
+      }
+
+      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a)));
       try {
         await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({ width_m: widthM, length_m: lengthM }),
+          body: JSON.stringify({ width_m: widthM, length_m: lengthM, x, y }),
         });
       } catch (err) {
         console.error("Failed to persist area resize", err);
       }
     },
-    [authHeaders],
+    [authHeaders, areas, layouts, rooms],
   );
 
   const handleAddReservation = useCallback((reservation: Reservation) => {
@@ -1133,6 +1172,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onAssignAreaToItem={handleAssignAreaToItem}
                       onUpdateAreaLabel={handleUpdateAreaLabel}
                       onChangeTableType={handleChangeTableType}
+                      onUpdateTable={handleUpdateTable}
                       onResizeArea={handleResizeArea}
                     />
                   </Tab.Pane>

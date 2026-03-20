@@ -1,24 +1,16 @@
 /**
  * LayoutEditor — multi-room floor plan manager.
  *
- * Uses @dnd-kit/core for accessible, reliable drag-and-drop positioning
+ * Uses @dnd-kit/react for accessible, reliable drag-and-drop positioning
  * of tables within rooms.  Each room is rendered as a proportional canvas
  * (1 metre = PX_PER_M pixels).
  */
 
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useDraggable,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
+import { PointerActivationConstraints } from "@dnd-kit/dom";
+import { RestrictToElement } from "@dnd-kit/dom/modifiers";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -98,10 +90,12 @@ function getAreaIcons(): { value: string; label: string }[] {
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
 
-// Stable sensor options — defined outside the component so the object reference
-// never changes between renders, preventing @dnd-kit from reinitialising the
-// sensor mid-drag (which would corrupt the active drag's internal state).
-const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 6 } } as const;
+// Sensor configuration — module-level so the descriptor is stable across renders.
+const SENSORS = [
+  PointerSensor.configure({
+    activationConstraints: [new PointerActivationConstraints.Distance({ value: 6 })],
+  }),
+];
 function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
   const type = tableTypes.find((t) => t.id === table.tableTypeId);
   return {
@@ -160,6 +154,7 @@ interface LayoutEditorProps {
   ) => Promise<void>;
   onUpdateAreaLabel: (areaId: string, label: string) => void;
   onChangeTableType: (tableId: string, tableTypeId: string) => Promise<void>;
+  onUpdateTable: (tableId: string, updates: { name?: string; capacity?: number }) => Promise<void>;
   onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
 }
 
@@ -190,7 +185,7 @@ function DraggableTable({
   canvasW,
   canvasH,
 }: DraggableTableProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { ref, isDragging } = useDraggable({
     id: table.id,
     disabled: !isInteractive,
   });
@@ -199,7 +194,6 @@ function DraggableTable({
   const type = tableTypes.find((t) => t.id === table.tableTypeId);
   const shape = type?.shape ?? "rectangle";
 
-  // Convert percentage to pixel offset within the canvas
   const leftPx = (table.x / 100) * canvasW;
   const topPx = (table.y / 100) * canvasH;
 
@@ -221,9 +215,7 @@ function DraggableTable({
 
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
+      ref={ref}
       onClick={(e) => {
         if (!isInteractive) return;
         e.stopPropagation();
@@ -242,7 +234,7 @@ function DraggableTable({
         height: TABLE_L,
         cursor: isDragging ? "grabbing" : isInteractive ? "grab" : "default",
         userSelect: "none",
-        transform: `${CSS.Translate.toString(transform)} rotate(${table.rotation}deg)`,
+        transform: `rotate(${table.rotation}deg)`,
         zIndex: isDragging ? 10 : 1,
         opacity: isInteractive ? (isDragging ? 0.8 : 1) : isInSelectedArea ? 0.7 : 0.25,
         transition: isDragging ? undefined : "border-color 0.15s, opacity 0.15s",
@@ -285,7 +277,7 @@ function DraggableArea({
   canvasW,
   canvasH,
 }: DraggableAreaProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { ref, isDragging } = useDraggable({
     id: area.id,
     disabled: !isInteractive,
   });
@@ -304,9 +296,7 @@ function DraggableArea({
 
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
+      ref={ref}
       onClick={(e) => {
         if (!isInteractive) return;
         e.stopPropagation();
@@ -324,7 +314,7 @@ function DraggableArea({
         height: AREA_H,
         cursor: isDragging ? "grabbing" : isInteractive ? "grab" : "default",
         userSelect: "none",
-        transform: `${CSS.Translate.toString(transform)} rotate(${area.rotation}deg)`,
+        transform: `rotate(${area.rotation}deg)`,
         zIndex: isDragging ? 10 : 2,
         opacity: isDragging ? 0.8 : 1,
         transition: isDragging ? undefined : "border-color 0.15s",
@@ -390,96 +380,36 @@ function RoomCanvas({
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Stores the element's canvas-local position AND canvas viewport position
-  // captured at the moment the drag activates.  Using the actual DOM position
-  // (rather than re-deriving it from React state) ensures that a state update
-  // that fires after the first drag completes cannot corrupt the base position
-  // for a subsequent drag that starts before the re-render settles.
-  interface DragInitial {
-    elementLeft: number; // element left edge relative to canvas, in px
-    elementTop: number; // element top edge relative to canvas, in px
-    canvasLeft: number; // canvas left edge in viewport, at drag start
-    canvasTop: number; // canvas top edge in viewport, at drag start
-  }
-  const dragInitialRef = useRef<DragInitial | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
-    useSensor(KeyboardSensor),
-  );
-
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      if (!canvasRef.current) return;
-      const canvasRect = canvasRef.current.getBoundingClientRect();
-      const activeId = event.active.id as string;
-
-      // Snapshot the element's canvas-local position from current state.
-      // State is guaranteed up-to-date here: onDragStart fires only after the
-      // activation threshold (6 px), which is well after any previous drag's
-      // state update has committed.  We snapshot rather than reading in
-      // handleDragEnd to avoid any stale-closure risk there.
-      let elementLeft: number;
-      let elementTop: number;
-
-      if (activeId.startsWith("area_")) {
-        const area = roomAreas.find((a) => a.id === activeId);
-        if (!area) return;
-        elementLeft = (area.x / 100) * canvasW;
-        elementTop = (area.y / 100) * canvasH;
-      } else {
-        const table = roomTables.find((t) => t.id === activeId);
-        if (!table) return;
-        elementLeft = (table.x / 100) * canvasW;
-        elementTop = (table.y / 100) * canvasH;
-      }
-
-      dragInitialRef.current = {
-        elementLeft,
-        elementTop,
-        canvasLeft: canvasRect.left,
-        canvasTop: canvasRect.top,
-      };
-    },
-    [roomTables, roomAreas, canvasW, canvasH],
+  // RestrictToElement is called at drag time so canvasRef.current is always current.
+  const modifiers = useMemo(
+    () => [RestrictToElement.configure({ element: () => canvasRef.current })],
+    [],
   );
 
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, delta } = event;
-      if (!canvasRef.current) return;
+    (event: Parameters<NonNullable<React.ComponentProps<typeof DragDropProvider>["onDragEnd"]>>[0]) => {
+      const { operation, canceled } = event;
+      if (canceled || !operation.source) return;
 
-      const di = dragInitialRef.current;
-      dragInitialRef.current = null;
-      if (!di) return;
-
-      // delta from @dnd-kit = scrollAdjustedTranslation (pointer movement +
-      // scroll compensation).  Subtract the change in the canvas's own viewport
-      // position to get the net canvas-local displacement.
-      const endCanvasRect = canvasRef.current.getBoundingClientRect();
-      const moveX = delta.x - (di.canvasLeft - endCanvasRect.left);
-      const moveY = delta.y - (di.canvasTop - endCanvasRect.top);
-
-      const activeId = active.id as string;
+      const { x: dx, y: dy } = operation.transform;
+      const activeId = String(operation.source.id);
 
       if (activeId.startsWith("area_")) {
-        // Area drag — use DOM position captured at drag start, not derived from state
         const area = roomAreas.find((a) => a.id === activeId);
         if (!area) return;
         const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
         const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
-        const leftPx = di.elementLeft + moveX;
-        const topPx = di.elementTop + moveY;
+        const leftPx = (area.x / 100) * canvasW + dx;
+        const topPx = (area.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - AREA_W);
         const clampedY = Math.min(Math.max(0, topPx), canvasH - AREA_H);
         onMoveArea(area.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
       } else {
-        // Table drag — same: use DOM position, not state-derived position
         const table = roomTables.find((t) => t.id === activeId);
         if (!table) return;
         const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
-        const leftPx = di.elementLeft + moveX;
-        const topPx = di.elementTop + moveY;
+        const leftPx = (table.x / 100) * canvasW + dx;
+        const topPx = (table.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);
         const clampedY = Math.min(Math.max(0, topPx), canvasH - TABLE_L);
         onMoveTable(table.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
@@ -499,7 +429,7 @@ function RoomCanvas({
           {m.admin_table_move_hint()}
         </span>
       </p>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DragDropProvider sensors={SENSORS} modifiers={modifiers} onDragEnd={handleDragEnd}>
         <div
           ref={canvasRef}
           onClick={() => {
@@ -514,7 +444,7 @@ function RoomCanvas({
             background:
               "repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)," +
               "repeating-linear-gradient(90deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)",
-            overflow: "hidden",
+            overflow: "visible",
             cursor: "default",
           }}
           aria-label={room.name}
@@ -575,7 +505,7 @@ function RoomCanvas({
             );
           })}
         </div>
-      </DndContext>
+      </DragDropProvider>
     </div>
   );
 }
@@ -605,6 +535,7 @@ export default function LayoutEditor({
   onAssignAreaToItem,
   onUpdateAreaLabel,
   onChangeTableType,
+  onUpdateTable,
   onResizeArea,
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
@@ -1065,6 +996,22 @@ export default function LayoutEditor({
                 {deleteTableError}
               </Alert>
             )}
+            <Form.Group className="mb-3" controlId="table-name-edit">
+              <Form.Label className="text-secondary small">{m.admin_table_name()}</Form.Label>
+              <Form.Control
+                size="sm"
+                type="text"
+                className="bg-dark text-light border-secondary"
+                defaultValue={selectedTableData.name}
+                onBlur={async (e) => {
+                  const val = e.target.value.trim();
+                  if (val && val !== selectedTableData.name) {
+                    await onUpdateTable(selectedTableData.id, { name: val });
+                  }
+                }}
+                key={`name-${selectedTableData.id}`}
+              />
+            </Form.Group>
             <Form.Group className="mb-3" controlId="table-type-select">
               <Form.Label className="text-secondary small">
                 {m.admin_layout_table_type_label()}
