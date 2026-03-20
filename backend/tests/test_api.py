@@ -354,6 +354,7 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     assert "notes" not in items[0]
     assert items[0]["status"] == "pending"
     assert items[0]["event_title"] == "Vrijdagavond"
+    await db_session.refresh(token_rows[0])
     assert token_rows[0].last_used_at is not None
 
 
