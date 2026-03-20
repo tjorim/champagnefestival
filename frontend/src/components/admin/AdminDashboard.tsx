@@ -301,11 +301,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           .filter((p) => p.id !== duplicateId)
           .map((p) => (p.id === canonicalId ? canonicalPerson : p)),
       );
-      // Re-point any reservations in state that were on the duplicate
+      // Re-point any reservations in state that were on the duplicate;
+      // also refresh person data on any already-canonical reservations (merged fields may have changed).
       setReservations((prev) =>
         prev.map((r) =>
           r.personId === duplicateId
             ? { ...r, personId: canonicalId, person: canonicalPerson }
+            : r.personId === canonicalId
+            ? { ...r, person: canonicalPerson }
             : r,
         ),
       );
@@ -975,9 +978,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
-  if (!visible) return null;
-
-  // Computed maps derived from people/reservations state
+  // Computed maps derived from people/reservations state — must stay above any early return
+  // to satisfy the Rules of Hooks (hooks must be called unconditionally).
   const reservationCountByPersonId = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const r of reservations) {
@@ -986,6 +988,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }
     return Object.fromEntries(people.map((p) => [p.id, counts[p.id] ?? 0]));
   }, [people, reservations]);
+
+  if (!visible) return null;
 
   return (
     <section id="admin" aria-labelledby="admin-title" className="py-5">

@@ -1134,6 +1134,24 @@ async def test_merge_people_not_found(client):
 
 
 @pytest.mark.anyio
+async def test_merge_people_canonical_not_found(client):
+    """404 when canonical person ID does not exist."""
+    r = await client.post("/api/people", json={"name": "Real Person", "email": "real@example.com"}, headers=ADMIN_HEADERS)
+    duplicate_id = r.json()["id"]
+    r = await client.post(f"/api/people/nonexistent/merge/{duplicate_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_merge_people_duplicate_not_found(client):
+    """404 when duplicate person ID does not exist."""
+    r = await client.post("/api/people", json={"name": "Canon Only", "email": "canon.only@example.com"}, headers=ADMIN_HEADERS)
+    canonical_id = r.json()["id"]
+    r = await client.post(f"/api/people/{canonical_id}/merge/nonexistent", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
 async def test_merge_people_self(client):
     r = await client.post("/api/people", json={"name": "Alice", "email": "alice@example.com"}, headers=ADMIN_HEADERS)
     pid = r.json()["id"]

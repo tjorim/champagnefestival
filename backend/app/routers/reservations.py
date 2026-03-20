@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_admin
 from app.database import get_db
 from app.models import Person, Reservation
+from app.routers.people import normalize_phone
 from app.schemas import (
     ReservationAdminCreate,
     ReservationCreate,
@@ -54,7 +55,7 @@ async def create_reservation(
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
 
-    phone_norm = "".join(c for c in (body.phone or "") if c.isdigit() or c == "+")
+    phone_norm = normalize_phone(body.phone)
 
     existing = (
         await db.execute(
