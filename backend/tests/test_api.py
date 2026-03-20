@@ -1110,6 +1110,11 @@ async def test_reservation_auto_links_certain_person(client):
     assert r.status_code == 201
     assert r.json()["person_id"] != bob_id
 
+    # Exact match again after a different-name reservation was created → still links to bob_id
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Bob Martin"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] == bob_id
+
     # Different phone → new person (even if email + name match)
     r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "name": "Bob Martin", "phone": "+32499111111"})
     assert r.status_code == 201
