@@ -1229,8 +1229,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             onCheckIn={handleCheckIn}
             onIssueStrap={handleIssueStrap}
             onMergeDuplicate={async (canonicalId, duplicateId) => {
-              await handleMergePeople(canonicalId, duplicateId);
-              setDetailReservation(null);
+              try {
+                await handleMergePeople(canonicalId, duplicateId);
+                setDetailReservation(null);
+              } catch (err) {
+                console.error("Failed to merge people", err);
+                setError(err instanceof Error ? err.message : m.admin_people_merge_error());
+              }
             }}
           />
         )}
