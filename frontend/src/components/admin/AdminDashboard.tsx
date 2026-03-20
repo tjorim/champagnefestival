@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -294,18 +294,28 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_people_merge_error());
       }
       const updated = await response.json();
+      const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
       // Replace both the canonical and duplicate in the people list
       setPeople((prev) =>
         prev
           .filter((p) => p.id !== duplicateId)
-          .map((p) => (p.id === canonicalId ? apiToPerson(updated as Record<string, unknown>) : p)),
+          .map((p) => (p.id === canonicalId ? canonicalPerson : p)),
       );
-      // Re-point any reservations in state that were on the duplicate
+      // Re-point any reservations in state that were on the duplicate;
+      // also refresh person data on any already-canonical reservations (merged fields may have changed).
       setReservations((prev) =>
         prev.map((r) =>
           r.personId === duplicateId
-            ? { ...r, personId: canonicalId, person: { ...r.person, id: canonicalId } }
+            ? { ...r, personId: canonicalId, person: canonicalPerson }
+            : r.personId === canonicalId
+            ? { ...r, person: canonicalPerson }
             : r,
+        ),
+      );
+      // Re-point any exhibitors in state that were linked to the duplicate contact person
+      setExhibitors((prev) =>
+        prev.map((ex) =>
+          ex.contactPersonId === duplicateId ? { ...ex, contactPersonId: canonicalId } : ex,
         ),
       );
     },
@@ -968,6 +978,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
+  // Computed maps derived from people/reservations state — must stay above any early return
+  // to satisfy the Rules of Hooks (hooks must be called unconditionally).
+  const reservationCountByPersonId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of reservations) {
+      if (r.personId == null) continue;
+      counts[r.personId] = (counts[r.personId] ?? 0) + 1;
+    }
+    return Object.fromEntries(people.map((p) => [p.id, counts[p.id] ?? 0]));
+  }, [people, reservations]);
+
   if (!visible) return null;
 
   return (
@@ -1176,12 +1197,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Tab.Pane eventKey="people">
                     <PeopleManagement
                       people={people}
-                      reservationCountByPersonId={Object.fromEntries(
-                        people.map((p) => [
-                          p.id,
-                          reservations.filter((r) => r.personId === p.id).length,
-                        ]),
-                      )}
+                      reservationCountByPersonId={reservationCountByPersonId}
                       isLoading={isLoading}
                       onMerge={handleMergePeople}
                     />
@@ -1197,15 +1213,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           <ReservationDetail
             reservation={detailReservation}
             baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
-            emailDuplicates={people
-              .filter(
-                (p) =>
-                  p.id !== detailReservation.personId &&
-                  p.email &&
-                  p.email.toLowerCase() ===
-                    (people.find((x) => x.id === detailReservation.personId)?.email ?? "").toLowerCase(),
-              )
-              .map((p) => ({ id: p.id, name: p.name }))}
+            emailDuplicates={(() => {
+              const personEmail = detailReservation.person.email.toLowerCase();
+              return people
+                .filter(
+                  (p) =>
+                    p.id !== detailReservation.personId &&
+                    p.email &&
+                    p.email.toLowerCase() === personEmail,
+                )
+                .map((p) => ({ id: p.id, name: p.name }));
+            })()}
             onClose={() => setDetailReservation(null)}
             onToggleDelivered={handleToggleDelivered}
             onCheckIn={handleCheckIn}

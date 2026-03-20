@@ -47,6 +47,15 @@ def _normalise_optional_identity(value: str | None) -> str | None:
     return value or None
 
 
+def normalize_phone(phone: str | None) -> str:
+    """Strip all non-digit characters except a leading '+', so that formatted
+    numbers like '+32 470 12 34 56' and '0470 12 34 56' are stored and matched
+    consistently."""
+    if not phone:
+        return ""
+    return "".join(c for c in phone if c.isdigit() or c == "+")
+
+
 def _raise_identity_conflict() -> None:
     raise HTTPException(
         status_code=409,
@@ -95,7 +104,7 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         id=make_id("per"),
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
-        phone=body.phone,
+        phone=normalize_phone(body.phone),
         address=body.address,
         first_help_day=body.first_help_day,
         last_help_day=body.last_help_day,
@@ -175,7 +184,6 @@ async def update_person(
 
     for field in (
         "name",
-        "phone",
         "address",
         "first_help_day",
         "last_help_day",
@@ -186,6 +194,9 @@ async def update_person(
     ):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
+
+    if "phone" in body.model_fields_set:
+        person.phone = normalize_phone(body.phone)
 
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""
@@ -267,13 +278,18 @@ async def merge_people(
     duplicate = await _get_or_404(db, duplicate_id)
 
     # Guard unique identity fields before making any changes.
+    field_labels = {
+        "national_register_number": "national register number",
+        "eid_document_number": "eID document number",
+    }
     for field in ("national_register_number", "eid_document_number"):
         canon_val = getattr(canonical, field)
         dup_val = getattr(duplicate, field)
         if canon_val and dup_val and canon_val != dup_val:
+            label = field_labels[field]
             raise HTTPException(
                 status_code=409,
-                detail=f"Both persons have a different {field}; resolve manually before merging.",
+                detail=f"Both persons have a different {label}; resolve manually before merging.",
             )
 
     # Fill blank string fields on canonical from duplicate.

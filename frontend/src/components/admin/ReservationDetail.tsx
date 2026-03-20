@@ -133,7 +133,7 @@ export default function ReservationDetail({
                   key={dup.id}
                   size="sm"
                   variant="warning"
-                  onClick={() => onMergeDuplicate?.(reservation!.personId, dup.id)}
+                  onClick={() => onMergeDuplicate?.(reservation.personId, dup.id)}
                 >
                   <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
                   {m.admin_people_merge_title()}: {dup.name}

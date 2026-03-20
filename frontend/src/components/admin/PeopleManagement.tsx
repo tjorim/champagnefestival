@@ -146,7 +146,7 @@ export default function PeopleManagement({
                             {person.name}
                             {!person.active && (
                               <Badge bg="secondary" className="ms-1">
-                                inactive
+                                {m.admin_people_inactive_badge_label()}
                               </Badge>
                             )}
                           </div>
@@ -234,6 +234,8 @@ export default function PeopleManagement({
                     <Button
                       size="sm"
                       variant={`outline-${variant}`}
+                      aria-label={m.admin_people_merge_swap_label()}
+                      title={m.admin_people_merge_swap_label()}
                       onClick={() =>
                         setMergeState({ canonical: mergeState.duplicate, duplicate: mergeState.canonical })
                       }
