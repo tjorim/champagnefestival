@@ -41,7 +41,7 @@ export default function PeopleManagement({
         return (
           p.name.toLowerCase().includes(s) ||
           p.email.toLowerCase().includes(s) ||
-          p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ)
+          (phoneQ.length > 0 && p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ))
         );
       })
     : people;

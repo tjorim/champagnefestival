@@ -321,6 +321,15 @@ async def merge_people(
                 detail=f"Both persons have a different {label}; resolve manually before merging.",
             )
 
+    # Normalise canonical's own existing identity fields in-place so the
+    # surviving record is always in canonical form, consistent with
+    # create/update_person.
+    for field in ("national_register_number", "eid_document_number"):
+        existing = getattr(canonical, field)
+        normalised = _normalise_optional_identity(existing)
+        if normalised != existing:
+            setattr(canonical, field, normalised or None)
+
     # Fill blank string fields on canonical from duplicate.
     for field in ("email", "phone", "address", "club_name", "notes"):
         if not getattr(canonical, field) and getattr(duplicate, field):

@@ -1121,6 +1121,52 @@ async def test_reservation_auto_links_certain_person(client):
     assert r.json()["person_id"] != bob_id
 
 
+@pytest.mark.anyio
+async def test_normalize_phone_equivalent_inputs(client):
+    """E.164-like normalization: +32 470..., 0032 470..., and 0470... all store as +32470123456."""
+    base_phone_variants = [
+        "+32 470 12 34 56",   # international with spaces
+        "0032 470 12 34 56",  # IDD prefix 00
+        "0470 12 34 56",      # local trunk 0
+    ]
+    canonical_phone = "+32470123456"
+
+    # Create a person with the first variant
+    r = await client.post(
+        "/api/people",
+        json={"name": "Phone Test", "email": "phonetest@example.com", "phone": base_phone_variants[0]},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    person_id = r.json()["id"]
+    assert r.json()["phone"] == canonical_phone
+
+    # POST a reservation using the IDD variant → should link to the same person
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "email": "phonetest@example.com", "phone": base_phone_variants[1], "name": "Phone Test"},
+    )
+    assert r.status_code == 201
+    assert r.json()["person_id"] == person_id
+
+    # POST a reservation using the local trunk variant → should also link to the same person
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "email": "phonetest@example.com", "phone": base_phone_variants[2], "name": "Phone Test"},
+    )
+    assert r.status_code == 201
+    assert r.json()["person_id"] == person_id
+
+    # Update a person using a local variant → stored in canonical form
+    r = await client.put(
+        f"/api/people/{person_id}",
+        json={"name": "Phone Test", "email": "phonetest@example.com", "phone": base_phone_variants[2]},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["phone"] == canonical_phone
+
+
 # ---------------------------------------------------------------------------
 # People merge endpoint
 # ---------------------------------------------------------------------------
