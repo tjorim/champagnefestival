@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -110,6 +110,7 @@ export default function ReservationCreateModal({
   const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
   const [personQuery, setPersonQuery] = useState("");
   const [loadingPersons, setLoadingPersons] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!show) return;
@@ -117,6 +118,7 @@ export default function ReservationCreateModal({
     setNotes("");
     setEventId("");
     setEventTitle("");
+    setEvents([]);
     setPersonOption(null);
     setPersonQuery("");
     setPersonOptions([]);
@@ -131,20 +133,30 @@ export default function ReservationCreateModal({
           setEvents(
             (data.schedule as ScheduleEvent[]).filter((e: ScheduleEvent) => e.reservation),
           );
+        } else {
+          setEvents([]);
         }
       })
       .catch(() => {
-        // Non-critical — user can type manually
+        setEvents([]);
       })
       .finally(() => setLoadingEvents(false));
   }, [show, authHeaders]);
 
   const searchPersons = useCallback(
     async (q: string) => {
+      if (!q) {
+        setPersonOptions([]);
+        return;
+      }
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       setLoadingPersons(true);
       try {
         const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&active=true`, {
           headers: authHeaders(),
+          signal: controller.signal,
         });
         if (res.ok) {
           const data = (await res.json()) as {
@@ -163,9 +175,17 @@ export default function ReservationCreateModal({
               phone: p.phone,
             })),
           );
+        } else {
+          setPersonOptions([]);
+        }
+      } catch (err) {
+        if ((err as { name?: string }).name !== "AbortError") {
+          setPersonOptions([]);
         }
       } finally {
-        setLoadingPersons(false);
+        if (!controller.signal.aborted) {
+          setLoadingPersons(false);
+        }
       }
     },
     [authHeaders],

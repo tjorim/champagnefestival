@@ -29,12 +29,12 @@ async def _load_contacts_by_ids(db: AsyncSession, ids: list[str]) -> dict[str, P
 
 @router.get("", response_model=list[ExhibitorOut], dependencies=[Depends(require_admin)])
 async def list_exhibitors(
-    type: str | None = Query(default=None),
+    exhibitor_type: str | None = Query(default=None, alias="type"),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     stmt = select(Exhibitor).order_by(Exhibitor.id)
-    if type is not None:
-        stmt = stmt.where(Exhibitor.type == type)
+    if exhibitor_type is not None:
+        stmt = stmt.where(Exhibitor.type == exhibitor_type)
     result = await db.execute(stmt)
     exhibitors = result.scalars().all()
     person_ids = [e.contact_person_id for e in exhibitors if e.contact_person_id]
@@ -49,6 +49,9 @@ async def list_exhibitors(
     dependencies=[Depends(require_admin)],
 )
 async def create_exhibitor(body: ExhibitorCreate, db: AsyncSession = Depends(get_db)) -> dict:
+    contact = await _load_contact(db, body.contact_person_id)
+    if body.contact_person_id and contact is None:
+        raise HTTPException(status_code=404, detail="Person not found.")
     e = Exhibitor(
         name=body.name,
         image=body.image,
@@ -60,7 +63,6 @@ async def create_exhibitor(body: ExhibitorCreate, db: AsyncSession = Depends(get
     db.add(e)
     await db.commit()
     await db.refresh(e)
-    contact = await _load_contact(db, e.contact_person_id)
     return exhibitor_to_dict(e, contact)
 
 
@@ -80,6 +82,10 @@ async def update_exhibitor(
     if body.type is not None:
         e.type = body.type
     if "contact_person_id" in body.model_fields_set:
+        if body.contact_person_id is not None:
+            contact_check = await _load_contact(db, body.contact_person_id)
+            if contact_check is None:
+                raise HTTPException(status_code=404, detail="Person not found.")
         e.contact_person_id = body.contact_person_id
     await db.commit()
     await db.refresh(e)

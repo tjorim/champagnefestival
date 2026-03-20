@@ -74,23 +74,25 @@ function getTablesInArea(
   });
 }
 
-// Preset icons available for floor areas
-const AREA_ICONS: { value: string; label: string }[] = [
-  { value: "bi-shop", label: "Stand / Shop" },
-  { value: "bi-glass-champagne", label: "Champagne" },
-  { value: "bi-music-note-beamed", label: "Music / DJ" },
-  { value: "bi-cup-hot", label: "Catering / Café" },
-  { value: "bi-egg-fried", label: "Food" },
-  { value: "bi-gift", label: "Gift Shop" },
-  { value: "bi-door-open", label: "Entrance / Exit" },
-  { value: "bi-info-circle", label: "Info Desk" },
-  { value: "bi-camera", label: "Photo Booth" },
-  { value: "bi-award", label: "Award / VIP" },
-  { value: "bi-people-fill", label: "Meeting Point" },
-  { value: "bi-tools", label: "Technical / Staff" },
-  { value: "bi-star", label: "Feature" },
-  { value: "bi-bar-chart-line", label: "Exhibition" },
-];
+// Preset icons available for floor areas — labels resolved at render time for i18n
+function getAreaIcons(): { value: string; label: string }[] {
+  return [
+    { value: "bi-shop", label: m.admin_layout_area_icon_stand() },
+    { value: "bi-glass-champagne", label: m.admin_layout_area_icon_champagne() },
+    { value: "bi-music-note-beamed", label: m.admin_layout_area_icon_music() },
+    { value: "bi-cup-hot", label: m.admin_layout_area_icon_catering() },
+    { value: "bi-egg-fried", label: m.admin_layout_area_icon_food() },
+    { value: "bi-gift", label: m.admin_layout_area_icon_gift() },
+    { value: "bi-door-open", label: m.admin_layout_area_icon_entrance() },
+    { value: "bi-info-circle", label: m.admin_layout_area_icon_info() },
+    { value: "bi-camera", label: m.admin_layout_area_icon_photo() },
+    { value: "bi-award", label: m.admin_layout_area_icon_award() },
+    { value: "bi-people-fill", label: m.admin_layout_area_icon_meeting() },
+    { value: "bi-tools", label: m.admin_layout_area_icon_technical() },
+    { value: "bi-star", label: m.admin_layout_area_icon_feature() },
+    { value: "bi-bar-chart-line", label: m.admin_layout_area_icon_exhibition() },
+  ];
+}
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
 function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
@@ -696,8 +698,6 @@ export default function LayoutEditor({
     ? reservations.filter((r) => selectedTableData.reservationIds.includes(r.id))
     : [];
 
-  const selectedAreaData = areas.find((a) => a.id === selectedArea);
-
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
@@ -705,6 +705,8 @@ export default function LayoutEditor({
     .sort((a, b) => a.dayId - b.dayId);
   const canvasTables = activeLayoutId ? tables.filter((t) => t.layoutId === activeLayoutId) : [];
   const canvasAreas = activeLayoutId ? areas.filter((a) => a.layoutId === activeLayoutId) : [];
+
+  const selectedAreaData = canvasAreas.find((a) => a.id === selectedArea);
 
   const areaCanvasW = activeRoom ? Math.max(MIN_CANVAS_PX, activeRoom.widthM * PX_PER_M) : 0;
   const areaCanvasH = activeRoom ? Math.max(180, activeRoom.lengthM * PX_PER_M) : 0;
@@ -1085,7 +1087,7 @@ export default function LayoutEditor({
                   }}
                   key={`icon-${selectedAreaData.id}`}
                 >
-                  {AREA_ICONS.map((ic) => (
+                  {getAreaIcons().map((ic) => (
                     <option key={ic.value} value={ic.value}>{ic.label}</option>
                   ))}
                 </Form.Select>
@@ -1241,7 +1243,7 @@ export default function LayoutEditor({
                 onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}
                 className="bg-dark text-light border-secondary"
               >
-                {AREA_ICONS.map((ic) => (
+                {getAreaIcons().map((ic) => (
                   <option key={ic.value} value={ic.value}>{ic.label}</option>
                 ))}
               </Form.Select>

@@ -773,7 +773,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddReservation = useCallback(
-    (reservation: import("../../types/reservation").Reservation) => {
+    (reservation: Reservation) => {
       setReservations((prev) => [reservation, ...prev]);
     },
     [],

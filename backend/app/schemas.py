@@ -343,7 +343,7 @@ class ExhibitorOut(BaseModel):
     active: bool
     type: str
     contact_person_id: str | None
-    contact_person: PersonOut | None
+    contact_person: PersonSummaryOut | None
     created_at: datetime
     updated_at: datetime
 

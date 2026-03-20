@@ -121,6 +121,18 @@ export default function EditionModal({
     setActive(initial?.active ?? true);
     setError(null);
 
+    // Pre-seed selections immediately from initial data so the select isn't empty while loading
+    if (initial) {
+      const preseeded = [...(initial.producers ?? []), ...(initial.sponsors ?? [])].map((e) => ({
+        value: e.id,
+        label: e.name,
+        isArchived: false,
+      }));
+      setSelectedExhibitors(preseeded);
+    } else {
+      setSelectedExhibitors([]);
+    }
+
     // Fetch item pools when the modal opens
     async function fetchItems() {
       try {

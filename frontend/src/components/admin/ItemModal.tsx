@@ -27,6 +27,8 @@ interface PersonOption {
   value: string;
   label: string;
   sub: string;
+  email: string;
+  phone: string;
 }
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
@@ -100,6 +102,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               value: p.id,
               label: p.name,
               sub: [p.email, p.phone].filter(Boolean).join(" · "),
+              email: p.email,
+              phone: p.phone,
             })),
           );
         }
@@ -133,8 +137,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
         ? {
             id: contactOption.value,
             name: contactOption.label,
-            email: "",
-            phone: "",
+            email: contactOption.email,
+            phone: contactOption.phone,
           }
         : null,
     });
@@ -173,7 +177,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             />
           </Form.Group>
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Website URL</Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
             <Form.Control
               type="url"
               value={website}
@@ -183,19 +187,19 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             />
           </Form.Group>
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">Type</Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
             <Form.Select
               value={type}
               onChange={(e) => setType(e.target.value)}
               className="bg-dark text-light border-secondary"
             >
-              <option value="vendor">Vendor</option>
-              <option value="producer">Producer</option>
-              <option value="sponsor">Sponsor</option>
+              <option value="vendor">{m.admin_item_vendor()}</option>
+              <option value="producer">{m.admin_item_producer()}</option>
+              <option value="sponsor">{m.admin_item_sponsor()}</option>
             </Form.Select>
           </Form.Group>
           <Form.Group>
-            <Form.Label className="text-secondary small">Contact person</Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_item_contact_person()}</Form.Label>
             <Select<PersonOption, false>
               isClearable
               options={personOptions}
@@ -206,7 +210,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               isLoading={loadingPersons}
               filterOption={null}
               styles={darkSelectStyles}
-              placeholder="Search by name, email, phone…"
+              placeholder={m.admin_search_person_placeholder()}
               classNamePrefix="rs"
               formatOptionLabel={(opt) => (
                 <div>

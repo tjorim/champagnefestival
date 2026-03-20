@@ -388,7 +388,7 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authHeaders]);
 
   const handleCreated = useCallback((edition: Edition) => {
     setEditions((prev) => [...prev, edition]);
@@ -463,7 +463,7 @@ export default function ContentManagement({ authHeaders, venues }: ContentManage
         <Card.Body>
           <ContentSection
             sectionKey="exhibitors"
-            title="Exhibitors"
+            title={m.admin_content_exhibitors_section()}
             authHeaders={authHeaders}
           />
           <hr className="border-secondary" />

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Area, Layout
+from app.models import Area, Exhibitor, Layout
 from app.schemas import AreaCreate, AreaOut, AreaUpdate
 from app.utils import area_to_dict, make_id
 
@@ -81,6 +81,10 @@ async def update_area(
     if "rotation" in body.model_fields_set and body.rotation is not None:
         a.rotation = body.rotation
     if "exhibitor_id" in body.model_fields_set:
+        if body.exhibitor_id is not None:
+            ex = await db.execute(select(Exhibitor).where(Exhibitor.id == body.exhibitor_id))
+            if ex.scalar_one_or_none() is None:
+                raise HTTPException(status_code=404, detail="Exhibitor not found.")
         a.exhibitor_id = body.exhibitor_id
 
     await db.commit()

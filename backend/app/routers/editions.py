@@ -108,7 +108,14 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
         active=body.active,
     )
     e.schedule = [ev.model_dump() for ev in body.schedule]
-    e.exhibitors = body.exhibitors
+    if body.exhibitors:
+        exhibitor_map = await _load_exhibitors_by_ids(db, set(body.exhibitors))
+        invalid = [eid for eid in body.exhibitors if eid not in exhibitor_map]
+        if invalid:
+            raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
+        e.exhibitors = [eid for eid in body.exhibitors if exhibitor_map[eid]["type"] in ("producer", "sponsor")]
+    else:
+        e.exhibitors = []
     db.add(e)
     await db.commit()
     await db.refresh(e)
@@ -132,7 +139,14 @@ async def update_edition(
     if "schedule" in body.model_fields_set and body.schedule is not None:
         e.schedule = [ev.model_dump() for ev in body.schedule]
     if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
-        e.exhibitors = body.exhibitors
+        if body.exhibitors:
+            exhibitor_map = await _load_exhibitors_by_ids(db, set(body.exhibitors))
+            invalid = [eid for eid in body.exhibitors if eid not in exhibitor_map]
+            if invalid:
+                raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
+            e.exhibitors = [eid for eid in body.exhibitors if exhibitor_map[eid]["type"] in ("producer", "sponsor")]
+        else:
+            e.exhibitors = []
 
     await db.commit()
     await db.refresh(e)
@@ -184,7 +198,9 @@ async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, dict
 async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, dict]:
     if not ids:
         return {}
-    result = await db.execute(select(Exhibitor).where(Exhibitor.id.in_(ids)))
+    result = await db.execute(
+        select(Exhibitor).where(Exhibitor.id.in_(ids), Exhibitor.active.is_(True))
+    )
     return {
         e.id: {"id": e.id, "name": e.name, "image": e.image, "website": e.website, "type": e.type}
         for e in result.scalars().all()

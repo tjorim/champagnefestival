@@ -122,7 +122,7 @@ def exhibitor_to_dict(e: Exhibitor, contact_person: Person | None = None) -> dic
         "active": e.active,
         "type": e.type,
         "contact_person_id": e.contact_person_id,
-        "contact_person": person_to_dict(contact_person) if contact_person else None,
+        "contact_person": person_summary_to_dict(contact_person) if contact_person else None,
         "created_at": e.created_at,
         "updated_at": e.updated_at,
     }

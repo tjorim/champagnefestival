@@ -64,6 +64,9 @@ async def create_reservation(
         )
         db.add(person)
         await db.flush()
+    elif body.phone and body.phone != person.phone:
+        person.phone = body.phone
+        await db.flush()
 
     reservation = Reservation(
         id=make_id("res"),
