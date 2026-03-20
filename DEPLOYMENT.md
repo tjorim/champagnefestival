@@ -52,39 +52,41 @@ Run Alembic migrations on first deploy and after each schema change:
 docker compose run --rm champagnefestival-api alembic upgrade head
 ```
 
-## Analytics (Umami)
+## Analytics
 
-The site supports self-hosted [Umami](https://umami.is/) analytics — a free, open-source, privacy-first analytics tool that collects no personal data and sets no cookies.
+Because `champagnefestival.be` is **proxied through Cloudflare** (not just DNS), two complementary tiers of analytics are available at no cost.
 
-### Install Umami on the VPS
+### Tier 1 — Cloudflare Zone Analytics (100 % coverage, zero code)
 
-Follow the [official Umami docs](https://umami.is/docs/install) or use Docker:
+Cloudflare records every request that passes through its edge — before any ad blocker or JavaScript setting on the visitor's device matters. No script is required.
 
-```bash
-# Example — adapt to your own database credentials
-docker run -d \
-  --name umami \
-  -p 3000:3000 \
-  -e DATABASE_URL=postgresql://umami:password@db:5432/umami \
-  -e DATABASE_TYPE=postgresql \
-  ghcr.io/umami-software/umami:postgresql-latest
-```
+Enable it in the dashboard: **Analytics & Logs → Traffic**.
 
-Once running, log in, add your website, and copy the **Script URL** and **Website ID** from the *Tracking code* settings page.
+Use this for: total request volume, bandwidth, country breakdown, and bot traffic.
 
-### Configure the frontend
+### Tier 2 — Cloudflare Web Analytics JS beacon (per-page detail)
 
-Set the following environment variables before building the frontend (add them to the production `.env` file or your CI secrets):
+A lightweight, cookieless JavaScript beacon adds per-page view counts and Core Web Vitals to the Cloudflare dashboard. Because it is a client-side script it will not fire for visitors who block `static.cloudflare.com` (typically 25–40 % of desktop users with ad blockers). Zone Analytics remains the authoritative source for total visitor counts.
+
+#### Enable the beacon
+
+1. Log in to [dash.cloudflare.com](https://dash.cloudflare.com) and select your zone (`champagnefestival.be`).
+2. Go to **Analytics & Logs → Web Analytics**.
+3. Click **Add a site** (or select the existing site) and copy the **JS Snippet token** — a 32-character hex string.
+
+#### Configure the frontend build
+
+Set `VITE_CF_BEACON_TOKEN` before building the frontend (in the production `.env` file or CI/CD secrets):
 
 | Variable | Description | Example |
 |---|---|---|
-| `VITE_UMAMI_SCRIPT_URL` | URL of the Umami tracking script | `https://analytics.example.com/script.js` |
-| `VITE_UMAMI_WEBSITE_ID` | UUID of the website created in Umami | `a1b2c3d4-...` |
-
-The Vite build will automatically inject the `<script>` tag into `index.html` when both variables are set. If either variable is empty, the analytics script is omitted entirely (safe for development and staging builds).
+| `VITE_CF_BEACON_TOKEN` | Token from the Cloudflare Web Analytics JS snippet | `a1b2c3d4e5f6...` (32 hex chars) |
 
 ```bash
 # frontend/.env.production
-VITE_UMAMI_SCRIPT_URL=https://analytics.champagnefestival.be/script.js
-VITE_UMAMI_WEBSITE_ID=<your-website-uuid>
+VITE_CF_BEACON_TOKEN=<your-32-char-token-from-cloudflare-dashboard>
 ```
+
+The Vite build injects the beacon `<script defer>` tag into `index.html` automatically when the token is set. If the variable is empty the script is omitted entirely, keeping development and staging builds clean.
+
+> **Note:** A Python/FastAPI backend approach cannot track page loads in this architecture — Caddy serves the static frontend directly, so the backend only ever sees `/api/*` requests.

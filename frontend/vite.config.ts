@@ -20,14 +20,23 @@ export default defineConfig(({ mode }) => {
       }),
       reactPlugin(),
       {
-        name: "analytics",
+        name: "cloudflare-analytics",
         transformIndexHtml(html) {
-          if (!env.VITE_UMAMI_SCRIPT_URL || !env.VITE_UMAMI_WEBSITE_ID) {
+          const token = env.VITE_CF_BEACON_TOKEN;
+          if (!token) {
             return html;
           }
+          // Validate token is a 32-character hex string before injecting into HTML
+          if (!/^[0-9a-f]{32}$/i.test(token)) {
+            console.warn(
+              `[cloudflare-analytics] VITE_CF_BEACON_TOKEN must be a 32-character hex string — analytics script not injected.`,
+            );
+            return html;
+          }
+          // Regex ensures the token is pure hex — no HTML-special characters possible
           return html.replace(
             "</head>",
-            `  <script defer src="${env.VITE_UMAMI_SCRIPT_URL}" data-website-id="${env.VITE_UMAMI_WEBSITE_ID}"></script>\n  </head>`,
+            `  <script defer src="https://static.cloudflare.com/beacon.min.js" data-cf-beacon='{"token": "${token}"}'></script>\n  </head>`,
           );
         },
       },
