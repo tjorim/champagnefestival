@@ -25,8 +25,11 @@ async def create_area(body: AreaCreate, db: AsyncSession = Depends(get_db)) -> d
 
     if body.exhibitor_id is not None:
         ex = await db.execute(select(Exhibitor).where(Exhibitor.id == body.exhibitor_id))
-        if ex.scalar_one_or_none() is None:
+        exhibitor = ex.scalar_one_or_none()
+        if exhibitor is None:
             raise HTTPException(status_code=404, detail=f"Exhibitor '{body.exhibitor_id}' not found.")
+        if not exhibitor.active:
+            raise HTTPException(status_code=400, detail=f"Exhibitor '{body.exhibitor_id}' is inactive.")
 
     a = Area(
         id=make_id("area"),
@@ -83,13 +86,16 @@ async def update_area(
         a.width_m = body.width_m
     if body.length_m is not None:
         a.length_m = body.length_m
-    if "rotation" in body.model_fields_set and body.rotation is not None:
+    if body.rotation is not None:
         a.rotation = body.rotation
     if "exhibitor_id" in body.model_fields_set:
         if body.exhibitor_id is not None:
             ex = await db.execute(select(Exhibitor).where(Exhibitor.id == body.exhibitor_id))
-            if ex.scalar_one_or_none() is None:
+            exhibitor = ex.scalar_one_or_none()
+            if exhibitor is None:
                 raise HTTPException(status_code=404, detail="Exhibitor not found.")
+            if not exhibitor.active:
+                raise HTTPException(status_code=400, detail="Exhibitor is inactive.")
         a.exhibitor_id = body.exhibitor_id
 
     await db.commit()

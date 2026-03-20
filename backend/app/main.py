@@ -4,9 +4,11 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.database import create_tables
@@ -87,6 +89,15 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
+
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    logger.warning("IntegrityError on %s: %s", request.url.path, exc.orig)
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "Cannot complete this operation because related records exist."},
+    )
+
 
 app.include_router(reservations.router)
 app.include_router(members.router)

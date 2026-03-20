@@ -159,7 +159,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           body: JSON.stringify({ active: false }),
         });
         if (res.ok) {
-          const saved = (await res.json()) as ItemDraft;
+          const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
           setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
         } else {
           setActionError(m.admin_content_error_save());
@@ -181,7 +181,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           body: JSON.stringify({ active: true }),
         });
         if (res.ok) {
-          const saved = (await res.json()) as ItemDraft;
+          const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
           setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
         } else {
           setActionError(m.admin_content_error_save());
