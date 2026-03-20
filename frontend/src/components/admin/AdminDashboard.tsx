@@ -752,9 +752,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleChangeTableType = useCallback(
     async (tableId: string, tableTypeId: string) => {
-      let previousTables: FloorTable[] = [];
+      let previousTable: FloorTable | undefined;
       setTables((prev) => {
-        previousTables = prev;
+        previousTable = prev.find((t) => t.id === tableId);
         return prev.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t));
       });
       try {
@@ -767,12 +767,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           const d = await response.json().catch(() => ({}));
           throw new Error(
             (d as { detail?: string }).detail ??
-              `Failed to persist table type change (status ${response.status})`,
+              m.admin_error_change_table_type_status({ status: response.status }),
           );
         }
       } catch (err) {
         console.error("Failed to persist table type change", err);
-        setTables(previousTables);
+        if (previousTable !== undefined) {
+          const snapshot = previousTable;
+          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+        }
         throw err;
       }
     },
@@ -781,9 +784,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleUpdateTable = useCallback(
     async (tableId: string, name: string) => {
-      let previousTables: FloorTable[] = [];
+      let previousTable: FloorTable | undefined;
       setTables((prev) => {
-        previousTables = prev;
+        previousTable = prev.find((t) => t.id === tableId);
         return prev.map((t) => (t.id === tableId ? { ...t, name } : t));
       });
       try {
@@ -795,11 +798,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (!response.ok) {
           const d = await response.json().catch(() => ({}));
           throw new Error(
-            (d as { detail?: string }).detail ?? `Failed to persist table name (status ${response.status})`,
+            (d as { detail?: string }).detail ??
+              m.admin_error_update_table_name_status({ status: response.status }),
           );
         }
       } catch (err) {
-        setTables(previousTables);
+        if (previousTable !== undefined) {
+          const snapshot = previousTable;
+          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+        }
         console.error("Failed to persist table name", err);
         throw err;
       }
@@ -827,9 +834,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
 
-      let previousAreas: FloorArea[] = [];
+      let previousArea: FloorArea | undefined;
       setAreas((prev) => {
-        previousAreas = prev;
+        previousArea = prev.find((a) => a.id === areaId);
         return prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a));
       });
       try {
@@ -841,11 +848,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (!response.ok) {
           const d = await response.json().catch(() => ({}));
           throw new Error(
-            (d as { detail?: string }).detail ?? `Failed to persist area resize (status ${response.status})`,
+            (d as { detail?: string }).detail ??
+              m.admin_error_resize_area_status({ status: response.status }),
           );
         }
       } catch (err) {
-        setAreas(previousAreas);
+        if (previousArea !== undefined) {
+          const snapshot = previousArea;
+          setAreas((prev) => prev.map((a) => (a.id === areaId ? snapshot : a)));
+        }
         console.error("Failed to persist area resize", err);
         throw err;
       }
