@@ -44,6 +44,7 @@ if _is_sqlite:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=5000")  # milliseconds to wait before returning SQLITE_BUSY
         cursor.close()
 
 async_session_factory = async_sessionmaker(

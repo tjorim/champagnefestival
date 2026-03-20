@@ -185,15 +185,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
 
       if (responses.some((r) => !r.ok)) {
-        setReservations([]);
-        setTables([]);
-        setVenues([]);
-        setRooms([]);
-        setTableTypes([]);
-        setLayouts([]);
-        setExhibitors([]);
-        setAreas([]);
-        setPeople([]);
         setError(m.admin_error_load_data());
         return;
       }
