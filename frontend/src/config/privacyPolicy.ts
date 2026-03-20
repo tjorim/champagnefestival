@@ -35,6 +35,10 @@ export const privacyPolicyConfig: PrivacyPolicyConfig = {
       getContent: m.privacy_data_protection_content,
     },
     {
+      getTitle: m.privacy_analytics_title,
+      getContent: m.privacy_analytics_content,
+    },
+    {
       getTitle: m.privacy_cookies_title,
       getContent: m.privacy_cookies_content,
     },
