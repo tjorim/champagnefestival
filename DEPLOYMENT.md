@@ -1,56 +1,53 @@
-# Deployment (Production): GitHub Pages
+# Deployment guide
 
-This repository's production deployment target is **GitHub Pages**.
+This repository contains:
 
-The canonical deploy pipeline is the GitHub Actions workflow at
-[`./.github/workflows/deploy.yml`](./.github/workflows/deploy.yml), which builds the Vite app and publishes the
-`dist/` output to GitHub Pages.
+- A **React/Vite frontend** in `frontend/`.
+- A **FastAPI backend** in `backend/`.
 
-## How production deploys work
+Production runs on a **VPS** with Caddy as the reverse proxy.
 
-Production deploys are triggered by:
+## Architecture
 
-1. Publishing a GitHub Release (`release.published`), or
-2. Manually running the workflow (`workflow_dispatch`).
-
-On each deploy run, the workflow:
-
-1. Checks out the repository
-2. Installs dependencies with `npm ci`
-3. Runs linting (`npm run lint`)
-4. Runs tests (`npm run test`)
-5. Builds the site (`npm run build`)
-6. Uploads `dist/` and deploys it to GitHub Pages
-
-## Prerequisites
-
-- GitHub Pages enabled for this repository
-- GitHub Actions enabled for this repository
-- Node.js 20+ for local validation
-
-## Local pre-deploy check
-
-Run the same core checks locally before creating a release:
-
-```bash
-npm ci
-npm run lint
-npm run test
-npm run build
+```
+VPS
+├── Caddy  (TLS termination + reverse proxy)
+│   └── champagnefestival.be  →  frontend static files + /api/* → backend
+└── champagnefestival-api  (FastAPI, port 8000, internal only)
 ```
 
-The production-ready static output is generated in `dist/`.
+Caddy handles HTTPS certificates automatically via Let's Encrypt.
 
-## Repository settings
+## Frontend build
 
-In GitHub repository settings:
+Build the frontend and ensure `frontend/dist/` is up to date before deploying:
 
-1. Go to **Settings → Pages**
-2. Ensure the source is set to **GitHub Actions**
+```bash
+cd frontend
+pnpm install
+pnpm build
+```
 
-## Notes on hosting assumptions
+The `frontend/dist/` output is served as static files by Caddy.
 
-- [`vite.config.ts`](./vite.config.ts) uses `base: "/champagnefestival/"` to match GitHub Pages
-  project-site hosting under the repository path.
-- Cloudflare Pages/Wrangler deployment instructions were removed because they
-  are not the production deployment path for this repository.
+## Backend environment
+
+The backend reads configuration from environment variables — see `backend/.env.example` for all options.
+
+Key variables:
+
+| Variable | Description |
+|---|---|
+| `ENVIRONMENT` | Set to `production` |
+| `ADMIN_TOKEN` | Long random string for admin bearer auth |
+| `DATABASE_URL` | e.g. `sqlite+aiosqlite:////var/data/champagne/champagne.db` |
+| `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
+| `SMTP_*` | Optional — reservation confirmation emails |
+
+## Database migrations
+
+Run Alembic migrations on first deploy and after each schema change:
+
+```bash
+docker compose run --rm champagnefestival-api alembic upgrade head
+```

@@ -216,11 +216,11 @@ Public endpoints (reservation creation, check-in) do not require a token.
 
 ---
 
+
 ## Frontend integration
 
 The React (Vite) frontend proxies `/api/*` to the backend during development
-via `vite.config.ts`. In production, configure your reverse proxy (nginx or
-similar) to route `/api/*` requests to the FastAPI process.
+via `vite.config.ts`. In production, Caddy routes `/api/*` requests to the FastAPI process.
 
 Set the `CORS_ORIGINS` env var to the origin(s) of your frontend deployment so
 the browser can reach the API:
