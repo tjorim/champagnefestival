@@ -34,7 +34,6 @@ const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
-const MyReservationsPage = lazy(() => import("./components/MyReservationsPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -132,23 +131,6 @@ function CheckInRoute() {
       <main id="main-content">
         <AppSuspense errorFallbackText={m.admin_error_load_checkin()}>
           <CheckInPage />
-        </AppSuspense>
-      </main>
-    </div>
-  );
-}
-
-/** Route component for /my-reservations */
-function MyReservationsRoute() {
-  return (
-    <div className="App">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_reservations_title()} />
-      <main id="main-content">
-        <AppSuspense errorFallbackText={m.my_reservations_error()}>
-          <MyReservationsPage />
         </AppSuspense>
       </main>
     </div>
@@ -443,7 +425,6 @@ ReactDOM.createRoot(rootElement).render(
       <Routes>
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/check-in" element={<CheckInRoute />} />
-        <Route path="/my-reservations" element={<MyReservationsRoute />} />
         <Route path="*" element={<App />} />
       </Routes>
     </BrowserRouter>

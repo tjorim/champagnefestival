@@ -482,15 +482,5 @@
   "admin_people_view_reservations": "Reservaties bekijken",
   "admin_people_reservations_modal_title": "Reservaties",
   "admin_people_reservations_empty": "Geen reservaties gevonden voor deze persoon.",
-  "admin_people_reservations_load_error": "Laden van reservaties mislukt.",
-  "my_reservations_title": "Mijn Reservaties",
-  "my_reservations_description": "Vul je e-mailadres in om je reservaties te bekijken.",
-  "my_reservations_email_label": "E-mailadres",
-  "my_reservations_email_placeholder": "jouw@email.be",
-  "my_reservations_search": "Opzoeken",
-  "my_reservations_searching": "Opzoeken...",
-  "my_reservations_no_results": "Geen reservaties gevonden voor dit e-mailadres.",
-  "my_reservations_error": "Er is een fout opgetreden bij het opzoeken van je reservaties.",
-  "my_reservations_guests_label": "gasten",
-  "my_reservations_checkedin_label": "Ingecheckt"
+  "admin_people_reservations_load_error": "Laden van reservaties mislukt."
 }
