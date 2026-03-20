@@ -767,21 +767,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleUpdateTable = useCallback(
-    async (tableId: string, updates: { name?: string; capacity?: number }) => {
-      setTables((prev) =>
-        prev.map((t) => (t.id === tableId ? { ...t, ...updates } : t)),
-      );
+    async (tableId: string, name: string) => {
+      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, name } : t)));
       try {
         await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({
-            ...(updates.name !== undefined && { name: updates.name }),
-            ...(updates.capacity !== undefined && { capacity: updates.capacity }),
-          }),
+          body: JSON.stringify({ name }),
         });
       } catch (err) {
-        console.error("Failed to persist table update", err);
+        console.error("Failed to persist table name", err);
       }
     },
     [authHeaders],

@@ -154,7 +154,7 @@ interface LayoutEditorProps {
   ) => Promise<void>;
   onUpdateAreaLabel: (areaId: string, label: string) => void;
   onChangeTableType: (tableId: string, tableTypeId: string) => Promise<void>;
-  onUpdateTable: (tableId: string, updates: { name?: string; capacity?: number }) => Promise<void>;
+  onUpdateTable: (tableId: string, name: string) => Promise<void>;
   onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
 }
 
@@ -1006,7 +1006,7 @@ export default function LayoutEditor({
                 onBlur={async (e) => {
                   const val = e.target.value.trim();
                   if (val && val !== selectedTableData.name) {
-                    await onUpdateTable(selectedTableData.id, { name: val });
+                    await onUpdateTable(selectedTableData.id, val);
                   }
                 }}
                 key={`name-${selectedTableData.id}`}
