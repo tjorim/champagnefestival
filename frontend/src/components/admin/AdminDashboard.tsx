@@ -1272,6 +1272,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       people={people}
                       reservationCountByPersonId={reservationCountByPersonId}
                       isLoading={isLoading}
+                      authHeaders={authHeaders}
                       onMerge={handleMergePeople}
                       onCreate={handleCreatePerson}
                       onUpdate={handleUpdatePerson}

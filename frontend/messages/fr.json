@@ -478,5 +478,19 @@
   "admin_people_emails_copied": "Adresses e-mail copiées !",
   "admin_people_no_emails": "Aucune adresse e-mail disponible.",
   "admin_people_error_create": "Échec de la création de la personne.",
-  "admin_people_error_update": "Échec de la mise à jour de la personne."
+  "admin_people_error_update": "Échec de la mise à jour de la personne.",
+  "admin_people_view_reservations": "Voir les réservations",
+  "admin_people_reservations_modal_title": "Réservations",
+  "admin_people_reservations_empty": "Aucune réservation trouvée pour cette personne.",
+  "admin_people_reservations_load_error": "Échec du chargement des réservations.",
+  "my_reservations_title": "Mes Réservations",
+  "my_reservations_description": "Saisissez votre adresse e-mail pour consulter vos réservations.",
+  "my_reservations_email_label": "Adresse e-mail",
+  "my_reservations_email_placeholder": "votre@email.fr",
+  "my_reservations_search": "Rechercher",
+  "my_reservations_searching": "Recherche...",
+  "my_reservations_no_results": "Aucune réservation trouvée pour cette adresse e-mail.",
+  "my_reservations_error": "Une erreur s'est produite lors de la recherche de vos réservations.",
+  "my_reservations_guests_label": "convives",
+  "my_reservations_checkedin_label": "Enregistré"
 }
