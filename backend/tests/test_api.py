@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.config import Settings
+from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.database import Base, get_db
 from app.main import app
 from app.models import ReservationAccessToken
@@ -89,6 +89,17 @@ async def test_health(client):
 def test_settings_reject_nonpositive_guest_access_token_ttl():
     with pytest.raises(ValidationError, match="GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0."):
         Settings(guest_access_token_ttl_minutes=0)
+
+
+def test_settings_reject_excessive_guest_access_token_ttl():
+    with pytest.raises(
+        ValidationError,
+        match=(
+            "GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to "
+            f"{GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}\\."
+        ),
+    ):
+        Settings(guest_access_token_ttl_minutes=GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES + 1)
 
 
 # ---------------------------------------------------------------------------
@@ -327,13 +338,13 @@ async def test_request_my_reservations_access_is_generic(client):
 
     assert found.status_code == 202
     assert missing.status_code == 202
-    assert found.json()["delivery_mode"] == "inline"
-    assert missing.json()["delivery_mode"] == "inline"
+    assert found.json()["delivery_mode"] == "email"
+    assert missing.json()["delivery_mode"] == "email"
     assert found.json()["expires_in_minutes"] == missing.json()["expires_in_minutes"]
-    assert found.json()["access_token"]
-    assert missing.json()["access_token"]
-    assert found.json()["access_url"].startswith("/my-reservations?token=")
-    assert missing.json()["access_url"].startswith("/my-reservations?token=")
+    assert "access_token" not in found.json()
+    assert "access_token" not in missing.json()
+    assert "access_url" not in found.json()
+    assert "access_url" not in missing.json()
 
 
 @pytest.mark.anyio
@@ -347,7 +358,6 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
 
     r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
-    assert r.json()["access_token"] == token
 
     token_rows = (
         await db_session.execute(select(ReservationAccessToken))
@@ -355,6 +365,7 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     assert len(token_rows) == 1
     assert token_rows[0].email == "jean@example.com"
     assert token_rows[0].token_hash != token
+    assert token_rows[0].token_hash == hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     r = await client.post(
         "/api/reservations/my/access", json={"token": token}
@@ -429,6 +440,30 @@ async def test_my_reservations_access_multiple_editions(client, monkeypatch):
     )
     assert r.status_code == 200
     assert len(r.json()) == 2
+
+
+@pytest.mark.anyio
+async def test_my_reservations_request_reuses_existing_token_row(client, db_session, monkeypatch):
+    tokens = iter(["guest-access-token-12345", "guest-access-token-67890"])
+    monkeypatch.setattr(
+        "app.routers.reservations.secrets.token_urlsafe",
+        lambda _: next(tokens),
+    )
+
+    first = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    second = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+
+    assert first.status_code == 202
+    assert second.status_code == 202
+
+    token_rows = (
+        await db_session.execute(select(ReservationAccessToken))
+    ).scalars().all()
+    assert len(token_rows) == 1
+    assert token_rows[0].email == "jean@example.com"
+    assert token_rows[0].token_hash == hashlib.sha256(
+        b"guest-access-token-67890"
+    ).hexdigest()
 
 
 # ---------------------------------------------------------------------------

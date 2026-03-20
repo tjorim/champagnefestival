@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 logger = logging.getLogger(__name__)
 
 DEFAULT_ADMIN_TOKEN = ""
+GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES = 60
 
 
 class Settings(BaseSettings):
@@ -87,6 +88,11 @@ class Settings(BaseSettings):
     def validate_guest_access_token_ttl_minutes(cls, v: int) -> int:
         if v <= 0:
             raise ValueError("GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0.")
+        if v > GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES:
+            raise ValueError(
+                "GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to "
+                f"{GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}."
+            )
         return v
 
     @model_validator(mode="after")

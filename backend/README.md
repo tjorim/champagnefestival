@@ -161,6 +161,7 @@ location /api/ {
 | `DATABASE_URL`     | no       | `sqlite+aiosqlite:////var/data/champagne/champagne.db` | Async SQLAlchemy URL                                                 |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `MIN_FORM_SECONDS` | no       | `3`                                                    | Anti-spam: min seconds to fill the form                              |
+| `GUEST_ACCESS_TOKEN_TTL_MINUTES` | no | `30` | TTL in minutes for short-lived guest access tokens used by `/api/reservations/my/request` and `/api/reservations/my/access` |
 | `SMTP_HOST`        | no       | —                                                      | SMTP server (planned — see below)                                    |
 | `SMTP_PORT`        | no       | `587`                                                  | SMTP port (planned)                                                  |
 | `SMTP_USER`        | no       | —                                                      | SMTP username (planned)                                              |
@@ -187,7 +188,7 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | `POST`   | `/api/reservations`             | public         | Create a reservation                                                       |
 | `GET`    | `/api/reservations`             | admin          | List reservations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
-| `POST`   | `/api/reservations/my/request`  | public         | Prepare a short-lived visitor access link; returns it inline until SMTP is wired up |
+| `POST`   | `/api/reservations/my/request`  | public         | Prepare a short-lived visitor access link for out-of-band delivery.       |
 | `POST`   | `/api/reservations/my/access`   | public + token | View visitor reservations using a short-lived secure token                 |
 | `GET`    | `/api/reservations/{id}`        | admin          | Get reservation detail (token included)                                    |
 | `PUT`    | `/api/reservations/{id}`        | admin          | Update reservation                                                         |

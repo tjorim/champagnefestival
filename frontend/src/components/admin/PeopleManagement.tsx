@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -68,6 +68,7 @@ export default function PeopleManagement({
   const [personReservations, setPersonReservations] = useState<PersonReservation[]>([]);
   const [loadingPersonReservations, setLoadingPersonReservations] = useState(false);
   const [personReservationsError, setPersonReservationsError] = useState(false);
+  const reservationsFetchControllerRef = useRef<AbortController | null>(null);
 
   const filtered = q.trim() || roleFilter !== "all"
     ? people.filter((p) => {
@@ -163,18 +164,36 @@ export default function PeopleManagement({
     }
   };
 
+  const closePersonReservations = useCallback(() => {
+    reservationsFetchControllerRef.current?.abort();
+    reservationsFetchControllerRef.current = null;
+    setLoadingPersonReservations(false);
+    setViewReservationsPerson(null);
+  }, []);
+
   const openPersonReservations = useCallback(
     async (person: Person) => {
+      reservationsFetchControllerRef.current?.abort();
+      const controller = new AbortController();
+      reservationsFetchControllerRef.current = controller;
+
       setViewReservationsPerson(person);
       setPersonReservations([]);
       setPersonReservationsError(false);
       setLoadingPersonReservations(true);
       try {
         const res = await fetch(`/api/people/${encodeURIComponent(person.id)}/reservations`, {
+          signal: controller.signal,
           headers: authHeaders(),
         });
+        if (reservationsFetchControllerRef.current !== controller) {
+          return;
+        }
         if (res.ok) {
           const data = (await res.json()) as Record<string, unknown>[];
+          if (reservationsFetchControllerRef.current !== controller) {
+            return;
+          }
           setPersonReservations(
             data.map((d) => ({
               id: d.id as string,
@@ -189,14 +208,28 @@ export default function PeopleManagement({
         } else {
           setPersonReservationsError(true);
         }
-      } catch {
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        if (reservationsFetchControllerRef.current !== controller) {
+          return;
+        }
         setPersonReservationsError(true);
       } finally {
-        setLoadingPersonReservations(false);
+        if (reservationsFetchControllerRef.current === controller) {
+          reservationsFetchControllerRef.current = null;
+          setLoadingPersonReservations(false);
+        }
       }
     },
     [authHeaders],
   );
+
+  useEffect(() => () => {
+    reservationsFetchControllerRef.current?.abort();
+    reservationsFetchControllerRef.current = null;
+  }, []);
 
   return (
     <>
@@ -546,7 +579,7 @@ export default function PeopleManagement({
       {viewReservationsPerson && (
         <Modal
           show
-          onHide={() => setViewReservationsPerson(null)}
+          onHide={closePersonReservations}
           centered
           data-bs-theme="dark"
         >
@@ -635,7 +668,7 @@ export default function PeopleManagement({
             <Button
               variant="outline-secondary"
               size="sm"
-              onClick={() => setViewReservationsPerson(null)}
+              onClick={closePersonReservations}
             >
               {m.close()}
             </Button>
