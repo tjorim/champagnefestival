@@ -15,7 +15,9 @@ import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
 import PeopleManagement from "./PeopleManagement";
+import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";
+import type { MemberFormData } from "./MemberFormModal";
 import type { PersonFormData } from "./PersonFormModal";
 import type { VolunteerFormData } from "./VolunteerFormModal";
 import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@/types/reservation";
@@ -172,6 +174,19 @@ function replaceVolunteerById(people: Person[], updatedVolunteer: Person): Perso
   );
 }
 
+function syncMembersWithPerson(members: Person[], person: Person): Person[] {
+  if (!person.roles.includes("member")) {
+    return members.filter((member) => member.id !== person.id);
+  }
+
+  const hasMember = members.some((member) => member.id === person.id);
+  if (!hasMember) {
+    return [person, ...members];
+  }
+
+  return members.map((member) => (member.id === person.id ? person : member));
+}
+
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [token, setToken] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -191,6 +206,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   >([]);
   const [areas, setAreas] = useState<FloorArea[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [members, setMembers] = useState<Person[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
   const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
@@ -202,6 +218,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }),
     [token],
   );
+
+  const loadMembers = useCallback(async (): Promise<Person[]> => {
+    const response = await fetch("/api/members", { headers: authHeaders() });
+    if (response.status === 401) {
+      throw new Error("unauthorized");
+    }
+    if (!response.ok) {
+      const d = await response.json().catch(() => ({}));
+      throw new Error((d as { detail?: string }).detail ?? m.admin_error_load_data());
+    }
+    const data = await response.json();
+    return Array.isArray(data) ? data.map(apiToPerson) : [];
+  }, [authHeaders]);
 
   const loadVolunteers = useCallback(async (): Promise<Person[]> => {
     const response = await fetch("/api/volunteers", { headers: authHeaders() });
@@ -230,6 +259,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         exhibitorsResponse,
         areasResponse,
         peopleResponse,
+        membersData,
+        volunteersData,
       ] = await Promise.all([
         fetch("/api/reservations", { headers: authHeaders() }),
         fetch("/api/tables", { headers: authHeaders() }),
@@ -240,6 +271,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fetch("/api/exhibitors", { headers: authHeaders() }),
         fetch("/api/areas", { headers: authHeaders() }),
         fetch("/api/people", { headers: authHeaders() }),
+        loadMembers(),
+        loadVolunteers(),
       ]);
 
       const responses = [
@@ -306,8 +339,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       const peopleData = await peopleResponse.json();
       const nextPeople = Array.isArray(peopleData) ? peopleData.map(apiToPerson) : [];
-      const volunteersData = await loadVolunteers();
       setPeople(mergePeopleWithVolunteers(nextPeople, volunteersData));
+      setMembers(membersData);
     } catch (err) {
       if (err instanceof Error && err.message === "unauthorized") {
         setIsAuthenticated(false);
@@ -319,7 +352,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [authHeaders, loadVolunteers]);
+  }, [authHeaders, loadMembers, loadVolunteers]);
 
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
@@ -356,6 +389,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setRooms([]);
     setTableTypes([]);
     setPeople([]);
+    setMembers([]);
   }, []);
 
   const handleMergePeople = useCallback(
@@ -370,24 +404,30 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const updated = await response.json();
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
+      const duplicate = people.find((p) => p.id === duplicateId);
+      const existingCanonical = people.find((p) => p.id === canonicalId);
+      const shouldPreserveVolunteerData =
+        canonicalPerson.roles.includes("volunteer") ||
+        existingCanonical?.roles.includes("volunteer") ||
+        duplicate?.roles.includes("volunteer");
+      const mergedCanonical = shouldPreserveVolunteerData
+        ? mergeVolunteerPerson(existingCanonical, {
+            ...canonicalPerson,
+            helpPeriods: existingCanonical?.helpPeriods ?? duplicate?.helpPeriods ?? [],
+          })
+        : canonicalPerson;
       // Replace both the canonical and duplicate in the canonical people list.
-      setPeople((prev) => {
-        const duplicate = prev.find((p) => p.id === duplicateId);
-        const existingCanonical = prev.find((p) => p.id === canonicalId);
-        const shouldPreserveVolunteerData =
-          canonicalPerson.roles.includes("volunteer") ||
-          existingCanonical?.roles.includes("volunteer") ||
-          duplicate?.roles.includes("volunteer");
-        const mergedCanonical = shouldPreserveVolunteerData
-          ? mergeVolunteerPerson(existingCanonical, {
-              ...canonicalPerson,
-              helpPeriods: existingCanonical?.helpPeriods ?? duplicate?.helpPeriods ?? [],
-            })
-          : canonicalPerson;
-        return prev
+      setPeople((prev) =>
+        prev
           .filter((p) => p.id !== duplicateId)
-          .map((p) => (p.id === canonicalId ? mergedCanonical : p));
-      });
+          .map((p) => (p.id === canonicalId ? mergedCanonical : p)),
+      );
+      setMembers((prev) =>
+        syncMembersWithPerson(
+          prev.filter((member) => member.id !== duplicateId),
+          mergedCanonical,
+        ),
+      );
       // Re-point any reservations in state that were on the duplicate;
       // also refresh person data on any already-canonical reservations (merged fields may have changed).
       setReservations((prev) =>
@@ -405,6 +445,104 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           ex.contactPersonId === duplicateId ? { ...ex, contactPersonId: canonicalId } : ex,
         ),
       );
+    },
+    [authHeaders, people],
+  );
+
+  const handleCreateMember = useCallback(
+    async (data: MemberFormData) => {
+      const response = await fetch("/api/members", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone,
+          address: data.address,
+          club_name: data.clubName,
+          notes: data.notes,
+          active: data.active,
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_create());
+      }
+      const d = await response.json();
+      const createdMember = apiToPerson(d as Record<string, unknown>);
+      setMembers((prev) => [createdMember, ...prev]);
+      setPeople((prev) => [createdMember, ...prev]);
+    },
+    [authHeaders],
+  );
+
+  const handleUpdateMember = useCallback(
+    async (id: string, data: MemberFormData) => {
+      const response = await fetch(`/api/members/${id}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email || null,
+          phone: data.phone,
+          address: data.address,
+          club_name: data.clubName,
+          notes: data.notes,
+          active: data.active,
+        }),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_update());
+      }
+      const d = await response.json();
+      const updatedMember = apiToPerson(d as Record<string, unknown>);
+      setMembers((prev) => prev.map((member) => (member.id === id ? updatedMember : member)));
+      setPeople((prev) => replacePersonById(prev, updatedMember));
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.personId === id
+            ? {
+                ...r,
+                person: {
+                  id: updatedMember.id,
+                  name: updatedMember.name,
+                  email: updatedMember.email,
+                  phone: updatedMember.phone,
+                },
+              }
+            : r,
+        ),
+      );
+      setDetailReservation((prev) =>
+        prev?.person.id === id
+          ? {
+              ...prev,
+              person: {
+                id: updatedMember.id,
+                name: updatedMember.name,
+                email: updatedMember.email,
+                phone: updatedMember.phone,
+              },
+            }
+          : prev,
+      );
+    },
+    [authHeaders],
+  );
+
+  const handleDeleteMember = useCallback(
+    async (id: string) => {
+      const response = await fetch(`/api/members/${id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const d = await response.json().catch(() => ({}));
+        throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_delete());
+      }
+      setMembers((prev) => prev.filter((member) => member.id !== id));
+      setPeople((prev) => prev.filter((person) => person.id !== id));
     },
     [authHeaders],
   );
@@ -430,7 +568,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_people_error_create());
       }
       const d = await response.json();
-      setPeople((prev) => [apiToPerson(d as Record<string, unknown>), ...prev]);
+      const createdPerson = apiToPerson(d as Record<string, unknown>);
+      setPeople((prev) => [createdPerson, ...prev]);
+      setMembers((prev) => syncMembersWithPerson(prev, createdPerson));
     },
     [authHeaders],
   );
@@ -458,6 +598,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       const d = await response.json();
       const updated = apiToPerson(d as Record<string, unknown>);
       setPeople((prev) => replacePersonById(prev, updated));
+      setMembers((prev) => syncMembersWithPerson(prev, updated));
       setReservations((prev) =>
         prev.map((r) =>
           r.personId === id
@@ -501,6 +642,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_person());
       }
       setPeople((prev) => prev.filter((p) => p.id !== id));
+      setMembers((prev) => prev.filter((member) => member.id !== id));
     },
     [authHeaders],
   );
@@ -557,6 +699,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       const d = await response.json();
       const updatedVolunteer = apiToPerson(d as Record<string, unknown>);
       setPeople((prev) => replaceVolunteerById(prev, updatedVolunteer));
+      setMembers((prev) =>
+        prev.map((member) =>
+          member.id === id
+            ? {
+                ...member,
+                name: updatedVolunteer.name,
+                address: updatedVolunteer.address,
+                active: updatedVolunteer.active,
+                updatedAt: updatedVolunteer.updatedAt,
+              }
+            : member,
+        ),
+      );
     },
     [authHeaders],
   );
@@ -572,6 +727,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_delete());
       }
       setPeople((prev) => prev.filter((person) => person.id !== id));
+      setMembers((prev) => prev.filter((member) => member.id !== id));
     },
     [authHeaders],
   );
@@ -1503,6 +1659,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
+                    <Nav.Link eventKey="members" className="text-light">
+                      <i className="bi bi-person-badge me-2" aria-hidden="true" />
+                      {m.admin_members_tab()}
+                      <span className="badge bg-secondary ms-2">{members.length}</span>
+                    </Nav.Link>
+                  </Nav.Item>
+                  <Nav.Item>
                     <Nav.Link eventKey="volunteers" className="text-light">
                       <i className="bi bi-hand-thumbs-up me-2" aria-hidden="true" />
                       {m.admin_volunteers_tab()}
@@ -1586,6 +1749,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onCreate={handleCreatePerson}
                       onUpdate={handleUpdatePerson}
                       onDelete={handleDeletePerson}
+                    />
+                  </Tab.Pane>
+                  <Tab.Pane eventKey="members">
+                    <MembersManagement
+                      members={members}
+                      reservationCountByPersonId={reservationCountByPersonId}
+                      isLoading={isLoading}
+                      onCreate={handleCreateMember}
+                      onUpdate={handleUpdateMember}
+                      onDelete={handleDeleteMember}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="volunteers">
