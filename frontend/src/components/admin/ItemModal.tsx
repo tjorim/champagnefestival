@@ -81,7 +81,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
       setType(initial?.type ?? "vendor");
       const cp = initial?.contact_person;
       setContactOption(
-        cp ? { value: cp.id, label: cp.name, sub: [cp.email, cp.phone].filter(Boolean).join(" · ") } : null,
+        cp ? { value: cp.id, label: cp.name, sub: [cp.email, cp.phone].filter(Boolean).join(" · "), email: cp.email ?? "", phone: cp.phone ?? "" } : null,
       );
       setPersonQuery("");
       setPersonOptions([]);
