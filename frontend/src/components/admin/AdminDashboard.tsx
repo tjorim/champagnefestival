@@ -193,6 +193,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setLayouts([]);
         setExhibitors([]);
         setAreas([]);
+        setPeople([]);
         setError(m.admin_error_load_data());
         return;
       }
