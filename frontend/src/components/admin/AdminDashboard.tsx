@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -14,9 +14,11 @@ import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
+import PeopleManagement from "./PeopleManagement";
 import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@/types/reservation";
 import { apiToReservation } from "@/types/reservationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
+import { type Person, apiToPerson } from "@/types/person";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -125,6 +127,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     { id: number; name: string; active: boolean; contactPersonId: string | null }[]
   >([]);
   const [areas, setAreas] = useState<FloorArea[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
   const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
@@ -150,6 +153,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         layoutsResponse,
         exhibitorsResponse,
         areasResponse,
+        peopleResponse,
       ] = await Promise.all([
         fetch("/api/reservations", { headers: authHeaders() }),
         fetch("/api/tables", { headers: authHeaders() }),
@@ -159,6 +163,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fetch("/api/layouts", { headers: authHeaders() }),
         fetch("/api/exhibitors", { headers: authHeaders() }),
         fetch("/api/areas", { headers: authHeaders() }),
+        fetch("/api/people", { headers: authHeaders() }),
       ]);
 
       const responses = [
@@ -170,6 +175,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         layoutsResponse,
         exhibitorsResponse,
         areasResponse,
+        peopleResponse,
       ];
 
       if (responses.some((r) => r.status === 401)) {
@@ -221,6 +227,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       const areasData = await areasResponse.json();
       setAreas(Array.isArray(areasData) ? areasData.map(apiAreaToArea) : []);
+
+      const peopleData = await peopleResponse.json();
+      setPeople(Array.isArray(peopleData) ? peopleData.map(apiToPerson) : []);
     } catch (err) {
       console.error("Failed to load dashboard data", err);
       setError(m.admin_error_load_data());
@@ -263,7 +272,47 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setTables([]);
     setRooms([]);
     setTableTypes([]);
+    setPeople([]);
   }, []);
+
+  const handleMergePeople = useCallback(
+    async (canonicalId: string, duplicateId: string) => {
+      const response = await fetch(`/api/people/${canonicalId}/merge/${duplicateId}`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? m.admin_people_merge_error());
+      }
+      const updated = await response.json();
+      const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
+      // Replace both the canonical and duplicate in the people list
+      setPeople((prev) =>
+        prev
+          .filter((p) => p.id !== duplicateId)
+          .map((p) => (p.id === canonicalId ? canonicalPerson : p)),
+      );
+      // Re-point any reservations in state that were on the duplicate;
+      // also refresh person data on any already-canonical reservations (merged fields may have changed).
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.personId === duplicateId
+            ? { ...r, personId: canonicalId, person: canonicalPerson }
+            : r.personId === canonicalId
+            ? { ...r, person: canonicalPerson }
+            : r,
+        ),
+      );
+      // Re-point any exhibitors in state that were linked to the duplicate contact person
+      setExhibitors((prev) =>
+        prev.map((ex) =>
+          ex.contactPersonId === duplicateId ? { ...ex, contactPersonId: canonicalId } : ex,
+        ),
+      );
+    },
+    [authHeaders],
+  );
 
   useEffect(() => {
     if (isAuthenticated && visible) {
@@ -921,6 +970,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
+  // Computed maps derived from people/reservations state — must stay above any early return
+  // to satisfy the Rules of Hooks (hooks must be called unconditionally).
+  const reservationCountByPersonId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of reservations) {
+      if (r.personId == null) continue;
+      counts[r.personId] = (counts[r.personId] ?? 0) + 1;
+    }
+    return Object.fromEntries(people.map((p) => [p.id, counts[p.id] ?? 0]));
+  }, [people, reservations]);
+
   if (!visible) return null;
 
   return (
@@ -1054,6 +1114,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       {m.admin_content_tab()}
                     </Nav.Link>
                   </Nav.Item>
+                  <Nav.Item>
+                    <Nav.Link eventKey="people" className="text-light">
+                      <i className="bi bi-people me-2" aria-hidden="true" />
+                      {m.admin_people_tab()}
+                      <span className="badge bg-secondary ms-2">{people.length}</span>
+                    </Nav.Link>
+                  </Nav.Item>
                 </Nav>
                 <Tab.Content>
                   <Tab.Pane eventKey="reservations">
@@ -1119,6 +1186,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Tab.Pane eventKey="content">
                     <ContentManagement authHeaders={authHeaders} venues={venues} />
                   </Tab.Pane>
+                  <Tab.Pane eventKey="people">
+                    <PeopleManagement
+                      people={people}
+                      reservationCountByPersonId={reservationCountByPersonId}
+                      isLoading={isLoading}
+                      onMerge={handleMergePeople}
+                    />
+                  </Tab.Pane>
                 </Tab.Content>
               </Tab.Container>
             )}
@@ -1130,10 +1205,30 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           <ReservationDetail
             reservation={detailReservation}
             baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
+            emailDuplicates={(() => {
+              const personEmail = detailReservation.person.email.toLowerCase();
+              return people
+                .filter(
+                  (p) =>
+                    p.id !== detailReservation.personId &&
+                    p.email &&
+                    p.email.toLowerCase() === personEmail,
+                )
+                .map((p) => ({ id: p.id, name: p.name }));
+            })()}
             onClose={() => setDetailReservation(null)}
             onToggleDelivered={handleToggleDelivered}
             onCheckIn={handleCheckIn}
             onIssueStrap={handleIssueStrap}
+            onMergeDuplicate={async (canonicalId, duplicateId) => {
+              try {
+                await handleMergePeople(canonicalId, duplicateId);
+                setDetailReservation(null);
+              } catch (err) {
+                console.error("Failed to merge people", err);
+                setError(err instanceof Error ? err.message : m.admin_people_merge_error());
+              }
+            }}
           />
         )}
       </Container>

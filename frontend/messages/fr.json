@@ -439,5 +439,21 @@
   "admin_layout_area_icon_meeting": "Point de rencontre",
   "admin_layout_area_icon_technical": "Technique / Personnel",
   "admin_layout_area_icon_feature": "Attraction",
-  "admin_layout_area_icon_exhibition": "Exposition"
+  "admin_layout_area_icon_exhibition": "Exposition",
+  "admin_people_tab": "Personnes",
+  "admin_people_inactive_badge_label": "inactif",
+  "admin_people_merge_swap_label": "Échanger la personne canonique et le doublon",
+  "admin_people_no_results": "Aucune personne trouvée.",
+  "admin_people_reservations_count": "réservations",
+  "admin_people_roles_label": "Rôles",
+  "admin_people_merge_title": "Fusionner le doublon",
+  "admin_people_merge_into": "Conserver cette personne",
+  "admin_people_merge_discard": "Supprimer le doublon",
+  "admin_people_merge_confirm": "Fusionner",
+  "admin_people_merge_success": "Personnes fusionnées avec succès.",
+  "admin_people_merge_error": "Échec de la fusion.",
+  "admin_people_duplicates_title": "Doublon possible",
+  "admin_people_duplicates_same_email": "Une autre personne avec cet e-mail existe déjà.",
+  "admin_error_load_people": "Échec du chargement des personnes.",
+  "admin_error_delete_person": "Échec de la suppression de la personne."
 }

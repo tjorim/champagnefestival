@@ -1,13 +1,13 @@
 """People CRUD endpoints (admin-only)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Text, cast, or_, select
+from sqlalchemy import Text, cast, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Person, Reservation
+from app.models import Exhibitor, Person, Reservation
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import make_id, person_to_dict, reservation_to_list_dict, roles_contains
 
@@ -45,6 +45,42 @@ def _normalise_optional_identity(value: str | None) -> str | None:
         value = value.replace(ch, "")
     value = value.strip().lower()
     return value or None
+
+
+DEFAULT_COUNTRY_PREFIX = "32"  # Belgium; used when a local number starts with "0"
+
+
+def normalize_phone(phone: str | None, default_country_prefix: str = DEFAULT_COUNTRY_PREFIX) -> str:
+    """Produce an E.164-like canonical form so that equivalent numbers such as
+    '+32 470 12 34 56', '0032 470 12 34 56' and '0470 12 34 56' all normalise to
+    '+32470123456'.
+
+    Rules applied in order:
+    1. Return '' for falsy input.
+    2. Strip all characters except digits and a leading '+'.
+    3. Convert a leading '00' in the digit string to '+'.
+    4. If the digit string starts with a single leading '0', replace it with
+       '+{default_country_prefix}'.
+    5. Prepend '+' if the result contains only digits (no international prefix).
+    """
+    if not phone:
+        return ""
+    # Detect an explicit leading '+' before stripping.
+    has_plus = phone.lstrip().startswith("+")
+    digits = "".join(c for c in phone if c.isdigit())
+    if not digits:
+        return ""
+    if has_plus:
+        # Already had a '+'; keep the digit string as-is (international form).
+        return "+" + digits
+    if digits.startswith("00"):
+        # Leading '00' is the international dialling prefix — convert to '+'.
+        return "+" + digits[2:]
+    if digits.startswith("0"):
+        # Local number with trunk prefix '0' — replace with country prefix.
+        return "+" + default_country_prefix + digits[1:]
+    # Bare digits with no prefix — assume already an international number body.
+    return "+" + digits
 
 
 def _raise_identity_conflict() -> None:
@@ -95,7 +131,7 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         id=make_id("per"),
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
-        phone=body.phone,
+        phone=normalize_phone(body.phone),
         address=body.address,
         first_help_day=body.first_help_day,
         last_help_day=body.last_help_day,
@@ -175,7 +211,6 @@ async def update_person(
 
     for field in (
         "name",
-        "phone",
         "address",
         "first_help_day",
         "last_help_day",
@@ -186,6 +221,9 @@ async def update_person(
     ):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
+
+    if "phone" in body.model_fields_set:
+        person.phone = normalize_phone(body.phone)
 
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""
@@ -241,6 +279,97 @@ async def list_person_reservations(
     for r in rows:
         r._person = person
     return [reservation_to_list_dict(r) for r in rows]
+
+
+@router.post("/{person_id}/merge/{duplicate_id}", response_model=PersonOut)
+async def merge_people(
+    person_id: str,
+    duplicate_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Merge duplicate_id into person_id (admin-only).
+
+    - All reservations and exhibitor contacts linked to the duplicate are
+      re-pointed to the canonical person.
+    - Blank string fields on the canonical person are filled from the duplicate.
+    - Roles are merged (union).
+    - Unique identity fields (national_register_number, eid_document_number)
+      are adopted from the duplicate only if the canonical person lacks them;
+      if both carry conflicting values a 409 is returned.
+    - The duplicate person record is deleted.
+    """
+    if person_id == duplicate_id:
+        raise HTTPException(status_code=400, detail="Cannot merge a person with themselves.")
+
+    canonical = await _get_or_404(db, person_id)
+    duplicate = await _get_or_404(db, duplicate_id)
+
+    # Guard unique identity fields before making any changes.
+    # Normalise values with the same routine used by create/update so that
+    # equivalent but differently-formatted IDs are not treated as conflicts.
+    field_labels = {
+        "national_register_number": "national register number",
+        "eid_document_number": "eID document number",
+    }
+    for field in ("national_register_number", "eid_document_number"):
+        canon_val = _normalise_optional_identity(getattr(canonical, field))
+        dup_val = _normalise_optional_identity(getattr(duplicate, field))
+        if canon_val and dup_val and canon_val != dup_val:
+            label = field_labels[field]
+            raise HTTPException(
+                status_code=409,
+                detail=f"Both persons have a different {label}; resolve manually before merging.",
+            )
+
+    # Normalise canonical's own existing identity fields in-place so the
+    # surviving record is always in canonical form, consistent with
+    # create/update_person.
+    for field in ("national_register_number", "eid_document_number"):
+        existing = getattr(canonical, field)
+        normalised = _normalise_optional_identity(existing)
+        if normalised != existing:
+            setattr(canonical, field, normalised or None)
+
+    # Fill blank string fields on canonical from duplicate.
+    for field in ("email", "phone", "address", "club_name", "notes"):
+        if not getattr(canonical, field) and getattr(duplicate, field):
+            setattr(canonical, field, getattr(duplicate, field))
+
+    # Fill blank nullable fields on canonical from duplicate.
+    for field in ("visits_per_month", "first_help_day", "last_help_day"):
+        if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
+            setattr(canonical, field, getattr(duplicate, field))
+
+    # Merge roles (union).
+    canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
+
+    # Adopt unique identity fields from duplicate if canonical lacks them.
+    # Normalise the value from the duplicate before storing so the canonical
+    # ends up with the same canonical form used by create/update_person.
+    # Clear from duplicate first to avoid unique constraint violation on delete.
+    for field in ("national_register_number", "eid_document_number"):
+        if not getattr(canonical, field) and getattr(duplicate, field):
+            setattr(canonical, field, _normalise_optional_identity(getattr(duplicate, field)))
+            setattr(duplicate, field, None)
+
+    await db.flush()
+
+    # Re-point all reservations and exhibitor contacts.
+    await db.execute(
+        update(Reservation)
+        .where(Reservation.person_id == duplicate_id)
+        .values(person_id=person_id)
+    )
+    await db.execute(
+        update(Exhibitor)
+        .where(Exhibitor.contact_person_id == duplicate_id)
+        .values(contact_person_id=person_id)
+    )
+
+    await db.delete(duplicate)
+    await db.commit()
+    await db.refresh(canonical)
+    return person_to_dict(canonical)
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)

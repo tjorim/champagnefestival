@@ -1071,30 +1071,254 @@ async def test_people_crud_roles_and_filters(client):
     )
     assert r.status_code == 400
 
-    # Reservation history is grouped under the person
+    # Uncertain match (same email, different name) → new person created; admin sees duplicate.
     r = await client.post(
         "/api/reservations",
-        json={
-            **VALID_RESERVATION,
-            "email": "anne@example.com",
-            "name": "Anne Dupuis",
-        },
+        json={**VALID_RESERVATION, "email": "anne@example.com", "name": "A. Dupuis"},
     )
     assert r.status_code == 201
-    assert r.json()["person_id"] == person_id
+    assert r.json()["person_id"] != person_id
 
     r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
-    assert r.json()[0]["person"]["email"] == "anne@example.com"
+    assert len(r.json()) == 0  # uncertain reservation belongs to the newly-created person
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
 
+@pytest.mark.anyio
+async def test_reservation_auto_links_certain_person(client):
+    """Same email + same name (case/whitespace insensitive) → reservation links to existing person."""
+    bob_phone = "+32470123456"
+    r = await client.post("/api/people", json={"name": "Bob Martin", "email": "bob@example.com", "phone": bob_phone}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    bob_id = r.json()["id"]
+
+    # Exact match on email + phone + name → auto-link
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Bob Martin"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] == bob_id
+
+    # Case/whitespace variation still matches
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "BOB@EXAMPLE.COM", "phone": bob_phone, "name": "  bob  martin  "})
+    assert r.status_code == 201
+    assert r.json()["person_id"] == bob_id
+
+    # Different name → new person
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Robert Martin"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] != bob_id
+
+    # Exact match again after a different-name reservation was created → still links to bob_id
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Bob Martin"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] == bob_id
+
+    # Different phone → new person (even if email + name match)
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "name": "Bob Martin", "phone": "+32499111111"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] != bob_id
+
+
+@pytest.mark.anyio
+async def test_normalize_phone_equivalent_inputs(client):
+    """E.164-like normalization: +32 470..., 0032 470..., and 0470... all store as +32470123456."""
+    base_phone_variants = [
+        "+32 470 12 34 56",   # international with spaces
+        "0032 470 12 34 56",  # IDD prefix 00
+        "0470 12 34 56",      # local trunk 0
+    ]
+    canonical_phone = "+32470123456"
+
+    # Create a person with the first variant
+    r = await client.post(
+        "/api/people",
+        json={"name": "Phone Test", "email": "phonetest@example.com", "phone": base_phone_variants[0]},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    person_id = r.json()["id"]
+    assert r.json()["phone"] == canonical_phone
+
+    # POST a reservation using the IDD variant → should link to the same person
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "email": "phonetest@example.com", "phone": base_phone_variants[1], "name": "Phone Test"},
+    )
+    assert r.status_code == 201
+    assert r.json()["person_id"] == person_id
+
+    # POST a reservation using the local trunk variant → should also link to the same person
+    r = await client.post(
+        "/api/reservations",
+        json={**VALID_RESERVATION, "email": "phonetest@example.com", "phone": base_phone_variants[2], "name": "Phone Test"},
+    )
+    assert r.status_code == 201
+    assert r.json()["person_id"] == person_id
+
+    # Update a person using a local variant → stored in canonical form
+    r = await client.put(
+        f"/api/people/{person_id}",
+        json={"name": "Phone Test", "email": "phonetest@example.com", "phone": base_phone_variants[2]},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["phone"] == canonical_phone
+
+
 # ---------------------------------------------------------------------------
-# Members (admin convenience endpoint)
+# People merge endpoint
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_merge_people_requires_auth(client):
+    r = await client.post("/api/people/per_x/merge/per_y")
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_merge_people_not_found(client):
+    r = await client.post("/api/people/nonexistent/merge/also_nonexistent", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_merge_people_canonical_not_found(client):
+    """404 when canonical person ID does not exist."""
+    r = await client.post("/api/people", json={"name": "Real Person", "email": "real@example.com"}, headers=ADMIN_HEADERS)
+    duplicate_id = r.json()["id"]
+    r = await client.post(f"/api/people/nonexistent/merge/{duplicate_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_merge_people_duplicate_not_found(client):
+    """404 when duplicate person ID does not exist."""
+    r = await client.post("/api/people", json={"name": "Canon Only", "email": "canon.only@example.com"}, headers=ADMIN_HEADERS)
+    canonical_id = r.json()["id"]
+    r = await client.post(f"/api/people/{canonical_id}/merge/nonexistent", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_merge_people_self(client):
+    r = await client.post("/api/people", json={"name": "Alice", "email": "alice@example.com"}, headers=ADMIN_HEADERS)
+    pid = r.json()["id"]
+    r = await client.post(f"/api/people/{pid}/merge/{pid}", headers=ADMIN_HEADERS)
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_merge_people_repoints_reservations(client):
+    """Reservations linked to duplicate are re-pointed to canonical after merge."""
+    r = await client.post("/api/people", json={"name": "Canon Person", "email": "canon@example.com", "phone": "+32470000001"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    canonical_id = r.json()["id"]
+
+    r = await client.post("/api/people", json={"name": "Dup Person", "email": "dup@example.com", "phone": "+32470000002"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    dup_id = r.json()["id"]
+
+    # Create a reservation linked to the duplicate
+    r = await client.post(
+        "/api/reservations/admin",
+        json={"person_id": dup_id, "event_id": "event-fri", "event_title": "Test", "guest_count": 1},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    res_id = r.json()["id"]
+
+    # Merge dup into canonical
+    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["id"] == canonical_id
+
+    # Duplicate should be gone
+    r = await client.get(f"/api/people/{dup_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+    # Reservation should now belong to canonical
+    r = await client.get(f"/api/reservations/{res_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["person_id"] == canonical_id
+
+
+@pytest.mark.anyio
+async def test_merge_people_repoints_exhibitor_contact(client):
+    """Exhibitor contact_person_id is updated when its person is merged as duplicate."""
+    r = await client.post("/api/people", json={"name": "Main Person", "email": "main@example.com"}, headers=ADMIN_HEADERS)
+    canonical_id = r.json()["id"]
+
+    r = await client.post("/api/people", json={"name": "Old Contact", "email": "old@example.com"}, headers=ADMIN_HEADERS)
+    dup_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Wine Co", "type": "producer", "contact_person_id": dup_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    exhibitor_id = r.json()["id"]
+
+    # Merge dup into canonical
+    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    # Exhibitor should now point to canonical
+    r = await client.get("/api/exhibitors", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    exhibitor = next((e for e in r.json() if e["id"] == exhibitor_id), None)
+    assert exhibitor is not None
+    assert exhibitor["contact_person_id"] == canonical_id
+
+
+@pytest.mark.anyio
+async def test_merge_people_identity_conflict(client):
+    """409 is raised when both persons have conflicting unique identity fields."""
+    r = await client.post(
+        "/api/people",
+        json={"name": "Person A", "email": "a@example.com", "national_register_number": "12345"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    id_a = r.json()["id"]
+
+    r = await client.post(
+        "/api/people",
+        json={"name": "Person B", "email": "b@example.com", "national_register_number": "99999"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    id_b = r.json()["id"]
+
+    r = await client.post(f"/api/people/{id_a}/merge/{id_b}", headers=ADMIN_HEADERS)
+    assert r.status_code == 409
+    assert "national register number" in r.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_merge_people_fills_blank_fields(client):
+    """Blank string fields on canonical are filled from duplicate."""
+    r = await client.post(
+        "/api/people",
+        json={"name": "Canon", "email": "canon2@example.com", "phone": ""},
+        headers=ADMIN_HEADERS,
+    )
+    canonical_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/people",
+        json={"name": "Dup", "email": "dup2@example.com", "phone": "+32470111222"},
+        headers=ADMIN_HEADERS,
+    )
+    dup_id = r.json()["id"]
+
+    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    # Phone from duplicate should be adopted on canonical
+    assert r.json()["phone"] == "+32470111222"
 
 
 @pytest.mark.anyio

@@ -439,5 +439,21 @@
   "admin_layout_area_icon_meeting": "Meeting Point",
   "admin_layout_area_icon_technical": "Technical / Staff",
   "admin_layout_area_icon_feature": "Feature",
-  "admin_layout_area_icon_exhibition": "Exhibition"
+  "admin_layout_area_icon_exhibition": "Exhibition",
+  "admin_people_tab": "People",
+  "admin_people_inactive_badge_label": "inactive",
+  "admin_people_merge_swap_label": "Swap canonical and duplicate person",
+  "admin_people_no_results": "No people found.",
+  "admin_people_reservations_count": "reservations",
+  "admin_people_roles_label": "Roles",
+  "admin_people_merge_title": "Merge duplicate",
+  "admin_people_merge_into": "Keep this person",
+  "admin_people_merge_discard": "Remove duplicate",
+  "admin_people_merge_confirm": "Merge",
+  "admin_people_merge_success": "People merged successfully.",
+  "admin_people_merge_error": "Failed to merge people.",
+  "admin_people_duplicates_title": "Possible duplicate",
+  "admin_people_duplicates_same_email": "Another person with this email already exists.",
+  "admin_error_load_people": "Failed to load people.",
+  "admin_error_delete_person": "Failed to delete person."
 }

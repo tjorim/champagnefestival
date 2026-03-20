@@ -439,5 +439,21 @@
   "admin_layout_area_icon_meeting": "Ontmoetingspunt",
   "admin_layout_area_icon_technical": "Technisch / Personeel",
   "admin_layout_area_icon_feature": "Attractie",
-  "admin_layout_area_icon_exhibition": "Tentoonstelling"
+  "admin_layout_area_icon_exhibition": "Tentoonstelling",
+  "admin_people_tab": "Personen",
+  "admin_people_inactive_badge_label": "inactief",
+  "admin_people_merge_swap_label": "Wissel canonieke en duplicaat persoon",
+  "admin_people_no_results": "Geen personen gevonden.",
+  "admin_people_reservations_count": "reservaties",
+  "admin_people_roles_label": "Rollen",
+  "admin_people_merge_title": "Duplicaat samenvoegen",
+  "admin_people_merge_into": "Deze persoon behouden",
+  "admin_people_merge_discard": "Duplicaat verwijderen",
+  "admin_people_merge_confirm": "Samenvoegen",
+  "admin_people_merge_success": "Personen samengevoegd.",
+  "admin_people_merge_error": "Samenvoegen mislukt.",
+  "admin_people_duplicates_title": "Mogelijk duplicaat",
+  "admin_people_duplicates_same_email": "Er bestaat al een andere persoon met dit e-mailadres.",
+  "admin_error_load_people": "Laden van personen mislukt.",
+  "admin_error_delete_person": "Verwijderen van persoon mislukt."
 }

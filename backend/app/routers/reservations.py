@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_admin
 from app.database import get_db
 from app.models import Person, Reservation
+from app.routers.people import normalize_phone
 from app.schemas import (
     ReservationAdminCreate,
     ReservationCreate,
@@ -52,20 +53,32 @@ async def create_reservation(
     check_form_timing(body.form_start_time)
 
     email_norm = str(body.email).lower().strip()
+    name_norm = " ".join(body.name.lower().split())
 
-    person_result = await db.execute(select(Person).where(Person.email == email_norm))
-    person = person_result.scalar_one_or_none()
+    phone_norm = normalize_phone(body.phone)
+
+    candidates = (
+        await db.execute(
+            select(Person).where(Person.email == email_norm, Person.phone == phone_norm)
+        )
+    ).scalars().all()
+
+    person = next(
+        (c for c in candidates if " ".join(c.name.lower().split()) == name_norm),
+        None,
+    )
+
     if person is None:
+        # Uncertain or new: create a fresh person record.
+        # If email or phone matches but name differs, the admin People tab will
+        # surface the duplicate for manual review and merging.
         person = Person(
             id=make_id("per"),
             name=body.name,
             email=email_norm,
-            phone=body.phone,
+            phone=phone_norm,
         )
         db.add(person)
-        await db.flush()
-    elif body.phone and body.phone != person.phone:
-        person.phone = body.phone
         await db.flush()
 
     reservation = Reservation(
