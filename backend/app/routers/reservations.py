@@ -52,20 +52,30 @@ async def create_reservation(
     check_form_timing(body.form_start_time)
 
     email_norm = str(body.email).lower().strip()
+    name_norm = " ".join(body.name.lower().split())
 
-    person_result = await db.execute(select(Person).where(Person.email == email_norm))
-    person = person_result.scalar_one_or_none()
-    if person is None:
+    phone_norm = body.phone.strip()
+
+    existing = (
+        await db.execute(
+            select(Person).where(Person.email == email_norm, Person.phone == phone_norm)
+        )
+    ).scalar_one_or_none()
+
+    if existing is not None and " ".join(existing.name.lower().split()) == name_norm:
+        # Certain match — same email + phone + name: link to existing person.
+        person = existing
+    else:
+        # Uncertain or new: create a fresh person record.
+        # If email or phone matches but name differs, the admin People tab will
+        # surface the duplicate for manual review and merging.
         person = Person(
             id=make_id("per"),
             name=body.name,
             email=email_norm,
-            phone=body.phone,
+            phone=phone_norm,
         )
         db.add(person)
-        await db.flush()
-    elif body.phone and body.phone != person.phone:
-        person.phone = body.phone
         await db.flush()
 
     reservation = Reservation(

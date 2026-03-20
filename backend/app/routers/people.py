@@ -1,13 +1,13 @@
 """People CRUD endpoints (admin-only)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Text, cast, or_, select
+from sqlalchemy import Text, cast, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Person, Reservation
+from app.models import Exhibitor, Person, Reservation
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import make_id, person_to_dict, reservation_to_list_dict, roles_contains
 
@@ -241,6 +241,79 @@ async def list_person_reservations(
     for r in rows:
         r._person = person
     return [reservation_to_list_dict(r) for r in rows]
+
+
+@router.post("/{person_id}/merge/{duplicate_id}", response_model=PersonOut)
+async def merge_people(
+    person_id: str,
+    duplicate_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Merge duplicate_id into person_id (admin-only).
+
+    - All reservations and exhibitor contacts linked to the duplicate are
+      re-pointed to the canonical person.
+    - Blank string fields on the canonical person are filled from the duplicate.
+    - Roles are merged (union).
+    - Unique identity fields (national_register_number, eid_document_number)
+      are adopted from the duplicate only if the canonical person lacks them;
+      if both carry conflicting values a 409 is returned.
+    - The duplicate person record is deleted.
+    """
+    if person_id == duplicate_id:
+        raise HTTPException(status_code=400, detail="Cannot merge a person with themselves.")
+
+    canonical = await _get_or_404(db, person_id)
+    duplicate = await _get_or_404(db, duplicate_id)
+
+    # Guard unique identity fields before making any changes.
+    for field in ("national_register_number", "eid_document_number"):
+        canon_val = getattr(canonical, field)
+        dup_val = getattr(duplicate, field)
+        if canon_val and dup_val and canon_val != dup_val:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Both persons have a different {field}; resolve manually before merging.",
+            )
+
+    # Fill blank string fields on canonical from duplicate.
+    for field in ("email", "phone", "address", "club_name", "notes"):
+        if not getattr(canonical, field) and getattr(duplicate, field):
+            setattr(canonical, field, getattr(duplicate, field))
+
+    # Fill blank nullable fields on canonical from duplicate.
+    for field in ("visits_per_month", "first_help_day", "last_help_day"):
+        if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
+            setattr(canonical, field, getattr(duplicate, field))
+
+    # Merge roles (union).
+    canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
+
+    # Adopt unique identity fields from duplicate if canonical lacks them.
+    # Clear from duplicate first to avoid unique constraint violation on delete.
+    for field in ("national_register_number", "eid_document_number"):
+        if not getattr(canonical, field) and getattr(duplicate, field):
+            setattr(canonical, field, getattr(duplicate, field))
+            setattr(duplicate, field, None)
+
+    await db.flush()
+
+    # Re-point all reservations and exhibitor contacts.
+    await db.execute(
+        update(Reservation)
+        .where(Reservation.person_id == duplicate_id)
+        .values(person_id=person_id)
+    )
+    await db.execute(
+        update(Exhibitor)
+        .where(Exhibitor.contact_person_id == duplicate_id)
+        .values(contact_person_id=person_id)
+    )
+
+    await db.delete(duplicate)
+    await db.commit()
+    await db.refresh(canonical)
+    return person_to_dict(canonical)
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)

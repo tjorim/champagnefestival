@@ -1071,25 +1071,49 @@ async def test_people_crud_roles_and_filters(client):
     )
     assert r.status_code == 400
 
-    # Reservation history is grouped under the person
+    # Uncertain match (same email, different name) → new person created; admin sees duplicate.
     r = await client.post(
         "/api/reservations",
-        json={
-            **VALID_RESERVATION,
-            "email": "anne@example.com",
-            "name": "Anne Dupuis",
-        },
+        json={**VALID_RESERVATION, "email": "anne@example.com", "name": "A. Dupuis"},
     )
     assert r.status_code == 201
-    assert r.json()["person_id"] == person_id
+    assert r.json()["person_id"] != person_id
 
     r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
-    assert r.json()[0]["person"]["email"] == "anne@example.com"
+    assert len(r.json()) == 0  # uncertain reservation belongs to the newly-created person
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
+
+
+@pytest.mark.anyio
+async def test_reservation_auto_links_certain_person(client):
+    """Same email + same name (case/whitespace insensitive) → reservation links to existing person."""
+    bob_phone = "+32470123456"
+    r = await client.post("/api/people", json={"name": "Bob Martin", "email": "bob@example.com", "phone": bob_phone}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    bob_id = r.json()["id"]
+
+    # Exact match on email + phone + name → auto-link
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Bob Martin"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] == bob_id
+
+    # Case/whitespace variation still matches
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "BOB@EXAMPLE.COM", "phone": bob_phone, "name": "  bob  martin  "})
+    assert r.status_code == 201
+    assert r.json()["person_id"] == bob_id
+
+    # Different name → new person
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Robert Martin"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] != bob_id
+
+    # Different phone → new person (even if email + name match)
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "name": "Bob Martin", "phone": "+32499111111"})
+    assert r.status_code == 201
+    assert r.json()["person_id"] != bob_id
 
 
 # ---------------------------------------------------------------------------

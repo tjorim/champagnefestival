@@ -1,8 +1,9 @@
 import { useCallback } from "react";
-import Modal from "react-bootstrap/Modal";
+import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
+import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { Reservation, OrderItem } from "@/types/reservation";
@@ -17,19 +18,24 @@ interface ReservationDetailProps {
    * subpath deployments.
    */
   baseUrl: string;
+  /** Other people sharing the same email as this reservation's person — used to surface merge suggestions. */
+  emailDuplicates?: { id: string; name: string }[];
   onClose: () => void;
   onToggleDelivered: (reservationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (reservationId: string) => void;
   onIssueStrap: (reservationId: string) => void;
+  onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
 }
 
 export default function ReservationDetail({
   reservation,
   baseUrl,
+  emailDuplicates = [],
   onClose,
   onToggleDelivered,
   onCheckIn,
   onIssueStrap,
+  onMergeDuplicate,
 }: ReservationDetailProps) {
   const checkInUrl = reservation
     ? `${baseUrl}/check-in?id=${encodeURIComponent(reservation.id)}&token=${encodeURIComponent(reservation.checkInToken ?? "")}`
@@ -112,6 +118,30 @@ export default function ReservationDetail({
             <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>
           )}
         </div>
+
+        {/* Duplicate person warning */}
+        {emailDuplicates.length > 0 && (
+          <Alert variant="warning" className="py-2 mb-3">
+            <div className="fw-semibold mb-1">
+              <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+              {m.admin_people_duplicates_title()}
+            </div>
+            <div className="small mb-2">{m.admin_people_duplicates_same_email()}</div>
+            <div className="d-flex flex-wrap gap-2">
+              {emailDuplicates.map((dup) => (
+                <Button
+                  key={dup.id}
+                  size="sm"
+                  variant="warning"
+                  onClick={() => onMergeDuplicate?.(reservation!.personId, dup.id)}
+                >
+                  <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                  {m.admin_people_merge_title()}: {dup.name}
+                </Button>
+              ))}
+            </div>
+          </Alert>
+        )}
 
         {/* Basic info */}
         <ListGroup variant="flush" className="mb-3">
