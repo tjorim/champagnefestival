@@ -160,8 +160,13 @@ export default function EditionModal({
 
   const isEdit = !!initial;
 
+  // Only producers and sponsors can be linked to editions; vendors are excluded.
+  const programmableExhibitors = allExhibitors.filter(
+    (e) => e.type === "producer" || e.type === "sponsor",
+  );
+
   const exhibitorGroups = (() => {
-    const { active: act, archived: arch } = toOptions(allExhibitors);
+    const { active: act, archived: arch } = toOptions(programmableExhibitors);
     const groups = [];
     if (act.length) groups.push({ label: m.admin_edition_exhibitors(), options: act });
     if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
