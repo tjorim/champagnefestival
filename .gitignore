@@ -141,15 +141,7 @@ dist
 # Build output
 build
 
-# Runtime data directory (SQLite DB, uploads, etc.)
-**/data/
-
-# SQLite / runtime database files
+# Database files
 *.db
-*.sqlite
-*.sqlite3
-champagne.db
-*-journal
-*.db-journal
 *.db-wal
 *.db-shm
