@@ -27,7 +27,49 @@ export interface PersonFormData {
   active: boolean;
 }
 
-const KNOWN_ROLES = ["member", "volunteer", "visitor", "admin"];
+const KNOWN_ROLES = ["member", "volunteer", "visitor", "admin"] as const;
+type KnownRole = (typeof KNOWN_ROLES)[number];
+
+/** Maps localized or variant spellings to canonical role keys */
+const ROLE_ALIASES: Record<string, KnownRole> = {
+  // member
+  member: "member",
+  lid: "member",
+  membre: "member",
+  // volunteer
+  volunteer: "volunteer",
+  vrijwilliger: "volunteer",
+  benevole: "volunteer",
+  bénévole: "volunteer",
+  // visitor
+  visitor: "visitor",
+  bezoeker: "visitor",
+  visiteur: "visitor",
+  // admin
+  admin: "admin",
+  beheerder: "admin",
+  administrateur: "admin",
+};
+
+function canonicalizeRole(raw: string): string {
+  const key = raw.trim().toLowerCase();
+  return ROLE_ALIASES[key] ?? key;
+}
+
+function roleLabel(role: string): string {
+  switch (role) {
+    case "member":
+      return m.admin_role_member();
+    case "volunteer":
+      return m.admin_role_volunteer();
+    case "visitor":
+      return m.admin_role_visitor();
+    case "admin":
+      return m.admin_role_admin();
+    default:
+      return role;
+  }
+}
 
 export default function PersonFormModal({
   show,
@@ -73,10 +115,15 @@ export default function PersonFormModal({
     setSaving(false);
   }, [show, person]);
 
+  // Clear any stale submit error as soon as the user edits any field
+  useEffect(() => {
+    setError(null);
+  }, [name, email, phone, address, clubName, rolesInput, notes, active]);
+
   function parseRoles(raw: string): string[] {
     return raw
       .split(",")
-      .map((r) => r.trim().toLowerCase())
+      .map((r) => canonicalizeRole(r))
       .filter(Boolean);
   }
 
@@ -225,9 +272,8 @@ export default function PersonFormModal({
                   variant={currentRoles.includes(role) ? "warning" : "outline-secondary"}
                   onClick={() => toggleRole(role)}
                   type="button"
-                  className="text-capitalize"
                 >
-                  {role}
+                  {roleLabel(role)}
                 </Button>
               ))}
             </div>

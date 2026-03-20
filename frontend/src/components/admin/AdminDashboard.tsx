@@ -364,6 +364,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       const d = await response.json();
       const updated = apiToPerson(d as Record<string, unknown>);
       setPeople((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.personId === id
+            ? { ...r, person: { id: updated.id, name: updated.name, email: updated.email, phone: updated.phone } }
+            : r,
+        ),
+      );
+      setDetailReservation((prev) =>
+        prev?.person.id === id
+          ? { ...prev, person: { id: updated.id, name: updated.name, email: updated.email, phone: updated.phone } }
+          : prev,
+      );
     },
     [authHeaders],
   );

@@ -315,6 +315,7 @@ export default function PeopleManagement({
                                 setShowForm(true);
                               }}
                               title={m.admin_people_edit_title()}
+                              aria-label={m.admin_people_edit_title()}
                             >
                               <i className="bi bi-pencil" aria-hidden="true" />
                             </Button>
@@ -326,6 +327,7 @@ export default function PeopleManagement({
                                 setDeleteError("");
                               }}
                               title={m.admin_people_delete_title()}
+                              aria-label={m.admin_people_delete_title()}
                             >
                               <i className="bi bi-trash" aria-hidden="true" />
                             </Button>
