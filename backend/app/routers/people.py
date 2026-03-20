@@ -47,13 +47,40 @@ def _normalise_optional_identity(value: str | None) -> str | None:
     return value or None
 
 
-def normalize_phone(phone: str | None) -> str:
-    """Strip all non-digit characters except a leading '+', so that formatted
-    numbers like '+32 470 12 34 56' and '0470 12 34 56' are stored and matched
-    consistently."""
+DEFAULT_COUNTRY_PREFIX = "32"  # Belgium; used when a local number starts with "0"
+
+
+def normalize_phone(phone: str | None, default_country_prefix: str = DEFAULT_COUNTRY_PREFIX) -> str:
+    """Produce an E.164-like canonical form so that equivalent numbers such as
+    '+32 470 12 34 56', '0032 470 12 34 56' and '0470 12 34 56' all normalise to
+    '+32470123456'.
+
+    Rules applied in order:
+    1. Return '' for falsy input.
+    2. Strip all characters except digits and a leading '+'.
+    3. Convert a leading '00' in the digit string to '+'.
+    4. If the digit string starts with a single leading '0', replace it with
+       '+{default_country_prefix}'.
+    5. Prepend '+' if the result contains only digits (no international prefix).
+    """
     if not phone:
         return ""
-    return "".join(c for c in phone if c.isdigit() or c == "+")
+    # Detect an explicit leading '+' before stripping.
+    has_plus = phone.lstrip().startswith("+")
+    digits = "".join(c for c in phone if c.isdigit())
+    if not digits:
+        return ""
+    if has_plus:
+        # Already had a '+'; keep the digit string as-is (international form).
+        return "+" + digits
+    if digits.startswith("00"):
+        # Leading '00' is the international dialling prefix — convert to '+'.
+        return "+" + digits[2:]
+    if digits.startswith("0"):
+        # Local number with trunk prefix '0' — replace with country prefix.
+        return "+" + default_country_prefix + digits[1:]
+    # Bare digits with no prefix — assume already an international number body.
+    return "+" + digits
 
 
 def _raise_identity_conflict() -> None:
@@ -278,13 +305,15 @@ async def merge_people(
     duplicate = await _get_or_404(db, duplicate_id)
 
     # Guard unique identity fields before making any changes.
+    # Normalise values with the same routine used by create/update so that
+    # equivalent but differently-formatted IDs are not treated as conflicts.
     field_labels = {
         "national_register_number": "national register number",
         "eid_document_number": "eID document number",
     }
     for field in ("national_register_number", "eid_document_number"):
-        canon_val = getattr(canonical, field)
-        dup_val = getattr(duplicate, field)
+        canon_val = _normalise_optional_identity(getattr(canonical, field))
+        dup_val = _normalise_optional_identity(getattr(duplicate, field))
         if canon_val and dup_val and canon_val != dup_val:
             label = field_labels[field]
             raise HTTPException(
@@ -306,10 +335,12 @@ async def merge_people(
     canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
 
     # Adopt unique identity fields from duplicate if canonical lacks them.
+    # Normalise the value from the duplicate before storing so the canonical
+    # ends up with the same canonical form used by create/update_person.
     # Clear from duplicate first to avoid unique constraint violation on delete.
     for field in ("national_register_number", "eid_document_number"):
         if not getattr(canonical, field) and getattr(duplicate, field):
-            setattr(canonical, field, getattr(duplicate, field))
+            setattr(canonical, field, _normalise_optional_identity(getattr(duplicate, field)))
             setattr(duplicate, field, None)
 
     await db.flush()
