@@ -1,7 +1,7 @@
 """People CRUD endpoints (admin-only)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select
+from sqlalchemy import Text, cast, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,7 +93,6 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
 
     person = Person(
         id=make_id("per"),
-        person_key=make_id("pkey"),
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
         phone=body.phone,
@@ -107,7 +106,7 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         notes=body.notes,
         active=body.active,
     )
-    person.set_roles(_normalise_roles(body.roles))
+    person.roles = _normalise_roles(body.roles)
 
     db.add(person)
     try:
@@ -147,7 +146,7 @@ async def list_people(
                 Person.eid_document_number.ilike(q_like, escape="\\"),
                 Person.club_name.ilike(q_like, escape="\\"),
                 Person.notes.ilike(q_like, escape="\\"),
-                Person.roles.ilike(q_like, escape="\\"),
+                cast(Person.roles, Text).ilike(q_like, escape="\\"),
             )
         )
 
@@ -215,7 +214,7 @@ async def update_person(
         person.eid_document_number = eid
 
     if body.roles is not None:
-        person.set_roles(_normalise_roles(body.roles))
+        person.roles = _normalise_roles(body.roles)
 
     try:
         await db.commit()
@@ -233,17 +232,15 @@ async def list_person_reservations(
 ) -> list[dict]:
     person = await _get_or_404(db, person_id)
 
-    stmt = select(Reservation).where(Reservation.person_id == person.id)
-    if person.email:
-        stmt = select(Reservation).where(
-            or_(
-                Reservation.person_id == person.id,
-                Reservation.email == person.email,
-            )
-        )
-
-    result = await db.execute(stmt.order_by(Reservation.created_at.desc()))
-    return [reservation_to_list_dict(r) for r in result.scalars().all()]
+    result = await db.execute(
+        select(Reservation)
+        .where(Reservation.person_id == person.id)
+        .order_by(Reservation.created_at.desc())
+    )
+    rows = result.scalars().all()
+    for r in rows:
+        r._person = person
+    return [reservation_to_list_dict(r) for r in rows]
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)

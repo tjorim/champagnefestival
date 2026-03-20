@@ -1,0 +1,560 @@
+/* Reset some default styles for consistency */
+* {
+  box-sizing: border-box;
+}
+
+/* Only limit max-width on img and video elements */
+img,
+video {
+  max-width: 100%;
+}
+
+:root {
+  /* Base brand colors with enhanced contrast for accessibility */
+  --primary-color: #5a7ff0;
+  /* Slightly darker for better contrast */
+  --secondary-color: #9a5df6;
+  /* Slightly darker for better contrast */
+  --text-color: #f0f0f0;
+  /* Brighter for better contrast on dark backgrounds */
+  --text-muted: #c5c5c5;
+  /* For less important text, still WCAG AA compliant */
+  --background-color: #121212;
+  --card-background: #1e1e1e;
+  --header-height: 4rem;
+
+  /* Bootstrap shadow variables */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  padding-top: var(--header-height);
+}
+
+.App {
+  min-height: 100vh;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--primary-color);
+  color: white;
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.2s;
+  border-radius: 0 0 4px 0;
+  text-decoration: none;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.skip-link:focus {
+  top: 0;
+  width: auto;
+  height: auto;
+  clip: auto;
+  overflow: visible;
+  white-space: normal;
+  background: var(--primary-color);
+  color: white;
+  padding: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  border-radius: 0 0 4px 0;
+}
+
+/* Sections */
+.content-section {
+  padding: 4rem 0;
+}
+
+.hero {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  position: relative;
+  z-index: 10;
+  background: radial-gradient(circle at center, rgba(110, 142, 251, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.brand-title {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  padding-bottom: 0.1em;
+}
+
+h2 {
+  font-size: 2.25rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Apply decorative line only to section headers with .section-header class */
+h2.section-header::after {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+.hero-subtitle {
+  font-size: 1.5rem;
+  max-width: 600px;
+  margin-bottom: 2rem;
+}
+
+.highlight-section {
+  background-color: rgba(110, 142, 251, 0.1);
+}
+
+/* Features */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.feature {
+  background-color: var(--card-background);
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.feature:hover {
+  transform: translateY(-5px);
+  border-color: var(--primary-color);
+  box-shadow: 0 10px 15px rgba(110, 142, 251, 0.2);
+}
+
+.feature h3 {
+  color: var(--primary-color);
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.feature p {
+  color: var(--text-color);
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+/* Loading placeholders */
+.map-loading,
+.carousel-loading,
+.bubble-container-placeholder {
+  width: 100%;
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--card-background);
+  border-radius: 10px;
+}
+
+/* Countdown Component */
+.countdown {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+  position: relative;
+  z-index: 50;
+}
+
+.countdown-units {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.countdown-unit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(110, 142, 251, 0.15);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  flex: 1;
+}
+
+.countdown-value {
+  font-weight: bold;
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin-right: 0.5rem;
+  min-width: 2.5ch;
+  text-align: center;
+  display: inline-block;
+}
+
+.countdown-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  min-width: 4ch;
+  text-align: center;
+  display: inline-block;
+}
+
+.countdown-loading,
+.countdown-complete {
+  padding: 1rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* Styling moved to brand color utilities section */
+
+/* Bubble Background Animation */
+.bubble-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: -1;
+  /* ensure it's behind all content */
+  /* Improve performance by offloading animation to GPU */
+  will-change: transform;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -50px;
+  /* start below the visible area */
+  background: rgba(255, 255, 255, 0.3);
+  /* semi-transparent white */
+  border-radius: 50%;
+  height: var(--bubble-size, 20px);
+  /* Fallback size */
+  width: var(--bubble-size, 20px);
+  /* Fallback size */
+  left: var(--bubble-left, 50%);
+  /* Fallback position */
+  /* Use transform for better performance */
+  will-change: transform, opacity;
+  animation: rise var(--bubble-duration, 10s) linear var(--bubble-delay, 0s) infinite;
+  /* Add compatibility for older browsers */
+  -webkit-animation: rise var(--bubble-duration, 10s) linear var(--bubble-delay, 0s) infinite;
+}
+
+/* Add special class for low performance environments */
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    animation-duration: calc(var(--bubble-duration, 10s) * 1.5);
+  }
+}
+
+@keyframes rise {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-120vh);
+    opacity: 0;
+  }
+}
+
+@-webkit-keyframes rise {
+  0% {
+    -webkit-transform: translateY(0);
+    opacity: 1;
+  }
+
+  100% {
+    -webkit-transform: translateY(-120vh);
+    opacity: 0;
+  }
+}
+
+/* Main content and sections */
+main {
+  position: relative;
+  z-index: 10;
+}
+
+.content-section {
+  position: relative;
+  z-index: 10;
+}
+
+/* Basic structure - no special z-index needed */
+
+/* Media queries */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+
+  .content-section {
+    padding: 3rem 0;
+  }
+
+  .container {
+    width: 100%;
+    padding: 0 1rem;
+  }
+
+  .features {
+    grid-template-columns: 1fr;
+  }
+
+  .countdown-units {
+    gap: 0.5rem;
+  }
+
+  .countdown-unit {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+
+  .content-section {
+    padding: 2rem 0;
+  }
+}
+
+/* Sub-scale font size utilities (below Bootstrap's fs-6 / 1rem) */
+.fs-xs {
+  font-size: 0.8rem;
+}
+.fs-2xs {
+  font-size: 0.7rem;
+}
+.fs-3xs {
+  font-size: 0.65rem;
+}
+.fs-4xs {
+  font-size: 0.6rem;
+}
+.fs-5xs {
+  font-size: 0.55rem;
+}
+
+/* Bootstrap theme is now set via data-bs-theme="dark" on the HTML element */
+:root {
+  /* Override Bootstrap variables with our brand colors */
+  --bs-primary: #5a7ff0;
+  --bs-primary-rgb: 90, 127, 240;
+  --bs-secondary: #9a5df6;
+  --bs-secondary-rgb: 154, 93, 246;
+
+  /* Focus styles for accessibility */
+  --focus-ring-color: rgba(90, 127, 240, 0.5);
+  --focus-ring-width: 0.25rem;
+}
+
+/* Only override Bootstrap variables that need customization for our brand */
+
+/* Brand color utilities - with higher specificity instead of !important */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+.gradient-text {
+  /* Softer gradient with better text rendering */
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* Fix for text cut-off issue */
+  padding-bottom: 0.2em;
+  margin-bottom: -0.1em;
+}
+
+.footer-link {
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+}
+
+.footer-link:hover {
+  opacity: 1;
+}
+
+/* Component-specific styles */
+.site-footer {
+  background: linear-gradient(to right, rgba(67, 56, 202, 0.7), rgba(126, 34, 206, 0.7));
+  padding: 1.5rem 0;
+}
+
+/* Map iframe styling */
+.map-iframe {
+  transition: opacity 0.3s ease;
+}
+
+.map-iframe-loading {
+  opacity: 0;
+}
+
+.map-iframe-loaded {
+  opacity: 1;
+}
+
+/* Schedule styling */
+.event-time {
+  min-width: 60px;
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.event-time div:first-child::after {
+  content: "↓";
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* Remove focus outline from bootstrap */
+.schedule-container .nav-tabs .nav-link:focus {
+  outline: none;
+}
+
+/* Custom Accordion Styling */
+.accordion {
+  --bs-accordion-border-width: 0;
+  --bs-accordion-border-radius: 0.5rem;
+  overflow: hidden;
+  margin-top: 2rem;
+}
+
+.accordion-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Add brand colors to accordion focus */
+.accordion-button:focus {
+  box-shadow: none;
+}
+
+/* Fallback for browsers without :focus-visible support */
+:focus {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Modern browsers with :focus-visible support */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Improved focus styles for all interactive elements */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Darker backdrop for better focus */
+.modal-backdrop.show {
+  opacity: 0.75;
+}
+
+/* Handle modal scrolling */
+.modal-close-btn {
+  transition: opacity 0.2s;
+}
+
+.modal-close-btn:hover {
+  opacity: 0.9;
+}
+
+/* Enhanced accessibility features */
+
+/* Visually hidden elements (for screen readers) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ARIA live regions */
+[aria-live="polite"],
+[aria-live="assertive"] {
+  position: relative;
+}
+
+/* Better focus management for forms */
+input:focus,
+select:focus,
+textarea:focus,
+button:focus,
+a:focus {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}

@@ -16,6 +16,9 @@ jobs:
   preview:
     name: Build Preview
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
 
     steps:
       - name: Checkout
@@ -23,12 +26,15 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: frontend/.node-version
           cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -40,19 +46,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pr-preview-${{ github.event.pull_request.number }}
-          path: dist/
+          path: frontend/dist/
           retention-days: 7
-
-      - name: Comment PR with preview link
-        if: github.event.pull_request.head.repo.fork == false
-        uses: marocchino/sticky-pull-request-comment@v3
-        with:
-          header: preview-build
-          message: |
-            ## Preview Build
-
-            A preview build for this PR is available as a downloadable artifact.
-
-            **[Download preview build](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})** (select `pr-preview-${{ github.event.pull_request.number }}` from Artifacts)
-
-            Built from ${{ github.event.pull_request.head.sha }}

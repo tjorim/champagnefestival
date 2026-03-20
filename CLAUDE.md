@@ -1,8 +1,8 @@
 # Champagne Festival Project Guidelines
 
-> **IMPORTANT UPDATE (April 13, 2025)**: The project has been successfully migrated from Next.js back to a standard React application. All Next.js code has been removed.
-
 ## Build Commands
+
+Run all frontend commands from the `frontend/` directory:
 
 - `pnpm dev`: Start React development server
 - `pnpm build`: Create production build
@@ -12,7 +12,7 @@
 ## Important Notes
 
 - The project is a standard React application using Vite as the build tool
-- The `src/` directory contains all application code
+- The `frontend/` directory contains all frontend code; `src/` lives inside it
 
 ## Code Style Guidelines
 
@@ -33,7 +33,7 @@
 ## React Specific Guidelines
 
 - The main marketing site uses hash-based navigation with anchor links handled by the `useScrollNavigation` hook. **Exception**: dedicated sub-pages (`/admin`, `/check-in`) use React Router v7 (`react-router`) with `BrowserRouter` and real URL paths.
-- Use navigation configuration from `src/config/navigation.ts` for consistent routing
+- Use navigation configuration from `frontend/src/config/navigation.ts` for consistent routing
 - Implement code splitting with React.lazy and Suspense
 - Use Paraglide (`@inlang/paraglide-js`) for internationalization
 - Implement error boundaries for graceful error handling
@@ -44,7 +44,7 @@
 
 - **Single-Page Application**: The main marketing page (`/`) uses section-based navigation with hash fragments.
 - **Hash Links**: Use anchor links with `href="#section-id"` format for navigation within the main page.
-- **Navigation Config**: Add new navigation items to `src/config/navigation.ts`
+- **Navigation Config**: Add new navigation items to `frontend/src/config/navigation.ts`
 - **Scroll Navigation**: The `useScrollNavigation` hook automatically handles:
   - Smooth scrolling to target sections
   - URL hash updates when scrolling between sections

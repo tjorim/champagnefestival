@@ -44,7 +44,7 @@ async def create_table(
         rotation=body.rotation,
         layout_id=body.layout_id,
     )
-    t.set_reservation_ids([])
+    t.reservation_ids = []
     db.add(t)
     await db.commit()
     await db.refresh(t)
@@ -102,7 +102,7 @@ async def update_table(
             raise HTTPException(status_code=404, detail=f"TableType '{body.table_type_id}' not found.")
         t.table_type_id = body.table_type_id
     if body.reservation_ids is not None:
-        t.set_reservation_ids(body.reservation_ids)
+        t.reservation_ids = body.reservation_ids
     # Zero-valid fields: must use model_fields_set so that an explicit zero
     # degrees (rotation=0) is honoured even though the value is falsy.
     if "rotation" in body.model_fields_set and body.rotation is not None:
@@ -112,7 +112,6 @@ async def update_table(
         if lay.scalar_one_or_none() is None:
             raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
         t.layout_id = body.layout_id
-
     await db.commit()
     await db.refresh(t)
     return table_to_dict(t)

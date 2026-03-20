@@ -1,7 +1,7 @@
 """Pydantic request / response schemas."""
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
@@ -34,12 +34,52 @@ class OrderItemOut(OrderItemBase):
 
 
 # ---------------------------------------------------------------------------
+# People (output — defined early so reservation schemas can reference it)
+# ---------------------------------------------------------------------------
+
+
+class PersonSummaryOut(BaseModel):
+    """Minimal person projection used in public-facing reservation responses.
+
+    Omits sensitive/admin-only fields so that the public reservation endpoints
+    cannot leak PII (address, roles, national register number, notes, etc.).
+    """
+
+    id: str
+    name: str
+    email: str
+    phone: str
+
+    model_config = {"from_attributes": True}
+
+
+class PersonOut(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: str
+    address: str
+    roles: list[str]
+    first_help_day: date | None
+    last_help_day: date | None
+    national_register_number: str | None
+    eid_document_number: str | None
+    visits_per_month: int | None
+    club_name: str
+    notes: str
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
 # Reservations
 # ---------------------------------------------------------------------------
 
 
 class ReservationCreate(BaseModel):
-    person_key: str | None = Field(default=None, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
@@ -65,24 +105,21 @@ class ReservationUpdate(BaseModel):
     pre_orders: list[OrderItemBase] | None = None
     notes: str | None = None
     accessibility_note: str | None = None
-    person_id: str | None = None
+    person_id: str | None = Field(default=None, min_length=1)
     checked_in: bool | None = None
     strap_issued: bool | None = None
 
 
 class ReservationOut(BaseModel):
     id: str
-    person_key: str | None
-    name: str
-    email: str
-    phone: str
+    person_id: str
+    person: PersonSummaryOut
     event_id: str
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str
     accessibility_note: str
-    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -107,15 +144,13 @@ class ReservationListOut(BaseModel):
     check_in_token is intentionally excluded here."""
 
     id: str
-    person_key: str | None
-    name: str
-    email: str
+    person_id: str
+    person: PersonSummaryOut
     event_id: str
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
     accessibility_note: str
-    person_id: str | None
     table_id: str | None
     status: ReservationStatus
     payment_status: PaymentStatus
@@ -129,14 +164,14 @@ class ReservationListOut(BaseModel):
 
 
 class ReservationGuestOut(BaseModel):
-    person_key: str | None
     """Reservation data returned to visitors via the self-lookup endpoint.
 
-    Only safe-to-expose fields — no phone, no internal notes, no checkInToken.
+    Only safe-to-expose fields — no internal notes, no checkInToken.
     Allows a guest to check their own booking status and pre-order summary.
     """
 
     id: str
+    name: str
     event_id: str
     event_title: str
     guest_count: int
@@ -149,6 +184,24 @@ class ReservationGuestOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ReservationAdminCreate(BaseModel):
+    """Admin-only reservation creation — skips spam checks, accepts person_id directly."""
+
+    person_id: str = Field(min_length=1, max_length=64)
+    event_id: str = Field(min_length=1, max_length=100)
+    event_title: str = Field(min_length=1, max_length=200)
+    guest_count: int = Field(ge=1, le=20)
+    pre_orders: list[OrderItemBase] = Field(default_factory=list)
+    notes: str = Field(default="", max_length=2000)
+    accessibility_note: str = Field(default="", max_length=2000)
+    status: ReservationStatus = "confirmed"
+
+    @field_validator("event_id", "event_title", "notes", mode="before")
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        return v.strip() if isinstance(v, str) else v
 
 
 class VolunteerCreate(BaseModel):
@@ -223,30 +276,78 @@ class CheckInOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Content
+# People
 # ---------------------------------------------------------------------------
 
-#: Keys that are allowed to be stored via the content API.
-ALLOWED_CONTENT_KEYS = frozenset({"producers", "sponsors"})
 
-
-class SliderItem(BaseModel):
-    id: int
+class PersonCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    image: str = Field(min_length=1, max_length=500)
+    email: EmailStr | None = None
+    phone: str = Field(default="", max_length=50)
+    address: str = Field(default="", max_length=300)
+    roles: list[str] = Field(default_factory=list)
+    first_help_day: date | None = None
+    last_help_day: date | None = None
+    national_register_number: str | None = Field(default=None, max_length=20)
+    eid_document_number: str | None = Field(default=None, max_length=50)
+    visits_per_month: int | None = Field(default=None, ge=1, le=31)
+    club_name: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=2000)
     active: bool = True
 
 
-class ContentItemOut(BaseModel):
-    key: str
-    value: list[SliderItem]
+class PersonUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=50)
+    address: str | None = Field(default=None, max_length=300)
+    roles: list[str] | None = None
+    first_help_day: date | None = None
+    last_help_day: date | None = None
+    national_register_number: str | None = Field(default=None, max_length=20)
+    eid_document_number: str | None = Field(default=None, max_length=50)
+    visits_per_month: int | None = Field(default=None, ge=1, le=31)
+    club_name: str | None = Field(default=None, max_length=200)
+    notes: str | None = Field(default=None, max_length=2000)
+    active: bool | None = None
+
+
+# ---------------------------------------------------------------------------
+# Exhibitors
+# ---------------------------------------------------------------------------
+
+
+class ExhibitorCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    image: str = Field(default="", max_length=500)
+    website: str = Field(default="", max_length=500)
+    active: bool = True
+    type: Literal["producer", "sponsor", "vendor"] = "vendor"
+    contact_person_id: str | None = None
+
+
+class ExhibitorUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    image: str | None = Field(default=None, max_length=500)
+    website: str | None = Field(default=None, max_length=500)
+    active: bool | None = None
+    type: Literal["producer", "sponsor", "vendor"] | None = None
+    contact_person_id: str | None = None
+
+
+class ExhibitorOut(BaseModel):
+    id: int
+    name: str
+    image: str
+    website: str
+    active: bool
+    type: str
+    contact_person_id: str | None
+    contact_person: PersonSummaryOut | None
+    created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class ContentItemUpdate(BaseModel):
-    value: list[SliderItem]
 
 
 # ---------------------------------------------------------------------------
@@ -285,9 +386,10 @@ class TableTypeCreate(BaseModel):
     length_m: float = Field(ge=0.1, le=20.0, default=1.8)
     height_type: Literal["low", "high"] = "low"
     max_capacity: int = Field(ge=1, le=50)
+    active: bool = True
 
     @model_validator(mode="after")
-    def normalise_dimensions(self) -> "TableTypeCreate":
+    def normalise_dimensions(self) -> Self:
         if self.shape == "round":
             self.length_m = self.width_m
         elif self.length_m < self.width_m:
@@ -302,6 +404,7 @@ class TableTypeUpdate(BaseModel):
     length_m: float | None = Field(default=None, ge=0.1, le=20.0)
     height_type: Literal["low", "high"] | None = None
     max_capacity: int | None = Field(default=None, ge=1, le=50)
+    active: bool | None = None
 
 
 class TableTypeOut(BaseModel):
@@ -312,6 +415,7 @@ class TableTypeOut(BaseModel):
     length_m: float
     height_type: str
     max_capacity: int
+    active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -354,6 +458,50 @@ class TableOut(BaseModel):
     rotation: int
     layout_id: str
     reservation_ids: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Areas
+# ---------------------------------------------------------------------------
+
+class AreaCreate(BaseModel):
+    layout_id: str = Field(max_length=64)
+    label: str = Field(min_length=1, max_length=200)
+    icon: str = Field(default="bi-shop", max_length=50)
+    exhibitor_id: int | None = None
+    width_m: float = Field(ge=0.1, le=50.0, default=1.5)
+    length_m: float = Field(ge=0.1, le=50.0, default=1.0)
+    x: float = Field(ge=0, le=100, default=50.0)
+    y: float = Field(ge=0, le=100, default=50.0)
+    rotation: int = Field(ge=0, le=359, default=0)
+
+
+class AreaUpdate(BaseModel):
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    icon: str | None = Field(default=None, max_length=50)
+    exhibitor_id: int | None = None
+    width_m: float | None = Field(default=None, ge=0.1, le=50.0)
+    length_m: float | None = Field(default=None, ge=0.1, le=50.0)
+    x: float | None = Field(default=None, ge=0, le=100)
+    y: float | None = Field(default=None, ge=0, le=100)
+    rotation: int | None = Field(default=None, ge=0, le=359)
+
+
+class AreaOut(BaseModel):
+    id: str
+    layout_id: str
+    icon: str
+    exhibitor_id: int | None
+    label: str
+    x: float
+    y: float
+    rotation: int
+    width_m: float
+    length_m: float
     created_at: datetime
     updated_at: datetime
 
@@ -414,6 +562,7 @@ class RoomCreate(BaseModel):
     width_m: float = Field(ge=1, le=500, default=20.0)
     length_m: float = Field(ge=1, le=500, default=15.0)
     color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    active: bool = True
 
 
 class RoomUpdate(BaseModel):
@@ -421,6 +570,7 @@ class RoomUpdate(BaseModel):
     width_m: float | None = Field(default=None, ge=1, le=500)
     length_m: float | None = Field(default=None, ge=1, le=500)
     color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    active: bool | None = None
 
 
 class RoomOut(BaseModel):
@@ -430,6 +580,7 @@ class RoomOut(BaseModel):
     width_m: float
     length_m: float
     color: str
+    active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -467,8 +618,7 @@ class EditionCreate(BaseModel):
     sunday: date
     venue_id: str
     schedule: list[ScheduleEventIn] = Field(default_factory=list)
-    producers: list[int] = Field(default_factory=list)
-    sponsors: list[int] = Field(default_factory=list)
+    exhibitors: list[int] = Field(default_factory=list)
     active: bool = True
 
 
@@ -480,9 +630,22 @@ class EditionUpdate(BaseModel):
     sunday: date | None = None
     venue_id: str | None = None
     schedule: list[ScheduleEventIn] | None = None
-    producers: list[int] | None = None
-    sponsors: list[int] | None = None
+    exhibitors: list[int] | None = None
     active: bool | None = None
+
+
+class EditionItemOut(BaseModel):
+    """Slim exhibitor shape embedded in the public edition response.
+    Only active items are included; contact person and active flag are
+    intentionally excluded — they are internal admin data."""
+
+    id: int
+    name: str
+    image: str
+    website: str
+    type: str
+
+    model_config = {"from_attributes": True}
 
 
 class EditionOut(BaseModel):
@@ -492,10 +655,10 @@ class EditionOut(BaseModel):
     friday: date
     saturday: date
     sunday: date
-    venue_id: str
+    venue: VenueOut
     schedule: list[ScheduleEventOut]
-    producers: list[SliderItem]
-    sponsors: list[SliderItem]
+    producers: list[EditionItemOut]
+    sponsors: list[EditionItemOut]
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -503,55 +666,3 @@ class EditionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class PersonCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    email: EmailStr | None = None
-    phone: str = Field(default="", max_length=50)
-    address: str = Field(default="", max_length=300)
-    roles: list[str] = Field(default_factory=list)
-    first_help_day: date | None = None
-    last_help_day: date | None = None
-    national_register_number: str | None = Field(default=None, max_length=20)
-    eid_document_number: str | None = Field(default=None, max_length=50)
-    visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    club_name: str = Field(default="", max_length=200)
-    notes: str = Field(default="", max_length=2000)
-    active: bool = True
-
-
-class PersonUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    email: EmailStr | None = None
-    phone: str | None = Field(default=None, max_length=50)
-    address: str | None = Field(default=None, max_length=300)
-    roles: list[str] | None = None
-    first_help_day: date | None = None
-    last_help_day: date | None = None
-    national_register_number: str | None = Field(default=None, max_length=20)
-    eid_document_number: str | None = Field(default=None, max_length=50)
-    visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    club_name: str | None = Field(default=None, max_length=200)
-    notes: str | None = Field(default=None, max_length=2000)
-    active: bool | None = None
-
-
-class PersonOut(BaseModel):
-    id: str
-    person_key: str
-    name: str
-    email: str
-    phone: str
-    address: str
-    roles: list[str]
-    first_help_day: date | None
-    last_help_day: date | None
-    national_register_number: str | None
-    eid_document_number: str | None
-    visits_per_month: int | None
-    club_name: str
-    notes: str
-    active: bool
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}

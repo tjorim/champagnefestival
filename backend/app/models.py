@@ -1,9 +1,8 @@
 """SQLAlchemy ORM models."""
 
-import json
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -17,20 +16,16 @@ class Reservation(Base):
     __tablename__ = "reservations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    name: Mapped[str] = mapped_column(String(200))
-    email: Mapped[str] = mapped_column(String(200))
-    phone: Mapped[str] = mapped_column(String(50))
     event_id: Mapped[str] = mapped_column(String(100))
     event_title: Mapped[str] = mapped_column(String(200))
     guest_count: Mapped[int] = mapped_column(Integer)
-    # JSON-encoded list of OrderItem dicts
-    pre_orders: Mapped[str] = mapped_column(Text, default="[]")
+    pre_orders: Mapped[list[dict]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     accessibility_note: Mapped[str] = mapped_column(Text, default="")
     """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
 
-    person_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    person_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="RESTRICT"), nullable=False
     )
     table_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
@@ -56,41 +51,26 @@ class Reservation(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+class Exhibitor(Base):
+    """A unified exhibitor: champagne producer, sponsor, or vendor."""
 
-    def get_pre_orders(self) -> list[dict]:
-        return json.loads(self.pre_orders) if self.pre_orders else []
+    __tablename__ = "exhibitors"
 
-    def set_pre_orders(self, items: list[dict]) -> None:
-        self.pre_orders = json.dumps(items)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200))
+    image: Mapped[str] = mapped_column(String(500), default="")
+    website: Mapped[str] = mapped_column(String(500), default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    type: Mapped[str] = mapped_column(String(20), default="vendor")
+    """'producer' | 'sponsor' | 'vendor'"""
+    contact_person_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
+    )
 
-
-class ContentItem(Base):
-    """Key-value store for CMS-managed content (producers, sponsors).
-
-    Each row stores a JSON array under a named key.  Keys are restricted to a
-    known set at the API layer; arbitrary keys are rejected.
-    """
-
-    __tablename__ = "content_items"
-
-    key: Mapped[str] = mapped_column(String(50), primary_key=True)
-    """Identifier, e.g. 'producers' or 'sponsors'."""
-
-    value: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
-    """JSON-encoded list of SliderItem objects."""
-
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
-
-    def get_items(self) -> list[dict]:
-        return json.loads(self.value) if self.value else []
-
-    def set_items(self, items: list[dict]) -> None:
-        self.value = json.dumps(items)
 
 
 class Venue(Base):
@@ -124,7 +104,7 @@ class Room(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     venue_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("venues.id", ondelete="CASCADE"), nullable=False
+        String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
     )
     """FK to the Venue this room belongs to."""
 
@@ -136,6 +116,8 @@ class Room(Base):
 
     color: Mapped[str] = mapped_column(String(20), default="#6c757d")
     """Accent colour for the room badge / canvas border (CSS colour string)."""
+
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -193,6 +175,7 @@ class TableType(Base):
     """'low' | 'high'"""
     max_capacity: Mapped[int] = mapped_column(Integer)
     """Physical maximum number of seats for this table shape/size."""
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
@@ -219,8 +202,7 @@ class Table(Base):
     )
     """FK to the Layout this table belongs to."""
 
-    # JSON-encoded list of reservation ID strings
-    reservation_ids: Mapped[str] = mapped_column(Text, default="[]")
+    reservation_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -229,11 +211,33 @@ class Table(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
-    def get_reservation_ids(self) -> list[str]:
-        return json.loads(self.reservation_ids) if self.reservation_ids else []
 
-    def set_reservation_ids(self, ids: list[str]) -> None:
-        self.reservation_ids = json.dumps(ids)
+class Area(Base):
+    """A non-seating zone on the floor plan (stand, stage, catering, etc.)."""
+
+    __tablename__ = "areas"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    layout_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False
+    )
+    exhibitor_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
+    )
+    label: Mapped[str] = mapped_column(String(200))
+    icon: Mapped[str] = mapped_column(String(50), default="bi-shop")
+    """Bootstrap Icons class name, e.g. 'bi-shop', 'bi-music-note-beamed'."""
+
+    x: Mapped[float] = mapped_column(default=50.0)
+    y: Mapped[float] = mapped_column(default=50.0)
+    rotation: Mapped[int] = mapped_column(Integer, default=0)
+    width_m: Mapped[float] = mapped_column(default=1.5)
+    length_m: Mapped[float] = mapped_column(default=1.0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
 
 class Edition(Base):
@@ -258,12 +262,8 @@ class Edition(Base):
         String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
     )
 
-    # JSON-encoded list of schedule event dicts
-    schedule: Mapped[str] = mapped_column(Text, default="[]")
-
-    # JSON-encoded lists of producer/sponsor IDs participating in this edition
-    producers: Mapped[str] = mapped_column(Text, default="[]")
-    sponsors: Mapped[str] = mapped_column(Text, default="[]")
+    schedule: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -274,43 +274,17 @@ class Edition(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    def get_schedule(self) -> list[dict]:
-        return json.loads(self.schedule) if self.schedule else []
-
-    def set_schedule(self, events: list[dict]) -> None:
-        self.schedule = json.dumps(events)
-
-    def get_producers(self) -> list[int]:
-        return json.loads(self.producers) if self.producers else []
-
-    def set_producers(self, ids: list[int]) -> None:
-        self.producers = json.dumps(ids)
-
-    def get_sponsors(self) -> list[int]:
-        return json.loads(self.sponsors) if self.sponsors else []
-
-    def set_sponsors(self, ids: list[int]) -> None:
-        self.sponsors = json.dumps(ids)
-
-
 class Person(Base):
     """Unified person entity used for members, volunteers, and visitors."""
 
     __tablename__ = "people"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    person_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), default="")
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
-    # JSON-encoded list of role strings: volunteer, chairwoman, treasurer,
-    # member, festival-visitor, ...
-    roles: Mapped[str] = mapped_column(Text, default="[]")
+    roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     # Optional compliance/attendance fields
     first_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -335,8 +309,3 @@ class Person(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
-    def get_roles(self) -> list[str]:
-        return json.loads(self.roles) if self.roles else []
-
-    def set_roles(self, roles: list[str]) -> None:
-        self.roles = json.dumps(roles)

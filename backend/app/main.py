@@ -4,17 +4,20 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.database import create_tables
 from app.routers import (
+    areas,
     members,
     check_in,
     contact,
-    content,
+    exhibitors,
     editions,
     layouts,
     people,
@@ -87,6 +90,15 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    logger.warning("IntegrityError on %s: %s", request.url.path, exc.orig)
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "Cannot complete this operation because related records exist."},
+    )
+
+
 app.include_router(reservations.router)
 app.include_router(members.router)
 app.include_router(check_in.router)
@@ -96,10 +108,11 @@ app.include_router(table_types.router)
 app.include_router(venues.router)
 app.include_router(rooms.router)
 app.include_router(layouts.router)
-app.include_router(content.router)
+app.include_router(exhibitors.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(volunteers.router)
+app.include_router(areas.router)
 
 
 class HealthResponse(BaseModel):

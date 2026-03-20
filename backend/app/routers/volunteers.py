@@ -31,9 +31,9 @@ def _validate_help_day_range(first_help_day, last_help_day) -> None:
 
 
 def _ensure_volunteer_role(person: Person) -> None:
-    roles = set(person.get_roles())
+    roles = set(person.roles or [])
     roles.add("volunteer")
-    person.set_roles(sorted(roles))
+    person.roles = sorted(roles)
 
 
 async def _ensure_unique_fields(
@@ -76,7 +76,6 @@ async def create_volunteer(body: VolunteerCreate, db: AsyncSession = Depends(get
 
     person = Person(
         id=make_id("per"),
-        person_key=make_id("pkey"),
         name=body.name,
         address=body.address,
         first_help_day=body.first_help_day,
@@ -179,7 +178,7 @@ async def delete_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)
 async def _get_or_404(db: AsyncSession, volunteer_id: str) -> Person:
     result = await db.execute(select(Person).where(Person.id == volunteer_id))
     volunteer = result.scalar_one_or_none()
-    if volunteer is None or "volunteer" not in volunteer.get_roles():
+    if volunteer is None or "volunteer" not in volunteer.roles:
         raise HTTPException(status_code=404, detail="Volunteer not found.")
     return volunteer
 
