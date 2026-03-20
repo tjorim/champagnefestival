@@ -57,11 +57,11 @@ interface GuestReservationResponse {
 
 interface ReservationLookupRequestAcceptedResponse {
   ok: boolean;
-  delivery_mode: "inline";
+  delivery_mode: "email";
   expires_in_minutes: number;
-  access_token: string;
-  access_url: string;
 }
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -119,10 +119,8 @@ function parseReservationLookupRequestAccepted(
   if (
     !isRecord(value) ||
     typeof value.ok !== "boolean" ||
-    value.delivery_mode !== "inline" ||
-    typeof value.expires_in_minutes !== "number" ||
-    typeof value.access_token !== "string" ||
-    typeof value.access_url !== "string"
+    value.delivery_mode !== "email" ||
+    typeof value.expires_in_minutes !== "number"
   ) {
     throw new Error("Invalid reservation lookup request response.");
   }
@@ -130,8 +128,6 @@ function parseReservationLookupRequestAccepted(
     ok: value.ok,
     delivery_mode: value.delivery_mode,
     expires_in_minutes: value.expires_in_minutes,
-    access_token: value.access_token,
-    access_url: value.access_url,
   };
 }
 
@@ -167,7 +163,6 @@ export default function MyReservationsPage() {
 
   const [email, setEmail] = useState("");
   const [requestSent, setRequestSent] = useState(false);
-  const [inlineAccessUrl, setInlineAccessUrl] = useState<string | null>(null);
   const [reservations, setReservations] = useState<GuestReservation[] | null>(null);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isLoadingReservations, setIsLoadingReservations] = useState(false);
@@ -177,7 +172,6 @@ export default function MyReservationsPage() {
   const resetToRequestForm = useCallback(() => {
     setSearchParams({}, { replace: true });
     setRequestSent(false);
-    setInlineAccessUrl(null);
     setReservations(null);
     setShowRecoveryCTA(false);
     setError("");
@@ -188,11 +182,15 @@ export default function MyReservationsPage() {
       e.preventDefault();
       const trimmed = email.trim();
       if (!trimmed) return;
+      if (!EMAIL_PATTERN.test(trimmed)) {
+        setError(m.my_reservations_invalid_email());
+        setRequestSent(false);
+        return;
+      }
 
       setIsSubmittingEmail(true);
       setError("");
       setRequestSent(false);
-      setInlineAccessUrl(null);
 
       try {
         const response = await fetch("/api/reservations/my/request", {
@@ -201,11 +199,14 @@ export default function MyReservationsPage() {
           body: JSON.stringify({ email: trimmed }),
         });
         if (!response.ok) {
-          setError(m.my_reservations_error());
+          setError(
+            response.status === 422
+              ? m.my_reservations_invalid_email()
+              : m.my_reservations_error(),
+          );
           return;
         }
-        const data = parseReservationLookupRequestAccepted(await response.json());
-        setInlineAccessUrl(data.access_url);
+        parseReservationLookupRequestAccepted(await response.json());
         setRequestSent(true);
       } catch {
         setError(m.my_reservations_error());
@@ -226,7 +227,6 @@ export default function MyReservationsPage() {
     setIsLoadingReservations(true);
     setError("");
     setRequestSent(false);
-    setInlineAccessUrl(null);
     setShowRecoveryCTA(false);
 
     void (async () => {
@@ -292,6 +292,7 @@ export default function MyReservationsPage() {
                       required
                       disabled={isSubmittingEmail}
                       autoComplete="email"
+                      isInvalid={Boolean(error)}
                       className="bg-dark text-light border-secondary"
                     />
                   </Form.Group>
@@ -307,18 +308,6 @@ export default function MyReservationsPage() {
                     <Alert variant="info" className="mb-3">
                       <div className="fw-semibold mb-1">{m.my_reservations_request_success()}</div>
                       <div>{m.my_reservations_request_pending_notice()}</div>
-                      {inlineAccessUrl && (
-                        <Button
-                          as="a"
-                          href={inlineAccessUrl}
-                          variant="outline-warning"
-                          size="sm"
-                          className="mt-3"
-                        >
-                          <i className="bi bi-box-arrow-up-right me-2" aria-hidden="true" />
-                          {m.my_reservations_open_inline_link()}
-                        </Button>
-                      )}
                     </Alert>
                   )}
 

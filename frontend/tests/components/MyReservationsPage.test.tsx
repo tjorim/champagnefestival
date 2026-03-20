@@ -12,9 +12,9 @@ vi.mock("@/paraglide/messages", () => ({
     my_reservations_request_link: () => "Email me a secure link",
     my_reservations_requesting: () => "Preparing secure link...",
     my_reservations_request_success: () => "If we found reservations for that email, we prepared a secure link.",
+    my_reservations_invalid_email: () => "Please enter a valid email address.",
     my_reservations_request_pending_notice: () =>
       "Automatic email sending is not enabled yet.",
-    my_reservations_open_inline_link: () => "Open my reservations now",
     my_reservations_loading: () => "Loading reservations...",
     my_reservations_invalid_token: () => "This secure link is invalid or expired.",
     my_reservations_no_results: () => "No reservations found.",
@@ -59,10 +59,8 @@ describe("MyReservationsPage", () => {
       ok: true,
       json: async () => ({
         ok: true,
-        delivery_mode: "inline",
+        delivery_mode: "email",
         expires_in_minutes: 30,
-        access_token: "inline-token",
-        access_url: "/my-reservations?token=inline-token",
       }),
     });
 
@@ -78,9 +76,6 @@ describe("MyReservationsPage", () => {
         screen.getByText(/if we found reservations for that email/i),
       ).toBeInTheDocument();
       expect(screen.getByText("Automatic email sending is not enabled yet.")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /open my reservations now/i }),
-      ).toHaveAttribute("href", "/my-reservations?token=inline-token");
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/reservations/my/request", {
@@ -134,6 +129,39 @@ describe("MyReservationsPage", () => {
       expect(
         screen.getByRole("button", { name: /request another secure link/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  it("validates the email before sending the request", async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "not-an-email" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /email me a secure link/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Please enter a valid email address.")).toBeInTheDocument();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows an invalid email error when the API rejects the address", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+    });
+
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "guest@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /email me a secure link/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Please enter a valid email address.")).toBeInTheDocument();
     });
   });
 });

@@ -26,6 +26,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("email"),
         sa.UniqueConstraint("token_hash"),
     )
     op.create_index(

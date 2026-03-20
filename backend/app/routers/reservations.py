@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import delete, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
@@ -226,39 +226,46 @@ async def request_my_reservations_access(
 
     The response is intentionally identical whether or not the e-mail exists,
     so callers cannot enumerate reservations by trying many addresses.
-    SMTP delivery is not wired up yet, so the server only logs that a link
-    was prepared — never the raw token itself.
+    SMTP delivery is not wired up yet, so the server only stores the token
+    server-side and logs that a link was prepared — never the raw token itself.
     """
     email_norm = str(body.email).lower().strip()
     token = secrets.token_urlsafe(24)
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(minutes=settings.guest_access_token_ttl_minutes)
     request_id = _guest_access_log_id(email_norm)
+    token_hash = _hash_guest_access_token(token)
 
-    await db.execute(
-        delete(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
+    existing_token = await db.scalar(
+        select(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
     )
-    db.add(
-        ReservationAccessToken(
-            id=make_id("rat"),
-            email=email_norm,
-            token_hash=_hash_guest_access_token(token),
-            expires_at=expires_at,
+    if existing_token is None:
+        db.add(
+            ReservationAccessToken(
+                id=make_id("rat"),
+                email=email_norm,
+                token_hash=token_hash,
+                expires_at=expires_at,
+                created_at=now,
+                last_used_at=None,
+            )
         )
-    )
+    else:
+        existing_token.token_hash = token_hash
+        existing_token.expires_at = expires_at
+        existing_token.created_at = now
+        existing_token.last_used_at = None
     await db.commit()
 
     logger.info(
-        "Prepared guest reservation access token request_id=%s delivery_mode=inline expires_at=%s",
+        "Prepared guest reservation access token request_id=%s delivery_mode=email expires_at=%s",
         request_id,
         expires_at.isoformat(),
     )
 
     return ReservationLookupRequestAccepted(
-        delivery_mode="inline",
+        delivery_mode="email",
         expires_in_minutes=settings.guest_access_token_ttl_minutes,
-        access_token=token,
-        access_url=f"/my-reservations?token={token}",
     )
 
 
