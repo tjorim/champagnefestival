@@ -25,9 +25,9 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Nav from "react-bootstrap/Nav";
-import { m } from "../../paraglide/messages";
-import type { Reservation } from "../../types/reservation";
-import type { Room, FloorTable, FloorArea, TableType, Layout } from "../../types/admin";
+import { m } from "@/paraglide/messages";
+import type { Reservation } from "@/types/reservation";
+import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
 
 // How many CSS pixels represent one metre on the canvas
 const PX_PER_M = 28;
@@ -324,7 +324,10 @@ function DraggableArea({
         style={{ fontSize: "0.8rem" }}
         aria-hidden="true"
       />
-      <span className="fw-semibold text-truncate w-100 text-center px-1" style={{ fontSize: "0.65rem" }}>
+      <span
+        className="fw-semibold text-truncate w-100 text-center px-1"
+        style={{ fontSize: "0.65rem" }}
+      >
         {area.label}
       </span>
       {assignedLabel && (
@@ -488,7 +491,8 @@ function RoomCanvas({
           })}
           {roomAreas.map((area) => {
             const assignedLabel = area.exhibitorId
-              ? (exhibitors.find((e) => e.id === area.exhibitorId)?.name ?? `Exhibitor #${area.exhibitorId}`)
+              ? (exhibitors.find((e) => e.id === area.exhibitorId)?.name ??
+                `Exhibitor #${area.exhibitorId}`)
               : null;
             return (
               <DraggableArea
@@ -670,7 +674,14 @@ export default function LayoutEditor({
         newArea.lengthM,
         exhibitorId,
       );
-      setNewArea({ label: "", icon: "bi-shop", widthM: 1.5, lengthM: 1.0, assignedType: "", assignedId: 0 });
+      setNewArea({
+        label: "",
+        icon: "bi-shop",
+        widthM: 1.5,
+        lengthM: 1.0,
+        assignedType: "",
+        assignedId: 0,
+      });
       setShowAddArea(false);
     } catch (err) {
       console.error("Failed to add area", err);
@@ -803,7 +814,14 @@ export default function LayoutEditor({
                 size="sm"
                 onClick={() => {
                   setAddAreaError(null);
-                  setNewArea({ label: "", icon: "bi-shop", widthM: 1.5, lengthM: 1.0, assignedType: "", assignedId: 0 });
+                  setNewArea({
+                    label: "",
+                    icon: "bi-shop",
+                    widthM: 1.5,
+                    lengthM: 1.0,
+                    assignedType: "",
+                    assignedId: 0,
+                  });
                   setShowAddArea(true);
                 }}
                 disabled={!activeLayoutId}
@@ -1013,7 +1031,10 @@ export default function LayoutEditor({
               >
                 <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
               </Button>
-              <span className="text-secondary small" style={{ minWidth: "3.5rem", textAlign: "center" }}>
+              <span
+                className="text-secondary small"
+                style={{ minWidth: "3.5rem", textAlign: "center" }}
+              >
                 {Math.round(selectedAreaData.rotation)}°
               </span>
               <Button
@@ -1043,12 +1064,19 @@ export default function LayoutEditor({
               </Alert>
             )}
             {assignAreaError && (
-              <Alert variant="danger" className="py-1 mb-2 small" dismissible onClose={() => setAssignAreaError(null)}>
+              <Alert
+                variant="danger"
+                className="py-1 mb-2 small"
+                dismissible
+                onClose={() => setAssignAreaError(null)}
+              >
                 {assignAreaError}
               </Alert>
             )}
             <Form.Group className="mb-3" controlId="area-label">
-              <Form.Label className="text-secondary small">{m.admin_layout_area_form_label()}</Form.Label>
+              <Form.Label className="text-secondary small">
+                {m.admin_layout_area_form_label()}
+              </Form.Label>
               <Form.Control
                 size="sm"
                 type="text"
@@ -1064,9 +1092,14 @@ export default function LayoutEditor({
               />
             </Form.Group>
             <Form.Group className="mb-3" controlId="area-icon">
-              <Form.Label className="text-secondary small">{m.admin_layout_area_form_icon()}</Form.Label>
+              <Form.Label className="text-secondary small">
+                {m.admin_layout_area_form_icon()}
+              </Form.Label>
               <div className="d-flex gap-2 align-items-center">
-                <i className={`bi ${selectedAreaData.icon || "bi-shop"} text-info`} aria-hidden="true" />
+                <i
+                  className={`bi ${selectedAreaData.icon || "bi-shop"} text-info`}
+                  aria-hidden="true"
+                />
                 <Form.Select
                   size="sm"
                   className="bg-dark text-light border-secondary"
@@ -1082,19 +1115,25 @@ export default function LayoutEditor({
                         newIcon,
                       );
                     } catch (err) {
-                      setAssignAreaError(err instanceof Error ? err.message : "Failed to update icon.");
+                      setAssignAreaError(
+                        err instanceof Error ? err.message : "Failed to update icon.",
+                      );
                     }
                   }}
                   key={`icon-${selectedAreaData.id}`}
                 >
                   {getAreaIcons().map((ic) => (
-                    <option key={ic.value} value={ic.value}>{ic.label}</option>
+                    <option key={ic.value} value={ic.value}>
+                      {ic.label}
+                    </option>
                   ))}
                 </Form.Select>
               </div>
             </Form.Group>
             <Form.Group controlId="area-assign-item">
-              <Form.Label className="text-secondary small">{m.admin_layout_area_assigned_to()}</Form.Label>
+              <Form.Label className="text-secondary small">
+                {m.admin_layout_area_assigned_to()}
+              </Form.Label>
               <Form.Select
                 size="sm"
                 className="bg-dark text-light border-secondary"
@@ -1111,16 +1150,22 @@ export default function LayoutEditor({
                     }
                     await onAssignAreaToItem(selectedAreaData.id, eId, newLabel);
                   } catch (err) {
-                    setAssignAreaError(err instanceof Error ? err.message : "Failed to assign area.");
+                    setAssignAreaError(
+                      err instanceof Error ? err.message : "Failed to assign area.",
+                    );
                   }
                 }}
               >
                 <option value="">{m.admin_layout_area_none()}</option>
                 {exhibitors.filter((e) => e.active).length > 0 && (
                   <optgroup label={m.admin_layout_area_exhibitors_group()}>
-                    {exhibitors.filter((e) => e.active).map((e) => (
-                      <option key={e.id} value={`e:${e.id}`}>{e.name}</option>
-                    ))}
+                    {exhibitors
+                      .filter((e) => e.active)
+                      .map((e) => (
+                        <option key={e.id} value={`e:${e.id}`}>
+                          {e.name}
+                        </option>
+                      ))}
                   </optgroup>
                 )}
               </Form.Select>
@@ -1134,7 +1179,8 @@ export default function LayoutEditor({
                     {tablesInSelectedArea.length}
                   </Badge>
                   <span className="ms-2 text-secondary">
-                    {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)} {m.admin_layout_places_total()}
+                    {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)}{" "}
+                    {m.admin_layout_places_total()}
                   </span>
                 </p>
                 <ListGroup variant="flush">
@@ -1244,7 +1290,9 @@ export default function LayoutEditor({
                 className="bg-dark text-light border-secondary"
               >
                 {getAreaIcons().map((ic) => (
-                  <option key={ic.value} value={ic.value}>{ic.label}</option>
+                  <option key={ic.value} value={ic.value}>
+                    {ic.label}
+                  </option>
                 ))}
               </Form.Select>
             </div>
@@ -1273,9 +1321,13 @@ export default function LayoutEditor({
               <option value="">{m.admin_layout_area_none()}</option>
               {exhibitors.filter((e) => e.active).length > 0 && (
                 <optgroup label={m.admin_layout_area_exhibitors_group()}>
-                  {exhibitors.filter((e) => e.active).map((e) => (
-                    <option key={e.id} value={`e:${e.id}`}>{e.name}</option>
-                  ))}
+                  {exhibitors
+                    .filter((e) => e.active)
+                    .map((e) => (
+                      <option key={e.id} value={`e:${e.id}`}>
+                        {e.name}
+                      </option>
+                    ))}
                 </optgroup>
               )}
             </Form.Select>
@@ -1315,11 +1367,7 @@ export default function LayoutEditor({
           <Button variant="secondary" onClick={() => setShowAddArea(false)}>
             {m.admin_action_cancel()}
           </Button>
-          <Button
-            variant="info"
-            onClick={handleAddArea}
-            disabled={!newArea.label.trim()}
-          >
+          <Button variant="info" onClick={handleAddArea} disabled={!newArea.label.trim()}>
             {m.admin_save()}
           </Button>
         </Modal.Footer>

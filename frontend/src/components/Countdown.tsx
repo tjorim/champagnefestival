@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { dayjs } from "../utils/dateUtils";
-import { m } from "../paraglide/messages";
+import { dayjs } from "@/utils/dateUtils";
+import { m } from "@/paraglide/messages";
 
 /**
  * Props for the Countdown component

@@ -13,8 +13,8 @@ import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
-import { m } from "../../paraglide/messages";
-import type { Room, Venue } from "../../types/admin";
+import { m } from "@/paraglide/messages";
+import type { Room, Venue } from "@/types/admin";
 
 interface VenueManagementProps {
   venues: Venue[];
@@ -263,7 +263,11 @@ export default function VenueManagement({
                               bg={room.active ? undefined : "secondary"}
                               className="d-inline-flex align-items-center gap-1"
                             >
-                              <span style={{ color: room.active ? contrastColor(room.color) : undefined }}>
+                              <span
+                                style={{
+                                  color: room.active ? contrastColor(room.color) : undefined,
+                                }}
+                              >
                                 {room.name}
                               </span>
                               {room.active ? (

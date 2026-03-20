@@ -7,8 +7,8 @@ import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
-import { m } from "../paraglide/messages";
-import type { OrderItemCategory, ReservationStatus } from "../types/reservation";
+import { m } from "@/paraglide/messages";
+import type { OrderItemCategory, ReservationStatus } from "@/types/reservation";
 
 interface CheckInData {
   id: string;
@@ -16,7 +16,14 @@ interface CheckInData {
   eventId: string;
   eventTitle: string;
   guestCount: number;
-  preOrders: { productId: string; name: string; quantity: number; price: number; category: OrderItemCategory; delivered: boolean }[];
+  preOrders: {
+    productId: string;
+    name: string;
+    quantity: number;
+    price: number;
+    category: OrderItemCategory;
+    delivered: boolean;
+  }[];
   notes: string;
   accessibilityNote: string;
   status: ReservationStatus;

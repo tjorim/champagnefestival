@@ -13,7 +13,7 @@
  * `contact.ts` all derive their values from `getActiveEdition()`.
  */
 
-import { endOfDay } from "../utils/dateUtils";
+import { endOfDay } from "@/utils/dateUtils";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

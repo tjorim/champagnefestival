@@ -1,6 +1,6 @@
 import React from "react";
-import { m } from "../paraglide/messages";
-import { contactConfig } from "../config/contact";
+import { m } from "@/paraglide/messages";
+import { contactConfig } from "@/config/contact";
 
 /**
  * Component to display contact information from configuration

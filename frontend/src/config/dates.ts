@@ -6,7 +6,7 @@
  * are needed in this file.
  */
 
-import { dayjs, endOfDay, localizedMonthName } from "../utils/dateUtils";
+import { dayjs, endOfDay, localizedMonthName } from "@/utils/dateUtils";
 import { getActiveEdition } from "./editions";
 
 const edition = getActiveEdition();

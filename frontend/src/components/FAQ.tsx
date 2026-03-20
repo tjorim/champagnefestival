@@ -1,8 +1,8 @@
 import React from "react";
 import Accordion from "react-bootstrap/Accordion";
 
-import { m } from "../paraglide/messages";
-import type { FaqId } from "../config/faq";
+import { m } from "@/paraglide/messages";
+import type { FaqId } from "@/config/faq";
 
 /**
  * Returns the translated question and answer for the given FAQ ID.

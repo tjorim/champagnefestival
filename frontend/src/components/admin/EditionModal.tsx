@@ -5,10 +5,10 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type MultiValue, type StylesConfig, type GroupBase } from "react-select";
-import { m } from "../../paraglide/messages";
+import { m } from "@/paraglide/messages";
 import type { ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
-import type { Venue } from "../../types/admin";
+import type { Venue } from "@/types/admin";
 
 interface EditionModalProps {
   show: boolean;
@@ -146,12 +146,14 @@ export default function EditionModal({
       }
     }
     fetchItems();
-  }, [show, initial]);
+  }, [show, initial, authHeaders]);
 
   // Sync selections once pool is loaded
   useEffect(() => {
     if (allExhibitors.length === 0) return;
-    const ids = new Set([...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id));
+    const ids = new Set(
+      [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
+    );
     const { active: act, archived: arch } = toOptions(allExhibitors);
     setSelectedExhibitors([...act, ...arch].filter((o) => ids.has(o.value)));
   }, [allExhibitors, initial]);

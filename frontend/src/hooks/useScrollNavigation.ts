@@ -3,7 +3,7 @@ import {
   SCROLL_THRESHOLD_PX,
   SCROLL_THROTTLE_MS,
   ACTIVE_SECTION_CLEANUP_DELAY_MS,
-} from "../config/constants";
+} from "@/config/constants";
 
 /**
  * Custom hook to handle hash-based navigation and section tracking

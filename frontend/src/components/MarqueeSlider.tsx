@@ -3,7 +3,7 @@ import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 // Import required Swiper modules
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
-import { BREAKPOINTS, CAROUSEL_SPEED_MS, CAROUSEL_AUTOPLAY_DELAY_MS } from "../config/constants";
+import { BREAKPOINTS, CAROUSEL_SPEED_MS, CAROUSEL_AUTOPLAY_DELAY_MS } from "@/config/constants";
 
 // Import Swiper styles
 import "swiper/css";

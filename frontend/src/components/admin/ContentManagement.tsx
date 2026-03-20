@@ -9,12 +9,31 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
-import { m } from "../../paraglide/messages";
+import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal, { type ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
-import type { Venue } from "../../types/admin";
+import type { Venue } from "@/types/admin";
+
+function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
+  const cp = (d.contact_person ?? null) as {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  } | null;
+  return {
+    id: d.id as number,
+    name: d.name as string,
+    image: d.image as string,
+    website: d.website as string | undefined,
+    active: d.active as boolean | undefined,
+    type: d.type as string | undefined,
+    contactPersonId: (d.contact_person_id as string | null) ?? null,
+    contactPerson: cp,
+  };
+}
 
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
@@ -30,7 +49,6 @@ interface ContentSectionProps {
   title: string;
   authHeaders: () => Record<string, string>;
 }
-
 
 function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps) {
   const [items, setItems] = useState<ItemDraft[]>([]);
@@ -53,8 +71,8 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
       try {
         const res = await fetch(apiBase, { headers: authHeaders() });
         if (res.ok && !cancelled) {
-          const data = (await res.json()) as ItemDraft[];
-          if (Array.isArray(data)) setItems(data);
+          const data = (await res.json()) as Record<string, unknown>[];
+          if (Array.isArray(data)) setItems(data.map(apiToItemDraft));
         } else if (!cancelled) {
           setLoadError(true);
         }
@@ -89,18 +107,30 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           ? await fetch(apiBase, {
               method: "POST",
               headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({ name: draft.name, image: draft.image, website: draft.website ?? "", type: draft.type ?? "vendor", contact_person_id: draft.contact_person_id ?? null }),
+              body: JSON.stringify({
+                name: draft.name,
+                image: draft.image,
+                website: draft.website ?? "",
+                type: draft.type ?? "vendor",
+                contact_person_id: draft.contactPersonId ?? null,
+              }),
             })
           : await fetch(`${apiBase}/${draft.id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({ name: draft.name, image: draft.image, website: draft.website ?? "", type: draft.type ?? "vendor", contact_person_id: draft.contact_person_id ?? null }),
+              body: JSON.stringify({
+                name: draft.name,
+                image: draft.image,
+                website: draft.website ?? "",
+                type: draft.type ?? "vendor",
+                contact_person_id: draft.contactPersonId ?? null,
+              }),
             });
         if (!res.ok) {
           setActionError(m.admin_content_error_save());
           return;
         }
-        const saved = (await res.json()) as ItemDraft;
+        const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
         setItems((prev) => {
           const idx = prev.findIndex((i) => i.id === saved.id);
           return idx >= 0 ? prev.map((i) => (i.id === saved.id ? saved : i)) : [...prev, saved];
@@ -213,10 +243,10 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
             {item.name}
           </span>
           <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
-          {item.contact_person && (
+          {item.contactPerson && (
             <small className="text-secondary text-truncate d-none d-lg-inline">
               <i className="bi bi-person me-1" aria-hidden="true" />
-              {item.contact_person.name}
+              {item.contactPerson.name}
             </small>
           )}
         </span>
@@ -302,7 +332,12 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         </Alert>
       )}
       {actionError && (
-        <Alert variant="danger" className="py-1 mb-2" dismissible onClose={() => setActionError(null)}>
+        <Alert
+          variant="danger"
+          className="py-1 mb-2"
+          dismissible
+          onClose={() => setActionError(null)}
+        >
           {actionError}
         </Alert>
       )}

@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run paraglide:compile && tsc -b && vite build",
+    "build": "pnpm paraglide:compile && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "npm run paraglide:compile && tsc -b --noEmit",
+    "typecheck": "pnpm paraglide:compile && tsc -b --noEmit",
     "lint": "oxlint",
     "format": "oxfmt .",
     "test": "vitest run",

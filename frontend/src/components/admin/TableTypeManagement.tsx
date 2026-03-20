@@ -13,8 +13,8 @@ import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
-import { m } from "../../paraglide/messages";
-import type { TableType } from "../../types/admin";
+import { m } from "@/paraglide/messages";
+import type { TableType } from "@/types/admin";
 
 interface TableTypeManagementProps {
   tableTypes: TableType[];
@@ -72,7 +72,12 @@ export default function TableTypeManagement({
 
   const handleSave = useCallback(async () => {
     if (!form.name.trim() || form.maxCapacity < 1 || !Number.isInteger(form.maxCapacity)) return;
-    if (!Number.isFinite(form.widthM) || form.widthM <= 0 || !Number.isFinite(form.lengthM) || form.lengthM <= 0) {
+    if (
+      !Number.isFinite(form.widthM) ||
+      form.widthM <= 0 ||
+      !Number.isFinite(form.lengthM) ||
+      form.lengthM <= 0
+    ) {
       setError("Width and length must be positive numbers.");
       return;
     }

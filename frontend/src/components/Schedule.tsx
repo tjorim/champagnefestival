@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { Tab, Nav, Card, Badge } from "react-bootstrap";
-import { m } from "../paraglide/messages";
-import { getLocale } from "../paraglide/runtime";
-import type { FestivalDay, ScheduleEvent } from "../config/schedule";
+import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
+import type { FestivalDay, ScheduleEvent } from "@/config/schedule";
 
 /**
  * Returns the translated title and description for a schedule event ID.

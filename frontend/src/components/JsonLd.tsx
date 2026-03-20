@@ -1,9 +1,9 @@
 import React from "react";
-import { m } from "../paraglide/messages";
-import { getLocale } from "../paraglide/runtime";
-import { festivalYear, festivalDate, festivalEndDate } from "../config/dates";
-import { contactConfig } from "../config/contact";
-import { baseUrl } from "../config/site";
+import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
+import { festivalYear, festivalDate, festivalEndDate } from "@/config/dates";
+import { contactConfig } from "@/config/contact";
+import { baseUrl } from "@/config/site";
 
 /**
  * Component that renders JSON-LD structured data for an event

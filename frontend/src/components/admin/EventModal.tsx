@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
-import { m } from "../../paraglide/messages";
+import { m } from "@/paraglide/messages";
 import type { ScheduleEvent } from "./editionTypes";
 
 const EMPTY_EVENT: ScheduleEvent = {
@@ -181,7 +181,10 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
-            <Form.Group controlId="event-presenter" style={{ minWidth: "160px", flex: "1 1 160px" }}>
+            <Form.Group
+              controlId="event-presenter"
+              style={{ minWidth: "160px", flex: "1 1 160px" }}
+            >
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_presenter()}
               </Form.Label>

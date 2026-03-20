@@ -4,8 +4,8 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ListGroup from "react-bootstrap/ListGroup";
 import { QRCodeSVG } from "qrcode.react";
-import { m } from "../../paraglide/messages";
-import type { Reservation, OrderItem } from "../../types/reservation";
+import { m } from "@/paraglide/messages";
+import type { Reservation, OrderItem } from "@/types/reservation";
 
 interface ReservationDetailProps {
   reservation: Reservation | null;

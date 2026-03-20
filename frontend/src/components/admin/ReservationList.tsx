@@ -5,9 +5,9 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import { m } from "../../paraglide/messages";
-import type { Reservation, ReservationStatus, PaymentStatus } from "../../types/reservation";
-import type { FloorTable } from "../../types/admin";
+import { m } from "@/paraglide/messages";
+import type { Reservation, ReservationStatus, PaymentStatus } from "@/types/reservation";
+import type { FloorTable } from "@/types/admin";
 import ReservationCreateModal from "./ReservationCreateModal";
 
 interface AllocationRef {
@@ -95,13 +95,15 @@ export default function ReservationList({
   const allocationOptions: { key: string; label: string; personId: string }[] = [
     ...exhibitors
       .filter((e) => e.contactPersonId && reservationPersonIds.has(e.contactPersonId))
-      .map((e) => ({ key: `e:${e.id}`, label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`, personId: e.contactPersonId! })),
+      .map((e) => ({
+        key: `e:${e.id}`,
+        label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`,
+        personId: e.contactPersonId!,
+      })),
   ];
 
   // Find which reservations are linked to an exhibitor contact person
-  const allContactPersonIds = new Set([
-    ...exhibitors.map((e) => e.contactPersonId),
-  ]);
+  const allContactPersonIds = new Set([...exhibitors.map((e) => e.contactPersonId)]);
 
   const filterPersonId = allocationFilter
     ? (allocationOptions.find((o) => o.key === allocationFilter)?.personId ?? null)
@@ -154,7 +156,8 @@ export default function ReservationList({
                 variant={filter === "pending" ? "warning" : "outline-secondary"}
                 onClick={() => onFilterChange("pending")}
               >
-                {m.admin_filter_pending()} ({reservations.filter((r) => r.status === "pending").length})
+                {m.admin_filter_pending()} (
+                {reservations.filter((r) => r.status === "pending").length})
               </Button>
               <Button
                 variant={filter === "confirmed" ? "warning" : "outline-secondary"}
@@ -164,11 +167,7 @@ export default function ReservationList({
                 {reservations.filter((r) => r.status === "confirmed").length})
               </Button>
             </ButtonGroup>
-            <Button
-              variant="outline-warning"
-              size="sm"
-              onClick={() => setShowCreateModal(true)}
-            >
+            <Button variant="outline-warning" size="sm" onClick={() => setShowCreateModal(true)}>
               <i className="bi bi-plus-lg me-1" aria-hidden="true" />
               {m.admin_add_reservation()}
             </Button>
@@ -213,8 +212,8 @@ export default function ReservationList({
                           {res.preOrders.length > 0 && (
                             <div className="text-warning small">
                               <i className="bi bi-cart-fill me-1" aria-hidden="true" />
-                              {res.preOrders.filter((o) => o.delivered).length}/{res.preOrders.length}{" "}
-                              {m.admin_pre_orders()}
+                              {res.preOrders.filter((o) => o.delivered).length}/
+                              {res.preOrders.length} {m.admin_pre_orders()}
                             </div>
                           )}
                         </td>
@@ -223,7 +222,9 @@ export default function ReservationList({
                         </td>
                         <td>{res.guestCount}</td>
                         <td>
-                          <Badge bg={statusBadgeVariant(res.status)}>{statusLabel(res.status)}</Badge>
+                          <Badge bg={statusBadgeVariant(res.status)}>
+                            {statusLabel(res.status)}
+                          </Badge>
                         </td>
                         <td className="d-none d-lg-table-cell">
                           <Badge bg={paymentBadgeVariant(res.paymentStatus)}>

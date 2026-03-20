@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { getLocale, setLocale, isLocale } from "../paraglide/runtime";
-import { m } from "../paraglide/messages";
+import { getLocale, setLocale, isLocale } from "@/paraglide/runtime";
+import { m } from "@/paraglide/messages";
 import { Dropdown, Button } from "react-bootstrap";
 
 const LanguageSwitcher = () => {

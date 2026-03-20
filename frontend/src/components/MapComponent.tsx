@@ -1,6 +1,6 @@
 import React from "react";
-import { contactConfig } from "../config/contact";
-import { m } from "../paraglide/messages";
+import { contactConfig } from "@/config/contact";
+import { m } from "@/paraglide/messages";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import markerIcon from "leaflet/dist/images/marker-icon.png";

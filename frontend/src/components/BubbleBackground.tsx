@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import Bubble from "./Bubble";
-import { BREAKPOINTS, RESIZE_DEBOUNCE_MS } from "../config/constants";
+import { BREAKPOINTS, RESIZE_DEBOUNCE_MS } from "@/config/constants";
 
 /**
  * Configuration for performance optimization

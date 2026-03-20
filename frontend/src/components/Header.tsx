@@ -1,4 +1,4 @@
-import { m } from "../paraglide/messages";
+import { m } from "@/paraglide/messages";
 import LanguageSwitcher from "./LanguageSwitcher";
 import Navbar from "react-bootstrap/Navbar";
 import Container from "react-bootstrap/Container";

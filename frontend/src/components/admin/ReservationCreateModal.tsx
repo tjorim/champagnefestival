@@ -5,8 +5,9 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
-import type { Reservation } from "../../types/reservation";
-import { m } from "../../paraglide/messages";
+import type { Reservation } from "@/types/reservation";
+import { apiToReservation } from "@/types/reservationMapper";
+import { m } from "@/paraglide/messages";
 
 interface PersonOption {
   value: string;
@@ -25,7 +26,12 @@ const darkSelectStyles: StylesConfig<PersonOption, false> = {
     color: "#f8f9fa",
     minHeight: "34px",
   }),
-  menu: (base) => ({ ...base, backgroundColor: "#212529", border: "1px solid #6c757d", zIndex: 9999 }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: "#212529",
+    border: "1px solid #6c757d",
+    zIndex: 9999,
+  }),
   option: (base, state) => ({
     ...base,
     backgroundColor: state.isFocused ? "#343a40" : "#212529",
@@ -53,42 +59,6 @@ interface ReservationCreateModalProps {
   authHeaders: () => Record<string, string>;
   onSaved: (reservation: Reservation) => void;
   onHide: () => void;
-}
-
-function apiResToReservation(d: Record<string, unknown>): Reservation {
-  const rawOrders = (d.pre_orders ?? []) as Record<string, unknown>[];
-  const rawPerson = (d.person ?? {}) as Record<string, unknown>;
-  return {
-    id: d.id as string,
-    personId: (d.person_id ?? "") as string,
-    person: {
-      id: (rawPerson.id ?? "") as string,
-      name: (rawPerson.name ?? "") as string,
-      email: (rawPerson.email ?? "") as string,
-      phone: (rawPerson.phone ?? "") as string,
-    },
-    eventId: (d.event_id ?? "") as string,
-    eventTitle: (d.event_title ?? "") as string,
-    guestCount: (d.guest_count ?? 1) as number,
-    preOrders: rawOrders.map((o) => ({
-      productId: (o.product_id ?? "") as string,
-      name: (o.name ?? "") as string,
-      quantity: (o.quantity ?? 1) as number,
-      price: (o.price ?? 0) as number,
-      category: (o.category ?? "other") as import("../../types/reservation").OrderItemCategory,
-      delivered: (o.delivered ?? false) as boolean,
-    })),
-    notes: (d.notes ?? "") as string,
-    accessibilityNote: (d.accessibility_note ?? "") as string,
-    tableId: (d.table_id as string | undefined) ?? undefined,
-    status: (d.status ?? "confirmed") as import("../../types/reservation").ReservationStatus,
-    paymentStatus: (d.payment_status ?? "unpaid") as import("../../types/reservation").PaymentStatus,
-    checkedIn: (d.checked_in ?? false) as boolean,
-    checkedInAt: (d.checked_in_at as string | undefined) ?? undefined,
-    strapIssued: (d.strap_issued ?? false) as boolean,
-    createdAt: (d.created_at ?? "") as string,
-    updatedAt: (d.updated_at ?? "") as string,
-  };
 }
 
 export default function ReservationCreateModal({
@@ -130,9 +100,7 @@ export default function ReservationCreateModal({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.schedule) {
-          setEvents(
-            (data.schedule as ScheduleEvent[]).filter((e: ScheduleEvent) => e.reservation),
-          );
+          setEvents((data.schedule as ScheduleEvent[]).filter((e: ScheduleEvent) => e.reservation));
         } else {
           setEvents([]);
         }
@@ -227,7 +195,7 @@ export default function ReservationCreateModal({
         return;
       }
       const data = await res.json();
-      onSaved(apiResToReservation(data as Record<string, unknown>));
+      onSaved(apiToReservation(data as Record<string, unknown>));
       onHide();
     } catch {
       setError(m.admin_error_create_reservation());
@@ -244,7 +212,12 @@ export default function ReservationCreateModal({
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="bg-dark">
           {error && (
-            <Alert variant="danger" className="py-2 small" dismissible onClose={() => setError(null)}>
+            <Alert
+              variant="danger"
+              className="py-2 small"
+              dismissible
+              onClose={() => setError(null)}
+            >
               {error}
             </Alert>
           )}

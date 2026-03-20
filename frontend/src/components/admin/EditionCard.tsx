@@ -4,12 +4,12 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
-import { m } from "../../paraglide/messages";
+import { m } from "@/paraglide/messages";
 import EditionModal from "./EditionModal";
 import EventModal from "./EventModal";
 import { parseEditionDate } from "./editionTypes";
 import type { Edition, ScheduleEvent } from "./editionTypes";
-import type { Venue } from "../../types/admin";
+import type { Venue } from "@/types/admin";
 
 interface EditionCardProps {
   edition: Edition;
@@ -120,12 +120,18 @@ export default function EditionCard({
         <Badge bg={edition.active ? "success" : "secondary"}>
           {edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}
         </Badge>
-        <Badge bg="secondary">{edition.schedule.length} {m.admin_edition_events()}</Badge>
+        <Badge bg="secondary">
+          {edition.schedule.length} {m.admin_edition_events()}
+        </Badge>
         {(edition.producers?.length ?? 0) > 0 && (
-          <Badge bg="secondary">{edition.producers!.length} {m.admin_edition_producers()}</Badge>
+          <Badge bg="secondary">
+            {edition.producers!.length} {m.admin_edition_producers()}
+          </Badge>
         )}
         {(edition.sponsors?.length ?? 0) > 0 && (
-          <Badge bg="secondary">{edition.sponsors!.length} {m.admin_edition_sponsors()}</Badge>
+          <Badge bg="secondary">
+            {edition.sponsors!.length} {m.admin_edition_sponsors()}
+          </Badge>
         )}
         {saving && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (

@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { getActiveEdition, type Edition, type SliderItem } from "../config/editions";
+import { getActiveEdition, type Edition, type SliderItem } from "@/config/editions";
 
 export interface ActiveEditionState {
   edition: Edition;

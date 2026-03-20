@@ -3,7 +3,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
-import { m } from "../../paraglide/messages";
+import { m } from "@/paraglide/messages";
 
 export interface ContactPerson {
   id: string;
@@ -19,8 +19,8 @@ export interface ItemDraft {
   website?: string;
   active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
   type?: string;
-  contact_person_id?: string | null;
-  contact_person?: ContactPerson | null;
+  contactPersonId?: string | null;
+  contactPerson?: ContactPerson | null;
 }
 
 interface PersonOption {
@@ -39,7 +39,12 @@ const darkSelectStyles: StylesConfig<PersonOption, false> = {
     color: "#f8f9fa",
     minHeight: "34px",
   }),
-  menu: (base) => ({ ...base, backgroundColor: "#212529", border: "1px solid #6c757d", zIndex: 9999 }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: "#212529",
+    border: "1px solid #6c757d",
+    zIndex: 9999,
+  }),
   option: (base, state) => ({
     ...base,
     backgroundColor: state.isFocused ? "#343a40" : "#212529",
@@ -79,9 +84,17 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
       setImage(initial?.image ?? "");
       setWebsite(initial?.website ?? "");
       setType(initial?.type ?? "vendor");
-      const cp = initial?.contact_person;
+      const cp = initial?.contactPerson;
       setContactOption(
-        cp ? { value: cp.id, label: cp.name, sub: [cp.email, cp.phone].filter(Boolean).join(" · "), email: cp.email ?? "", phone: cp.phone ?? "" } : null,
+        cp
+          ? {
+              value: cp.id,
+              label: cp.name,
+              sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
+              email: cp.email ?? "",
+              phone: cp.phone ?? "",
+            }
+          : null,
       );
       setPersonQuery("");
       setPersonOptions([]);
@@ -102,7 +115,12 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
         });
         if (signal.aborted) return;
         if (res.ok) {
-          const data = (await res.json()) as { id: string; name: string; email: string; phone: string }[];
+          const data = (await res.json()) as {
+            id: string;
+            name: string;
+            email: string;
+            phone: string;
+          }[];
           setPersonOptions(
             data.map((p) => ({
               value: p.id,
@@ -146,8 +164,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
       website: website.trim(),
       active: initial?.active ?? true,
       type,
-      contact_person_id: contactOption?.value ?? null,
-      contact_person: contactOption
+      contactPersonId: contactOption?.value ?? null,
+      contactPerson: contactOption
         ? {
             id: contactOption.value,
             name: contactOption.label,
@@ -213,7 +231,9 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </Form.Select>
           </Form.Group>
           <Form.Group>
-            <Form.Label className="text-secondary small">{m.admin_item_contact_person()}</Form.Label>
+            <Form.Label className="text-secondary small">
+              {m.admin_item_contact_person()}
+            </Form.Label>
             <Select<PersonOption, false>
               isClearable
               options={personOptions}

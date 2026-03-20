@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, Row, Col } from "react-bootstrap";
-import { m } from "../paraglide/messages";
-import { contactConfig } from "../config/contact";
+import { m } from "@/paraglide/messages";
+import { contactConfig } from "@/config/contact";
 
 /**
  * Component to display venue location information from configuration

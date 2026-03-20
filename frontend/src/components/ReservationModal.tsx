@@ -4,9 +4,9 @@ import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
-import { m } from "../paraglide/messages";
-import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "../config/reservation";
-import type { ReservationFormData, ReservationFormErrors, OrderItem } from "../types/reservation";
+import { m } from "@/paraglide/messages";
+import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/reservation";
+import type { ReservationFormData, ReservationFormErrors, OrderItem } from "@/types/reservation";
 
 interface ReservationModalProps {
   show: boolean;

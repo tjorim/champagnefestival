@@ -1,8 +1,8 @@
 import { useState } from "react";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
-import { m } from "../paraglide/messages";
-import { privacyPolicyConfig } from "../config/privacyPolicy";
+import { m } from "@/paraglide/messages";
+import { privacyPolicyConfig } from "@/config/privacyPolicy";
 
 /**
  * Privacy Policy modal component

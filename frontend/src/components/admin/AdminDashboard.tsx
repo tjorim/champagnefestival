@@ -7,21 +7,16 @@ import Alert from "react-bootstrap/Alert";
 import Tab from "react-bootstrap/Tab";
 import Nav from "react-bootstrap/Nav";
 import Spinner from "react-bootstrap/Spinner";
-import { m } from "../../paraglide/messages";
+import { m } from "@/paraglide/messages";
 import ReservationList from "./ReservationList";
 import ReservationDetail from "./ReservationDetail";
 import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
-import type {
-  Reservation,
-  ReservationStatus,
-  PaymentStatus,
-  OrderItem,
-  OrderItemCategory,
-} from "../../types/reservation";
-import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "../../types/admin";
+import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@/types/reservation";
+import { apiToReservation } from "@/types/reservationMapper";
+import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -112,44 +107,6 @@ function apiAreaToArea(d: Record<string, unknown>): FloorArea {
   };
 }
 
-/** Map FastAPI snake_case reservation response to frontend camelCase Reservation type */
-function apiReservationToReservation(d: Record<string, unknown>): Reservation {
-  const rawOrders = (d.pre_orders ?? []) as Record<string, unknown>[];
-  const rawPerson = (d.person ?? {}) as Record<string, unknown>;
-  return {
-    id: d.id as string,
-    personId: d.person_id as string,
-    person: {
-      id: (rawPerson.id ?? "") as string,
-      name: (rawPerson.name ?? "") as string,
-      email: (rawPerson.email ?? "") as string,
-      phone: (rawPerson.phone ?? "") as string,
-    },
-    eventId: d.event_id as string,
-    eventTitle: (d.event_title ?? "") as string,
-    guestCount: d.guest_count as number,
-    preOrders: rawOrders.map((item) => ({
-      productId: item.product_id as string,
-      name: item.name as string,
-      quantity: item.quantity as number,
-      price: item.price as number,
-      category: (item.category ?? "other") as OrderItemCategory,
-      delivered: (item.delivered ?? false) as boolean,
-    })),
-    notes: (d.notes ?? "") as string,
-    accessibilityNote: (d.accessibility_note ?? "") as string,
-    tableId: d.table_id as string | undefined,
-    status: (d.status ?? "pending") as ReservationStatus,
-    paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
-    checkedIn: (d.checked_in ?? false) as boolean,
-    checkedInAt: d.checked_in_at as string | undefined,
-    strapIssued: (d.strap_issued ?? false) as boolean,
-    checkInToken: d.check_in_token as string | undefined,
-    createdAt: d.created_at as string,
-    updatedAt: d.updated_at as string,
-  };
-}
-
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [token, setToken] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -164,7 +121,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [tableTypes, setTableTypes] = useState<TableType[]>([]);
   const [layouts, setLayouts] = useState<Layout[]>([]);
-  const [exhibitors, setExhibitors] = useState<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]>([]);
+  const [exhibitors, setExhibitors] = useState<
+    { id: number; name: string; active: boolean; contactPersonId: string | null }[]
+  >([]);
   const [areas, setAreas] = useState<FloorArea[]>([]);
   const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
   /** Full reservation (with checkInToken) shown in the detail modal */
@@ -234,7 +193,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       const data = await resResponse.json();
       const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
-      setReservations(rawRes.map(apiReservationToReservation));
+      setReservations(rawRes.map(apiToReservation));
 
       const tablesData = await tablesResponse.json();
       const rawTables: Record<string, unknown>[] = Array.isArray(tablesData)
@@ -692,9 +651,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({ x, y }),
         });
         if (!response.ok) {
-          if (prev) setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, x: prev.x, y: prev.y } : a)));
+          if (prev)
+            setAreas((prevAreas) =>
+              prevAreas.map((a) => (a.id === areaId ? { ...a, x: prev.x, y: prev.y } : a)),
+            );
           const data = await response.json().catch(() => ({}));
-          throw new Error((data as { detail?: string }).detail ?? "Failed to persist area position.");
+          throw new Error(
+            (data as { detail?: string }).detail ?? "Failed to persist area position.",
+          );
         }
       } catch (err) {
         console.error("Failed to persist area position", err);
@@ -707,7 +671,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     async (areaId: string, rotation: number) => {
       const prev = areas.find((a) => a.id === areaId);
       const normalised = ((rotation % 360) + 360) % 360;
-      setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)));
+      setAreas((prevAreas) =>
+        prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)),
+      );
       try {
         const response = await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
@@ -715,9 +681,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({ rotation: normalised }),
         });
         if (!response.ok) {
-          if (prev) setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: prev.rotation } : a)));
+          if (prev)
+            setAreas((prevAreas) =>
+              prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: prev.rotation } : a)),
+            );
           const data = await response.json().catch(() => ({}));
-          throw new Error((data as { detail?: string }).detail ?? "Failed to persist area rotation.");
+          throw new Error(
+            (data as { detail?: string }).detail ?? "Failed to persist area rotation.",
+          );
         }
       } catch (err) {
         console.error("Failed to persist area rotation", err);
@@ -742,12 +713,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAssignAreaToItem = useCallback(
-    async (
-      areaId: string,
-      exhibitorId: number | null,
-      label?: string,
-      icon?: string,
-    ) => {
+    async (areaId: string, exhibitorId: number | null, label?: string, icon?: string) => {
       const body: Record<string, unknown> = {
         exhibitor_id: exhibitorId,
       };
@@ -784,12 +750,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [authHeaders],
   );
 
-  const handleAddReservation = useCallback(
-    (reservation: Reservation) => {
-      setReservations((prev) => [reservation, ...prev]);
-    },
-    [],
-  );
+  const handleAddReservation = useCallback((reservation: Reservation) => {
+    setReservations((prev) => [reservation, ...prev]);
+  }, []);
 
   const handleAddTableType = useCallback(
     async (data: Omit<TableType, "id">) => {
@@ -859,7 +822,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         });
         if (response.ok) {
           const data = await response.json();
-          setDetailReservation(apiReservationToReservation(data as Record<string, unknown>));
+          setDetailReservation(apiToReservation(data as Record<string, unknown>));
         } else {
           // Fall back to the list version (no token available)
           setDetailReservation(res);
@@ -920,7 +883,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         });
         if (response.ok) {
           const data = await response.json();
-          const updated = apiReservationToReservation(data as Record<string, unknown>);
+          const updated = apiToReservation(data as Record<string, unknown>);
           setReservations((prev) =>
             prev.map((r) =>
               r.id === reservationId
