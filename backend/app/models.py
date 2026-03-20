@@ -311,8 +311,6 @@ class Person(Base):
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     # Optional compliance/attendance fields
-    first_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
-    last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
     national_register_number: Mapped[str | None] = mapped_column(
         String(20), unique=True, nullable=True
     )

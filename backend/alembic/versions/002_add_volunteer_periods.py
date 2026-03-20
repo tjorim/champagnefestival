@@ -1,4 +1,9 @@
-"""Add volunteer periods table.
+"""Add volunteer_periods table and drop help-day columns from people.
+
+Volunteer help periods are now stored in a dedicated volunteer_periods table
+so a person can cover multiple non-contiguous festival dates.  The old
+first_help_day / last_help_day columns on people are removed; they were never
+populated in production so no data migration is required.
 
 Revision ID: 002
 Revises: 001
@@ -17,8 +22,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    bind = op.get_bind()
-
     op.create_table(
         "volunteer_periods",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
@@ -50,53 +53,16 @@ def upgrade() -> None:
         "ix_volunteer_periods_first_help_day", "volunteer_periods", ["first_help_day"]
     )
 
-    role_filter = (
-        "roles::jsonb @> '[\"volunteer\"]'::jsonb"
-        if bind.dialect.name == "postgresql"
-        else """EXISTS (
-              SELECT 1
-              FROM json_each(people.roles)
-              WHERE json_each.value = 'volunteer'
-            )"""
-    )
-
-    op.execute(
-        sa.text(
-            f"""
-            INSERT INTO volunteer_periods (volunteer_id, first_help_day, last_help_day, created_at, updated_at)
-            SELECT id, first_help_day, last_help_day, created_at, updated_at
-            FROM people
-            WHERE first_help_day IS NOT NULL
-              AND {role_filter}
-            """
-        )
-    )
+    with op.batch_alter_table("people") as batch_op:
+        batch_op.drop_column("first_help_day")
+        batch_op.drop_column("last_help_day")
 
 
 def downgrade() -> None:
-    op.execute(
-        sa.text(
-            """
-            UPDATE people
-            SET
-              first_help_day = (
-                SELECT MIN(vp.first_help_day)
-                FROM volunteer_periods AS vp
-                WHERE vp.volunteer_id = people.id
-              ),
-              last_help_day = (
-                SELECT MAX(vp.last_help_day)
-                FROM volunteer_periods AS vp
-                WHERE vp.volunteer_id = people.id
-              )
-            WHERE EXISTS (
-              SELECT 1
-              FROM volunteer_periods AS vp
-              WHERE vp.volunteer_id = people.id
-            )
-            """
-        )
-    )
+    with op.batch_alter_table("people") as batch_op:
+        batch_op.add_column(sa.Column("first_help_day", sa.Date(), nullable=True))
+        batch_op.add_column(sa.Column("last_help_day", sa.Date(), nullable=True))
+
     op.drop_index("ix_volunteer_periods_first_help_day", table_name="volunteer_periods")
     op.drop_index("ix_volunteer_periods_volunteer_id", table_name="volunteer_periods")
     op.drop_table("volunteer_periods")

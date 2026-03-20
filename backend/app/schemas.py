@@ -60,8 +60,6 @@ class PersonOut(BaseModel):
     phone: str
     address: str
     roles: list[str]
-    first_help_day: date | None
-    last_help_day: date | None
     national_register_number: str | None
     eid_document_number: str | None
     visits_per_month: int | None
@@ -321,8 +319,6 @@ class PersonCreate(BaseModel):
     phone: str = Field(default="", max_length=50)
     address: str = Field(default="", max_length=300)
     roles: list[str] = Field(default_factory=list)
-    first_help_day: date | None = None
-    last_help_day: date | None = None
     national_register_number: str | None = Field(default=None, max_length=20)
     eid_document_number: str | None = Field(default=None, max_length=50)
     visits_per_month: int | None = Field(default=None, ge=1, le=31)
@@ -337,8 +333,6 @@ class PersonUpdate(BaseModel):
     phone: str | None = Field(default=None, max_length=50)
     address: str | None = Field(default=None, max_length=300)
     roles: list[str] | None = None
-    first_help_day: date | None = None
-    last_help_day: date | None = None
     national_register_number: str | None = Field(default=None, max_length=20)
     eid_document_number: str | None = Field(default=None, max_length=50)
     visits_per_month: int | None = Field(default=None, ge=1, le=31)

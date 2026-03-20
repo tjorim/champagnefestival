@@ -122,8 +122,6 @@ function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): 
     ...volunteer,
     email: existing?.email ?? volunteer.email,
     phone: existing?.phone ?? volunteer.phone,
-    firstHelpDay: existing?.firstHelpDay ?? volunteer.firstHelpDay,
-    lastHelpDay: existing?.lastHelpDay ?? volunteer.lastHelpDay,
     visitsPerMonth: existing?.visitsPerMonth ?? volunteer.visitsPerMonth,
     clubName: existing?.clubName ?? volunteer.clubName,
     notes: existing?.notes ?? volunteer.notes,
@@ -726,8 +724,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_delete());
       }
-      setPeople((prev) => prev.filter((person) => person.id !== id));
-      setMembers((prev) => prev.filter((member) => member.id !== id));
+      // The person record is preserved (soft archive); only the volunteer role
+      // and help periods are removed.  Update local state accordingly so that
+      // the person remains visible in People/Members tabs if applicable.
+      setPeople((prev) =>
+        prev.map((person) =>
+          person.id !== id
+            ? person
+            : { ...person, roles: person.roles.filter((r) => r !== "volunteer"), helpPeriods: [] },
+        ),
+      );
     },
     [authHeaders],
   );

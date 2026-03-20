@@ -272,7 +272,7 @@ export default function VolunteerFormModal({
                       <Col xs={12} md={6}>
                         <Form.Group controlId={`volunteer-period-start-${index}`}>
                           <Form.Label className="text-secondary small">
-                            {m.admin_people_first_help_day_label()} *
+                            {m.admin_volunteers_period_start_label()} *
                           </Form.Label>
                           <Form.Control
                             type="date"
@@ -291,7 +291,7 @@ export default function VolunteerFormModal({
                       <Col xs={12} md={6}>
                         <Form.Group controlId={`volunteer-period-end-${index}`}>
                           <Form.Label className="text-secondary small">
-                            {m.admin_people_last_help_day_label()}
+                            {m.admin_volunteers_period_end_label()}
                           </Form.Label>
                           <Form.Control
                             type="date"

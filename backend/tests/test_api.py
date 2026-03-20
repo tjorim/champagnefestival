@@ -1084,6 +1084,15 @@ async def test_volunteer_crud_and_constraints(client):
     r = await client.delete(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
+    # Volunteer role is removed — endpoint returns 404.
+    r = await client.get(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+    # But the underlying person record still exists (soft archive).
+    r = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert "volunteer" not in r.json()["roles"]
+
 
 # ---------------------------------------------------------------------------
 # People (admin)
@@ -1104,8 +1113,6 @@ async def test_people_crud_roles_and_filters(client):
         "phone": "+32470111222",
         "address": "Kapelstraat 8, Bredene",
         "roles": ["Chairwoman", "Volunteer", "Member"],
-        "first_help_day": "2026-03-20",
-        "last_help_day": "2026-03-22",
         "national_register_number": "85010199999",
         "eid_document_number": "BEI998877",
         "visits_per_month": 1,
@@ -1149,13 +1156,6 @@ async def test_people_crud_roles_and_filters(client):
     )
     assert r.status_code == 200
     assert len(r.json()) == 1
-
-    r = await client.put(
-        f"/api/people/{person_id}",
-        json={"first_help_day": "2026-03-25", "last_help_day": "2026-03-24"},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 400
 
     # Uncertain match (same email, different name) → new person created; admin sees duplicate.
     r = await client.post(
