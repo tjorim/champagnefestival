@@ -752,15 +752,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleChangeTableType = useCallback(
     async (tableId: string, tableTypeId: string) => {
-      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t)));
+      let previousTable: FloorTable | undefined;
+      setTables((prev) => {
+        previousTable = prev.find((t) => t.id === tableId);
+        return prev.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t));
+      });
       try {
-        await fetch(`/api/tables/${tableId}`, {
+        const response = await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ table_type_id: tableTypeId }),
         });
+        if (!response.ok) {
+          const d = await response.json().catch(() => ({}));
+          throw new Error(
+            (d as { detail?: string }).detail ??
+              m.admin_error_change_table_type_status({ status: response.status }),
+          );
+        }
       } catch (err) {
         console.error("Failed to persist table type change", err);
+        if (previousTable !== undefined) {
+          const snapshot = previousTable;
+          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+        }
+        throw err;
       }
     },
     [authHeaders],
@@ -768,15 +784,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleUpdateTable = useCallback(
     async (tableId: string, name: string) => {
-      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, name } : t)));
+      let previousTable: FloorTable | undefined;
+      setTables((prev) => {
+        previousTable = prev.find((t) => t.id === tableId);
+        return prev.map((t) => (t.id === tableId ? { ...t, name } : t));
+      });
       try {
-        await fetch(`/api/tables/${tableId}`, {
+        const response = await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ name }),
         });
+        if (!response.ok) {
+          const d = await response.json().catch(() => ({}));
+          throw new Error(
+            (d as { detail?: string }).detail ??
+              m.admin_error_update_table_name_status({ status: response.status }),
+          );
+        }
       } catch (err) {
+        if (previousTable !== undefined) {
+          const snapshot = previousTable;
+          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+        }
         console.error("Failed to persist table name", err);
+        throw err;
       }
     },
     [authHeaders],
@@ -802,15 +834,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
 
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a)));
+      let previousArea: FloorArea | undefined;
+      setAreas((prev) => {
+        previousArea = prev.find((a) => a.id === areaId);
+        return prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a));
+      });
       try {
-        await fetch(`/api/areas/${areaId}`, {
+        const response = await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ width_m: widthM, length_m: lengthM, x, y }),
         });
+        if (!response.ok) {
+          const d = await response.json().catch(() => ({}));
+          throw new Error(
+            (d as { detail?: string }).detail ??
+              m.admin_error_resize_area_status({ status: response.status }),
+          );
+        }
       } catch (err) {
+        if (previousArea !== undefined) {
+          const snapshot = previousArea;
+          setAreas((prev) => prev.map((a) => (a.id === areaId ? snapshot : a)));
+        }
         console.error("Failed to persist area resize", err);
+        throw err;
       }
     },
     [authHeaders, areas, layouts, rooms],

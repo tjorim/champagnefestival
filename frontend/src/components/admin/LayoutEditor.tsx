@@ -611,6 +611,7 @@ export default function LayoutEditor({
   const [addTableError, setAddTableError] = useState<string | null>(null);
 
   const [deleteTableError, setDeleteTableError] = useState<string | null>(null);
+  const [updateTableError, setUpdateTableError] = useState<string | null>(null);
   // Add Area modal
   const [showAddArea, setShowAddArea] = useState(false);
   const [newArea, setNewArea] = useState({
@@ -624,6 +625,7 @@ export default function LayoutEditor({
   const [addAreaError, setAddAreaError] = useState<string | null>(null);
   const [deleteAreaError, setDeleteAreaError] = useState<string | null>(null);
   const [assignAreaError, setAssignAreaError] = useState<string | null>(null);
+  const [resizeAreaError, setResizeAreaError] = useState<string | null>(null);
 
   const handleAddTable = useCallback(async () => {
     if (!newTable.name.trim() || newTable.capacity < 1 || !newTable.tableTypeId || !activeLayoutId)
@@ -996,6 +998,11 @@ export default function LayoutEditor({
                 {deleteTableError}
               </Alert>
             )}
+            {updateTableError && (
+              <Alert variant="danger" className="py-1 mb-2 small">
+                {updateTableError}
+              </Alert>
+            )}
             <Form.Group className="mb-3" controlId="table-name-edit">
               <Form.Label className="text-secondary small">{m.admin_table_name()}</Form.Label>
               <Form.Control
@@ -1006,7 +1013,14 @@ export default function LayoutEditor({
                 onBlur={async (e) => {
                   const val = e.target.value.trim();
                   if (val && val !== selectedTableData.name) {
-                    await onUpdateTable(selectedTableData.id, val);
+                    setUpdateTableError(null);
+                    try {
+                      await onUpdateTable(selectedTableData.id, val);
+                    } catch (err) {
+                      setUpdateTableError(
+                        err instanceof Error ? err.message : m.admin_content_error_save(),
+                      );
+                    }
                   }
                 }}
                 key={`name-${selectedTableData.id}`}
@@ -1021,15 +1035,24 @@ export default function LayoutEditor({
                 className="bg-dark text-light border-secondary"
                 value={selectedTableData.tableTypeId}
                 onChange={async (e) => {
-                  await onChangeTableType(selectedTableData.id, e.target.value);
+                  setUpdateTableError(null);
+                  try {
+                    await onChangeTableType(selectedTableData.id, e.target.value);
+                  } catch (err) {
+                    setUpdateTableError(
+                      err instanceof Error ? err.message : m.admin_content_error_save(),
+                    );
+                  }
                 }}
                 key={`type-${selectedTableData.id}`}
               >
-                {tableTypes.filter((tt) => tt.active).map((tt) => (
-                  <option key={tt.id} value={tt.id}>
-                    {tt.name}
-                  </option>
-                ))}
+                {tableTypes
+                  .filter((tt) => tt.active || tt.id === selectedTableData.tableTypeId)
+                  .map((tt) => (
+                    <option key={tt.id} value={tt.id} disabled={!tt.active}>
+                      {tt.name}
+                    </option>
+                  ))}
               </Form.Select>
             </Form.Group>
             {selectedReservations.length === 0 ? (
@@ -1113,6 +1136,16 @@ export default function LayoutEditor({
                 {assignAreaError}
               </Alert>
             )}
+            {resizeAreaError && (
+              <Alert
+                variant="danger"
+                className="py-1 mb-2 small"
+                dismissible
+                onClose={() => setResizeAreaError(null)}
+              >
+                {resizeAreaError}
+              </Alert>
+            )}
             <Form.Group className="mb-3" controlId="area-label">
               <Form.Label className="text-secondary small">
                 {m.admin_layout_area_form_label()}
@@ -1147,7 +1180,14 @@ export default function LayoutEditor({
                   onBlur={async (e) => {
                     const val = parseFloat(e.target.value);
                     if (!isNaN(val) && val > 0 && val !== selectedAreaData.widthM) {
-                      await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
+                      setResizeAreaError(null);
+                      try {
+                        await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
+                      } catch (err) {
+                        setResizeAreaError(
+                          err instanceof Error ? err.message : m.admin_content_error_save(),
+                        );
+                      }
                     }
                   }}
                   key={`w-${selectedAreaData.id}`}
@@ -1168,7 +1208,14 @@ export default function LayoutEditor({
                   onBlur={async (e) => {
                     const val = parseFloat(e.target.value);
                     if (!isNaN(val) && val > 0 && val !== selectedAreaData.lengthM) {
-                      await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
+                      setResizeAreaError(null);
+                      try {
+                        await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
+                      } catch (err) {
+                        setResizeAreaError(
+                          err instanceof Error ? err.message : m.admin_content_error_save(),
+                        );
+                      }
                     }
                   }}
                   key={`l-${selectedAreaData.id}`}
