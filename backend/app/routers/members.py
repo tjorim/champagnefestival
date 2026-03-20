@@ -32,13 +32,13 @@ def _normalise_optional_identity(value: str | None) -> str | None:
 
 
 def _ensure_member_role(person: Person) -> None:
-    roles = set(person.roles)
+    roles = set(person.roles or [])
     roles.add("member")
     person.roles = sorted(roles)
 
 
 def _has_member_role(person: Person) -> bool:
-    return "member" in person.roles
+    return "member" in (person.roles or [])
 
 
 async def _ensure_unique_fields(

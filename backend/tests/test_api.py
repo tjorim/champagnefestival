@@ -364,102 +364,359 @@ async def test_my_reservations_multiple_editions(client):
 
 
 # ---------------------------------------------------------------------------
-# Content API (producers / sponsors)
+# Exhibitors API
 # ---------------------------------------------------------------------------
 
-PRODUCER_ITEMS = [
-    {"id": 1, "name": "Maison Bollinger", "image": "/images/producers/bollinger.jpg"},
-    {"id": 2, "name": "Krug", "image": "/images/producers/krug.jpg"},
-]
-
-SPONSOR_ITEMS = [
-    {"id": 1, "name": "Acme Corp", "image": "/images/sponsors/acme.jpg"},
-]
-
 
 @pytest.mark.anyio
-async def test_content_404_before_save(client):
-    """Before any admin save, the endpoint returns 404 (frontend falls back to placeholders)."""
-    r = await client.get("/api/content/producers")
-    assert r.status_code == 404
-
-
-@pytest.mark.anyio
-async def test_content_upsert_requires_admin(client):
-    r = await client.put("/api/content/producers", json={"value": PRODUCER_ITEMS})
+async def test_exhibitors_require_admin(client):
+    r = await client.get("/api/exhibitors")
     assert r.status_code == 401
 
 
 @pytest.mark.anyio
-async def test_content_invalid_key(client):
+async def test_exhibitor_crud(client):
+    # Create producer
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Maison Bollinger", "image": "/img/bollinger.jpg", "website": "https://bollinger.com", "type": "producer"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    producer = r.json()
+    assert producer["name"] == "Maison Bollinger"
+    assert producer["type"] == "producer"
+    assert producer["contact_person"] is None
+    producer_id = producer["id"]
+
+    # Create sponsor
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Acme Corp", "type": "sponsor"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    assert r.json()["type"] == "sponsor"
+
+    # List all
+    r = await client.get("/api/exhibitors", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert len(r.json()) == 2
+
+    # Filter by type
+    r = await client.get("/api/exhibitors", params={"type": "producer"}, headers=ADMIN_HEADERS)
+    assert len(r.json()) == 1
+    assert r.json()[0]["name"] == "Maison Bollinger"
+
+    # Update
     r = await client.put(
-        "/api/content/invalid_key",
-        json={"value": PRODUCER_ITEMS},
+        f"/api/exhibitors/{producer_id}",
+        json={"website": "https://bollinger.fr"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["website"] == "https://bollinger.fr"
+
+    # Delete
+    r = await client.delete(f"/api/exhibitors/{producer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+
+    r = await client.get("/api/exhibitors", headers=ADMIN_HEADERS)
+    assert len(r.json()) == 1
+
+
+@pytest.mark.anyio
+async def test_exhibitor_with_contact_person(client):
+    """An exhibitor can reference a Person as contact; summary is embedded."""
+    r = await client.post(
+        "/api/people",
+        json={"name": "Alice Contact", "email": "alice@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    person_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Fine Wines Ltd", "type": "vendor", "contact_person_id": person_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["contact_person"]["name"] == "Alice Contact"
+    assert data["contact_person_id"] == person_id
+
+    # Remove contact via update (set to null)
+    exhibitor_id = data["id"]
+    r = await client.put(
+        f"/api/exhibitors/{exhibitor_id}",
+        json={"contact_person_id": None},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["contact_person"] is None
+
+
+@pytest.mark.anyio
+async def test_exhibitor_invalid_contact_person(client):
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Bad Corp", "contact_person_id": "nonexistent-id"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Areas API
+# ---------------------------------------------------------------------------
+
+
+async def _create_layout_prerequisites(client):
+    """Helper: create venue → room → layout; return layout_id."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    room_id = r.json()["id"]
+    r = await client.post(
+        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+    )
+    return r.json()["id"]
+
+
+@pytest.mark.anyio
+async def test_areas_require_admin(client):
+    r = await client.get("/api/areas")
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_area_crud(client):
+    layout_id = await _create_layout_prerequisites(client)
+
+    payload = {
+        "layout_id": layout_id,
+        "label": "DJ Stage",
+        "icon": "bi-music-note-beamed",
+        "width_m": 3.0,
+        "length_m": 2.0,
+        "x": 25.0,
+        "y": 50.0,
+    }
+
+    r = await client.post("/api/areas", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    area = r.json()
+    assert area["label"] == "DJ Stage"
+    assert area["icon"] == "bi-music-note-beamed"
+    assert area["exhibitor_id"] is None
+    area_id = area["id"]
+
+    # List (filter by layout)
+    r = await client.get("/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+    # Get single
+    r = await client.get(f"/api/areas/{area_id}", headers=ADMIN_HEADERS)
+    assert r.json()["label"] == "DJ Stage"
+
+    # Update position
+    r = await client.put(
+        f"/api/areas/{area_id}", json={"x": 40.0, "label": "Main Stage"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert r.json()["x"] == 40.0
+    assert r.json()["label"] == "Main Stage"
+
+    # Delete
+    r = await client.delete(f"/api/areas/{area_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+
+    r = await client.get("/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS)
+    assert r.json() == []
+
+
+@pytest.mark.anyio
+async def test_area_linked_to_exhibitor(client):
+    """An area can be assigned to an exhibitor; clearing works too."""
+    layout_id = await _create_layout_prerequisites(client)
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Oyster Bar", "type": "vendor"},
+        headers=ADMIN_HEADERS,
+    )
+    exhibitor_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/areas",
+        json={"layout_id": layout_id, "label": "Oyster Stand", "exhibitor_id": exhibitor_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    area_id = r.json()["id"]
+    assert r.json()["exhibitor_id"] == exhibitor_id
+
+    # Clear exhibitor assignment
+    r = await client.put(
+        f"/api/areas/{area_id}", json={"exhibitor_id": None}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert r.json()["exhibitor_id"] is None
+
+
+@pytest.mark.anyio
+async def test_area_invalid_layout(client):
+    r = await client.post(
+        "/api/areas",
+        json={"layout_id": "nonexistent", "label": "Ghost Area"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Editions API — public active endpoint
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_active_edition_not_found(client):
+    r = await client.get("/api/editions/active")
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
+    # Create venue
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+
+    # Create a producer and a sponsor
+    r = await client.post(
+        "/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS
+    )
+    producer_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors", json={"name": "Acme", "type": "sponsor"}, headers=ADMIN_HEADERS
+    )
+    sponsor_id = r.json()["id"]
+
+    # Create active edition
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "2026",
+            "year": 2026,
+            "month": "march",
+            "friday": "2026-03-20",
+            "saturday": "2026-03-21",
+            "sunday": "2099-03-22",  # far future so it's "upcoming"
+            "venue_id": venue_id,
+            "exhibitors": [producer_id, sponsor_id],
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    # Public endpoint — no auth required
+    r = await client.get("/api/editions/active")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["id"] == "2026"
+    assert data["venue"]["name"] == "Test Venue"
+    assert len(data["producers"]) == 1
+    assert data["producers"][0]["name"] == "Bollinger"
+    assert len(data["sponsors"]) == 1
+    assert data["sponsors"][0]["name"] == "Acme"
+
+
+@pytest.mark.anyio
+async def test_edition_rejects_vendor_exhibitors(client):
+    """Vendor-type exhibitors must not be linked to editions."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors", json={"name": "Food Vendor", "type": "vendor"}, headers=ADMIN_HEADERS
+    )
+    vendor_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "2026v",
+            "year": 2026,
+            "month": "march",
+            "friday": "2026-03-20",
+            "saturday": "2026-03-21",
+            "sunday": "2026-03-22",
+            "venue_id": venue_id,
+            "exhibitors": [vendor_id],
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400
+    assert "vendor" in r.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Admin reservation creation
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_content_producers_crud(client):
-    # Create
-    r = await client.put(
-        "/api/content/producers",
-        json={"value": PRODUCER_ITEMS},
+async def test_admin_create_reservation(client):
+    """Admin endpoint creates reservation directly for a known person."""
+    r = await client.post(
+        "/api/people",
+        json={"name": "Pierre Admin", "email": "pierre@example.com", "phone": "+32499111222"},
         headers=ADMIN_HEADERS,
     )
-    assert r.status_code == 200
+    person_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/reservations/admin",
+        json={
+            "person_id": person_id,
+            "event_id": "event-fri",
+            "event_title": "Vrijdagavond",
+            "guest_count": 3,
+            "status": "confirmed",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
     data = r.json()
-    assert data["key"] == "producers"
-    assert len(data["value"]) == 2
-    assert data["value"][0]["name"] == "Maison Bollinger"
-
-    # Read back (public — no auth)
-    r = await client.get("/api/content/producers")
-    assert r.status_code == 200
-    assert len(r.json()["value"]) == 2
-
-    # Update (replace)
-    r = await client.put(
-        "/api/content/producers",
-        json={"value": [PRODUCER_ITEMS[0]]},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 200
-    assert len(r.json()["value"]) == 1
+    assert data["person_id"] == person_id
+    assert data["person"]["name"] == "Pierre Admin"
+    assert data["status"] == "confirmed"
+    assert "check_in_token" not in data
 
 
 @pytest.mark.anyio
-async def test_content_sponsors_independent(client):
-    """Producers and sponsors are stored independently."""
-    await client.put(
-        "/api/content/producers",
-        json={"value": PRODUCER_ITEMS},
-        headers=ADMIN_HEADERS,
+async def test_admin_create_reservation_requires_auth(client):
+    r = await client.post(
+        "/api/reservations/admin",
+        json={"person_id": "x", "event_id": "e", "event_title": "t", "guest_count": 1},
     )
-    r = await client.put(
-        "/api/content/sponsors",
-        json={"value": SPONSOR_ITEMS},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 200
-
-    r_prod = await client.get("/api/content/producers")
-    r_spon = await client.get("/api/content/sponsors")
-    assert len(r_prod.json()["value"]) == 2
-    assert len(r_spon.json()["value"]) == 1
+    assert r.status_code == 401
 
 
 @pytest.mark.anyio
-async def test_content_empty_list(client):
-    """Saving an empty list is valid (admin cleared the content)."""
-    r = await client.put(
-        "/api/content/sponsors",
-        json={"value": []},
+async def test_admin_create_reservation_person_not_found(client):
+    r = await client.post(
+        "/api/reservations/admin",
+        json={
+            "person_id": "nonexistent",
+            "event_id": "event-fri",
+            "event_title": "Vrijdagavond",
+            "guest_count": 1,
+        },
         headers=ADMIN_HEADERS,
     )
-    assert r.status_code == 200
-    assert r.json()["value"] == []
+    assert r.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -829,7 +1086,7 @@ async def test_people_crud_roles_and_filters(client):
     r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
-    assert r.json()[0]["email"] == "anne@example.com"
+    assert r.json()[0]["person"]["email"] == "anne@example.com"
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204

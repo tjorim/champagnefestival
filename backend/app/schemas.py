@@ -435,6 +435,8 @@ class TableCreate(BaseModel):
     table_type_id: str
     rotation: int = Field(ge=0, le=359, default=0)
     layout_id: str
+
+
 class TableUpdate(BaseModel):
     name: str | None = None
     capacity: int | None = Field(default=None, ge=1, le=50)

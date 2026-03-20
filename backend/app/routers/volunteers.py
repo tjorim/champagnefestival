@@ -31,7 +31,7 @@ def _validate_help_day_range(first_help_day, last_help_day) -> None:
 
 
 def _ensure_volunteer_role(person: Person) -> None:
-    roles = set(person.roles)
+    roles = set(person.roles or [])
     roles.add("volunteer")
     person.roles = sorted(roles)
 

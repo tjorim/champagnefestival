@@ -113,7 +113,10 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
         invalid = [eid for eid in body.exhibitors if eid not in exhibitor_map]
         if invalid:
             raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
-        e.exhibitors = [eid for eid in body.exhibitors if exhibitor_map[eid]["type"] in ("producer", "sponsor")]
+        vendors = [eid for eid in body.exhibitors if exhibitor_map[eid]["type"] == "vendor"]
+        if vendors:
+            raise HTTPException(status_code=400, detail=f"Only producers and sponsors may be linked to editions. Rejected vendor IDs: {vendors}")
+        e.exhibitors = list(body.exhibitors)
     else:
         e.exhibitors = []
     db.add(e)
@@ -144,7 +147,10 @@ async def update_edition(
             invalid = [eid for eid in body.exhibitors if eid not in exhibitor_map]
             if invalid:
                 raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
-            e.exhibitors = [eid for eid in body.exhibitors if exhibitor_map[eid]["type"] in ("producer", "sponsor")]
+            vendors = [eid for eid in body.exhibitors if exhibitor_map[eid]["type"] == "vendor"]
+            if vendors:
+                raise HTTPException(status_code=400, detail=f"Only producers and sponsors may be linked to editions. Rejected vendor IDs: {vendors}")
+            e.exhibitors = list(body.exhibitors)
         else:
             e.exhibitors = []
 

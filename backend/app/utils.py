@@ -32,10 +32,12 @@ def make_id(prefix: str) -> str:
 def reservation_to_dict(r: Reservation) -> dict:
     """Serialise a Reservation ORM row to a plain dict (no check_in_token)."""
     person: Person | None = getattr(r, "_person", None)
+    if person is None:
+        raise ValueError(f"Reservation {r.id!r} has no attached _person; caller must set r._person before serialising.")
     return {
         "id": r.id,
         "person_id": r.person_id,
-        "person": person_summary_to_dict(person) if person else {},
+        "person": person_summary_to_dict(person),
         "event_id": r.event_id,
         "event_title": r.event_title,
         "guest_count": r.guest_count,

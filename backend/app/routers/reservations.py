@@ -248,9 +248,8 @@ async def get_reservation(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     r = await _get_or_404(db, reservation_id)
-    if r.person_id:
-        person_result = await db.execute(select(Person).where(Person.id == r.person_id))
-        r._person = person_result.scalar_one_or_none()
+    person_result = await db.execute(select(Person).where(Person.id == r.person_id))
+    r._person = person_result.scalar_one_or_none()
     return reservation_to_dict_with_token(r)
 
 
