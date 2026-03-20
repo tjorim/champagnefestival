@@ -5,6 +5,7 @@
  * navigation tabs when organising floor plans.
  */
 
+import clsx from "clsx";
 import { useCallback, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -236,11 +237,11 @@ export default function VenueManagement({
                 const venueRooms = rooms.filter((r) => r.venueId === venue.id);
                 const isArchived = !venue.active;
                 return (
-                  <tr key={venue.id} className={isArchived ? "opacity-50" : undefined}>
+                  <tr key={venue.id} className={clsx(isArchived && "opacity-50")}>
                     <td className="fw-semibold">
                       {venue.name}
                       {isArchived && (
-                        <Badge bg="secondary" className="ms-2" style={{ fontSize: "0.7rem" }}>
+                        <Badge bg="secondary" className="ms-2 fs-2xs">
                           {m.admin_venue_archived_badge()}
                         </Badge>
                       )}
@@ -273,8 +274,10 @@ export default function VenueManagement({
                               {room.active ? (
                                 <button
                                   type="button"
-                                  className={`btn-close${contrastColor(room.color) === "#fff" ? " btn-close-white" : ""}`}
-                                  style={{ fontSize: "0.55rem" }}
+                                  className={clsx(
+                                    "btn-close fs-5xs",
+                                    contrastColor(room.color) === "#fff" && "btn-close-white",
+                                  )}
                                   onClick={() => handleArchiveRoom(room.id)}
                                   aria-label={m.admin_content_archive()}
                                   title={m.admin_content_archive()}
@@ -282,8 +285,7 @@ export default function VenueManagement({
                               ) : (
                                 <button
                                   type="button"
-                                  className="btn btn-sm p-0 border-0 bg-transparent text-white"
-                                  style={{ fontSize: "0.55rem", lineHeight: 1 }}
+                                  className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
                                   onClick={() => handleRestoreRoom(room.id)}
                                   aria-label={m.admin_content_restore()}
                                   title={m.admin_content_restore()}
@@ -296,8 +298,7 @@ export default function VenueManagement({
                           <Button
                             variant="outline-secondary"
                             size="sm"
-                            className="py-0 px-1"
-                            style={{ fontSize: "0.7rem" }}
+                            className="py-0 px-1 fs-2xs"
                             onClick={() => openAddRoom(venue.id)}
                           >
                             <i className="bi bi-plus-lg" aria-hidden="true" />

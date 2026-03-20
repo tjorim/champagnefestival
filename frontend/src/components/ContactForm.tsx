@@ -147,7 +147,7 @@ const ContactForm: React.FC = () => {
             )}
 
             {/* Hidden honeypot field to catch bots - placed early to trap bots */}
-            <div style={{ display: "none" }}>
+            <div className="d-none">
               <Form.Control
                 name="honeypot"
                 type="text"

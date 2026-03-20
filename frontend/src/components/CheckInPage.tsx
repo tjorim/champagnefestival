@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import Container from "react-bootstrap/Container";
@@ -216,7 +217,14 @@ export default function CheckInPage() {
                 border={success ? "success" : alreadyCheckedIn ? "warning" : "secondary"}
               >
                 <Card.Header
-                  className={`d-flex align-items-center justify-content-between ${success ? "border-success" : alreadyCheckedIn ? "border-warning" : "border-secondary"}`}
+                  className={clsx(
+                    "d-flex align-items-center justify-content-between",
+                    success
+                      ? "border-success"
+                      : alreadyCheckedIn
+                        ? "border-warning"
+                        : "border-secondary",
+                  )}
                 >
                   <span className="fw-semibold fs-5">
                     <i className="bi bi-person-fill me-2" aria-hidden="true" />

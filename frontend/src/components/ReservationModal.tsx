@@ -237,7 +237,7 @@ export default function ReservationModal({
               aria-hidden="true"
               tabIndex={-1}
               autoComplete="off"
-              style={{ display: "none" }}
+              className="d-none"
             />
 
             {/* Personal details */}

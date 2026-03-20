@@ -5,6 +5,7 @@
  * capacity) here. The Layout component then picks a type when placing a table.
  */
 
+import clsx from "clsx";
 import { useCallback, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -156,11 +157,11 @@ export default function TableTypeManagement({
                 </thead>
                 <tbody>
                   {tableTypes.map((tt) => (
-                    <tr key={tt.id} className={tt.active ? undefined : "opacity-50"}>
+                    <tr key={tt.id} className={clsx(!tt.active && "opacity-50")}>
                       <td className="fw-semibold">
                         {tt.name}
                         {!tt.active && (
-                          <Badge bg="secondary" className="ms-2" style={{ fontSize: "0.7rem" }}>
+                          <Badge bg="secondary" className="ms-2 fs-2xs">
                             {m.admin_venue_archived_badge()}
                           </Badge>
                         )}

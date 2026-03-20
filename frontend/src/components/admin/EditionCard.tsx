@@ -197,7 +197,7 @@ export default function EditionCard({
                 <i className="bi bi-geo-alt me-1" aria-hidden="true" />
                 {[venue.name, venue.address, venue.city, venue.country].filter(Boolean).join(", ")}
                 {!venue.active && (
-                  <Badge bg="secondary" className="ms-2" style={{ fontSize: "0.65rem" }}>
+                  <Badge bg="secondary" className="ms-2 fs-3xs">
                     {m.admin_venue_archived_badge()}
                   </Badge>
                 )}
@@ -223,11 +223,7 @@ export default function EditionCard({
                   className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-2 py-1 px-0"
                 >
                   <span className="d-flex align-items-center gap-2 flex-wrap">
-                    <Badge
-                      bg="secondary"
-                      className="text-uppercase"
-                      style={{ fontSize: "0.65rem" }}
-                    >
+                    <Badge bg="secondary" className="text-uppercase fs-3xs">
                       {ev.day_id === 1
                         ? m.admin_content_edition_friday()
                         : ev.day_id === 2
@@ -236,16 +232,11 @@ export default function EditionCard({
                     </Badge>
                     <span className="text-secondary small">{ev.start_time}</span>
                     <span>{ev.title}</span>
-                    <Badge
-                      bg="info"
-                      text="dark"
-                      className="text-capitalize"
-                      style={{ fontSize: "0.65rem" }}
-                    >
+                    <Badge bg="info" text="dark" className="text-capitalize fs-3xs">
                       {ev.category}
                     </Badge>
                     {ev.reservation && (
-                      <Badge bg="warning" text="dark" style={{ fontSize: "0.65rem" }}>
+                      <Badge bg="warning" text="dark" className="fs-3xs">
                         {m.schedule_reservation()}
                       </Badge>
                     )}

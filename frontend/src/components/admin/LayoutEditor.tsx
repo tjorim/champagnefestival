@@ -6,6 +6,7 @@
  * (1 metre = PX_PER_M pixels).
  */
 
+import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext,
@@ -220,7 +221,12 @@ function DraggableTable({
         e.stopPropagation();
         onClick();
       }}
-      className={`position-absolute d-flex flex-column align-items-center justify-content-center border text-center ${shape === "round" ? "rounded-circle" : "rounded"} ${borderCls} ${bgCls}`}
+      className={clsx(
+        "position-absolute d-flex flex-column align-items-center justify-content-center border text-center",
+        shape === "round" ? "rounded-circle" : "rounded",
+        borderCls,
+        bgCls,
+      )}
       style={{
         left: leftPx,
         top: topPx,
@@ -240,10 +246,8 @@ function DraggableTable({
       aria-label={`${m.admin_table_label()} ${table.name}`}
     >
       <i className="bi bi-people-fill fs-5" aria-hidden="true" />
-      <span className="small fw-semibold" style={{ fontSize: "0.7rem" }}>
-        {table.name}
-      </span>
-      <span style={{ fontSize: "0.65rem" }}>
+      <span className="small fw-semibold fs-2xs">{table.name}</span>
+      <span className="fs-3xs">
         {assignedCount}/{table.capacity}
       </span>
     </div>
@@ -300,7 +304,11 @@ function DraggableArea({
         e.stopPropagation();
         onClick();
       }}
-      className={`position-absolute d-flex flex-column align-items-center justify-content-center border text-center rounded ${borderCls} ${bgCls}`}
+      className={clsx(
+        "position-absolute d-flex flex-column align-items-center justify-content-center border text-center rounded",
+        borderCls,
+        bgCls,
+      )}
       style={{
         left: leftPx,
         top: topPx,
@@ -319,21 +327,12 @@ function DraggableArea({
       aria-pressed={isInteractive ? isSelected : undefined}
       aria-label={`${m.admin_layout_area_label_prefix()} ${area.label}`}
     >
-      <i
-        className={`bi ${area.icon || "bi-shop"}`}
-        style={{ fontSize: "0.8rem" }}
-        aria-hidden="true"
-      />
-      <span
-        className="fw-semibold text-truncate w-100 text-center px-1"
-        style={{ fontSize: "0.65rem" }}
-      >
-        {area.label}
-      </span>
+      <i className={clsx("bi", area.icon || "bi-shop", "fs-xs")} aria-hidden="true" />
+      <span className="fw-semibold text-truncate w-100 text-center px-1 fs-3xs">{area.label}</span>
       {assignedLabel && (
         <span
-          className="text-truncate w-100 text-center px-1"
-          style={{ fontSize: "0.55rem", opacity: 0.85 }}
+          className="text-truncate w-100 text-center px-1 fs-5xs"
+          style={{ opacity: 0.85 }}
           title={assignedLabel}
         >
           {assignedLabel}
@@ -453,10 +452,7 @@ function RoomCanvas({
           aria-label={room.name}
         >
           {isEmpty && (
-            <div
-              className="position-absolute top-50 start-50 translate-middle text-secondary text-center"
-              style={{ pointerEvents: "none" }}
-            >
+            <div className="position-absolute top-50 start-50 translate-middle text-secondary text-center pe-none">
               <i className="bi bi-grid-3x3-gap display-4" aria-hidden="true" />
               <p className="mt-2 small">{m.admin_no_tables()}</p>
             </div>
@@ -762,7 +758,7 @@ export default function LayoutEditor({
                       aria-hidden="true"
                     />
                     {room.name}
-                    <Badge bg="secondary" className="ms-1" style={{ fontSize: "0.6rem" }}>
+                    <Badge bg="secondary" className="ms-1 fs-4xs">
                       {roomTableCount}
                     </Badge>
                   </Nav.Link>
@@ -1018,7 +1014,10 @@ export default function LayoutEditor({
         <Card bg="dark" text="white" border="info" className="mb-3">
           <Card.Header className="d-flex align-items-center justify-content-between border-info">
             <span className="fw-semibold">
-              <i className={`bi ${selectedAreaData.icon || "bi-shop"} me-2`} aria-hidden="true" />
+              <i
+                className={clsx("bi", selectedAreaData.icon || "bi-shop", "me-2")}
+                aria-hidden="true"
+              />
               {m.admin_layout_area_label_prefix()} {selectedAreaData.label}
             </span>
             <div className="d-flex gap-2 align-items-center">
@@ -1097,7 +1096,7 @@ export default function LayoutEditor({
               </Form.Label>
               <div className="d-flex gap-2 align-items-center">
                 <i
-                  className={`bi ${selectedAreaData.icon || "bi-shop"} text-info`}
+                  className={clsx("bi", selectedAreaData.icon || "bi-shop", "text-info")}
                   aria-hidden="true"
                 />
                 <Form.Select
@@ -1191,7 +1190,7 @@ export default function LayoutEditor({
                     >
                       <i className="bi bi-grid-3x3 me-1 text-secondary" aria-hidden="true" />
                       {t.name}
-                      <Badge bg="secondary" className="ms-2" style={{ fontSize: "0.65rem" }}>
+                      <Badge bg="secondary" className="ms-2 fs-3xs">
                         {t.capacity} {m.admin_layout_capacity_abbrev()}
                       </Badge>
                     </ListGroup.Item>
@@ -1283,7 +1282,7 @@ export default function LayoutEditor({
           <Form.Group className="mb-3" controlId="area-new-icon">
             <Form.Label>{m.admin_layout_area_form_icon()}</Form.Label>
             <div className="d-flex gap-2 align-items-center">
-              <i className={`bi ${newArea.icon} fs-4 text-info`} aria-hidden="true" />
+              <i className={clsx("bi", newArea.icon, "fs-4 text-info")} aria-hidden="true" />
               <Form.Select
                 value={newArea.icon}
                 onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}

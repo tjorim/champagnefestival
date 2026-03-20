@@ -381,6 +381,23 @@ main {
   }
 }
 
+/* Sub-scale font size utilities (below Bootstrap's fs-6 / 1rem) */
+.fs-xs {
+  font-size: 0.8rem;
+}
+.fs-2xs {
+  font-size: 0.7rem;
+}
+.fs-3xs {
+  font-size: 0.65rem;
+}
+.fs-4xs {
+  font-size: 0.6rem;
+}
+.fs-5xs {
+  font-size: 0.55rem;
+}
+
 /* Bootstrap theme is now set via data-bs-theme="dark" on the HTML element */
 :root {
   /* Override Bootstrap variables with our brand colors */

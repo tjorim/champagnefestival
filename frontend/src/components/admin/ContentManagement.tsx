@@ -2,6 +2,7 @@
  * ContentManagement — admin tab for editing producers, sponsors, and editions.
  */
 
+import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -217,7 +218,10 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
     return (
       <ListGroup.Item
         key={item.id}
-        className={`bg-dark border-secondary d-flex justify-content-between align-items-center gap-2${isArchived ? " opacity-50" : ""}`}
+        className={clsx(
+          "bg-dark border-secondary d-flex justify-content-between align-items-center gap-2",
+          isArchived && "opacity-50",
+        )}
       >
         <span className="d-flex align-items-center gap-2 flex-grow-1 text-truncate">
           {item.image && (
@@ -239,7 +243,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
               )}
             </span>
           )}
-          <span className={`text-truncate ${isArchived ? "text-secondary" : "text-light"}`}>
+          <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
             {item.name}
           </span>
           <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>

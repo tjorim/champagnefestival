@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useState, useEffect } from "react";
 import { getLocale, setLocale, isLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
@@ -59,9 +60,10 @@ const LanguageSwitcher = () => {
         {languages.map((lang) => (
           <Dropdown.Item
             key={lang.code}
-            className={`d-flex align-items-center px-4 py-3 ${
-              currentLang === lang.code ? "bg-primary bg-opacity-10" : ""
-            }`}
+            className={clsx(
+              "d-flex align-items-center px-4 py-3",
+              currentLang === lang.code && "bg-primary bg-opacity-10",
+            )}
             as="button"
             onClick={() => changeLanguage(lang.code)}
           >

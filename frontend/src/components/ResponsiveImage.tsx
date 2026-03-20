@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import React from "react";
 
 interface ResponsiveImageProps {
@@ -43,7 +44,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
         sizes={sizes}
         width={width}
         height={height}
-        className={`object-cover ${fill ? "position-absolute w-100 h-100" : "w-100"}`}
+        className={clsx("object-cover", fill ? "position-absolute w-100 h-100" : "w-100")}
         style={{
           objectFit: "cover",
           top: 0,

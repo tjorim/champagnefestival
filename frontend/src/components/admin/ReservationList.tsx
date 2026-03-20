@@ -103,7 +103,9 @@ export default function ReservationList({
   ];
 
   // Find which reservations are linked to an exhibitor contact person
-  const allContactPersonIds = new Set(exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null));
+  const allContactPersonIds = new Set(
+    exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null),
+  );
 
   const filterPersonId = allocationFilter
     ? (allocationOptions.find((o) => o.key === allocationFilter)?.personId ?? null)
