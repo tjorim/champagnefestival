@@ -504,5 +504,12 @@
   "admin_volunteers_filter_inactive": "Inactifs uniquement",
   "admin_volunteers_error_create": "Échec de la création du bénévole.",
   "admin_volunteers_error_update": "Échec de la mise à jour du bénévole.",
-  "admin_volunteers_error_delete": "Échec de la suppression du bénévole."
+  "admin_volunteers_error_delete": "Échec de la suppression du bénévole.",
+  "admin_volunteers_help_periods_label": "Périodes d’aide",
+  "admin_volunteers_periods_column": "Périodes d’aide",
+  "admin_volunteers_add_help_period": "Ajouter une période d’aide",
+  "admin_volunteers_remove_help_period": "Supprimer la période",
+  "admin_volunteers_no_help_periods": "Aucune période d’aide ajoutée pour le moment.",
+  "admin_volunteers_validation_help_period_required": "Ajoutez au moins une période d’aide pour chaque bénévole.",
+  "admin_volunteers_validation_help_period_range": "Chaque période d’aide doit commencer avant ou le même jour que sa date de fin."
 }

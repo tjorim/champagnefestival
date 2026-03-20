@@ -7,7 +7,7 @@ import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import type { Person } from "@/types/person";
+import type { Person, VolunteerHelpPeriod } from "@/types/person";
 
 interface VolunteerFormModalProps {
   show: boolean;
@@ -16,12 +16,29 @@ interface VolunteerFormModalProps {
   onHide: () => void;
 }
 
+export interface VolunteerHelpPeriodFormData {
+  firstHelpDay: string;
+  lastHelpDay: string | null;
+}
+
 export interface VolunteerFormData {
   name: string;
   address: string;
   nationalRegisterNumber: string;
   eidDocumentNumber: string;
   active: boolean;
+  helpPeriods: VolunteerHelpPeriodFormData[];
+}
+
+function emptyPeriod(): VolunteerHelpPeriodFormData {
+  return { firstHelpDay: "", lastHelpDay: null };
+}
+
+function mapPeriod(period: VolunteerHelpPeriod): VolunteerHelpPeriodFormData {
+  return {
+    firstHelpDay: period.firstHelpDay,
+    lastHelpDay: period.lastHelpDay,
+  };
 }
 
 export default function VolunteerFormModal({
@@ -36,6 +53,7 @@ export default function VolunteerFormModal({
   const [address, setAddress] = useState("");
   const [nationalRegisterNumber, setNationalRegisterNumber] = useState("");
   const [eidDocumentNumber, setEidDocumentNumber] = useState("");
+  const [helpPeriods, setHelpPeriods] = useState<VolunteerHelpPeriodFormData[]>([emptyPeriod()]);
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,12 +65,16 @@ export default function VolunteerFormModal({
       setAddress(volunteer.address ?? "");
       setNationalRegisterNumber(volunteer.nationalRegisterNumber ?? "");
       setEidDocumentNumber(volunteer.eidDocumentNumber ?? "");
+      setHelpPeriods(
+        volunteer.helpPeriods.length > 0 ? volunteer.helpPeriods.map(mapPeriod) : [emptyPeriod()],
+      );
       setActive(volunteer.active);
     } else {
       setName("");
       setAddress("");
       setNationalRegisterNumber("");
       setEidDocumentNumber("");
+      setHelpPeriods([emptyPeriod()]);
       setActive(true);
     }
     setError(null);
@@ -61,13 +83,47 @@ export default function VolunteerFormModal({
 
   useEffect(() => {
     setError(null);
-  }, [name, address, nationalRegisterNumber, eidDocumentNumber, active]);
+  }, [name, address, nationalRegisterNumber, eidDocumentNumber, active, helpPeriods]);
+
+  function updateHelpPeriod(index: number, next: VolunteerHelpPeriodFormData) {
+    setHelpPeriods((prev) => prev.map((period, i) => (i === index ? next : period)));
+  }
+
+  function removeHelpPeriod(index: number) {
+    setHelpPeriods((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  }
+
+  function normalizeHelpPeriods(): VolunteerHelpPeriodFormData[] | null {
+    const normalized = helpPeriods.map((period) => ({
+      firstHelpDay: period.firstHelpDay,
+      lastHelpDay: period.lastHelpDay?.trim() ? period.lastHelpDay : null,
+    }));
+
+    if (normalized.length === 0 || normalized.some((period) => !period.firstHelpDay)) {
+      setError(m.admin_volunteers_validation_help_period_required());
+      return null;
+    }
+
+    if (
+      normalized.some(
+        (period) => period.lastHelpDay != null && period.firstHelpDay > period.lastHelpDay,
+      )
+    ) {
+      setError(m.admin_volunteers_validation_help_period_range());
+      return null;
+    }
+
+    return normalized;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !nationalRegisterNumber.trim() || !eidDocumentNumber.trim()) {
       return;
     }
+
+    const normalizedHelpPeriods = normalizeHelpPeriods();
+    if (!normalizedHelpPeriods) return;
 
     setSaving(true);
     setError(null);
@@ -78,6 +134,7 @@ export default function VolunteerFormModal({
         nationalRegisterNumber: nationalRegisterNumber.trim(),
         eidDocumentNumber: eidDocumentNumber.trim(),
         active,
+        helpPeriods: normalizedHelpPeriods,
       });
       onHide();
     } catch (err) {
@@ -94,7 +151,7 @@ export default function VolunteerFormModal({
   }
 
   return (
-    <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
+    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           <i className="bi bi-hand-thumbs-up me-2" aria-hidden="true" />
@@ -172,6 +229,90 @@ export default function VolunteerFormModal({
               </Form.Group>
             </Col>
           </Row>
+
+          <div className="mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <Form.Label className="text-secondary small mb-0">
+                {m.admin_volunteers_help_periods_label()} *
+              </Form.Label>
+              <Button
+                type="button"
+                variant="outline-warning"
+                size="sm"
+                onClick={() => setHelpPeriods((prev) => [...prev, emptyPeriod()])}
+              >
+                <i className="bi bi-plus-circle me-1" aria-hidden="true" />
+                {m.admin_volunteers_add_help_period()}
+              </Button>
+            </div>
+
+            {helpPeriods.length === 0 ? (
+              <div className="text-secondary small">{m.admin_volunteers_no_help_periods()}</div>
+            ) : (
+              <div className="d-flex flex-column gap-2">
+                {helpPeriods.map((period, index) => (
+                  <div
+                    key={`${index}-${period.firstHelpDay}-${period.lastHelpDay ?? ""}`}
+                    className="border border-secondary rounded p-3"
+                  >
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span className="text-secondary small">#{index + 1}</span>
+                      <Button
+                        type="button"
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => removeHelpPeriod(index)}
+                        disabled={helpPeriods.length === 1}
+                      >
+                        <i className="bi bi-trash me-1" aria-hidden="true" />
+                        {m.admin_volunteers_remove_help_period()}
+                      </Button>
+                    </div>
+                    <Row>
+                      <Col xs={12} md={6}>
+                        <Form.Group controlId={`volunteer-period-start-${index}`}>
+                          <Form.Label className="text-secondary small">
+                            {m.admin_people_first_help_day_label()} *
+                          </Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={period.firstHelpDay}
+                            onChange={(e) =>
+                              updateHelpPeriod(index, {
+                                ...period,
+                                firstHelpDay: e.target.value,
+                              })
+                            }
+                            className="bg-dark text-light border-secondary"
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col xs={12} md={6}>
+                        <Form.Group controlId={`volunteer-period-end-${index}`}>
+                          <Form.Label className="text-secondary small">
+                            {m.admin_people_last_help_day_label()}
+                          </Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={period.lastHelpDay ?? ""}
+                            onChange={(e) =>
+                              updateHelpPeriod(index, {
+                                ...period,
+                                lastHelpDay: e.target.value || null,
+                              })
+                            }
+                            min={period.firstHelpDay || undefined}
+                            className="bg-dark text-light border-secondary"
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <Form.Check
             id="volunteer-active"

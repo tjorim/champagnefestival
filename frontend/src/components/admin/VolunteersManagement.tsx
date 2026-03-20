@@ -21,6 +21,12 @@ interface VolunteersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
+function formatPeriod(period: Person["helpPeriods"][number]): string {
+  return period.lastHelpDay
+    ? `${period.firstHelpDay} → ${period.lastHelpDay}`
+    : `${period.firstHelpDay} →`;
+}
+
 export default function VolunteersManagement({
   volunteers,
   isLoading,
@@ -48,7 +54,12 @@ export default function VolunteersManagement({
             volunteer.name.toLowerCase().includes(s) ||
             volunteer.address.toLowerCase().includes(s) ||
             (volunteer.nationalRegisterNumber ?? "").toLowerCase().includes(s) ||
-            (volunteer.eidDocumentNumber ?? "").toLowerCase().includes(s);
+            (volunteer.eidDocumentNumber ?? "").toLowerCase().includes(s) ||
+            volunteer.helpPeriods.some(
+              (period) =>
+                period.firstHelpDay.toLowerCase().includes(s) ||
+                (period.lastHelpDay ?? "").toLowerCase().includes(s),
+            );
           const matchesActive =
             activeFilter === "all" ||
             (activeFilter === "active" ? volunteer.active : !volunteer.active);
@@ -171,6 +182,7 @@ export default function VolunteersManagement({
                     <th>{m.admin_people_address_label()}</th>
                     <th>{m.admin_people_national_register_number_label()}</th>
                     <th>{m.admin_people_eid_document_number_label()}</th>
+                    <th>{m.admin_volunteers_periods_column()}</th>
                     <th>{m.admin_actions_label()}</th>
                   </tr>
                 </thead>
@@ -190,6 +202,21 @@ export default function VolunteersManagement({
                       <td className="small">{volunteer.address}</td>
                       <td className="small">{volunteer.nationalRegisterNumber}</td>
                       <td className="small">{volunteer.eidDocumentNumber}</td>
+                      <td className="small">
+                        <div className="d-flex flex-column gap-1">
+                          {volunteer.helpPeriods.length > 0 ? (
+                            volunteer.helpPeriods.map((period) => (
+                              <span key={period.id} className="text-secondary">
+                                {formatPeriod(period)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-secondary">
+                              {m.admin_volunteers_no_help_periods()}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td>
                         <div className="d-flex flex-wrap gap-1">
                           <Button

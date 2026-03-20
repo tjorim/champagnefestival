@@ -446,6 +446,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           national_register_number: data.nationalRegisterNumber,
           eid_document_number: data.eidDocumentNumber,
           active: data.active,
+          help_periods: data.helpPeriods.map((period) => ({
+            first_help_day: period.firstHelpDay,
+            last_help_day: period.lastHelpDay,
+          })),
         }),
       });
       if (!response.ok) {
@@ -469,6 +473,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           national_register_number: data.nationalRegisterNumber,
           eid_document_number: data.eidDocumentNumber,
           active: data.active,
+          help_periods: data.helpPeriods.map((period) => ({
+            first_help_day: period.firstHelpDay,
+            last_help_day: period.lastHelpDay,
+          })),
         }),
       });
       if (!response.ok) {

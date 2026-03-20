@@ -504,5 +504,12 @@
   "admin_volunteers_filter_inactive": "Inactive only",
   "admin_volunteers_error_create": "Failed to create volunteer.",
   "admin_volunteers_error_update": "Failed to update volunteer.",
-  "admin_volunteers_error_delete": "Failed to delete volunteer."
+  "admin_volunteers_error_delete": "Failed to delete volunteer.",
+  "admin_volunteers_help_periods_label": "Help periods",
+  "admin_volunteers_periods_column": "Help periods",
+  "admin_volunteers_add_help_period": "Add help period",
+  "admin_volunteers_remove_help_period": "Remove period",
+  "admin_volunteers_no_help_periods": "No help periods added yet.",
+  "admin_volunteers_validation_help_period_required": "Add at least one help period for each volunteer.",
+  "admin_volunteers_validation_help_period_range": "Each help period must start on or before its end date."
 }

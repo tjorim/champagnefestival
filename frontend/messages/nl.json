@@ -504,5 +504,12 @@
   "admin_volunteers_filter_inactive": "Alleen inactief",
   "admin_volunteers_error_create": "Aanmaken van vrijwilliger mislukt.",
   "admin_volunteers_error_update": "Bijwerken van vrijwilliger mislukt.",
-  "admin_volunteers_error_delete": "Verwijderen van vrijwilliger mislukt."
+  "admin_volunteers_error_delete": "Verwijderen van vrijwilliger mislukt.",
+  "admin_volunteers_help_periods_label": "Helpperiodes",
+  "admin_volunteers_periods_column": "Helpperiodes",
+  "admin_volunteers_add_help_period": "Helpperiode toevoegen",
+  "admin_volunteers_remove_help_period": "Periode verwijderen",
+  "admin_volunteers_no_help_periods": "Nog geen helpperiodes toegevoegd.",
+  "admin_volunteers_validation_help_period_required": "Voeg minstens één helpperiode toe voor elke vrijwilliger.",
+  "admin_volunteers_validation_help_period_range": "Elke helpperiode moet op of vóór de einddatum beginnen."
 }

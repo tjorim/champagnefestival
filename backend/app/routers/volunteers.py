@@ -1,20 +1,25 @@
 """Volunteer CRUD endpoints (admin-only).
 
 Volunteers are stored in the people table as a subset with role='volunteer'.
-The current API shape only exposes the subset needed by the volunteer admin UI.
-Note that `Person.first_help_day` / `Person.last_help_day` still exist as
-persisted volunteer-oriented columns on the shared `people` table; actually
-removing or replacing those columns would require a database migration.
+Volunteer help periods are stored separately so a person can help across
+multiple non-contiguous festival dates.
 """
 
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Person
-from app.schemas import VolunteerCreate, VolunteerOut, VolunteerUpdate
+from app.models import Person, VolunteerPeriod
+from app.schemas import (
+    VolunteerCreate,
+    VolunteerHelpPeriodIn,
+    VolunteerOut,
+    VolunteerUpdate,
+)
 from app.utils import make_id, person_to_dict, roles_contains
 
 router = APIRouter(
@@ -61,6 +66,50 @@ async def _ensure_unique_fields(
             )
 
 
+async def _replace_help_periods(
+    db: AsyncSession,
+    volunteer_id: str,
+    help_periods: list[VolunteerHelpPeriodIn],
+) -> None:
+    await db.execute(
+        delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)
+    )
+    for period in help_periods:
+        db.add(
+            VolunteerPeriod(
+                volunteer_id=volunteer_id,
+                first_help_day=period.first_help_day,
+                last_help_day=period.last_help_day,
+            )
+        )
+
+
+async def _load_periods_map(
+    db: AsyncSession, volunteer_ids: list[str]
+) -> dict[str, list[VolunteerPeriod]]:
+    if not volunteer_ids:
+        return {}
+    rows = (
+        (
+            await db.execute(
+                select(VolunteerPeriod)
+                .where(VolunteerPeriod.volunteer_id.in_(volunteer_ids))
+                .order_by(
+                    VolunteerPeriod.volunteer_id,
+                    VolunteerPeriod.first_help_day,
+                    VolunteerPeriod.id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    grouped: dict[str, list[VolunteerPeriod]] = defaultdict(list)
+    for row in rows:
+        grouped[row.volunteer_id].append(row)
+    return grouped
+
+
 @router.post("", response_model=VolunteerOut, status_code=status.HTTP_201_CREATED)
 async def create_volunteer(
     body: VolunteerCreate, db: AsyncSession = Depends(get_db)
@@ -82,9 +131,12 @@ async def create_volunteer(
     _ensure_volunteer_role(person)
 
     db.add(person)
+    await db.flush()
+    await _replace_help_periods(db, person.id, body.help_periods)
     await db.commit()
     await db.refresh(person)
-    return _to_volunteer_out(person)
+    periods_map = await _load_periods_map(db, [person.id])
+    return _to_volunteer_out(person, periods_map.get(person.id, []))
 
 
 @router.get("", response_model=list[VolunteerOut])
@@ -114,15 +166,16 @@ async def list_volunteers(
             )
         )
 
-    result = await db.execute(stmt.order_by(Person.created_at.desc()))
-    rows = result.scalars().all()
-    return [_to_volunteer_out(v) for v in rows]
+    rows = (await db.execute(stmt.order_by(Person.created_at.desc()))).scalars().all()
+    periods_map = await _load_periods_map(db, [row.id for row in rows])
+    return [_to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]
 
 
 @router.get("/{volunteer_id}", response_model=VolunteerOut)
 async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     volunteer = await _get_or_404(db, volunteer_id)
-    return _to_volunteer_out(volunteer)
+    periods_map = await _load_periods_map(db, [volunteer.id])
+    return _to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
 
 
 @router.put("/{volunteer_id}", response_model=VolunteerOut)
@@ -162,11 +215,15 @@ async def update_volunteer(
         if field in body.model_fields_set:
             setattr(volunteer, field, getattr(body, field))
 
+    if "help_periods" in body.model_fields_set and body.help_periods is not None:
+        await _replace_help_periods(db, volunteer_id, body.help_periods)
+
     _ensure_volunteer_role(volunteer)
 
     await db.commit()
     await db.refresh(volunteer)
-    return _to_volunteer_out(volunteer)
+    periods_map = await _load_periods_map(db, [volunteer.id])
+    return _to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
 
 
 @router.delete("/{volunteer_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -174,6 +231,9 @@ async def delete_volunteer(
     volunteer_id: str, db: AsyncSession = Depends(get_db)
 ) -> None:
     volunteer = await _get_or_404(db, volunteer_id)
+    await db.execute(
+        delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)
+    )
     await db.delete(volunteer)
     await db.commit()
 
@@ -186,7 +246,7 @@ async def _get_or_404(db: AsyncSession, volunteer_id: str) -> Person:
     return volunteer
 
 
-def _to_volunteer_out(person: Person) -> dict:
+def _to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dict:
     d = person_to_dict(person)
     return {
         "id": d["id"],
@@ -195,6 +255,14 @@ def _to_volunteer_out(person: Person) -> dict:
         "national_register_number": d["national_register_number"],
         "eid_document_number": d["eid_document_number"],
         "active": d["active"],
+        "help_periods": [
+            {
+                "id": period.id,
+                "first_help_day": period.first_help_day,
+                "last_help_day": period.last_help_day,
+            }
+            for period in help_periods
+        ],
         "created_at": d["created_at"],
         "updated_at": d["updated_at"],
     }

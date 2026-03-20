@@ -991,12 +991,23 @@ async def test_volunteer_crud_and_constraints(client):
         "national_register_number": "91010112345",
         "eid_document_number": "BEX123456",
         "active": True,
+        "help_periods": [
+            {
+                "first_help_day": "2024-03-15",
+                "last_help_day": "2024-03-17",
+            },
+            {
+                "first_help_day": "2025-10-10",
+                "last_help_day": None,
+            },
+        ],
     }
 
     r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     volunteer = r.json()
     assert volunteer["name"] == "Sofie De Smet"
+    assert len(volunteer["help_periods"]) == 2
 
     # duplicate insurance identity fields are rejected
     r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
@@ -1031,12 +1042,44 @@ async def test_volunteer_crud_and_constraints(client):
     assert len(r.json()) == 1
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",
-        json={"address": "Nieuwe Steenweg 8, 8400 Oostende", "active": True},
+        json={
+            "address": "Nieuwe Steenweg 8, 8400 Oostende",
+            "active": True,
+            "help_periods": [
+                {
+                    "first_help_day": "2024-03-15",
+                    "last_help_day": "2024-03-17",
+                },
+                {
+                    "first_help_day": "2025-03-21",
+                    "last_help_day": "2025-03-23",
+                },
+                {
+                    "first_help_day": "2025-10-10",
+                    "last_help_day": None,
+                },
+            ],
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert r.json()["address"] == "Nieuwe Steenweg 8, 8400 Oostende"
     assert r.json()["active"] is True
+    assert len(r.json()["help_periods"]) == 3
+
+    r = await client.put(
+        f"/api/volunteers/{volunteer_id}",
+        json={
+            "help_periods": [
+                {
+                    "first_help_day": "2025-10-11",
+                    "last_help_day": "2025-10-10",
+                }
+            ]
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422
 
     r = await client.delete(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204

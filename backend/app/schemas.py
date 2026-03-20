@@ -204,12 +204,25 @@ class ReservationAdminCreate(BaseModel):
         return v.strip() if isinstance(v, str) else v
 
 
+class VolunteerHelpPeriodIn(BaseModel):
+    first_help_day: date
+    last_help_day: date | None = None
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        if self.last_help_day is not None and self.first_help_day > self.last_help_day:
+            raise ValueError("first_help_day must be before or equal to last_help_day.")
+        return self
+
+
 class VolunteerCreate(BaseModel):
+
     name: str = Field(min_length=1, max_length=200)
     address: str = Field(default="", max_length=300)
     national_register_number: str = Field(min_length=1, max_length=20)
     eid_document_number: str = Field(min_length=1, max_length=50)
     active: bool = True
+    help_periods: list[VolunteerHelpPeriodIn] = Field(min_length=1)
 
 
 class VolunteerUpdate(BaseModel):
@@ -220,6 +233,15 @@ class VolunteerUpdate(BaseModel):
     )
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
     active: bool | None = None
+    help_periods: list[VolunteerHelpPeriodIn] | None = None
+
+
+class VolunteerPeriodOut(BaseModel):
+    id: int
+    first_help_day: date
+    last_help_day: date | None
+
+    model_config = {"from_attributes": True}
 
 
 class VolunteerOut(BaseModel):
@@ -229,6 +251,7 @@ class VolunteerOut(BaseModel):
     national_register_number: str | None
     eid_document_number: str | None
     active: bool
+    help_periods: list[VolunteerPeriodOut]
     created_at: datetime
     updated_at: datetime
 
