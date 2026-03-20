@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     min_form_seconds: int = 3
     """Minimum seconds between form load and submission (bot protection)."""
 
+    guest_access_token_ttl_minutes: int = 30
+    """How long a visitor reservation access link remains valid."""
+
     # --- TODO: Email notifications (planned, not yet implemented) ---
     smtp_host: str = ""
     smtp_port: int = 587
@@ -77,6 +80,13 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"ENVIRONMENT must be 'development' or 'production', got: {v}"
             )
+        return v
+
+    @field_validator("guest_access_token_ttl_minutes")
+    @classmethod
+    def validate_guest_access_token_ttl_minutes(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0.")
         return v
 
     @model_validator(mode="after")

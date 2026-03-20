@@ -16,8 +16,8 @@ The table below tracks each user story against its current implementation status
 | 2   | Visitor   | Register for special events (VIP, breakfast, …)           | ✅ `ReservationModal` + `POST /api/reservations`                                                                                                                   |
 | 3   | Manager   | Overview of all registered guests                         | ✅ Admin dashboard + `GET /api/reservations`                                                                                                                       |
 | 4   | Manager   | Approve, edit, or cancel registrations                    | ✅ `PUT /api/reservations/{id}` (status, notes, pre-orders)                                                                                                        |
-| 5   | Visitor   | Overview of own orders across all editions                | ✅ `GET /api/reservations/my?email=` (public)                                                                                                                      |
-| 6   | Visitor   | Show personal QR code / order identifier                  | ⚠️ Partial — QR is available in admin detail view; visitor access requires the planned confirmation e-mail (see [§ Planned features](#-guest-confirmation-e-mail)) |
+| 5   | Visitor   | Overview of own orders across all editions                | ✅ `POST /api/reservations/my/request` + `POST /api/reservations/my/access`                                                                                         |
+| 6   | Visitor   | Show personal QR code / order identifier                  | ⚠️ Partial — secure access links are prepared server-side, but SMTP delivery is still pending                                                                       |
 | 7   | Manager   | Create / move / delete tables on the floor plan           | ✅ Hall Layout tab + `POST/PUT/DELETE /api/tables/{id}`                                                                                                            |
 | 8   | Manager   | Assign guests (and their orders) to tables                | ✅ `PUT /api/reservations/{id}` (`table_id`)                                                                                                                       |
 | 9   | Manager   | Mark orders as (partially) paid                           | ✅ `PUT /api/reservations/{id}` (`payment_status`)                                                                                                                 |
@@ -27,6 +27,10 @@ The table below tracks each user story against its current implementation status
 | 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, member, festival-visitor; one person can have multiple roles                  |
 | 15  | Manager   | Quickly manage members                                    | ✅ Convenience CRUD via `/api/members` (role-filtered view on people)                                                                                              |
 | 14  | Manager   | Group returning attendees by order history                | ✅ `GET /api/people/{id}/reservations` groups all reservations for that person (linked by person + e-mail)                                                         |
+
+---
+
+**Reservation access strategy:** confirmation e-mails should contain the guest's reservation details directly. Any link back into the site should be a freshly issued, short-lived access link rather than a permanent bearer token.
 
 ---
 
@@ -183,7 +187,8 @@ Public endpoints (reservation creation, check-in) do not require a token.
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | `POST`   | `/api/reservations`             | public         | Create a reservation                                                       |
 | `GET`    | `/api/reservations`             | admin          | List reservations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
-| `GET`    | `/api/reservations/my?email=`   | public         | Visitor self-lookup — own bookings by e-mail                               |
+| `POST`   | `/api/reservations/my/request`  | public         | Prepare a short-lived visitor access link; returns it inline until SMTP is wired up |
+| `POST`   | `/api/reservations/my/access`   | public + token | View visitor reservations using a short-lived secure token                 |
 | `GET`    | `/api/reservations/{id}`        | admin          | Get reservation detail (token included)                                    |
 | `PUT`    | `/api/reservations/{id}`        | admin          | Update reservation                                                         |
 | `DELETE` | `/api/reservations/{id}`        | admin          | Delete reservation                                                         |
