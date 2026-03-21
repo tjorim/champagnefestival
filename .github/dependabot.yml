@@ -50,6 +50,24 @@ updates:
           - "react-leaflet"
           - "@types/leaflet"
 
+  # Monitor Python dependencies for backend API
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "18:00"
+      timezone: "Etc/UTC"
+    assignees:
+      - "tjorim"
+    commit-message:
+      prefix: "deps(backend)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "backend"
+      - "python"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
