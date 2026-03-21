@@ -15,8 +15,6 @@ import ReservationModal from "./components/ReservationModal";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useLanguage } from "./hooks/useLanguage";
-import { useScrollNavigation } from "./hooks/useScrollNavigation";
-import { useServiceWorker } from "./hooks/useServiceWorker";
 import { useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
@@ -159,10 +157,8 @@ function MyReservationsRoute() {
 }
 
 function App() {
-  // Use custom hooks for language, navigation, and service worker
+  // Use custom hooks for language
   useLanguage();
-  useScrollNavigation();
-  useServiceWorker();
 
   // Fetch live edition data; falls back to hardcoded editions.ts on any error
   const { edition } = useActiveEdition();
@@ -452,5 +448,3 @@ ReactDOM.createRoot(rootElement).render(
     </BrowserRouter>
   </React.StrictMode>,
 );
-
-// Service worker registration is now handled by the useServiceWorker hook
