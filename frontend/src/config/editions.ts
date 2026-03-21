@@ -35,7 +35,7 @@ export interface EditionVenue {
   };
 }
 
-export interface ScheduleEvent {
+export interface Event {
   id: string;
   title: string;
   startTime: string;
@@ -52,6 +52,8 @@ export interface ScheduleEvent {
   dayId: number;
 }
 
+export type ScheduleEvent = Event;
+
 export interface SliderItem {
   id: number;
   name: string;
@@ -67,7 +69,7 @@ export interface Edition {
   dates: EditionDates;
   venue: EditionVenue;
   /** Schedule events for this edition. Empty array means TBD. */
-  schedule: ScheduleEvent[];
+  schedule: Event[];
   /** Producers participating in this edition. */
   producers: SliderItem[];
   /** Sponsors participating in this edition. */
@@ -116,7 +118,7 @@ const venueBredene2026: EditionVenue = {
 
 // ─── Schedule definitions ────────────────────────────────────────────────────
 
-const schedule2026March: ScheduleEvent[] = [
+const schedule2026March: Event[] = [
   // FRIDAY – Day 1
   {
     id: "fri-tasting",

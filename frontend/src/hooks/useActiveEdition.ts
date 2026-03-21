@@ -29,6 +29,8 @@ export interface ActiveEditionEvent {
   date: string;
   startTime: string;
   endTime?: string;
+  location?: string;
+  presenter?: string;
   category: string;
   registrationRequired: boolean;
   registrationsOpenFrom?: Date;
@@ -62,6 +64,8 @@ interface ApiEvent {
   date: string;
   start_time: string;
   end_time: string | null;
+  location: string | null;
+  presenter: string | null;
   category: string;
   registration_required: boolean;
   registrations_open_from: string | null;
@@ -122,6 +126,8 @@ function mapStaticEdition(edition: Edition): ActiveEdition {
       date: toLocalISODate(dayDates[event.dayId - 1] ?? edition.dates.friday),
       startTime: event.startTime,
       endTime: event.endTime,
+      location: event.location,
+      presenter: event.presenter,
       category: event.category,
       registrationRequired: Boolean(event.reservation),
       registrationsOpenFrom: event.reservationsOpenFrom,
@@ -139,6 +145,8 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
     date: event.date,
     startTime: event.start_time,
     endTime: event.end_time ?? undefined,
+    location: event.location ?? undefined,
+    presenter: event.presenter ?? undefined,
     category: event.category,
     registrationRequired: event.registration_required,
     registrationsOpenFrom: event.registrations_open_from

@@ -2,12 +2,12 @@ import React, { useState, useMemo } from "react";
 import { Tab, Nav, Card, Badge } from "react-bootstrap";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import type { ScheduleEvent } from "@/config/editions";
+import type { Event } from "@/config/editions";
 import type { FestivalDay } from "@/types/schedule";
 
 interface ScheduleProps {
   days: FestivalDay[];
-  events: ScheduleEvent[];
+  events: Event[];
 }
 
 /**
@@ -24,7 +24,7 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
   }, [activeDay, events]);
 
   // Get category badge color
-  const getCategoryColor = (category: ScheduleEvent["category"]) => {
+  const getCategoryColor = (category: Event["category"]) => {
     switch (category) {
       case "tasting":
         return "danger";
@@ -64,7 +64,7 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
   };
 
   // Get translated category name
-  const getCategoryLabel = (category: ScheduleEvent["category"]) => {
+  const getCategoryLabel = (category: Event["category"]) => {
     switch (category) {
       case "tasting":
         return m.schedule_categories_tasting();
