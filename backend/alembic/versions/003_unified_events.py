@@ -37,14 +37,21 @@ def _normalise_schedule(value):
     return value if isinstance(value, list) else []
 
 
-def _event_id(edition_id: str, raw_id: str | None, index: int) -> str:
-    if raw_id:
-        legacy_id = str(raw_id).strip()
-        if legacy_id:
-            return legacy_id[:64]
-    seed = f"{edition_id}:{raw_id or index}".encode("utf-8")
+def _event_id(edition_id: str, schedule_item_id: str | None, index: int) -> str:
+    """Return the migrated event ID for one legacy schedule item.
+
+    If the old JSON schedule entry already had an ``id``, we preserve it so any
+    pre-existing reservation/registration rows that still point at that legacy
+    schedule ID continue to resolve after the FK is added. Only schedule items
+    without an ID get a generated ``evt-...`` identifier.
+    """
+    if schedule_item_id:
+        preserved_schedule_id = str(schedule_item_id).strip()
+        if preserved_schedule_id:
+            return preserved_schedule_id[:64]
+    seed = f"{edition_id}:{schedule_item_id or index}".encode("utf-8")
     digest = hashlib.sha1(seed).hexdigest()[:16]
-    prefix = (raw_id or f"event-{index + 1}").replace(" ", "-")[:32]
+    prefix = (schedule_item_id or f"event-{index + 1}").replace(" ", "-")[:32]
     return f"evt-{prefix}-{digest}"[:64]
 
 
@@ -91,7 +98,7 @@ def upgrade() -> None:
         )
 
     event_rows: list[dict] = []
-    legacy_event_id_updates: list[dict[str, str]] = []
+    schedule_id_remaps: list[dict[str, str]] = []
     if {"schedule", "friday", "saturday", "sunday"}.issubset(edition_cols):
         editions = bind.execute(
             sa.text("SELECT id, friday, saturday, sunday, schedule FROM editions")
@@ -102,8 +109,8 @@ def upgrade() -> None:
             for index, item in enumerate(schedule):
                 if not isinstance(item, dict):
                     continue
-                legacy_event_id = item.get("id")
-                event_id = _event_id(row.id, legacy_event_id, index)
+                schedule_item_id = item.get("id")
+                event_id = _event_id(row.id, schedule_item_id, index)
                 event_rows.append(
                     {
                         "id": event_id,
@@ -122,10 +129,10 @@ def upgrade() -> None:
                         "updated_at": now,
                     }
                 )
-                if legacy_event_id and event_id != legacy_event_id:
-                    legacy_event_id_updates.append(
+                if schedule_item_id and event_id != schedule_item_id:
+                    schedule_id_remaps.append(
                         {
-                            "legacy_event_id": str(legacy_event_id),
+                            "schedule_item_id": str(schedule_item_id),
                             "event_id": event_id,
                         }
                     )
@@ -154,11 +161,11 @@ def upgrade() -> None:
     if "reservations" in existing_tables and "registrations" not in existing_tables:
         op.rename_table("reservations", "registrations")
 
-    if legacy_event_id_updates:
-        for mapping in legacy_event_id_updates:
+    if schedule_id_remaps:
+        for mapping in schedule_id_remaps:
             bind.execute(
                 sa.text(
-                    "UPDATE registrations SET event_id = :event_id WHERE event_id = :legacy_event_id"
+                    "UPDATE registrations SET event_id = :event_id WHERE event_id = :schedule_item_id"
                 ),
                 mapping,
             )
