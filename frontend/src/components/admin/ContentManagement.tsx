@@ -61,6 +61,8 @@ function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
   venues: Venue[];
+  onExhibitorSaved?: (item: ItemDraft) => void;
+  onExhibitorDeleted?: (id: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,9 +73,11 @@ interface ContentSectionProps {
   sectionKey: string;
   title: string;
   authHeaders: () => Record<string, string>;
+  onItemSaved?: (item: ItemDraft) => void;
+  onItemDeleted?: (id: number) => void;
 }
 
-function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps) {
+function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDeleted }: ContentSectionProps) {
   const [items, setItems] = useState<ItemDraft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -163,12 +167,13 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
           copy.delete(saved.id);
           return copy;
         });
+        onItemSaved?.(saved);
       } catch {
         setActionError(m.admin_content_error_save());
       }
       setModalOpen(false);
     },
-    [items, apiBase, authHeaders],
+    [items, apiBase, authHeaders, onItemSaved],
   );
 
   const handleArchive = useCallback(
@@ -183,6 +188,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         if (res.ok) {
           const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
           setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
+          onItemSaved?.(saved);
         } else {
           setActionError(m.admin_content_error_save());
         }
@@ -190,7 +196,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         setActionError(m.admin_content_error_save());
       }
     },
-    [apiBase, authHeaders],
+    [apiBase, authHeaders, onItemSaved],
   );
 
   const handleRestore = useCallback(
@@ -205,6 +211,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         if (res.ok) {
           const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
           setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
+          onItemSaved?.(saved);
         } else {
           setActionError(m.admin_content_error_save());
         }
@@ -212,7 +219,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         setActionError(m.admin_content_error_save());
       }
     },
-    [apiBase, authHeaders],
+    [apiBase, authHeaders, onItemSaved],
   );
 
   const handleDelete = useCallback(
@@ -225,6 +232,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         });
         if (res.ok || res.status === 204) {
           setItems((prev) => prev.filter((i) => i.id !== id));
+          onItemDeleted?.(id);
         } else {
           const data = await res.json().catch(() => ({}));
           setActionError((data as { detail?: string }).detail ?? m.admin_content_error_save());
@@ -233,7 +241,7 @@ function ContentSection({ sectionKey, title, authHeaders }: ContentSectionProps)
         setActionError(m.admin_content_error_save());
       }
     },
-    [apiBase, authHeaders],
+    [apiBase, authHeaders, onItemDeleted],
   );
 
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
@@ -524,7 +532,7 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
 // ContentManagement — root export
 // ---------------------------------------------------------------------------
 
-export default function ContentManagement({ authHeaders, venues }: ContentManagementProps) {
+export default function ContentManagement({ authHeaders, venues, onExhibitorSaved, onExhibitorDeleted }: ContentManagementProps) {
   return (
     <div>
       <Card bg="dark" text="white" border="secondary" className="mb-3">
@@ -533,6 +541,8 @@ export default function ContentManagement({ authHeaders, venues }: ContentManage
             sectionKey="exhibitors"
             title={m.admin_content_exhibitors_section()}
             authHeaders={authHeaders}
+            onItemSaved={onExhibitorSaved}
+            onItemDeleted={onExhibitorDeleted}
           />
           <hr className="border-secondary" />
           <EditionsSection authHeaders={authHeaders} venues={venues} />
