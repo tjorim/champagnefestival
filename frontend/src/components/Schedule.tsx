@@ -144,16 +144,6 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
                             </Badge>
                           )}
                           <p className="event-description mb-1">{event.description}</p>
-                          {event.presenter && (
-                            <p className="event-presenter small mb-0">
-                              <strong>{m.schedule_presenter()}:</strong> {event.presenter}
-                            </p>
-                          )}
-                          {event.location && (
-                            <p className="event-location small mb-0">
-                              <strong>{m.schedule_location()}:</strong> {event.location}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </Card.Body>

@@ -196,8 +196,6 @@ function App() {
       description: event.description,
       reservation: event.registrationRequired,
       reservationsOpenFrom: event.registrationsOpenFrom,
-      location: event.location,
-      presenter: event.presenter,
       category: event.category,
       dayId: dayIdByDate.get(event.date) ?? 1,
     }));

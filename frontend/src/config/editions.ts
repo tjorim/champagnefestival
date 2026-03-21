@@ -46,8 +46,6 @@ export interface Event {
    *  Omit (or set to a past date) to open immediately.
    *  Set to a future date to gate early bookings until announced. */
   reservationsOpenFrom?: Date;
-  location?: string;
-  presenter?: string;
   category: string;
   dayId: number;
 }
@@ -126,7 +124,6 @@ const schedule2026March: Event[] = [
     startTime: "17:00",
     endTime: "23:00",
     description: "Doorlopende degustatie van verschillende champagnes.",
-    location: venueBredene2026.venueName,
     category: "tasting",
     dayId: 1,
   },

@@ -8,8 +8,6 @@ export interface ScheduleEvent {
   description: string;
   reservation: boolean;
   reservations_open_from: string | null;
-  location: string | null;
-  presenter: string | null;
   category: string;
   day_id: number;
 }

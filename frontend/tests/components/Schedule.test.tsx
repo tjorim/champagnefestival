@@ -12,8 +12,6 @@ vi.mock("@/paraglide/messages", () => ({
     schedule_time_range: ({ start, end }: { start: string; end: string }) => `${start} - ${end}`,
     schedule_time: () => "Time",
     schedule_reservation: () => "Reservation required",
-    schedule_presenter: () => "Presenter",
-    schedule_location: () => "Location",
     schedule_no_events: () => "No events",
     schedule_categories_tasting: () => "Tasting",
     schedule_categories_vip: () => "VIP",
@@ -117,29 +115,5 @@ describe("Schedule component", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
     expect(screen.getByRole("heading", { name: "Tasting" })).toBeInTheDocument();
     expect(screen.getByText("Tasting event")).toBeInTheDocument();
-  });
-
-  it("renders presenter and location from the event payload", () => {
-    render(
-      <Schedule
-        days={mockDays}
-        events={[
-          {
-            id: "custom-event",
-            title: "Custom Event",
-            startTime: "18:00",
-            description: "Custom description",
-            category: "custom",
-            dayId: 1,
-            presenter: "Jane Doe",
-            location: "Main Hall",
-          },
-        ]}
-      />,
-    );
-    expect(screen.getByText(/Presenter:/)).toBeInTheDocument();
-    expect(screen.getByText(/Jane Doe/)).toBeInTheDocument();
-    expect(screen.getByText(/Location:/)).toBeInTheDocument();
-    expect(screen.getByText(/Main Hall/)).toBeInTheDocument();
   });
 });
