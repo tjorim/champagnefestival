@@ -33,23 +33,29 @@ export default defineConfig({
             dropDebugger: true,
           },
         },
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            // Check more specific patterns before generic "react" to avoid
-            // react-bootstrap, react-leaflet, etc. landing in vendor-react
-            if (id.includes("react-bootstrap") || id.includes("bootstrap")) {
-              return "vendor-ui";
-            }
-            if (id.includes("leaflet")) {
-              return "vendor-maps";
-            }
-            if (id.includes("swiper")) {
-              return "vendor-carousel";
-            }
-            if (id.includes("react")) {
-              return "vendor-react";
-            }
-          }
+        codeSplitting: {
+          groups: [
+            {
+              name: "vendor-ui",
+              test: /node_modules[\\/](react-bootstrap|bootstrap)/,
+              priority: 4,
+            },
+            {
+              name: "vendor-maps",
+              test: /node_modules[\\/](leaflet|react-leaflet)/,
+              priority: 3,
+            },
+            {
+              name: "vendor-carousel",
+              test: /node_modules[\\/]swiper/,
+              priority: 2,
+            },
+            {
+              name: "vendor-react",
+              test: /node_modules[\\/](react|react-dom|react-router|scheduler)/,
+              priority: 1,
+            },
+          ],
         },
       },
     },
