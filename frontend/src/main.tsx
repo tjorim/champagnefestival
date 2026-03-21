@@ -19,7 +19,7 @@ import { useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import type { FestivalDay } from "./config/schedule";
+import type { FestivalDay } from "./types/schedule";
 import { endOfDay } from "./utils/dateUtils";
 import "./index.css";
 
@@ -160,34 +160,45 @@ function App() {
   // Use custom hooks for language
   useLanguage();
 
-  // Fetch live edition data; falls back to hardcoded editions.ts on any error
+  // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition } = useActiveEdition();
   const { producers, sponsors } = edition;
 
   // Derive festival start/end dates from the active edition
   const festivalDate = useMemo(() => {
-    const d = new Date(edition.dates.friday);
+    const d = new Date(edition.dates[0] ?? new Date());
     d.setHours(17, 0, 0, 0);
     return d;
   }, [edition]);
 
   const festivalEndDate = useMemo(() => {
-    return endOfDay(edition.dates.sunday);
+    return endOfDay(edition.dates[edition.dates.length - 1] ?? new Date());
   }, [edition]);
 
   // Derive festival days for the Schedule component
   const festivalDays = useMemo<FestivalDay[]>(() => {
-    const toISO = (d: Date) => {
-      const y = d.getFullYear();
-      const mo = String(d.getMonth() + 1).padStart(2, "0");
-      const da = String(d.getDate()).padStart(2, "0");
-      return `${y}-${mo}-${da}`;
+    const uniqueDates = [...new Set(edition.events.map((event) => event.date))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (uniqueDates.length > 0) {
+      return uniqueDates.map((date, index) => ({
+        id: index + 1,
+        date,
+      }));
+    }
+
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     };
-    return [
-      { id: 1, date: toISO(edition.dates.friday), label: "friday" },
-      { id: 2, date: toISO(edition.dates.saturday), label: "saturday" },
-      { id: 3, date: toISO(edition.dates.sunday), label: "sunday" },
-    ];
+
+    return edition.dates.map((date, index) => ({
+      id: index + 1,
+      date: formatLocalDate(date),
+    }));
   }, [edition]);
 
   const [showReservationModal, setShowReservationModal] = useState(false);
@@ -201,16 +212,13 @@ function App() {
   // if the API response updates the edition.
   useEffect(() => {
     const now = new Date();
-    const dayDate = (dayId: number): Date =>
-      [edition.dates.friday, edition.dates.saturday, edition.dates.sunday][dayId - 1] ??
-      edition.dates.friday;
-    const events = edition.schedule
-      .filter((ev) => ev.reservation)
+    const events = edition.events
+      .filter((event) => event.registrationRequired)
       .filter((ev) => {
-        const eventEnd = endOfDay(dayDate(ev.dayId));
+        const eventEnd = endOfDay(new Date(`${ev.date}T00:00:00`));
         return eventEnd >= now;
       })
-      .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)
+      .filter((ev) => !ev.registrationsOpenFrom || ev.registrationsOpenFrom <= now)
       .map((ev) => ({ id: ev.id, title: ev.title }));
     setReservableEvents(events);
   }, [edition]);
@@ -305,7 +313,7 @@ function App() {
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
                   <AppSuspense errorFallbackText={m.error_schedule()}>
-                    <Schedule days={festivalDays} events={edition.schedule} />
+                    <Schedule days={festivalDays} events={edition.events} />
                   </AppSuspense>
                 </div>
               </div>

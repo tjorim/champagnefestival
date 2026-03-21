@@ -1,12 +1,26 @@
 """Shared serialisation helpers for ORM → dict conversions."""
 
+from __future__ import annotations
+
 import secrets
 import time
 from typing import Any
 
 from sqlalchemy import Text, cast
 
-from app.models import Area, Edition, Exhibitor, Layout, Person, Reservation, Room, Table, TableType, Venue
+from app.models import (
+    Area,
+    Edition,
+    Event,
+    Exhibitor,
+    Layout,
+    Person,
+    Registration,
+    Room,
+    Table,
+    TableType,
+    Venue,
+)
 
 
 def roles_contains(role: str) -> Any:
@@ -29,17 +43,48 @@ def make_id(prefix: str) -> str:
     return f"{prefix}_{ts}_{rand}"
 
 
-def reservation_to_dict(r: Reservation) -> dict:
-    """Serialise a Reservation ORM row to a plain dict (no check_in_token)."""
+def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
+    data = {
+        "id": event.id,
+        "edition_id": event.edition_id,
+        "title": event.title,
+        "description": event.description,
+        "date": event.date,
+        "start_time": event.start_time,
+        "end_time": event.end_time,
+        "category": event.category,
+        "registration_required": event.registration_required,
+        "registrations_open_from": event.registrations_open_from,
+        "max_capacity": event.max_capacity,
+        "active": event.active,
+        "created_at": event.created_at,
+        "updated_at": event.updated_at,
+        "edition": None,
+    }
+    edition: Edition | None = getattr(event, "edition", None)
+    if include_edition and edition is not None:
+        data["edition"] = edition_summary_to_dict(edition)
+    return data
+
+
+def registration_to_dict(r: Registration) -> dict:
+    """Serialise a Registration ORM row to a plain dict (no check_in_token)."""
     person: Person | None = getattr(r, "_person", None)
+    event: Event | None = getattr(r, "_event", None)
     if person is None:
-        raise ValueError(f"Reservation {r.id!r} has no attached _person; caller must set r._person before serialising.")
+        raise ValueError(
+            f"Registration {r.id!r} has no attached _person; caller must set r._person before serialising."
+        )
+    if event is None:
+        raise ValueError(
+            f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising."
+        )
     return {
         "id": r.id,
         "person_id": r.person_id,
         "person": person_summary_to_dict(person),
         "event_id": r.event_id,
-        "event_title": r.event_title,
+        "event": event_to_summary_dict(event, include_edition=True),
         "guest_count": r.guest_count,
         "pre_orders": r.pre_orders,
         "notes": r.notes,
@@ -55,20 +100,19 @@ def reservation_to_dict(r: Reservation) -> dict:
     }
 
 
-def reservation_to_checkin_dict(r: Reservation) -> dict:
-    """Serialise a Reservation for the public check-in GET endpoint.
-
-    Only exposes fields needed on the volunteer tablet.  PII (email, phone) and
-    internal-only fields (payment_status, table_id, timestamps) are omitted.
-    """
+def registration_to_checkin_dict(r: Registration) -> dict:
+    """Serialise a Registration for the public check-in GET endpoint."""
     person: Person | None = getattr(r, "_person", None)
-    if person is None:
-        raise ValueError(f"Reservation {r.id!r} has no attached _person; caller must set r._person before serialising.")
+    event: Event | None = getattr(r, "_event", None)
+    if person is None or event is None:
+        raise ValueError(
+            f"Registration {r.id!r} requires attached _person and _event before serialising."
+        )
     return {
         "id": r.id,
         "name": person.name,
         "event_id": r.event_id,
-        "event_title": r.event_title,
+        "event_title": event.title,
         "guest_count": r.guest_count,
         "pre_orders": r.pre_orders,
         "notes": r.notes,
@@ -79,33 +123,27 @@ def reservation_to_checkin_dict(r: Reservation) -> dict:
     }
 
 
-def reservation_to_dict_with_token(r: Reservation) -> dict:
-    """Serialise a Reservation ORM row including the sensitive check_in_token.
-
-    Only use this for the admin detail endpoint.
-    """
-    return {**reservation_to_dict(r), "check_in_token": r.check_in_token}
+def registration_to_dict_with_token(r: Registration) -> dict:
+    """Serialise a Registration ORM row including the sensitive check_in_token."""
+    return {**registration_to_dict(r), "check_in_token": r.check_in_token}
 
 
-def reservation_to_list_dict(r: Reservation) -> dict:
-    """Serialise a Reservation for the list endpoint (drops notes)."""
-    d = reservation_to_dict(r)
+def registration_to_list_dict(r: Registration) -> dict:
+    """Serialise a Registration for the list endpoint (drops notes)."""
+    d = registration_to_dict(r)
     d.pop("notes", None)
     return d
 
 
-def reservation_to_guest_dict(r: Reservation) -> dict:
-    """Serialise a Reservation for the visitor self-lookup endpoint.
-
-    Strips all sensitive / internal fields: notes, checkInToken.
-    Returns only safe-to-share booking status information.
-    """
+def registration_to_guest_dict(r: Registration) -> dict:
+    """Serialise a Registration for the visitor self-lookup endpoint."""
     person: Person | None = getattr(r, "_person", None)
+    event: Event | None = getattr(r, "_event", None)
     return {
         "id": r.id,
         "name": person.name if person else "",
         "event_id": r.event_id,
-        "event_title": r.event_title,
+        "event_title": event.title if event else "",
         "guest_count": r.guest_count,
         "pre_orders": r.pre_orders,
         "status": r.status,
@@ -180,12 +218,13 @@ def table_type_to_dict(tt: TableType) -> dict:
     }
 
 
-def layout_to_dict(lay: Layout) -> dict:
+def layout_to_dict(lay: Layout, date: object | None = None) -> dict:
     return {
         "id": lay.id,
         "edition_id": lay.edition_id,
         "room_id": lay.room_id,
         "day_id": lay.day_id,
+        "date": date,
         "label": lay.label,
         "created_at": lay.created_at,
         "updated_at": lay.updated_at,
@@ -222,9 +261,21 @@ def room_to_dict(r: Room) -> dict:
     }
 
 
+def edition_summary_to_dict(e: Edition) -> dict:
+    return {
+        "id": e.id,
+        "year": e.year,
+        "month": e.month,
+        "edition_type": e.edition_type,
+        "active": e.active,
+    }
+
+
 def edition_to_dict(
     e: Edition,
     venue: dict,
+    dates: list | None = None,
+    events: list[dict] | None = None,
     producers: list[dict] | None = None,
     sponsors: list[dict] | None = None,
 ) -> dict:
@@ -232,11 +283,13 @@ def edition_to_dict(
         "id": e.id,
         "year": e.year,
         "month": e.month,
-        "friday": e.friday.isoformat(),
-        "saturday": e.saturday.isoformat(),
-        "sunday": e.sunday.isoformat(),
+        "edition_type": e.edition_type,
+        "external_partner": e.external_partner,
+        "external_contact_name": e.external_contact_name,
+        "external_contact_email": e.external_contact_email,
+        "dates": dates if dates is not None else [],
         "venue": venue,
-        "schedule": e.schedule,
+        "events": events if events is not None else [],
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],
         "active": e.active,
@@ -246,11 +299,7 @@ def edition_to_dict(
 
 
 def person_summary_to_dict(p: Person) -> dict:
-    """Serialise only public-safe person fields for embedding in reservation responses.
-
-    Omits sensitive/admin-only fields (address, roles, national register number,
-    notes, etc.) so that the public reservation endpoints cannot leak PII.
-    """
+    """Serialise only public-safe person fields for embedding in registration responses."""
     return {
         "id": p.id,
         "name": p.name,

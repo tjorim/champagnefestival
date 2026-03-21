@@ -11,36 +11,46 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
+const location = {
+  venueName: "Meeting- en eventcentrum Staf Versluys",
+  address: "Kapelstraat 76",
+  city: "Bredene",
+  postalCode: "8450",
+  country: "België",
+  openingHours: "See schedule",
+  coordinates: { lat: 51.252562, lng: 2.974563 },
+};
+
 describe("LocationInfo component", () => {
   it("renders the venue name", () => {
-    render(<LocationInfo />);
+    render(<LocationInfo location={location} />);
     expect(screen.getByText("Meeting- en eventcentrum Staf Versluys")).toBeInTheDocument();
   });
 
   it("renders the address section heading", () => {
-    render(<LocationInfo />);
+    render(<LocationInfo location={location} />);
     expect(screen.getByText("Address")).toBeInTheDocument();
   });
 
   it("renders the street address", () => {
-    render(<LocationInfo />);
+    render(<LocationInfo location={location} />);
     expect(screen.getByText("Kapelstraat 76")).toBeInTheDocument();
   });
 
   it("renders the city and postal code", () => {
-    render(<LocationInfo />);
+    render(<LocationInfo location={location} />);
     expect(screen.getByText(/Bredene/)).toBeInTheDocument();
     expect(screen.getByText(/8450/)).toBeInTheDocument();
   });
 
   it("renders opening hours", () => {
-    render(<LocationInfo />);
+    render(<LocationInfo location={location} />);
     expect(screen.getByText("Opening Hours")).toBeInTheDocument();
     expect(screen.getByText("Fri-Sun, 10:00-23:00")).toBeInTheDocument();
   });
 
   it("renders the localized country name", () => {
-    render(<LocationInfo />);
+    render(<LocationInfo location={location} />);
     expect(screen.getByText("Belgium")).toBeInTheDocument();
   });
 });

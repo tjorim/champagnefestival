@@ -3,21 +3,30 @@ import { Card, Row, Col } from "react-bootstrap";
 import { m } from "@/paraglide/messages";
 import { contactConfig } from "@/config/contact";
 
+type Location = typeof contactConfig.location;
+
+interface LocationInfoProps {
+  location?: Location;
+}
+
 /**
- * Component to display venue location information from configuration
+ * Component to display venue location information.
+ *
+ * Public pages should pass the active edition venue from the API. The config
+ * fallback only exists for isolated renders/tests.
  */
-const LocationInfo: React.FC = () => {
+const LocationInfo: React.FC<LocationInfoProps> = ({ location = contactConfig.location }) => {
   return (
     <Card className="border-0 shadow-sm">
       <Card.Body className="p-4">
-        <h3 className="mb-3">{contactConfig.location.venueName}</h3>
+        <h3 className="mb-3">{location.venueName}</h3>
         <Row>
           <Col md={6} className="mb-3 mb-md-0">
             <div className="mb-4">
               <h5>{m.location_address()}</h5>
-              <p className="mb-1">{contactConfig.location.address}</p>
+              <p className="mb-1">{location.address}</p>
               <p className="mb-1">
-                {contactConfig.location.postalCode} {contactConfig.location.city}
+                {location.postalCode} {location.city}
               </p>
               <p>{m.location_country()}</p>
             </div>

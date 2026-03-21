@@ -13,8 +13,6 @@ const EMPTY_EVENT: ScheduleEvent = {
   description: "",
   reservation: false,
   reservations_open_from: null,
-  location: null,
-  presenter: null,
   category: "other",
   day_id: 1,
 };
@@ -36,8 +34,6 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
   const [category, setCategory] = useState("other");
   const [reservation, setReservation] = useState(false);
   const [reservationsOpenFrom, setReservationsOpenFrom] = useState("");
-  const [location, setLocation] = useState("");
-  const [presenter, setPresenter] = useState("");
 
   useEffect(() => {
     if (show) {
@@ -51,8 +47,6 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
       setCategory(ev.category);
       setReservation(ev.reservation);
       setReservationsOpenFrom(ev.reservations_open_from ?? "");
-      setLocation(ev.location ?? "");
-      setPresenter(ev.presenter ?? "");
     }
   }, [show, initial]);
 
@@ -67,8 +61,6 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
       description: description.trim(),
       reservation,
       reservations_open_from: reservation ? reservationsOpenFrom.trim() || null : null,
-      location: location.trim() || null,
-      presenter: presenter.trim() || null,
       category: category.trim(),
       day_id: dayId,
     });
@@ -166,33 +158,6 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
                 className="bg-dark text-light border-secondary"
                 placeholder={m.admin_event_category_placeholder()}
                 required
-              />
-            </Form.Group>
-          </div>
-          <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group controlId="event-location" style={{ minWidth: "160px", flex: "1 1 160px" }}>
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_event_location()}
-              </Form.Label>
-              <Form.Control
-                size="sm"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-            <Form.Group
-              controlId="event-presenter"
-              style={{ minWidth: "160px", flex: "1 1 160px" }}
-            >
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_event_presenter()}
-              </Form.Label>
-              <Form.Control
-                size="sm"
-                value={presenter}
-                onChange={(e) => setPresenter(e.target.value)}
-                className="bg-dark text-light border-secondary"
               />
             </Form.Group>
           </div>

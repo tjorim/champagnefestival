@@ -3,7 +3,7 @@
  * Store all contact-related information in this file
  */
 
-import { getActiveEdition } from "./editions";
+import { EMPTY_EDITION } from "./editions";
 
 interface Coordinates {
   lat: number;
@@ -63,9 +63,9 @@ export const contactConfig: ContactConfig = {
     facebook: "champagnefestival.kust",
   },
 
-  // Location is derived from the active edition's venue
+  // Venue details now come from the active-edition API at runtime; keep config fallback blank.
   location: {
-    ...getActiveEdition().venue,
+    ...EMPTY_EDITION.venue,
     // Opening hours are in the dictionary by language - this field not used directly
     openingHours: "See schedule",
   },

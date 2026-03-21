@@ -104,10 +104,14 @@ function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; 
   };
 }
 
-function getDayLabel(dayId: number): string {
-  if (dayId === 1) return m.admin_content_edition_friday();
-  if (dayId === 2) return m.admin_content_edition_saturday();
-  return m.admin_content_edition_sunday();
+interface DayOption {
+  date: string;
+  label: string;
+}
+
+function getDayLabel(date: string | null, dayOptions: DayOption[], fallbackLabel = ""): string {
+  if (!date) return fallbackLabel;
+  return dayOptions.find((day) => day.date === date)?.label ?? date;
 }
 
 interface ItemRef {
@@ -117,6 +121,7 @@ interface ItemRef {
 }
 
 interface LayoutEditorProps {
+  dayOptions: DayOption[];
   tables: FloorTable[];
   tableTypes: TableType[];
   layouts: Layout[];
@@ -133,7 +138,7 @@ interface LayoutEditorProps {
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
-  onAddLayout: (roomId: string, dayId: number, label: string) => Promise<void>;
+  onAddLayout: (roomId: string, date: string, label?: string) => Promise<void>;
   onDeleteLayout: (layoutId: string) => Promise<void>;
   onAddArea: (
     label: string,
@@ -517,6 +522,7 @@ function RoomCanvas({
 // ---------------------------------------------------------------------------
 
 export default function LayoutEditor({
+  dayOptions,
   tables,
   tableTypes,
   layouts,
@@ -567,7 +573,7 @@ export default function LayoutEditor({
 
   // Add Layout modal
   const [showAddLayout, setShowAddLayout] = useState(false);
-  const [newLayout, setNewLayout] = useState({ dayId: 1, label: "" });
+  const [newLayout, setNewLayout] = useState({ date: dayOptions[0]?.date ?? "" });
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
   const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
 
@@ -575,14 +581,22 @@ export default function LayoutEditor({
     if (!activeRoomId) return;
     setAddLayoutError(null);
     try {
-      await onAddLayout(activeRoomId, newLayout.dayId, newLayout.label.trim());
-      setNewLayout({ dayId: 1, label: "" });
+      if (!newLayout.date) return;
+      await onAddLayout(activeRoomId, newLayout.date);
+      setNewLayout({ date: dayOptions[0]?.date ?? "" });
       setShowAddLayout(false);
     } catch (err) {
       console.error("Failed to add layout", err);
       setAddLayoutError(err instanceof Error ? err.message : m.admin_error_add_layout());
     }
-  }, [activeRoomId, newLayout, onAddLayout]);
+  }, [activeRoomId, dayOptions, newLayout, onAddLayout]);
+
+  useEffect(() => {
+    if (dayOptions.length === 0) return;
+    setNewLayout((current) =>
+      dayOptions.some((day) => day.date === current.date) ? current : { date: dayOptions[0]!.date },
+    );
+  }, [dayOptions]);
 
   const handleDeleteLayout = useCallback(
     async (layoutId: string) => {
@@ -714,7 +728,7 @@ export default function LayoutEditor({
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
     .filter((l) => l.roomId === activeRoomId)
-    .sort((a, b) => a.dayId - b.dayId);
+    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
   const canvasTables = activeLayoutId ? tables.filter((t) => t.layoutId === activeLayoutId) : [];
   const canvasAreas = activeLayoutId ? areas.filter((a) => a.layoutId === activeLayoutId) : [];
 
@@ -861,7 +875,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {layout.label || getDayLabel(layout.dayId)}
+                          {getDayLabel(layout.date, dayOptions, layout.label)}
                         </Button>
                         <Button
                           size="sm"
@@ -887,7 +901,7 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                        setNewLayout({ dayId: 1, label: "" });
+                        setNewLayout({ date: dayOptions[0]?.date ?? "" });
                         setShowAddLayout(true);
                       }}
                       title={m.admin_add_layout()}
@@ -1353,26 +1367,16 @@ export default function LayoutEditor({
           <Form.Group className="mb-3" controlId="layout-day">
             <Form.Label>{m.admin_layout_day_label()}</Form.Label>
             <Form.Select
-              value={newLayout.dayId}
-              onChange={(e) => setNewLayout((p) => ({ ...p, dayId: Number(e.target.value) }))}
+              value={newLayout.date}
+              onChange={(e) => setNewLayout((p) => ({ ...p, date: e.target.value }))}
               className="bg-dark text-light border-secondary"
             >
-              <option value={1}>{m.admin_content_edition_friday()}</option>
-              <option value={2}>{m.admin_content_edition_saturday()}</option>
-              <option value={3}>{m.admin_content_edition_sunday()}</option>
+              {dayOptions.map((day) => (
+                <option key={day.date} value={day.date}>
+                  {day.label}
+                </option>
+              ))}
             </Form.Select>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="layout-label">
-            <Form.Label>
-              {m.admin_table_name()} / {m.admin_layout_day_label()}
-            </Form.Label>
-            <Form.Control
-              type="text"
-              value={newLayout.label}
-              onChange={(e) => setNewLayout((p) => ({ ...p, label: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-              placeholder={m.admin_layout_label_placeholder()}
-            />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">

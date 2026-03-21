@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Person, Reservation
+from app.models import Event, Person, Registration
 from app.schemas import CheckInOut, CheckInRequest, CheckInGuestOut
-from app.utils import reservation_to_checkin_dict
+from app.utils import registration_to_checkin_dict
 
 router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 
@@ -35,7 +35,9 @@ async def get_check_in(
     r = await _get_by_token_or_401(db, reservation_id, token)
     person_result = await db.execute(select(Person).where(Person.id == r.person_id))
     r._person = person_result.scalar_one_or_none()
-    return reservation_to_checkin_dict(r)
+    event_result = await db.execute(select(Event).where(Event.id == r.event_id))
+    r._event = event_result.scalar_one_or_none()
+    return registration_to_checkin_dict(r)
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +58,8 @@ async def post_check_in(
     r = await _get_by_token_or_401(db, reservation_id, body.token)
     person_result = await db.execute(select(Person).where(Person.id == r.person_id))
     r._person = person_result.scalar_one_or_none()
+    event_result = await db.execute(select(Event).where(Event.id == r.event_id))
+    r._event = event_result.scalar_one_or_none()
 
     already = r.checked_in
     changed = False
@@ -74,7 +78,7 @@ async def post_check_in(
         await db.refresh(r)
 
     return {
-        "reservation": reservation_to_checkin_dict(r),
+        "reservation": registration_to_checkin_dict(r),
         "already_checked_in": already,
     }
 
@@ -86,14 +90,14 @@ async def post_check_in(
 
 async def _get_by_token_or_401(
     db: AsyncSession, reservation_id: str, token: str
-) -> Reservation:
+) -> Registration:
     result = await db.execute(
-        select(Reservation).where(Reservation.id == reservation_id)
+        select(Registration).where(Registration.id == reservation_id)
     )
     r = result.scalar_one_or_none()
     if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid reservation ID or token.",
+            detail="Invalid registration ID or token.",
         )
     return r

@@ -18,6 +18,12 @@ interface PersonOption {
   phone: string;
 }
 
+interface EditionEvent {
+  id: string;
+  title: string;
+  registration_required: boolean;
+}
+
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
   control: (base) => ({
     ...base,
@@ -47,13 +53,6 @@ const darkSelectStyles: StylesConfig<PersonOption, false> = {
   noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
 };
 
-interface ScheduleEvent {
-  id: string;
-  title: string;
-  day_id: number;
-  reservation: boolean;
-}
-
 interface ReservationCreateModalProps {
   show: boolean;
   authHeaders: () => Record<string, string>;
@@ -70,8 +69,7 @@ export default function ReservationCreateModal({
   const [guestCount, setGuestCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [eventId, setEventId] = useState("");
-  const [eventTitle, setEventTitle] = useState("");
-  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [events, setEvents] = useState<EditionEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +85,6 @@ export default function ReservationCreateModal({
     setGuestCount(1);
     setNotes("");
     setEventId("");
-    setEventTitle("");
     setEvents([]);
     setPersonOption(null);
     setPersonQuery("");
@@ -99,8 +96,10 @@ export default function ReservationCreateModal({
     fetch("/api/editions/active", { headers: authHeaders() })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.schedule) {
-          setEvents((data.schedule as ScheduleEvent[]).filter((e: ScheduleEvent) => e.reservation));
+        if (data?.events) {
+          setEvents(
+            (data.events as EditionEvent[]).filter((event) => event.registration_required),
+          );
         } else {
           setEvents([]);
         }
@@ -179,15 +178,16 @@ export default function ReservationCreateModal({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/reservations/admin", {
+      const res = await fetch("/api/registrations/admin", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
           person_id: personOption.value,
           event_id: eventId,
-          event_title: eventTitle,
           guest_count: guestCount,
+          pre_orders: [],
           notes: notes.trim(),
+          accessibility_note: "",
           status: "confirmed",
         }),
       });
@@ -234,11 +234,7 @@ export default function ReservationCreateModal({
             ) : events.length > 0 ? (
               <Form.Select
                 value={eventId}
-                onChange={(ev) => {
-                  const selected = events.find((e) => e.id === ev.target.value);
-                  setEventId(ev.target.value);
-                  setEventTitle(selected?.title ?? ev.target.value);
-                }}
+                onChange={(ev) => setEventId(ev.target.value)}
                 className="bg-dark text-light border-secondary"
                 required
               >
@@ -253,10 +249,7 @@ export default function ReservationCreateModal({
               <Form.Control
                 type="text"
                 value={eventId}
-                onChange={(ev) => {
-                  setEventId(ev.target.value);
-                  setEventTitle(ev.target.value);
-                }}
+                onChange={(ev) => setEventId(ev.target.value)}
                 className="bg-dark text-light border-secondary"
                 placeholder={m.admin_event_id_title_placeholder()}
                 required

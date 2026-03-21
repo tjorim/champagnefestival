@@ -25,6 +25,7 @@ import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@
 import { apiToReservation } from "@/types/reservationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
+import { useActiveEdition } from "@/hooks/useActiveEdition";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -51,7 +52,7 @@ function apiLayoutToLayout(d: Record<string, unknown>): Layout {
     id: d.id as string,
     editionId: (d.edition_id as string | null) ?? null,
     roomId: d.room_id as string,
-    dayId: d.day_id as number,
+    date: (d.date as string | null) ?? null,
     label: (d.label ?? "") as string,
     createdAt: d.created_at as string,
   };
@@ -187,6 +188,7 @@ function syncMembersWithPerson(members: Person[], person: Person): Person[] {
 }
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
+  const { edition: activeEdition } = useActiveEdition();
   const [token, setToken] = useState("");
   const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -219,6 +221,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }),
     [],
   );
+
+  const layoutDayOptions = useMemo(() => {
+    const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    return uniqueDates.map((date) => ({
+      date,
+      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
+    }));
+  }, [activeEdition.events]);
 
   const loadMembers = useCallback(async (): Promise<Person[]> => {
     const response = await fetch("/api/members", { headers: authHeaders() });
@@ -1130,11 +1147,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, dayId: number, label: string) => {
+    async (roomId: string, date: string, label?: string) => {
       const response = await fetch("/api/layouts", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ room_id: roomId, day_id: dayId, label }),
+        body: JSON.stringify({
+          edition_id: activeEdition.id,
+          room_id: roomId,
+          date,
+          ...(label?.trim() ? { label: label.trim() } : {}),
+        }),
       });
       if (!response.ok) {
         const d = await response.json().catch(() => ({}));
@@ -1143,7 +1165,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       const d = await response.json();
       setLayouts((prev) => [...prev, apiLayoutToLayout(d)]);
     },
-    [authHeaders],
+    [activeEdition.id, authHeaders],
   );
 
   const handleDeleteLayout = useCallback(
@@ -1783,6 +1805,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   </Tab.Pane>
                   <Tab.Pane eventKey="tables">
                     <LayoutEditor
+                      dayOptions={layoutDayOptions}
                       tables={tables}
                       tableTypes={tableTypes}
                       layouts={layouts}
