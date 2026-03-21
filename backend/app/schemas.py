@@ -15,6 +15,7 @@ from typing_extensions import Self
 
 OrderItemCategory = Literal["champagne", "food", "other"]
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
+STANDALONE_EDITION_TYPES: frozenset[EditionType] = frozenset({"bourse", "capsule_exchange"})
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
 
