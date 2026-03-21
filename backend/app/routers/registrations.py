@@ -9,8 +9,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import delete, or_, select
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -69,6 +68,7 @@ async def create_registration(
     check_form_timing(body.form_start_time)
 
     event = await _get_event_or_404(db, body.event_id)
+    await _ensure_public_registration_allowed(db, event, body.guest_count)
 
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
@@ -214,26 +214,27 @@ async def request_my_registrations_access(
     await db.execute(
         delete(ReservationAccessToken).where(ReservationAccessToken.expires_at < now)
     )
-    await db.execute(
-        sqlite_insert(ReservationAccessToken)
-        .values(
-            id=make_id("rat"),
-            email=email_norm,
-            token_hash=token_hash,
-            expires_at=expires_at,
-            created_at=now,
-            last_used_at=None,
+    existing_token_row = (
+        await db.execute(
+            select(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
         )
-        .on_conflict_do_update(
-            index_elements=["email"],
-            set_={
-                "token_hash": token_hash,
-                "expires_at": expires_at,
-                "created_at": now,
-                "last_used_at": None,
-            },
+    ).scalar_one_or_none()
+    if existing_token_row is None:
+        db.add(
+            ReservationAccessToken(
+                id=make_id("rat"),
+                email=email_norm,
+                token_hash=token_hash,
+                expires_at=expires_at,
+                created_at=now,
+                last_used_at=None,
+            )
         )
-    )
+    else:
+        existing_token_row.token_hash = token_hash
+        existing_token_row.expires_at = expires_at
+        existing_token_row.created_at = now
+        existing_token_row.last_used_at = None
     await db.commit()
 
     logger.info(
@@ -305,6 +306,8 @@ async def update_registration(
     if body.checked_in is not None:
         if body.checked_in and not registration.checked_in:
             registration.checked_in_at = datetime.now(timezone.utc)
+        if not body.checked_in:
+            registration.checked_in_at = None
         registration.checked_in = body.checked_in
     if body.strap_issued is not None:
         registration.strap_issued = body.strap_issued
@@ -409,6 +412,51 @@ async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found.")
     return event
+
+
+async def _ensure_public_registration_allowed(
+    db: AsyncSession,
+    event: Event,
+    requested_guest_count: int,
+) -> None:
+    if not event.active or not event.edition.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registrations are not available for this event.",
+        )
+    if not event.registration_required:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This event does not accept registrations.",
+        )
+
+    now = datetime.now(timezone.utc)
+    if event.registrations_open_from is not None:
+        registrations_open_from = event.registrations_open_from
+        if registrations_open_from.tzinfo is None:
+            registrations_open_from = registrations_open_from.replace(tzinfo=timezone.utc)
+        if registrations_open_from > now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registrations for this event are not open yet.",
+            )
+
+    if event.max_capacity is None:
+        return
+
+    reserved_guest_count = (
+        await db.execute(
+            select(func.coalesce(func.sum(Registration.guest_count), 0)).where(
+                Registration.event_id == event.id,
+                Registration.status != "cancelled",
+            )
+        )
+    ).scalar_one()
+    if reserved_guest_count + requested_guest_count > event.max_capacity:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This event is fully booked.",
+        )
 
 
 async def _attach_people_and_events(db: AsyncSession, rows: list[Registration]) -> None:

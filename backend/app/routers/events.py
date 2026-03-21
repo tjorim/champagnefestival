@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -61,6 +61,11 @@ async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> dict:
 async def create_event(body: EventCreate, db: AsyncSession = Depends(get_db)) -> dict:
     edition = await _ensure_edition_exists(db, body.edition_id)
     await _validate_standalone_event_date(db, edition, body.date)
+    _validate_registration_settings(
+        registration_required=body.registration_required,
+        registrations_open_from=body.registrations_open_from,
+        max_capacity=body.max_capacity,
+    )
     event = Event(
         id=make_id("evt"),
         edition_id=body.edition_id,
@@ -95,6 +100,21 @@ async def update_event(
 
     candidate_date = body.date if "date" in body.model_fields_set and body.date is not None else event.date
     await _validate_standalone_event_date(db, edition, candidate_date, exclude_event_id=event.id)
+    _validate_registration_settings(
+        registration_required=(
+            body.registration_required
+            if "registration_required" in body.model_fields_set and body.registration_required is not None
+            else event.registration_required
+        ),
+        registrations_open_from=(
+            body.registrations_open_from
+            if "registrations_open_from" in body.model_fields_set
+            else event.registrations_open_from
+        ),
+        max_capacity=(
+            body.max_capacity if "max_capacity" in body.model_fields_set else event.max_capacity
+        ),
+    )
 
     for field in [
         "title",
@@ -158,4 +178,22 @@ async def _validate_standalone_event_date(
         raise HTTPException(
             status_code=400,
             detail="Standalone editions may only contain events on a single date.",
+        )
+
+
+def _validate_registration_settings(
+    *,
+    registration_required: bool,
+    registrations_open_from: datetime | None,
+    max_capacity: int | None,
+) -> None:
+    if registration_required:
+        return
+    if registrations_open_from is not None or max_capacity is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "registrations_open_from and max_capacity may only be set when "
+                "registration_required is true."
+            ),
         )

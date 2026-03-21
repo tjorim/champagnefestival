@@ -13,7 +13,7 @@ from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.database import Base, get_db
 from app.main import app
 from app.models import ReservationAccessToken
-import app.routers.reservations as reservations_module
+import app.routers.registrations as reservations_module
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
@@ -81,6 +81,55 @@ VALID_RESERVATION = {
 }
 
 
+async def _create_event(
+    client,
+    *,
+    edition_id: str = "edition-public",
+    edition_active: bool = True,
+    event_active: bool = True,
+    registration_required: bool = True,
+    registrations_open_from: str | None = None,
+    max_capacity: int | None = None,
+):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": edition_id,
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "active": edition_active,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    event_payload = {
+        "edition_id": edition_id,
+        "title": "Public Registration Event",
+        "description": "",
+        "date": "2099-03-21",
+        "start_time": "18:00",
+        "end_time": "22:00",
+        "category": "festival",
+        "registration_required": registration_required,
+        "sort_order": 0,
+        "active": event_active,
+    }
+    if registrations_open_from is not None:
+        event_payload["registrations_open_from"] = registrations_open_from
+    if max_capacity is not None:
+        event_payload["max_capacity"] = max_capacity
+
+    event_response = await client.post("/api/events", json=event_payload, headers=ADMIN_HEADERS)
+    assert event_response.status_code == 201
+    return event_response.json()
+
+
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
@@ -116,12 +165,115 @@ def test_settings_reject_excessive_guest_access_token_ttl():
 
 @pytest.mark.anyio
 async def test_create_reservation(client):
-    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    r = await client.post("/api/registrations", json=VALID_RESERVATION)
     assert r.status_code == 201
     data = r.json()
     assert data["person"]["name"] == "Jean Dupont"
     assert data["status"] == "pending"
     assert "check_in_token" not in data  # must not be returned here
+
+
+@pytest.mark.anyio
+async def test_create_reservation_rejects_event_without_public_registrations(client):
+    event = await _create_event(client, registration_required=False)
+
+    r = await client.post(
+        "/api/registrations",
+        json={**VALID_RESERVATION, "event_id": event["id"]},
+    )
+
+    assert r.status_code == 400
+    assert r.json()["detail"] == "This event does not accept registrations."
+
+
+@pytest.mark.anyio
+async def test_create_reservation_rejects_registrations_before_opening(client):
+    event = await _create_event(client, registrations_open_from="2099-03-22T00:00:00+00:00")
+
+    r = await client.post(
+        "/api/registrations",
+        json={**VALID_RESERVATION, "event_id": event["id"]},
+    )
+
+    assert r.status_code == 400
+    assert r.json()["detail"] == "Registrations for this event are not open yet."
+
+
+@pytest.mark.anyio
+async def test_create_reservation_rejects_fully_booked_event(client):
+    event = await _create_event(client, max_capacity=2)
+
+    first = await client.post(
+        "/api/registrations",
+        json={**VALID_RESERVATION, "event_id": event["id"], "guest_count": 2},
+    )
+    assert first.status_code == 201
+
+    second = await client.post(
+        "/api/registrations",
+        json={
+            **VALID_RESERVATION,
+            "event_id": event["id"],
+            "email": "other@example.com",
+            "phone": "+32499000001",
+        },
+    )
+
+    assert second.status_code == 400
+    assert second.json()["detail"] == "This event is fully booked."
+
+
+@pytest.mark.anyio
+async def test_create_reservation_rejects_inactive_event(client):
+    event = await _create_event(client, event_active=False)
+
+    r = await client.post(
+        "/api/registrations",
+        json={**VALID_RESERVATION, "event_id": event["id"]},
+    )
+
+    assert r.status_code == 400
+    assert r.json()["detail"] == "Registrations are not available for this event."
+
+
+@pytest.mark.anyio
+async def test_event_rejects_registration_window_without_registration_required(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-event-validation",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    r = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "edition-event-validation",
+            "title": "Walk-in Only Event",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "18:00",
+            "end_time": "22:00",
+            "category": "festival",
+            "registration_required": False,
+            "registrations_open_from": "2099-03-20T00:00:00+00:00",
+        },
+        headers=ADMIN_HEADERS,
+    )
+
+    assert r.status_code == 400
+    assert (
+        r.json()["detail"]
+        == "registrations_open_from and max_capacity may only be set when registration_required is true."
+    )
 
 
 @pytest.mark.anyio
@@ -166,7 +318,7 @@ async def test_list_and_detail(client):
 
 @pytest.mark.anyio
 async def test_check_in_flow(client):
-    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    r = await client.post("/api/registrations", json=VALID_RESERVATION)
     res_id = r.json()["id"]
 
     # Get the token from admin detail
@@ -315,6 +467,34 @@ async def test_filter_by_status(client):
         "/api/reservations", params={"status": "pending"}, headers=ADMIN_HEADERS
     )
     assert len(r.json()) == 0
+
+
+@pytest.mark.anyio
+async def test_admin_uncheckin_clears_checked_in_at(client):
+    event = await _create_event(client, edition_id="edition-checkin-reset")
+    r = await client.post(
+        "/api/registrations",
+        json={**VALID_RESERVATION, "event_id": event["id"]},
+    )
+    assert r.status_code == 201
+
+    reservation_id = r.json()["id"]
+    checked_in = await client.put(
+        f"/api/registrations/{reservation_id}",
+        json={"checked_in": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert checked_in.status_code == 200
+    assert checked_in.json()["checked_in_at"] is not None
+
+    unchecked = await client.put(
+        f"/api/registrations/{reservation_id}",
+        json={"checked_in": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert unchecked.status_code == 200
+    assert unchecked.json()["checked_in"] is False
+    assert unchecked.json()["checked_in_at"] is None
 
 
 @pytest.mark.anyio
@@ -477,12 +657,12 @@ async def test_my_reservations_access_multiple_editions(client, monkeypatch):
 async def test_my_reservations_request_reuses_existing_token_row(client, db_session, monkeypatch):
     tokens = iter(["guest-access-token-12345", "guest-access-token-67890"])
     monkeypatch.setattr(
-        "app.routers.reservations.secrets.token_urlsafe",
+        "app.routers.registrations.secrets.token_urlsafe",
         lambda _: next(tokens),
     )
 
-    first = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
-    second = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    first = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
+    second = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
 
     assert first.status_code == 202
     assert second.status_code == 202
@@ -1487,6 +1667,39 @@ async def test_reservation_auto_links_certain_person(client):
     )
     assert r.status_code == 201
     assert r.json()["person_id"] != bob_id
+
+
+@pytest.mark.anyio
+async def test_person_reservations_include_event_payload(client):
+    person = await client.post(
+        "/api/people",
+        json={"name": "Alice Event", "email": "alice.event@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    assert person.status_code == 201
+    person_id = person.json()["id"]
+
+    event = await _create_event(client, edition_id="edition-person-reservations")
+    reservation = await client.post(
+        "/api/registrations/admin",
+        json={
+            "person_id": person_id,
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [],
+            "notes": "",
+            "accessibility_note": "",
+            "status": "confirmed",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert reservation.status_code == 201
+
+    r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
+
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+    assert r.json()[0]["event"]["id"] == event["id"]
 
 
 @pytest.mark.anyio

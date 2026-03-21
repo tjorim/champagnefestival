@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import Text, cast, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Exhibitor, Person, Registration
+from app.models import Event, Exhibitor, Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import make_id, person_to_dict, registration_to_list_dict, roles_contains
 
@@ -254,12 +255,14 @@ async def list_person_reservations(
 
     result = await db.execute(
         select(Registration)
+        .options(selectinload(Registration.event).selectinload(Event.edition))
         .where(Registration.person_id == person.id)
         .order_by(Registration.created_at.desc())
     )
     rows = result.scalars().all()
     for r in rows:
         r._person = person
+        r._event = r.event
     return [registration_to_list_dict(r) for r in rows]
 
 

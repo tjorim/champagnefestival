@@ -30,7 +30,14 @@ async def get_active_edition(
 
     today = datetime.now(timezone.utc).date()
     dated = _sorted_editions(editions)
-    active = next((edition for edition in dated if _edition_end_date(edition) and _edition_end_date(edition) >= today), None)
+    active = next(
+        (
+            edition
+            for edition in dated
+            if (edition_end_date := _edition_end_date(edition)) and edition_end_date >= today
+        ),
+        None,
+    )
     if active is None:
         active = dated[-1]
     return await _edition_payload(db, active)
