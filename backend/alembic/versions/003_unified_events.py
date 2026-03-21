@@ -38,6 +38,10 @@ def _normalise_schedule(value):
 
 
 def _event_id(edition_id: str, raw_id: str | None, index: int) -> str:
+    if raw_id:
+        legacy_id = str(raw_id).strip()
+        if legacy_id:
+            return legacy_id[:64]
     seed = f"{edition_id}:{raw_id or index}".encode("utf-8")
     digest = hashlib.sha1(seed).hexdigest()[:16]
     prefix = (raw_id or f"event-{index + 1}").replace(" ", "-")[:32]
@@ -88,6 +92,7 @@ def upgrade() -> None:
         )
 
     event_rows: list[dict] = []
+    legacy_event_id_updates: list[dict[str, str]] = []
     if {"schedule", "friday", "saturday", "sunday"}.issubset(edition_cols):
         editions = bind.execute(
             sa.text("SELECT id, friday, saturday, sunday, schedule FROM editions")
@@ -98,9 +103,11 @@ def upgrade() -> None:
             for index, item in enumerate(schedule):
                 if not isinstance(item, dict):
                     continue
+                legacy_event_id = item.get("id")
+                event_id = _event_id(row.id, legacy_event_id, index)
                 event_rows.append(
                     {
-                        "id": _event_id(row.id, item.get("id"), index),
+                        "id": event_id,
                         "edition_id": row.id,
                         "title": item.get("title") or f"Event {index + 1}",
                         "description": item.get("description") or "",
@@ -117,6 +124,13 @@ def upgrade() -> None:
                         "updated_at": now,
                     }
                 )
+                if legacy_event_id and event_id != legacy_event_id:
+                    legacy_event_id_updates.append(
+                        {
+                            "legacy_event_id": str(legacy_event_id),
+                            "event_id": event_id,
+                        }
+                    )
     if event_rows:
         op.bulk_insert(
             sa.table(
@@ -142,6 +156,15 @@ def upgrade() -> None:
 
     if "reservations" in existing_tables and "registrations" not in existing_tables:
         op.rename_table("reservations", "registrations")
+
+    if legacy_event_id_updates:
+        for mapping in legacy_event_id_updates:
+            bind.execute(
+                sa.text(
+                    "UPDATE registrations SET event_id = :event_id WHERE event_id = :legacy_event_id"
+                ),
+                mapping,
+            )
 
     registration_indexes = {index["name"] for index in inspect(bind).get_indexes("registrations")}
     for old_name in (
