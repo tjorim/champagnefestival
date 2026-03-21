@@ -101,7 +101,6 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
 
 
 app.include_router(registrations.router)
-app.include_router(registrations.legacy_router)
 app.include_router(members.router)
 app.include_router(events.router)
 app.include_router(check_in.router)

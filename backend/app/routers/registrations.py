@@ -41,7 +41,6 @@ from app.utils import (
 )
 
 router = APIRouter(prefix="/api/registrations", tags=["registrations"])
-legacy_router = APIRouter(prefix="/api/reservations", tags=["reservations"], include_in_schema=False)
 logger = logging.getLogger(__name__)
 
 _RATE_LIMIT_MAX_REQUESTS = 5
@@ -61,7 +60,6 @@ def _check_rate_limit(client_ip: str) -> bool:
     return True
 
 
-@legacy_router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
 @router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
 async def create_registration(
     body: RegistrationCreate,
@@ -113,12 +111,6 @@ async def create_registration(
     return registration_to_dict(registration)
 
 
-@legacy_router.post(
-    "/admin",
-    response_model=RegistrationOut,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin)],
-)
 @router.post(
     "/admin",
     response_model=RegistrationOut,
@@ -152,12 +144,6 @@ async def admin_create_registration(
     return registration_to_dict(registration)
 
 
-@legacy_router.get(
-    "",
-    response_model=list[RegistrationListOut],
-    dependencies=[Depends(require_admin)],
-    include_in_schema=False,
-)
 @router.get(
     "",
     response_model=list[RegistrationListOut],
@@ -201,12 +187,6 @@ async def list_registrations(
     return [registration_to_list_dict(row) for row in rows]
 
 
-@legacy_router.post(
-    "/my/request",
-    response_model=RegistrationLookupRequestAccepted,
-    status_code=status.HTTP_202_ACCEPTED,
-    include_in_schema=False,
-)
 @router.post(
     "/my/request",
     response_model=RegistrationLookupRequestAccepted,
@@ -267,7 +247,6 @@ async def request_my_registrations_access(
     )
 
 
-@legacy_router.post("/my/access", response_model=list[RegistrationGuestOut], include_in_schema=False)
 @router.post("/my/access", response_model=list[RegistrationGuestOut])
 async def access_my_registrations(
     body: RegistrationAccessLookupRequest,
@@ -280,12 +259,6 @@ async def access_my_registrations(
     return [registration_to_guest_dict(row) for row in rows]
 
 
-@legacy_router.get(
-    "/{registration_id}",
-    response_model=RegistrationOutWithToken,
-    dependencies=[Depends(require_admin)],
-    include_in_schema=False,
-)
 @router.get(
     "/{registration_id}",
     response_model=RegistrationOutWithToken,
@@ -300,12 +273,6 @@ async def get_registration(
     return registration_to_dict_with_token(registration)
 
 
-@legacy_router.put(
-    "/{registration_id}",
-    response_model=RegistrationOut,
-    dependencies=[Depends(require_admin)],
-    include_in_schema=False,
-)
 @router.put(
     "/{registration_id}",
     response_model=RegistrationOut,
@@ -348,12 +315,6 @@ async def update_registration(
     return registration_to_dict(registration)
 
 
-@legacy_router.delete(
-    "/{registration_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin)],
-    include_in_schema=False,
-)
 @router.delete(
     "/{registration_id}",
     status_code=status.HTTP_204_NO_CONTENT,
