@@ -28,14 +28,6 @@ def _normalise_roles(roles: list[str]) -> list[str]:
     return sorted(normalised)
 
 
-def _validate_help_days(first_help_day, last_help_day) -> None:
-    if first_help_day is not None and last_help_day is not None and first_help_day > last_help_day:
-        raise HTTPException(
-            status_code=400,
-            detail="first_help_day must be before or equal to last_help_day.",
-        )
-
-
 def _normalise_optional_identity(value: str | None) -> str | None:
     """Strip separators and normalise case so that e.g. '93.05.18-223.61' and
     '93051822361' are treated as the same value for uniqueness checks."""
@@ -117,8 +109,6 @@ async def _ensure_unique_identity_fields(
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) -> dict:
-    _validate_help_days(body.first_help_day, body.last_help_day)
-
     national_register_number = _normalise_optional_identity(body.national_register_number)
     eid_document_number = _normalise_optional_identity(body.eid_document_number)
     await _ensure_unique_identity_fields(
@@ -133,8 +123,6 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         email=str(body.email).lower().strip() if body.email else "",
         phone=normalize_phone(body.phone),
         address=body.address,
-        first_help_day=body.first_help_day,
-        last_help_day=body.last_help_day,
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
         visits_per_month=body.visits_per_month,
@@ -205,15 +193,9 @@ async def update_person(
 ) -> dict:
     person = await _get_or_404(db, person_id)
 
-    first_help_day = body.first_help_day if "first_help_day" in body.model_fields_set else person.first_help_day
-    last_help_day = body.last_help_day if "last_help_day" in body.model_fields_set else person.last_help_day
-    _validate_help_days(first_help_day, last_help_day)
-
     for field in (
         "name",
         "address",
-        "first_help_day",
-        "last_help_day",
         "visits_per_month",
         "club_name",
         "notes",
@@ -336,7 +318,7 @@ async def merge_people(
             setattr(canonical, field, getattr(duplicate, field))
 
     # Fill blank nullable fields on canonical from duplicate.
-    for field in ("visits_per_month", "first_help_day", "last_help_day"):
+    for field in ("visits_per_month",):
         if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
             setattr(canonical, field, getattr(duplicate, field))
 

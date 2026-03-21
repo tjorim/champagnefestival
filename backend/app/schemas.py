@@ -60,8 +60,6 @@ class PersonOut(BaseModel):
     phone: str
     address: str
     roles: list[str]
-    first_help_day: date | None
-    last_help_day: date | None
     national_register_number: str | None
     eid_document_number: str | None
     visits_per_month: int | None
@@ -204,32 +202,67 @@ class ReservationAdminCreate(BaseModel):
         return v.strip() if isinstance(v, str) else v
 
 
-class VolunteerCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    address: str = Field(min_length=1, max_length=300)
+class VolunteerHelpPeriodIn(BaseModel):
     first_help_day: date
-    last_help_day: date
+    last_help_day: date | None = None
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        if self.last_help_day is not None and self.first_help_day > self.last_help_day:
+            raise ValueError("first_help_day must be before or equal to last_help_day.")
+        return self
+
+
+class VolunteerCreate(BaseModel):
+
+    name: str = Field(min_length=1, max_length=200)
+    address: str = Field(default="", max_length=300)
     national_register_number: str = Field(min_length=1, max_length=20)
     eid_document_number: str = Field(min_length=1, max_length=50)
+    active: bool = True
+    help_periods: list[VolunteerHelpPeriodIn] = Field(min_length=1)
+
+    @field_validator("name", "national_register_number", "eid_document_number", mode="before")
+    @classmethod
+    def strip_required_strings(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
 
 
 class VolunteerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
-    address: str | None = Field(default=None, min_length=1, max_length=300)
-    first_help_day: date | None = None
-    last_help_day: date | None = None
-    national_register_number: str | None = Field(default=None, min_length=1, max_length=20)
+    address: str | None = Field(default=None, max_length=300)
+    national_register_number: str | None = Field(
+        default=None, min_length=1, max_length=20
+    )
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
+    active: bool | None = None
+    help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
+
+    @field_validator("name", "national_register_number", "eid_document_number", mode="before")
+    @classmethod
+    def strip_optional_strings(cls, value: str | None) -> str | None:
+        if not isinstance(value, str):
+            return value
+        stripped = value.strip()
+        return stripped or None
+
+
+class VolunteerPeriodOut(BaseModel):
+    id: int
+    first_help_day: date
+    last_help_day: date | None
+
+    model_config = {"from_attributes": True}
 
 
 class VolunteerOut(BaseModel):
     id: str
     name: str
     address: str
-    first_help_day: date
-    last_help_day: date
     national_register_number: str | None
     eid_document_number: str | None
+    active: bool
+    help_periods: list[VolunteerPeriodOut]
     created_at: datetime
     updated_at: datetime
 
@@ -286,8 +319,6 @@ class PersonCreate(BaseModel):
     phone: str = Field(default="", max_length=50)
     address: str = Field(default="", max_length=300)
     roles: list[str] = Field(default_factory=list)
-    first_help_day: date | None = None
-    last_help_day: date | None = None
     national_register_number: str | None = Field(default=None, max_length=20)
     eid_document_number: str | None = Field(default=None, max_length=50)
     visits_per_month: int | None = Field(default=None, ge=1, le=31)
@@ -302,8 +333,6 @@ class PersonUpdate(BaseModel):
     phone: str | None = Field(default=None, max_length=50)
     address: str | None = Field(default=None, max_length=300)
     roles: list[str] | None = None
-    first_help_day: date | None = None
-    last_help_day: date | None = None
     national_register_number: str | None = Field(default=None, max_length=20)
     eid_document_number: str | None = Field(default=None, max_length=50)
     visits_per_month: int | None = Field(default=None, ge=1, le=31)
@@ -468,6 +497,7 @@ class TableOut(BaseModel):
 # Areas
 # ---------------------------------------------------------------------------
 
+
 class AreaCreate(BaseModel):
     layout_id: str = Field(max_length=64)
     label: str = Field(min_length=1, max_length=200)
@@ -561,7 +591,9 @@ class RoomCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     width_m: float = Field(ge=1, le=500, default=20.0)
     length_m: float = Field(ge=1, le=500, default=15.0)
-    color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    color: str = Field(
+        default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    )
     active: bool = True
 
 
@@ -569,7 +601,9 @@ class RoomUpdate(BaseModel):
     name: str | None = None
     width_m: float | None = Field(default=None, ge=1, le=500)
     length_m: float | None = Field(default=None, ge=1, le=500)
-    color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    color: str | None = Field(
+        default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    )
     active: bool | None = None
 
 
@@ -664,5 +698,3 @@ class EditionOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-
