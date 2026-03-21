@@ -192,7 +192,7 @@ def layout_to_dict(lay: Layout) -> dict:
     }
 
 
-def table_to_dict(t: Table) -> dict:
+def table_to_dict(t: Table, reservation_ids: list[str] | None = None) -> dict:
     return {
         "id": t.id,
         "name": t.name,
@@ -202,7 +202,7 @@ def table_to_dict(t: Table) -> dict:
         "table_type_id": t.table_type_id,
         "rotation": t.rotation,
         "layout_id": t.layout_id,
-        "reservation_ids": t.reservation_ids,
+        "reservation_ids": reservation_ids if reservation_ids is not None else t.reservation_ids,
         "created_at": t.created_at,
         "updated_at": t.updated_at,
     }

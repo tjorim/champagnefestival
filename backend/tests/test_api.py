@@ -1128,11 +1128,91 @@ async def test_table_id_can_be_cleared(client):
     assert r.json()["table_id"] is None
 
 
+@pytest.mark.anyio
+async def test_table_reservation_ids_computed_from_reservation_table_id(client):
+    """reservation_ids on a table must reflect Reservation.table_id after reload.
+
+    Regression test: previously Table.reservation_ids was a denormalized JSON
+    array that was never updated when a reservation was assigned via
+    PUT /api/reservations/{id}.  On a fresh GET /api/tables the array appeared
+    empty, making the layout editor lose all assignments after a page reload.
+    """
+    # Create a reservation
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+    res_id = r.json()["id"]
+
+    # Build prerequisites: venue → room → layout + table_type
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    room_id = r.json()["id"]
+    r = await client.post(
+        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+    )
+    layout_id = r.json()["id"]
+    r = await client.post(
+        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
+    )
+    tt_id = r.json()["id"]
+
+    # Create a table
+    r = await client.post(
+        "/api/tables",
+        json={
+            "name": "T-Persist",
+            "capacity": 4,
+            "table_type_id": tt_id,
+            "layout_id": layout_id,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    tbl_id = r.json()["id"]
+    # A new table has no reservations yet
+    assert r.json()["reservation_ids"] == []
+
+    # Assign the reservation to the table via the reservation endpoint
+    r = await client.put(
+        f"/api/reservations/{res_id}",
+        json={"table_id": tbl_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["table_id"] == tbl_id
+
+    # GET /api/tables must now reflect the assignment without any extra call
+    r = await client.get("/api/tables", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    tables = r.json()
+    tbl = next(t for t in tables if t["id"] == tbl_id)
+    assert res_id in tbl["reservation_ids"], (
+        "reservation_ids should be computed from Reservation.table_id on every GET"
+    )
+
+    # GET /api/tables/{id} must also reflect the assignment
+    r = await client.get(f"/api/tables/{tbl_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert res_id in r.json()["reservation_ids"]
+
+    # After clearing the table assignment the list must also update
+    r = await client.put(
+        f"/api/reservations/{res_id}",
+        json={"table_id": None},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+
+    r = await client.get("/api/tables", headers=ADMIN_HEADERS)
+    tbl = next(t for t in r.json() if t["id"] == tbl_id)
+    assert tbl["reservation_ids"] == []
+
+
 # ---------------------------------------------------------------------------
 # Volunteers (admin)
 # ---------------------------------------------------------------------------
-
-
 @pytest.mark.anyio
 async def test_volunteers_require_auth(client):
     r = await client.get("/api/volunteers")

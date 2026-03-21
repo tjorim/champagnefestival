@@ -493,7 +493,6 @@ class TableUpdate(BaseModel):
     table_type_id: str | None = None
     rotation: int | None = Field(default=None, ge=0, le=359)
     layout_id: str | None = None
-    reservation_ids: list[str] | None = None
 
 
 class TableOut(BaseModel):
