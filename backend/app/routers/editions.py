@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_admin
 from app.database import get_db
 from app.models import Edition, Exhibitor, Venue
-from app.schemas import STANDALONE_EDITION_TYPES, EditionCreate, EditionOut, EditionType, EditionUpdate
+from app.schemas import EditionCreate, EditionOut, EditionType, EditionUpdate
 from app.utils import edition_to_dict, event_to_summary_dict, venue_to_dict
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
@@ -289,7 +289,7 @@ def _sorted_editions(editions: list[Edition]) -> list[Edition]:
 
 
 def _validate_exhibitors_allowed(edition_type: EditionType, exhibitors: list[int]) -> None:
-    if edition_type in STANDALONE_EDITION_TYPES and exhibitors:
+    if edition_type != "festival" and exhibitors:
         raise HTTPException(
             status_code=400,
             detail="Exhibitors are only supported on festival editions.",

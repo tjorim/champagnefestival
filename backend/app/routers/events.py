@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_admin
 from app.database import get_db
 from app.models import Edition, Event
-from app.schemas import STANDALONE_EDITION_TYPES, EventCreate, EventOut, EventUpdate
+from app.schemas import EventCreate, EventOut, EventUpdate
 from app.utils import event_to_summary_dict, make_id
 
 router = APIRouter(prefix="/api/events", tags=["events"])
@@ -148,7 +148,7 @@ async def _validate_standalone_event_date(
     event_date: date,
     exclude_event_id: str | None = None,
 ) -> None:
-    if edition.edition_type not in STANDALONE_EDITION_TYPES:
+    if edition.edition_type == "festival":
         return
     stmt = select(Event.date).where(Event.edition_id == edition.id)
     if exclude_event_id is not None:
