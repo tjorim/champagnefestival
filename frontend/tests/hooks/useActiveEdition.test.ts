@@ -89,4 +89,44 @@ describe("useActiveEdition", () => {
       }),
     ]);
   });
+
+
+  it("deduplicates dates when the API omits dates and multiple events share one day", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...apiEdition,
+          dates: null,
+          events: [
+            apiEdition.events[0],
+            {
+              id: "evt-friday-late",
+              title: "Late Friday",
+              description: "Second Friday event",
+              date: "2026-03-13",
+              start_time: "21:30",
+              end_time: null,
+              category: "party",
+              registration_required: false,
+              registrations_open_from: null,
+            },
+            apiEdition.events[1],
+          ],
+        }),
+      } as Response),
+    );
+
+    const { result } = renderHook(() => useActiveEdition());
+
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+
+    expect(result.current.edition.dates.map((date) => date.toISOString().slice(0, 10))).toEqual([
+      "2026-03-13",
+      "2026-03-14",
+    ]);
+    expect(result.current.edition.events).toHaveLength(3);
+  });
+
 });

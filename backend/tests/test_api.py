@@ -1094,6 +1094,75 @@ async def test_active_edition_includes_dates_derived_from_events(client):
 
 
 @pytest.mark.anyio
+async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-multi-day",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    for payload in [
+        {
+            "edition_id": "edition-multi-day",
+            "title": "Friday Tasting",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "17:00",
+            "end_time": "18:00",
+            "category": "festival",
+            "registration_required": False,
+            "active": True,
+        },
+        {
+            "edition_id": "edition-multi-day",
+            "title": "Friday VIP",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "19:00",
+            "end_time": "20:00",
+            "category": "festival",
+            "registration_required": True,
+            "active": True,
+        },
+        {
+            "edition_id": "edition-multi-day",
+            "title": "Saturday Party",
+            "description": "",
+            "date": "2099-03-22",
+            "start_time": "20:00",
+            "end_time": "22:00",
+            "category": "festival",
+            "registration_required": False,
+            "active": True,
+        },
+    ]:
+        event_response = await client.post("/api/events", json=payload, headers=ADMIN_HEADERS)
+        assert event_response.status_code == 201
+
+    r = await client.get("/api/editions/active")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["id"] == "edition-multi-day"
+    assert data["dates"] == ["2099-03-21", "2099-03-22"]
+    assert [event["title"] for event in data["events"]] == [
+        "Friday Tasting",
+        "Friday VIP",
+        "Saturday Party",
+    ]
+
+
+@pytest.mark.anyio
 async def test_edition_rejects_vendor_exhibitors(client):
     """Vendor-type exhibitors must not be linked to editions."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
