@@ -40,15 +40,9 @@ def _normalise_schedule(value):
 def _event_id(edition_id: str, schedule_item_id: str | None, index: int) -> str:
     """Return the migrated event ID for one legacy schedule item.
 
-    If the old JSON schedule entry already had an ``id``, we preserve it so any
-    pre-existing reservation/registration rows that still point at that legacy
-    schedule ID continue to resolve after the FK is added. Only schedule items
-    without an ID get a generated ``evt-...`` identifier.
+    Old schedule-item IDs are used only as remap keys during the migration; the
+    new relational ``events`` table always gets generated ``evt-...`` IDs.
     """
-    if schedule_item_id:
-        preserved_schedule_id = str(schedule_item_id).strip()
-        if preserved_schedule_id:
-            return preserved_schedule_id[:64]
     seed = f"{edition_id}:{schedule_item_id or index}".encode("utf-8")
     digest = hashlib.sha1(seed).hexdigest()[:16]
     prefix = (schedule_item_id or f"event-{index + 1}").replace(" ", "-")[:32]
@@ -110,12 +104,13 @@ def upgrade() -> None:
                 if not isinstance(item, dict):
                     continue
                 schedule_item_id = item.get("id")
+                event_title = item.get("title") or f"Event {index + 1}"
                 event_id = _event_id(row.id, schedule_item_id, index)
                 event_rows.append(
                     {
                         "id": event_id,
                         "edition_id": row.id,
-                        "title": item.get("title") or f"Event {index + 1}",
+                        "title": event_title,
                         "description": item.get("description") or "",
                         "date": _day_to_date(row, item.get("day_id")),
                         "start_time": item.get("start_time") or "00:00",
@@ -129,10 +124,11 @@ def upgrade() -> None:
                         "updated_at": now,
                     }
                 )
-                if schedule_item_id and event_id != schedule_item_id:
+                if schedule_item_id:
                     schedule_id_remaps.append(
                         {
                             "schedule_item_id": str(schedule_item_id),
+                            "event_title": event_title,
                             "event_id": event_id,
                         }
                     )
@@ -165,7 +161,9 @@ def upgrade() -> None:
         for mapping in schedule_id_remaps:
             bind.execute(
                 sa.text(
-                    "UPDATE registrations SET event_id = :event_id WHERE event_id = :schedule_item_id"
+                    "UPDATE registrations "
+                    "SET event_id = :event_id "
+                    "WHERE event_id = :schedule_item_id AND event_title = :event_title"
                 ),
                 mapping,
             )
