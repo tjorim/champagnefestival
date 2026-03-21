@@ -8,7 +8,6 @@ const apiEdition = {
   year: 2026,
   month: "march",
   venue: {
-    id: "venue-1",
     name: "Staf Versluys",
     address: "Kapelstraat 76",
     city: "Bredene",
@@ -61,7 +60,7 @@ describe("useActiveEdition", () => {
     vi.unstubAllGlobals();
   });
 
-  it("maps the backend events payload into the frontend edition shape", async () => {
+  it("exposes the backend events payload directly while deriving frontend dates", async () => {
     const { result } = renderHook(() => useActiveEdition());
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
@@ -73,18 +72,18 @@ describe("useActiveEdition", () => {
     expect(result.current.edition.dates.saturday.getDate()).toBe(14);
     expect(result.current.edition.dates.sunday.getDate()).toBe(14);
 
-    expect(result.current.edition.schedule).toEqual([
+    expect(result.current.edition.events).toEqual([
       expect.objectContaining({
         id: "evt-friday",
         title: "VIP-arrangement",
-        reservation: true,
-        dayId: 1,
+        date: "2026-03-13",
+        registrationRequired: true,
       }),
       expect.objectContaining({
         id: "evt-saturday",
         title: "Champagneparty",
-        reservation: false,
-        dayId: 2,
+        date: "2026-03-14",
+        registrationRequired: false,
       }),
     ]);
   });

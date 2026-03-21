@@ -5,11 +5,9 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
-import { getActiveEdition, type ScheduleEvent } from "@/config/editions";
 import type { Reservation } from "@/types/reservation";
 import { apiToReservation } from "@/types/reservationMapper";
 import { m } from "@/paraglide/messages";
-import { mapApiEditionToEdition, type ApiEdition } from "@/utils/editionApi";
 
 interface PersonOption {
   value: string;
@@ -18,6 +16,12 @@ interface PersonOption {
   name: string;
   email: string;
   phone: string;
+}
+
+interface EditionEvent {
+  id: string;
+  title: string;
+  registration_required: boolean;
 }
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
@@ -65,7 +69,7 @@ export default function ReservationCreateModal({
   const [guestCount, setGuestCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [eventId, setEventId] = useState("");
-  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [events, setEvents] = useState<EditionEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,8 +97,9 @@ export default function ReservationCreateModal({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.events) {
-          const edition = mapApiEditionToEdition(data as ApiEdition, getActiveEdition().dates);
-          setEvents(edition.schedule.filter((event) => event.reservation));
+          setEvents(
+            (data.events as EditionEvent[]).filter((event) => event.registration_required),
+          );
         } else {
           setEvents([]);
         }

@@ -177,18 +177,31 @@ function App() {
 
   // Derive festival days for the Schedule component
   const festivalDays = useMemo<FestivalDay[]>(() => {
-    const toISO = (d: Date) => {
-      const y = d.getFullYear();
-      const mo = String(d.getMonth() + 1).padStart(2, "0");
-      const da = String(d.getDate()).padStart(2, "0");
-      return `${y}-${mo}-${da}`;
-    };
-    return [
-      { id: 1, date: toISO(edition.dates.friday), label: "friday" },
-      { id: 2, date: toISO(edition.dates.saturday), label: "saturday" },
-      { id: 3, date: toISO(edition.dates.sunday), label: "sunday" },
-    ];
+    const uniqueDates = [...new Set(edition.events.map((event) => event.date))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+    const labels: FestivalDay["label"][] = ["friday", "saturday", "sunday"];
+    return uniqueDates.map((date, index) => ({
+      id: index + 1,
+      date,
+      label: labels[index] ?? "sunday",
+    }));
   }, [edition]);
+
+  const scheduleEvents = useMemo(() => {
+    const dayIdByDate = new Map(festivalDays.map((day) => [day.date, day.id]));
+    return edition.events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      description: event.description,
+      reservation: event.registrationRequired,
+      reservationsOpenFrom: event.registrationsOpenFrom,
+      category: event.category,
+      dayId: dayIdByDate.get(event.date) ?? 1,
+    }));
+  }, [edition.events, festivalDays]);
 
   const [showReservationModal, setShowReservationModal] = useState(false);
 
@@ -201,16 +214,13 @@ function App() {
   // if the API response updates the edition.
   useEffect(() => {
     const now = new Date();
-    const dayDate = (dayId: number): Date =>
-      [edition.dates.friday, edition.dates.saturday, edition.dates.sunday][dayId - 1] ??
-      edition.dates.friday;
-    const events = edition.schedule
-      .filter((ev) => ev.reservation)
+    const events = edition.events
+      .filter((event) => event.registrationRequired)
       .filter((ev) => {
-        const eventEnd = endOfDay(dayDate(ev.dayId));
+        const eventEnd = endOfDay(new Date(`${ev.date}T00:00:00`));
         return eventEnd >= now;
       })
-      .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)
+      .filter((ev) => !ev.registrationsOpenFrom || ev.registrationsOpenFrom <= now)
       .map((ev) => ({ id: ev.id, title: ev.title }));
     setReservableEvents(events);
   }, [edition]);
@@ -305,7 +315,7 @@ function App() {
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
                   <AppSuspense errorFallbackText={m.error_schedule()}>
-                    <Schedule days={festivalDays} events={edition.schedule} />
+                    <Schedule days={festivalDays} events={scheduleEvents} />
                   </AppSuspense>
                 </div>
               </div>
