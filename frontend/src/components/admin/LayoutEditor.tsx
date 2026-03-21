@@ -861,7 +861,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {layout.label || getDayLabel(layout.dayId)}
+                          {getDayLabel(layout.dayId)}
                         </Button>
                         <Button
                           size="sm"

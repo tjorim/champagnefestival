@@ -27,13 +27,28 @@ async def create_layout(
     body: LayoutCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    label = body.label.strip() or _default_layout_label(body.day_id)
+    existing_stmt = select(Layout).where(
+        Layout.room_id == body.room_id,
+        Layout.day_id == body.day_id,
+    )
+    if body.edition_id is None:
+        existing_stmt = existing_stmt.where(Layout.edition_id.is_(None))
+    else:
+        existing_stmt = existing_stmt.where(Layout.edition_id == body.edition_id)
+
+    existing = (await db.execute(existing_stmt.limit(1))).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A layout already exists for this room and day.",
+        )
+
     lay = Layout(
         id=make_id("lay"),
         edition_id=body.edition_id,
         room_id=body.room_id,
         day_id=body.day_id,
-        label=label,
+        label=body.label.strip(),
     )
     db.add(lay)
     await db.commit()
@@ -98,11 +113,3 @@ async def _get_or_404(db: AsyncSession, layout_id: str) -> Layout:
     if lay is None:
         raise HTTPException(status_code=404, detail="Layout not found.")
     return lay
-
-
-def _default_layout_label(day_id: int) -> str:
-    return {
-        1: "Friday",
-        2: "Saturday",
-        3: "Sunday",
-    }.get(day_id, f"Day {day_id}")

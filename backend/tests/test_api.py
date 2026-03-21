@@ -362,7 +362,7 @@ async def test_check_in_wrong_token(client):
 
 
 @pytest.mark.anyio
-async def test_layout_defaults_label_from_day(client):
+async def test_layout_rejects_duplicate_room_day(client):
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
@@ -374,7 +374,12 @@ async def test_layout_defaults_label_from_day(client):
         "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 201
-    assert r.json()["label"] == "Friday"
+
+    r = await client.post(
+        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 409
+    assert r.json()["detail"] == "A layout already exists for this room and day."
 
 
 # ---------------------------------------------------------------------------
