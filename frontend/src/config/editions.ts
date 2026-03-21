@@ -48,7 +48,7 @@ export interface ScheduleEvent {
   reservationsOpenFrom?: Date;
   location?: string;
   presenter?: string;
-  category: "tasting" | "vip" | "party" | "breakfast" | "exchange" | "general";
+  category: string;
   dayId: number;
 }
 

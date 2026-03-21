@@ -10,8 +10,6 @@
 import { useEffect, useState } from "react";
 import { getActiveEdition, type Edition, type EditionDates, type SliderItem } from "@/config/editions";
 
-type EventCategory = "tasting" | "vip" | "party" | "breakfast" | "exchange" | "general";
-
 interface ActiveEditionVenue {
   venueName: string;
   address: string;
@@ -31,7 +29,7 @@ export interface ActiveEditionEvent {
   date: string;
   startTime: string;
   endTime?: string;
-  category: EventCategory;
+  category: string;
   registrationRequired: boolean;
   registrationsOpenFrom?: Date;
 }
@@ -64,7 +62,7 @@ interface ApiEvent {
   date: string;
   start_time: string;
   end_time: string | null;
-  category: EventCategory;
+  category: string;
   registration_required: boolean;
   registrations_open_from: string | null;
 }

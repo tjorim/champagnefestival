@@ -91,10 +91,4 @@ describe("schedule config", () => {
     expect(requiresReservation(tastingEvent!)).toBe(false);
   });
 
-  it("event categories are valid values", () => {
-    const validCategories = ["tasting", "vip", "party", "breakfast", "exchange", "general"];
-    scheduleEvents.forEach((event) => {
-      expect(validCategories).toContain(event.category);
-    });
-  });
 });
