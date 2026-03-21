@@ -1,20 +1,66 @@
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
+import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import type { PaymentStatus, ReservationStatus } from "@/types/reservation";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
+
+interface PersonReservation {
+  id: string;
+  eventTitle: string;
+  guestCount: number;
+  status: ReservationStatus;
+  paymentStatus: PaymentStatus;
+  checkedIn: boolean;
+  createdAt: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isReservationStatus(value: unknown): value is ReservationStatus {
+  return value === "pending" || value === "confirmed" || value === "cancelled";
+}
+
+function isPaymentStatus(value: unknown): value is PaymentStatus {
+  return value === "unpaid" || value === "partial" || value === "paid";
+}
+
+function isPersonReservationRecord(value: unknown): value is Record<string, unknown> & {
+  id: string;
+  event_title: string;
+  guest_count: number;
+  status: ReservationStatus;
+  payment_status: PaymentStatus;
+  checked_in: boolean;
+  created_at: string;
+} {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.event_title === "string" &&
+    typeof value.guest_count === "number" &&
+    isReservationStatus(value.status) &&
+    isPaymentStatus(value.payment_status) &&
+    typeof value.checked_in === "boolean" &&
+    typeof value.created_at === "string"
+  );
+}
 
 interface PeopleManagementProps {
   people: Person[];
   reservationCountByPersonId: Record<string, number>;
   isLoading: boolean;
+  authHeaders: () => Record<string, string>;
   onMerge: (canonicalId: string, duplicateId: string) => Promise<void>;
   onCreate: (data: PersonFormData) => Promise<void>;
   onUpdate: (id: string, data: PersonFormData) => Promise<void>;
@@ -30,6 +76,7 @@ export default function PeopleManagement({
   people,
   reservationCountByPersonId,
   isLoading,
+  authHeaders,
   onMerge,
   onCreate,
   onUpdate,
@@ -50,6 +97,11 @@ export default function PeopleManagement({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
+  const [viewReservationsPerson, setViewReservationsPerson] = useState<Person | null>(null);
+  const [personReservations, setPersonReservations] = useState<PersonReservation[]>([]);
+  const [loadingPersonReservations, setLoadingPersonReservations] = useState(false);
+  const [personReservationsError, setPersonReservationsError] = useState(false);
+  const reservationsFetchControllerRef = useRef<AbortController | null>(null);
 
   const filtered = q.trim() || roleFilter !== "all"
     ? people.filter((p) => {
@@ -144,6 +196,77 @@ export default function PeopleManagement({
       setCreateSuccess(true);
     }
   };
+
+  const closePersonReservations = useCallback(() => {
+    reservationsFetchControllerRef.current?.abort();
+    reservationsFetchControllerRef.current = null;
+    setLoadingPersonReservations(false);
+    setViewReservationsPerson(null);
+  }, []);
+
+  const openPersonReservations = useCallback(
+    async (person: Person) => {
+      reservationsFetchControllerRef.current?.abort();
+      const controller = new AbortController();
+      reservationsFetchControllerRef.current = controller;
+
+      setViewReservationsPerson(person);
+      setPersonReservations([]);
+      setPersonReservationsError(false);
+      setLoadingPersonReservations(true);
+      try {
+        const res = await fetch(`/api/people/${encodeURIComponent(person.id)}/reservations`, {
+          signal: controller.signal,
+          headers: authHeaders(),
+        });
+        if (reservationsFetchControllerRef.current !== controller) {
+          return;
+        }
+        if (res.ok) {
+          const raw: unknown = await res.json();
+          if (reservationsFetchControllerRef.current !== controller) {
+            return;
+          }
+          if (!Array.isArray(raw) || !raw.every(isPersonReservationRecord)) {
+            setPersonReservationsError(true);
+            return;
+          }
+          setPersonReservations(
+            raw.map((d) => ({
+              id: d.id,
+              eventTitle: d.event_title,
+              guestCount: d.guest_count,
+              status: d.status,
+              paymentStatus: d.payment_status,
+              checkedIn: d.checked_in,
+              createdAt: d.created_at,
+            })),
+          );
+        } else {
+          setPersonReservationsError(true);
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        if (reservationsFetchControllerRef.current !== controller) {
+          return;
+        }
+        setPersonReservationsError(true);
+      } finally {
+        if (reservationsFetchControllerRef.current === controller) {
+          reservationsFetchControllerRef.current = null;
+          setLoadingPersonReservations(false);
+        }
+      }
+    },
+    [authHeaders],
+  );
+
+  useEffect(() => () => {
+    reservationsFetchControllerRef.current?.abort();
+    reservationsFetchControllerRef.current = null;
+  }, []);
 
   return (
     <>
@@ -304,6 +427,18 @@ export default function PeopleManagement({
                           <Badge bg={resCount > 0 ? "warning" : "secondary"} text={resCount > 0 ? "dark" : undefined}>
                             {resCount}
                           </Badge>
+                          {resCount > 0 && (
+                            <Button
+                              size="sm"
+                              variant="link"
+                              className="text-secondary p-0 ms-1"
+                              onClick={() => openPersonReservations(person)}
+                              title={m.admin_people_view_reservations()}
+                              aria-label={`${m.admin_people_view_reservations()}: ${person.name}`}
+                            >
+                              <i className="bi bi-eye" aria-hidden="true" />
+                            </Button>
+                          )}
                         </td>
                         <td>
                           <div className="d-flex flex-wrap gap-1">
@@ -476,6 +611,107 @@ export default function PeopleManagement({
           setEditingPerson(null);
         }}
       />
+
+      {/* Person reservations modal */}
+      {viewReservationsPerson && (
+        <Modal
+          show
+          onHide={closePersonReservations}
+          centered
+          data-bs-theme="dark"
+        >
+          <Modal.Header closeButton className="bg-dark border-secondary">
+            <Modal.Title className="text-warning fs-6">
+              <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+              {m.admin_people_reservations_modal_title()} — {viewReservationsPerson.name}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="bg-dark text-light p-0">
+            {loadingPersonReservations && (
+              <div className="text-center py-4">
+                <Spinner animation="border" size="sm" variant="warning" />
+              </div>
+            )}
+            {!loadingPersonReservations && personReservationsError && (
+              <Alert variant="danger" className="m-3">
+                {m.admin_people_reservations_load_error()}
+              </Alert>
+            )}
+            {!loadingPersonReservations && !personReservationsError && personReservations.length === 0 && (
+              <p className="text-secondary text-center py-4 mb-0">
+                {m.admin_people_reservations_empty()}
+              </p>
+            )}
+            {!loadingPersonReservations && !personReservationsError && personReservations.length > 0 && (
+              <ListGroup variant="flush">
+                {personReservations.map((r) => (
+                  <ListGroup.Item key={r.id} className="bg-dark border-secondary text-light py-2">
+                    <div className="d-flex justify-content-between align-items-start gap-2">
+                      <div>
+                        <div className="fw-semibold small">{r.eventTitle}</div>
+                        <div className="text-secondary small">
+                          <i className="bi bi-people me-1" aria-hidden="true" />
+                          {r.guestCount}
+                        </div>
+                      </div>
+                      <div className="d-flex gap-1 flex-wrap justify-content-end">
+                        <Badge
+                          bg={
+                            r.status === "confirmed"
+                              ? "success"
+                              : r.status === "cancelled"
+                                ? "danger"
+                                : "warning"
+                          }
+                        >
+                          {r.status === "confirmed"
+                            ? m.admin_status_confirmed()
+                            : r.status === "cancelled"
+                              ? m.admin_status_cancelled()
+                              : m.admin_status_pending()}
+                        </Badge>
+                        <Badge
+                          bg={
+                            r.paymentStatus === "paid"
+                              ? "success"
+                              : r.paymentStatus === "partial"
+                                ? "warning"
+                                : "secondary"
+                          }
+                        >
+                          {r.paymentStatus === "paid"
+                            ? m.admin_payment_paid()
+                            : r.paymentStatus === "partial"
+                              ? m.admin_payment_partial()
+                              : m.admin_payment_unpaid()}
+                        </Badge>
+                        {r.checkedIn && (
+                          <Badge bg="success">
+                            <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                            {m.admin_checked_in()}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-secondary" style={{ fontSize: "0.7rem" }}>
+                      {new Date(r.createdAt).toLocaleDateString()}
+                    </div>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            )}
+          </Modal.Body>
+          <Modal.Footer className="bg-dark border-secondary">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={closePersonReservations}
+            >
+              {m.close()}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </>
   );
 }

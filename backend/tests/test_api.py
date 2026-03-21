@@ -1,11 +1,19 @@
 """Integration tests for the reservation API."""
 
+import hashlib
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.database import Base, get_db
 from app.main import app
+from app.models import ReservationAccessToken
+import app.routers.reservations as reservations_module
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
@@ -15,6 +23,12 @@ ADMIN_TOKEN = "test-admin-token"
 def set_admin_token(monkeypatch):
     monkeypatch.setattr("app.config.settings.admin_token", ADMIN_TOKEN)
     monkeypatch.setattr("app.auth.settings.admin_token", ADMIN_TOKEN)
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter(monkeypatch):
+    """Reset the in-memory rate limiter before every test for isolation."""
+    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
 
 
 @pytest.fixture()
@@ -77,6 +91,22 @@ async def test_health(client):
     r = await client.get("/health")
     assert r.status_code == 200
     assert r.json() == {"status": "ok"}
+
+
+def test_settings_reject_nonpositive_guest_access_token_ttl():
+    with pytest.raises(ValidationError, match="GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0."):
+        Settings(guest_access_token_ttl_minutes=0)
+
+
+def test_settings_reject_excessive_guest_access_token_ttl():
+    with pytest.raises(
+        ValidationError,
+        match=(
+            "GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to "
+            f"{GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}\\."
+        ),
+    ):
+        Settings(guest_access_token_ttl_minutes=GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES + 1)
 
 
 # ---------------------------------------------------------------------------
@@ -309,26 +339,27 @@ async def test_filter_by_event(client):
 
 
 # ---------------------------------------------------------------------------
-# Visitor self-lookup (public /my endpoint)
+# Visitor self-lookup (public token-based flow)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_my_reservations(client):
+async def test_request_my_reservations_access_is_generic(client):
     r = await client.post("/api/reservations", json=VALID_RESERVATION)
     assert r.status_code == 201
 
-    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
-    assert r.status_code == 200
-    items = r.json()
-    assert len(items) == 1
-    # Must not expose sensitive fields
-    assert "check_in_token" not in items[0]
-    assert "phone" not in items[0]
-    assert "notes" not in items[0]
-    # Must expose booking status fields
-    assert items[0]["status"] == "pending"
-    assert items[0]["event_title"] == "Vrijdagavond"
+    found = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    missing = await client.post("/api/reservations/my/request", json={"email": "nobody@example.com"})
+
+    assert found.status_code == 202
+    assert missing.status_code == 202
+    assert found.json()["delivery_mode"] == "email"
+    assert missing.json()["delivery_mode"] == "email"
+    assert found.json()["expires_in_minutes"] == missing.json()["expires_in_minutes"]
+    assert "access_token" not in found.json()
+    assert "access_token" not in missing.json()
+    assert "access_url" not in found.json()
+    assert "access_url" not in missing.json()
 
 
 @pytest.mark.anyio
@@ -339,28 +370,87 @@ async def test_my_reservations_case_insensitive_email(client):
     )
     assert r.status_code == 201
 
-    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+
+@pytest.mark.anyio
+async def test_my_reservations_access_token_flow(client, db_session, monkeypatch):
+    """Guest reservations are only returned after presenting a valid token."""
+    token = "guest-access-token-12345"
+    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+
+    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "Jean@Example.com"})
+    assert r.status_code == 201
+
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+    token_rows = (
+        await db_session.execute(select(ReservationAccessToken))
+    ).scalars().all()
+    assert len(token_rows) == 1
+    assert token_rows[0].email == "jean@example.com"
+    assert token_rows[0].token_hash != token
+    assert token_rows[0].token_hash == hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    r = await client.post(
+        "/api/reservations/my/access", json={"token": token}
+    )
     assert r.status_code == 200
-    assert len(r.json()) == 1
-    assert r.json()[0]["status"] == "pending"
+    items = r.json()
+    assert len(items) == 1
+    assert "check_in_token" not in items[0]
+    assert "phone" not in items[0]
+    assert "notes" not in items[0]
+    assert items[0]["status"] == "pending"
+    assert items[0]["event_title"] == "Vrijdagavond"
+    await db_session.refresh(token_rows[0])
+    assert token_rows[0].last_used_at is not None
 
 
 @pytest.mark.anyio
-async def test_my_reservations_no_results(client):
-    r = await client.get("/api/reservations/my", params={"email": "nobody@example.com"})
-    assert r.status_code == 200
-    assert r.json() == []
+async def test_my_reservations_access_requires_valid_token(client):
+    r = await client.post(
+        "/api/reservations/my/access",
+        json={"token": "invalid-token-value-12345"},
+    )
+    assert r.status_code == 401
 
 
 @pytest.mark.anyio
-async def test_my_reservations_invalid_email(client):
-    r = await client.get("/api/reservations/my", params={"email": "not-an-email"})
-    assert r.status_code == 422  # FastAPI/Pydantic validation error
+async def test_my_reservations_request_invalid_email(client):
+    r = await client.post("/api/reservations/my/request", json={"email": "not-an-email"})
+    assert r.status_code == 422
 
 
 @pytest.mark.anyio
-async def test_my_reservations_multiple_editions(client):
-    """A guest with two bookings (different events) sees both."""
+async def test_my_reservations_access_expired_token(client, db_session):
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+
+    db_session.add(
+        ReservationAccessToken(
+            id="rat_expired",
+            email="jean@example.com",
+            token_hash=hashlib.sha256(b"expired-token-value-12345").hexdigest(),
+            expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+        )
+    )
+    await db_session.commit()
+
+    r = await client.post(
+        "/api/reservations/my/access",
+        json={"token": "expired-token-value-12345"},
+    )
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_my_reservations_access_multiple_editions(client, monkeypatch):
+    token = "guest-access-token-12345"
+    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+
     r = await client.post("/api/reservations", json=VALID_RESERVATION)
     assert r.status_code == 201
     r = await client.post(
@@ -373,8 +463,74 @@ async def test_my_reservations_multiple_editions(client):
     )
     assert r.status_code == 201
 
-    r = await client.get("/api/reservations/my", params={"email": "jean@example.com"})
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+    r = await client.post(
+        "/api/reservations/my/access", json={"token": token}
+    )
+    assert r.status_code == 200
     assert len(r.json()) == 2
+
+
+@pytest.mark.anyio
+async def test_my_reservations_request_reuses_existing_token_row(client, db_session, monkeypatch):
+    tokens = iter(["guest-access-token-12345", "guest-access-token-67890"])
+    monkeypatch.setattr(
+        "app.routers.reservations.secrets.token_urlsafe",
+        lambda _: next(tokens),
+    )
+
+    first = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    second = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+
+    assert first.status_code == 202
+    assert second.status_code == 202
+
+    token_rows = (
+        await db_session.execute(select(ReservationAccessToken))
+    ).scalars().all()
+    assert len(token_rows) == 1
+    assert token_rows[0].email == "jean@example.com"
+    assert token_rows[0].token_hash == hashlib.sha256(
+        b"guest-access-token-67890"
+    ).hexdigest()
+
+
+@pytest.mark.anyio
+async def test_my_reservations_access_token_reuse(client, monkeypatch):
+    """A valid token can be used more than once within its TTL window."""
+    token = "guest-access-token-12345"
+    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+
+    r = await client.post("/api/reservations", json=VALID_RESERVATION)
+    assert r.status_code == 201
+
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+    first = await client.post("/api/reservations/my/access", json={"token": token})
+    second = await client.post("/api/reservations/my/access", json={"token": token})
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert len(first.json()) == 1
+    assert len(second.json()) == 1
+
+
+@pytest.mark.anyio
+async def test_my_reservations_request_rate_limited(client, monkeypatch):
+    """After exceeding the per-IP request limit the endpoint returns 429."""
+    # Reset the in-process rate limiter state so prior tests don't affect this one.
+    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
+
+    limit = reservations_module._RATE_LIMIT_MAX_REQUESTS
+    for _ in range(limit):
+        r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+        assert r.status_code == 202
+
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 429
 
 
 # ---------------------------------------------------------------------------

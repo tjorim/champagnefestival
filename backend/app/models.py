@@ -62,6 +62,23 @@ class Reservation(Base):
     )
 
 
+class ReservationAccessToken(Base):
+    """Short-lived visitor access token for viewing reservations via e-mail link."""
+
+    __tablename__ = "reservation_access_tokens"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(200), unique=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    last_used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class Exhibitor(Base):
     """A unified exhibitor: champagne producer, sponsor, or vendor."""
 

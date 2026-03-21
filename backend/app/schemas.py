@@ -184,6 +184,25 @@ class ReservationGuestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReservationLookupRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def strip_email_whitespace(cls, v: str) -> str:
+        return v.strip() if isinstance(v, str) else v
+
+
+class ReservationLookupRequestAccepted(BaseModel):
+    ok: bool = True
+    delivery_mode: Literal["email"] = "email"
+    expires_in_minutes: int
+
+
+class ReservationAccessLookupRequest(BaseModel):
+    token: str = Field(min_length=20)
+
+
 class ReservationAdminCreate(BaseModel):
     """Admin-only reservation creation — skips spam checks, accepts person_id directly."""
 
