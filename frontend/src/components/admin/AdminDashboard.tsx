@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -187,7 +187,9 @@ function syncMembersWithPerson(members: Person[], person: Person): Person[] {
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [token, setToken] = useState("");
+  const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const autoAuthRan = useRef(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -212,9 +214,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const authHeaders = useCallback(
     () => ({
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${storedTokenRef.current}`,
     }),
-    [token],
+    [],
   );
 
   const loadMembers = useCallback(async (): Promise<Person[]> => {
@@ -352,6 +354,38 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }
   }, [authHeaders, loadMembers, loadVolunteers]);
 
+  const validateToken = useCallback(
+    async (tokenToValidate: string): Promise<"valid" | "invalid" | "transientError"> => {
+      try {
+        const response = await fetch("/api/reservations", {
+          headers: { Authorization: `Bearer ${tokenToValidate}` },
+        });
+
+        if (response.ok) {
+          return "valid";
+        }
+
+        // Auth failures: 401 Unauthorized, 403 Forbidden
+        if (response.status === 401 || response.status === 403) {
+          return "invalid";
+        }
+
+        // Server errors (5xx) are transient
+        if (response.status >= 500) {
+          return "transientError";
+        }
+
+        // Other client errors (4xx) treat as invalid
+        return "invalid";
+      } catch (err) {
+        // Network errors or fetch failures are transient
+        console.error("Token validation network error:", err);
+        return "transientError";
+      }
+    },
+    [],
+  );
+
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -360,14 +394,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       setLoginError("");
 
       try {
-        const response = await fetch("/api/reservations", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.ok) {
+        const result = await validateToken(token);
+        if (result === "valid") {
+          sessionStorage.setItem("adminToken", token);
+          storedTokenRef.current = token;
           // loadData() will be triggered by the useEffect watching isAuthenticated
           setIsAuthenticated(true);
-        } else {
+        } else if (result === "invalid") {
           setLoginError(m.admin_login_error());
+        } else {
+          // transientError
+          setLoginError("Server temporarily unavailable. Please try again.");
         }
       } catch (err) {
         console.error("Login request failed", err);
@@ -376,10 +413,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setIsLoggingIn(false);
       }
     },
-    [token],
+    [token, validateToken],
   );
 
   const handleLogout = useCallback(() => {
+    sessionStorage.removeItem("adminToken");
+    storedTokenRef.current = "";
     setIsAuthenticated(false);
     setToken("");
     setReservations([]);
@@ -748,6 +787,32 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       loadData();
     }
   }, [isAuthenticated, visible, loadData]);
+
+  // Auto-authenticate on mount if a token was previously stored in sessionStorage
+  useEffect(() => {
+    if (autoAuthRan.current || !storedTokenRef.current || isAuthenticated) return;
+    autoAuthRan.current = true;
+    validateToken(storedTokenRef.current)
+      .then((result) => {
+        if (result === "valid") {
+          setIsAuthenticated(true);
+        } else if (result === "invalid") {
+          // Only clear stored token on auth failures
+          sessionStorage.removeItem("adminToken");
+          storedTokenRef.current = "";
+          setLoginError(m.admin_login_error());
+        } else {
+          // transientError: keep the token, log the error
+          console.error("Auto-authentication failed due to transient error");
+          setLoginError("Server temporarily unavailable. Please refresh or try logging in again.");
+        }
+      })
+      .catch((err) => {
+        // Unexpected error in the effect itself
+        console.error("Auto-authentication exception:", err);
+        setLoginError("Failed to authenticate. Please log in manually.");
+      });
+  }, [isAuthenticated, validateToken]);
 
   const handleUpdateStatus = useCallback(
     async (id: string, status: ReservationStatus) => {
