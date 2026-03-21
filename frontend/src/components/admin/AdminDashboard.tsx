@@ -1130,11 +1130,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, dayId: number, label: string) => {
+    async (roomId: string, dayId: number, label?: string) => {
       const response = await fetch("/api/layouts", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ room_id: roomId, day_id: dayId, label }),
+        body: JSON.stringify({
+          room_id: roomId,
+          day_id: dayId,
+          ...(label?.trim() ? { label: label.trim() } : {}),
+        }),
       });
       if (!response.ok) {
         const d = await response.json().catch(() => ({}));

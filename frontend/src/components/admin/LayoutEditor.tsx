@@ -133,7 +133,7 @@ interface LayoutEditorProps {
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
-  onAddLayout: (roomId: string, dayId: number, label: string) => Promise<void>;
+  onAddLayout: (roomId: string, dayId: number, label?: string) => Promise<void>;
   onDeleteLayout: (layoutId: string) => Promise<void>;
   onAddArea: (
     label: string,
@@ -567,7 +567,7 @@ export default function LayoutEditor({
 
   // Add Layout modal
   const [showAddLayout, setShowAddLayout] = useState(false);
-  const [newLayout, setNewLayout] = useState({ dayId: 1, label: "" });
+  const [newLayout, setNewLayout] = useState({ dayId: 1 });
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
   const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
 
@@ -575,8 +575,8 @@ export default function LayoutEditor({
     if (!activeRoomId) return;
     setAddLayoutError(null);
     try {
-      await onAddLayout(activeRoomId, newLayout.dayId, newLayout.label.trim());
-      setNewLayout({ dayId: 1, label: "" });
+      await onAddLayout(activeRoomId, newLayout.dayId);
+      setNewLayout({ dayId: 1 });
       setShowAddLayout(false);
     } catch (err) {
       console.error("Failed to add layout", err);
@@ -887,7 +887,7 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                        setNewLayout({ dayId: 1, label: "" });
+                        setNewLayout({ dayId: 1 });
                         setShowAddLayout(true);
                       }}
                       title={m.admin_add_layout()}
@@ -1361,18 +1361,6 @@ export default function LayoutEditor({
               <option value={2}>{m.admin_content_edition_saturday()}</option>
               <option value={3}>{m.admin_content_edition_sunday()}</option>
             </Form.Select>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="layout-label">
-            <Form.Label>
-              {m.admin_table_name()} / {m.admin_layout_day_label()}
-            </Form.Label>
-            <Form.Control
-              type="text"
-              value={newLayout.label}
-              onChange={(e) => setNewLayout((p) => ({ ...p, label: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-              placeholder={m.admin_layout_label_placeholder()}
-            />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
