@@ -274,7 +274,7 @@ def edition_summary_to_dict(e: Edition) -> dict:
 def edition_to_dict(
     e: Edition,
     venue: dict,
-    dates: dict | None = None,
+    dates: list | None = None,
     events: list[dict] | None = None,
     producers: list[dict] | None = None,
     sponsors: list[dict] | None = None,
@@ -287,7 +287,7 @@ def edition_to_dict(
         "external_partner": e.external_partner,
         "external_contact_name": e.external_contact_name,
         "external_contact_email": e.external_contact_email,
-        "dates": dates,
+        "dates": dates if dates is not None else [],
         "venue": venue,
         "events": events if events is not None else [],
         "producers": producers if producers is not None else [],

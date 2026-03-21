@@ -42,12 +42,6 @@ interface ApiVenue {
   lng: number;
 }
 
-interface ApiEditionDates {
-  friday: string;
-  saturday: string;
-  sunday: string;
-}
-
 interface ApiEvent {
   id: string;
   title: string;
@@ -64,7 +58,7 @@ interface ApiEdition {
   id: string;
   year: number;
   month: string;
-  dates?: ApiEditionDates | null;
+  dates?: string[] | null;
   venue: ApiVenue;
   events: ApiEvent[];
   producers: SliderItem[];
@@ -84,16 +78,12 @@ function parseLocalDate(s: string): Date {
 }
 
 function deriveEditionDates(
-  apiDates: ApiEditionDates | null | undefined,
+  apiDates: string[] | null | undefined,
   eventDates: string[],
   fallbackDates: EditionDates,
 ): EditionDates {
-  if (apiDates) {
-    return {
-      friday: parseLocalDate(apiDates.friday),
-      saturday: parseLocalDate(apiDates.saturday),
-      sunday: parseLocalDate(apiDates.sunday),
-    };
+  if (apiDates && apiDates.length > 0) {
+    return apiDates.map(parseLocalDate);
   }
 
   const uniqueDates = [...new Set(eventDates)].filter(Boolean).sort((a, b) => a.localeCompare(b));
@@ -101,11 +91,7 @@ function deriveEditionDates(
     return fallbackDates;
   }
 
-  return {
-    friday: parseLocalDate(uniqueDates[0]!),
-    saturday: parseLocalDate(uniqueDates[1] ?? uniqueDates[0]!),
-    sunday: parseLocalDate(uniqueDates[2] ?? uniqueDates[uniqueDates.length - 1]!),
-  };
+  return uniqueDates.map(parseLocalDate);
 }
 
 function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdition {

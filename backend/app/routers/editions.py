@@ -281,15 +281,8 @@ def _resolve_exhibitors(
     return producers, sponsors
 
 
-def _edition_dates(edition: Edition) -> dict | None:
-    dates = sorted({event.date for event in edition.events})
-    if not dates:
-        return None
-    return {
-        "friday": dates[0],
-        "saturday": dates[1] if len(dates) > 1 else dates[0],
-        "sunday": dates[2] if len(dates) > 2 else dates[-1],
-    }
+def _edition_dates(edition: Edition) -> list[date]:
+    return sorted({event.date for event in edition.events})
 
 
 def _edition_start_date(edition: Edition) -> date | None:

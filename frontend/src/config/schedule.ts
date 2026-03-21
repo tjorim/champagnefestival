@@ -11,7 +11,7 @@ import type { Event } from "./editions";
 export interface FestivalDay {
   id: number;
   date: string; // ISO date format
-  label: string; // e.g., "friday", "saturday", "sunday"
+  label: string; // fallback label only; live schedule days come from API dates
 }
 
 const activeEdition = EMPTY_EDITION;
@@ -28,17 +28,17 @@ const toLocalISOString = (date: Date): string => {
 export const festivalDays: FestivalDay[] = [
   {
     id: 1,
-    date: toLocalISOString(activeEdition.dates.friday),
+    date: toLocalISOString(activeEdition.dates[0] ?? new Date()),
     label: "friday",
   },
   {
     id: 2,
-    date: toLocalISOString(activeEdition.dates.saturday),
+    date: toLocalISOString(activeEdition.dates[1] ?? activeEdition.dates[0] ?? new Date()),
     label: "saturday",
   },
   {
     id: 3,
-    date: toLocalISOString(activeEdition.dates.sunday),
+    date: toLocalISOString(activeEdition.dates[2] ?? activeEdition.dates[activeEdition.dates.length - 1] ?? new Date()),
     label: "sunday",
   },
 ];

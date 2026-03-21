@@ -5,11 +5,7 @@
  * This module only defines the shared shapes plus an empty loading/error fallback.
  */
 
-export interface EditionDates {
-  friday: Date;
-  saturday: Date;
-  sunday: Date;
-}
+export type EditionDates = Date[];
 
 export interface EditionVenue {
   venueName: string;
@@ -64,11 +60,7 @@ export const EMPTY_EDITION: Edition = {
   id: "",
   year: today.getFullYear(),
   month: "march",
-  dates: {
-    friday: new Date(today),
-    saturday: tomorrow,
-    sunday: dayAfterTomorrow,
-  },
+  dates: [new Date(today), tomorrow, dayAfterTomorrow],
   venue: {
     venueName: "",
     address: "",

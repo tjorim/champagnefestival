@@ -7,11 +7,7 @@ const apiEdition = {
   id: "2026-march",
   year: 2026,
   month: "march",
-  dates: {
-    friday: "2026-03-13",
-    saturday: "2026-03-14",
-    sunday: "2026-03-15",
-  },
+  dates: ["2026-03-13", "2026-03-14", "2026-03-15"],
   venue: {
     name: "Staf Versluys",
     address: "Kapelstraat 76",
@@ -72,11 +68,11 @@ describe("useActiveEdition", () => {
 
     expect(result.current.edition.id).toBe("2026-march");
     expect(result.current.edition.venue.venueName).toBe("Staf Versluys");
-    expect(result.current.edition.dates.friday.getFullYear()).toBe(2026);
-    expect(result.current.edition.dates.friday.getMonth()).toBe(2);
-    expect(result.current.edition.dates.friday.getDate()).toBe(13);
-    expect(result.current.edition.dates.saturday.getDate()).toBe(14);
-    expect(result.current.edition.dates.sunday.getDate()).toBe(15);
+    expect(result.current.edition.dates[0]?.getFullYear()).toBe(2026);
+    expect(result.current.edition.dates[0]?.getMonth()).toBe(2);
+    expect(result.current.edition.dates[0]?.getDate()).toBe(13);
+    expect(result.current.edition.dates[1]?.getDate()).toBe(14);
+    expect(result.current.edition.dates[2]?.getDate()).toBe(15);
 
     expect(result.current.edition.events).toEqual([
       expect.objectContaining({

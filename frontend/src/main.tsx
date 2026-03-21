@@ -166,13 +166,13 @@ function App() {
 
   // Derive festival start/end dates from the active edition
   const festivalDate = useMemo(() => {
-    const d = new Date(edition.dates.friday);
+    const d = new Date(edition.dates[0] ?? new Date());
     d.setHours(17, 0, 0, 0);
     return d;
   }, [edition]);
 
   const festivalEndDate = useMemo(() => {
-    return endOfDay(edition.dates.sunday);
+    return endOfDay(edition.dates[edition.dates.length - 1] ?? new Date());
   }, [edition]);
 
   // Derive festival days for the Schedule component
@@ -195,7 +195,7 @@ function App() {
       return `${year}-${month}-${day}`;
     };
 
-    return [edition.dates.friday, edition.dates.saturday, edition.dates.sunday].map((date, index) => ({
+    return edition.dates.map((date, index) => ({
       id: index + 1,
       date: formatLocalDate(date),
     }));
