@@ -104,10 +104,13 @@ function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; 
   };
 }
 
-function getDayLabel(dayId: number): string {
-  if (dayId === 1) return m.admin_content_edition_friday();
-  if (dayId === 2) return m.admin_content_edition_saturday();
-  return m.admin_content_edition_sunday();
+interface DayOption {
+  id: number;
+  label: string;
+}
+
+function getDayLabel(dayId: number, dayOptions: DayOption[]): string {
+  return dayOptions.find((day) => day.id === dayId)?.label ?? `Day ${dayId}`;
 }
 
 interface ItemRef {
@@ -117,6 +120,7 @@ interface ItemRef {
 }
 
 interface LayoutEditorProps {
+  dayOptions: DayOption[];
   tables: FloorTable[];
   tableTypes: TableType[];
   layouts: Layout[];
@@ -517,6 +521,7 @@ function RoomCanvas({
 // ---------------------------------------------------------------------------
 
 export default function LayoutEditor({
+  dayOptions,
   tables,
   tableTypes,
   layouts,
@@ -567,7 +572,7 @@ export default function LayoutEditor({
 
   // Add Layout modal
   const [showAddLayout, setShowAddLayout] = useState(false);
-  const [newLayout, setNewLayout] = useState({ dayId: 1 });
+  const [newLayout, setNewLayout] = useState({ dayId: dayOptions[0]?.id ?? 1 });
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
   const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
 
@@ -576,13 +581,20 @@ export default function LayoutEditor({
     setAddLayoutError(null);
     try {
       await onAddLayout(activeRoomId, newLayout.dayId);
-      setNewLayout({ dayId: 1 });
+      setNewLayout({ dayId: dayOptions[0]?.id ?? 1 });
       setShowAddLayout(false);
     } catch (err) {
       console.error("Failed to add layout", err);
       setAddLayoutError(err instanceof Error ? err.message : m.admin_error_add_layout());
     }
-  }, [activeRoomId, newLayout, onAddLayout]);
+  }, [activeRoomId, dayOptions, newLayout, onAddLayout]);
+
+  useEffect(() => {
+    if (dayOptions.length === 0) return;
+    setNewLayout((current) =>
+      dayOptions.some((day) => day.id === current.dayId) ? current : { dayId: dayOptions[0]!.id },
+    );
+  }, [dayOptions]);
 
   const handleDeleteLayout = useCallback(
     async (layoutId: string) => {
@@ -861,7 +873,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {getDayLabel(layout.dayId)}
+                          {getDayLabel(layout.dayId, dayOptions)}
                         </Button>
                         <Button
                           size="sm"
@@ -887,7 +899,7 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                        setNewLayout({ dayId: 1 });
+                        setNewLayout({ dayId: dayOptions[0]?.id ?? 1 });
                         setShowAddLayout(true);
                       }}
                       title={m.admin_add_layout()}
@@ -1357,9 +1369,11 @@ export default function LayoutEditor({
               onChange={(e) => setNewLayout((p) => ({ ...p, dayId: Number(e.target.value) }))}
               className="bg-dark text-light border-secondary"
             >
-              <option value={1}>{m.admin_content_edition_friday()}</option>
-              <option value={2}>{m.admin_content_edition_saturday()}</option>
-              <option value={3}>{m.admin_content_edition_sunday()}</option>
+              {dayOptions.map((day) => (
+                <option key={day.id} value={day.id}>
+                  {day.label}
+                </option>
+              ))}
             </Form.Select>
           </Form.Group>
         </Modal.Body>

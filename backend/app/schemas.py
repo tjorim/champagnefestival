@@ -466,7 +466,7 @@ class ExhibitorOut(BaseModel):
 class LayoutCreate(BaseModel):
     edition_id: str | None = Field(default=None, max_length=100)
     room_id: str = Field(max_length=64)
-    day_id: int = Field(ge=1, le=3)
+    day_id: int = Field(ge=1)
     label: str = Field(default="", max_length=200)
 
 

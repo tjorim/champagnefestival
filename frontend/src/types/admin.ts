@@ -51,7 +51,7 @@ export interface Layout {
   editionId: string | null;
   /** Room this layout applies to */
   roomId: string;
-  /** 1 = Friday, 2 = Saturday, 3 = Sunday */
+  /** 1-based day index within the edition */
   dayId: number;
   label: string;
   createdAt: string;

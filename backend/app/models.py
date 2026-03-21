@@ -167,11 +167,11 @@ class Room(Base):
 
 
 class Layout(Base):
-    """A named floor-plan snapshot for a specific room and festival day.
+    """A named floor-plan snapshot for a specific room and edition day index.
 
-    Each snapshot captures the table configuration for one room on one of the
-    three festival days (Friday=1, Saturday=2, Sunday=3), allowing managers
-    to maintain different floor plans per day and restore previous versions.
+    Each snapshot captures the table configuration for one room on a numbered
+    day within an edition, allowing managers to maintain different floor plans
+    per day and restore previous versions.
     """
 
     __tablename__ = "layouts"
@@ -186,7 +186,7 @@ class Layout(Base):
     """FK to the room this layout belongs to."""
 
     day_id: Mapped[int] = mapped_column(Integer)
-    """1 = Friday, 2 = Saturday, 3 = Sunday."""
+    """1-based day index within the edition."""
 
     label: Mapped[str] = mapped_column(String(200), default="")
     """Human-readable version label, e.g. 'pre-event', 'after cancellations'."""

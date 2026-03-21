@@ -371,12 +371,12 @@ async def test_layout_rejects_duplicate_room_day(client):
     room_id = r.json()["id"]
 
     r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+        "/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 201
 
     r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
+        "/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 409
     assert r.json()["detail"] == "A layout already exists for this room and day."

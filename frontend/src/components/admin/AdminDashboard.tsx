@@ -25,6 +25,7 @@ import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@
 import { apiToReservation } from "@/types/reservationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
+import { useActiveEdition } from "@/hooks/useActiveEdition";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -187,6 +188,7 @@ function syncMembersWithPerson(members: Person[], person: Person): Person[] {
 }
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
+  const { edition: activeEdition } = useActiveEdition();
   const [token, setToken] = useState("");
   const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -219,6 +221,29 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }),
     [],
   );
+
+  const layoutDayOptions = useMemo(() => {
+    const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (uniqueDates.length === 0) {
+      const existingDayIds = [...new Set(layouts.map((layout) => layout.dayId))].sort((a, b) => a - b);
+      if (existingDayIds.length > 0) {
+        return existingDayIds.map((dayId) => ({ id: dayId, label: `Day ${dayId}` }));
+      }
+      return [{ id: 1, label: "Day 1" }];
+    }
+
+    return uniqueDates.map((date, index) => ({
+      id: index + 1,
+      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
+    }));
+  }, [activeEdition.events, layouts]);
 
   const loadMembers = useCallback(async (): Promise<Person[]> => {
     const response = await fetch("/api/members", { headers: authHeaders() });
@@ -1787,6 +1812,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   </Tab.Pane>
                   <Tab.Pane eventKey="tables">
                     <LayoutEditor
+                      dayOptions={layoutDayOptions}
                       tables={tables}
                       tableTypes={tableTypes}
                       layouts={layouts}
