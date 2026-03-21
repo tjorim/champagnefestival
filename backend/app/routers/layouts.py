@@ -3,10 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Layout, Table
+from app.models import Edition, Layout, Table
 from app.schemas import LayoutCreate, LayoutOut
 from app.utils import layout_to_dict, make_id
 
@@ -27,9 +28,10 @@ async def create_layout(
     body: LayoutCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    resolved_day_id, resolved_date = await _resolve_layout_day(db, body)
     existing_stmt = select(Layout).where(
         Layout.room_id == body.room_id,
-        Layout.day_id == body.day_id,
+        Layout.day_id == resolved_day_id,
     )
     if body.edition_id is None:
         existing_stmt = existing_stmt.where(Layout.edition_id.is_(None))
@@ -47,13 +49,13 @@ async def create_layout(
         id=make_id("lay"),
         edition_id=body.edition_id,
         room_id=body.room_id,
-        day_id=body.day_id,
+        day_id=resolved_day_id,
         label=body.label.strip(),
     )
     db.add(lay)
     await db.commit()
     await db.refresh(lay)
-    return layout_to_dict(lay)
+    return layout_to_dict(lay, date=resolved_date)
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +73,8 @@ async def list_layouts(
     if limit is not None:
         stmt = stmt.limit(limit)
     result = await db.execute(stmt)
-    return [layout_to_dict(lay) for lay in result.scalars().all()]
+    layouts = result.scalars().all()
+    return await _layout_payloads(db, layouts)
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +84,8 @@ async def list_layouts(
 
 @router.get("/{layout_id}", response_model=LayoutOut)
 async def get_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return layout_to_dict(await _get_or_404(db, layout_id))
+    payloads = await _layout_payloads(db, [await _get_or_404(db, layout_id)])
+    return payloads[0]
 
 
 # ---------------------------------------------------------------------------
@@ -113,3 +117,48 @@ async def _get_or_404(db: AsyncSession, layout_id: str) -> Layout:
     if lay is None:
         raise HTTPException(status_code=404, detail="Layout not found.")
     return lay
+
+
+async def _layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[dict]:
+    edition_ids = {layout.edition_id for layout in layouts if layout.edition_id}
+    edition_dates_by_id: dict[str, list] = {}
+    if edition_ids:
+        result = await db.execute(
+            select(Edition)
+            .options(selectinload(Edition.events))
+            .where(Edition.id.in_(edition_ids))
+        )
+        for edition in result.scalars().all():
+            edition_dates_by_id[edition.id] = sorted({event.date for event in edition.events})
+
+    payloads: list[dict] = []
+    for layout in layouts:
+        date = None
+        if layout.edition_id and layout.edition_id in edition_dates_by_id:
+            dates = edition_dates_by_id[layout.edition_id]
+            if 1 <= layout.day_id <= len(dates):
+                date = dates[layout.day_id - 1]
+        payloads.append(layout_to_dict(layout, date=date))
+    return payloads
+
+
+async def _resolve_layout_day(db: AsyncSession, body: LayoutCreate) -> tuple[int, object | None]:
+    if body.date is None:
+        return body.day_id or 1, None
+    if not body.edition_id:
+        raise HTTPException(status_code=400, detail="edition_id is required when date is provided.")
+
+    result = await db.execute(
+        select(Edition).options(selectinload(Edition.events)).where(Edition.id == body.edition_id)
+    )
+    edition = result.scalar_one_or_none()
+    if edition is None:
+        raise HTTPException(status_code=404, detail="Edition not found.")
+
+    unique_dates = sorted({event.date for event in edition.events})
+    if body.date not in unique_dates:
+        raise HTTPException(
+            status_code=400,
+            detail="Layout date must match one of the edition event dates.",
+        )
+    return unique_dates.index(body.date) + 1, body.date

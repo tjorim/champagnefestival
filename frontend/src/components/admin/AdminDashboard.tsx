@@ -52,7 +52,7 @@ function apiLayoutToLayout(d: Record<string, unknown>): Layout {
     id: d.id as string,
     editionId: (d.edition_id as string | null) ?? null,
     roomId: d.room_id as string,
-    dayId: d.day_id as number,
+    date: (d.date as string | null) ?? null,
     label: (d.label ?? "") as string,
     createdAt: d.created_at as string,
   };
@@ -227,23 +227,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
 
-    if (uniqueDates.length === 0) {
-      const existingDayIds = [...new Set(layouts.map((layout) => layout.dayId))].sort((a, b) => a - b);
-      if (existingDayIds.length > 0) {
-        return existingDayIds.map((dayId) => ({ id: dayId, label: `Day ${dayId}` }));
-      }
-      return [{ id: 1, label: "Day 1" }];
-    }
-
-    return uniqueDates.map((date, index) => ({
-      id: index + 1,
+    return uniqueDates.map((date) => ({
+      date,
       label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
         weekday: "long",
         month: "short",
         day: "numeric",
       }),
     }));
-  }, [activeEdition.events, layouts]);
+  }, [activeEdition.events]);
 
   const loadMembers = useCallback(async (): Promise<Person[]> => {
     const response = await fetch("/api/members", { headers: authHeaders() });
@@ -1155,13 +1147,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, dayId: number, label?: string) => {
+    async (roomId: string, date: string, label?: string) => {
       const response = await fetch("/api/layouts", {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({
+          edition_id: activeEdition.id,
           room_id: roomId,
-          day_id: dayId,
+          date,
           ...(label?.trim() ? { label: label.trim() } : {}),
         }),
       });
@@ -1172,7 +1165,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       const d = await response.json();
       setLayouts((prev) => [...prev, apiLayoutToLayout(d)]);
     },
-    [authHeaders],
+    [activeEdition.id, authHeaders],
   );
 
   const handleDeleteLayout = useCallback(

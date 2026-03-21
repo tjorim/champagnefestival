@@ -466,8 +466,15 @@ class ExhibitorOut(BaseModel):
 class LayoutCreate(BaseModel):
     edition_id: str | None = Field(default=None, max_length=100)
     room_id: str = Field(max_length=64)
-    day_id: int = Field(ge=1)
+    day_id: int | None = Field(default=None, ge=1)
+    date: dt_date | None = None
     label: str = Field(default="", max_length=200)
+
+    @model_validator(mode="after")
+    def validate_day_reference(self) -> Self:
+        if self.day_id is None and self.date is None:
+            raise ValueError("Either day_id or date is required.")
+        return self
 
 
 class LayoutOut(BaseModel):
@@ -475,6 +482,7 @@ class LayoutOut(BaseModel):
     edition_id: str | None
     room_id: str
     day_id: int
+    date: dt_date | None
     label: str
     created_at: datetime
     updated_at: datetime

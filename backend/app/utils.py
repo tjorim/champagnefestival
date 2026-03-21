@@ -218,12 +218,13 @@ def table_type_to_dict(tt: TableType) -> dict:
     }
 
 
-def layout_to_dict(lay: Layout) -> dict:
+def layout_to_dict(lay: Layout, date: object | None = None) -> dict:
     return {
         "id": lay.id,
         "edition_id": lay.edition_id,
         "room_id": lay.room_id,
         "day_id": lay.day_id,
+        "date": date,
         "label": lay.label,
         "created_at": lay.created_at,
         "updated_at": lay.updated_at,
