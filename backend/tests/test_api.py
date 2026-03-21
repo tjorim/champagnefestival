@@ -307,7 +307,7 @@ async def test_event_rejects_registration_window_without_registration_required(c
 async def test_honeypot_rejected(client):
     event = await _create_event(client)
     body = _registration_body(event, honeypot="bot-value")
-    r = await client.post("/api/reservations", json=body)
+    r = await client.post("/api/registrations", json=body)
     assert r.status_code == 400
 
 
@@ -318,22 +318,22 @@ async def test_honeypot_rejected(client):
 
 @pytest.mark.anyio
 async def test_list_requires_auth(client):
-    r = await client.get("/api/reservations")
+    r = await client.get("/api/registrations")
     assert r.status_code == 401
 
 
 @pytest.mark.anyio
 async def test_list_and_detail(client):
-    await _post_registration(client, path="/api/reservations")
+    await _post_registration(client, path="/api/registrations")
 
-    r = await client.get("/api/reservations", headers=ADMIN_HEADERS)
+    r = await client.get("/api/registrations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     items = r.json()
     assert len(items) == 1
     assert "check_in_token" not in items[0]  # stripped from list
 
     res_id = items[0]["id"]
-    r = await client.get(f"/api/reservations/{res_id}", headers=ADMIN_HEADERS)
+    r = await client.get(f"/api/registrations/{res_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     detail = r.json()
     assert "check_in_token" in detail  # present in detail view
@@ -350,7 +350,7 @@ async def test_check_in_flow(client):
     res_id = r.json()["id"]
 
     # Get the token from admin detail
-    r = await client.get(f"/api/reservations/{res_id}", headers=ADMIN_HEADERS)
+    r = await client.get(f"/api/registrations/{res_id}", headers=ADMIN_HEADERS)
     token = r.json()["check_in_token"]
 
     # Verify token via GET
@@ -376,7 +376,7 @@ async def test_check_in_flow(client):
 
 @pytest.mark.anyio
 async def test_check_in_wrong_token(client):
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     res_id = r.json()["id"]
     r = await client.post(
         f"/api/check-in/{res_id}", json={"token": "wrong", "issue_strap": True}
@@ -468,18 +468,18 @@ async def test_table_crud(client):
 
 @pytest.mark.anyio
 async def test_search_by_name(client):
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         name="Marie Curie",
         email="marie@example.com",
     )
     assert r.status_code == 201
 
     r = await client.get(
-        "/api/reservations", params={"q": "jean"}, headers=ADMIN_HEADERS
+        "/api/registrations", params={"q": "jean"}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 200
     items = r.json()
@@ -489,11 +489,11 @@ async def test_search_by_name(client):
 
 @pytest.mark.anyio
 async def test_search_by_email(client):
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
 
     r = await client.get(
-        "/api/reservations", params={"q": "example.com"}, headers=ADMIN_HEADERS
+        "/api/registrations", params={"q": "example.com"}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 200
     assert len(r.json()) == 1
@@ -501,26 +501,26 @@ async def test_search_by_email(client):
 
 @pytest.mark.anyio
 async def test_filter_by_status(client):
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
-    r_list = await client.get("/api/reservations", headers=ADMIN_HEADERS)
+    r_list = await client.get("/api/registrations", headers=ADMIN_HEADERS)
     res_id = r_list.json()[0]["id"]
 
     # Confirm the reservation
     r = await client.put(
-        f"/api/reservations/{res_id}",
+        f"/api/registrations/{res_id}",
         json={"status": "confirmed"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
 
     r = await client.get(
-        "/api/reservations", params={"status": "confirmed"}, headers=ADMIN_HEADERS
+        "/api/registrations", params={"status": "confirmed"}, headers=ADMIN_HEADERS
     )
     assert len(r.json()) == 1
 
     r = await client.get(
-        "/api/reservations", params={"status": "pending"}, headers=ADMIN_HEADERS
+        "/api/registrations", params={"status": "pending"}, headers=ADMIN_HEADERS
     )
     assert len(r.json()) == 0
 
@@ -555,7 +555,7 @@ async def test_admin_uncheckin_clears_checked_in_at(client):
 
 @pytest.mark.anyio
 async def test_filter_by_event(client):
-    friday = await _post_registration(client, path="/api/reservations")
+    friday = await _post_registration(client, path="/api/registrations")
     assert friday.status_code == 201
     saturday_event = await _create_event(
         client,
@@ -564,13 +564,13 @@ async def test_filter_by_event(client):
         date="2099-03-22",
     )
     saturday = await client.post(
-        "/api/reservations",
+        "/api/registrations",
         json=_registration_body(saturday_event, email="other@example.com"),
     )
     assert saturday.status_code == 201
 
     r = await client.get(
-        "/api/reservations", params={"event_id": friday.json()["event_id"]}, headers=ADMIN_HEADERS
+        "/api/registrations", params={"event_id": friday.json()["event_id"]}, headers=ADMIN_HEADERS
     )
     assert len(r.json()) == 1
     assert r.json()[0]["event_id"] == friday.json()["event_id"]
@@ -583,11 +583,11 @@ async def test_filter_by_event(client):
 
 @pytest.mark.anyio
 async def test_request_my_reservations_access_is_generic(client):
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
 
-    found = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
-    missing = await client.post("/api/reservations/my/request", json={"email": "nobody@example.com"})
+    found = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
+    missing = await client.post("/api/registrations/my/request", json={"email": "nobody@example.com"})
 
     assert found.status_code == 202
     assert missing.status_code == 202
@@ -603,10 +603,10 @@ async def test_request_my_reservations_access_is_generic(client):
 @pytest.mark.anyio
 async def test_my_reservations_case_insensitive_email(client):
     """Email stored with mixed case must be retrievable via lowercase lookup."""
-    r = await _post_registration(client, path="/api/reservations", email="Jean@Example.com")
+    r = await _post_registration(client, path="/api/registrations", email="Jean@Example.com")
     assert r.status_code == 201
 
-    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
 
@@ -614,12 +614,12 @@ async def test_my_reservations_case_insensitive_email(client):
 async def test_my_reservations_access_token_flow(client, db_session, monkeypatch):
     """Guest reservations are only returned after presenting a valid token."""
     token = "guest-access-token-12345"
-    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: token)
 
-    r = await _post_registration(client, path="/api/reservations", email="Jean@Example.com")
+    r = await _post_registration(client, path="/api/registrations", email="Jean@Example.com")
     assert r.status_code == 201
 
-    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
     token_rows = (
@@ -631,7 +631,7 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     assert token_rows[0].token_hash == hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     r = await client.post(
-        "/api/reservations/my/access", json={"token": token}
+        "/api/registrations/my/access", json={"token": token}
     )
     assert r.status_code == 200
     items = r.json()
@@ -648,7 +648,7 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
 @pytest.mark.anyio
 async def test_my_reservations_access_requires_valid_token(client):
     r = await client.post(
-        "/api/reservations/my/access",
+        "/api/registrations/my/access",
         json={"token": "invalid-token-value-12345"},
     )
     assert r.status_code == 401
@@ -656,13 +656,13 @@ async def test_my_reservations_access_requires_valid_token(client):
 
 @pytest.mark.anyio
 async def test_my_reservations_request_invalid_email(client):
-    r = await client.post("/api/reservations/my/request", json={"email": "not-an-email"})
+    r = await client.post("/api/registrations/my/request", json={"email": "not-an-email"})
     assert r.status_code == 422
 
 
 @pytest.mark.anyio
 async def test_my_reservations_access_expired_token(client, db_session):
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
 
     db_session.add(
@@ -676,7 +676,7 @@ async def test_my_reservations_access_expired_token(client, db_session):
     await db_session.commit()
 
     r = await client.post(
-        "/api/reservations/my/access",
+        "/api/registrations/my/access",
         json={"token": "expired-token-value-12345"},
     )
     assert r.status_code == 401
@@ -685,9 +685,9 @@ async def test_my_reservations_access_expired_token(client, db_session):
 @pytest.mark.anyio
 async def test_my_reservations_access_multiple_editions(client, monkeypatch):
     token = "guest-access-token-12345"
-    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: token)
 
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
     saturday_event = await _create_event(
         client,
@@ -696,16 +696,16 @@ async def test_my_reservations_access_multiple_editions(client, monkeypatch):
         date="2099-03-22",
     )
     r = await client.post(
-        "/api/reservations",
+        "/api/registrations",
         json=_registration_body(saturday_event, event_title="Zaterdagavond"),
     )
     assert r.status_code == 201
 
-    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
     r = await client.post(
-        "/api/reservations/my/access", json={"token": token}
+        "/api/registrations/my/access", json={"token": token}
     )
     assert r.status_code == 200
     assert len(r.json()) == 2
@@ -786,16 +786,16 @@ async def test_my_reservations_request_recovers_from_insert_race(client, db_sess
 async def test_my_reservations_access_token_reuse(client, monkeypatch):
     """A valid token can be used more than once within its TTL window."""
     token = "guest-access-token-12345"
-    monkeypatch.setattr("app.routers.reservations.secrets.token_urlsafe", lambda _: token)
+    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: token)
 
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
 
-    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
-    first = await client.post("/api/reservations/my/access", json={"token": token})
-    second = await client.post("/api/reservations/my/access", json={"token": token})
+    first = await client.post("/api/registrations/my/access", json={"token": token})
+    second = await client.post("/api/registrations/my/access", json={"token": token})
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -811,10 +811,10 @@ async def test_my_reservations_request_rate_limited(client, monkeypatch):
 
     limit = reservations_module._RATE_LIMIT_MAX_REQUESTS
     for _ in range(limit):
-        r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+        r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
         assert r.status_code == 202
 
-    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 429
 
 
@@ -1245,7 +1245,7 @@ async def test_admin_create_reservation(client):
 
     event = await _create_event(client, edition_id="edition-admin-create", title="Vrijdagavond")
     r = await client.post(
-        "/api/reservations/admin",
+        "/api/registrations/admin",
         json={
             "person_id": person_id,
             "event_id": event["id"],
@@ -1266,7 +1266,7 @@ async def test_admin_create_reservation(client):
 @pytest.mark.anyio
 async def test_admin_create_reservation_requires_auth(client):
     r = await client.post(
-        "/api/reservations/admin",
+        "/api/registrations/admin",
         json={"person_id": "x", "event_id": "e", "event_title": "t", "guest_count": 1},
     )
     assert r.status_code == 401
@@ -1276,7 +1276,7 @@ async def test_admin_create_reservation_requires_auth(client):
 async def test_admin_create_reservation_person_not_found(client):
     event = await _create_event(client, edition_id="edition-admin-person-missing", title="Vrijdagavond")
     r = await client.post(
-        "/api/reservations/admin",
+        "/api/registrations/admin",
         json={
             "person_id": "nonexistent",
             "event_id": event["id"],
@@ -1434,7 +1434,7 @@ async def test_spam_invalid_timestamp(client):
     """A non-ISO form_start_time is rejected (bot protection)."""
     event = await _create_event(client)
     r = await client.post(
-        "/api/reservations",
+        "/api/registrations",
         json=_registration_body(event, form_start_time="1234567890"),
     )
     assert r.status_code == 400
@@ -1444,7 +1444,7 @@ async def test_spam_invalid_timestamp(client):
 async def test_table_id_can_be_cleared(client):
     """table_id on a reservation can be explicitly cleared to null."""
     # Create a reservation
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
     res_id = r.json()["id"]
 
@@ -1480,7 +1480,7 @@ async def test_table_id_can_be_cleared(client):
 
     # Assign the table
     r = await client.put(
-        f"/api/reservations/{res_id}",
+        f"/api/registrations/{res_id}",
         json={"table_id": tbl_id},
         headers=ADMIN_HEADERS,
     )
@@ -1489,7 +1489,7 @@ async def test_table_id_can_be_cleared(client):
 
     # Clear the table (set to null)
     r = await client.put(
-        f"/api/reservations/{res_id}",
+        f"/api/registrations/{res_id}",
         json={"table_id": None},
         headers=ADMIN_HEADERS,
     )
@@ -1503,11 +1503,11 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
 
     Regression test: previously Table.reservation_ids was a denormalized JSON
     array that was never updated when a reservation was assigned via
-    PUT /api/reservations/{id}.  On a fresh GET /api/tables the array appeared
+    PUT /api/registrations/{id}.  On a fresh GET /api/tables the array appeared
     empty, making the layout editor lose all assignments after a page reload.
     """
     # Create a reservation
-    r = await _post_registration(client, path="/api/reservations")
+    r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
     res_id = r.json()["id"]
 
@@ -1545,7 +1545,7 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
 
     # Assign the reservation to the table via the reservation endpoint
     r = await client.put(
-        f"/api/reservations/{res_id}",
+        f"/api/registrations/{res_id}",
         json={"table_id": tbl_id},
         headers=ADMIN_HEADERS,
     )
@@ -1568,7 +1568,7 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
 
     # After clearing the table assignment the list must also update
     r = await client.put(
-        f"/api/reservations/{res_id}",
+        f"/api/registrations/{res_id}",
         json={"table_id": None},
         headers=ADMIN_HEADERS,
     )
@@ -1765,7 +1765,7 @@ async def test_people_crud_roles_and_filters(client):
     # Uncertain match (same email, different name) → new person created; admin sees duplicate.
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="anne@example.com",
         name="A. Dupuis",
     )
@@ -1797,7 +1797,7 @@ async def test_reservation_auto_links_certain_person(client):
     # Exact match on email + phone + name → auto-link
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="bob@example.com",
         phone=bob_phone,
         name="Bob Martin",
@@ -1808,7 +1808,7 @@ async def test_reservation_auto_links_certain_person(client):
     # Case/whitespace variation still matches
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="BOB@EXAMPLE.COM",
         phone=bob_phone,
         name="  bob  martin  ",
@@ -1819,7 +1819,7 @@ async def test_reservation_auto_links_certain_person(client):
     # Different name → new person
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="bob@example.com",
         phone=bob_phone,
         name="Robert Martin",
@@ -1830,7 +1830,7 @@ async def test_reservation_auto_links_certain_person(client):
     # Exact match again after a different-name reservation was created → still links to bob_id
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="bob@example.com",
         phone=bob_phone,
         name="Bob Martin",
@@ -1841,7 +1841,7 @@ async def test_reservation_auto_links_certain_person(client):
     # Different phone → new person (even if email + name match)
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="bob@example.com",
         name="Bob Martin",
         phone="+32499111111",
@@ -1910,7 +1910,7 @@ async def test_normalize_phone_equivalent_inputs(client):
     # POST a reservation using the IDD variant → should link to the same person
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="phonetest@example.com",
         phone=base_phone_variants[1],
         name="Phone Test",
@@ -1921,7 +1921,7 @@ async def test_normalize_phone_equivalent_inputs(client):
     # POST a reservation using the local trunk variant → should also link to the same person
     r = await _post_registration(
         client,
-        path="/api/reservations",
+        path="/api/registrations",
         email="phonetest@example.com",
         phone=base_phone_variants[2],
         name="Phone Test",
@@ -2034,7 +2034,7 @@ async def test_merge_people_repoints_reservations(client):
     # Create a reservation linked to the duplicate
     event = await _create_event(client, edition_id="edition-merge-duplicate", title="Test")
     r = await client.post(
-        "/api/reservations/admin",
+        "/api/registrations/admin",
         json={
             "person_id": dup_id,
             "event_id": event["id"],
@@ -2058,7 +2058,7 @@ async def test_merge_people_repoints_reservations(client):
     assert r.status_code == 404
 
     # Reservation should now belong to canonical
-    r = await client.get(f"/api/reservations/{res_id}", headers=ADMIN_HEADERS)
+    r = await client.get(f"/api/registrations/{res_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert r.json()["person_id"] == canonical_id
 
