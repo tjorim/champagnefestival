@@ -122,6 +122,16 @@ describe("Schedule component", () => {
     expect(screen.getByText("No events")).toBeInTheDocument();
   });
 
+  it("derives a localized weekday label for non-festival day names", () => {
+    render(
+      <Schedule
+        days={[{ id: 1, date: "2025-10-06", label: "monday" }]}
+        events={[]}
+      />,
+    );
+    expect(screen.getByText("maandag")).toBeInTheDocument();
+  });
+
   it("displays start and end times for events", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
     expect(screen.getByText("17:00")).toBeInTheDocument();

@@ -108,19 +108,22 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
   };
 
   // Get translated day name
-  const getDayName = (dayId: string | number, dayLabel: string) => {
-    switch (String(dayId).toLowerCase()) {
-      case "1":
+  const getDayName = (dayLabel: string, dayDate: string) => {
+    switch (String(dayLabel).toLowerCase()) {
       case "friday":
         return m.schedule_days_friday();
-      case "2":
       case "saturday":
         return m.schedule_days_saturday();
-      case "3":
       case "sunday":
         return m.schedule_days_sunday();
       default:
-        return dayLabel;
+        try {
+          return new Date(dayDate + "T00:00:00").toLocaleDateString(getLocale(), {
+            weekday: "long",
+          });
+        } catch {
+          return dayLabel;
+        }
     }
   };
 
@@ -151,7 +154,7 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
           {days.map((day) => (
             <Nav.Item key={day.id}>
               <Nav.Link eventKey={day.id} className="px-4">
-                {getDayName(day.id, day.label)}
+                {getDayName(day.label, day.date)}
                 <span className="d-block small">
                   {(() => {
                     try {

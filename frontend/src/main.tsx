@@ -180,11 +180,12 @@ function App() {
     const uniqueDates = [...new Set(edition.events.map((event) => event.date))]
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
-    const labels: FestivalDay["label"][] = ["friday", "saturday", "sunday"];
     return uniqueDates.map((date, index) => ({
       id: index + 1,
       date,
-      label: labels[index] ?? "sunday",
+      label: new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+        weekday: "long",
+      }).toLowerCase(),
     }));
   }, [edition]);
 
