@@ -22,23 +22,21 @@ export default defineConfig({
   },
   build: {
     cssMinify: "lightningcss",
-    minify: "terser",
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         chunkFileNames: "assets/js/[name]-[hash].js",
         entryFileNames: "assets/js/[name]-[hash].js",
         assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
+        minify: {
+          compress: {
+            dropConsole: true,
+            dropDebugger: true,
+          },
+        },
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "vendor-react";
-            }
+            // Check more specific patterns before generic "react" to avoid
+            // react-bootstrap, react-leaflet, etc. landing in vendor-react
             if (id.includes("react-bootstrap") || id.includes("bootstrap")) {
               return "vendor-ui";
             }
@@ -47,6 +45,9 @@ export default defineConfig({
             }
             if (id.includes("swiper")) {
               return "vendor-carousel";
+            }
+            if (id.includes("react")) {
+              return "vendor-react";
             }
           }
         },

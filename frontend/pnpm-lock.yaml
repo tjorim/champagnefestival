@@ -105,9 +105,6 @@ importers:
       oxlint:
         specifier: ^1.56.0
         version: 1.56.0
-      terser:
-        specifier: ^5.46.1
-        version: 5.46.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -1771,6 +1768,7 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
+    optional: true
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
@@ -2168,7 +2166,8 @@ snapshots:
     dependencies:
       '@popperjs/core': 2.11.8
 
-  buffer-from@1.1.2: {}
+  buffer-from@1.1.2:
+    optional: true
 
   callsites@3.1.0: {}
 
@@ -2178,7 +2177,8 @@ snapshots:
 
   commander@11.1.0: {}
 
-  commander@2.20.3: {}
+  commander@2.20.3:
+    optional: true
 
   comment-json@4.6.2:
     dependencies:
@@ -2610,10 +2610,12 @@ snapshots:
     dependencies:
       buffer-from: 1.1.2
       source-map: 0.6.1
+    optional: true
 
   source-map@0.5.7: {}
 
-  source-map@0.6.1: {}
+  source-map@0.6.1:
+    optional: true
 
   sqlite-wasm-kysely@0.3.0(kysely@0.28.14):
     dependencies:
@@ -2640,6 +2642,7 @@ snapshots:
       acorn: 8.16.0
       commander: 2.20.3
       source-map-support: 0.5.21
+    optional: true
 
   tinybench@2.9.0: {}
 
