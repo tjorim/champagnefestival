@@ -456,7 +456,9 @@ function RoomCanvas({
             </div>
           )}
           {roomTables.map((table) => {
-            const assigned = reservations.filter((r) => table.reservationIds.includes(r.id)).length;
+            const assigned = reservations
+              .filter((r) => table.reservationIds.includes(r.id))
+              .reduce((sum, r) => sum + r.guestCount, 0);
             const isInSelectedArea = selectedArea
               ? (() => {
                   const area = roomAreas.find((a) => a.id === selectedArea);
