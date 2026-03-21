@@ -19,7 +19,7 @@ import { useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import type { FestivalDay } from "./config/schedule";
+import type { FestivalDay } from "./types/schedule";
 import { endOfDay } from "./utils/dateUtils";
 import "./index.css";
 
@@ -183,9 +183,6 @@ function App() {
     return uniqueDates.map((date, index) => ({
       id: index + 1,
       date,
-      label: new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
-        weekday: "long",
-      }).toLowerCase(),
     }));
   }, [edition]);
 

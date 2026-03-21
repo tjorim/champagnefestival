@@ -51,9 +51,9 @@ vi.mock("@/paraglide/runtime", () => ({
 }));
 
 const mockDays = [
-  { id: 1, date: "2025-10-03", label: "friday" },
-  { id: 2, date: "2025-10-04", label: "saturday" },
-  { id: 3, date: "2025-10-05", label: "sunday" },
+  { id: 1, date: "2025-10-03" },
+  { id: 2, date: "2025-10-04" },
+  { id: 3, date: "2025-10-05" },
 ];
 
 const mockEvents = [
@@ -122,13 +122,8 @@ describe("Schedule component", () => {
     expect(screen.getByText("No events")).toBeInTheDocument();
   });
 
-  it("derives a localized weekday label for non-festival day names", () => {
-    render(
-      <Schedule
-        days={[{ id: 1, date: "2025-10-06", label: "monday" }]}
-        events={[]}
-      />,
-    );
+  it("derives a localized weekday label for non-festival dates", () => {
+    render(<Schedule days={[{ id: 1, date: "2025-10-06" }]} events={[]} />);
     expect(screen.getByText("maandag")).toBeInTheDocument();
   });
 

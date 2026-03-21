@@ -2,7 +2,8 @@ import React, { useState, useMemo } from "react";
 import { Tab, Nav, Card, Badge } from "react-bootstrap";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import type { FestivalDay, ScheduleEvent } from "@/config/schedule";
+import type { ScheduleEvent } from "@/config/editions";
+import type { FestivalDay } from "@/types/schedule";
 
 /**
  * Returns the translated title and description for a schedule event ID.
@@ -108,22 +109,22 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
   };
 
   // Get translated day name
-  const getDayName = (dayLabel: string, dayDate: string) => {
-    switch (String(dayLabel).toLowerCase()) {
-      case "friday":
-        return m.schedule_days_friday();
-      case "saturday":
-        return m.schedule_days_saturday();
-      case "sunday":
-        return m.schedule_days_sunday();
-      default:
-        try {
+  const getDayName = (dayDate: string) => {
+    try {
+      switch (new Date(dayDate + "T00:00:00").getDay()) {
+        case 5:
+          return m.schedule_days_friday();
+        case 6:
+          return m.schedule_days_saturday();
+        case 0:
+          return m.schedule_days_sunday();
+        default:
           return new Date(dayDate + "T00:00:00").toLocaleDateString(getLocale(), {
             weekday: "long",
           });
-        } catch {
-          return dayLabel;
-        }
+      }
+    } catch {
+      return dayDate;
     }
   };
 
@@ -154,7 +155,7 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
           {days.map((day) => (
             <Nav.Item key={day.id}>
               <Nav.Link eventKey={day.id} className="px-4">
-                {getDayName(day.label, day.date)}
+                {getDayName(day.date)}
                 <span className="d-block small">
                   {(() => {
                     try {
