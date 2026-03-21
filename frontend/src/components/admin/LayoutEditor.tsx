@@ -1276,12 +1276,10 @@ export default function LayoutEditor({
                   setAssignAreaError(null);
                   try {
                     let eId: number | null = null;
-                    let newLabel: string | undefined;
                     if (val.startsWith("e:")) {
                       eId = Number(val.slice(2));
-                      newLabel = exhibitors.find((e) => e.id === eId)?.name;
                     }
-                    await onAssignAreaToItem(selectedAreaData.id, eId, newLabel);
+                    await onAssignAreaToItem(selectedAreaData.id, eId);
                   } catch (err) {
                     setAssignAreaError(
                       err instanceof Error ? err.message : m.admin_content_error_save(),
