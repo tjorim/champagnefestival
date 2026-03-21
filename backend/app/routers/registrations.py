@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -235,7 +236,22 @@ async def request_my_registrations_access(
         existing_token_row.expires_at = expires_at
         existing_token_row.created_at = now
         existing_token_row.last_used_at = None
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        existing_token_row = (
+            await db.execute(
+                select(ReservationAccessToken).where(ReservationAccessToken.email == email_norm)
+            )
+        ).scalar_one_or_none()
+        if existing_token_row is None:
+            raise
+        existing_token_row.token_hash = token_hash
+        existing_token_row.expires_at = expires_at
+        existing_token_row.created_at = now
+        existing_token_row.last_used_at = None
+        await db.commit()
 
     logger.info(
         "Prepared guest registration access token request_id=%s delivery_mode=email expires_at=%s",

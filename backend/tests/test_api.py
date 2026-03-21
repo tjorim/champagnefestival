@@ -7,6 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
@@ -674,6 +675,53 @@ async def test_my_reservations_request_reuses_existing_token_row(client, db_sess
     assert token_rows[0].email == "jean@example.com"
     assert token_rows[0].token_hash == hashlib.sha256(
         b"guest-access-token-67890"
+    ).hexdigest()
+
+
+@pytest.mark.anyio
+async def test_my_reservations_request_recovers_from_insert_race(client, db_session, monkeypatch):
+    tokens = iter(["guest-access-token-first", "guest-access-token-second"])
+    monkeypatch.setattr(
+        "app.routers.registrations.secrets.token_urlsafe",
+        lambda _: next(tokens),
+    )
+
+    original_commit = db_session.commit
+    factory = async_sessionmaker(db_session.bind, expire_on_commit=False)
+    race_inserted = False
+
+    async def flaky_commit():
+        nonlocal race_inserted
+        if race_inserted:
+            await original_commit()
+            return
+
+        async with factory() as other_session:
+            other_session.add(
+                ReservationAccessToken(
+                    id="rat-race",
+                    email="jean@example.com",
+                    token_hash=hashlib.sha256(b"guest-access-token-first").hexdigest(),
+                    expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+                )
+            )
+            await other_session.commit()
+
+        race_inserted = True
+        raise IntegrityError("INSERT", {}, Exception("duplicate key value violates unique constraint"))
+
+    monkeypatch.setattr(db_session, "commit", flaky_commit)
+
+    response = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
+
+    assert response.status_code == 202
+    token_rows = (
+        await db_session.execute(select(ReservationAccessToken))
+    ).scalars().all()
+    assert len(token_rows) == 1
+    assert token_rows[0].email == "jean@example.com"
+    assert token_rows[0].token_hash == hashlib.sha256(
+        b"guest-access-token-first"
     ).hexdigest()
 
 
