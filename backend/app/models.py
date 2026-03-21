@@ -343,8 +343,6 @@ class Event(Base):
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
-    location: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    presenter: Mapped[str | None] = mapped_column(String(200), nullable=True)
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

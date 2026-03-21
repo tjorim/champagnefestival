@@ -87,8 +87,6 @@ def upgrade() -> None:
             sa.Column("start_time", sa.String(10), nullable=False),
             sa.Column("end_time", sa.String(10), nullable=True),
             sa.Column("category", sa.String(50), nullable=False),
-            sa.Column("location", sa.String(200), nullable=True),
-            sa.Column("presenter", sa.String(200), nullable=True),
             sa.Column("registration_required", sa.Boolean(), nullable=False, server_default=sa.false()),
             sa.Column("registrations_open_from", sa.DateTime(timezone=True), nullable=True),
             sa.Column("max_capacity", sa.Integer(), nullable=True),
@@ -122,8 +120,6 @@ def upgrade() -> None:
                         "start_time": item.get("start_time") or "00:00",
                         "end_time": item.get("end_time"),
                         "category": item.get("category") or "general",
-                        "location": item.get("location"),
-                        "presenter": item.get("presenter"),
                         "registration_required": bool(item.get("registration") or item.get("registration_required")),
                         "registrations_open_from": item.get("reservations_open_from") or item.get("registrations_open_from"),
                         "max_capacity": item.get("max_capacity"),
@@ -145,8 +141,6 @@ def upgrade() -> None:
                 sa.column("start_time", sa.String),
                 sa.column("end_time", sa.String),
                 sa.column("category", sa.String),
-                sa.column("location", sa.String),
-                sa.column("presenter", sa.String),
                 sa.column("registration_required", sa.Boolean),
                 sa.column("registrations_open_from", sa.DateTime(timezone=True)),
                 sa.column("max_capacity", sa.Integer),
@@ -222,7 +216,7 @@ def downgrade() -> None:
     }
     events = bind.execute(
         sa.text(
-            "SELECT id, edition_id, title, description, date, start_time, end_time, category, location, presenter, registration_required, registrations_open_from, sort_order, active FROM events ORDER BY edition_id, sort_order, date, start_time"
+            "SELECT id, edition_id, title, description, date, start_time, end_time, category, registration_required, registrations_open_from, sort_order, active FROM events ORDER BY edition_id, sort_order, date, start_time"
         )
     ).fetchall()
     schedules: dict[str, list[dict]] = {edition_id: [] for edition_id in editions}
@@ -247,8 +241,6 @@ def downgrade() -> None:
                 "description": row.description or "",
                 "reservation": bool(row.registration_required),
                 "reservations_open_from": row.registrations_open_from.isoformat() if row.registrations_open_from else None,
-                "location": row.location,
-                "presenter": row.presenter,
                 "category": row.category,
                 "day_id": day_id,
             }

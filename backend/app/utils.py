@@ -53,8 +53,6 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
         "start_time": event.start_time,
         "end_time": event.end_time,
         "category": event.category,
-        "location": event.location,
-        "presenter": event.presenter,
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
         "max_capacity": event.max_capacity,
