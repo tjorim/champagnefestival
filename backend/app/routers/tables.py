@@ -117,8 +117,6 @@ async def update_table(
         if tt.scalar_one_or_none() is None:
             raise HTTPException(status_code=404, detail=f"TableType '{body.table_type_id}' not found.")
         t.table_type_id = body.table_type_id
-    if body.reservation_ids is not None:
-        t.reservation_ids = body.reservation_ids
     # Zero-valid fields: must use model_fields_set so that an explicit zero
     # degrees (rotation=0) is honoured even though the value is falsy.
     if "rotation" in body.model_fields_set and body.rotation is not None:
