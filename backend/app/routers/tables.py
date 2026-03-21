@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Layout, Table, TableType
+from app.models import Layout, Reservation, Table, TableType
 from app.schemas import TableCreate, TableOut, TableUpdate
 from app.utils import make_id, table_to_dict
 
@@ -48,7 +48,8 @@ async def create_table(
     db.add(t)
     await db.commit()
     await db.refresh(t)
-    return table_to_dict(t)
+    # New tables have no reservations yet
+    return table_to_dict(t, [])
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +60,17 @@ async def create_table(
 @router.get("", response_model=list[TableOut])
 async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
     result = await db.execute(select(Table).order_by(Table.created_at))
-    return [table_to_dict(t) for t in result.scalars().all()]
+    tables = result.scalars().all()
+
+    # Compute reservation_ids from the Reservation.table_id FK (source of truth)
+    res_result = await db.execute(
+        select(Reservation.id, Reservation.table_id).where(Reservation.table_id.isnot(None))
+    )
+    table_res_map: dict[str, list[str]] = {}
+    for res_id, tbl_id in res_result.all():
+        table_res_map.setdefault(tbl_id, []).append(res_id)
+
+    return [table_to_dict(t, table_res_map.get(t.id, [])) for t in tables]
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +80,12 @@ async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
 
 @router.get("/{table_id}", response_model=TableOut)
 async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return table_to_dict(await _get_or_404(db, table_id))
+    t = await _get_or_404(db, table_id)
+    res_result = await db.execute(
+        select(Reservation.id).where(Reservation.table_id == table_id)
+    )
+    reservation_ids = [row[0] for row in res_result.all()]
+    return table_to_dict(t, reservation_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +130,11 @@ async def update_table(
         t.layout_id = body.layout_id
     await db.commit()
     await db.refresh(t)
-    return table_to_dict(t)
+    res_result = await db.execute(
+        select(Reservation.id).where(Reservation.table_id == table_id)
+    )
+    reservation_ids = [row[0] for row in res_result.all()]
+    return table_to_dict(t, reservation_ids)
 
 
 # ---------------------------------------------------------------------------
