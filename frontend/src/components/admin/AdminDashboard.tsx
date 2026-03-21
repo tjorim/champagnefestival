@@ -14,6 +14,7 @@ import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
+import type { ItemDraft } from "./ItemModal";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";
@@ -776,6 +777,26 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     [authHeaders],
   );
+
+  const handleExhibitorSaved = useCallback((item: ItemDraft) => {
+    setExhibitors((prev) => {
+      const entry = {
+        id: item.id,
+        name: item.name,
+        active: item.active ?? true,
+        contactPersonId: item.contactPersonId ?? null,
+      };
+      const idx = prev.findIndex((e) => e.id === item.id);
+      if (idx >= 0) {
+        return prev.map((e) => (e.id === item.id ? entry : e));
+      }
+      return [...prev, entry];
+    });
+  }, []);
+
+  const handleExhibitorDeleted = useCallback((id: number) => {
+    setExhibitors((prev) => prev.filter((e) => e.id !== id));
+  }, []);
 
   const volunteers = useMemo(
     () => people.filter((person) => person.roles.includes("volunteer")),
@@ -1809,7 +1830,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="content">
-                    <ContentManagement authHeaders={authHeaders} venues={venues} />
+                    <ContentManagement
+                      authHeaders={authHeaders}
+                      venues={venues}
+                      onExhibitorSaved={handleExhibitorSaved}
+                      onExhibitorDeleted={handleExhibitorDeleted}
+                    />
                   </Tab.Pane>
                   <Tab.Pane eventKey="people">
                     <PeopleManagement
