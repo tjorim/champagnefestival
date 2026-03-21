@@ -1,15 +1,14 @@
 /**
  * Central configuration for festival dates.
  *
- * All values are derived from the active edition defined in `editions.ts`.
- * To change the active dates, add or modify an edition there — no changes
- * are needed in this file.
+ * This module now exposes only a frontend fallback date shape.
+ * The live site derives its actual dates from the active-edition API response.
  */
 
 import { dayjs, endOfDay, localizedMonthName } from "@/utils/dateUtils";
-import { getActiveEdition } from "./editions";
+import { EMPTY_EDITION } from "./editions";
 
-const edition = getActiveEdition();
+const edition = EMPTY_EDITION;
 
 // ── Year and edition identifier ───────────────────────────────────────────────
 

@@ -243,6 +243,7 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
             edition_to_dict(
                 edition,
                 venue=venues[edition.venue_id],
+                dates=_edition_dates(edition),
                 events=[
                     event_to_summary_dict(event)
                     for event in sorted(
@@ -278,6 +279,17 @@ def _resolve_exhibitors(
         elif item["type"] == "sponsor":
             sponsors.append(item)
     return producers, sponsors
+
+
+def _edition_dates(edition: Edition) -> dict | None:
+    dates = sorted({event.date for event in edition.events})
+    if not dates:
+        return None
+    return {
+        "friday": dates[0],
+        "saturday": dates[1] if len(dates) > 1 else dates[0],
+        "sunday": dates[2] if len(dates) > 2 else dates[-1],
+    }
 
 
 def _edition_start_date(edition: Edition) -> date | None:

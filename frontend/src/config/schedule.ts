@@ -1,11 +1,11 @@
 /**
  * Schedule configuration for the Champagne Festival.
  *
- * All data is derived from the active edition defined in `editions.ts`.
- * To update the schedule, edit the edition's `schedule` array there.
+ * This module now exposes only empty frontend fallbacks.
+ * The live schedule is sourced from the active-edition API response.
  */
 
-import { getActiveEdition } from "./editions";
+import { EMPTY_EDITION } from "./editions";
 import type { ScheduleEvent } from "./editions";
 
 // Re-export ScheduleEvent type from editions for backward compatibility
@@ -17,7 +17,7 @@ export interface FestivalDay {
   label: string; // e.g., "friday", "saturday", "sunday"
 }
 
-const activeEdition = getActiveEdition();
+const activeEdition = EMPTY_EDITION;
 
 // Helper function to format date as ISO string in local time (Belgian time)
 const toLocalISOString = (date: Date): string => {
@@ -46,7 +46,7 @@ export const festivalDays: FestivalDay[] = [
   },
 ];
 
-// Schedule events from the active edition (shallow copy to protect the registry from external mutation)
+// Schedule events from the frontend fallback edition shape.
 export const scheduleEvents = [...activeEdition.schedule];
 
 /**

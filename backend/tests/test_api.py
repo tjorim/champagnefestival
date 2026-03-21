@@ -1074,11 +1074,27 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
     assert r.status_code == 200
     data = r.json()
     assert data["id"] == "2026"
+    assert data["dates"] is None
     assert data["venue"]["name"] == "Test Venue"
     assert len(data["producers"]) == 1
     assert data["producers"][0]["name"] == "Bollinger"
     assert len(data["sponsors"]) == 1
     assert data["sponsors"][0]["name"] == "Acme"
+
+
+@pytest.mark.anyio
+async def test_active_edition_includes_dates_derived_from_events(client):
+    event = await _create_event(client, edition_id="edition-with-dates")
+
+    r = await client.get("/api/editions/active")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["id"] == "edition-with-dates"
+    assert data["dates"] == {
+        "friday": event["date"],
+        "saturday": event["date"],
+        "sunday": event["date"],
+    }
 
 
 @pytest.mark.anyio

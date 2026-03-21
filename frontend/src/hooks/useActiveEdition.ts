@@ -1,14 +1,13 @@
 /**
  * useActiveEdition — fetches the active festival edition from the backend API.
  *
- * Initialises with the static fallback from `editions.ts` (immediate, no flash),
- * then fetches `/api/editions/active` to get live data including embedded venue,
- * events, producers, and sponsors.
- * Silently keeps the static fallback on any network or parse error.
+ * The public site now treats the backend as the source of truth for edition,
+ * venue, and schedule data. This hook starts with an empty fallback shape for
+ * initial render / network failures, then replaces it with `/api/editions/active`.
  */
 
 import { useEffect, useState } from "react";
-import { getActiveEdition, type Edition, type EditionDates, type SliderItem } from "@/config/editions";
+import { EMPTY_EDITION, type EditionDates, type SliderItem } from "@/config/editions";
 
 interface ActiveEditionVenue {
   venueName: string;
@@ -55,6 +54,12 @@ interface ApiVenue {
   lng: number;
 }
 
+interface ApiEditionDates {
+  friday: string;
+  saturday: string;
+  sunday: string;
+}
+
 interface ApiEvent {
   id: string;
   title: string;
@@ -71,6 +76,7 @@ interface ApiEdition {
   id: string;
   year: number;
   month: string;
+  dates?: ApiEditionDates | null;
   venue: ApiVenue;
   events: ApiEvent[];
   producers: SliderItem[];
@@ -89,45 +95,28 @@ function parseLocalDate(s: string): Date {
   return new Date(year!, month! - 1, day!);
 }
 
-function toLocalISODate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+function deriveEditionDates(
+  apiDates: ApiEditionDates | null | undefined,
+  eventDates: string[],
+  fallbackDates: EditionDates,
+): EditionDates {
+  if (apiDates) {
+    return {
+      friday: parseLocalDate(apiDates.friday),
+      saturday: parseLocalDate(apiDates.saturday),
+      sunday: parseLocalDate(apiDates.sunday),
+    };
+  }
 
-function deriveEditionDates(eventDates: string[], fallbackDates: EditionDates): EditionDates {
   const uniqueDates = [...new Set(eventDates)].filter(Boolean).sort((a, b) => a.localeCompare(b));
   if (uniqueDates.length === 0) {
     return fallbackDates;
   }
-  const friday = parseLocalDate(uniqueDates[0]!);
-  const saturday = parseLocalDate(uniqueDates[1] ?? uniqueDates[0]!);
-  const sunday = parseLocalDate(uniqueDates[2] ?? uniqueDates[uniqueDates.length - 1]!);
-  return { friday, saturday, sunday };
-}
 
-function mapStaticEdition(edition: Edition): ActiveEdition {
-  const dayDates = [edition.dates.friday, edition.dates.saturday, edition.dates.sunday];
   return {
-    id: edition.id,
-    year: edition.year,
-    month: edition.month,
-    dates: edition.dates,
-    venue: edition.venue,
-    events: edition.schedule.map((event) => ({
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      date: toLocalISODate(dayDates[event.dayId - 1] ?? edition.dates.friday),
-      startTime: event.startTime,
-      endTime: event.endTime,
-      category: event.category,
-      registrationRequired: Boolean(event.reservation),
-      registrationsOpenFrom: event.reservationsOpenFrom,
-    })),
-    producers: edition.producers,
-    sponsors: edition.sponsors,
+    friday: parseLocalDate(uniqueDates[0]!),
+    saturday: parseLocalDate(uniqueDates[1] ?? uniqueDates[0]!),
+    sunday: parseLocalDate(uniqueDates[2] ?? uniqueDates[uniqueDates.length - 1]!),
   };
 }
 
@@ -150,7 +139,7 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
     id: api.id,
     year: api.year,
     month: api.month as ActiveEdition["month"],
-    dates: deriveEditionDates(events.map((event) => event.date), fallbackDates),
+    dates: deriveEditionDates(api.dates, events.map((event) => event.date), fallbackDates),
     venue: {
       venueName: api.venue.name,
       address: api.venue.address,
@@ -165,8 +154,21 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
   };
 }
 
+function createFallbackEdition(): ActiveEdition {
+  return {
+    id: EMPTY_EDITION.id,
+    year: EMPTY_EDITION.year,
+    month: EMPTY_EDITION.month,
+    dates: EMPTY_EDITION.dates,
+    venue: EMPTY_EDITION.venue,
+    events: [],
+    producers: [],
+    sponsors: [],
+  };
+}
+
 export function useActiveEdition(): ActiveEditionState {
-  const [edition, setEdition] = useState<ActiveEdition>(() => mapStaticEdition(getActiveEdition()));
+  const [edition, setEdition] = useState<ActiveEdition>(createFallbackEdition);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -182,10 +184,10 @@ export function useActiveEdition(): ActiveEditionState {
 
         const api = (await res.json()) as ApiEdition;
         if (cancelled) return;
-        setEdition(mapApiEdition(api, getActiveEdition().dates));
+        setEdition((current) => mapApiEdition(api, current.dates));
         setIsLoaded(true);
       } catch {
-        // Network error or parse failure — keep static fallback silently.
+        // Network error or parse failure — keep the empty fallback silently.
         setIsLoaded(true);
       }
     }

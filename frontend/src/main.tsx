@@ -160,7 +160,7 @@ function App() {
   // Use custom hooks for language
   useLanguage();
 
-  // Fetch live edition data; falls back to hardcoded editions.ts on any error
+  // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition } = useActiveEdition();
   const { producers, sponsors } = edition;
 
@@ -180,9 +180,24 @@ function App() {
     const uniqueDates = [...new Set(edition.events.map((event) => event.date))]
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
-    return uniqueDates.map((date, index) => ({
+
+    if (uniqueDates.length > 0) {
+      return uniqueDates.map((date, index) => ({
+        id: index + 1,
+        date,
+      }));
+    }
+
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    return [edition.dates.friday, edition.dates.saturday, edition.dates.sunday].map((date, index) => ({
       id: index + 1,
-      date,
+      date: formatLocalDate(date),
     }));
   }, [edition]);
 
