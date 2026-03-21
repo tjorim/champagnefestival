@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 """Pydantic request / response schemas."""
 
-from datetime import date, datetime
-from typing import Literal, Self
+from datetime import date as dt_date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from typing_extensions import Self
 
 
 # ---------------------------------------------------------------------------
@@ -11,7 +14,8 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 # ---------------------------------------------------------------------------
 
 OrderItemCategory = Literal["champagne", "food", "other"]
-ReservationStatus = Literal["pending", "confirmed", "cancelled"]
+EditionType = Literal["festival", "bourse", "capsule_exchange"]
+RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
 
 
@@ -34,7 +38,7 @@ class OrderItemOut(OrderItemBase):
 
 
 # ---------------------------------------------------------------------------
-# People (output — defined early so reservation schemas can reference it)
+# People (output — defined early so registration schemas can reference it)
 # ---------------------------------------------------------------------------
 
 
@@ -73,31 +77,104 @@ class PersonOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Reservations
+# Edition / event projections used across multiple responses
 # ---------------------------------------------------------------------------
 
 
-class ReservationCreate(BaseModel):
+class EditionSummaryOut(BaseModel):
+    id: str
+    year: int
+    month: str
+    edition_type: EditionType
+    friday: dt_date
+    saturday: dt_date
+    sunday: dt_date
+    active: bool
+
+    model_config = {"from_attributes": True}
+
+
+class EventCreate(BaseModel):
+    edition_id: str = Field(min_length=1, max_length=100)
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=10000)
+    date: dt_date
+    start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    category: str = Field(min_length=1, max_length=50)
+    location: str | None = Field(default=None, max_length=200)
+    presenter: str | None = Field(default=None, max_length=200)
+    registration_required: bool = False
+    registrations_open_from: datetime | None = None
+    max_capacity: int | None = Field(default=None, ge=1)
+    sort_order: int = 0
+    active: bool = True
+
+
+class EventUpdate(BaseModel):
+    edition_id: str | None = Field(default=None, min_length=1, max_length=100)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=10000)
+    date: dt_date | None = None
+    start_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    category: str | None = Field(default=None, min_length=1, max_length=50)
+    location: str | None = Field(default=None, max_length=200)
+    presenter: str | None = Field(default=None, max_length=200)
+    registration_required: bool | None = None
+    registrations_open_from: datetime | None = None
+    max_capacity: int | None = Field(default=None, ge=1)
+    sort_order: int | None = None
+    active: bool | None = None
+
+
+class EventOut(BaseModel):
+    id: str
+    edition_id: str
+    title: str
+    description: str
+    date: dt_date
+    start_time: str
+    end_time: str | None
+    category: str
+    location: str | None
+    presenter: str | None
+    registration_required: bool
+    registrations_open_from: datetime | None
+    max_capacity: int | None
+    sort_order: int
+    active: bool
+    edition: EditionSummaryOut | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Registrations
+# ---------------------------------------------------------------------------
+
+
+class RegistrationCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
-    event_id: str = Field(min_length=1, max_length=100)
-    event_title: str = Field(min_length=1, max_length=200)
+    event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
     pre_orders: list[OrderItemBase] = Field(default_factory=list)
     notes: str = Field(default="", max_length=2000)
-    # Anti-spam fields (validated server-side, not stored)
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
 
-    @field_validator("name", "phone", "event_id", "event_title", "notes", mode="before")
+    @field_validator("name", "phone", "event_id", "notes", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip() if isinstance(v, str) else v
 
 
-class ReservationUpdate(BaseModel):
-    status: ReservationStatus | None = None
+class RegistrationUpdate(BaseModel):
+    status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
     table_id: str | None = None
     pre_orders: list[OrderItemBase] | None = None
@@ -108,18 +185,18 @@ class ReservationUpdate(BaseModel):
     strap_issued: bool | None = None
 
 
-class ReservationOut(BaseModel):
+class RegistrationOut(BaseModel):
     id: str
     person_id: str
     person: PersonSummaryOut
     event_id: str
-    event_title: str
+    event: EventOut
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str
     accessibility_note: str
     table_id: str | None
-    status: ReservationStatus
+    status: RegistrationStatus
     payment_status: PaymentStatus
     checked_in: bool
     checked_in_at: datetime | None
@@ -130,27 +207,27 @@ class ReservationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ReservationOutWithToken(ReservationOut):
-    """Full reservation including the sensitive check-in token.
+class RegistrationOutWithToken(RegistrationOut):
+    """Full registration including the sensitive check-in token.
     Only returned by the admin detail endpoint."""
 
     check_in_token: str
 
 
-class ReservationListOut(BaseModel):
-    """Reservation item returned in the list endpoint.
+class RegistrationListOut(BaseModel):
+    """Registration item returned in the list endpoint.
     check_in_token is intentionally excluded here."""
 
     id: str
     person_id: str
     person: PersonSummaryOut
     event_id: str
-    event_title: str
+    event: EventOut
     guest_count: int
     pre_orders: list[OrderItemOut]
     accessibility_note: str
     table_id: str | None
-    status: ReservationStatus
+    status: RegistrationStatus
     payment_status: PaymentStatus
     checked_in: bool
     checked_in_at: datetime | None
@@ -161,12 +238,8 @@ class ReservationListOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ReservationGuestOut(BaseModel):
-    """Reservation data returned to visitors via the self-lookup endpoint.
-
-    Only safe-to-expose fields — no internal notes, no checkInToken.
-    Allows a guest to check their own booking status and pre-order summary.
-    """
+class RegistrationGuestOut(BaseModel):
+    """Registration data returned to visitors via the self-lookup endpoint."""
 
     id: str
     name: str
@@ -174,7 +247,7 @@ class ReservationGuestOut(BaseModel):
     event_title: str
     guest_count: int
     pre_orders: list[OrderItemOut]
-    status: ReservationStatus
+    status: RegistrationStatus
     payment_status: PaymentStatus
     checked_in: bool
     checked_in_at: datetime | None
@@ -184,7 +257,7 @@ class ReservationGuestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ReservationLookupRequest(BaseModel):
+class RegistrationLookupRequest(BaseModel):
     email: EmailStr
 
     @field_validator("email", mode="before")
@@ -193,37 +266,36 @@ class ReservationLookupRequest(BaseModel):
         return v.strip() if isinstance(v, str) else v
 
 
-class ReservationLookupRequestAccepted(BaseModel):
+class RegistrationLookupRequestAccepted(BaseModel):
     ok: bool = True
     delivery_mode: Literal["email"] = "email"
     expires_in_minutes: int
 
 
-class ReservationAccessLookupRequest(BaseModel):
+class RegistrationAccessLookupRequest(BaseModel):
     token: str = Field(min_length=20)
 
 
-class ReservationAdminCreate(BaseModel):
-    """Admin-only reservation creation — skips spam checks, accepts person_id directly."""
+class RegistrationAdminCreate(BaseModel):
+    """Admin-only registration creation — skips spam checks, accepts person_id directly."""
 
     person_id: str = Field(min_length=1, max_length=64)
-    event_id: str = Field(min_length=1, max_length=100)
-    event_title: str = Field(min_length=1, max_length=200)
+    event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
     pre_orders: list[OrderItemBase] = Field(default_factory=list)
     notes: str = Field(default="", max_length=2000)
     accessibility_note: str = Field(default="", max_length=2000)
-    status: ReservationStatus = "confirmed"
+    status: RegistrationStatus = "confirmed"
 
-    @field_validator("event_id", "event_title", "notes", mode="before")
+    @field_validator("event_id", "notes", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip() if isinstance(v, str) else v
 
 
 class VolunteerHelpPeriodIn(BaseModel):
-    first_help_day: date
-    last_help_day: date | None = None
+    first_help_day: dt_date
+    last_help_day: dt_date | None = None
 
     @model_validator(mode="after")
     def validate_range(self) -> Self:
@@ -268,8 +340,8 @@ class VolunteerUpdate(BaseModel):
 
 class VolunteerPeriodOut(BaseModel):
     id: int
-    first_help_day: date
-    last_help_day: date | None
+    first_help_day: dt_date
+    last_help_day: dt_date | None
 
     model_config = {"from_attributes": True}
 
@@ -294,7 +366,7 @@ class VolunteerOut(BaseModel):
 
 
 class CheckInGuestOut(BaseModel):
-    """Minimal reservation data returned by the public check-in GET endpoint.
+    """Minimal registration data returned by the public check-in GET endpoint.
 
     Only exposes fields needed on the volunteer tablet — guest name, party size,
     event info, pre-orders, arrival notes, and check-in/strap status.
@@ -309,7 +381,7 @@ class CheckInGuestOut(BaseModel):
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str
-    status: ReservationStatus
+    status: RegistrationStatus
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -644,32 +716,18 @@ class RoomOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class ScheduleEventIn(BaseModel):
-    id: str
-    title: str
-    start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    description: str = ""
-    reservation: bool = False
-    reservations_open_from: datetime | None = None
-    location: str | None = None
-    presenter: str | None = None
-    category: str
-    day_id: int = Field(ge=1, le=3)
-
-
-ScheduleEventOut = ScheduleEventIn
-
-
 class EditionCreate(BaseModel):
     id: str = Field(min_length=1, max_length=100)
     year: int = Field(ge=2020, le=2100)
     month: str
-    friday: date
-    saturday: date
-    sunday: date
+    friday: dt_date
+    saturday: dt_date
+    sunday: dt_date
     venue_id: str
-    schedule: list[ScheduleEventIn] = Field(default_factory=list)
+    edition_type: EditionType = "festival"
+    external_partner: str | None = Field(default=None, max_length=200)
+    external_contact_name: str | None = Field(default=None, max_length=200)
+    external_contact_email: EmailStr | None = None
     exhibitors: list[int] = Field(default_factory=list)
     active: bool = True
 
@@ -677,11 +735,14 @@ class EditionCreate(BaseModel):
 class EditionUpdate(BaseModel):
     year: int | None = Field(default=None, ge=2020, le=2100)
     month: str | None = None
-    friday: date | None = None
-    saturday: date | None = None
-    sunday: date | None = None
+    friday: dt_date | None = None
+    saturday: dt_date | None = None
+    sunday: dt_date | None = None
     venue_id: str | None = None
-    schedule: list[ScheduleEventIn] | None = None
+    edition_type: EditionType | None = None
+    external_partner: str | None = Field(default=None, max_length=200)
+    external_contact_name: str | None = Field(default=None, max_length=200)
+    external_contact_email: EmailStr | None = None
     exhibitors: list[int] | None = None
     active: bool | None = None
 
@@ -704,11 +765,15 @@ class EditionOut(BaseModel):
     id: str
     year: int
     month: str
-    friday: date
-    saturday: date
-    sunday: date
+    friday: dt_date
+    saturday: dt_date
+    sunday: dt_date
+    edition_type: EditionType
+    external_partner: str | None
+    external_contact_name: str | None
+    external_contact_email: EmailStr | None
     venue: VenueOut
-    schedule: list[ScheduleEventOut]
+    events: list[EventOut]
     producers: list[EditionItemOut]
     sponsors: list[EditionItemOut]
     active: bool

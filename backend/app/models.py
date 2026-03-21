@@ -1,5 +1,7 @@
 """SQLAlchemy ORM models."""
 
+from __future__ import annotations
+
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
@@ -13,7 +15,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -22,12 +24,13 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class Reservation(Base):
-    __tablename__ = "reservations"
+class Registration(Base):
+    __tablename__ = "registrations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    event_id: Mapped[str] = mapped_column(String(100))
-    event_title: Mapped[str] = mapped_column(String(200))
+    event_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("events.id", ondelete="RESTRICT"), nullable=False
+    )
     guest_count: Mapped[int] = mapped_column(Integer)
     pre_orders: Mapped[list[dict]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
@@ -61,9 +64,11 @@ class Reservation(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
+    event: Mapped["Event"] = relationship(back_populates="registrations")
+
 
 class ReservationAccessToken(Base):
-    """Short-lived visitor access token for viewing reservations via e-mail link."""
+    """Short-lived visitor access token for viewing registrations via e-mail link."""
 
     __tablename__ = "reservation_access_tokens"
 
@@ -178,6 +183,8 @@ class Layout(Base):
     room_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False
     )
+    """FK to the room this layout belongs to."""
+
     day_id: Mapped[int] = mapped_column(Integer)
     """1 = Friday, 2 = Saturday, 3 = Sunday."""
 
@@ -281,11 +288,7 @@ class Area(Base):
 
 
 class Edition(Base):
-    """A festival edition (e.g. 2026-march).
-
-    Stores the dates of the three festival days, venue information, and a
-    JSON-encoded schedule of events.
-    """
+    """A festival edition or related standalone event container."""
 
     __tablename__ = "editions"
 
@@ -301,8 +304,14 @@ class Edition(Base):
     venue_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
     )
-
-    schedule: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    edition_type: Mapped[str] = mapped_column(String(20), default="festival")
+    external_partner: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    external_contact_name: Mapped[str | None] = mapped_column(
+        String(200), nullable=True
+    )
+    external_contact_email: Mapped[str | None] = mapped_column(
+        String(200), nullable=True
+    )
     exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -313,6 +322,45 @@ class Edition(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
+
+    events: Mapped[list["Event"]] = relationship(
+        back_populates="edition",
+        cascade="all, delete-orphan",
+        order_by="Event.sort_order, Event.date, Event.start_time, Event.created_at",
+    )
+
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    edition_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("editions.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text, default="")
+    date: Mapped[date] = mapped_column(Date)
+    start_time: Mapped[str] = mapped_column(String(10))
+    end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    category: Mapped[str] = mapped_column(String(50))
+    location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    presenter: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
+    registrations_open_from: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    edition: Mapped[Edition] = relationship(back_populates="events")
+    registrations: Mapped[list[Registration]] = relationship(back_populates="event")
 
 
 class Person(Base):
@@ -327,15 +375,12 @@ class Person(Base):
     address: Mapped[str] = mapped_column(String(300), default="")
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
-    # Optional compliance/attendance fields
     national_register_number: Mapped[str | None] = mapped_column(
         String(20), unique=True, nullable=True
     )
     eid_document_number: Mapped[str | None] = mapped_column(
         String(50), unique=True, nullable=True
     )
-
-    # Optional club/visitor metadata
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")

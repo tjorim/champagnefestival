@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Exhibitor, Person, Reservation
+from app.models import Exhibitor, Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
-from app.utils import make_id, person_to_dict, reservation_to_list_dict, roles_contains
+from app.utils import make_id, person_to_dict, registration_to_list_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/people",
@@ -253,14 +253,14 @@ async def list_person_reservations(
     person = await _get_or_404(db, person_id)
 
     result = await db.execute(
-        select(Reservation)
-        .where(Reservation.person_id == person.id)
-        .order_by(Reservation.created_at.desc())
+        select(Registration)
+        .where(Registration.person_id == person.id)
+        .order_by(Registration.created_at.desc())
     )
     rows = result.scalars().all()
     for r in rows:
         r._person = person
-    return [reservation_to_list_dict(r) for r in rows]
+    return [registration_to_list_dict(r) for r in rows]
 
 
 @router.post("/{person_id}/merge/{duplicate_id}", response_model=PersonOut)
@@ -338,8 +338,8 @@ async def merge_people(
 
     # Re-point all reservations and exhibitor contacts.
     await db.execute(
-        update(Reservation)
-        .where(Reservation.person_id == duplicate_id)
+        update(Registration)
+        .where(Registration.person_id == duplicate_id)
         .values(person_id=person_id)
     )
     await db.execute(
