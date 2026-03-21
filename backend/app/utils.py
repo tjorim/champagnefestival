@@ -267,8 +267,6 @@ def person_to_dict(p: Person) -> dict:
         "phone": p.phone,
         "address": p.address,
         "roles": p.roles,
-        "first_help_day": p.first_help_day,
-        "last_help_day": p.last_help_day,
         "national_register_number": p.national_register_number,
         "eid_document_number": p.eid_document_number,
         "visits_per_month": p.visits_per_month,

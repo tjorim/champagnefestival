@@ -2,7 +2,17 @@
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -68,6 +78,7 @@ class ReservationAccessToken(Base):
         DateTime(timezone=True), nullable=True
     )
 
+
 class Exhibitor(Base):
     """A unified exhibitor: champagne producer, sponsor, or vendor."""
 
@@ -84,7 +95,9 @@ class Exhibitor(Base):
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
     )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
@@ -105,8 +118,12 @@ class Venue(Base):
     lng: Mapped[float] = mapped_column(Float, default=0.0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
 
 class Room(Base):
@@ -193,8 +210,12 @@ class TableType(Base):
     max_capacity: Mapped[int] = mapped_column(Integer)
     """Physical maximum number of seats for this table shape/size."""
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
 
 
 class Table(Base):
@@ -251,7 +272,9 @@ class Area(Base):
     width_m: Mapped[float] = mapped_column(default=1.5)
     length_m: Mapped[float] = mapped_column(default=1.0)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
@@ -291,6 +314,7 @@ class Edition(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
 
+
 class Person(Base):
     """Unified person entity used for members, volunteers, and visitors."""
 
@@ -304,8 +328,6 @@ class Person(Base):
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     # Optional compliance/attendance fields
-    first_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
-    last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
     national_register_number: Mapped[str | None] = mapped_column(
         String(20), unique=True, nullable=True
     )
@@ -318,6 +340,26 @@ class Person(Base):
     club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+
+class VolunteerPeriod(Base):
+    """A volunteering period for a person with the volunteer role."""
+
+    __tablename__ = "volunteer_periods"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    volunteer_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="CASCADE"), nullable=False
+    )
+    first_help_day: Mapped[date] = mapped_column(Date, nullable=False)
+    last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow

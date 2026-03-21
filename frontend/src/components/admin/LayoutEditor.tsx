@@ -1,23 +1,16 @@
 /**
  * LayoutEditor — multi-room floor plan manager.
  *
- * Uses @dnd-kit/core for accessible, reliable drag-and-drop positioning
+ * Uses @dnd-kit/react for accessible, reliable drag-and-drop positioning
  * of tables within rooms.  Each room is rendered as a proportional canvas
  * (1 metre = PX_PER_M pixels).
  */
 
 import clsx from "clsx";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useDraggable,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
+import { PointerActivationConstraints } from "@dnd-kit/dom";
+import { RestrictToElement } from "@dnd-kit/dom/modifiers";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -96,6 +89,13 @@ function getAreaIcons(): { value: string; label: string }[] {
 }
 // Minimum canvas width so small rooms are still usable
 const MIN_CANVAS_PX = 280;
+
+// Sensor configuration — module-level so the descriptor is stable across renders.
+const SENSORS = [
+  PointerSensor.configure({
+    activationConstraints: [new PointerActivationConstraints.Distance({ value: 6 })],
+  }),
+];
 function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
   const type = tableTypes.find((t) => t.id === table.tableTypeId);
   return {
@@ -153,6 +153,9 @@ interface LayoutEditorProps {
     icon?: string,
   ) => Promise<void>;
   onUpdateAreaLabel: (areaId: string, label: string) => void;
+  onChangeTableType: (tableId: string, tableTypeId: string) => Promise<void>;
+  onUpdateTable: (tableId: string, name: string) => Promise<void>;
+  onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,7 +185,7 @@ function DraggableTable({
   canvasW,
   canvasH,
 }: DraggableTableProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { ref, isDragging } = useDraggable({
     id: table.id,
     disabled: !isInteractive,
   });
@@ -191,7 +194,6 @@ function DraggableTable({
   const type = tableTypes.find((t) => t.id === table.tableTypeId);
   const shape = type?.shape ?? "rectangle";
 
-  // Convert percentage to pixel offset within the canvas
   const leftPx = (table.x / 100) * canvasW;
   const topPx = (table.y / 100) * canvasH;
 
@@ -213,9 +215,7 @@ function DraggableTable({
 
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
+      ref={ref}
       onClick={(e) => {
         if (!isInteractive) return;
         e.stopPropagation();
@@ -234,7 +234,7 @@ function DraggableTable({
         height: TABLE_L,
         cursor: isDragging ? "grabbing" : isInteractive ? "grab" : "default",
         userSelect: "none",
-        transform: `${CSS.Translate.toString(transform)} rotate(${table.rotation}deg)`,
+        transform: `rotate(${table.rotation}deg)`,
         zIndex: isDragging ? 10 : 1,
         opacity: isInteractive ? (isDragging ? 0.8 : 1) : isInSelectedArea ? 0.7 : 0.25,
         transition: isDragging ? undefined : "border-color 0.15s, opacity 0.15s",
@@ -277,7 +277,7 @@ function DraggableArea({
   canvasW,
   canvasH,
 }: DraggableAreaProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { ref, isDragging } = useDraggable({
     id: area.id,
     disabled: !isInteractive,
   });
@@ -296,9 +296,7 @@ function DraggableArea({
 
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
+      ref={ref}
       onClick={(e) => {
         if (!isInteractive) return;
         e.stopPropagation();
@@ -316,7 +314,7 @@ function DraggableArea({
         height: AREA_H,
         cursor: isDragging ? "grabbing" : isInteractive ? "grab" : "default",
         userSelect: "none",
-        transform: `${CSS.Translate.toString(transform)} rotate(${area.rotation}deg)`,
+        transform: `rotate(${area.rotation}deg)`,
         zIndex: isDragging ? 10 : 2,
         opacity: isDragging ? 0.8 : 1,
         transition: isDragging ? undefined : "border-color 0.15s",
@@ -382,42 +380,42 @@ function RoomCanvas({
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor),
+  // RestrictToElement is called at drag time so canvasRef.current is always current.
+  const modifiers = useMemo(
+    () => [RestrictToElement.configure({ element: () => canvasRef.current })],
+    [],
   );
 
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, delta } = event;
-      if (!canvasRef.current) return;
+    (event: Parameters<NonNullable<React.ComponentProps<typeof DragDropProvider>["onDragEnd"]>>[0]) => {
+      const { operation, canceled } = event;
+      if (canceled || !operation.source) return;
 
-      const activeId = active.id as string;
+      const { x: dx, y: dy } = operation.transform;
+      const activeId = String(operation.source.id);
 
       if (activeId.startsWith("area_")) {
-        // Area drag
         const area = roomAreas.find((a) => a.id === activeId);
         if (!area) return;
         const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
         const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
-        const leftPx = (area.x / 100) * canvasW + delta.x;
-        const topPx = (area.y / 100) * canvasH + delta.y;
+        const leftPx = (area.x / 100) * canvasW + dx;
+        const topPx = (area.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - AREA_W);
         const clampedY = Math.min(Math.max(0, topPx), canvasH - AREA_H);
         onMoveArea(area.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
       } else {
-        // Table drag
         const table = roomTables.find((t) => t.id === activeId);
         if (!table) return;
         const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
-        const leftPx = (table.x / 100) * canvasW + delta.x;
-        const topPx = (table.y / 100) * canvasH + delta.y;
+        const leftPx = (table.x / 100) * canvasW + dx;
+        const topPx = (table.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);
         const clampedY = Math.min(Math.max(0, topPx), canvasH - TABLE_L);
         onMoveTable(table.id, (clampedX / canvasW) * 100, (clampedY / canvasH) * 100);
       }
     },
-    [roomTables, roomAreas, tableTypes, canvasW, canvasH, onMoveTable, onMoveArea],
+    [roomAreas, roomTables, tableTypes, canvasW, canvasH, onMoveArea, onMoveTable],
   );
 
   const isEmpty = roomTables.length === 0 && roomAreas.length === 0;
@@ -431,7 +429,7 @@ function RoomCanvas({
           {m.admin_table_move_hint()}
         </span>
       </p>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DragDropProvider sensors={SENSORS} modifiers={modifiers} onDragEnd={handleDragEnd}>
         <div
           ref={canvasRef}
           onClick={() => {
@@ -446,7 +444,7 @@ function RoomCanvas({
             background:
               "repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)," +
               "repeating-linear-gradient(90deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)",
-            overflow: "hidden",
+            overflow: "visible",
             cursor: "default",
           }}
           aria-label={room.name}
@@ -507,7 +505,7 @@ function RoomCanvas({
             );
           })}
         </div>
-      </DndContext>
+      </DragDropProvider>
     </div>
   );
 }
@@ -536,6 +534,9 @@ export default function LayoutEditor({
   onRotateArea,
   onAssignAreaToItem,
   onUpdateAreaLabel,
+  onChangeTableType,
+  onUpdateTable,
+  onResizeArea,
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
@@ -610,6 +611,7 @@ export default function LayoutEditor({
   const [addTableError, setAddTableError] = useState<string | null>(null);
 
   const [deleteTableError, setDeleteTableError] = useState<string | null>(null);
+  const [updateTableError, setUpdateTableError] = useState<string | null>(null);
   // Add Area modal
   const [showAddArea, setShowAddArea] = useState(false);
   const [newArea, setNewArea] = useState({
@@ -623,6 +625,7 @@ export default function LayoutEditor({
   const [addAreaError, setAddAreaError] = useState<string | null>(null);
   const [deleteAreaError, setDeleteAreaError] = useState<string | null>(null);
   const [assignAreaError, setAssignAreaError] = useState<string | null>(null);
+  const [resizeAreaError, setResizeAreaError] = useState<string | null>(null);
 
   const handleAddTable = useCallback(async () => {
     if (!newTable.name.trim() || newTable.capacity < 1 || !newTable.tableTypeId || !activeLayoutId)
@@ -950,30 +953,34 @@ export default function LayoutEditor({
                     : m.admin_table_height_type_low()}
                 </Badge>
               )}
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)}
-                title={m.admin_layout_rotate_ccw()}
-                aria-label={m.admin_layout_rotate_ccw()}
-              >
-                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-              </Button>
-              <span
-                className="text-secondary small"
-                style={{ minWidth: "3.5rem", textAlign: "center" }}
-              >
-                {Math.round(selectedTableData.rotation)}°
-              </span>
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)}
-                title={m.admin_layout_rotate_cw()}
-                aria-label={m.admin_layout_rotate_cw()}
-              >
-                <i className="bi bi-arrow-clockwise" aria-hidden="true" />
-              </Button>
+              {selectedType?.shape !== "round" && (
+                <>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)}
+                    title={m.admin_layout_rotate_ccw()}
+                    aria-label={m.admin_layout_rotate_ccw()}
+                  >
+                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                  </Button>
+                  <span
+                    className="text-secondary small"
+                    style={{ minWidth: "3.5rem", textAlign: "center" }}
+                  >
+                    {Math.round(selectedTableData.rotation)}°
+                  </span>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)}
+                    title={m.admin_layout_rotate_cw()}
+                    aria-label={m.admin_layout_rotate_cw()}
+                  >
+                    <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+                  </Button>
+                </>
+              )}
               <Button
                 variant="outline-danger"
                 size="sm"
@@ -991,6 +998,63 @@ export default function LayoutEditor({
                 {deleteTableError}
               </Alert>
             )}
+            {updateTableError && (
+              <Alert variant="danger" className="py-1 mb-2 small">
+                {updateTableError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="table-name-edit">
+              <Form.Label className="text-secondary small">{m.admin_table_name()}</Form.Label>
+              <Form.Control
+                size="sm"
+                type="text"
+                className="bg-dark text-light border-secondary"
+                defaultValue={selectedTableData.name}
+                onBlur={async (e) => {
+                  const val = e.target.value.trim();
+                  if (val && val !== selectedTableData.name) {
+                    setUpdateTableError(null);
+                    try {
+                      await onUpdateTable(selectedTableData.id, val);
+                    } catch (err) {
+                      setUpdateTableError(
+                        err instanceof Error ? err.message : m.admin_content_error_save(),
+                      );
+                    }
+                  }
+                }}
+                key={`name-${selectedTableData.id}`}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="table-type-select">
+              <Form.Label className="text-secondary small">
+                {m.admin_layout_table_type_label()}
+              </Form.Label>
+              <Form.Select
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                value={selectedTableData.tableTypeId}
+                onChange={async (e) => {
+                  setUpdateTableError(null);
+                  try {
+                    await onChangeTableType(selectedTableData.id, e.target.value);
+                  } catch (err) {
+                    setUpdateTableError(
+                      err instanceof Error ? err.message : m.admin_content_error_save(),
+                    );
+                  }
+                }}
+                key={`type-${selectedTableData.id}`}
+              >
+                {tableTypes
+                  .filter((tt) => tt.active || tt.id === selectedTableData.tableTypeId)
+                  .map((tt) => (
+                    <option key={tt.id} value={tt.id} disabled={!tt.active}>
+                      {tt.name}
+                    </option>
+                  ))}
+              </Form.Select>
+            </Form.Group>
             {selectedReservations.length === 0 ? (
               <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
             ) : (
@@ -1072,6 +1136,16 @@ export default function LayoutEditor({
                 {assignAreaError}
               </Alert>
             )}
+            {resizeAreaError && (
+              <Alert
+                variant="danger"
+                className="py-1 mb-2 small"
+                dismissible
+                onClose={() => setResizeAreaError(null)}
+              >
+                {resizeAreaError}
+              </Alert>
+            )}
             <Form.Group className="mb-3" controlId="area-label">
               <Form.Label className="text-secondary small">
                 {m.admin_layout_area_form_label()}
@@ -1090,6 +1164,64 @@ export default function LayoutEditor({
                 key={selectedAreaData.id}
               />
             </Form.Group>
+            <div className="d-flex gap-2 mb-3">
+              <Form.Group controlId="area-width" className="flex-fill">
+                <Form.Label className="text-secondary small">
+                  {m.admin_layout_area_width_m()}
+                </Form.Label>
+                <Form.Control
+                  size="sm"
+                  type="number"
+                  min={0.1}
+                  max={50}
+                  step={0.1}
+                  className="bg-dark text-light border-secondary"
+                  defaultValue={selectedAreaData.widthM}
+                  onBlur={async (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val > 0 && val !== selectedAreaData.widthM) {
+                      setResizeAreaError(null);
+                      try {
+                        await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
+                      } catch (err) {
+                        setResizeAreaError(
+                          err instanceof Error ? err.message : m.admin_content_error_save(),
+                        );
+                      }
+                    }
+                  }}
+                  key={`w-${selectedAreaData.id}`}
+                />
+              </Form.Group>
+              <Form.Group controlId="area-length" className="flex-fill">
+                <Form.Label className="text-secondary small">
+                  {m.admin_layout_area_length_m()}
+                </Form.Label>
+                <Form.Control
+                  size="sm"
+                  type="number"
+                  min={0.1}
+                  max={50}
+                  step={0.1}
+                  className="bg-dark text-light border-secondary"
+                  defaultValue={selectedAreaData.lengthM}
+                  onBlur={async (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val > 0 && val !== selectedAreaData.lengthM) {
+                      setResizeAreaError(null);
+                      try {
+                        await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
+                      } catch (err) {
+                        setResizeAreaError(
+                          err instanceof Error ? err.message : m.admin_content_error_save(),
+                        );
+                      }
+                    }
+                  }}
+                  key={`l-${selectedAreaData.id}`}
+                />
+              </Form.Group>
+            </div>
             <Form.Group className="mb-3" controlId="area-icon">
               <Form.Label className="text-secondary small">
                 {m.admin_layout_area_form_icon()}

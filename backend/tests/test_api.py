@@ -270,7 +270,9 @@ async def test_search_by_name(client):
     )
     assert r.status_code == 201
 
-    r = await client.get("/api/reservations", params={"q": "jean"}, headers=ADMIN_HEADERS)
+    r = await client.get(
+        "/api/reservations", params={"q": "jean"}, headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200
     items = r.json()
     assert len(items) == 1
@@ -298,7 +300,9 @@ async def test_filter_by_status(client):
 
     # Confirm the reservation
     r = await client.put(
-        f"/api/reservations/{res_id}", json={"status": "confirmed"}, headers=ADMIN_HEADERS
+        f"/api/reservations/{res_id}",
+        json={"status": "confirmed"},
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
 
@@ -319,7 +323,11 @@ async def test_filter_by_event(client):
     assert r.status_code == 201
     r = await client.post(
         "/api/reservations",
-        json={**VALID_RESERVATION, "event_id": "event-sat", "email": "other@example.com"},
+        json={
+            **VALID_RESERVATION,
+            "event_id": "event-sat",
+            "email": "other@example.com",
+        },
     )
     assert r.status_code == 201
 
@@ -352,6 +360,18 @@ async def test_request_my_reservations_access_is_generic(client):
     assert "access_token" not in missing.json()
     assert "access_url" not in found.json()
     assert "access_url" not in missing.json()
+
+
+@pytest.mark.anyio
+async def test_my_reservations_case_insensitive_email(client):
+    """Email stored with mixed case must be retrievable via lowercase lookup."""
+    r = await client.post(
+        "/api/reservations", json={**VALID_RESERVATION, "email": "Jean@Example.com"}
+    )
+    assert r.status_code == 201
+
+    r = await client.post("/api/reservations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
 
 
 @pytest.mark.anyio
@@ -435,7 +455,11 @@ async def test_my_reservations_access_multiple_editions(client, monkeypatch):
     assert r.status_code == 201
     r = await client.post(
         "/api/reservations",
-        json={**VALID_RESERVATION, "event_id": "event-sat", "event_title": "Zaterdagavond"},
+        json={
+            **VALID_RESERVATION,
+            "event_id": "event-sat",
+            "event_title": "Zaterdagavond",
+        },
     )
     assert r.status_code == 201
 
@@ -525,7 +549,12 @@ async def test_exhibitor_crud(client):
     # Create producer
     r = await client.post(
         "/api/exhibitors",
-        json={"name": "Maison Bollinger", "image": "/img/bollinger.jpg", "website": "https://bollinger.com", "type": "producer"},
+        json={
+            "name": "Maison Bollinger",
+            "image": "/img/bollinger.jpg",
+            "website": "https://bollinger.com",
+            "type": "producer",
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -550,7 +579,9 @@ async def test_exhibitor_crud(client):
     assert len(r.json()) == 2
 
     # Filter by type
-    r = await client.get("/api/exhibitors", params={"type": "producer"}, headers=ADMIN_HEADERS)
+    r = await client.get(
+        "/api/exhibitors", params={"type": "producer"}, headers=ADMIN_HEADERS
+    )
     assert len(r.json()) == 1
     assert r.json()[0]["name"] == "Maison Bollinger"
 
@@ -583,7 +614,11 @@ async def test_exhibitor_with_contact_person(client):
 
     r = await client.post(
         "/api/exhibitors",
-        json={"name": "Fine Wines Ltd", "type": "vendor", "contact_person_id": person_id},
+        json={
+            "name": "Fine Wines Ltd",
+            "type": "vendor",
+            "contact_person_id": person_id,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -660,7 +695,9 @@ async def test_area_crud(client):
     area_id = area["id"]
 
     # List (filter by layout)
-    r = await client.get("/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS)
+    r = await client.get(
+        "/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200
     assert len(r.json()) == 1
 
@@ -670,7 +707,9 @@ async def test_area_crud(client):
 
     # Update position
     r = await client.put(
-        f"/api/areas/{area_id}", json={"x": 40.0, "label": "Main Stage"}, headers=ADMIN_HEADERS
+        f"/api/areas/{area_id}",
+        json={"x": 40.0, "label": "Main Stage"},
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert r.json()["x"] == 40.0
@@ -680,7 +719,9 @@ async def test_area_crud(client):
     r = await client.delete(f"/api/areas/{area_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
-    r = await client.get("/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS)
+    r = await client.get(
+        "/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS
+    )
     assert r.json() == []
 
 
@@ -697,7 +738,11 @@ async def test_area_linked_to_exhibitor(client):
 
     r = await client.post(
         "/api/areas",
-        json={"layout_id": layout_id, "label": "Oyster Stand", "exhibitor_id": exhibitor_id},
+        json={
+            "layout_id": layout_id,
+            "label": "Oyster Stand",
+            "exhibitor_id": exhibitor_id,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -741,11 +786,15 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
 
     # Create a producer and a sponsor
     r = await client.post(
-        "/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS
+        "/api/exhibitors",
+        json={"name": "Bollinger", "type": "producer"},
+        headers=ADMIN_HEADERS,
     )
     producer_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors", json={"name": "Acme", "type": "sponsor"}, headers=ADMIN_HEADERS
+        "/api/exhibitors",
+        json={"name": "Acme", "type": "sponsor"},
+        headers=ADMIN_HEADERS,
     )
     sponsor_id = r.json()["id"]
 
@@ -785,7 +834,9 @@ async def test_edition_rejects_vendor_exhibitors(client):
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors", json={"name": "Food Vendor", "type": "vendor"}, headers=ADMIN_HEADERS
+        "/api/exhibitors",
+        json={"name": "Food Vendor", "type": "vendor"},
+        headers=ADMIN_HEADERS,
     )
     vendor_id = r.json()["id"]
 
@@ -817,7 +868,11 @@ async def test_admin_create_reservation(client):
     """Admin endpoint creates reservation directly for a known person."""
     r = await client.post(
         "/api/people",
-        json={"name": "Pierre Admin", "email": "pierre@example.com", "phone": "+32499111222"},
+        json={
+            "name": "Pierre Admin",
+            "email": "pierre@example.com",
+            "phone": "+32499111222",
+        },
         headers=ADMIN_HEADERS,
     )
     person_id = r.json()["id"]
@@ -984,6 +1039,7 @@ async def test_table_with_layout_id(client):
 # Contact endpoint
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_contact_submission(client):
     """Valid contact form submission returns 200 OK."""
@@ -1042,7 +1098,12 @@ async def test_table_id_can_be_cleared(client):
     # Create a table
     r = await client.post(
         "/api/tables",
-        json={"name": "T-Clear", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_id},
+        json={
+            "name": "T-Clear",
+            "capacity": 4,
+            "table_type_id": tt_id,
+            "layout_id": layout_id,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -1067,7 +1128,6 @@ async def test_table_id_can_be_cleared(client):
     assert r.json()["table_id"] is None
 
 
-
 # ---------------------------------------------------------------------------
 # Volunteers (admin)
 # ---------------------------------------------------------------------------
@@ -1084,16 +1144,26 @@ async def test_volunteer_crud_and_constraints(client):
     payload = {
         "name": "Sofie De Smet",
         "address": "Dorpsstraat 12, 8450 Bredene",
-        "first_help_day": "2026-03-20",
-        "last_help_day": "2026-03-22",
         "national_register_number": "91010112345",
         "eid_document_number": "BEX123456",
+        "active": True,
+        "help_periods": [
+            {
+                "first_help_day": "2024-03-15",
+                "last_help_day": "2024-03-17",
+            },
+            {
+                "first_help_day": "2025-10-10",
+                "last_help_day": None,
+            },
+        ],
     }
 
     r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     volunteer = r.json()
     assert volunteer["name"] == "Sofie De Smet"
+    assert len(volunteer["help_periods"]) == 2
 
     # duplicate insurance identity fields are rejected
     r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
@@ -1126,25 +1196,58 @@ async def test_volunteer_crud_and_constraints(client):
     )
     assert r.status_code == 200
     assert len(r.json()) == 1
-
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",
-        json={"last_help_day": "2026-03-24"},
+        json={
+            "address": "Nieuwe Steenweg 8, 8400 Oostende",
+            "active": True,
+            "help_periods": [
+                {
+                    "first_help_day": "2024-03-15",
+                    "last_help_day": "2024-03-17",
+                },
+                {
+                    "first_help_day": "2025-03-21",
+                    "last_help_day": "2025-03-23",
+                },
+                {
+                    "first_help_day": "2025-10-10",
+                    "last_help_day": None,
+                },
+            ],
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
-    assert r.json()["last_help_day"] == "2026-03-24"
+    assert r.json()["address"] == "Nieuwe Steenweg 8, 8400 Oostende"
+    assert r.json()["active"] is True
+    assert len(r.json()["help_periods"]) == 3
 
-    # invalid day range should fail
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",
-        json={"first_help_day": "2026-03-25", "last_help_day": "2026-03-24"},
+        json={
+            "help_periods": [
+                {
+                    "first_help_day": "2025-10-11",
+                    "last_help_day": "2025-10-10",
+                }
+            ]
+        },
         headers=ADMIN_HEADERS,
     )
-    assert r.status_code == 400
+    assert r.status_code == 422
 
     r = await client.delete(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
+
+    # Volunteer role is removed — endpoint returns 404.
+    r = await client.get(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+    # But the underlying person record still exists (soft archive).
+    r = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert "volunteer" not in r.json()["roles"]
 
 
 # ---------------------------------------------------------------------------
@@ -1166,8 +1269,6 @@ async def test_people_crud_roles_and_filters(client):
         "phone": "+32470111222",
         "address": "Kapelstraat 8, Bredene",
         "roles": ["Chairwoman", "Volunteer", "Member"],
-        "first_help_day": "2026-03-20",
-        "last_help_day": "2026-03-22",
         "national_register_number": "85010199999",
         "eid_document_number": "BEI998877",
         "visits_per_month": 1,
@@ -1205,17 +1306,12 @@ async def test_people_crud_roles_and_filters(client):
     assert r.json()["active"] is False
 
     r = await client.get(
-        "/api/people", params={"role": "treasurer", "active": "false"}, headers=ADMIN_HEADERS
+        "/api/people",
+        params={"role": "treasurer", "active": "false"},
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert len(r.json()) == 1
-
-    r = await client.put(
-        f"/api/people/{person_id}",
-        json={"first_help_day": "2026-03-25", "last_help_day": "2026-03-24"},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 400
 
     # Uncertain match (same email, different name) → new person created; admin sees duplicate.
     r = await client.post(
@@ -1227,7 +1323,9 @@ async def test_people_crud_roles_and_filters(client):
 
     r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 0  # uncertain reservation belongs to the newly-created person
+    assert (
+        len(r.json()) == 0
+    )  # uncertain reservation belongs to the newly-created person
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
@@ -1237,32 +1335,76 @@ async def test_people_crud_roles_and_filters(client):
 async def test_reservation_auto_links_certain_person(client):
     """Same email + same name (case/whitespace insensitive) → reservation links to existing person."""
     bob_phone = "+32470123456"
-    r = await client.post("/api/people", json={"name": "Bob Martin", "email": "bob@example.com", "phone": bob_phone}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={"name": "Bob Martin", "email": "bob@example.com", "phone": bob_phone},
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201
     bob_id = r.json()["id"]
 
     # Exact match on email + phone + name → auto-link
-    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Bob Martin"})
+    r = await client.post(
+        "/api/reservations",
+        json={
+            **VALID_RESERVATION,
+            "email": "bob@example.com",
+            "phone": bob_phone,
+            "name": "Bob Martin",
+        },
+    )
     assert r.status_code == 201
     assert r.json()["person_id"] == bob_id
 
     # Case/whitespace variation still matches
-    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "BOB@EXAMPLE.COM", "phone": bob_phone, "name": "  bob  martin  "})
+    r = await client.post(
+        "/api/reservations",
+        json={
+            **VALID_RESERVATION,
+            "email": "BOB@EXAMPLE.COM",
+            "phone": bob_phone,
+            "name": "  bob  martin  ",
+        },
+    )
     assert r.status_code == 201
     assert r.json()["person_id"] == bob_id
 
     # Different name → new person
-    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Robert Martin"})
+    r = await client.post(
+        "/api/reservations",
+        json={
+            **VALID_RESERVATION,
+            "email": "bob@example.com",
+            "phone": bob_phone,
+            "name": "Robert Martin",
+        },
+    )
     assert r.status_code == 201
     assert r.json()["person_id"] != bob_id
 
     # Exact match again after a different-name reservation was created → still links to bob_id
-    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "phone": bob_phone, "name": "Bob Martin"})
+    r = await client.post(
+        "/api/reservations",
+        json={
+            **VALID_RESERVATION,
+            "email": "bob@example.com",
+            "phone": bob_phone,
+            "name": "Bob Martin",
+        },
+    )
     assert r.status_code == 201
     assert r.json()["person_id"] == bob_id
 
     # Different phone → new person (even if email + name match)
-    r = await client.post("/api/reservations", json={**VALID_RESERVATION, "email": "bob@example.com", "name": "Bob Martin", "phone": "+32499111111"})
+    r = await client.post(
+        "/api/reservations",
+        json={
+            **VALID_RESERVATION,
+            "email": "bob@example.com",
+            "name": "Bob Martin",
+            "phone": "+32499111111",
+        },
+    )
     assert r.status_code == 201
     assert r.json()["person_id"] != bob_id
 
@@ -1271,16 +1413,20 @@ async def test_reservation_auto_links_certain_person(client):
 async def test_normalize_phone_equivalent_inputs(client):
     """E.164-like normalization: +32 470..., 0032 470..., and 0470... all store as +32470123456."""
     base_phone_variants = [
-        "+32 470 12 34 56",   # international with spaces
+        "+32 470 12 34 56",  # international with spaces
         "0032 470 12 34 56",  # IDD prefix 00
-        "0470 12 34 56",      # local trunk 0
+        "0470 12 34 56",  # local trunk 0
     ]
     canonical_phone = "+32470123456"
 
     # Create a person with the first variant
     r = await client.post(
         "/api/people",
-        json={"name": "Phone Test", "email": "phonetest@example.com", "phone": base_phone_variants[0]},
+        json={
+            "name": "Phone Test",
+            "email": "phonetest@example.com",
+            "phone": base_phone_variants[0],
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -1290,7 +1436,12 @@ async def test_normalize_phone_equivalent_inputs(client):
     # POST a reservation using the IDD variant → should link to the same person
     r = await client.post(
         "/api/reservations",
-        json={**VALID_RESERVATION, "email": "phonetest@example.com", "phone": base_phone_variants[1], "name": "Phone Test"},
+        json={
+            **VALID_RESERVATION,
+            "email": "phonetest@example.com",
+            "phone": base_phone_variants[1],
+            "name": "Phone Test",
+        },
     )
     assert r.status_code == 201
     assert r.json()["person_id"] == person_id
@@ -1298,7 +1449,12 @@ async def test_normalize_phone_equivalent_inputs(client):
     # POST a reservation using the local trunk variant → should also link to the same person
     r = await client.post(
         "/api/reservations",
-        json={**VALID_RESERVATION, "email": "phonetest@example.com", "phone": base_phone_variants[2], "name": "Phone Test"},
+        json={
+            **VALID_RESERVATION,
+            "email": "phonetest@example.com",
+            "phone": base_phone_variants[2],
+            "name": "Phone Test",
+        },
     )
     assert r.status_code == 201
     assert r.json()["person_id"] == person_id
@@ -1306,7 +1462,11 @@ async def test_normalize_phone_equivalent_inputs(client):
     # Update a person using a local variant → stored in canonical form
     r = await client.put(
         f"/api/people/{person_id}",
-        json={"name": "Phone Test", "email": "phonetest@example.com", "phone": base_phone_variants[2]},
+        json={
+            "name": "Phone Test",
+            "email": "phonetest@example.com",
+            "phone": base_phone_variants[2],
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -1326,31 +1486,49 @@ async def test_merge_people_requires_auth(client):
 
 @pytest.mark.anyio
 async def test_merge_people_not_found(client):
-    r = await client.post("/api/people/nonexistent/merge/also_nonexistent", headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people/nonexistent/merge/also_nonexistent", headers=ADMIN_HEADERS
+    )
     assert r.status_code == 404
 
 
 @pytest.mark.anyio
 async def test_merge_people_canonical_not_found(client):
     """404 when canonical person ID does not exist."""
-    r = await client.post("/api/people", json={"name": "Real Person", "email": "real@example.com"}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={"name": "Real Person", "email": "real@example.com"},
+        headers=ADMIN_HEADERS,
+    )
     duplicate_id = r.json()["id"]
-    r = await client.post(f"/api/people/nonexistent/merge/{duplicate_id}", headers=ADMIN_HEADERS)
+    r = await client.post(
+        f"/api/people/nonexistent/merge/{duplicate_id}", headers=ADMIN_HEADERS
+    )
     assert r.status_code == 404
 
 
 @pytest.mark.anyio
 async def test_merge_people_duplicate_not_found(client):
     """404 when duplicate person ID does not exist."""
-    r = await client.post("/api/people", json={"name": "Canon Only", "email": "canon.only@example.com"}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={"name": "Canon Only", "email": "canon.only@example.com"},
+        headers=ADMIN_HEADERS,
+    )
     canonical_id = r.json()["id"]
-    r = await client.post(f"/api/people/{canonical_id}/merge/nonexistent", headers=ADMIN_HEADERS)
+    r = await client.post(
+        f"/api/people/{canonical_id}/merge/nonexistent", headers=ADMIN_HEADERS
+    )
     assert r.status_code == 404
 
 
 @pytest.mark.anyio
 async def test_merge_people_self(client):
-    r = await client.post("/api/people", json={"name": "Alice", "email": "alice@example.com"}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={"name": "Alice", "email": "alice@example.com"},
+        headers=ADMIN_HEADERS,
+    )
     pid = r.json()["id"]
     r = await client.post(f"/api/people/{pid}/merge/{pid}", headers=ADMIN_HEADERS)
     assert r.status_code == 400
@@ -1359,25 +1537,48 @@ async def test_merge_people_self(client):
 @pytest.mark.anyio
 async def test_merge_people_repoints_reservations(client):
     """Reservations linked to duplicate are re-pointed to canonical after merge."""
-    r = await client.post("/api/people", json={"name": "Canon Person", "email": "canon@example.com", "phone": "+32470000001"}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={
+            "name": "Canon Person",
+            "email": "canon@example.com",
+            "phone": "+32470000001",
+        },
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201
     canonical_id = r.json()["id"]
 
-    r = await client.post("/api/people", json={"name": "Dup Person", "email": "dup@example.com", "phone": "+32470000002"}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={
+            "name": "Dup Person",
+            "email": "dup@example.com",
+            "phone": "+32470000002",
+        },
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201
     dup_id = r.json()["id"]
 
     # Create a reservation linked to the duplicate
     r = await client.post(
         "/api/reservations/admin",
-        json={"person_id": dup_id, "event_id": "event-fri", "event_title": "Test", "guest_count": 1},
+        json={
+            "person_id": dup_id,
+            "event_id": "event-fri",
+            "event_title": "Test",
+            "guest_count": 1,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
     res_id = r.json()["id"]
 
     # Merge dup into canonical
-    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
+    r = await client.post(
+        f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200
     assert r.json()["id"] == canonical_id
 
@@ -1394,10 +1595,18 @@ async def test_merge_people_repoints_reservations(client):
 @pytest.mark.anyio
 async def test_merge_people_repoints_exhibitor_contact(client):
     """Exhibitor contact_person_id is updated when its person is merged as duplicate."""
-    r = await client.post("/api/people", json={"name": "Main Person", "email": "main@example.com"}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={"name": "Main Person", "email": "main@example.com"},
+        headers=ADMIN_HEADERS,
+    )
     canonical_id = r.json()["id"]
 
-    r = await client.post("/api/people", json={"name": "Old Contact", "email": "old@example.com"}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/people",
+        json={"name": "Old Contact", "email": "old@example.com"},
+        headers=ADMIN_HEADERS,
+    )
     dup_id = r.json()["id"]
 
     r = await client.post(
@@ -1409,7 +1618,9 @@ async def test_merge_people_repoints_exhibitor_contact(client):
     exhibitor_id = r.json()["id"]
 
     # Merge dup into canonical
-    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
+    r = await client.post(
+        f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200
 
     # Exhibitor should now point to canonical
@@ -1425,7 +1636,11 @@ async def test_merge_people_identity_conflict(client):
     """409 is raised when both persons have conflicting unique identity fields."""
     r = await client.post(
         "/api/people",
-        json={"name": "Person A", "email": "a@example.com", "national_register_number": "12345"},
+        json={
+            "name": "Person A",
+            "email": "a@example.com",
+            "national_register_number": "12345",
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -1433,7 +1648,11 @@ async def test_merge_people_identity_conflict(client):
 
     r = await client.post(
         "/api/people",
-        json={"name": "Person B", "email": "b@example.com", "national_register_number": "99999"},
+        json={
+            "name": "Person B",
+            "email": "b@example.com",
+            "national_register_number": "99999",
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -1461,7 +1680,9 @@ async def test_merge_people_fills_blank_fields(client):
     )
     dup_id = r.json()["id"]
 
-    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
+    r = await client.post(
+        f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200
     # Phone from duplicate should be adopted on canonical
     assert r.json()["phone"] == "+32470111222"
@@ -1493,9 +1714,7 @@ async def test_members_crud(client):
 
     person_id = person["id"]
 
-    r = await client.get(
-        "/api/members", params={"q": "spui"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/members", params={"q": "spui"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
 
