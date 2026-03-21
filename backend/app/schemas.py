@@ -102,7 +102,6 @@ class EventCreate(BaseModel):
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
-    sort_order: int = 0
     active: bool = True
 
 
@@ -117,7 +116,6 @@ class EventUpdate(BaseModel):
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
-    sort_order: int | None = None
     active: bool | None = None
 
 
@@ -133,7 +131,6 @@ class EventOut(BaseModel):
     registration_required: bool
     registrations_open_from: datetime | None
     max_capacity: int | None
-    sort_order: int
     active: bool
     edition: EditionSummaryOut | None = None
     created_at: datetime

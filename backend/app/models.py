@@ -323,7 +323,7 @@ class Edition(Base):
     events: Mapped[list["Event"]] = relationship(
         back_populates="edition",
         cascade="all, delete-orphan",
-        order_by="Event.sort_order, Event.date, Event.start_time, Event.created_at",
+        order_by="Event.date, Event.start_time, Event.created_at",
     )
 
 
@@ -345,7 +345,6 @@ class Event(Base):
         DateTime(timezone=True), nullable=True
     )
     max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    sort_order: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow

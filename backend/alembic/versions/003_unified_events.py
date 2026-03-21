@@ -85,7 +85,6 @@ def upgrade() -> None:
             sa.Column("registration_required", sa.Boolean(), nullable=False, server_default=sa.false()),
             sa.Column("registrations_open_from", sa.DateTime(timezone=True), nullable=True),
             sa.Column("max_capacity", sa.Integer(), nullable=True),
-            sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
             sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
@@ -118,7 +117,6 @@ def upgrade() -> None:
                         "registration_required": bool(item.get("registration") or item.get("registration_required")),
                         "registrations_open_from": item.get("reservations_open_from") or item.get("registrations_open_from"),
                         "max_capacity": item.get("max_capacity"),
-                        "sort_order": index,
                         "active": bool(item.get("active", True)),
                         "created_at": now,
                         "updated_at": now,
@@ -146,7 +144,6 @@ def upgrade() -> None:
                 sa.column("registration_required", sa.Boolean),
                 sa.column("registrations_open_from", sa.DateTime(timezone=True)),
                 sa.column("max_capacity", sa.Integer),
-                sa.column("sort_order", sa.Integer),
                 sa.column("active", sa.Boolean),
                 sa.column("created_at", sa.DateTime(timezone=True)),
                 sa.column("updated_at", sa.DateTime(timezone=True)),
@@ -226,7 +223,7 @@ def downgrade() -> None:
 
     events = bind.execute(
         sa.text(
-            "SELECT id, edition_id, title, description, date, start_time, end_time, category, registration_required, registrations_open_from, sort_order FROM events ORDER BY edition_id, sort_order, date, start_time"
+            "SELECT id, edition_id, title, description, date, start_time, end_time, category, registration_required, registrations_open_from FROM events ORDER BY edition_id, date, start_time, id"
         )
     ).fetchall()
     events_by_edition: dict[str, list] = {}

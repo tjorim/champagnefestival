@@ -118,7 +118,6 @@ async def _create_event(
         "end_time": "22:00",
         "category": "festival",
         "registration_required": registration_required,
-        "sort_order": 0,
         "active": event_active,
     }
     if registrations_open_from is not None:

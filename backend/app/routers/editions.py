@@ -243,7 +243,13 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
             edition_to_dict(
                 edition,
                 venue=venues[edition.venue_id],
-                events=[event_to_summary_dict(event) for event in sorted(edition.events, key=lambda event: (event.date, event.sort_order, event.start_time, event.created_at))],
+                events=[
+                    event_to_summary_dict(event)
+                    for event in sorted(
+                        edition.events,
+                        key=lambda event: (event.date, event.start_time, event.created_at),
+                    )
+                ],
                 producers=producers,
                 sponsors=sponsors,
             )

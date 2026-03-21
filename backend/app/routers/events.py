@@ -28,7 +28,7 @@ async def list_events(
     active: bool | None = Query(default=None),
 ) -> list[dict]:
     stmt = select(Event).options(selectinload(Event.edition)).order_by(
-        Event.date, Event.sort_order, Event.start_time, Event.created_at
+        Event.date, Event.start_time, Event.created_at
     )
     if edition_id is not None:
         stmt = stmt.where(Event.edition_id == edition_id)
@@ -78,7 +78,6 @@ async def create_event(body: EventCreate, db: AsyncSession = Depends(get_db)) ->
         registration_required=body.registration_required,
         registrations_open_from=body.registrations_open_from,
         max_capacity=body.max_capacity,
-        sort_order=body.sort_order,
         active=body.active,
     )
     db.add(event)
@@ -126,7 +125,6 @@ async def update_event(
         "registration_required",
         "registrations_open_from",
         "max_capacity",
-        "sort_order",
         "active",
     ]:
         if field in body.model_fields_set:

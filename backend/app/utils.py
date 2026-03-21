@@ -56,7 +56,6 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
         "max_capacity": event.max_capacity,
-        "sort_order": event.sort_order,
         "active": event.active,
         "created_at": event.created_at,
         "updated_at": event.updated_at,
