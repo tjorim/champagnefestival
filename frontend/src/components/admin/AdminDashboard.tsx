@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -186,8 +186,9 @@ function syncMembersWithPerson(members: Person[], person: Person): Person[] {
 }
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(() => sessionStorage.getItem("adminToken") ?? "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const autoAuthRan = useRef(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -352,6 +353,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }
   }, [authHeaders, loadMembers, loadVolunteers]);
 
+  const validateToken = useCallback(async (tokenToValidate: string): Promise<boolean> => {
+    const response = await fetch("/api/reservations", {
+      headers: { Authorization: `Bearer ${tokenToValidate}` },
+    });
+    return response.ok;
+  }, []);
+
   const handleLogin = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -360,10 +368,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       setLoginError("");
 
       try {
-        const response = await fetch("/api/reservations", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.ok) {
+        const valid = await validateToken(token);
+        if (valid) {
+          sessionStorage.setItem("adminToken", token);
           // loadData() will be triggered by the useEffect watching isAuthenticated
           setIsAuthenticated(true);
         } else {
@@ -376,10 +383,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setIsLoggingIn(false);
       }
     },
-    [token],
+    [token, validateToken],
   );
 
   const handleLogout = useCallback(() => {
+    sessionStorage.removeItem("adminToken");
     setIsAuthenticated(false);
     setToken("");
     setReservations([]);
@@ -748,6 +756,26 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       loadData();
     }
   }, [isAuthenticated, visible, loadData]);
+
+  // Auto-authenticate on mount if a token was previously stored in sessionStorage
+  useEffect(() => {
+    if (autoAuthRan.current || !token || isAuthenticated) return;
+    autoAuthRan.current = true;
+    validateToken(token)
+      .then((valid) => {
+        if (valid) {
+          setIsAuthenticated(true);
+        } else {
+          sessionStorage.removeItem("adminToken");
+          setToken("");
+          setLoginError(m.admin_login_error());
+        }
+      })
+      .catch(() => {
+        sessionStorage.removeItem("adminToken");
+        setToken("");
+      });
+  }, [token, isAuthenticated, validateToken]);
 
   const handleUpdateStatus = useCallback(
     async (id: string, status: ReservationStatus) => {
