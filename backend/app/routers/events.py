@@ -16,6 +16,7 @@ from app.schemas import EventCreate, EventOut, EventUpdate
 from app.utils import event_to_summary_dict, make_id
 
 router = APIRouter(prefix="/api/events", tags=["events"])
+_STANDALONE_TYPES = {"bourse", "capsule_exchange"}
 
 
 @router.get("", response_model=list[EventOut])
@@ -60,7 +61,8 @@ async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     dependencies=[Depends(require_admin)],
 )
 async def create_event(body: EventCreate, db: AsyncSession = Depends(get_db)) -> dict:
-    await _ensure_edition_exists(db, body.edition_id)
+    edition = await _ensure_edition_exists(db, body.edition_id)
+    await _validate_standalone_event_date(db, edition, body.date)
     event = Event(
         id=make_id("evt"),
         edition_id=body.edition_id,
@@ -87,10 +89,15 @@ async def update_event(
     event_id: str, body: EventUpdate, db: AsyncSession = Depends(get_db)
 ) -> dict:
     event = await _get_or_404(db, event_id)
+    edition = event.edition
 
     if "edition_id" in body.model_fields_set and body.edition_id is not None:
-        await _ensure_edition_exists(db, body.edition_id)
+        edition = await _ensure_edition_exists(db, body.edition_id)
         event.edition_id = body.edition_id
+
+    candidate_date = body.date if "date" in body.model_fields_set and body.date is not None else event.date
+    await _validate_standalone_event_date(db, edition, candidate_date, exclude_event_id=event.id)
+
     for field in [
         "title",
         "description",
@@ -136,3 +143,21 @@ async def _ensure_edition_exists(db: AsyncSession, edition_id: str) -> Edition:
         raise HTTPException(status_code=404, detail=f"Edition '{edition_id}' not found.")
     return edition
 
+
+async def _validate_standalone_event_date(
+    db: AsyncSession,
+    edition: Edition,
+    event_date: date,
+    exclude_event_id: str | None = None,
+) -> None:
+    if edition.edition_type not in _STANDALONE_TYPES:
+        return
+    stmt = select(Event.date).where(Event.edition_id == edition.id)
+    if exclude_event_id is not None:
+        stmt = stmt.where(Event.id != exclude_event_id)
+    existing_dates = {row[0] for row in (await db.execute(stmt)).all()}
+    if existing_dates and existing_dates != {event_date}:
+        raise HTTPException(
+            status_code=400,
+            detail="Standalone editions may only contain events on a single date.",
+        )

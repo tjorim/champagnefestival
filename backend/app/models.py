@@ -297,9 +297,6 @@ class Edition(Base):
 
     year: Mapped[int] = mapped_column(Integer)
     month: Mapped[str] = mapped_column(String(20))
-    friday: Mapped[date] = mapped_column(Date)
-    saturday: Mapped[date] = mapped_column(Date)
-    sunday: Mapped[date] = mapped_column(Date)
 
     venue_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False

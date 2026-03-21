@@ -86,9 +86,6 @@ class EditionSummaryOut(BaseModel):
     year: int
     month: str
     edition_type: EditionType
-    friday: dt_date
-    saturday: dt_date
-    sunday: dt_date
     active: bool
 
     model_config = {"from_attributes": True}
@@ -714,9 +711,6 @@ class EditionCreate(BaseModel):
     id: str = Field(min_length=1, max_length=100)
     year: int = Field(ge=2020, le=2100)
     month: str
-    friday: dt_date
-    saturday: dt_date
-    sunday: dt_date
     venue_id: str
     edition_type: EditionType = "festival"
     external_partner: str | None = Field(default=None, max_length=200)
@@ -729,9 +723,6 @@ class EditionCreate(BaseModel):
 class EditionUpdate(BaseModel):
     year: int | None = Field(default=None, ge=2020, le=2100)
     month: str | None = None
-    friday: dt_date | None = None
-    saturday: dt_date | None = None
-    sunday: dt_date | None = None
     venue_id: str | None = None
     edition_type: EditionType | None = None
     external_partner: str | None = Field(default=None, max_length=200)
@@ -759,9 +750,6 @@ class EditionOut(BaseModel):
     id: str
     year: int
     month: str
-    friday: dt_date
-    saturday: dt_date
-    sunday: dt_date
     edition_type: EditionType
     external_partner: str | None
     external_contact_name: str | None

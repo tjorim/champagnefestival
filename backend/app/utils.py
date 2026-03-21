@@ -267,9 +267,6 @@ def edition_summary_to_dict(e: Edition) -> dict:
         "year": e.year,
         "month": e.month,
         "edition_type": e.edition_type,
-        "friday": e.friday,
-        "saturday": e.saturday,
-        "sunday": e.sunday,
         "active": e.active,
     }
 
@@ -285,9 +282,6 @@ def edition_to_dict(
         "id": e.id,
         "year": e.year,
         "month": e.month,
-        "friday": e.friday,
-        "saturday": e.saturday,
-        "sunday": e.sunday,
         "edition_type": e.edition_type,
         "external_partner": e.external_partner,
         "external_contact_name": e.external_contact_name,

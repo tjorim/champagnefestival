@@ -45,12 +45,8 @@ def _event_id(edition_id: str, raw_id: str | None, index: int) -> str:
 
 
 def _day_to_date(row, day_id):
-    mapping = {
-        1: row.friday,
-        2: row.saturday,
-        3: row.sunday,
-    }
-    return mapping.get(day_id) or row.friday
+    mapping = {1: row.friday, 2: row.saturday, 3: row.sunday}
+    return mapping.get(day_id) or row.friday or row.saturday or row.sunday
 
 
 def upgrade() -> None:
@@ -62,12 +58,7 @@ def upgrade() -> None:
     with op.batch_alter_table("editions") as batch_op:
         if "edition_type" not in edition_cols:
             batch_op.add_column(
-                sa.Column(
-                    "edition_type",
-                    sa.String(length=20),
-                    nullable=False,
-                    server_default="festival",
-                )
+                sa.Column("edition_type", sa.String(length=20), nullable=False, server_default="festival")
             )
         if "external_partner" not in edition_cols:
             batch_op.add_column(sa.Column("external_partner", sa.String(length=200), nullable=True))
@@ -97,11 +88,9 @@ def upgrade() -> None:
         )
 
     event_rows: list[dict] = []
-    if "schedule" in edition_cols:
+    if {"schedule", "friday", "saturday", "sunday"}.issubset(edition_cols):
         editions = bind.execute(
-            sa.text(
-                "SELECT id, friday, saturday, sunday, schedule FROM editions"
-            )
+            sa.text("SELECT id, friday, saturday, sunday, schedule FROM editions")
         ).fetchall()
         now = _utcnow()
         for row in editions:
@@ -109,14 +98,13 @@ def upgrade() -> None:
             for index, item in enumerate(schedule):
                 if not isinstance(item, dict):
                     continue
-                day_id = item.get("day_id")
                 event_rows.append(
                     {
                         "id": _event_id(row.id, item.get("id"), index),
                         "edition_id": row.id,
                         "title": item.get("title") or f"Event {index + 1}",
                         "description": item.get("description") or "",
-                        "date": _day_to_date(row, day_id),
+                        "date": _day_to_date(row, item.get("day_id")),
                         "start_time": item.get("start_time") or "00:00",
                         "end_time": item.get("end_time"),
                         "category": item.get("category") or "general",
@@ -187,9 +175,15 @@ def upgrade() -> None:
     op.create_index("ix_registrations_table_id", "registrations", ["table_id"])
 
     edition_cols = {col["name"] for col in inspect(bind).get_columns("editions")}
-    if "schedule" in edition_cols:
-        with op.batch_alter_table("editions") as batch_op:
+    with op.batch_alter_table("editions") as batch_op:
+        if "schedule" in edition_cols:
             batch_op.drop_column("schedule")
+        if "friday" in edition_cols:
+            batch_op.drop_column("friday")
+        if "saturday" in edition_cols:
+            batch_op.drop_column("saturday")
+        if "sunday" in edition_cols:
+            batch_op.drop_column("sunday")
 
 
 def downgrade() -> None:
@@ -197,58 +191,65 @@ def downgrade() -> None:
     inspector = inspect(bind)
 
     edition_cols = {col["name"] for col in inspector.get_columns("editions")}
-    if "schedule" not in edition_cols:
-        with op.batch_alter_table("editions") as batch_op:
-            batch_op.add_column(
-                sa.Column(
-                    "schedule",
-                    sa.JSON(),
-                    nullable=False,
-                    server_default=sa.text("'[]'"),
-                )
-            )
+    with op.batch_alter_table("editions") as batch_op:
+        if "schedule" not in edition_cols:
+            batch_op.add_column(sa.Column("schedule", sa.JSON(), nullable=False, server_default=sa.text("'[]'")))
+        if "friday" not in edition_cols:
+            batch_op.add_column(sa.Column("friday", sa.Date(), nullable=True))
+        if "saturday" not in edition_cols:
+            batch_op.add_column(sa.Column("saturday", sa.Date(), nullable=True))
+        if "sunday" not in edition_cols:
+            batch_op.add_column(sa.Column("sunday", sa.Date(), nullable=True))
 
-    editions = {
-        row.id: row
-        for row in bind.execute(
-            sa.text("SELECT id, friday, saturday, sunday FROM editions")
-        ).fetchall()
-    }
     events = bind.execute(
         sa.text(
-            "SELECT id, edition_id, title, description, date, start_time, end_time, category, registration_required, registrations_open_from, sort_order, active FROM events ORDER BY edition_id, sort_order, date, start_time"
+            "SELECT id, edition_id, title, description, date, start_time, end_time, category, registration_required, registrations_open_from, sort_order FROM events ORDER BY edition_id, sort_order, date, start_time"
         )
     ).fetchall()
-    schedules: dict[str, list[dict]] = {edition_id: [] for edition_id in editions}
+    events_by_edition: dict[str, list] = {}
     for row in events:
-        edition = editions.get(row.edition_id)
-        if edition is None:
-            continue
-        if row.date == edition.friday:
-            day_id = 1
-        elif row.date == edition.saturday:
-            day_id = 2
-        elif row.date == edition.sunday:
-            day_id = 3
+        events_by_edition.setdefault(row.edition_id, []).append(row)
+
+    for edition_id, rows in events_by_edition.items():
+        unique_dates = sorted({row.date for row in rows if row.date is not None})
+        if not unique_dates:
+            friday = saturday = sunday = None
+        elif len(unique_dates) == 1:
+            friday = saturday = sunday = unique_dates[0]
+        elif len(unique_dates) == 2:
+            friday, saturday = unique_dates
+            sunday = saturday
         else:
-            day_id = 1
-        schedules.setdefault(row.edition_id, []).append(
-            {
-                "id": row.id,
-                "title": row.title,
-                "start_time": row.start_time,
-                "end_time": row.end_time,
-                "description": row.description or "",
-                "reservation": bool(row.registration_required),
-                "reservations_open_from": row.registrations_open_from.isoformat() if row.registrations_open_from else None,
-                "category": row.category,
-                "day_id": day_id,
-            }
-        )
-    for edition_id, schedule in schedules.items():
+            friday, saturday, sunday = unique_dates[:3]
+
+        day_map = {friday: 1, saturday: 2, sunday: 3}
+        schedule = []
+        for row in rows:
+            schedule.append(
+                {
+                    "id": row.id,
+                    "title": row.title,
+                    "start_time": row.start_time,
+                    "end_time": row.end_time,
+                    "description": row.description or "",
+                    "reservation": bool(row.registration_required),
+                    "reservations_open_from": row.registrations_open_from.isoformat() if row.registrations_open_from else None,
+                    "category": row.category,
+                    "day_id": day_map.get(row.date, 1),
+                }
+            )
+
         bind.execute(
-            sa.text("UPDATE editions SET schedule = :schedule WHERE id = :edition_id"),
-            {"edition_id": edition_id, "schedule": json.dumps(schedule)},
+            sa.text(
+                "UPDATE editions SET friday = :friday, saturday = :saturday, sunday = :sunday, schedule = :schedule WHERE id = :edition_id"
+            ),
+            {
+                "edition_id": edition_id,
+                "friday": friday,
+                "saturday": saturday,
+                "sunday": sunday,
+                "schedule": json.dumps(schedule),
+            },
         )
 
     registration_indexes = {index["name"] for index in inspector.get_indexes("registrations")}

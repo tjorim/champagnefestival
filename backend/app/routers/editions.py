@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -26,20 +26,15 @@ async def get_active_edition(
     edition_type: EditionType | None = Query(default=None),
 ) -> dict:
     """Return the current or next upcoming active edition, optionally filtered by type."""
-    stmt = (
-        select(Edition)
-        .options(selectinload(Edition.events))
-        .where(Edition.active.is_(True))
-        .order_by(Edition.friday)
-    )
-    if edition_type is not None:
-        stmt = stmt.where(Edition.edition_type == edition_type)
-    editions = (await db.execute(stmt)).scalars().all()
+    editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
     if not editions:
         raise HTTPException(status_code=404, detail="No active editions found.")
 
-    now = datetime.now(timezone.utc).date()
-    active = next((e for e in editions if e.sunday >= now), editions[-1])
+    today = datetime.now(timezone.utc).date()
+    dated = _sorted_editions(editions)
+    active = next((edition for edition in dated if _edition_end_date(edition) and _edition_end_date(edition) >= today), None)
+    if active is None:
+        active = dated[-1]
     return await _edition_payload(db, active)
 
 
@@ -50,16 +45,9 @@ async def list_upcoming_editions(
 ) -> list[dict]:
     """List upcoming active editions across all supported edition types."""
     today = datetime.now(timezone.utc).date()
-    stmt = (
-        select(Edition)
-        .options(selectinload(Edition.events))
-        .where(Edition.active.is_(True), Edition.sunday >= today)
-        .order_by(Edition.friday, Edition.created_at)
-    )
-    if edition_type is not None:
-        stmt = stmt.where(Edition.edition_type == edition_type)
-    editions = (await db.execute(stmt)).scalars().all()
-    return await _edition_payloads(db, editions)
+    editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
+    upcoming = [edition for edition in editions if (_edition_end_date(edition) or date.min) >= today]
+    return await _edition_payloads(db, _sorted_editions(upcoming))
 
 
 @router.get("", response_model=list[EditionOut], dependencies=[Depends(require_admin)])
@@ -67,11 +55,8 @@ async def list_editions(
     db: AsyncSession = Depends(get_db),
     include_inactive: bool = Query(False),
 ) -> list[dict]:
-    stmt = select(Edition).options(selectinload(Edition.events)).order_by(Edition.year, Edition.friday)
-    if not include_inactive:
-        stmt = stmt.where(Edition.active.is_(True))
-    editions = (await db.execute(stmt)).scalars().all()
-    return await _edition_payloads(db, editions)
+    editions = await _load_editions(db, include_inactive=include_inactive)
+    return await _edition_payloads(db, _sorted_editions(editions))
 
 
 @router.get("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
@@ -93,16 +78,12 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
             detail=f"Edition '{body.id}' already exists.",
         )
     await _load_venue(db, body.venue_id)
-    _validate_edition_dates(body.edition_type, body.friday, body.saturday, body.sunday)
     _validate_exhibitors_allowed(body.edition_type, body.exhibitors)
 
     edition = Edition(
         id=body.id,
         year=body.year,
         month=body.month,
-        friday=body.friday,
-        saturday=body.saturday,
-        sunday=body.sunday,
         venue_id=body.venue_id,
         edition_type=body.edition_type,
         external_partner=body.external_partner,
@@ -127,9 +108,6 @@ async def update_edition(
     for field in [
         "year",
         "month",
-        "friday",
-        "saturday",
-        "sunday",
         "active",
         "edition_type",
         "external_partner",
@@ -151,12 +129,6 @@ async def update_edition(
         await _validate_exhibitor_ids(db, body.exhibitors)
         edition.exhibitors = list(body.exhibitors)
 
-    _validate_edition_dates(
-        edition.edition_type,
-        edition.friday,
-        edition.saturday,
-        edition.sunday,
-    )
     _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)
 
     await db.commit()
@@ -173,6 +145,19 @@ async def delete_edition(edition_id: str, db: AsyncSession = Depends(get_db)) ->
     edition = await _get_or_404(db, edition_id)
     await db.delete(edition)
     await db.commit()
+
+
+async def _load_editions(
+    db: AsyncSession,
+    include_inactive: bool,
+    edition_type: EditionType | None = None,
+) -> list[Edition]:
+    stmt = select(Edition).options(selectinload(Edition.events))
+    if not include_inactive:
+        stmt = stmt.where(Edition.active.is_(True))
+    if edition_type is not None:
+        stmt = stmt.where(Edition.edition_type == edition_type)
+    return (await db.execute(stmt)).scalars().all()
 
 
 async def _get_or_404(db: AsyncSession, edition_id: str) -> Edition:
@@ -253,7 +238,7 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
             edition_to_dict(
                 edition,
                 venue=venues[edition.venue_id],
-                events=[event_to_summary_dict(event) for event in edition.events],
+                events=[event_to_summary_dict(event) for event in sorted(edition.events, key=lambda event: (event.date, event.sort_order, event.start_time, event.created_at))],
                 producers=producers,
                 sponsors=sponsors,
             )
@@ -284,15 +269,25 @@ def _resolve_exhibitors(
     return producers, sponsors
 
 
-def _validate_edition_dates(edition_type: EditionType, friday, saturday, sunday) -> None:
-    if edition_type in _STANDALONE_TYPES and not (friday == saturday == sunday):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Standalone editions must use a single event date: friday, saturday, "
-                "and sunday must all match."
-            ),
-        )
+def _edition_start_date(edition: Edition) -> date | None:
+    return min((event.date for event in edition.events), default=None)
+
+
+def _edition_end_date(edition: Edition) -> date | None:
+    return max((event.date for event in edition.events), default=None)
+
+
+def _sorted_editions(editions: list[Edition]) -> list[Edition]:
+    return sorted(
+        editions,
+        key=lambda edition: (
+            _edition_start_date(edition) or date.max,
+            _edition_end_date(edition) or date.max,
+            edition.year,
+            edition.month,
+            edition.created_at,
+        ),
+    )
 
 
 def _validate_exhibitors_allowed(edition_type: EditionType, exhibitors: list[int]) -> None:
