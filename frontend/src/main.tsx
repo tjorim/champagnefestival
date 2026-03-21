@@ -201,21 +201,6 @@ function App() {
     }));
   }, [edition]);
 
-  const scheduleEvents = useMemo(() => {
-    const dayIdByDate = new Map(festivalDays.map((day) => [day.date, day.id]));
-    return edition.events.map((event) => ({
-      id: event.id,
-      title: event.title,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      description: event.description,
-      reservation: event.registrationRequired,
-      reservationsOpenFrom: event.registrationsOpenFrom,
-      category: event.category,
-      dayId: dayIdByDate.get(event.date) ?? 1,
-    }));
-  }, [edition.events, festivalDays]);
-
   const [showReservationModal, setShowReservationModal] = useState(false);
 
   const [reservableEvents, setReservableEvents] = useState<Array<{ id: string; title: string }>>(
@@ -328,7 +313,7 @@ function App() {
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
                   <AppSuspense errorFallbackText={m.error_schedule()}>
-                    <Schedule days={festivalDays} events={scheduleEvents} />
+                    <Schedule days={festivalDays} events={edition.events} />
                   </AppSuspense>
                 </div>
               </div>

@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { EMPTY_EDITION, type EditionDates, type SliderItem } from "@/config/editions";
+import { EMPTY_EDITION, type EditionDates, type Event, type SliderItem } from "@/config/editions";
 
 interface ActiveEditionVenue {
   venueName: string;
@@ -21,25 +21,13 @@ interface ActiveEditionVenue {
   };
 }
 
-export interface ActiveEditionEvent {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  startTime: string;
-  endTime?: string;
-  category: string;
-  registrationRequired: boolean;
-  registrationsOpenFrom?: Date;
-}
-
 export interface ActiveEdition {
   id: string;
   year: number;
   month: "march" | "october";
   dates: EditionDates;
   venue: ActiveEditionVenue;
-  events: ActiveEditionEvent[];
+  events: Event[];
   producers: SliderItem[];
   sponsors: SliderItem[];
 }
@@ -121,7 +109,7 @@ function deriveEditionDates(
 }
 
 function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdition {
-  const events = (api.events ?? []).map((event) => ({
+  const events: Event[] = (api.events ?? []).map((event) => ({
     id: event.id,
     title: event.title,
     description: event.description,

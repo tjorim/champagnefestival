@@ -6,10 +6,7 @@
  */
 
 import { EMPTY_EDITION } from "./editions";
-import type { ScheduleEvent } from "./editions";
-
-// Re-export ScheduleEvent type from editions for backward compatibility
-export type { ScheduleEvent };
+import type { Event } from "./editions";
 
 export interface FestivalDay {
   id: number;
@@ -50,34 +47,34 @@ export const festivalDays: FestivalDay[] = [
 export const scheduleEvents = [...activeEdition.schedule];
 
 /**
- * Helper function to get events for a specific day
+ * Helper function to get events for a specific date
  */
-export function getEventsByDay(dayId: number) {
-  return scheduleEvents.filter((event) => event.dayId === dayId);
+export function getEventsByDate(date: string) {
+  return scheduleEvents.filter((event) => event.date === date);
 }
 
 /**
  * Helper function to get events by category
  */
-export function getEventsByCategory(category: ScheduleEvent["category"]) {
+export function getEventsByCategory(category: Event["category"]) {
   return scheduleEvents.filter((event) => event.category === category);
 }
 
 /**
- * Helper function to get all events sorted by day and time
+ * Helper function to get all events sorted by date then time
  */
 export function getAllEventsSorted() {
   return [...scheduleEvents].sort((a, b) => {
-    if (a.dayId !== b.dayId) {
-      return a.dayId - b.dayId;
+    if (a.date !== b.date) {
+      return a.date.localeCompare(b.date);
     }
     return a.startTime.localeCompare(b.startTime);
   });
 }
 
 /**
- * Helper function to check if an event requires reservation
+ * Helper function to check if an event requires registration
  */
-export function requiresReservation(event: ScheduleEvent): boolean {
-  return Boolean(event.reservation);
+export function requiresRegistration(event: Event): boolean {
+  return event.registrationRequired;
 }

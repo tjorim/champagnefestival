@@ -42,7 +42,8 @@ const mockEvents = [
     endTime: "23:00",
     description: "Tasting event",
     category: "tasting" as const,
-    dayId: 1,
+    date: "2025-10-03",
+    registrationRequired: false,
   },
   {
     id: "fri-vip",
@@ -50,8 +51,8 @@ const mockEvents = [
     startTime: "19:30",
     description: "VIP event",
     category: "vip" as const,
-    dayId: 1,
-    reservation: true,
+    date: "2025-10-03",
+    registrationRequired: true,
   },
   {
     id: "sat-party",
@@ -59,7 +60,8 @@ const mockEvents = [
     startTime: "20:00",
     description: "Party event",
     category: "party" as const,
-    dayId: 2,
+    date: "2025-10-04",
+    registrationRequired: false,
   },
 ];
 
@@ -95,7 +97,6 @@ describe("Schedule component", () => {
 
   it("shows no events message when a day has no events", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
-    // Sunday has no events in our mock
     fireEvent.click(screen.getByText("Sunday"));
     expect(screen.getByText("No events")).toBeInTheDocument();
   });

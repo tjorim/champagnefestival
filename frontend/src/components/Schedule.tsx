@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Tab, Nav, Card, Badge } from "react-bootstrap";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
@@ -19,9 +19,10 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
 
   // Get events for the active day and sort them by start time
   const sortedEvents = useMemo(() => {
-    const dayEvents = events.filter((event) => event.dayId === activeDay);
+    const activeDate = days.find((day) => day.id === activeDay)?.date;
+    const dayEvents = events.filter((event) => event.date === activeDate);
     return [...dayEvents].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [activeDay, events]);
+  }, [activeDay, days, events]);
 
   // Get category badge color
   const getCategoryColor = (category: Event["category"]) => {
@@ -138,7 +139,7 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
                           <Badge bg={getCategoryColor(event.category)} className="mb-2">
                             {getCategoryLabel(event.category)}
                           </Badge>
-                          {event.reservation && (
+                          {event.registrationRequired && (
                             <Badge bg="warning" className="mb-2 ms-2">
                               {m.schedule_reservation()}
                             </Badge>

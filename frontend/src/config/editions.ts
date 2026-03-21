@@ -26,17 +26,15 @@ export interface EditionVenue {
 export interface Event {
   id: string;
   title: string;
+  description: string;
+  date: string;
   startTime: string;
   endTime?: string;
-  description: string;
-  reservation?: boolean;
-  /** Earliest date/time from which reservations are accepted for this event. */
-  reservationsOpenFrom?: Date;
   category: string;
-  dayId: number;
+  registrationRequired: boolean;
+  /** Earliest date/time from which registrations are accepted for this event. */
+  registrationsOpenFrom?: Date;
 }
-
-export type ScheduleEvent = Event;
 
 export interface SliderItem {
   id: number;
