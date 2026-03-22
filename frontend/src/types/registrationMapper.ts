@@ -7,8 +7,9 @@ import type {
 
 /** Map a FastAPI snake_case registration response to the frontend camelCase Registration type. */
 export function apiToRegistration(d: Record<string, unknown>): Registration {
-  const rawOrders = (d.pre_orders ?? []) as Record<string, unknown>[];
-  const rawPerson = (d.person ?? {}) as Record<string, unknown>;
+  // Add runtime guards for API data
+  const rawOrders = Array.isArray(d.pre_orders) ? d.pre_orders as Record<string, unknown>[] : [];
+  const rawPerson = (typeof d.person === 'object' && d.person !== null) ? d.person as Record<string, unknown> : {};
   return {
     id: d.id as string,
     personId: (d.person_id ?? "") as string,

@@ -190,6 +190,13 @@ export default function EditionModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!month.trim() || !friday || !saturday || !sunday || !venueId) return;
+
+    // When creating a new edition, reject whitespace-only IDs
+    if (!isEdit && id.trim() === "") {
+      setError("ID cannot be empty or whitespace only");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
