@@ -23,6 +23,7 @@ interface FormData {
 class ContactSubmissionError extends Error {
   constructor(message: string) {
     super(message);
+    this.name = 'ContactSubmissionError';
   }
 }
 

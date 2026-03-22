@@ -144,9 +144,9 @@ function MyRegistrationsRoute() {
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_reservations_title()} />
+      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_registrations_title()} />
       <main id="main-content">
-        <AppSuspense errorFallbackText={m.my_reservations_error()}>
+        <AppSuspense errorFallbackText={m.my_registrations_error()}>
           <MyRegistrationsPage />
         </AppSuspense>
       </main>

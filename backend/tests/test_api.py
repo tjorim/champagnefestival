@@ -370,8 +370,8 @@ async def test_check_in_flow(client):
     assert r.status_code == 200
     body = r.json()
     assert body["already_checked_in"] is False
-    assert body["reservation"]["checked_in"] is True
-    assert body["reservation"]["strap_issued"] is True
+    assert body["registration"]["checked_in"] is True
+    assert body["registration"]["strap_issued"] is True
 
     # Second scan
     r = await client.post(

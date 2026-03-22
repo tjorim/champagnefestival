@@ -57,8 +57,12 @@ export class CheckInError extends Error {
   }
 }
 
+function isOrderItemCategory(value: unknown): value is OrderItemCategory {
+  return value === "champagne" || value === "food" || value === "other";
+}
+
 function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
-  const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
+  const rawOrders: unknown[] = data.pre_orders ?? [];
 
   return {
     id: data.id ?? "",
@@ -66,13 +70,13 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
     eventId: data.event_id ?? "",
     eventTitle: data.event_title ?? "",
     guestCount: data.guest_count ?? 1,
-    preOrders: rawOrders.map((item) => ({
-      productId: item.product_id as string,
-      name: item.name as string,
-      quantity: item.quantity as number,
-      price: item.price as number,
-      category: item.category as OrderItemCategory,
-      delivered: (item.delivered ?? false) as boolean,
+    preOrders: rawOrders.filter(isGuestOrderItemResponse).map((item) => ({
+      productId: item.product_id,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      category: isOrderItemCategory(item.category) ? item.category : "other",
+      delivered: item.delivered,
     })),
     notes: data.notes ?? "",
     accessibilityNote: data.accessibility_note ?? "",
@@ -91,7 +95,11 @@ export async function fetchCheckInRegistration(
     `/api/check-in/${encodeURIComponent(registrationId)}?token=${encodeURIComponent(checkInToken)}`,
   );
 
-  if (response.status === 401 || response.status === 404) {
+  if (response.status === 401) {
+    throw new CheckInError("invalid_token", m.checkin_invalid_token());
+  }
+
+  if (response.status === 404) {
     throw new CheckInError("not_found", m.checkin_not_found());
   }
 

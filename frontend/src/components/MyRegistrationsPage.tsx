@@ -46,7 +46,9 @@ export default function MyRegistrationsPage() {
   const registrations = registrationsQuery.data ?? null;
   const isSubmittingEmail = requestLookupMutation.isPending;
   const isLoadingRegistrations = registrationsQuery.isPending;
-  const tokenError = registrationsQuery.isError ? registrationsQuery.error.message : "";
+  const tokenError = registrationsQuery.isError
+    ? (registrationsQuery.error instanceof Error ? registrationsQuery.error.message : String(registrationsQuery.error))
+    : "";
   const showRecoveryCTA =
     registrationsQuery.isError &&
     isRegistrationLookupError(registrationsQuery.error) &&

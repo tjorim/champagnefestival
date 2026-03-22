@@ -11,82 +11,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
-import type { PaymentStatus, RegistrationStatus } from "@/types/registration";
 import { queryKeys } from "@/utils/queryKeys";
+import {
+  fetchAdminPersonRegistrations,
+} from "@/utils/adminRegistrationApi";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
-
-interface PersonRegistration {
-  id: string;
-  eventTitle: string;
-  guestCount: number;
-  status: RegistrationStatus;
-  paymentStatus: PaymentStatus;
-  checkedIn: boolean;
-  createdAt: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isRegistrationStatus(value: unknown): value is RegistrationStatus {
-  return value === "pending" || value === "confirmed" || value === "cancelled";
-}
-
-function isPaymentStatus(value: unknown): value is PaymentStatus {
-  return value === "unpaid" || value === "partial" || value === "paid";
-}
-
-function isPersonRegistrationRecord(value: unknown): value is Record<string, unknown> & {
-  id: string;
-  event_title: string;
-  guest_count: number;
-  status: RegistrationStatus;
-  payment_status: PaymentStatus;
-  checked_in: boolean;
-  created_at: string;
-} {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.event_title === "string" &&
-    typeof value.guest_count === "number" &&
-    isRegistrationStatus(value.status) &&
-    isPaymentStatus(value.payment_status) &&
-    typeof value.checked_in === "boolean" &&
-    typeof value.created_at === "string"
-  );
-}
-
-async function fetchPersonRegistrations(
-  personId: string,
-  authHeaders: () => Record<string, string>,
-  signal?: AbortSignal,
-): Promise<PersonRegistration[]> {
-  const response = await fetch(`/api/people/${encodeURIComponent(personId)}/registrations`, {
-    signal,
-    headers: authHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load registrations for person ${personId}: ${response.status}`);
-  }
-
-  const raw: unknown = await response.json();
-  if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord)) {
-    throw new Error(`Invalid registrations payload for person ${personId}.`);
-  }
-
-  return raw.map((registration) => ({
-    id: registration.id,
-    eventTitle: registration.event_title,
-    guestCount: registration.guest_count,
-    status: registration.status,
-    paymentStatus: registration.payment_status,
-    checkedIn: registration.checked_in,
-    createdAt: registration.created_at,
-  }));
-}
 
 interface PeopleManagementProps {
   people: Person[];
@@ -232,7 +161,7 @@ export default function PeopleManagement({
   const personRegistrationsQuery = useQuery({
     queryKey: queryKeys.admin.peopleRegistrations(viewRegistrationsPerson?.id ?? ""),
     queryFn: ({ signal }) =>
-      fetchPersonRegistrations(viewRegistrationsPerson!.id, authHeaders, signal),
+      fetchAdminPersonRegistrations(viewRegistrationsPerson!.id, authHeaders, signal),
     enabled: viewRegistrationsPerson !== null,
     staleTime: 30 * 1000,
     retry: false,
