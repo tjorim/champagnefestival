@@ -15,7 +15,7 @@ import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
-import type { ItemDraft } from "./ItemModal";
+import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";

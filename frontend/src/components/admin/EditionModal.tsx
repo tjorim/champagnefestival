@@ -7,10 +7,11 @@ import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type MultiValue, type StylesConfig, type GroupBase } from "react-select";
 import { m } from "@/paraglide/messages";
-import type { ItemDraft } from "./ItemModal";
+import type { ItemDraft } from "./itemTypes";
 import type { Edition } from "./editionTypes";
 import type { Venue } from "@/types/admin";
 import { queryKeys } from "@/utils/queryKeys";
+import { fetchEditionModalExhibitors, saveEdition } from "@/utils/adminContentApi";
 
 interface EditionModalProps {
   show: boolean;
@@ -25,13 +26,6 @@ interface ItemOption {
   value: number;
   label: string;
   isArchived: boolean;
-}
-
-interface ApiExhibitor {
-  id: number;
-  name: string;
-  active?: boolean;
-  type?: string;
 }
 
 type ItemSelectStyles = StylesConfig<ItemOption, true, GroupBase<ItemOption>>;
@@ -80,66 +74,6 @@ const darkSelectStyles: ItemSelectStyles = {
 };
 
 const editionModalExhibitorsQueryKey = queryKeys.admin.editionModalExhibitors;
-
-async function fetchEditionModalExhibitors(
-  authHeaders: () => Record<string, string>,
-): Promise<ItemDraft[]> {
-  const response = await fetch("/api/exhibitors", { headers: authHeaders() });
-  if (!response.ok) {
-    throw new Error(`Failed to load exhibitors: ${response.status}`);
-  }
-
-  const data = (await response.json()) as ApiExhibitor[];
-  return Array.isArray(data)
-    ? data.map((item) => ({
-        id: item.id,
-        name: item.name,
-        image: "",
-        active: item.active ?? true,
-        type: item.type,
-      }))
-    : [];
-}
-
-async function saveEdition(
-  payload: {
-    id: string;
-    year: number;
-    month: string;
-    friday: string;
-    saturday: string;
-    sunday: string;
-    venueId: string;
-    active: boolean;
-    exhibitorIds: number[];
-  },
-  authHeaders: () => Record<string, string>,
-  initialId?: string,
-): Promise<Edition> {
-  const isEdit = Boolean(initialId);
-  const response = await fetch(isEdit ? `/api/editions/${initialId}` : "/api/editions", {
-    method: isEdit ? "PUT" : "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({
-      ...(isEdit ? {} : { id: payload.id }),
-      year: payload.year,
-      month: payload.month,
-      friday: payload.friday,
-      saturday: payload.saturday,
-      sunday: payload.sunday,
-      venue_id: payload.venueId,
-      active: payload.active,
-      exhibitors: payload.exhibitorIds,
-    }),
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
-  }
-
-  return (await response.json()) as Edition;
-}
 
 function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
   const active: ItemOption[] = [];

@@ -6,39 +6,11 @@ import Modal from "react-bootstrap/Modal";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
-
-export interface ContactPerson {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
-
-export interface ItemDraft {
-  id: number;
-  name: string;
-  image: string;
-  website?: string;
-  active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
-  type?: string;
-  contactPersonId?: string | null;
-  contactPerson?: ContactPerson | null;
-}
-
-interface PersonOption {
-  value: string;
-  label: string;
-  sub: string;
-  email: string;
-  phone: string;
-}
-
-interface PersonSearchResult {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
+import type { ItemDraft } from "./itemTypes";
+import {
+  fetchAdminPersonOptions,
+  type PersonOption,
+} from "@/utils/adminRegistrationApi";
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
   control: (base) => ({
@@ -77,30 +49,6 @@ interface ItemModalProps {
   onHide: () => void;
 }
 
-async function fetchPersonOptions(
-  query: string,
-  authHeaders: () => Record<string, string>,
-  signal?: AbortSignal,
-): Promise<PersonOption[]> {
-  const response = await fetch(`/api/people?q=${encodeURIComponent(query)}&active=true`, {
-    headers: authHeaders(),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load people: ${response.status}`);
-  }
-
-  const data = (await response.json()) as PersonSearchResult[];
-  return data.map((person) => ({
-    value: person.id,
-    label: person.name,
-    sub: [person.email, person.phone].filter(Boolean).join(" · "),
-    email: person.email,
-    phone: person.phone,
-  }));
-}
-
 export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
@@ -123,6 +71,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               value: cp.id,
               label: cp.name,
               sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
+              name: cp.name,
               email: cp.email ?? "",
               phone: cp.phone ?? "",
             }
@@ -143,7 +92,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
 
   const personOptionsQuery = useQuery({
     queryKey: queryKeys.admin.itemModalPeople(debouncedPersonQuery),
-    queryFn: ({ signal }) => fetchPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, authHeaders, signal),
     enabled: show && debouncedPersonQuery.length > 0,
     staleTime: 30 * 1000,
     retry: false,

@@ -8,38 +8,15 @@ import Spinner from "react-bootstrap/Spinner";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
-import { apiToRegistration } from "@/types/registrationMapper";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
-
-interface PersonOption {
-  value: string;
-  label: string;
-  sub: string;
-  name: string;
-  email: string;
-  phone: string;
-}
-
-interface EditionEvent {
-  id: string;
-  title: string;
-  registration_required: boolean;
-}
-
-interface PersonSearchResult {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
-
-interface CreateRegistrationPayload {
-  personId: string;
-  eventId: string;
-  guestCount: number;
-  notes: string;
-}
+import {
+  createAdminRegistration,
+  fetchAdminPersonOptions,
+  fetchReservableEvents,
+  type CreateRegistrationPayload,
+  type PersonOption,
+} from "@/utils/adminRegistrationApi";
 
 const adminActiveEditionEventsQueryKey = queryKeys.admin.activeEditionEvents;
 const adminPersonOptionsQueryKey = queryKeys.admin.personOptions;
@@ -78,70 +55,6 @@ interface RegistrationCreateModalProps {
   authHeaders: () => Record<string, string>;
   onSaved: (registration: Registration) => void;
   onHide: () => void;
-}
-
-async function fetchReservableEvents(
-  authHeaders: () => Record<string, string>,
-): Promise<EditionEvent[]> {
-  const response = await fetch("/api/editions/active", { headers: authHeaders() });
-  if (!response.ok) {
-    throw new Error(m.admin_content_edition_no_events());
-  }
-
-  const data = (await response.json()) as { events?: EditionEvent[] };
-  return (data.events ?? []).filter((event) => event.registration_required);
-}
-
-async function fetchPersonOptions(
-  query: string,
-  authHeaders: () => Record<string, string>,
-  signal?: AbortSignal,
-): Promise<PersonOption[]> {
-  const response = await fetch(`/api/people?q=${encodeURIComponent(query)}&active=true`, {
-    headers: authHeaders(),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(m.admin_error_create_reservation());
-  }
-
-  const data = (await response.json()) as PersonSearchResult[];
-  return data.map((person) => ({
-    value: person.id,
-    label: person.name,
-    sub: [person.email, person.phone].filter(Boolean).join(" · "),
-    name: person.name,
-    email: person.email,
-    phone: person.phone,
-  }));
-}
-
-async function createRegistration(
-  payload: CreateRegistrationPayload,
-  authHeaders: () => Record<string, string>,
-): Promise<Registration> {
-  const res = await fetch("/api/registrations/admin", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({
-      person_id: payload.personId,
-      event_id: payload.eventId,
-      guest_count: payload.guestCount,
-      pre_orders: [],
-      notes: payload.notes,
-      accessibility_note: "",
-      status: "confirmed",
-    }),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_error_create_reservation());
-  }
-
-  const data = await res.json();
-  return apiToRegistration(data as Record<string, unknown>);
 }
 
 export default function RegistrationCreateModal({
@@ -195,14 +108,14 @@ export default function RegistrationCreateModal({
 
   const personOptionsQuery = useQuery({
     queryKey: adminPersonOptionsQueryKey(debouncedPersonQuery),
-    queryFn: ({ signal }) => fetchPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, authHeaders, signal),
     enabled: show && debouncedPersonQuery.length > 0,
     staleTime: 30 * 1000,
     retry: false,
   });
 
   const createRegistrationMutation = useMutation({
-    mutationFn: (payload: CreateRegistrationPayload) => createRegistration(payload, authHeaders),
+    mutationFn: (payload: CreateRegistrationPayload) => createAdminRegistration(payload, authHeaders),
     retry: false,
     onSuccess: async (registration) => {
       await Promise.all([
