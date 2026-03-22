@@ -1,6 +1,5 @@
 """Integration tests for the reservation API."""
 
-import collections
 import hashlib
 from datetime import datetime, timedelta, timezone
 
@@ -21,28 +20,6 @@ TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
 
 
-class FakeRateLimitRedis:
-    def __init__(self) -> None:
-        self.buckets: dict[str, collections.deque[int]] = {}
-
-    async def eval(
-        self,
-        script: str,
-        numkeys: int,
-        key: str,
-        now_ms: int,
-        cutoff_ms: int,
-        ttl_seconds: int,
-        member: str,
-    ) -> int:
-        del script, numkeys, ttl_seconds, member
-        bucket = self.buckets.setdefault(key, collections.deque())
-        while bucket and bucket[0] <= cutoff_ms:
-            bucket.popleft()
-        bucket.append(now_ms)
-        return len(bucket)
-
-
 @pytest.fixture(autouse=True)
 def set_admin_token(monkeypatch):
     monkeypatch.setattr("app.config.settings.admin_token", ADMIN_TOKEN)
@@ -51,10 +28,8 @@ def set_admin_token(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter(monkeypatch):
-    """Reset the shared rate limiter client before every test for isolation."""
-    fake_redis = FakeRateLimitRedis()
-    monkeypatch.setattr(reservations_module, "_rate_limit_redis", None)
-    monkeypatch.setattr(reservations_module, "_get_rate_limit_redis", lambda: fake_redis)
+    """Reset the in-memory rate limiter before every test for isolation."""
+    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
 
 
 @pytest.fixture()
