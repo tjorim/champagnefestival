@@ -1,5 +1,6 @@
 import React, { lazy, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Link } from "react-router";
 
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -143,10 +144,7 @@ function MyReservationsRoute() {
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar
-        iconClass="bi bi-ticket-perforated"
-        title={m.my_reservations_title()}
-      />
+      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_reservations_title()} />
       <main id="main-content">
         <AppSuspense errorFallbackText={m.my_reservations_error()}>
           <MyReservationsPage />
@@ -155,6 +153,15 @@ function MyReservationsRoute() {
     </div>
   );
 }
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   // Use custom hooks for language
@@ -446,13 +453,15 @@ if (!rootElement) {
 }
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Routes>
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/check-in" element={<CheckInRoute />} />
-        <Route path="/my-reservations" element={<MyReservationsRoute />} />
-        <Route path="*" element={<App />} />
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <Routes>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/check-in" element={<CheckInRoute />} />
+          <Route path="/my-reservations" element={<MyReservationsRoute />} />
+          <Route path="*" element={<App />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   </React.StrictMode>,
 );

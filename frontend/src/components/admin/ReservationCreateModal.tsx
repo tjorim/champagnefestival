@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -22,6 +23,13 @@ interface EditionEvent {
   id: string;
   title: string;
   registration_required: boolean;
+}
+
+interface PersonSearchResult {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
 }
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
@@ -60,6 +68,43 @@ interface ReservationCreateModalProps {
   onHide: () => void;
 }
 
+async function fetchReservableEvents(
+  authHeaders: () => Record<string, string>,
+): Promise<EditionEvent[]> {
+  const response = await fetch("/api/editions/active", { headers: authHeaders() });
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = (await response.json()) as { events?: EditionEvent[] };
+  return (data.events ?? []).filter((event) => event.registration_required);
+}
+
+async function fetchPersonOptions(
+  query: string,
+  authHeaders: () => Record<string, string>,
+  signal?: AbortSignal,
+): Promise<PersonOption[]> {
+  const response = await fetch(`/api/people?q=${encodeURIComponent(query)}&active=true`, {
+    headers: authHeaders(),
+    signal,
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const data = (await response.json()) as PersonSearchResult[];
+  return data.map((person) => ({
+    value: person.id,
+    label: person.name,
+    sub: [person.email, person.phone].filter(Boolean).join(" · "),
+    name: person.name,
+    email: person.email,
+    phone: person.phone,
+  }));
+}
+
 export default function ReservationCreateModal({
   show,
   authHeaders,
@@ -69,105 +114,59 @@ export default function ReservationCreateModal({
   const [guestCount, setGuestCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [eventId, setEventId] = useState("");
-  const [events, setEvents] = useState<EditionEvent[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [personOption, setPersonOption] = useState<SingleValue<PersonOption>>(null);
-  const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
   const [personQuery, setPersonQuery] = useState("");
-  const [loadingPersons, setLoadingPersons] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
-  const hasValidEventSelection = events.some((event) => event.id === eventId);
+  const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
   useEffect(() => {
-    if (!show) return;
+    if (!show) {
+      return;
+    }
+
     setGuestCount(1);
     setNotes("");
     setEventId("");
-    setEvents([]);
     setPersonOption(null);
     setPersonQuery("");
-    setPersonOptions([]);
+    setDebouncedPersonQuery("");
     setError(null);
-
-    // Fetch active edition events
-    setLoadingEvents(true);
-    fetch("/api/editions/active", { headers: authHeaders() })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.events) {
-          setEvents(
-            (data.events as EditionEvent[]).filter((event) => event.registration_required),
-          );
-        } else {
-          setEvents([]);
-        }
-      })
-      .catch(() => {
-        setEvents([]);
-      })
-      .finally(() => setLoadingEvents(false));
-  }, [show, authHeaders]);
-
-  const searchPersons = useCallback(
-    async (q: string) => {
-      if (!q) {
-        abortRef.current?.abort();
-        abortRef.current = null;
-        setPersonOptions([]);
-        return;
-      }
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      setLoadingPersons(true);
-      try {
-        const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&active=true`, {
-          headers: authHeaders(),
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const data = (await res.json()) as {
-            id: string;
-            name: string;
-            email: string;
-            phone: string;
-          }[];
-          setPersonOptions(
-            data.map((p) => ({
-              value: p.id,
-              label: p.name,
-              sub: [p.email, p.phone].filter(Boolean).join(" · "),
-              name: p.name,
-              email: p.email,
-              phone: p.phone,
-            })),
-          );
-        } else {
-          setPersonOptions([]);
-        }
-      } catch (err) {
-        if ((err as { name?: string }).name !== "AbortError") {
-          setPersonOptions([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoadingPersons(false);
-        }
-      }
-    },
-    [authHeaders],
-  );
+  }, [show]);
 
   useEffect(() => {
-    if (!show) return;
+    if (!show) {
+      return;
+    }
+
     const timer = setTimeout(() => {
-      searchPersons(personQuery);
+      setDebouncedPersonQuery(personQuery.trim());
     }, 300);
+
     return () => clearTimeout(timer);
-  }, [personQuery, show, searchPersons]);
+  }, [personQuery, show]);
+
+  const eventsQuery = useQuery({
+    queryKey: ["admin-active-edition-events"],
+    queryFn: () => fetchReservableEvents(authHeaders),
+    enabled: show,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  const personOptionsQuery = useQuery({
+    queryKey: ["admin-person-options", debouncedPersonQuery],
+    queryFn: ({ signal }) => fetchPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    enabled: show && debouncedPersonQuery.length > 0,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const events = eventsQuery.data ?? [];
+  const personOptions = personOptionsQuery.data ?? [];
+  const loadingEvents = eventsQuery.isPending;
+  const loadingPersons = personOptionsQuery.isFetching;
+  const hasValidEventSelection = events.some((event) => event.id === eventId);
 
   function handlePersonChange(opt: SingleValue<PersonOption>) {
     setPersonOption(opt);
@@ -265,7 +264,7 @@ export default function ReservationCreateModal({
               options={personOptions}
               value={personOption}
               onChange={handlePersonChange}
-              onInputChange={(v) => setPersonQuery(v)}
+              onInputChange={(value) => setPersonQuery(value)}
               inputValue={personQuery}
               isLoading={loadingPersons}
               filterOption={null}

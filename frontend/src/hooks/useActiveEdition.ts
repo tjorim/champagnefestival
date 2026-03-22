@@ -6,7 +6,7 @@
  * initial render / network failures, then replaces it with `/api/editions/active`.
  */
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates, type Event, type SliderItem } from "@/config/editions";
 
 interface ActiveEditionVenue {
@@ -70,6 +70,8 @@ export interface ActiveEditionState {
   /** True once the fetch has settled (success or failure). */
   isLoaded: boolean;
 }
+
+export const activeEditionQueryKey = ["active-edition"] as const;
 
 /** Parse "YYYY-MM-DD" as a local date (avoids UTC-midnight → previous day shift). */
 function parseLocalDate(s: string): Date {
@@ -149,7 +151,11 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
     id: api.id,
     year: api.year,
     month: api.month as ActiveEdition["month"],
-    dates: deriveEditionDates(api.dates, events.map((event) => event.date), fallbackDates),
+    dates: deriveEditionDates(
+      api.dates,
+      events.map((event) => event.date),
+      fallbackDates,
+    ),
     venue: {
       venueName: api.venue.name,
       address: api.venue.address,
@@ -177,36 +183,26 @@ function createFallbackEdition(): ActiveEdition {
   };
 }
 
+export async function fetchActiveEdition(): Promise<ActiveEdition> {
+  const res = await fetch("/api/editions/active");
+  if (!res.ok) {
+    throw new Error(`Failed to load active edition: ${res.status}`);
+  }
+
+  const api = (await res.json()) as ApiEdition;
+  return mapApiEdition(api, EMPTY_EDITION.dates);
+}
+
 export function useActiveEdition(): ActiveEditionState {
-  const [edition, setEdition] = useState<ActiveEdition>(createFallbackEdition);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const query = useQuery({
+    queryKey: activeEditionQueryKey,
+    queryFn: fetchActiveEdition,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch("/api/editions/active");
-        if (!res.ok) {
-          setIsLoaded(true);
-          return;
-        }
-
-        const api = (await res.json()) as ApiEdition;
-        if (cancelled) return;
-        setEdition((current) => mapApiEdition(api, current.dates));
-        setIsLoaded(true);
-      } catch {
-        // Network error or parse failure — keep the empty fallback silently.
-        setIsLoaded(true);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { edition, isLoaded };
+  return {
+    edition: query.data ?? createFallbackEdition(),
+    isLoaded: query.status !== "pending",
+  };
 }

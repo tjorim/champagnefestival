@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import ReservationCreateModal from "@/components/admin/ReservationCreateModal";
+import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -36,19 +38,21 @@ describe("ReservationCreateModal", () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
-        events: [
-          { id: "evt-public", title: "Public talk", registration_required: false },
-        ],
+        events: [{ id: "evt-public", title: "Public talk", registration_required: false }],
       }),
     });
 
+    const queryClient = createTestQueryClient();
+
     render(
-      <ReservationCreateModal
-        show={true}
-        authHeaders={() => ({ Authorization: "Bearer test" })}
-        onSaved={() => {}}
-        onHide={() => {}}
-      />,
+      <QueryClientProvider client={queryClient}>
+        <ReservationCreateModal
+          show={true}
+          authHeaders={() => ({ Authorization: "Bearer test" })}
+          onSaved={() => {}}
+          onHide={() => {}}
+        />
+      </QueryClientProvider>,
     );
 
     await waitFor(() => {

@@ -2,6 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useActiveEdition } from "@/hooks/useActiveEdition";
+import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 const toNormalizedLocalDate = (date: Date) => {
   const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -67,7 +68,8 @@ describe("useActiveEdition", () => {
   });
 
   it("uses the API as the source of truth for edition, venue, dates, and events", async () => {
-    const { result } = renderHook(() => useActiveEdition());
+    const wrapper = createTestQueryClientWrapper();
+    const { result } = renderHook(() => useActiveEdition(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
@@ -94,7 +96,6 @@ describe("useActiveEdition", () => {
       }),
     ]);
   });
-
 
   it("deduplicates dates when the API omits dates and multiple events share one day", async () => {
     vi.stubGlobal(
@@ -123,7 +124,8 @@ describe("useActiveEdition", () => {
       } as Response),
     );
 
-    const { result } = renderHook(() => useActiveEdition());
+    const wrapper = createTestQueryClientWrapper();
+    const { result } = renderHook(() => useActiveEdition(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
@@ -133,5 +135,22 @@ describe("useActiveEdition", () => {
     ]);
     expect(result.current.edition.events).toHaveLength(3);
   });
+  it("keeps the fallback edition when the active-edition query fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response),
+    );
 
+    const wrapper = createTestQueryClientWrapper();
+    const { result } = renderHook(() => useActiveEdition(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+
+    expect(result.current.edition.events).toEqual([]);
+    expect(result.current.edition.producers).toEqual([]);
+    expect(result.current.edition.sponsors).toEqual([]);
+  });
 });
