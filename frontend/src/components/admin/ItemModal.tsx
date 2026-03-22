@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -27,6 +28,13 @@ interface PersonOption {
   value: string;
   label: string;
   sub: string;
+  email: string;
+  phone: string;
+}
+
+interface PersonSearchResult {
+  id: string;
+  name: string;
   email: string;
   phone: string;
 }
@@ -68,15 +76,40 @@ interface ItemModalProps {
   onHide: () => void;
 }
 
+const itemModalPersonOptionsQueryKey = (query: string) => ["admin", "item-modal", "people", query] as const;
+
+async function fetchPersonOptions(
+  query: string,
+  authHeaders: () => Record<string, string>,
+  signal?: AbortSignal,
+): Promise<PersonOption[]> {
+  const response = await fetch(`/api/people?q=${encodeURIComponent(query)}&active=true`, {
+    headers: authHeaders(),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load people: ${response.status}`);
+  }
+
+  const data = (await response.json()) as PersonSearchResult[];
+  return data.map((person) => ({
+    value: person.id,
+    label: person.name,
+    sub: [person.email, person.phone].filter(Boolean).join(" · "),
+    email: person.email,
+    phone: person.phone,
+  }));
+}
+
 export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
   const [website, setWebsite] = useState("");
   const [type, setType] = useState<string>("vendor");
   const [contactOption, setContactOption] = useState<SingleValue<PersonOption>>(null);
-  const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
   const [personQuery, setPersonQuery] = useState("");
-  const [loadingPersons, setLoadingPersons] = useState(false);
+  const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
   useEffect(() => {
     if (show) {
@@ -97,62 +130,28 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           : null,
       );
       setPersonQuery("");
-      setPersonOptions([]);
+      setDebouncedPersonQuery("");
     }
   }, [show, initial]);
 
-  const searchPersons = useCallback(
-    async (q: string, signal: AbortSignal) => {
-      if (!q) {
-        setPersonOptions([]);
-        return;
-      }
-      setLoadingPersons(true);
-      try {
-        const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&active=true`, {
-          headers: authHeaders(),
-          signal,
-        });
-        if (signal.aborted) return;
-        if (res.ok) {
-          const data = (await res.json()) as {
-            id: string;
-            name: string;
-            email: string;
-            phone: string;
-          }[];
-          setPersonOptions(
-            data.map((p) => ({
-              value: p.id,
-              label: p.name,
-              sub: [p.email, p.phone].filter(Boolean).join(" · "),
-              email: p.email,
-              phone: p.phone,
-            })),
-          );
-        }
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.error("Failed to search persons", err);
-        }
-      } finally {
-        if (!signal.aborted) setLoadingPersons(false);
-      }
-    },
-    [authHeaders],
-  );
-
   useEffect(() => {
     if (!show) return;
-    const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchPersons(personQuery, controller.signal);
+      setDebouncedPersonQuery(personQuery.trim());
     }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [personQuery, show, searchPersons]);
+    return () => clearTimeout(timer);
+  }, [personQuery, show]);
+
+  const personOptionsQuery = useQuery({
+    queryKey: itemModalPersonOptionsQueryKey(debouncedPersonQuery),
+    queryFn: ({ signal }) => fetchPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    enabled: show && debouncedPersonQuery.length > 0,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const personOptions = personOptionsQuery.data ?? [];
+  const loadingPersons = personOptionsQuery.isFetching;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

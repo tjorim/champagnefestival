@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -23,6 +24,13 @@ interface ItemOption {
   value: number;
   label: string;
   isArchived: boolean;
+}
+
+interface ApiExhibitor {
+  id: number;
+  name: string;
+  active?: boolean;
+  type?: string;
 }
 
 type ItemSelectStyles = StylesConfig<ItemOption, true, GroupBase<ItemOption>>;
@@ -70,6 +78,68 @@ const darkSelectStyles: ItemSelectStyles = {
   noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
 };
 
+const editionModalExhibitorsQueryKey = ["admin", "edition-modal", "exhibitors"] as const;
+
+async function fetchEditionModalExhibitors(
+  authHeaders: () => Record<string, string>,
+): Promise<ItemDraft[]> {
+  const response = await fetch("/api/exhibitors", { headers: authHeaders() });
+  if (!response.ok) {
+    throw new Error(`Failed to load exhibitors: ${response.status}`);
+  }
+
+  const data = (await response.json()) as ApiExhibitor[];
+  return Array.isArray(data)
+    ? data.map((item) => ({
+        id: item.id,
+        name: item.name,
+        image: "",
+        active: item.active ?? true,
+        type: item.type,
+      }))
+    : [];
+}
+
+async function saveEdition(
+  payload: {
+    id: string;
+    year: number;
+    month: string;
+    friday: string;
+    saturday: string;
+    sunday: string;
+    venueId: string;
+    active: boolean;
+    exhibitorIds: number[];
+  },
+  authHeaders: () => Record<string, string>,
+  initialId?: string,
+): Promise<Edition> {
+  const isEdit = Boolean(initialId);
+  const response = await fetch(isEdit ? `/api/editions/${initialId}` : "/api/editions", {
+    method: isEdit ? "PUT" : "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({
+      ...(isEdit ? {} : { id: payload.id }),
+      year: payload.year,
+      month: payload.month,
+      friday: payload.friday,
+      saturday: payload.saturday,
+      sunday: payload.sunday,
+      venue_id: payload.venueId,
+      active: payload.active,
+      exhibitors: payload.exhibitorIds,
+    }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
+  }
+
+  return (await response.json()) as Edition;
+}
+
 function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
   const active: ItemOption[] = [];
   const archived: ItemOption[] = [];
@@ -105,8 +175,6 @@ export default function EditionModal({
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [allExhibitors, setAllExhibitors] = useState<ItemDraft[]>([]);
   const [selectedExhibitors, setSelectedExhibitors] = useState<MultiValue<ItemOption>>([]);
 
   useEffect(() => {
@@ -132,21 +200,32 @@ export default function EditionModal({
     } else {
       setSelectedExhibitors([]);
     }
+  }, [show, initial]);
 
-    // Fetch item pools when the modal opens
-    async function fetchItems() {
-      try {
-        const eRes = await fetch("/api/exhibitors", { headers: authHeaders() });
-        if (eRes.ok) {
-          const eData = (await eRes.json()) as ItemDraft[];
-          if (Array.isArray(eData)) setAllExhibitors(eData);
-        }
-      } catch {
-        // non-critical; select will just be empty
-      }
-    }
-    fetchItems();
-  }, [show, initial, authHeaders]);
+  const exhibitorsQuery = useQuery({
+    queryKey: editionModalExhibitorsQueryKey,
+    queryFn: () => fetchEditionModalExhibitors(authHeaders),
+    enabled: show,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  const saveEditionMutation = useMutation({
+    mutationFn: (payload: {
+      id: string;
+      year: number;
+      month: string;
+      friday: string;
+      saturday: string;
+      sunday: string;
+      venueId: string;
+      active: boolean;
+      exhibitorIds: number[];
+    }) => saveEdition(payload, authHeaders, initial?.id),
+    retry: false,
+  });
+
+  const allExhibitors = useMemo(() => exhibitorsQuery.data ?? [], [exhibitorsQuery.data]);
 
   // Sync selections once pool is loaded
   useEffect(() => {
@@ -162,49 +241,41 @@ export default function EditionModal({
 
   // Only producers and sponsors can be linked to editions; vendors are excluded.
   const programmableExhibitors = allExhibitors.filter(
-    (e) => e.type === "producer" || e.type === "sponsor",
+    (exhibitor) => exhibitor.type === "producer" || exhibitor.type === "sponsor",
   );
 
-  const exhibitorGroups = (() => {
+  const exhibitorGroups = useMemo(() => {
     const { active: act, archived: arch } = toOptions(programmableExhibitors);
-    const groups = [];
+    const groups: GroupBase<ItemOption>[] = [];
     if (act.length) groups.push({ label: m.admin_edition_exhibitors(), options: act });
     if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
     return groups;
-  })();
+  }, [programmableExhibitors]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!month.trim() || !friday || !saturday || !sunday || !venueId) return;
     setSaving(true);
     setError(null);
+
     try {
-      const url = isEdit ? `/api/editions/${initial!.id}` : "/api/editions";
-      const method = isEdit ? "PUT" : "POST";
-      const body: Record<string, unknown> = {
+      const savedEdition = await saveEditionMutation.mutateAsync({
+        id: id.trim(),
         year,
         month: month.trim(),
         friday,
         saturday,
         sunday,
-        venue_id: venueId,
+        venueId,
         active,
-        exhibitors: selectedExhibitors.map((o: ItemOption) => o.value),
-      };
-      if (!isEdit) body.id = id.trim();
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify(body),
+        exhibitorIds: selectedExhibitors.map((option: ItemOption) => option.value),
       });
-      if (res.ok) {
-        onSaved((await res.json()) as Edition);
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError((data as { detail?: string }).detail ?? m.admin_content_error_save());
-      }
-    } catch {
-      setError(m.admin_content_error_save());
+
+      onSaved(savedEdition);
+    } catch (mutationError) {
+      setError(
+        mutationError instanceof Error ? mutationError.message : m.admin_content_error_save(),
+      );
     } finally {
       setSaving(false);
     }
@@ -336,12 +407,18 @@ export default function EditionModal({
             <Form.Label className="text-secondary small mb-1">
               {m.admin_content_edition_exhibitors_label()}
             </Form.Label>
+            {exhibitorsQuery.isError && (
+              <Alert variant="danger" className="py-1 mb-2 small">
+                {m.admin_content_error_load()}
+              </Alert>
+            )}
             <Select<ItemOption, true, GroupBase<ItemOption>>
               isMulti
               options={exhibitorGroups}
               value={selectedExhibitors}
               onChange={setSelectedExhibitors}
               styles={darkSelectStyles}
+              isLoading={exhibitorsQuery.isFetching}
               placeholder={m.admin_content_edition_exhibitors_placeholder()}
               classNamePrefix="rs"
             />

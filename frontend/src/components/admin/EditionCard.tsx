@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -10,6 +11,42 @@ import EventModal from "./EventModal";
 import { parseEditionDate } from "./editionTypes";
 import type { Edition, ScheduleEvent } from "./editionTypes";
 import type { Venue } from "@/types/admin";
+
+async function saveEditionSchedule(
+  editionId: string,
+  schedule: ScheduleEvent[],
+  authHeaders: () => Record<string, string>,
+): Promise<Edition> {
+  const response = await fetch(`/api/editions/${editionId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ schedule }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
+  }
+
+  return (await response.json()) as Edition;
+}
+
+async function deleteEdition(
+  editionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<string> {
+  const response = await fetch(`/api/editions/${editionId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  if (!response.ok && response.status !== 204) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
+  }
+
+  return editionId;
+}
 
 interface EditionCardProps {
   edition: Edition;
@@ -39,18 +76,24 @@ export default function EditionCard({
   const friday = parseEditionDate(edition.friday);
   const sunday = parseEditionDate(edition.sunday);
 
+  const saveScheduleMutation = useMutation({
+    mutationFn: (schedule: ScheduleEvent[]) => saveEditionSchedule(edition.id, schedule, authHeaders),
+    retry: false,
+  });
+
+  const deleteEditionMutation = useMutation({
+    mutationFn: () => deleteEdition(edition.id, authHeaders),
+    retry: false,
+  });
+
   async function saveSchedule(newSchedule: ScheduleEvent[]) {
     setSaving(true);
     setSaveError(false);
     try {
-      const res = await fetch(`/api/editions/${edition.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ schedule: newSchedule }),
-      });
-      if (res.ok) onUpdated((await res.json()) as Edition);
-      else setSaveError(true);
-    } catch {
+      const updatedEdition = await saveScheduleMutation.mutateAsync(newSchedule);
+      onUpdated(updatedEdition);
+    } catch (error) {
+      console.error("Failed to save edition schedule", error);
       setSaveError(true);
     } finally {
       setSaving(false);
@@ -82,17 +125,11 @@ export default function EditionCard({
     setDeleting(true);
     setDeleteError(false);
     try {
-      const res = await fetch(`/api/editions/${edition.id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (res.ok || res.status === 204) {
-        setConfirmDelete(false);
-        onDeleted(edition.id);
-      } else {
-        setDeleteError(true);
-      }
-    } catch {
+      await deleteEditionMutation.mutateAsync();
+      setConfirmDelete(false);
+      onDeleted(edition.id);
+    } catch (error) {
+      console.error("Failed to delete edition", error);
       setDeleteError(true);
     } finally {
       setDeleting(false);
@@ -235,7 +272,7 @@ export default function EditionCard({
                     <Badge bg="info" text="dark" className="text-capitalize fs-3xs">
                       {ev.category}
                     </Badge>
-                    {ev.reservation && (
+                    {ev.registration && (
                       <Badge bg="warning" text="dark" className="fs-3xs">
                         {m.schedule_reservation()}
                       </Badge>

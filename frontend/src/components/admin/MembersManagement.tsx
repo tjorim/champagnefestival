@@ -13,7 +13,7 @@ import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 
 interface MembersManagementProps {
   members: Person[];
-  reservationCountByPersonId: Record<string, number>;
+  registrationCountByPersonId: Record<string, number>;
   isLoading: boolean;
   onCreate: (data: MemberFormData) => Promise<void>;
   onUpdate: (id: string, data: MemberFormData) => Promise<void>;
@@ -31,7 +31,7 @@ function truncateText(value: string, limit = 80): string {
 
 export default function MembersManagement({
   members,
-  reservationCountByPersonId,
+  registrationCountByPersonId,
   isLoading,
   onCreate,
   onUpdate,
@@ -208,7 +208,7 @@ export default function MembersManagement({
                         <td className="small text-secondary" title={member.notes || undefined}>
                           {notesPreview || "—"}
                         </td>
-                        <td className="small">{reservationCountByPersonId[member.id] ?? 0}</td>
+                        <td className="small">{registrationCountByPersonId[member.id] ?? 0}</td>
                         <td>
                           <div className="d-flex flex-wrap gap-1">
                             <Button

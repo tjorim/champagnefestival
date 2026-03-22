@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
-import type { Reservation } from "@/types/reservation";
-import { apiToReservation } from "@/types/reservationMapper";
+import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
+import type { Registration } from "@/types/registration";
+import { apiToRegistration } from "@/types/registrationMapper";
 import { m } from "@/paraglide/messages";
 
 interface PersonOption {
@@ -31,6 +32,16 @@ interface PersonSearchResult {
   email: string;
   phone: string;
 }
+
+interface CreateRegistrationPayload {
+  personId: string;
+  eventId: string;
+  guestCount: number;
+  notes: string;
+}
+
+const adminActiveEditionEventsQueryKey = ["admin", "active-edition", "events"] as const;
+const adminPersonOptionsQueryKey = (query: string) => ["admin", "person-options", query] as const;
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
   control: (base) => ({
@@ -61,10 +72,10 @@ const darkSelectStyles: StylesConfig<PersonOption, false> = {
   noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
 };
 
-interface ReservationCreateModalProps {
+interface RegistrationCreateModalProps {
   show: boolean;
   authHeaders: () => Record<string, string>;
-  onSaved: (reservation: Reservation) => void;
+  onSaved: (registration: Registration) => void;
   onHide: () => void;
 }
 
@@ -73,7 +84,7 @@ async function fetchReservableEvents(
 ): Promise<EditionEvent[]> {
   const response = await fetch("/api/editions/active", { headers: authHeaders() });
   if (!response.ok) {
-    return [];
+    throw new Error(m.admin_content_edition_no_events());
   }
 
   const data = (await response.json()) as { events?: EditionEvent[] };
@@ -91,7 +102,7 @@ async function fetchPersonOptions(
   });
 
   if (!response.ok) {
-    return [];
+    throw new Error(m.admin_error_create_reservation());
   }
 
   const data = (await response.json()) as PersonSearchResult[];
@@ -105,16 +116,43 @@ async function fetchPersonOptions(
   }));
 }
 
-export default function ReservationCreateModal({
+async function createRegistration(
+  payload: CreateRegistrationPayload,
+  authHeaders: () => Record<string, string>,
+): Promise<Registration> {
+  const res = await fetch("/api/registrations/admin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({
+      person_id: payload.personId,
+      event_id: payload.eventId,
+      guest_count: payload.guestCount,
+      pre_orders: [],
+      notes: payload.notes,
+      accessibility_note: "",
+      status: "confirmed",
+    }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_error_create_reservation());
+  }
+
+  const data = await res.json();
+  return apiToRegistration(data as Record<string, unknown>);
+}
+
+export default function RegistrationCreateModal({
   show,
   authHeaders,
   onSaved,
   onHide,
-}: ReservationCreateModalProps) {
+}: RegistrationCreateModalProps) {
+  const queryClient = useQueryClient();
   const [guestCount, setGuestCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [eventId, setEventId] = useState("");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [personOption, setPersonOption] = useState<SingleValue<PersonOption>>(null);
   const [personQuery, setPersonQuery] = useState("");
@@ -147,7 +185,7 @@ export default function ReservationCreateModal({
   }, [personQuery, show]);
 
   const eventsQuery = useQuery({
-    queryKey: ["admin-active-edition-events"],
+    queryKey: adminActiveEditionEventsQueryKey,
     queryFn: () => fetchReservableEvents(authHeaders),
     enabled: show,
     staleTime: 60 * 1000,
@@ -155,11 +193,25 @@ export default function ReservationCreateModal({
   });
 
   const personOptionsQuery = useQuery({
-    queryKey: ["admin-person-options", debouncedPersonQuery],
+    queryKey: adminPersonOptionsQueryKey(debouncedPersonQuery),
     queryFn: ({ signal }) => fetchPersonOptions(debouncedPersonQuery, authHeaders, signal),
     enabled: show && debouncedPersonQuery.length > 0,
     staleTime: 30 * 1000,
     retry: false,
+  });
+
+  const createRegistrationMutation = useMutation({
+    mutationFn: (payload: CreateRegistrationPayload) => createRegistration(payload, authHeaders),
+    retry: false,
+    onSuccess: async (registration) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminActiveEditionEventsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: ["admin", "person-options"] }),
+        queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
+      ]);
+      onSaved(registration);
+      onHide();
+    },
   });
 
   const events = eventsQuery.data ?? [];
@@ -175,34 +227,22 @@ export default function ReservationCreateModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!personOption || !hasValidEventSelection) return;
-    setSaving(true);
+
     setError(null);
+
     try {
-      const res = await fetch("/api/registrations/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({
-          person_id: personOption.value,
-          event_id: eventId,
-          guest_count: guestCount,
-          pre_orders: [],
-          notes: notes.trim(),
-          accessibility_note: "",
-          status: "confirmed",
-        }),
+      await createRegistrationMutation.mutateAsync({
+        personId: personOption.value,
+        eventId,
+        guestCount,
+        notes: notes.trim(),
       });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setError((d as { detail?: string }).detail ?? m.admin_error_create_reservation());
-        return;
-      }
-      const data = await res.json();
-      onSaved(apiToReservation(data as Record<string, unknown>));
-      onHide();
-    } catch {
-      setError(m.admin_error_create_reservation());
-    } finally {
-      setSaving(false);
+    } catch (mutationError) {
+      setError(
+        mutationError instanceof Error
+          ? mutationError.message
+          : m.admin_error_create_reservation(),
+      );
     }
   }
 
@@ -311,9 +351,9 @@ export default function ReservationCreateModal({
             type="submit"
             variant="warning"
             size="sm"
-            disabled={saving || !personOption || !hasValidEventSelection}
+            disabled={createRegistrationMutation.isPending || !personOption || !hasValidEventSelection}
           >
-            {saving ? (
+            {createRegistrationMutation.isPending ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />

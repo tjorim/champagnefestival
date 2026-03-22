@@ -1,10 +1,10 @@
 /**
- * Types for the VIP reservation and ordering system.
+ * Types for the VIP registration and ordering system.
  */
 
 export type OrderItemCategory = "champagne" | "food" | "other";
 
-export type ReservationStatus = "pending" | "confirmed" | "cancelled";
+export type RegistrationStatus = "pending" | "confirmed" | "cancelled";
 
 export type PaymentStatus = "unpaid" | "partial" | "paid";
 
@@ -34,7 +34,7 @@ export interface PersonSummary {
   phone: string;
 }
 
-export interface Reservation {
+export interface Registration {
   id: string;
   personId: string;
   person: PersonSummary;
@@ -46,7 +46,7 @@ export interface Reservation {
   /** Optional accessibility requirements (wheelchair, crutches, low table needed, etc.) */
   accessibilityNote: string;
   tableId?: string;
-  status: ReservationStatus;
+  status: RegistrationStatus;
   paymentStatus: PaymentStatus;
   /** Whether the guest has physically checked in at the entrance */
   checkedIn: boolean;
@@ -55,7 +55,7 @@ export interface Reservation {
   strapIssued: boolean;
   /**
    * One-time token included in the QR code.
-   * Never exposed to the general public listing; only in individual reservation details.
+   * Never exposed to the general public listing; only in individual registration details.
    * Optional because the list endpoint omits it — only the admin detail endpoint returns it.
    */
   checkInToken?: string;
@@ -63,7 +63,7 @@ export interface Reservation {
   updatedAt: string;
 }
 
-export interface ReservationFormData {
+export interface RegistrationFormData {
   name: string;
   email: string;
   phone: string;
@@ -75,7 +75,7 @@ export interface ReservationFormData {
   formStartTime: string;
 }
 
-export interface ReservationFormErrors {
+export interface RegistrationFormErrors {
   name?: string;
   email?: string;
   phone?: string;

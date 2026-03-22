@@ -1,5 +1,6 @@
 import clsx from "clsx";
-import { useState, useEffect, useCallback } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
@@ -9,7 +10,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "@/paraglide/messages";
-import type { OrderItemCategory, ReservationStatus } from "@/types/reservation";
+import type { OrderItemCategory, RegistrationStatus } from "@/types/registration";
 
 interface CheckInData {
   id: string;
@@ -27,143 +28,163 @@ interface CheckInData {
   }[];
   notes: string;
   accessibilityNote: string;
-  status: ReservationStatus;
+  status: RegistrationStatus;
   checkedIn: boolean;
   checkedInAt?: string;
   strapIssued: boolean;
 }
 
+interface CheckInResponseRegistration {
+  id?: string;
+  name?: string;
+  event_id?: string;
+  event_title?: string;
+  guest_count?: number;
+  pre_orders?: Record<string, unknown>[];
+  notes?: string;
+  accessibility_note?: string;
+  status?: RegistrationStatus;
+  checked_in?: boolean;
+  checked_in_at?: string;
+  strap_issued?: boolean;
+}
+
+interface CheckInMutationResponse {
+  registration?: CheckInResponseRegistration;
+  already_checked_in?: boolean;
+}
+
+class CheckInError extends Error {
+  code: "not_found" | "invalid_token" | "request_failed";
+
+  constructor(code: "not_found" | "invalid_token" | "request_failed", message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+const checkInRegistrationQueryKey = (registrationId: string, checkInToken: string) =>
+  ["check-in", registrationId, checkInToken] as const;
+
+function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
+  const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
+
+  return {
+    id: data.id ?? "",
+    name: data.name ?? "",
+    eventId: data.event_id ?? "",
+    eventTitle: data.event_title ?? "",
+    guestCount: data.guest_count ?? 1,
+    preOrders: rawOrders.map((item) => ({
+      productId: item.product_id as string,
+      name: item.name as string,
+      quantity: item.quantity as number,
+      price: item.price as number,
+      category: item.category as OrderItemCategory,
+      delivered: (item.delivered ?? false) as boolean,
+    })),
+    notes: data.notes ?? "",
+    accessibilityNote: data.accessibility_note ?? "",
+    status: data.status ?? "pending",
+    checkedIn: data.checked_in ?? false,
+    checkedInAt: data.checked_in_at,
+    strapIssued: data.strap_issued ?? false,
+  };
+}
+
+async function fetchCheckInRegistration(
+  registrationId: string,
+  checkInToken: string,
+): Promise<CheckInData> {
+  const response = await fetch(
+    `/api/check-in/${encodeURIComponent(registrationId)}?token=${encodeURIComponent(checkInToken)}`,
+  );
+
+  if (response.status === 401 || response.status === 404) {
+    throw new CheckInError("not_found", m.checkin_not_found());
+  }
+
+  if (!response.ok) {
+    throw new CheckInError("request_failed", m.checkin_error());
+  }
+
+  return mapCheckInData((await response.json()) as CheckInResponseRegistration);
+}
+
+async function submitCheckIn(
+  registrationId: string,
+  checkInToken: string,
+): Promise<{ registration: CheckInData; alreadyCheckedIn: boolean }> {
+  const response = await fetch(`/api/check-in/${encodeURIComponent(registrationId)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: checkInToken, issue_strap: true }),
+  });
+
+  if (response.status === 401) {
+    throw new CheckInError("invalid_token", m.checkin_invalid_token());
+  }
+
+  if (!response.ok) {
+    throw new CheckInError("request_failed", m.checkin_error());
+  }
+
+  const data = (await response.json()) as CheckInMutationResponse;
+  return {
+    registration: mapCheckInData(data.registration ?? {}),
+    alreadyCheckedIn: data.already_checked_in ?? false,
+  };
+}
+
 export default function CheckInPage() {
   const [searchParams] = useSearchParams();
-  const reservationId = searchParams.get("id") ?? undefined;
+  const registrationId = searchParams.get("id") ?? undefined;
   const checkInToken = searchParams.get("token") ?? undefined;
-  const [reservation, setReservation] = useState<CheckInData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
 
-  const lookUpReservation = useCallback(
-    async (signal: AbortSignal) => {
-      if (!reservationId || !checkInToken) return;
+  const registrationQuery = useQuery({
+    queryKey: checkInRegistrationQueryKey(registrationId ?? "", checkInToken ?? ""),
+    queryFn: () => fetchCheckInRegistration(registrationId!, checkInToken!),
+    enabled: Boolean(registrationId && checkInToken),
+    retry: false,
+    staleTime: 30 * 1000,
+  });
 
-      // Reset previous state before fetching to avoid showing stale guest data.
-      setReservation(null);
-      setSuccess(false);
-      setAlreadyCheckedIn(false);
-      setIsLoading(true);
+  const checkInMutation = useMutation({
+    mutationFn: () => submitCheckIn(registrationId!, checkInToken!),
+    retry: false,
+    onSuccess: ({ alreadyCheckedIn: mutationAlreadyCheckedIn }) => {
       setError("");
-
-      try {
-        const response = await fetch(
-          `/api/check-in/${encodeURIComponent(reservationId)}?token=${encodeURIComponent(checkInToken)}`,
-          { signal },
-        );
-
-        if (response.status === 401 || response.status === 404) {
-          setError(m.checkin_not_found());
-        } else if (response.ok) {
-          const data = (await response.json()) as Record<string, unknown>;
-          const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
-          const res: CheckInData = {
-            id: data.id as string,
-            name: (data.name ?? "") as string,
-            eventId: (data.event_id ?? "") as string,
-            eventTitle: (data.event_title ?? "") as string,
-            guestCount: (data.guest_count ?? 1) as number,
-            preOrders: rawOrders.map((item) => ({
-              productId: item.product_id as string,
-              name: item.name as string,
-              quantity: item.quantity as number,
-              price: item.price as number,
-              category: item.category as OrderItemCategory,
-              delivered: (item.delivered ?? false) as boolean,
-            })),
-            notes: (data.notes ?? "") as string,
-            accessibilityNote: (data.accessibility_note ?? "") as string,
-            status: (data.status ?? "pending") as ReservationStatus,
-            checkedIn: (data.checked_in ?? false) as boolean,
-            checkedInAt: data.checked_in_at as string | undefined,
-            strapIssued: (data.strap_issued ?? false) as boolean,
-          };
-          setReservation(res);
-          if (res.checkedIn) {
-            setAlreadyCheckedIn(true);
-          }
-        } else {
-          setError(m.checkin_error());
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(m.checkin_error());
-      } finally {
-        if (!signal.aborted) setIsLoading(false);
-      }
+      setSuccess(true);
+      setAlreadyCheckedIn(mutationAlreadyCheckedIn);
+      registrationQuery.refetch().catch(() => undefined);
     },
-    [reservationId, checkInToken],
-  );
+  });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    lookUpReservation(controller.signal);
-    return () => controller.abort();
-  }, [lookUpReservation]);
+  const registration = checkInMutation.data?.registration ?? registrationQuery.data ?? null;
+  const isLoading = registrationQuery.isPending;
+  const isCheckingIn = checkInMutation.isPending;
+  const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
+  const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
 
   const handleCheckIn = useCallback(async () => {
-    if (!reservationId || !checkInToken) return;
+    if (!registrationId || !checkInToken) return;
 
-    setIsCheckingIn(true);
     setError("");
 
     try {
-      const response = await fetch(`/api/check-in/${encodeURIComponent(reservationId)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: checkInToken, issue_strap: true }),
-      });
-
-      if (response.status === 401) {
-        setError(m.checkin_invalid_token());
-      } else if (response.ok) {
-        const data = (await response.json()) as Record<string, unknown>;
-        const rawRes = (data.reservation ?? {}) as Record<string, unknown>;
-        const rawOrders = (rawRes.pre_orders ?? []) as Record<string, unknown>[];
-        const res: CheckInData = {
-          id: rawRes.id as string,
-          name: (rawRes.name ?? "") as string,
-          eventId: (rawRes.event_id ?? "") as string,
-          eventTitle: (rawRes.event_title ?? "") as string,
-          guestCount: (rawRes.guest_count ?? 1) as number,
-          preOrders: rawOrders.map((item) => ({
-            productId: item.product_id as string,
-            name: item.name as string,
-            quantity: item.quantity as number,
-            price: item.price as number,
-            category: item.category as OrderItemCategory,
-            delivered: (item.delivered ?? false) as boolean,
-          })),
-          notes: (rawRes.notes ?? "") as string,
-          accessibilityNote: (rawRes.accessibility_note ?? "") as string,
-          status: (rawRes.status ?? "pending") as ReservationStatus,
-          checkedIn: (rawRes.checked_in ?? false) as boolean,
-          checkedInAt: rawRes.checked_in_at as string | undefined,
-          strapIssued: (rawRes.strap_issued ?? false) as boolean,
-        };
-        setReservation(res);
-        setSuccess(true);
-        setAlreadyCheckedIn((data.already_checked_in ?? false) as boolean);
-      } else {
-        setError(m.checkin_error());
-      }
-    } catch {
-      setError(m.checkin_error());
-    } finally {
-      setIsCheckingIn(false);
+      const result = await checkInMutation.mutateAsync();
+      setAlreadyCheckedIn(result.alreadyCheckedIn || result.registration.checkedIn);
+    } catch (mutationError) {
+      setError(
+        mutationError instanceof CheckInError ? mutationError.message : m.checkin_error(),
+      );
     }
-  }, [reservationId, checkInToken]);
+  }, [checkInMutation, checkInToken, registrationId]);
 
-  if (!reservationId || !checkInToken) {
+  if (!registrationId || !checkInToken) {
     return (
       <section id="check-in" className="py-5" aria-labelledby="checkin-title">
         <Container>
@@ -203,41 +224,41 @@ export default function CheckInPage() {
               </div>
             )}
 
-            {error && (
+            {(error || queryError) && (
               <Alert variant="danger">
                 <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                {error}
+                {error || queryError}
               </Alert>
             )}
 
-            {reservation && !isLoading && (
+            {registration && !isLoading && (
               <Card
                 bg="dark"
                 text="white"
-                border={success ? "success" : alreadyCheckedIn ? "warning" : "secondary"}
+                border={success ? "success" : isAlreadyCheckedIn ? "warning" : "secondary"}
               >
                 <Card.Header
                   className={clsx(
                     "d-flex align-items-center justify-content-between",
                     success
                       ? "border-success"
-                      : alreadyCheckedIn
+                      : isAlreadyCheckedIn
                         ? "border-warning"
                         : "border-secondary",
                   )}
                 >
                   <span className="fw-semibold fs-5">
                     <i className="bi bi-person-fill me-2" aria-hidden="true" />
-                    {reservation.name}
+                    {registration.name}
                   </span>
                   <div className="d-flex gap-2 flex-wrap">
-                    {reservation.checkedIn && (
+                    {registration.checkedIn && (
                       <Badge bg="success">
                         <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
                         {m.admin_checked_in()}
                       </Badge>
                     )}
-                    {reservation.strapIssued && (
+                    {registration.strapIssued && (
                       <Badge bg="info">
                         <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
                         {m.admin_strap_issued()}
@@ -255,33 +276,33 @@ export default function CheckInPage() {
                     </Alert>
                   )}
 
-                  {alreadyCheckedIn && !success && reservation.checkedInAt && (
+                  {isAlreadyCheckedIn && !success && registration.checkedInAt && (
                     <Alert variant="warning" className="mb-3">
                       <i className="bi bi-exclamation-circle-fill me-2" aria-hidden="true" />
                       {m.checkin_already_in()}{" "}
-                      {new Date(reservation.checkedInAt).toLocaleTimeString()}
+                      {new Date(registration.checkedInAt).toLocaleTimeString()}
                     </Alert>
                   )}
 
                   <ListGroup variant="flush" className="bg-dark">
                     <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
                       <span className="text-secondary">{m.checkin_event()}</span>
-                      <span>{reservation.eventTitle || reservation.eventId}</span>
+                      <span>{registration.eventTitle || registration.eventId}</span>
                     </ListGroup.Item>
                     <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
                       <span className="text-secondary">{m.checkin_guests()}</span>
-                      <span>{reservation.guestCount}</span>
+                      <span>{registration.guestCount}</span>
                     </ListGroup.Item>
                   </ListGroup>
 
-                  {reservation.preOrders.length > 0 && (
+                  {registration.preOrders.length > 0 && (
                     <div className="mt-3">
                       <p className="fw-semibold text-warning mb-2">
                         <i className="bi bi-cart-fill me-2" aria-hidden="true" />
                         {m.checkin_pre_orders()}
                       </p>
                       <ListGroup variant="flush">
-                        {reservation.preOrders.map((item, idx) => (
+                        {registration.preOrders.map((item, idx) => (
                           <ListGroup.Item
                             key={`${item.productId}-${idx}`}
                             className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center"
@@ -304,7 +325,7 @@ export default function CheckInPage() {
                   )}
                 </Card.Body>
 
-                {!reservation.checkedIn && (
+                {!registration.checkedIn && (
                   <Card.Footer className="bg-dark border-secondary">
                     <Button
                       variant="warning"

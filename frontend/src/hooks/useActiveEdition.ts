@@ -6,7 +6,7 @@
  * initial render / network failures, then replaces it with `/api/editions/active`.
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates, type Event, type SliderItem } from "@/config/editions";
 
 interface ActiveEditionVenue {
@@ -193,13 +193,17 @@ export async function fetchActiveEdition(): Promise<ActiveEdition> {
   return mapApiEdition(api, EMPTY_EDITION.dates);
 }
 
-export function useActiveEdition(): ActiveEditionState {
-  const query = useQuery({
+export function activeEditionQueryOptions() {
+  return queryOptions({
     queryKey: activeEditionQueryKey,
     queryFn: fetchActiveEdition,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
+}
+
+export function useActiveEdition(): ActiveEditionState {
+  const query = useQuery(activeEditionQueryOptions());
 
   return {
     edition: query.data ?? createFallbackEdition(),
