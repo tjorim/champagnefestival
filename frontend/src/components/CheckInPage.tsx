@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import Container from "react-bootstrap/Container";
@@ -18,15 +18,16 @@ import {
 } from "@/utils/publicRegistrationApi";
 
 export default function CheckInPage() {
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const registrationId = searchParams.get("id") ?? undefined;
   const checkInToken = searchParams.get("token") ?? undefined;
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
+  const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
 
   const registrationQuery = useQuery({
-    queryKey: queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? ""),
+    queryKey: checkInQueryKey,
     queryFn: () => fetchCheckInRegistration(registrationId!, checkInToken!),
     enabled: Boolean(registrationId && checkInToken),
     retry: false,
@@ -36,11 +37,17 @@ export default function CheckInPage() {
   const checkInMutation = useMutation({
     mutationFn: () => submitCheckIn(registrationId!, checkInToken!),
     retry: false,
-    onSuccess: ({ alreadyCheckedIn: mutationAlreadyCheckedIn }) => {
-      setError("");
+    onMutate: () => {
+      setSuccess(false);
+      setAlreadyCheckedIn(false);
+    },
+    onSuccess: ({ registration: updatedRegistration, alreadyCheckedIn: mutationAlreadyCheckedIn }) => {
+      queryClient.setQueryData(checkInQueryKey, updatedRegistration);
       setSuccess(true);
-      setAlreadyCheckedIn(mutationAlreadyCheckedIn);
-      registrationQuery.refetch().catch(() => undefined);
+      setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: checkInQueryKey });
     },
   });
 
@@ -48,21 +55,17 @@ export default function CheckInPage() {
   const isLoading = registrationQuery.isPending;
   const isCheckingIn = checkInMutation.isPending;
   const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
+  const mutationError =
+    checkInMutation.isError
+      ? checkInMutation.error instanceof CheckInError
+        ? checkInMutation.error.message
+        : m.checkin_error()
+      : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
 
-  const handleCheckIn = useCallback(async () => {
+  const handleCheckIn = useCallback(() => {
     if (!registrationId || !checkInToken) return;
-
-    setError("");
-
-    try {
-      const result = await checkInMutation.mutateAsync();
-      setAlreadyCheckedIn(result.alreadyCheckedIn || result.registration.checkedIn);
-    } catch (mutationError) {
-      setError(
-        mutationError instanceof CheckInError ? mutationError.message : m.checkin_error(),
-      );
-    }
+    checkInMutation.mutate();
   }, [checkInMutation, checkInToken, registrationId]);
 
   if (!registrationId || !checkInToken) {
@@ -105,10 +108,10 @@ export default function CheckInPage() {
               </div>
             )}
 
-            {(error || queryError) && (
+            {(mutationError || queryError) && (
               <Alert variant="danger">
                 <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                {error || queryError}
+                {mutationError || queryError}
               </Alert>
             )}
 

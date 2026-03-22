@@ -67,10 +67,24 @@ export default function RegistrationCreateModal({
   const [guestCount, setGuestCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [eventId, setEventId] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [personOption, setPersonOption] = useState<SingleValue<PersonOption>>(null);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
+
+  const createRegistrationMutation = useMutation({
+    mutationFn: (payload: CreateRegistrationPayload) => createAdminRegistration(payload, authHeaders),
+    retry: false,
+    onSuccess: async (registration) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminActiveEditionEventsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.personOptionsRoot }),
+        queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
+      ]);
+      onSaved(registration);
+      onHide();
+    },
+  });
+  const resetCreateRegistrationMutation = createRegistrationMutation.reset;
 
   useEffect(() => {
     if (!show) {
@@ -83,8 +97,8 @@ export default function RegistrationCreateModal({
     setPersonOption(null);
     setPersonQuery("");
     setDebouncedPersonQuery("");
-    setError(null);
-  }, [show]);
+    resetCreateRegistrationMutation();
+  }, [resetCreateRegistrationMutation, show]);
 
   useEffect(() => {
     if (!show) {
@@ -114,19 +128,12 @@ export default function RegistrationCreateModal({
     retry: false,
   });
 
-  const createRegistrationMutation = useMutation({
-    mutationFn: (payload: CreateRegistrationPayload) => createAdminRegistration(payload, authHeaders),
-    retry: false,
-    onSuccess: async (registration) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminActiveEditionEventsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.admin.personOptionsRoot }),
-        queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
-      ]);
-      onSaved(registration);
-      onHide();
-    },
-  });
+  const error =
+    createRegistrationMutation.isError
+      ? createRegistrationMutation.error instanceof Error
+        ? createRegistrationMutation.error.message
+        : m.admin_error_create_reservation()
+      : null;
 
   const events = eventsQuery.data ?? [];
   const personOptions = personOptionsQuery.data ?? [];
@@ -138,26 +145,15 @@ export default function RegistrationCreateModal({
     setPersonOption(opt);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!personOption || !hasValidEventSelection) return;
-
-    setError(null);
-
-    try {
-      await createRegistrationMutation.mutateAsync({
-        personId: personOption.value,
-        eventId,
-        guestCount,
-        notes: notes.trim(),
-      });
-    } catch (mutationError) {
-      setError(
-        mutationError instanceof Error
-          ? mutationError.message
-          : m.admin_error_create_reservation(),
-      );
-    }
+    createRegistrationMutation.mutate({
+      personId: personOption.value,
+      eventId,
+      guestCount,
+      notes: notes.trim(),
+    });
   }
 
   return (
@@ -172,7 +168,7 @@ export default function RegistrationCreateModal({
               variant="danger"
               className="py-2 small"
               dismissible
-              onClose={() => setError(null)}
+              onClose={() => createRegistrationMutation.reset()}
             >
               {error}
             </Alert>
