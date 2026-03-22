@@ -1629,11 +1629,11 @@ async def test_table_id_can_be_cleared(client):
 
 
 @pytest.mark.anyio
-async def test_table_reservation_ids_computed_from_reservation_table_id(client):
-    """reservation_ids on a table must reflect Reservation.table_id after reload.
+async def test_table_registration_ids_computed_from_registration_table_id(client):
+    """registration_ids on a table must reflect Registration.table_id after reload.
 
-    Regression test: previously Table.reservation_ids was a denormalized JSON
-    array that was never updated when a reservation was assigned via
+    Regression test: previously Table.registration_ids was a denormalized JSON
+    array that was never updated when a registration was assigned via
     PUT /api/registrations/{id}.  On a fresh GET /api/tables the array appeared
     empty, making the layout editor lose all assignments after a page reload.
     """
@@ -1672,7 +1672,7 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
     assert r.status_code == 201
     tbl_id = r.json()["id"]
     # A new table has no reservations yet
-    assert r.json()["reservation_ids"] == []
+    assert r.json()["registration_ids"] == []
 
     # Assign the reservation to the table via the reservation endpoint
     r = await client.put(
@@ -1688,14 +1688,14 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
     assert r.status_code == 200
     tables = r.json()
     tbl = next(t for t in tables if t["id"] == tbl_id)
-    assert res_id in tbl["reservation_ids"], (
-        "reservation_ids should be computed from Reservation.table_id on every GET"
+    assert res_id in tbl["registration_ids"], (
+        "registration_ids should be computed from Registration.table_id on every GET"
     )
 
     # GET /api/tables/{id} must also reflect the assignment
     r = await client.get(f"/api/tables/{tbl_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert res_id in r.json()["reservation_ids"]
+    assert res_id in r.json()["registration_ids"]
 
     # After clearing the table assignment the list must also update
     r = await client.put(
@@ -1707,7 +1707,7 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
 
     r = await client.get("/api/tables", headers=ADMIN_HEADERS)
     tbl = next(t for t in r.json() if t["id"] == tbl_id)
-    assert tbl["reservation_ids"] == []
+    assert tbl["registration_ids"] == []
 
 
 # ---------------------------------------------------------------------------
