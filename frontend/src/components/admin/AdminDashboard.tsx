@@ -27,6 +27,7 @@ import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
 import { useActiveEdition } from "@/hooks/useActiveEdition";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -201,7 +202,7 @@ interface AdminDashboardData {
   members: Person[];
 }
 
-const adminDashboardQueryKey = ["admin-dashboard"] as const;
+const adminDashboardQueryKey = queryKeys.adminDashboard;
 
 async function loadMembers(
   authHeaders: () => Record<string, string>,

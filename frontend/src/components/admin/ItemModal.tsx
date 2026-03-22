@@ -5,6 +5,7 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
+import { queryKeys } from "@/utils/queryKeys";
 
 export interface ContactPerson {
   id: string;
@@ -76,8 +77,6 @@ interface ItemModalProps {
   onHide: () => void;
 }
 
-const itemModalPersonOptionsQueryKey = (query: string) => ["admin", "item-modal", "people", query] as const;
-
 async function fetchPersonOptions(
   query: string,
   authHeaders: () => Record<string, string>,
@@ -143,7 +142,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   }, [personQuery, show]);
 
   const personOptionsQuery = useQuery({
-    queryKey: itemModalPersonOptionsQueryKey(debouncedPersonQuery),
+    queryKey: queryKeys.admin.itemModalPeople(debouncedPersonQuery),
     queryFn: ({ signal }) => fetchPersonOptions(debouncedPersonQuery, authHeaders, signal),
     enabled: show && debouncedPersonQuery.length > 0,
     staleTime: 30 * 1000,

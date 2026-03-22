@@ -1,41 +1,43 @@
 # React Query migration notes
 
-## Implemented in Issue 3
+## Completed migration coverage
 
-The frontend now relies on TanStack Query for the first shared server-state flows instead of local fetch lifecycle code:
+The TanStack Query migration from the original Issue 3 notes has now been completed for the planned follow-up surfaces:
 
 - `useActiveEdition` uses a dedicated query options factory for `/api/editions/active`.
-- `main.tsx` derives reservable events from query-backed edition data with `useMemo`, rather than copying query data into additional component state.
-- `RegistrationCreateModal` uses TanStack Query for:
+- `main.tsx` derives registrable events and schedule data from query-backed edition data with `useMemo`, rather than copying query data into additional component state.
+- `RegistrationCreateModal.tsx` uses TanStack Query for:
   - active-edition event lookup,
   - debounced people search,
   - registration creation mutation invalidation.
+- `AdminDashboard.tsx` now loads its server-state through TanStack Query and clears dashboard cache on logout.
+- `ContentManagement.tsx` now uses query-backed section loads and mutations for CRUD flows.
+- `ItemModal.tsx` and related admin lookup flows now use TanStack Query for debounced people search.
+- Public-side request flows now use TanStack Query where planned:
+  - `RegistrationModal.tsx` for submission,
+  - `MyRegistrationsPage.tsx` for lookup request + token-backed access,
+  - `CheckInPage.tsx` for lookup + check-in mutation,
+  - `ContactForm.tsx` for submission.
 
-Current cache policy for the migrated flows:
+## Current cache policy
 
 - Active edition: `staleTime` 5 minutes, `retry: false`.
 - Admin reservable events: `staleTime` 1 minute, `retry: false`.
 - Admin people search: `staleTime` 30 seconds, `retry: false`.
+- Content-management sections: `staleTime` 1 minute, `retry: false`.
+- Public lookup/check-in flows: `staleTime` 30 seconds, `retry: false`.
 
-## Follow-up migration path
+## Follow-up notes after migration
 
-The next raw-fetch candidates should be migrated in this order:
+The original migration checklist is complete, but there is still room for incremental cleanup:
 
-1. `AdminDashboard.tsx`
-   - largest concentration of server-state,
-   - already performs coordinated refreshes after admin mutations,
-   - would benefit most from shared query keys and targeted invalidation.
-2. `ContentManagement.tsx`
-   - server-backed CRUD with multiple local loading/error branches,
-   - good fit for `useQuery` + `useMutation`.
-3. `ItemModal.tsx` and other admin lookup modals
-   - repeats searchable lookup behavior similar to `RegistrationCreateModal`.
-4. public-side request flows (`RegistrationModal`, `MyRegistrationsPage`, `CheckInPage`, `ContactForm`)
-   - can migrate after the admin query-key conventions are stable.
+1. Continue moving shared fetch helpers out of component files where reuse becomes valuable.
+2. Add more shared query-key helpers when new query-backed domains are introduced.
+3. Keep invalidation scoped to the affected domain families as more admin mutations migrate.
 
-## Suggested conventions for follow-up work
+## Conventions in use
 
-- Keep query keys centralized per domain (`edition`, `registrations`, `people`, etc.).
-- Prefer `select` and derived `useMemo` values over copying query data into local state.
-- Use `useMutation` for writes and invalidate only the affected query families.
-- Avoid silent fetch fallbacks; keep retry/staleness behavior explicit in query options.
+- Query keys are centralized in `src/utils/queryKeys.ts` for the migrated shared domains.
+- Derived values continue to prefer `useMemo` over copying query results into extra state.
+- Mutations keep `retry: false` explicit and invalidate or update only affected caches.
+- Fallback behavior remains explicit rather than relying on silent fetch retries.

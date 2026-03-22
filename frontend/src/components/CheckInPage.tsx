@@ -11,6 +11,7 @@ import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import { m } from "@/paraglide/messages";
 import type { OrderItemCategory, RegistrationStatus } from "@/types/registration";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface CheckInData {
   id: string;
@@ -62,9 +63,6 @@ class CheckInError extends Error {
     this.code = code;
   }
 }
-
-const checkInRegistrationQueryKey = (registrationId: string, checkInToken: string) =>
-  ["check-in", registrationId, checkInToken] as const;
 
 function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
   const rawOrders = (data.pre_orders ?? []) as Record<string, unknown>[];
@@ -145,7 +143,7 @@ export default function CheckInPage() {
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
 
   const registrationQuery = useQuery({
-    queryKey: checkInRegistrationQueryKey(registrationId ?? "", checkInToken ?? ""),
+    queryKey: queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? ""),
     queryFn: () => fetchCheckInRegistration(registrationId!, checkInToken!),
     enabled: Boolean(registrationId && checkInToken),
     retry: false,

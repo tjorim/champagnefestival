@@ -13,6 +13,7 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import type { PaymentStatus, RegistrationStatus } from "@/types/registration";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface GuestRegistration {
   id: string;
@@ -79,8 +80,6 @@ function isRegistrationLookupError(error: unknown): error is RegistrationLookupE
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const myRegistrationsQueryKey = (token: string) => ["my-registrations", token] as const;
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -225,7 +224,7 @@ export default function MyRegistrationsPage() {
   });
 
   const registrationsQuery = useQuery({
-    queryKey: myRegistrationsQueryKey(token),
+    queryKey: queryKeys.myRegistrations(token),
     queryFn: () => fetchMyRegistrations(token),
     enabled: token.length > 0,
     retry: false,

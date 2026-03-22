@@ -10,6 +10,7 @@ import { m } from "@/paraglide/messages";
 import type { ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
 import type { Venue } from "@/types/admin";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface EditionModalProps {
   show: boolean;
@@ -78,7 +79,7 @@ const darkSelectStyles: ItemSelectStyles = {
   noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
 };
 
-const editionModalExhibitorsQueryKey = ["admin", "edition-modal", "exhibitors"] as const;
+const editionModalExhibitorsQueryKey = queryKeys.admin.editionModalExhibitors;
 
 async function fetchEditionModalExhibitors(
   authHeaders: () => Record<string, string>,

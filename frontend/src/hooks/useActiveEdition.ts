@@ -8,6 +8,7 @@
 
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates, type Event, type SliderItem } from "@/config/editions";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface ActiveEditionVenue {
   venueName: string;
@@ -71,7 +72,7 @@ export interface ActiveEditionState {
   isLoaded: boolean;
 }
 
-export const activeEditionQueryKey = ["active-edition"] as const;
+export const activeEditionQueryKey = queryKeys.activeEdition;
 
 /** Parse "YYYY-MM-DD" as a local date (avoids UTC-midnight → previous day shift). */
 function parseLocalDate(s: string): Date {

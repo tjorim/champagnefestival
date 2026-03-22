@@ -12,6 +12,7 @@ import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import type { PaymentStatus, RegistrationStatus } from "@/types/registration";
+import { queryKeys } from "@/utils/queryKeys";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 
 interface PersonRegistration {
@@ -56,8 +57,6 @@ function isPersonRegistrationRecord(value: unknown): value is Record<string, unk
     typeof value.created_at === "string"
   );
 }
-
-const personRegistrationsQueryKey = (personId: string) => ["admin", "people", personId, "registrations"] as const;
 
 async function fetchPersonRegistrations(
   personId: string,
@@ -231,7 +230,7 @@ export default function PeopleManagement({
   }, []);
 
   const personRegistrationsQuery = useQuery({
-    queryKey: personRegistrationsQueryKey(viewRegistrationsPerson?.id ?? ""),
+    queryKey: queryKeys.admin.peopleRegistrations(viewRegistrationsPerson?.id ?? ""),
     queryFn: ({ signal }) =>
       fetchPersonRegistrations(viewRegistrationsPerson!.id, authHeaders, signal),
     enabled: viewRegistrationsPerson !== null,

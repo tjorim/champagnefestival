@@ -10,6 +10,7 @@ import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
 import { m } from "@/paraglide/messages";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface PersonOption {
   value: string;
@@ -40,8 +41,8 @@ interface CreateRegistrationPayload {
   notes: string;
 }
 
-const adminActiveEditionEventsQueryKey = ["admin", "active-edition", "events"] as const;
-const adminPersonOptionsQueryKey = (query: string) => ["admin", "person-options", query] as const;
+const adminActiveEditionEventsQueryKey = queryKeys.admin.activeEditionEvents;
+const adminPersonOptionsQueryKey = queryKeys.admin.personOptions;
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
   control: (base) => ({
@@ -206,7 +207,7 @@ export default function RegistrationCreateModal({
     onSuccess: async (registration) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: adminActiveEditionEventsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: ["admin", "person-options"] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.personOptionsRoot }),
         queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
       ]);
       onSaved(registration);

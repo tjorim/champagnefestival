@@ -17,6 +17,7 @@ import EditionModal from "./EditionModal";
 import ItemModal, { type ItemDraft } from "./ItemModal";
 import type { Edition } from "./editionTypes";
 import type { Venue } from "@/types/admin";
+import { queryKeys } from "@/utils/queryKeys";
 
 function typeBadgeVariant(type: string | undefined): string {
   switch (type) {
@@ -66,8 +67,8 @@ interface ContentManagementProps {
   onExhibitorDeleted?: (id: number) => void;
 }
 
-const contentSectionQueryKey = (sectionKey: string) => ["content-management", sectionKey] as const;
-const contentEditionsQueryKey = ["content-management", "editions"] as const;
+const contentSectionQueryKey = queryKeys.admin.contentManagement.section;
+const contentEditionsQueryKey = queryKeys.admin.contentManagement.editions;
 
 async function fetchContentSectionItems(
   sectionKey: string,
