@@ -41,13 +41,7 @@ async def get_active_edition(
         None,
     )
     if active is None:
-        has_current_or_future = any(
-            (edition_end_date := _edition_end_date(edition)) and edition_end_date >= today
-            for edition in dated
-        )
-        if not has_current_or_future:
-            raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
-        active = dated[-1]
+        raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
     return await _edition_payload(db, active)
 
 
