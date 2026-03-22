@@ -3,6 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useActiveEdition } from "@/hooks/useActiveEdition";
 
+const toNormalizedLocalDate = (date: Date) => {
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return adjusted.toISOString().slice(0, 10);
+};
+
 const apiEdition = {
   id: "2026-march",
   year: 2026,
@@ -68,11 +73,11 @@ describe("useActiveEdition", () => {
 
     expect(result.current.edition.id).toBe("2026-march");
     expect(result.current.edition.venue.venueName).toBe("Staf Versluys");
-    expect(result.current.edition.dates[0]?.getFullYear()).toBe(2026);
-    expect(result.current.edition.dates[0]?.getMonth()).toBe(2);
-    expect(result.current.edition.dates[0]?.getDate()).toBe(13);
-    expect(result.current.edition.dates[1]?.getDate()).toBe(14);
-    expect(result.current.edition.dates[2]?.getDate()).toBe(15);
+    expect(result.current.edition.dates.map(toNormalizedLocalDate)).toEqual([
+      "2026-03-13",
+      "2026-03-14",
+      "2026-03-15",
+    ]);
 
     expect(result.current.edition.events).toEqual([
       expect.objectContaining({
@@ -122,7 +127,7 @@ describe("useActiveEdition", () => {
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
-    expect(result.current.edition.dates.map((date) => date.toISOString().slice(0, 10))).toEqual([
+    expect(result.current.edition.dates.map(toNormalizedLocalDate)).toEqual([
       "2026-03-13",
       "2026-03-14",
     ]);

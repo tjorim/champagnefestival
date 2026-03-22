@@ -79,6 +79,7 @@ export default function ReservationCreateModal({
   const [personQuery, setPersonQuery] = useState("");
   const [loadingPersons, setLoadingPersons] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const hasValidEventSelection = events.some((event) => event.id === eventId);
 
   useEffect(() => {
     if (!show) return;
@@ -174,7 +175,7 @@ export default function ReservationCreateModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!personOption || !eventId) return;
+    if (!personOption || !hasValidEventSelection) return;
     setSaving(true);
     setError(null);
     try {
@@ -246,14 +247,14 @@ export default function ReservationCreateModal({
                 ))}
               </Form.Select>
             ) : (
-              <Form.Control
-                type="text"
-                value={eventId}
-                onChange={(ev) => setEventId(ev.target.value)}
+              <Form.Select
+                value=""
                 className="bg-dark text-light border-secondary"
-                placeholder={m.admin_event_id_title_placeholder()}
-                required
-              />
+                disabled
+                aria-label={m.admin_event_label()}
+              >
+                <option value="">{m.admin_content_edition_no_events()}</option>
+              </Form.Select>
             )}
           </Form.Group>
 
@@ -311,7 +312,7 @@ export default function ReservationCreateModal({
             type="submit"
             variant="warning"
             size="sm"
-            disabled={saving || !personOption || !eventId}
+            disabled={saving || !personOption || !hasValidEventSelection}
           >
             {saving ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />

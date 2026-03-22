@@ -37,7 +37,7 @@ const mockDays = [
 const mockEvents = [
   {
     id: "fri-tasting",
-    title: "Tasting",
+    title: "Winery Tour",
     startTime: "17:00",
     endTime: "23:00",
     description: "Tasting event",
@@ -75,7 +75,7 @@ describe("Schedule component", () => {
 
   it("renders events for the default active day (Friday)", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
-    expect(screen.getByRole("heading", { name: "Tasting" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Winery Tour" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "VIP" })).toBeInTheDocument();
   });
 
@@ -114,7 +114,7 @@ describe("Schedule component", () => {
 
   it("renders the backend-provided title and description for known legacy ids", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
-    expect(screen.getByRole("heading", { name: "Tasting" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Winery Tour" })).toBeInTheDocument();
     expect(screen.getByText("Tasting event")).toBeInTheDocument();
   });
 });

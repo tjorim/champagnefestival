@@ -10,6 +10,10 @@ import { baseUrl } from "@/config/site";
  * Uses Paraglide JS for translations and our configuration files
  */
 const EventStructuredData: React.FC = () => {
+  if (!festivalDate || !festivalEndDate) {
+    return null;
+  }
+
   const festivalName = m.festival_name();
 
   const venueAddress = contactConfig.location.address;

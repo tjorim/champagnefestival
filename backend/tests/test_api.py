@@ -1,5 +1,6 @@
 """Integration tests for the reservation API."""
 
+import collections
 import hashlib
 from datetime import datetime, timedelta, timezone
 
@@ -20,6 +21,28 @@ TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
 
 
+class FakeRateLimitRedis:
+    def __init__(self) -> None:
+        self.buckets: dict[str, collections.deque[int]] = {}
+
+    async def eval(
+        self,
+        script: str,
+        numkeys: int,
+        key: str,
+        now_ms: int,
+        cutoff_ms: int,
+        ttl_seconds: int,
+        member: str,
+    ) -> int:
+        del script, numkeys, ttl_seconds, member
+        bucket = self.buckets.setdefault(key, collections.deque())
+        while bucket and bucket[0] <= cutoff_ms:
+            bucket.popleft()
+        bucket.append(now_ms)
+        return len(bucket)
+
+
 @pytest.fixture(autouse=True)
 def set_admin_token(monkeypatch):
     monkeypatch.setattr("app.config.settings.admin_token", ADMIN_TOKEN)
@@ -28,8 +51,10 @@ def set_admin_token(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter(monkeypatch):
-    """Reset the in-memory rate limiter before every test for isolation."""
-    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
+    """Reset the shared rate limiter client before every test for isolation."""
+    fake_redis = FakeRateLimitRedis()
+    monkeypatch.setattr(reservations_module, "_rate_limit_redis", None)
+    monkeypatch.setattr(reservations_module, "_get_rate_limit_redis", lambda: fake_redis)
 
 
 @pytest.fixture()
@@ -155,6 +180,12 @@ async def _post_registration(
         event_kwargs.setdefault("title", overrides.get("event_title", VALID_RESERVATION["event_title"]))
         event = await _create_event(client, **event_kwargs)
     return await client.post(path, json=_registration_body(event, **overrides))
+
+
+@pytest.mark.anyio
+async def test_list_events_requires_admin(client):
+    response = await client.get("/api/events")
+    assert response.status_code == 401
 
 
 # ---------------------------------------------------------------------------
@@ -582,7 +613,25 @@ async def test_filter_by_event(client):
 
 
 @pytest.mark.anyio
-async def test_request_my_reservations_access_is_generic(client):
+async def test_request_my_reservations_access_is_generic(client, monkeypatch):
+    sent_messages = []
+
+    async def fake_send_guest_access_email(*, email, token, request_id, expires_at):
+        sent_messages.append(
+            {
+                "email": email,
+                "token": token,
+                "request_id": request_id,
+                "expires_at": expires_at,
+            }
+        )
+        return True
+
+    monkeypatch.setattr(
+        "app.routers.registrations.send_guest_access_email",
+        fake_send_guest_access_email,
+    )
+
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
 
@@ -598,6 +647,26 @@ async def test_request_my_reservations_access_is_generic(client):
     assert "access_token" not in missing.json()
     assert "access_url" not in found.json()
     assert "access_url" not in missing.json()
+    assert len(sent_messages) == 2
+    assert sent_messages[0]["email"] == "jean@example.com"
+    assert sent_messages[1]["email"] == "nobody@example.com"
+    assert sent_messages[0]["token"]
+    assert sent_messages[0]["request_id"]
+
+
+@pytest.mark.anyio
+async def test_request_my_reservations_access_mail_failure_is_non_blocking(client, monkeypatch):
+    async def failing_send_guest_access_email(*, email, token, request_id, expires_at):
+        raise RuntimeError("smtp unavailable")
+
+    monkeypatch.setattr(
+        "app.routers.registrations.send_guest_access_email",
+        failing_send_guest_access_email,
+    )
+
+    response = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
+
+    assert response.status_code == 202
 
 
 @pytest.mark.anyio
@@ -804,11 +873,8 @@ async def test_my_reservations_access_token_reuse(client, monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_my_reservations_request_rate_limited(client, monkeypatch):
+async def test_my_reservations_request_rate_limited(client):
     """After exceeding the per-IP request limit the endpoint returns 429."""
-    # Reset the in-process rate limiter state so prior tests don't affect this one.
-    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
-
     limit = reservations_module._RATE_LIMIT_MAX_REQUESTS
     for _ in range(limit):
         r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
@@ -1064,6 +1130,48 @@ async def test_active_edition_not_found(client):
 
 
 @pytest.mark.anyio
+async def test_active_edition_returns_404_when_only_past_editions_exist(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-past-only",
+            "year": 2020,
+            "month": "march",
+            "venue_id": venue_id,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    event_response = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "edition-past-only",
+            "title": "Past Event",
+            "description": "",
+            "date": "2020-03-20",
+            "start_time": "18:00",
+            "end_time": "22:00",
+            "category": "festival",
+            "registration_required": False,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert event_response.status_code == 201
+
+    response = await client.get("/api/editions/active")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "No active or upcoming editions found."
+
+
+@pytest.mark.anyio
 async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
     # Create venue
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
@@ -1192,6 +1300,54 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
         "Friday VIP",
         "Saturday Party",
     ]
+
+
+@pytest.mark.anyio
+async def test_standalone_event_can_move_within_same_single_day(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-bourse-single-day",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    event_response = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "edition-bourse-single-day",
+            "title": "Bourse Opening",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "10:00",
+            "end_time": "11:00",
+            "category": "exchange",
+            "registration_required": False,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert event_response.status_code == 201
+    event_id = event_response.json()["id"]
+
+    update_response = await client.put(
+        f"/api/events/{event_id}",
+        json={"date": "2099-03-21", "title": "Bourse Opening Updated"},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.json()["date"] == "2099-03-21"
 
 
 @pytest.mark.anyio

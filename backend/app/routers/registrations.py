@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import collections
 import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from redis.asyncio import Redis
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_admin
 from app.config import settings
 from app.database import get_db
+from app.email import send_guest_access_email
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken
 from app.routers.people import normalize_phone
 from app.schemas import (
@@ -45,19 +46,46 @@ logger = logging.getLogger(__name__)
 
 _RATE_LIMIT_MAX_REQUESTS = 5
 _RATE_LIMIT_WINDOW_SECONDS = 600
-_rate_limit_buckets: dict[str, collections.deque[datetime]] = {}
+_RATE_LIMIT_KEY_PREFIX = "rate"
+_rate_limit_redis: Redis | None = None
+_RATE_LIMIT_LUA = """
+local key = KEYS[1]
+local now_ms = tonumber(ARGV[1])
+local cutoff_ms = tonumber(ARGV[2])
+local ttl_seconds = tonumber(ARGV[3])
+local member = ARGV[4]
+
+redis.call("ZREMRANGEBYSCORE", key, 0, cutoff_ms)
+redis.call("ZADD", key, now_ms, member)
+redis.call("EXPIRE", key, ttl_seconds)
+
+return redis.call("ZCARD", key)
+"""
 
 
-def _check_rate_limit(client_ip: str) -> bool:
+def _get_rate_limit_redis() -> Redis:
+    global _rate_limit_redis
+    if _rate_limit_redis is None:
+        _rate_limit_redis = Redis.from_url(settings.redis_url, decode_responses=True)
+    return _rate_limit_redis
+
+
+async def _check_rate_limit(client_ip: str) -> bool:
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(seconds=_RATE_LIMIT_WINDOW_SECONDS)
-    bucket = _rate_limit_buckets.setdefault(client_ip, collections.deque())
-    while bucket and bucket[0] < cutoff:
-        bucket.popleft()
-    if len(bucket) >= _RATE_LIMIT_MAX_REQUESTS:
-        return False
-    bucket.append(now)
-    return True
+    now_ms = int(now.timestamp() * 1000)
+    cutoff_ms = now_ms - (_RATE_LIMIT_WINDOW_SECONDS * 1000)
+    member = f"{now_ms}:{secrets.token_hex(8)}"
+    key = f"{_RATE_LIMIT_KEY_PREFIX}:{client_ip}"
+    bucket_size = await _get_rate_limit_redis().eval(
+        _RATE_LIMIT_LUA,
+        1,
+        key,
+        now_ms,
+        cutoff_ms,
+        _RATE_LIMIT_WINDOW_SECONDS,
+        member,
+    )
+    return int(bucket_size) <= _RATE_LIMIT_MAX_REQUESTS
 
 
 @router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
@@ -199,7 +227,7 @@ async def request_my_registrations_access(
     db: AsyncSession = Depends(get_db),
 ) -> RegistrationLookupRequestAccepted:
     client_ip = request.client.host if request.client else "unknown"
-    if not _check_rate_limit(client_ip):
+    if not await _check_rate_limit(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
@@ -253,10 +281,24 @@ async def request_my_registrations_access(
         existing_token_row.last_used_at = None
         await db.commit()
 
+    try:
+        email_sent = await send_guest_access_email(
+            email=email_norm,
+            token=token,
+            request_id=request_id,
+            expires_at=expires_at,
+        )
+    except Exception:
+        logger.exception(
+            "Guest access email delivery failed unexpectedly for request_id=%s.",
+            request_id,
+        )
+        email_sent = False
     logger.info(
-        "Prepared guest registration access token request_id=%s delivery_mode=email expires_at=%s",
+        "Prepared guest registration access token request_id=%s delivery_mode=email expires_at=%s email_sent=%s",
         request_id,
         expires_at.isoformat(),
+        email_sent,
     )
     return RegistrationLookupRequestAccepted(
         delivery_mode="email",

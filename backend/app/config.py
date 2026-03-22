@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     guest_access_token_ttl_minutes: int = 30
     """How long a visitor reservation access link remains valid."""
 
+    redis_url: str = "redis://localhost:6379/0"
+    """Redis URL used for shared rate limiting and other cross-worker coordination."""
+
     # --- TODO: Email notifications (planned, not yet implemented) ---
     smtp_host: str = ""
     smtp_port: int = 587

@@ -73,8 +73,44 @@ export interface ActiveEditionState {
 
 /** Parse "YYYY-MM-DD" as a local date (avoids UTC-midnight → previous day shift). */
 function parseLocalDate(s: string): Date {
-  const [year, month, day] = s.split("-").map(Number);
-  return new Date(year!, month! - 1, day!);
+  if (typeof s !== "string") {
+    throw new Error(`Invalid edition date: expected a string, received ${typeof s}.`);
+  }
+
+  const parts = s.split("-");
+  if (parts.length !== 3) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: expected YYYY-MM-DD.`);
+  }
+
+  const numericParts = parts.map(Number);
+  const year = numericParts[0];
+  const month = numericParts[1];
+  const day = numericParts[2];
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: expected YYYY-MM-DD.`);
+  }
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: expected numeric YYYY-MM-DD.`);
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: out-of-range calendar date.`);
+  }
+
+  return parsed;
 }
 
 function deriveEditionDates(
