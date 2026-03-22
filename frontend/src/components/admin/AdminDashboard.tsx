@@ -493,7 +493,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     queryClient.removeQueries({
       predicate: (query) => {
         const key = query.queryKey[0];
-        return key === "admin-dashboard" || key === "admin" || key === "content-management";
+        return key === "admin-dashboard" || key === "admin";
       },
     });
     setIsAuthenticated(false);

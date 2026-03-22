@@ -14,8 +14,8 @@ export const queryKeys = {
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,
     contentManagement: {
-      section: (sectionKey: string) => ["content-management", sectionKey] as const,
-      editions: ["content-management", "editions"] as const,
+      section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
+      editions: ["admin", "content-management", "editions"] as const,
     },
   },
 } as const;

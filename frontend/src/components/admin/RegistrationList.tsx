@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -124,6 +124,15 @@ export default function RegistrationList({
     [onAssignTable],
   );
 
+  const statusCounts = useMemo(
+    () => ({
+      all: registrations.length,
+      pending: registrations.filter((r) => r.status === "pending").length,
+      confirmed: registrations.filter((r) => r.status === "confirmed").length,
+    }),
+    [registrations],
+  );
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
@@ -152,21 +161,21 @@ export default function RegistrationList({
                 variant={filter === "all" ? "warning" : "outline-secondary"}
                 onClick={() => onFilterChange("all")}
               >
-                {m.admin_filter_all()} ({registrations.length})
+                {m.admin_filter_all()} ({statusCounts.all})
               </Button>
               <Button
                 variant={filter === "pending" ? "warning" : "outline-secondary"}
                 onClick={() => onFilterChange("pending")}
               >
                 {m.admin_filter_pending()} (
-                {registrations.filter((r) => r.status === "pending").length})
+                {statusCounts.pending})
               </Button>
               <Button
                 variant={filter === "confirmed" ? "warning" : "outline-secondary"}
                 onClick={() => onFilterChange("confirmed")}
               >
                 {m.admin_filter_confirmed()} (
-                {registrations.filter((r) => r.status === "confirmed").length})
+                {statusCounts.confirmed})
               </Button>
             </ButtonGroup>
             <Button variant="outline-warning" size="sm" onClick={() => setShowCreateModal(true)}>
