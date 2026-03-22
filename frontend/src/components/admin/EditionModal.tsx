@@ -100,6 +100,10 @@ export default function EditionModal({
   const venuesRef = useRef(venues);
   venuesRef.current = venues;
 
+  // Track whether exhibitor selections have been hydrated from the full pool
+  // so that a background refetch of allExhibitors doesn't wipe user edits.
+  const hydratedRef = useRef(false);
+
   const [id, setId] = useState("");
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState("");
@@ -114,6 +118,8 @@ export default function EditionModal({
 
   useEffect(() => {
     if (!show) return;
+    // Reset hydration flag so allExhibitors effect will re-hydrate on next modal open
+    hydratedRef.current = false;
     setId(initial?.id ?? "");
     setYear(initial?.year ?? new Date().getFullYear());
     setMonth(initial?.month ?? "");
@@ -162,14 +168,16 @@ export default function EditionModal({
 
   const allExhibitors = useMemo(() => exhibitorsQuery.data ?? [], [exhibitorsQuery.data]);
 
-  // Sync selections once pool is loaded
+  // Sync selections once pool is loaded — guard with hydratedRef so a background
+  // refetch does not overwrite selections the user has already made.
   useEffect(() => {
-    if (allExhibitors.length === 0) return;
+    if (allExhibitors.length === 0 || hydratedRef.current) return;
     const ids = new Set(
       [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
     );
     const { active: act, archived: arch } = toOptions(allExhibitors);
     setSelectedExhibitors([...act, ...arch].filter((o) => ids.has(o.value)));
+    hydratedRef.current = true;
   }, [allExhibitors, initial]);
 
   const isEdit = !!initial;

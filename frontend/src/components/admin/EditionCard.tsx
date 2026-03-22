@@ -65,10 +65,10 @@ export default function EditionCard({
 }: EditionCardProps) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [editionModalOpen, setEditionModalOpen] = useState(false);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
@@ -88,13 +88,13 @@ export default function EditionCard({
 
   async function saveSchedule(newSchedule: ScheduleEvent[]) {
     setSaving(true);
-    setSaveError(false);
+    setSaveError('');
     try {
       const updatedEdition = await saveScheduleMutation.mutateAsync(newSchedule);
       onUpdated(updatedEdition);
     } catch (error) {
       console.error("Failed to save edition schedule", error);
-      setSaveError(true);
+      setSaveError(error instanceof Error ? error.message : m.admin_content_error_save());
     } finally {
       setSaving(false);
     }
@@ -123,14 +123,14 @@ export default function EditionCard({
 
   async function handleDelete() {
     setDeleting(true);
-    setDeleteError(false);
+    setDeleteError('');
     try {
       await deleteEditionMutation.mutateAsync();
       setConfirmDelete(false);
       onDeleted(edition.id);
     } catch (error) {
       console.error("Failed to delete edition", error);
-      setDeleteError(true);
+      setDeleteError(error instanceof Error ? error.message : m.admin_content_error_save());
     } finally {
       setDeleting(false);
     }
@@ -174,13 +174,13 @@ export default function EditionCard({
         {saveError && (
           <span className="text-danger small">
             <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
-            {m.admin_content_error_save()}
+            {saveError}
           </span>
         )}
         {deleteError && (
           <span className="text-danger small">
             <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
-            {m.admin_content_error_save()}
+            {deleteError}
           </span>
         )}
         {confirmDelete ? (

@@ -1,5 +1,5 @@
 import { m } from "@/paraglide/messages";
-import type { Registration } from "@/types/registration";
+import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
 
 export interface PersonOption {
@@ -29,6 +29,49 @@ export interface CreateRegistrationPayload {
   eventId: string;
   guestCount: number;
   notes: string;
+}
+
+export interface PersonRegistration {
+  id: string;
+  eventTitle: string;
+  guestCount: number;
+  status: RegistrationStatus;
+  paymentStatus: PaymentStatus;
+  checkedIn: boolean;
+  createdAt: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isRegistrationStatus(value: unknown): value is RegistrationStatus {
+  return value === "pending" || value === "confirmed" || value === "cancelled";
+}
+
+function isPaymentStatus(value: unknown): value is PaymentStatus {
+  return value === "unpaid" || value === "partial" || value === "paid";
+}
+
+function isPersonRegistrationRecord(value: unknown): value is Record<string, unknown> & {
+  id: string;
+  event_title: string;
+  guest_count: number;
+  status: RegistrationStatus;
+  payment_status: PaymentStatus;
+  checked_in: boolean;
+  created_at: string;
+} {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.event_title === "string" &&
+    typeof value.guest_count === "number" &&
+    isRegistrationStatus(value.status) &&
+    isPaymentStatus(value.payment_status) &&
+    typeof value.checked_in === "boolean" &&
+    typeof value.created_at === "string"
+  );
 }
 
 export async function fetchRegistrableEvents(
@@ -68,6 +111,36 @@ export async function fetchAdminPersonOptions(
     name: person.name,
     email: person.email,
     phone: person.phone,
+  }));
+}
+
+export async function fetchAdminPersonRegistrations(
+  personId: string,
+  authHeaders: () => Record<string, string>,
+  signal?: AbortSignal,
+): Promise<PersonRegistration[]> {
+  const response = await fetch(`/api/people/${encodeURIComponent(personId)}/registrations`, {
+    signal,
+    headers: authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load registrations for person ${personId}: ${response.status}`);
+  }
+
+  const raw: unknown = await response.json();
+  if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord)) {
+    throw new Error(`Invalid registrations payload for person ${personId}.`);
+  }
+
+  return raw.map((registration) => ({
+    id: registration.id,
+    eventTitle: registration.event_title,
+    guestCount: registration.guest_count,
+    status: registration.status,
+    paymentStatus: registration.payment_status,
+    checkedIn: registration.checked_in,
+    createdAt: registration.created_at,
   }));
 }
 
