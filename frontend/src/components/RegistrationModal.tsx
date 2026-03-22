@@ -8,6 +8,10 @@ import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/registration";
 import type { RegistrationFormData, RegistrationFormErrors, OrderItem } from "@/types/registration";
+import {
+  RegistrationSubmitError,
+  submitRegistration,
+} from "@/utils/publicRegistrationApi";
 
 interface RegistrationModalProps {
   show: boolean;
@@ -19,12 +23,6 @@ interface RegistrationModalProps {
 }
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-class RegistrationSubmitError extends Error {
-  constructor(message: string) {
-    super(message);
-  }
-}
 
 function getProductName(nameKey: string): string {
   switch (nameKey) {
@@ -40,43 +38,6 @@ function getProductName(nameKey: string): string {
       return m.reservation_product_food_charcuterie();
     default:
       return nameKey;
-  }
-}
-
-async function submitRegistration(
-  payload: RegistrationFormData,
-  registrableEvents: { id: string; title: string }[],
-): Promise<void> {
-  const selectedEvent = registrableEvents.find((event) => event.id === payload.eventId);
-  const response = await fetch("/api/registrations", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: payload.name,
-      email: payload.email,
-      phone: payload.phone,
-      event_id: payload.eventId,
-      event_title: selectedEvent?.title ?? payload.eventId,
-      guest_count: payload.guestCount,
-      pre_orders: payload.preOrders.map((order) => ({
-        product_id: order.productId,
-        name: order.name,
-        quantity: order.quantity,
-        price: order.price,
-        category: order.category,
-        delivered: order.delivered,
-      })),
-      notes: payload.notes,
-      honeypot: payload.honeypot ?? "",
-      form_start_time: payload.formStartTime,
-    }),
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new RegistrationSubmitError(
-      (data as { error?: string }).error ?? m.reservation_error(),
-    );
   }
 }
 
