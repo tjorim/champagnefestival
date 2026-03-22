@@ -202,6 +202,21 @@ interface AdminDashboardData {
   members: Person[];
 }
 
+function createEmptyDashboardData(): AdminDashboardData {
+  return {
+    registrations: [],
+    tables: [],
+    venues: [],
+    rooms: [],
+    tableTypes: [],
+    layouts: [],
+    exhibitors: [],
+    areas: [],
+    people: [],
+    members: [],
+  };
+}
+
 const adminDashboardQueryKey = queryKeys.adminDashboardRoot;
 
 async function loadMembers(
@@ -338,19 +353,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState("");
-
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [tables, setTables] = useState<FloorTable[]>([]);
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [tableTypes, setTableTypes] = useState<TableType[]>([]);
-  const [layouts, setLayouts] = useState<Layout[]>([]);
-  const [exhibitors, setExhibitors] = useState<
-    { id: number; name: string; active: boolean; contactPersonId: string | null }[]
-  >([]);
-  const [areas, setAreas] = useState<FloorArea[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [members, setMembers] = useState<Person[]>([]);
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   /** Full registration (with checkInToken) shown in the detail modal */
   const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
@@ -370,6 +372,40 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     staleTime: 60 * 1000,
     retry: false,
   });
+  const currentDashboardQueryKey = queryKeys.adminDashboard(storedTokenRef.current);
+  const dashboardData = dashboardQuery.data ?? createEmptyDashboardData();
+  const {
+    registrations,
+    tables,
+    venues,
+    rooms,
+    tableTypes,
+    layouts,
+    exhibitors,
+    areas,
+    people,
+    members,
+  } = dashboardData;
+  const updateDashboardData = useCallback(
+    (updater: (prev: AdminDashboardData) => AdminDashboardData) => {
+      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (prev) =>
+        updater(prev ?? createEmptyDashboardData()),
+      );
+    },
+    [currentDashboardQueryKey, queryClient],
+  );
+  const updateDashboardField = useCallback(
+    <K extends keyof AdminDashboardData>(
+      key: K,
+      updater: (value: AdminDashboardData[K]) => AdminDashboardData[K],
+    ) => {
+      updateDashboardData((prev) => ({
+        ...prev,
+        [key]: updater(prev[key]),
+      }));
+    },
+    [updateDashboardData],
+  );
 
   const layoutDayOptions = useMemo(() => {
     const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
@@ -459,12 +495,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     queryClient.removeQueries({ queryKey: adminDashboardQueryKey });
     setIsAuthenticated(false);
     setToken("");
-    setRegistrations([]);
-    setTables([]);
-    setRooms([]);
-    setTableTypes([]);
-    setPeople([]);
-    setMembers([]);
+    setDetailRegistration(null);
   }, [queryClient]);
 
   const handleMergePeople = useCallback(
@@ -492,12 +523,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           })
         : canonicalPerson;
       // Replace both the canonical and duplicate in the canonical people list.
-      setPeople((prev) =>
+      updateDashboardField("people", (prev) =>
         prev
           .filter((p) => p.id !== duplicateId)
           .map((p) => (p.id === canonicalId ? mergedCanonical : p)),
       );
-      setMembers((prev) =>
+      updateDashboardField("members", (prev) =>
         syncMembersWithPerson(
           prev.filter((member) => member.id !== duplicateId),
           mergedCanonical,
@@ -505,7 +536,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       );
       // Re-point any registrations in state that were on the duplicate;
       // also refresh person data on any already-canonical registrations (merged fields may have changed).
-      setRegistrations((prev) =>
+      updateDashboardField("registrations", (prev) =>
         prev.map((r) =>
           r.personId === duplicateId
             ? { ...r, personId: canonicalId, person: canonicalPerson }
@@ -515,13 +546,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
       // Re-point any exhibitors in state that were linked to the duplicate contact person
-      setExhibitors((prev) =>
+      updateDashboardField("exhibitors", (prev) =>
         prev.map((ex) =>
           ex.contactPersonId === duplicateId ? { ...ex, contactPersonId: canonicalId } : ex,
         ),
       );
     },
-    [authHeaders, people],
+    [authHeaders, people, updateDashboardField],
   );
 
   const handleCreateMember = useCallback(
@@ -545,10 +576,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const createdMember = apiToPerson(d as Record<string, unknown>);
-      setMembers((prev) => [createdMember, ...prev]);
-      setPeople((prev) => [createdMember, ...prev]);
+      updateDashboardField("members", (prev) => [createdMember, ...prev]);
+      updateDashboardField("people", (prev) => [createdMember, ...prev]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateMember = useCallback(
@@ -572,9 +603,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const updatedMember = apiToPerson(d as Record<string, unknown>);
-      setMembers((prev) => prev.map((member) => (member.id === id ? updatedMember : member)));
-      setPeople((prev) => replacePersonById(prev, updatedMember));
-      setRegistrations((prev) =>
+      updateDashboardField("members", (prev) =>
+        prev.map((member) => (member.id === id ? updatedMember : member)),
+      );
+      updateDashboardField("people", (prev) => replacePersonById(prev, updatedMember));
+      updateDashboardField("registrations", (prev) =>
         prev.map((r) =>
           r.personId === id
             ? {
@@ -603,7 +636,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           : prev,
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteMember = useCallback(
@@ -616,10 +649,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_delete());
       }
-      setMembers((prev) => prev.filter((member) => member.id !== id));
-      setPeople((prev) => prev.filter((person) => person.id !== id));
+      updateDashboardField("members", (prev) => prev.filter((member) => member.id !== id));
+      updateDashboardField("people", (prev) => prev.filter((person) => person.id !== id));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleCreatePerson = useCallback(
@@ -644,10 +677,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const createdPerson = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => [createdPerson, ...prev]);
-      setMembers((prev) => syncMembersWithPerson(prev, createdPerson));
+      updateDashboardField("people", (prev) => [createdPerson, ...prev]);
+      updateDashboardField("members", (prev) => syncMembersWithPerson(prev, createdPerson));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdatePerson = useCallback(
@@ -672,9 +705,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const updated = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => replacePersonById(prev, updated));
-      setMembers((prev) => syncMembersWithPerson(prev, updated));
-      setRegistrations((prev) =>
+      updateDashboardField("people", (prev) => replacePersonById(prev, updated));
+      updateDashboardField("members", (prev) => syncMembersWithPerson(prev, updated));
+      updateDashboardField("registrations", (prev) =>
         prev.map((r) =>
           r.personId === id
             ? {
@@ -703,7 +736,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           : prev,
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeletePerson = useCallback(
@@ -716,10 +749,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_person());
       }
-      setPeople((prev) => prev.filter((p) => p.id !== id));
-      setMembers((prev) => prev.filter((member) => member.id !== id));
+      updateDashboardField("people", (prev) => prev.filter((p) => p.id !== id));
+      updateDashboardField("members", (prev) => prev.filter((member) => member.id !== id));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleCreateVolunteer = useCallback(
@@ -745,9 +778,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const createdVolunteer = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => [mergeVolunteerPerson(undefined, createdVolunteer), ...prev]);
+      updateDashboardField("people", (prev) => [
+        mergeVolunteerPerson(undefined, createdVolunteer),
+        ...prev,
+      ]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateVolunteer = useCallback(
@@ -773,8 +809,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const updatedVolunteer = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => replaceVolunteerById(prev, updatedVolunteer));
-      setMembers((prev) =>
+      updateDashboardField("people", (prev) => replaceVolunteerById(prev, updatedVolunteer));
+      updateDashboardField("members", (prev) =>
         prev.map((member) =>
           member.id === id
             ? {
@@ -788,7 +824,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteVolunteer = useCallback(
@@ -804,7 +840,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       // The person record is preserved (soft archive); only the volunteer role
       // and help periods are removed.  Update local state accordingly so that
       // the person remains visible in People/Members tabs if applicable.
-      setPeople((prev) =>
+      updateDashboardField("people", (prev) =>
         prev.map((person) =>
           person.id !== id
             ? person
@@ -812,11 +848,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleExhibitorSaved = useCallback((item: ItemDraft) => {
-    setExhibitors((prev) => {
+    updateDashboardField("exhibitors", (prev) => {
       const entry = {
         id: item.id,
         name: item.name,
@@ -829,11 +865,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       return [...prev, entry];
     });
-  }, []);
+  }, [updateDashboardField]);
 
   const handleExhibitorDeleted = useCallback((id: number) => {
-    setExhibitors((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+    updateDashboardField("exhibitors", (prev) => prev.filter((e) => e.id !== id));
+  }, [updateDashboardField]);
 
   const volunteers = useMemo(
     () => people.filter((person) => person.roles.includes("volunteer")),
@@ -841,21 +877,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   useEffect(() => {
-    if (!dashboardQuery.data) {
-      return;
+    if (dashboardQuery.data) {
+      setError("");
     }
-
-    setRegistrations(dashboardQuery.data.registrations);
-    setTables(dashboardQuery.data.tables);
-    setVenues(dashboardQuery.data.venues);
-    setRooms(dashboardQuery.data.rooms);
-    setTableTypes(dashboardQuery.data.tableTypes);
-    setLayouts(dashboardQuery.data.layouts);
-    setExhibitors(dashboardQuery.data.exhibitors);
-    setAreas(dashboardQuery.data.areas);
-    setPeople(dashboardQuery.data.people);
-    setMembers(dashboardQuery.data.members);
-    setError("");
   }, [dashboardQuery.data]);
 
   useEffect(() => {
@@ -910,7 +934,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({ status }),
         });
         if (response.ok) {
-          setRegistrations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
               r.id === id ? { ...r, status, updatedAt: new Date().toISOString() } : r,
             ),
@@ -921,7 +945,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_update_reservation());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdatePayment = useCallback(
@@ -933,7 +957,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({ payment_status: paymentStatus }),
         });
         if (response.ok) {
-          setRegistrations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
               r.id === id ? { ...r, paymentStatus, updatedAt: new Date().toISOString() } : r,
             ),
@@ -944,7 +968,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_update_payment());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAssignTable = useCallback(
@@ -956,14 +980,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({ table_id: tableId ?? null }),
         });
         if (response.ok) {
-          setRegistrations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
               r.id === registrationId ? { ...r, tableId, updatedAt: new Date().toISOString() } : r,
             ),
           );
 
           // Update the tables' registrationIds lists
-          setTables((prevTables) =>
+          updateDashboardField("tables", (prevTables) =>
             prevTables.map((t) => {
               const wasAssigned = t.registrationIds.includes(registrationId);
               const shouldBeAssigned = t.id === tableId;
@@ -985,7 +1009,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_assign_table());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddTable = useCallback(
@@ -1008,15 +1032,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const data = await response.json();
       const table = data.table ?? data;
-      setTables((prev) => [...prev, apiTableToTable(table)]);
+      updateDashboardField("tables", (prev) => [...prev, apiTableToTable(table)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleMoveTable = useCallback(
     async (tableId: string, x: number, y: number) => {
       // Optimistic update
-      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, x, y } : t)));
+      updateDashboardField("tables", (prev) =>
+        prev.map((t) => (t.id === tableId ? { ...t, x, y } : t)),
+      );
       try {
         await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
@@ -1028,14 +1054,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist table position", err);
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleRotateTable = useCallback(
     async (tableId: string, rotation: number) => {
       // Normalise to [0, 360)
       const normalised = ((rotation % 360) + 360) % 360;
-      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)));
+      updateDashboardField("tables", (prev) =>
+        prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)),
+      );
       try {
         await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
@@ -1046,7 +1074,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist table rotation", err);
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteTable = useCallback(
@@ -1059,9 +1087,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_table());
       }
-      setTables((prev) => prev.filter((t) => t.id !== tableId));
+      updateDashboardField("tables", (prev) => prev.filter((t) => t.id !== tableId));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddVenue = useCallback(
@@ -1076,9 +1104,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_venue());
       }
       const d = await response.json();
-      setVenues((prev) => [...prev, apiVenueToVenue(d)]);
+      updateDashboardField("venues", (prev) => [...prev, apiVenueToVenue(d)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleArchiveVenue = useCallback(
@@ -1093,9 +1121,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_archive_venue());
       }
       const d = await response.json();
-      setVenues((prev) => prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)));
+      updateDashboardField("venues", (prev) =>
+        prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleRestoreVenue = useCallback(
@@ -1110,9 +1140,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_restore_venue());
       }
       const d = await response.json();
-      setVenues((prev) => prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)));
+      updateDashboardField("venues", (prev) =>
+        prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteVenue = useCallback(
@@ -1125,17 +1157,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_venue());
       }
-      setVenues((prev) => prev.filter((v) => v.id !== venueId));
+      updateDashboardField("venues", (prev) => prev.filter((v) => v.id !== venueId));
       // Cascade: remove rooms and their layouts/tables from local state
       const venueRoomIds = rooms.filter((r) => r.venueId === venueId).map((r) => r.id);
-      setRooms((prev) => prev.filter((r) => r.venueId !== venueId));
+      updateDashboardField("rooms", (prev) => prev.filter((r) => r.venueId !== venueId));
       const venueLayoutIds = layouts
         .filter((l) => venueRoomIds.includes(l.roomId ?? ""))
         .map((l) => l.id);
-      setLayouts((prev) => prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")));
-      setTables((prev) => prev.filter((t) => !venueLayoutIds.includes(t.layoutId)));
+      updateDashboardField("layouts", (prev) =>
+        prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")),
+      );
+      updateDashboardField("tables", (prev) =>
+        prev.filter((t) => !venueLayoutIds.includes(t.layoutId)),
+      );
     },
-    [authHeaders, rooms, layouts],
+    [authHeaders, layouts, rooms, updateDashboardField],
   );
 
   const handleAddRoom = useCallback(
@@ -1156,9 +1192,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_add_room());
       }
       const data = await response.json();
-      setRooms((prev) => [...prev, apiRoomToRoom(data)]);
+      updateDashboardField("rooms", (prev) => [...prev, apiRoomToRoom(data)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleArchiveRoom = useCallback(
@@ -1173,9 +1209,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_room());
       }
       const data = await response.json();
-      setRooms((prev) => prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)));
+      updateDashboardField("rooms", (prev) =>
+        prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleRestoreRoom = useCallback(
@@ -1190,9 +1228,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
       }
       const data = await response.json();
-      setRooms((prev) => prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)));
+      updateDashboardField("rooms", (prev) =>
+        prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddLayout = useCallback(
@@ -1212,9 +1252,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_layout());
       }
       const d = await response.json();
-      setLayouts((prev) => [...prev, apiLayoutToLayout(d)]);
+      updateDashboardField("layouts", (prev) => [...prev, apiLayoutToLayout(d)]);
     },
-    [activeEdition.id, authHeaders],
+    [activeEdition.id, authHeaders, updateDashboardField],
   );
 
   const handleDeleteLayout = useCallback(
@@ -1227,11 +1267,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_layout());
       }
-      setLayouts((prev) => prev.filter((l) => l.id !== layoutId));
-      setTables((prev) => prev.filter((t) => t.layoutId !== layoutId));
-      setAreas((prev) => prev.filter((a) => a.layoutId !== layoutId));
+      updateDashboardField("layouts", (prev) => prev.filter((l) => l.id !== layoutId));
+      updateDashboardField("tables", (prev) => prev.filter((t) => t.layoutId !== layoutId));
+      updateDashboardField("areas", (prev) => prev.filter((a) => a.layoutId !== layoutId));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddArea = useCallback(
@@ -1262,15 +1302,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? "Failed to add area.");
       }
       const data = await response.json();
-      setAreas((prev) => [...prev, apiAreaToArea(data)]);
+      updateDashboardField("areas", (prev) => [...prev, apiAreaToArea(data)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleMoveArea = useCallback(
     async (areaId: string, x: number, y: number) => {
       const prev = areas.find((a) => a.id === areaId);
-      setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, x, y } : a)));
+      updateDashboardField("areas", (prevAreas) =>
+        prevAreas.map((a) => (a.id === areaId ? { ...a, x, y } : a)),
+      );
       try {
         const response = await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
@@ -1279,7 +1321,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         });
         if (!response.ok) {
           if (prev)
-            setAreas((prevAreas) =>
+            updateDashboardField("areas", (prevAreas) =>
               prevAreas.map((a) => (a.id === areaId ? { ...a, x: prev.x, y: prev.y } : a)),
             );
           const data = await response.json().catch(() => ({}));
@@ -1291,14 +1333,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist area position", err);
       }
     },
-    [authHeaders, areas],
+    [areas, authHeaders, updateDashboardField],
   );
 
   const handleRotateArea = useCallback(
     async (areaId: string, rotation: number) => {
       const prev = areas.find((a) => a.id === areaId);
       const normalised = ((rotation % 360) + 360) % 360;
-      setAreas((prevAreas) =>
+      updateDashboardField("areas", (prevAreas) =>
         prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)),
       );
       try {
@@ -1309,7 +1351,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         });
         if (!response.ok) {
           if (prev)
-            setAreas((prevAreas) =>
+            updateDashboardField("areas", (prevAreas) =>
               prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: prev.rotation } : a)),
             );
           const data = await response.json().catch(() => ({}));
@@ -1321,7 +1363,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist area rotation", err);
       }
     },
-    [authHeaders, areas],
+    [areas, authHeaders, updateDashboardField],
   );
 
   const handleDeleteArea = useCallback(
@@ -1334,9 +1376,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { detail?: string }).detail ?? "Failed to delete area.");
       }
-      setAreas((prev) => prev.filter((a) => a.id !== areaId));
+      updateDashboardField("areas", (prev) => prev.filter((a) => a.id !== areaId));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAssignAreaToItem = useCallback(
@@ -1356,14 +1398,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? "Failed to assign area.");
       }
       const d = await response.json();
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? apiAreaToArea(d) : a)));
+      updateDashboardField("areas", (prev) =>
+        prev.map((a) => (a.id === areaId ? apiAreaToArea(d) : a)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateAreaLabel = useCallback(
     async (areaId: string, label: string) => {
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, label } : a)));
+      updateDashboardField("areas", (prev) =>
+        prev.map((a) => (a.id === areaId ? { ...a, label } : a)),
+      );
       try {
         await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
@@ -1374,13 +1420,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist area label", err);
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleChangeTableType = useCallback(
     async (tableId: string, tableTypeId: string) => {
       let previousTable: FloorTable | undefined;
-      setTables((prev) => {
+      updateDashboardField("tables", (prev) => {
         previousTable = prev.find((t) => t.id === tableId);
         return prev.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t));
       });
@@ -1401,18 +1447,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist table type change", err);
         if (previousTable !== undefined) {
           const snapshot = previousTable;
-          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+          updateDashboardField("tables", (prev) =>
+            prev.map((t) => (t.id === tableId ? snapshot : t)),
+          );
         }
         throw err;
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateTable = useCallback(
     async (tableId: string, name: string) => {
       let previousTable: FloorTable | undefined;
-      setTables((prev) => {
+      updateDashboardField("tables", (prev) => {
         previousTable = prev.find((t) => t.id === tableId);
         return prev.map((t) => (t.id === tableId ? { ...t, name } : t));
       });
@@ -1432,13 +1480,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         if (previousTable !== undefined) {
           const snapshot = previousTable;
-          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+          updateDashboardField("tables", (prev) =>
+            prev.map((t) => (t.id === tableId ? snapshot : t)),
+          );
         }
         console.error("Failed to persist table name", err);
         throw err;
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleResizeArea = useCallback(
@@ -1462,7 +1512,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
 
       let previousArea: FloorArea | undefined;
-      setAreas((prev) => {
+      updateDashboardField("areas", (prev) => {
         previousArea = prev.find((a) => a.id === areaId);
         return prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a));
       });
@@ -1482,18 +1532,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         if (previousArea !== undefined) {
           const snapshot = previousArea;
-          setAreas((prev) => prev.map((a) => (a.id === areaId ? snapshot : a)));
+          updateDashboardField("areas", (prev) =>
+            prev.map((a) => (a.id === areaId ? snapshot : a)),
+          );
         }
         console.error("Failed to persist area resize", err);
         throw err;
       }
     },
-    [authHeaders, areas, layouts, rooms],
+    [areas, authHeaders, layouts, rooms, updateDashboardField],
   );
 
   const handleAddRegistration = useCallback((registration: Registration) => {
-    setRegistrations((prev) => [registration, ...prev]);
-  }, []);
+    updateDashboardField("registrations", (prev) => [registration, ...prev]);
+  }, [updateDashboardField]);
 
   const handleAddTableType = useCallback(
     async (data: Omit<TableType, "id">) => {
@@ -1514,9 +1566,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_table_type());
       }
       const d = await response.json();
-      setTableTypes((prev) => [...prev, apiTableTypeToTableType(d)]);
+      updateDashboardField("tableTypes", (prev) => [...prev, apiTableTypeToTableType(d)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateTableType = useCallback(
@@ -1539,9 +1591,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_update_table_type());
       }
       const d = await response.json();
-      setTableTypes((prev) => prev.map((tt) => (tt.id === id ? apiTableTypeToTableType(d) : tt)));
+      updateDashboardField("tableTypes", (prev) =>
+        prev.map((tt) => (tt.id === id ? apiTableTypeToTableType(d) : tt)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleArchiveTableType = useCallback(
@@ -1594,7 +1648,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           }),
         });
         if (response.ok) {
-          setRegistrations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
               r.id === registrationId
                 ? { ...r, preOrders: updatedOrders, updatedAt: new Date().toISOString() }
@@ -1611,7 +1665,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_bottle_delivery());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleCheckIn = useCallback(
@@ -1625,7 +1679,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         if (response.ok) {
           const data = await response.json();
           const updated = apiToRegistration(data as Record<string, unknown>);
-          setRegistrations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
               r.id === registrationId
                 ? { ...r, checkedIn: true, checkedInAt: updated.checkedInAt }
@@ -1643,7 +1697,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_check_in());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleIssueStrap = useCallback(
@@ -1655,7 +1709,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({ strap_issued: true }),
         });
         if (response.ok) {
-          setRegistrations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) => (r.id === registrationId ? { ...r, strapIssued: true } : r)),
           );
           setDetailRegistration((prev) =>
@@ -1667,7 +1721,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_issue_strap());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   // Computed maps derived from people/registrations state — must stay above any early return
