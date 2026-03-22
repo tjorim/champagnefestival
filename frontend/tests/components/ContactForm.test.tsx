@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import ContactForm from "@/components/ContactForm";
+import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -23,6 +24,11 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("ContactForm component", () => {
+  function renderForm() {
+    const wrapper = createTestQueryClientWrapper();
+    return render(<ContactForm />, { wrapper });
+  }
+
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -33,7 +39,7 @@ describe("ContactForm component", () => {
   });
 
   it("renders form fields and submit button", () => {
-    render(<ContactForm />);
+    renderForm();
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/message/i)).toBeInTheDocument();
@@ -41,7 +47,7 @@ describe("ContactForm component", () => {
   });
 
   it("shows validation errors when submitting empty form", async () => {
-    render(<ContactForm />);
+    renderForm();
     fireEvent.submit(screen.getByRole("button", { name: /send/i }).closest("form")!);
     await waitFor(() => {
       expect(screen.getByText("Name is required")).toBeInTheDocument();
@@ -51,7 +57,7 @@ describe("ContactForm component", () => {
   });
 
   it("shows email validation error for invalid email", async () => {
-    render(<ContactForm />);
+    renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { name: "email", value: "not-an-email" },
@@ -66,7 +72,7 @@ describe("ContactForm component", () => {
   });
 
   it("clears field error when user starts typing", async () => {
-    render(<ContactForm />);
+    renderForm();
     fireEvent.submit(screen.getByLabelText(/name/i).closest("form")!);
     await waitFor(() => {
       expect(screen.getByText("Name is required")).toBeInTheDocument();
@@ -83,7 +89,7 @@ describe("ContactForm component", () => {
       json: async () => ({ message: "success" }),
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<ContactForm />);
+    renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), {
       target: { name: "name", value: "John Doe" },
     });
@@ -121,7 +127,7 @@ describe("ContactForm component", () => {
       json: async () => ({ message: "Server error" }),
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<ContactForm />);
+    renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { name: "email", value: "john@example.com" },
@@ -131,7 +137,7 @@ describe("ContactForm component", () => {
     });
     fireEvent.submit(screen.getByLabelText(/name/i).closest("form")!);
     await waitFor(() => {
-      expect(screen.getByText("Submission error")).toBeInTheDocument();
+      expect(screen.getByText("Server error")).toBeInTheDocument();
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -161,7 +167,7 @@ describe("ContactForm component", () => {
         }),
       ),
     );
-    render(<ContactForm />);
+    renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { name: "email", value: "john@example.com" },

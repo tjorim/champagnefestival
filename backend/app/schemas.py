@@ -383,7 +383,7 @@ class CheckInRequest(BaseModel):
 
 
 class CheckInOut(BaseModel):
-    reservation: CheckInGuestOut
+    registration: CheckInGuestOut
     already_checked_in: bool
 
 
@@ -572,7 +572,7 @@ class TableOut(BaseModel):
     table_type_id: str
     rotation: int
     layout_id: str
-    reservation_ids: list[str]
+    registration_ids: list[str]
     created_at: datetime
     updated_at: datetime
 
@@ -759,7 +759,7 @@ class EditionOut(BaseModel):
     external_partner: str | None
     external_contact_name: str | None
     external_contact_email: EmailStr | None
-    dates: list[date] = Field(default_factory=list)
+    dates: list[dt_date] = Field(default_factory=list)
     venue: VenueOut
     events: list[EventOut]
     producers: list[EditionItemOut]

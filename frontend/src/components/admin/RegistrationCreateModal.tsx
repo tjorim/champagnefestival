@@ -1,28 +1,25 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
-import type { Reservation } from "@/types/reservation";
-import { apiToReservation } from "@/types/reservationMapper";
+import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
+import type { Registration } from "@/types/registration";
 import { m } from "@/paraglide/messages";
+import { queryKeys } from "@/utils/queryKeys";
+import {
+  createAdminRegistration,
+  fetchAdminPersonOptions,
+  fetchRegistrableEvents,
+  type CreateRegistrationPayload,
+  type PersonOption,
+} from "@/utils/adminRegistrationApi";
 
-interface PersonOption {
-  value: string;
-  label: string;
-  sub: string;
-  name: string;
-  email: string;
-  phone: string;
-}
-
-interface EditionEvent {
-  id: string;
-  title: string;
-  registration_required: boolean;
-}
+const adminActiveEditionEventsQueryKey = queryKeys.admin.activeEditionEvents;
+const adminPersonOptionsQueryKey = queryKeys.admin.personOptions;
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
   control: (base) => ({
@@ -53,157 +50,110 @@ const darkSelectStyles: StylesConfig<PersonOption, false> = {
   noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
 };
 
-interface ReservationCreateModalProps {
+interface RegistrationCreateModalProps {
   show: boolean;
   authHeaders: () => Record<string, string>;
-  onSaved: (reservation: Reservation) => void;
+  onSaved: (registration: Registration) => void;
   onHide: () => void;
 }
 
-export default function ReservationCreateModal({
+export default function RegistrationCreateModal({
   show,
   authHeaders,
   onSaved,
   onHide,
-}: ReservationCreateModalProps) {
+}: RegistrationCreateModalProps) {
+  const queryClient = useQueryClient();
   const [guestCount, setGuestCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [eventId, setEventId] = useState("");
-  const [events, setEvents] = useState<EditionEvent[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [personOption, setPersonOption] = useState<SingleValue<PersonOption>>(null);
-  const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
   const [personQuery, setPersonQuery] = useState("");
-  const [loadingPersons, setLoadingPersons] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
+
+  const createRegistrationMutation = useMutation({
+    mutationFn: (payload: CreateRegistrationPayload) => createAdminRegistration(payload, authHeaders),
+    retry: false,
+    onSuccess: async (registration) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminActiveEditionEventsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.personOptionsRoot }),
+        queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
+      ]);
+      onSaved(registration);
+      onHide();
+    },
+  });
+  const resetCreateRegistrationMutation = createRegistrationMutation.reset;
 
   useEffect(() => {
-    if (!show) return;
+    if (!show) {
+      return;
+    }
+
     setGuestCount(1);
     setNotes("");
     setEventId("");
-    setEvents([]);
     setPersonOption(null);
     setPersonQuery("");
-    setPersonOptions([]);
-    setError(null);
-
-    // Fetch active edition events
-    setLoadingEvents(true);
-    fetch("/api/editions/active", { headers: authHeaders() })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.events) {
-          setEvents(
-            (data.events as EditionEvent[]).filter((event) => event.registration_required),
-          );
-        } else {
-          setEvents([]);
-        }
-      })
-      .catch(() => {
-        setEvents([]);
-      })
-      .finally(() => setLoadingEvents(false));
-  }, [show, authHeaders]);
-
-  const searchPersons = useCallback(
-    async (q: string) => {
-      if (!q) {
-        abortRef.current?.abort();
-        abortRef.current = null;
-        setPersonOptions([]);
-        return;
-      }
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      setLoadingPersons(true);
-      try {
-        const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&active=true`, {
-          headers: authHeaders(),
-          signal: controller.signal,
-        });
-        if (res.ok) {
-          const data = (await res.json()) as {
-            id: string;
-            name: string;
-            email: string;
-            phone: string;
-          }[];
-          setPersonOptions(
-            data.map((p) => ({
-              value: p.id,
-              label: p.name,
-              sub: [p.email, p.phone].filter(Boolean).join(" · "),
-              name: p.name,
-              email: p.email,
-              phone: p.phone,
-            })),
-          );
-        } else {
-          setPersonOptions([]);
-        }
-      } catch (err) {
-        if ((err as { name?: string }).name !== "AbortError") {
-          setPersonOptions([]);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoadingPersons(false);
-        }
-      }
-    },
-    [authHeaders],
-  );
+    setDebouncedPersonQuery("");
+    resetCreateRegistrationMutation();
+  }, [resetCreateRegistrationMutation, show]);
 
   useEffect(() => {
-    if (!show) return;
+    if (!show) {
+      return;
+    }
+
     const timer = setTimeout(() => {
-      searchPersons(personQuery);
+      setDebouncedPersonQuery(personQuery.trim());
     }, 300);
+
     return () => clearTimeout(timer);
-  }, [personQuery, show, searchPersons]);
+  }, [personQuery, show]);
+
+  const eventsQuery = useQuery({
+    queryKey: adminActiveEditionEventsQueryKey,
+    queryFn: () => fetchRegistrableEvents(authHeaders),
+    enabled: show,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  const personOptionsQuery = useQuery({
+    queryKey: adminPersonOptionsQueryKey(debouncedPersonQuery),
+    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    enabled: show && debouncedPersonQuery.length > 0,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const error =
+    createRegistrationMutation.isError
+      ? createRegistrationMutation.error instanceof Error
+        ? createRegistrationMutation.error.message
+        : m.admin_error_create_reservation()
+      : null;
+
+  const events = eventsQuery.data ?? [];
+  const personOptions = personOptionsQuery.data ?? [];
+  const loadingEvents = eventsQuery.isPending;
+  const loadingPersons = personOptionsQuery.isFetching;
+  const hasValidEventSelection = events.some((event) => event.id === eventId);
 
   function handlePersonChange(opt: SingleValue<PersonOption>) {
     setPersonOption(opt);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!personOption || !eventId) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/registrations/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({
-          person_id: personOption.value,
-          event_id: eventId,
-          guest_count: guestCount,
-          pre_orders: [],
-          notes: notes.trim(),
-          accessibility_note: "",
-          status: "confirmed",
-        }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setError((d as { detail?: string }).detail ?? m.admin_error_create_reservation());
-        return;
-      }
-      const data = await res.json();
-      onSaved(apiToReservation(data as Record<string, unknown>));
-      onHide();
-    } catch {
-      setError(m.admin_error_create_reservation());
-    } finally {
-      setSaving(false);
-    }
+    if (!personOption || !hasValidEventSelection) return;
+    createRegistrationMutation.mutate({
+      personId: personOption.value,
+      eventId,
+      guestCount,
+      notes: notes.trim(),
+    });
   }
 
   return (
@@ -218,7 +168,7 @@ export default function ReservationCreateModal({
               variant="danger"
               className="py-2 small"
               dismissible
-              onClose={() => setError(null)}
+              onClose={() => createRegistrationMutation.reset()}
             >
               {error}
             </Alert>
@@ -230,6 +180,19 @@ export default function ReservationCreateModal({
               <div className="text-secondary small">
                 <Spinner animation="border" size="sm" className="me-2" />
                 {m.admin_loading_events()}
+              </div>
+            ) : eventsQuery.isError ? (
+              <div className="text-danger small d-flex align-items-center gap-2">
+                <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                {m.admin_error_load_events()}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="p-0 text-warning"
+                  onClick={() => void eventsQuery.refetch()}
+                >
+                  {m.admin_retry()}
+                </Button>
               </div>
             ) : events.length > 0 ? (
               <Form.Select
@@ -246,14 +209,14 @@ export default function ReservationCreateModal({
                 ))}
               </Form.Select>
             ) : (
-              <Form.Control
-                type="text"
-                value={eventId}
-                onChange={(ev) => setEventId(ev.target.value)}
+              <Form.Select
+                value=""
                 className="bg-dark text-light border-secondary"
-                placeholder={m.admin_event_id_title_placeholder()}
-                required
-              />
+                disabled
+                aria-label={m.admin_event_label()}
+              >
+                <option value="">{m.admin_content_edition_no_events()}</option>
+              </Form.Select>
             )}
           </Form.Group>
 
@@ -264,7 +227,7 @@ export default function ReservationCreateModal({
               options={personOptions}
               value={personOption}
               onChange={handlePersonChange}
-              onInputChange={(v) => setPersonQuery(v)}
+              onInputChange={(value) => setPersonQuery(value)}
               inputValue={personQuery}
               isLoading={loadingPersons}
               filterOption={null}
@@ -311,9 +274,9 @@ export default function ReservationCreateModal({
             type="submit"
             variant="warning"
             size="sm"
-            disabled={saving || !personOption || !eventId}
+            disabled={createRegistrationMutation.isPending || !personOption || !hasValidEventSelection}
           >
-            {saving ? (
+            {createRegistrationMutation.isPending ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />

@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_admin
 from app.config import settings
 from app.database import get_db
+from app.email import send_guest_access_email
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken
 from app.routers.people import normalize_phone
 from app.schemas import (
@@ -253,10 +254,24 @@ async def request_my_registrations_access(
         existing_token_row.last_used_at = None
         await db.commit()
 
+    try:
+        email_sent = await send_guest_access_email(
+            email=email_norm,
+            token=token,
+            request_id=request_id,
+            expires_at=expires_at,
+        )
+    except Exception:
+        logger.exception(
+            "Guest access email delivery failed unexpectedly for request_id=%s.",
+            request_id,
+        )
+        email_sent = False
     logger.info(
-        "Prepared guest registration access token request_id=%s delivery_mode=email expires_at=%s",
+        "Prepared guest registration access token request_id=%s delivery_mode=email expires_at=%s email_sent=%s",
         request_id,
         expires_at.isoformat(),
+        email_sent,
     )
     return RegistrationLookupRequestAccepted(
         delivery_mode="email",

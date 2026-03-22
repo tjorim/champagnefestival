@@ -1,7 +1,7 @@
 /**
- * Products and constants for the VIP reservation and ordering system.
+ * Products and constants for the VIP registration and ordering system.
  */
-import type { Product } from "@/types/reservation";
+import type { Product } from "@/types/registration";
 
 export const MAX_GUESTS = 20;
 export const MIN_GUESTS = 1;

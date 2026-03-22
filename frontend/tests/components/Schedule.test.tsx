@@ -11,7 +11,7 @@ vi.mock("@/paraglide/messages", () => ({
     schedule_end_time: () => "End time",
     schedule_time_range: ({ start, end }: { start: string; end: string }) => `${start} - ${end}`,
     schedule_time: () => "Time",
-    schedule_reservation: () => "Reservation required",
+    schedule_reservation: () => "Registration required",
     schedule_no_events: () => "No events",
     schedule_categories_tasting: () => "Tasting",
     schedule_categories_vip: () => "VIP",
@@ -37,7 +37,7 @@ const mockDays = [
 const mockEvents = [
   {
     id: "fri-tasting",
-    title: "Tasting",
+    title: "Winery Tour",
     startTime: "17:00",
     endTime: "23:00",
     description: "Tasting event",
@@ -75,13 +75,13 @@ describe("Schedule component", () => {
 
   it("renders events for the default active day (Friday)", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
-    expect(screen.getByRole("heading", { name: "Tasting" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Winery Tour" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "VIP" })).toBeInTheDocument();
   });
 
-  it("shows reservation badge for events that require reservation", () => {
+  it("shows registration badge for events that require registration", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
-    expect(screen.getByText("Reservation required")).toBeInTheDocument();
+    expect(screen.getByText("Registration required")).toBeInTheDocument();
   });
 
   it("shows category badge", () => {
@@ -114,7 +114,7 @@ describe("Schedule component", () => {
 
   it("renders the backend-provided title and description for known legacy ids", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
-    expect(screen.getByRole("heading", { name: "Tasting" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Winery Tour" })).toBeInTheDocument();
     expect(screen.getByText("Tasting event")).toBeInTheDocument();
   });
 });

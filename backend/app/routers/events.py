@@ -17,7 +17,7 @@ from app.utils import event_to_summary_dict, make_id
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
-@router.get("", response_model=list[EventOut])
+@router.get("", response_model=list[EventOut], dependencies=[Depends(require_admin)])
 async def list_events(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None),
@@ -172,7 +172,8 @@ async def _validate_standalone_event_date(
     if exclude_event_id is not None:
         stmt = stmt.where(Event.id != exclude_event_id)
     existing_dates = {row[0] for row in (await db.execute(stmt)).all()}
-    if existing_dates and existing_dates != {event_date}:
+    resulting_dates = existing_dates | {event_date}
+    if len(resulting_dates) > 1:
         raise HTTPException(
             status_code=400,
             detail="Standalone editions may only contain events on a single date.",

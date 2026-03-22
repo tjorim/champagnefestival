@@ -78,7 +78,7 @@ async def post_check_in(
         await db.refresh(r)
 
     return {
-        "reservation": registration_to_checkin_dict(r),
+        "registration": registration_to_checkin_dict(r),
         "already_checked_in": already,
     }
 

@@ -62,7 +62,7 @@ async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
     result = await db.execute(select(Table).order_by(Table.created_at))
     tables = result.scalars().all()
 
-    # Compute reservation_ids from the Registration.table_id FK (source of truth)
+    # Compute registration_ids from the Registration.table_id FK (source of truth)
     res_result = await db.execute(
         select(Registration.id, Registration.table_id).where(Registration.table_id.isnot(None))
     )
@@ -84,8 +84,8 @@ async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     res_result = await db.execute(
         select(Registration.id).where(Registration.table_id == table_id)
     )
-    reservation_ids = [row[0] for row in res_result.all()]
-    return table_to_dict(t, reservation_ids)
+    registration_ids = [row[0] for row in res_result.all()]
+    return table_to_dict(t, registration_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -131,8 +131,8 @@ async def update_table(
     res_result = await db.execute(
         select(Registration.id).where(Registration.table_id == table_id)
     )
-    reservation_ids = [row[0] for row in res_result.all()]
-    return table_to_dict(t, reservation_ids)
+    registration_ids = [row[0] for row in res_result.all()]
+    return table_to_dict(t, registration_ids)
 
 
 # ---------------------------------------------------------------------------

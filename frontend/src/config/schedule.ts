@@ -38,7 +38,7 @@ export const festivalDays: FestivalDay[] = [
   },
   {
     id: 3,
-    date: toLocalISOString(activeEdition.dates[2] ?? activeEdition.dates[activeEdition.dates.length - 1] ?? new Date()),
+    date: toLocalISOString(activeEdition.dates[activeEdition.dates.length - 1] ?? new Date()),
     label: "sunday",
   },
 ];

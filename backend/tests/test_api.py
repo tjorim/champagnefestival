@@ -157,6 +157,12 @@ async def _post_registration(
     return await client.post(path, json=_registration_body(event, **overrides))
 
 
+@pytest.mark.anyio
+async def test_list_events_requires_admin(client):
+    response = await client.get("/api/events")
+    assert response.status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
@@ -364,8 +370,8 @@ async def test_check_in_flow(client):
     assert r.status_code == 200
     body = r.json()
     assert body["already_checked_in"] is False
-    assert body["reservation"]["checked_in"] is True
-    assert body["reservation"]["strap_issued"] is True
+    assert body["registration"]["checked_in"] is True
+    assert body["registration"]["strap_issued"] is True
 
     # Second scan
     r = await client.post(
@@ -582,7 +588,25 @@ async def test_filter_by_event(client):
 
 
 @pytest.mark.anyio
-async def test_request_my_reservations_access_is_generic(client):
+async def test_request_my_reservations_access_is_generic(client, monkeypatch):
+    sent_messages = []
+
+    async def fake_send_guest_access_email(*, email, token, request_id, expires_at):
+        sent_messages.append(
+            {
+                "email": email,
+                "token": token,
+                "request_id": request_id,
+                "expires_at": expires_at,
+            }
+        )
+        return True
+
+    monkeypatch.setattr(
+        "app.routers.registrations.send_guest_access_email",
+        fake_send_guest_access_email,
+    )
+
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
 
@@ -598,6 +622,26 @@ async def test_request_my_reservations_access_is_generic(client):
     assert "access_token" not in missing.json()
     assert "access_url" not in found.json()
     assert "access_url" not in missing.json()
+    assert len(sent_messages) == 2
+    assert sent_messages[0]["email"] == "jean@example.com"
+    assert sent_messages[1]["email"] == "nobody@example.com"
+    assert sent_messages[0]["token"]
+    assert sent_messages[0]["request_id"]
+
+
+@pytest.mark.anyio
+async def test_request_my_reservations_access_mail_failure_is_non_blocking(client, monkeypatch):
+    async def failing_send_guest_access_email(*, email, token, request_id, expires_at):
+        raise RuntimeError("smtp unavailable")
+
+    monkeypatch.setattr(
+        "app.routers.registrations.send_guest_access_email",
+        failing_send_guest_access_email,
+    )
+
+    response = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
+
+    assert response.status_code == 202
 
 
 @pytest.mark.anyio
@@ -804,11 +848,8 @@ async def test_my_reservations_access_token_reuse(client, monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_my_reservations_request_rate_limited(client, monkeypatch):
+async def test_my_reservations_request_rate_limited(client):
     """After exceeding the per-IP request limit the endpoint returns 429."""
-    # Reset the in-process rate limiter state so prior tests don't affect this one.
-    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
-
     limit = reservations_module._RATE_LIMIT_MAX_REQUESTS
     for _ in range(limit):
         r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
@@ -1064,6 +1105,48 @@ async def test_active_edition_not_found(client):
 
 
 @pytest.mark.anyio
+async def test_active_edition_returns_404_when_only_past_editions_exist(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-past-only",
+            "year": 2020,
+            "month": "march",
+            "venue_id": venue_id,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    event_response = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "edition-past-only",
+            "title": "Past Event",
+            "description": "",
+            "date": "2020-03-20",
+            "start_time": "18:00",
+            "end_time": "22:00",
+            "category": "festival",
+            "registration_required": False,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert event_response.status_code == 201
+
+    response = await client.get("/api/editions/active")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "No active or upcoming editions found."
+
+
+@pytest.mark.anyio
 async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
     # Create venue
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
@@ -1192,6 +1275,54 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
         "Friday VIP",
         "Saturday Party",
     ]
+
+
+@pytest.mark.anyio
+async def test_standalone_event_can_move_within_same_single_day(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-bourse-single-day",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    event_response = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "edition-bourse-single-day",
+            "title": "Bourse Opening",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "10:00",
+            "end_time": "11:00",
+            "category": "exchange",
+            "registration_required": False,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert event_response.status_code == 201
+    event_id = event_response.json()["id"]
+
+    update_response = await client.put(
+        f"/api/events/{event_id}",
+        json={"date": "2099-03-21", "title": "Bourse Opening Updated"},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert update_response.status_code == 200
+    assert update_response.json()["date"] == "2099-03-21"
 
 
 @pytest.mark.anyio
@@ -1498,11 +1629,11 @@ async def test_table_id_can_be_cleared(client):
 
 
 @pytest.mark.anyio
-async def test_table_reservation_ids_computed_from_reservation_table_id(client):
-    """reservation_ids on a table must reflect Reservation.table_id after reload.
+async def test_table_registration_ids_computed_from_registration_table_id(client):
+    """registration_ids on a table must reflect Registration.table_id after reload.
 
-    Regression test: previously Table.reservation_ids was a denormalized JSON
-    array that was never updated when a reservation was assigned via
+    Regression test: previously Table.registration_ids was a denormalized JSON
+    array that was never updated when a registration was assigned via
     PUT /api/registrations/{id}.  On a fresh GET /api/tables the array appeared
     empty, making the layout editor lose all assignments after a page reload.
     """
@@ -1541,7 +1672,7 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
     assert r.status_code == 201
     tbl_id = r.json()["id"]
     # A new table has no reservations yet
-    assert r.json()["reservation_ids"] == []
+    assert r.json()["registration_ids"] == []
 
     # Assign the reservation to the table via the reservation endpoint
     r = await client.put(
@@ -1557,14 +1688,14 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
     assert r.status_code == 200
     tables = r.json()
     tbl = next(t for t in tables if t["id"] == tbl_id)
-    assert res_id in tbl["reservation_ids"], (
-        "reservation_ids should be computed from Reservation.table_id on every GET"
+    assert res_id in tbl["registration_ids"], (
+        "registration_ids should be computed from Registration.table_id on every GET"
     )
 
     # GET /api/tables/{id} must also reflect the assignment
     r = await client.get(f"/api/tables/{tbl_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert res_id in r.json()["reservation_ids"]
+    assert res_id in r.json()["registration_ids"]
 
     # After clearing the table assignment the list must also update
     r = await client.put(
@@ -1576,7 +1707,7 @@ async def test_table_reservation_ids_computed_from_reservation_table_id(client):
 
     r = await client.get("/api/tables", headers=ADMIN_HEADERS)
     tbl = next(t for t in r.json() if t["id"] == tbl_id)
-    assert tbl["reservation_ids"] == []
+    assert tbl["registration_ids"] == []
 
 
 # ---------------------------------------------------------------------------
