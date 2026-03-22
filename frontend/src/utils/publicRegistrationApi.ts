@@ -91,7 +91,11 @@ export async function fetchCheckInRegistration(
     `/api/check-in/${encodeURIComponent(registrationId)}?token=${encodeURIComponent(checkInToken)}`,
   );
 
-  if (response.status === 401 || response.status === 404) {
+  if (response.status === 401) {
+    throw new CheckInError("invalid_token", m.checkin_invalid_token());
+  }
+
+  if (response.status === 404) {
     throw new CheckInError("not_found", m.checkin_not_found());
   }
 

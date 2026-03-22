@@ -217,8 +217,6 @@ function createEmptyDashboardData(): AdminDashboardData {
   };
 }
 
-const adminDashboardQueryKey = queryKeys.adminDashboardRoot;
-
 async function loadMembers(
   authHeaders: () => Record<string, string>,
 ): Promise<Person[]> {
@@ -492,7 +490,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleLogout = useCallback(() => {
     sessionStorage.removeItem("adminToken");
     storedTokenRef.current = "";
-    queryClient.removeQueries({ queryKey: adminDashboardQueryKey });
+    queryClient.removeQueries({
+      predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === "admin-dashboard" || key === "admin" || key === "content-management";
+      },
+    });
     setIsAuthenticated(false);
     setToken("");
     setDetailRegistration(null);

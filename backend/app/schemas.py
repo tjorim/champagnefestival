@@ -383,7 +383,7 @@ class CheckInRequest(BaseModel):
 
 
 class CheckInOut(BaseModel):
-    reservation: CheckInGuestOut
+    registration: CheckInGuestOut
     already_checked_in: bool
 
 

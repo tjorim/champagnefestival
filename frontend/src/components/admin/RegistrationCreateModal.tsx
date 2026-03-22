@@ -13,7 +13,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import {
   createAdminRegistration,
   fetchAdminPersonOptions,
-  fetchReservableEvents,
+  fetchRegistrableEvents,
   type CreateRegistrationPayload,
   type PersonOption,
 } from "@/utils/adminRegistrationApi";
@@ -114,7 +114,7 @@ export default function RegistrationCreateModal({
 
   const eventsQuery = useQuery({
     queryKey: adminActiveEditionEventsQueryKey,
-    queryFn: () => fetchReservableEvents(authHeaders),
+    queryFn: () => fetchRegistrableEvents(authHeaders),
     enabled: show,
     staleTime: 60 * 1000,
     retry: false,

@@ -31,12 +31,15 @@ export interface CreateRegistrationPayload {
   notes: string;
 }
 
-export async function fetchReservableEvents(
+export async function fetchRegistrableEvents(
   authHeaders: () => Record<string, string>,
 ): Promise<EditionEvent[]> {
   const response = await fetch("/api/editions/active", { headers: authHeaders() });
   if (!response.ok) {
-    throw new Error(m.admin_content_edition_no_events());
+    if (response.status === 404) {
+      throw new Error(m.admin_content_edition_no_events());
+    }
+    throw new Error(`Failed to load active edition (${response.status})`);
   }
 
   const data = (await response.json()) as { events?: EditionEvent[] };
@@ -54,7 +57,7 @@ export async function fetchAdminPersonOptions(
   });
 
   if (!response.ok) {
-    throw new Error(m.admin_error_create_reservation());
+    throw new Error("Failed to load people");
   }
 
   const data = (await response.json()) as PersonSearchResult[];
