@@ -1,4 +1,4 @@
-import React, { lazy, useEffect, useMemo, useState } from "react";
+import React, { lazy, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Link } from "react-router";
@@ -12,7 +12,7 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
-import ReservationModal from "./components/ReservationModal";
+import RegistrationModal from "./components/RegistrationModal";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useLanguage } from "./hooks/useLanguage";
@@ -33,7 +33,7 @@ const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
-const MyReservationsPage = lazy(() => import("./components/MyReservationsPage"));
+const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -137,17 +137,17 @@ function CheckInRoute() {
   );
 }
 
-/** Route component for /my-reservations */
-function MyReservationsRoute() {
+/** Route component for /my-registrations */
+function MyRegistrationsRoute() {
   return (
     <div className="App">
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_reservations_title()} />
+      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_registrations_title()} />
       <main id="main-content">
-        <AppSuspense errorFallbackText={m.my_reservations_error()}>
-          <MyReservationsPage />
+        <AppSuspense errorFallbackText={m.my_registrations_error()}>
+          <MyRegistrationsPage />
         </AppSuspense>
       </main>
     </div>
@@ -208,27 +208,19 @@ function App() {
     }));
   }, [edition]);
 
-  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
-  const [reservableEvents, setReservableEvents] = useState<Array<{ id: string; title: string }>>(
-    [],
-  );
-
-  // Recompute reservable events whenever the active edition changes.
-  // Runs immediately after first mount with the static fallback, then again
-  // if the API response updates the edition.
-  useEffect(() => {
+  const registrableEvents = useMemo(() => {
     const now = new Date();
-    const events = edition.events
+    return edition.events
       .filter((event) => event.registrationRequired)
-      .filter((ev) => {
-        const eventEnd = endOfDay(new Date(`${ev.date}T00:00:00`));
+      .filter((event) => {
+        const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
         return eventEnd >= now;
       })
-      .filter((ev) => !ev.registrationsOpenFrom || ev.registrationsOpenFrom <= now)
-      .map((ev) => ({ id: ev.id, title: ev.title }));
-    setReservableEvents(events);
-  }, [edition]);
+      .filter((event) => !event.registrationsOpenFrom || event.registrationsOpenFrom <= now)
+      .map((event) => ({ id: event.id, title: event.title }));
+  }, [edition.events]);
 
   // --- Main marketing page ---
 
@@ -412,18 +404,18 @@ function App() {
           </div>
         </section>
 
-        {/* VIP Reservations Section */}
-        <section id="reservations" className="content-section highlight-section">
+        {/* VIP Registrations Section */}
+        <section id="registrations" className="content-section highlight-section">
           <div className="container text-center">
             <SectionHeading
-              id="reservations-heading"
+              id="registrations-heading"
               title={m.reservation_title()}
               subtitle={m.reservation_description()}
             />
             <button
               type="button"
               className="btn btn-warning btn-lg rounded-pill px-5 fw-bold"
-              onClick={() => setShowReservationModal(true)}
+              onClick={() => setShowRegistrationModal(true)}
             >
               <i className="bi bi-calendar-plus me-2" aria-hidden="true" />
               {m.reservation_cta()}
@@ -435,11 +427,11 @@ function App() {
       {/* Footer */}
       <Footer />
 
-      {/* VIP Reservation Modal */}
-      <ReservationModal
-        show={showReservationModal}
-        onHide={() => setShowReservationModal(false)}
-        reservableEvents={reservableEvents}
+      {/* VIP Registration Modal */}
+      <RegistrationModal
+        show={showRegistrationModal}
+        onHide={() => setShowRegistrationModal(false)}
+        registrableEvents={registrableEvents}
       />
     </div>
   );
@@ -458,7 +450,7 @@ ReactDOM.createRoot(rootElement).render(
         <Routes>
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/check-in" element={<CheckInRoute />} />
-          <Route path="/my-reservations" element={<MyReservationsRoute />} />
+          <Route path="/my-registrations" element={<MyRegistrationsRoute />} />
           <Route path="*" element={<App />} />
         </Routes>
       </BrowserRouter>

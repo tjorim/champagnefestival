@@ -493,6 +493,8 @@
   "admin_people_reservations_modal_title": "Reservaties",
   "admin_people_reservations_empty": "Geen reservaties gevonden voor deze persoon.",
   "admin_people_reservations_load_error": "Laden van reservaties mislukt.",
+  "my_registrations_title": "Mijn Inschrijvingen",
+  "my_registrations_error": "Er is een fout opgetreden bij het laden van je inschrijvingen.",
   "my_reservations_title": "Mijn Reservaties",
   "my_reservations_description": "Vraag een veilige inloglink aan om je reservaties te bekijken.",
   "my_reservations_email_label": "E-mailadres",

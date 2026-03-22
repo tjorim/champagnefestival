@@ -11,7 +11,7 @@ vi.mock("@/paraglide/messages", () => ({
     schedule_end_time: () => "End time",
     schedule_time_range: ({ start, end }: { start: string; end: string }) => `${start} - ${end}`,
     schedule_time: () => "Time",
-    schedule_reservation: () => "Reservation required",
+    schedule_reservation: () => "Registration required",
     schedule_no_events: () => "No events",
     schedule_categories_tasting: () => "Tasting",
     schedule_categories_vip: () => "VIP",
@@ -79,9 +79,9 @@ describe("Schedule component", () => {
     expect(screen.getByRole("heading", { name: "VIP" })).toBeInTheDocument();
   });
 
-  it("shows reservation badge for events that require reservation", () => {
+  it("shows registration badge for events that require registration", () => {
     render(<Schedule days={mockDays} events={mockEvents} />);
-    expect(screen.getByText("Reservation required")).toBeInTheDocument();
+    expect(screen.getByText("Registration required")).toBeInTheDocument();
   });
 
   it("shows category badge", () => {

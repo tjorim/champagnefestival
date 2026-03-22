@@ -12,7 +12,7 @@ vi.mock("@/paraglide/messages", () => ({
     faq_a3: () => "At the event center.",
     faq_q4: () => "How much does it cost?",
     faq_a4: () => "Entry is free.",
-    faq_q5: () => "Is reservation required?",
+    faq_q5: () => "Is registration required?",
     faq_a5: () => "Only for VIP events.",
   },
 }));
@@ -24,7 +24,7 @@ describe("FAQ component", () => {
     expect(screen.getByText("When does it take place?")).toBeInTheDocument();
     expect(screen.getByText("Where is it held?")).toBeInTheDocument();
     expect(screen.getByText("How much does it cost?")).toBeInTheDocument();
-    expect(screen.getByText("Is reservation required?")).toBeInTheDocument();
+    expect(screen.getByText("Is registration required?")).toBeInTheDocument();
   });
 
   it("renders only specified FAQ ids when ids prop provided", () => {

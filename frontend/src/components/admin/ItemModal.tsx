@@ -1,35 +1,16 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
-
-export interface ContactPerson {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
-
-export interface ItemDraft {
-  id: number;
-  name: string;
-  image: string;
-  website?: string;
-  active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
-  type?: string;
-  contactPersonId?: string | null;
-  contactPerson?: ContactPerson | null;
-}
-
-interface PersonOption {
-  value: string;
-  label: string;
-  sub: string;
-  email: string;
-  phone: string;
-}
+import { queryKeys } from "@/utils/queryKeys";
+import type { ItemDraft } from "./itemTypes";
+import {
+  fetchAdminPersonOptions,
+  type PersonOption,
+} from "@/utils/adminRegistrationApi";
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
   control: (base) => ({
@@ -74,9 +55,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const [website, setWebsite] = useState("");
   const [type, setType] = useState<string>("vendor");
   const [contactOption, setContactOption] = useState<SingleValue<PersonOption>>(null);
-  const [personOptions, setPersonOptions] = useState<PersonOption[]>([]);
   const [personQuery, setPersonQuery] = useState("");
-  const [loadingPersons, setLoadingPersons] = useState(false);
+  const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
   useEffect(() => {
     if (show) {
@@ -91,68 +71,35 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               value: cp.id,
               label: cp.name,
               sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
+              name: cp.name,
               email: cp.email ?? "",
               phone: cp.phone ?? "",
             }
           : null,
       );
       setPersonQuery("");
-      setPersonOptions([]);
+      setDebouncedPersonQuery("");
     }
   }, [show, initial]);
 
-  const searchPersons = useCallback(
-    async (q: string, signal: AbortSignal) => {
-      if (!q) {
-        setPersonOptions([]);
-        return;
-      }
-      setLoadingPersons(true);
-      try {
-        const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&active=true`, {
-          headers: authHeaders(),
-          signal,
-        });
-        if (signal.aborted) return;
-        if (res.ok) {
-          const data = (await res.json()) as {
-            id: string;
-            name: string;
-            email: string;
-            phone: string;
-          }[];
-          setPersonOptions(
-            data.map((p) => ({
-              value: p.id,
-              label: p.name,
-              sub: [p.email, p.phone].filter(Boolean).join(" · "),
-              email: p.email,
-              phone: p.phone,
-            })),
-          );
-        }
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.error("Failed to search persons", err);
-        }
-      } finally {
-        if (!signal.aborted) setLoadingPersons(false);
-      }
-    },
-    [authHeaders],
-  );
-
   useEffect(() => {
     if (!show) return;
-    const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchPersons(personQuery, controller.signal);
+      setDebouncedPersonQuery(personQuery.trim());
     }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [personQuery, show, searchPersons]);
+    return () => clearTimeout(timer);
+  }, [personQuery, show]);
+
+  const personOptionsQuery = useQuery({
+    queryKey: queryKeys.admin.itemModalPeople(debouncedPersonQuery),
+    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    enabled: show && debouncedPersonQuery.length > 0,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+
+  const personOptions = personOptionsQuery.data ?? [];
+  const loadingPersons = personOptionsQuery.isFetching;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

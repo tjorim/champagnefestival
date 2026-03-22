@@ -20,7 +20,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
-import type { Reservation } from "@/types/reservation";
+import type { Registration } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
 
 // How many CSS pixels represent one metre on the canvas
@@ -125,7 +125,7 @@ interface LayoutEditorProps {
   tables: FloorTable[];
   tableTypes: TableType[];
   layouts: Layout[];
-  reservations: Reservation[];
+  registrations: Registration[];
   rooms: Room[];
   exhibitors: ItemRef[];
   areas: FloorArea[];
@@ -354,7 +354,7 @@ interface RoomCanvasProps {
   roomTables: FloorTable[];
   roomAreas: FloorArea[];
   tableTypes: TableType[];
-  reservations: Reservation[];
+  registrations: Registration[];
   exhibitors: ItemRef[];
   layer: "seating" | "areas";
   selectedTable: string | null;
@@ -370,7 +370,7 @@ function RoomCanvas({
   roomTables,
   roomAreas,
   tableTypes,
-  reservations,
+  registrations,
   exhibitors,
   layer,
   selectedTable,
@@ -461,8 +461,8 @@ function RoomCanvas({
             </div>
           )}
           {roomTables.map((table) => {
-            const assigned = reservations
-              .filter((r) => table.reservationIds.includes(r.id))
+            const assigned = registrations
+              .filter((r) => table.registrationIds.includes(r.id))
               .reduce((sum, r) => sum + r.guestCount, 0);
             const isInSelectedArea = selectedArea
               ? (() => {
@@ -526,7 +526,7 @@ export default function LayoutEditor({
   tables,
   tableTypes,
   layouts,
-  reservations,
+  registrations,
   rooms,
   exhibitors,
   areas,
@@ -720,8 +720,8 @@ export default function LayoutEditor({
 
   const selectedTableData = tables.find((t) => t.id === selectedTable);
   const selectedType = tableTypes.find((t) => t.id === selectedTableData?.tableTypeId);
-  const selectedReservations = selectedTableData
-    ? reservations.filter((r) => selectedTableData.reservationIds.includes(r.id))
+  const selectedRegistrations = selectedTableData
+    ? registrations.filter((r) => selectedTableData.registrationIds.includes(r.id))
     : [];
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
@@ -923,7 +923,7 @@ export default function LayoutEditor({
                   roomTables={canvasTables}
                   roomAreas={canvasAreas}
                   tableTypes={tableTypes}
-                  reservations={reservations}
+                  registrations={registrations}
                   exhibitors={exhibitors}
                   layer={layer}
                   selectedTable={selectedTable}
@@ -1071,11 +1071,11 @@ export default function LayoutEditor({
                   ))}
               </Form.Select>
             </Form.Group>
-            {selectedReservations.length === 0 ? (
+            {selectedRegistrations.length === 0 ? (
               <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
             ) : (
               <ListGroup variant="flush">
-                {selectedReservations.map((r) => (
+                {selectedRegistrations.map((r) => (
                   <ListGroup.Item key={r.id} className="bg-dark text-light border-secondary">
                     <span className="fw-semibold">{r.person.name}</span>
                     <span className="text-secondary ms-2 small">

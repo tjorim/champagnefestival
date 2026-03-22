@@ -1,13 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
-import ReservationCreateModal from "@/components/admin/ReservationCreateModal";
+import RegistrationCreateModal from "@/components/admin/RegistrationCreateModal";
 import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
-    admin_create_reservation: () => "Create reservation",
-    admin_error_create_reservation: () => "Could not create reservation",
+    admin_create_reservation: () => "Create registration",
+    admin_error_create_reservation: () => "Could not create registration",
     admin_event_label: () => "Event",
     admin_loading_events: () => "Loading events",
     admin_select_event_placeholder: () => "Select event",
@@ -21,7 +21,7 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
-describe("ReservationCreateModal", () => {
+describe("RegistrationCreateModal", () => {
   let fetchMock: Mock;
 
   beforeEach(() => {
@@ -46,7 +46,7 @@ describe("ReservationCreateModal", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <ReservationCreateModal
+        <RegistrationCreateModal
           show={true}
           authHeaders={() => ({ Authorization: "Bearer test" })}
           onSaved={() => {}}

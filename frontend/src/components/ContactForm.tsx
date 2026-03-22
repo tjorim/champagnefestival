@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { m } from "@/paraglide/messages";
@@ -19,6 +20,37 @@ interface FormData {
   recaptchaToken?: string; // Optional reCAPTCHA token obtained via reCAPTCHA API integration (e.g., using grecaptcha.execute)
 }
 
+class ContactSubmissionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ContactSubmissionError';
+  }
+}
+
+async function submitContactForm(form: FormData): Promise<void> {
+  const response = await fetch("/api/contact", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: form.name,
+      email: form.email,
+      message: form.message,
+      honeypot: form.honeypot,
+      form_start_time: form.formStartTime,
+    }),
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new ContactSubmissionError(
+      (result as { message?: string }).message ?? m.contact_submission_error(),
+    );
+  }
+}
+
 /**
  * Contact form component with validation using react-bootstrap components
  */
@@ -30,10 +62,16 @@ const ContactForm: React.FC = () => {
     honeypot: "",
     formStartTime: new Date().toISOString(), // Initialize only once
   }));
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  const submitContactMutation = useMutation({
+    mutationFn: submitContactForm,
+    retry: false,
+  });
+
+  const isSubmitting = submitContactMutation.isPending;
 
   // Handle form field changes
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -54,7 +92,6 @@ const ContactForm: React.FC = () => {
   // Handle form submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setGeneralError(null); // Reset general error on new submission attempt
 
     // Basic validation
@@ -70,7 +107,6 @@ const ContactForm: React.FC = () => {
       console.warn("Honeypot triggered - likely bot submission");
       // Fake success to confuse bots
       setIsSubmitted(true);
-      setIsSubmitting(false);
       return;
     }
 
@@ -78,33 +114,12 @@ const ContactForm: React.FC = () => {
     // If there are errors, set them and stop submission
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setIsSubmitting(false);
       return;
     }
 
     // If no errors, proceed with submission
     try {
-      // Call the FastAPI backend endpoint
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          message: form.message,
-          honeypot: form.honeypot,
-          form_start_time: form.formStartTime,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Something went wrong");
-      }
-
+      await submitContactMutation.mutateAsync(form);
       setIsSubmitted(true);
       setForm({
         name: "",
@@ -116,19 +131,15 @@ const ContactForm: React.FC = () => {
       setErrors({});
     } catch (error) {
       console.warn("Form submission error:", error);
-      // Provide more specific error messages based on error type
       if (error instanceof TypeError && error.message.includes("fetch")) {
         // Network connectivity issues
         setGeneralError(m.contact_network_error());
-      } else if (error instanceof Error && error.message.includes("JSON")) {
-        // JSON parsing issues from server response
-        setGeneralError(m.contact_submission_error());
+      } else if (error instanceof ContactSubmissionError) {
+        setGeneralError(error.message);
       } else {
         // General server or validation errors
         setGeneralError(m.contact_submission_error());
       }
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
