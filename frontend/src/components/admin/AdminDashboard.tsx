@@ -202,7 +202,7 @@ interface AdminDashboardData {
   members: Person[];
 }
 
-const adminDashboardQueryKey = queryKeys.adminDashboard;
+const adminDashboardQueryKey = queryKeys.adminDashboardRoot;
 
 async function loadMembers(
   authHeaders: () => Record<string, string>,
@@ -364,7 +364,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const dashboardQuery = useQuery({
-    queryKey: [...adminDashboardQueryKey, storedTokenRef.current],
+    queryKey: queryKeys.adminDashboard(storedTokenRef.current),
     queryFn: () => fetchAdminDashboardData(authHeaders),
     enabled: visible && isAuthenticated,
     staleTime: 60 * 1000,

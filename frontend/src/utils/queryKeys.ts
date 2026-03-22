@@ -3,7 +3,8 @@ export const queryKeys = {
   myRegistrations: (token: string) => ["my-registrations", token] as const,
   checkInRegistration: (registrationId: string, checkInToken: string) =>
     ["check-in", registrationId, checkInToken] as const,
-  adminDashboard: ["admin-dashboard"] as const,
+  adminDashboardRoot: ["admin-dashboard"] as const,
+  adminDashboard: (token: string) => ["admin-dashboard", token] as const,
   admin: {
     activeEditionEvents: ["admin", "active-edition", "events"] as const,
     personOptions: (query: string) => ["admin", "person-options", query] as const,
