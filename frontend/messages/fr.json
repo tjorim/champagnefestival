@@ -415,6 +415,8 @@
   "admin_person_label": "Personne",
   "admin_error_create_reservation": "Impossible de créer la réservation.",
   "admin_loading_events": "Chargement des événements\u2026",
+  "admin_error_load_events": "Impossible de charger les événements.",
+  "admin_retry": "Réessayer",
   "admin_select_event_placeholder": "\u2014 Sélectionner l'événement \u2014",
   "admin_event_id_title_placeholder": "ID événement / titre",
   "admin_search_person_placeholder": "Rechercher par nom, e-mail, téléphone\u2026",

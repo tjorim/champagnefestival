@@ -572,7 +572,7 @@ class TableOut(BaseModel):
     table_type_id: str
     rotation: int
     layout_id: str
-    reservation_ids: list[str]
+    registration_ids: list[str]
     created_at: datetime
     updated_at: datetime
 

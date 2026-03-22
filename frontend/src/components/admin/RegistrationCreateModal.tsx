@@ -181,6 +181,19 @@ export default function RegistrationCreateModal({
                 <Spinner animation="border" size="sm" className="me-2" />
                 {m.admin_loading_events()}
               </div>
+            ) : eventsQuery.isError ? (
+              <div className="text-danger small d-flex align-items-center gap-2">
+                <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                {m.admin_error_load_events()}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="p-0 text-warning"
+                  onClick={() => void eventsQuery.refetch()}
+                >
+                  {m.admin_retry()}
+                </Button>
+              </div>
             ) : events.length > 0 ? (
               <Form.Select
                 value={eventId}

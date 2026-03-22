@@ -415,6 +415,8 @@
   "admin_person_label": "Persoon",
   "admin_error_create_reservation": "Reservatie aanmaken mislukt.",
   "admin_loading_events": "Evenementen laden\u2026",
+  "admin_error_load_events": "Laden van evenementen mislukt.",
+  "admin_retry": "Opnieuw proberen",
   "admin_select_event_placeholder": "\u2014 Selecteer evenement \u2014",
   "admin_event_id_title_placeholder": "Evenement-ID / titel",
   "admin_search_person_placeholder": "Zoek op naam, e-mail, telefoon\u2026",

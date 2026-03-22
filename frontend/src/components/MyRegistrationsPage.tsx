@@ -98,7 +98,7 @@ export default function MyRegistrationsPage() {
       <Container>
         <h2 id="my-registrations-title" className="text-center mb-2 text-warning">
           <i className="bi bi-ticket-perforated me-2" aria-hidden="true" />
-          {m.my_reservations_title()}
+          {m.my_registrations_title()}
         </h2>
         <p className="text-center text-secondary mb-4">{m.my_reservations_description()}</p>
 
