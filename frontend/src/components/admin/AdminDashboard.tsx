@@ -15,8 +15,6 @@ import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
-import type { Event } from "@/types/event";
-import { apiToEvent } from "@/types/event";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
@@ -231,15 +229,6 @@ async function fetchVenues(authHeaders: () => Record<string, string>): Promise<V
   return Array.isArray(payload) ? payload.map(apiVenueToVenue) : [];
 }
 
-async function fetchEvents(authHeaders: () => Record<string, string>): Promise<Event[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/events",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiToEvent) : [];
-}
-
 async function fetchRooms(authHeaders: () => Record<string, string>): Promise<Room[]> {
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
     "/api/rooms",
@@ -277,10 +266,11 @@ async function fetchExhibitors(
   );
   return Array.isArray(payload)
     ? payload.map((exhibitor: Record<string, unknown>) => ({
-        id: exhibitor.id as number,
-        name: exhibitor.name as string,
-        active: (exhibitor.active ?? true) as boolean,
-        contactPersonId: (exhibitor.contact_person_id as string | null) ?? null,
+        id: Number(exhibitor.id),
+        name: String(exhibitor.name ?? ""),
+        active: exhibitor.active !== false,
+        contactPersonId:
+          typeof exhibitor.contact_person_id === "string" ? exhibitor.contact_person_id : null,
       }))
     : [];
 }
@@ -348,7 +338,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const registrationsQueryKey = queryKeys.admin.registrations(storedTokenRef.current);
   const tablesQueryKey = queryKeys.admin.tables(storedTokenRef.current);
   const venuesQueryKey = queryKeys.admin.venues(storedTokenRef.current);
-  const eventsQueryKey = queryKeys.admin.events(storedTokenRef.current);
   const roomsQueryKey = queryKeys.admin.rooms(storedTokenRef.current);
   const tableTypesQueryKey = queryKeys.admin.tableTypes(storedTokenRef.current);
   const layoutsQueryKey = queryKeys.admin.layouts(storedTokenRef.current);
@@ -357,7 +346,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const peopleQueryKey = queryKeys.admin.people(storedTokenRef.current);
   const membersQueryKey = queryKeys.admin.members(storedTokenRef.current);
 
-  const queryOptions = {
+  const adminQueryOptions = {
     enabled: visible && isAuthenticated,
     staleTime: 60 * 1000,
     retry: false as const,
@@ -366,57 +355,52 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const registrationsQuery = useQuery({
     queryKey: registrationsQueryKey,
     queryFn: () => fetchRegistrations(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const tablesQuery = useQuery({
     queryKey: tablesQueryKey,
     queryFn: () => fetchTables(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const venuesQuery = useQuery({
     queryKey: venuesQueryKey,
     queryFn: () => fetchVenues(authHeaders),
-    ...queryOptions,
-  });
-  const eventsQuery = useQuery({
-    queryKey: eventsQueryKey,
-    queryFn: () => fetchEvents(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const roomsQuery = useQuery({
     queryKey: roomsQueryKey,
     queryFn: () => fetchRooms(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const tableTypesQuery = useQuery({
     queryKey: tableTypesQueryKey,
     queryFn: () => fetchTableTypes(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const layoutsQuery = useQuery({
     queryKey: layoutsQueryKey,
     queryFn: () => fetchLayouts(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const exhibitorsQuery = useQuery({
     queryKey: exhibitorsQueryKey,
     queryFn: () => fetchExhibitors(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const areasQuery = useQuery({
     queryKey: areasQueryKey,
     queryFn: () => fetchAreas(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const peopleQuery = useQuery({
     queryKey: peopleQueryKey,
     queryFn: () => fetchPeople(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
   const membersQuery = useQuery({
     queryKey: membersQueryKey,
     queryFn: () => fetchMembers(authHeaders),
-    ...queryOptions,
+    ...adminQueryOptions,
   });
 
   const registrations = registrationsQuery.data ?? [];
@@ -430,31 +414,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const people = peopleQuery.data ?? [];
   const members = membersQuery.data ?? [];
 
-  const isAnyPending =
-    registrationsQuery.isPending ||
-    tablesQuery.isPending ||
-    venuesQuery.isPending ||
-    eventsQuery.isPending ||
-    roomsQuery.isPending ||
-    tableTypesQuery.isPending ||
-    layoutsQuery.isPending ||
-    exhibitorsQuery.isPending ||
-    areasQuery.isPending ||
-    peopleQuery.isPending ||
-    membersQuery.isPending;
-
-  const isAnyFetching =
-    registrationsQuery.isFetching ||
-    tablesQuery.isFetching ||
-    venuesQuery.isFetching ||
-    eventsQuery.isFetching ||
-    roomsQuery.isFetching ||
-    tableTypesQuery.isFetching ||
-    layoutsQuery.isFetching ||
-    exhibitorsQuery.isFetching ||
-    areasQuery.isFetching ||
-    peopleQuery.isFetching ||
-    membersQuery.isFetching;
+  const allQueries = [
+    registrationsQuery,
+    tablesQuery,
+    venuesQuery,
+    roomsQuery,
+    tableTypesQuery,
+    layoutsQuery,
+    exhibitorsQuery,
+    areasQuery,
+    peopleQuery,
+    membersQuery,
+  ];
+  const isAnyPending = allQueries.some((q) => q.isPending);
+  const isAnyFetching = allQueries.some((q) => q.isFetching);
 
   const layoutDayOptions = useMemo(() => {
     const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
@@ -473,32 +446,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const loadData = useCallback(async () => {
     setError("");
-    await Promise.all([
-      registrationsQuery.refetch(),
-      tablesQuery.refetch(),
-      venuesQuery.refetch(),
-      eventsQuery.refetch(),
-      roomsQuery.refetch(),
-      tableTypesQuery.refetch(),
-      layoutsQuery.refetch(),
-      exhibitorsQuery.refetch(),
-      areasQuery.refetch(),
-      peopleQuery.refetch(),
-      membersQuery.refetch(),
-    ]);
-  }, [
-    registrationsQuery,
-    tablesQuery,
-    venuesQuery,
-    eventsQuery,
-    roomsQuery,
-    tableTypesQuery,
-    layoutsQuery,
-    exhibitorsQuery,
-    areasQuery,
-    peopleQuery,
-    membersQuery,
-  ]);
+    await queryClient.refetchQueries({ predicate: (query) => query.queryKey[0] === "admin" });
+  }, [queryClient]);
 
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
@@ -508,12 +457,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_people_merge_error(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-        queryClient.invalidateQueries({ queryKey: registrationsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: exhibitorsQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: exhibitorsQueryKey });
     },
     retry: false,
   });
@@ -538,10 +485,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_members_error_create(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
     },
     retry: false,
   });
@@ -566,11 +511,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_members_error_update(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-        queryClient.invalidateQueries({ queryKey: registrationsQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
     },
     retry: false,
   });
@@ -583,10 +526,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_members_error_delete(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
     },
     retry: false,
   });
@@ -612,10 +553,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_people_error_create(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
     },
     retry: false,
   });
@@ -641,11 +580,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_people_error_update(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-        queryClient.invalidateQueries({ queryKey: registrationsQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
     },
     retry: false,
   });
@@ -658,10 +595,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_person(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
     },
     retry: false,
   });
@@ -715,10 +650,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_volunteers_error_update(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: peopleQueryKey }),
-        queryClient.invalidateQueries({ queryKey: membersQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
     },
     retry: false,
   });
@@ -732,6 +665,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
     },
     retry: false,
   });
@@ -752,10 +686,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fallbackMessage,
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: registrationsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
     },
     retry: false,
   });
@@ -818,8 +750,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       return { previousTables };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousTables)
-        queryClient.setQueryData(tablesQueryKey, context.previousTables);
+      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
@@ -847,8 +778,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       return { previousTables };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousTables)
-        queryClient.setQueryData(tablesQueryKey, context.previousTables);
+      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
@@ -876,8 +806,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       return { previousTables };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousTables)
-        queryClient.setQueryData(tablesQueryKey, context.previousTables);
+      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
       console.error("Failed to persist table position");
     },
     onSettled: () => {
@@ -906,8 +835,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       return { previousTables };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousTables)
-        queryClient.setQueryData(tablesQueryKey, context.previousTables);
+      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
       console.error("Failed to persist table rotation");
     },
     onSettled: () => {
@@ -979,13 +907,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_venue(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: venuesQueryKey }),
-        queryClient.invalidateQueries({ queryKey: roomsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: layoutsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
-        queryClient.invalidateQueries({ queryKey: areasQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: venuesQueryKey });
+      void queryClient.invalidateQueries({ queryKey: roomsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: layoutsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
     },
     retry: false,
   });
@@ -1076,11 +1002,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_layout(),
       ),
     onSettled: () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: layoutsQueryKey }),
-        queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
-        queryClient.invalidateQueries({ queryKey: areasQueryKey }),
-      ]);
+      void queryClient.invalidateQueries({ queryKey: layoutsQueryKey });
+      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
     },
     retry: false,
   });
@@ -1408,8 +1332,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     async (canonicalId: string, duplicateId: string) => {
       const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
-      const duplicate = people.find((p) => p.id === duplicateId);
-      const existingCanonical = people.find((p) => p.id === canonicalId);
+      const currentPeople = peopleQuery.data ?? [];
+      const duplicate = currentPeople.find((p) => p.id === duplicateId);
+      const existingCanonical = currentPeople.find((p) => p.id === canonicalId);
       const shouldPreserveVolunteerData =
         canonicalPerson.roles.includes("volunteer") ||
         existingCanonical?.roles.includes("volunteer") ||
@@ -1464,7 +1389,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       exhibitorsQueryKey,
       membersQueryKey,
       mergePeopleMutation,
-      people,
+      peopleQuery.data,
       peopleQueryKey,
       queryClient,
       registrationsQueryKey,
@@ -1705,8 +1630,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const volunteers = useMemo(
-    () => people.filter((person) => person.roles.includes("volunteer")),
-    [people],
+    () => (peopleQuery.data ?? []).filter((person) => person.roles.includes("volunteer")),
+    [peopleQuery.data],
   );
 
   useEffect(() => {
@@ -1714,7 +1639,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       registrationsQuery.error,
       tablesQuery.error,
       venuesQuery.error,
-      eventsQuery.error,
       roomsQuery.error,
       tableTypesQuery.error,
       layoutsQuery.error,
@@ -1728,9 +1652,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       (e) => e instanceof Error && e.message === "unauthorized",
     );
     if (unauthorizedError) {
-      sessionStorage.removeItem("adminToken");
-      storedTokenRef.current = "";
-      setIsAuthenticated(false);
+      handleLogout();
       setLoginError(m.admin_login_error());
       return;
     }
@@ -1747,7 +1669,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     registrationsQuery.error,
     tablesQuery.error,
     venuesQuery.error,
-    eventsQuery.error,
     roomsQuery.error,
     tableTypesQuery.error,
     layoutsQuery.error,
@@ -1755,6 +1676,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     areasQuery.error,
     peopleQuery.error,
     membersQuery.error,
+    handleLogout,
   ]);
 
   // Auto-authenticate on mount if a token was previously stored in sessionStorage
@@ -1967,11 +1889,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         prev ? prev.filter((v) => v.id !== venueId) : prev,
       );
       // Cascade: remove rooms and their layouts/tables from local state
-      const venueRoomIds = rooms.filter((r) => r.venueId === venueId).map((r) => r.id);
+      const venueRoomIds = (roomsQuery.data ?? [])
+        .filter((r) => r.venueId === venueId)
+        .map((r) => r.id);
       queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
         prev ? prev.filter((r) => r.venueId !== venueId) : prev,
       );
-      const venueLayoutIds = layouts
+      const venueLayoutIds = (layoutsQuery.data ?? [])
         .filter((l) => venueRoomIds.includes(l.roomId ?? ""))
         .map((l) => l.id);
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
@@ -1987,10 +1911,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [
       areasQueryKey,
       deleteVenueMutation,
-      layouts,
+      layoutsQuery.data,
       layoutsQueryKey,
       queryClient,
-      rooms,
+      roomsQuery.data,
       roomsQueryKey,
       tablesQueryKey,
       venuesQueryKey,
@@ -2144,9 +2068,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     async (areaId: string, widthM: number, lengthM: number) => {
       // Must match LayoutEditor/RoomCanvas constants
       const PX_PER_M = 28;
-      const area = areas.find((a) => a.id === areaId);
-      const layout = layouts.find((l) => l.id === area?.layoutId);
-      const room = rooms.find((r) => r.id === layout?.roomId);
+      const area = (areasQuery.data ?? []).find((a) => a.id === areaId);
+      const layout = (layoutsQuery.data ?? []).find((l) => l.id === area?.layoutId);
+      const room = (roomsQuery.data ?? []).find((r) => r.id === layout?.roomId);
 
       // Clamp the area's position so it stays within the canvas after resize.
       let x = area?.x ?? 0;
@@ -2162,7 +2086,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
       await resizeAreaMutation.mutateAsync({ areaId, widthM, lengthM, x, y });
     },
-    [areas, layouts, rooms, resizeAreaMutation],
+    [areasQuery.data, layoutsQuery.data, roomsQuery.data, resizeAreaMutation],
   );
 
   const handleAddRegistration = useCallback(
@@ -2301,12 +2225,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // to satisfy the Rules of Hooks (hooks must be called unconditionally).
   const registrationCountByPersonId = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const r of registrations) {
+    for (const r of registrationsQuery.data ?? []) {
       if (r.personId == null) continue;
       counts[r.personId] = (counts[r.personId] ?? 0) + 1;
     }
-    return Object.fromEntries(people.map((p) => [p.id, counts[p.id] ?? 0]));
-  }, [people, registrations]);
+    return Object.fromEntries((peopleQuery.data ?? []).map((p) => [p.id, counts[p.id] ?? 0]));
+  }, [peopleQuery.data, registrationsQuery.data]);
 
   if (!visible) return null;
 
@@ -2537,13 +2461,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onExhibitorSaved={handleExhibitorSaved}
                       onExhibitorDeleted={handleExhibitorDeleted}
                       onEditionMutated={() => {
-                        void Promise.all([
-                          loadData(),
-                          queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
-                          queryClient.invalidateQueries({
-                            queryKey: queryKeys.admin.activeEditionEvents,
-                          }),
-                        ]);
+                        void loadData();
+                        void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
+                        void queryClient.invalidateQueries({
+                          queryKey: queryKeys.admin.activeEditionEvents,
+                        });
                       }}
                     />
                   </Tab.Pane>
