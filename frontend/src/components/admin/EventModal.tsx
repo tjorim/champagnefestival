@@ -37,7 +37,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     [edition.dates, initial?.date],
   );
 
-  const { register, handleSubmit, reset, watch, setValue, control } = useForm<EventFormData>({
+  const { register, handleSubmit, reset, watch, setValue, control, formState: { errors } } = useForm<EventFormData>({
     defaultValues: EMPTY_FORM,
   });
 
@@ -80,7 +80,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
   const effectiveDate = isFestival ? dateValue : dateValue || derivedStandaloneDate;
 
   const onSubmit = (data: EventFormData) => {
-    if (!data.title.trim() || !effectiveDate || !data.startTime.trim()) return;
     onSave({ ...data, date: effectiveDate });
   };
 
@@ -105,8 +104,12 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 className="bg-dark text-light border-secondary"
                 required
                 autoFocus
-                {...register("title", { required: true })}
+                isInvalid={!!errors.title}
+                {...register("title", { required: "Title is required" })}
               />
+              {errors.title && (
+                <Form.Control.Feedback type="invalid">{errors.title.message}</Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group controlId="event-category" style={{ minWidth: "160px", flex: "1 1 160px" }}>
               <Form.Label className="text-secondary small mb-1">
@@ -128,17 +131,26 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Controller
                 name="date"
                 control={control}
+                rules={{ required: "Date is required" }}
                 render={({ field }) => (
-                  <Form.Control
-                    type="date"
-                    size="sm"
-                    className="bg-dark text-light border-secondary"
-                    readOnly={!isFestival && Boolean(derivedStandaloneDate)}
-                    required
-                    {...field}
-                    value={effectiveDate}
-                    onChange={(e) => field.onChange(e.target.value)}
-                  />
+                  <>
+                    <Form.Control
+                      type="date"
+                      size="sm"
+                      className="bg-dark text-light border-secondary"
+                      readOnly={!isFestival && Boolean(derivedStandaloneDate)}
+                      required
+                      isInvalid={!!errors.date}
+                      {...field}
+                      value={effectiveDate}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                    {errors.date && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.date.message}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
                 )}
               />
             </Form.Group>
@@ -151,8 +163,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 size="sm"
                 className="bg-dark text-light border-secondary"
                 required
-                {...register("startTime", { required: true })}
+                isInvalid={!!errors.startTime}
+                {...register("startTime", { required: "Start time is required" })}
               />
+              {errors.startTime && (
+                <Form.Control.Feedback type="invalid">
+                  {errors.startTime.message}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group controlId="event-end-time" style={{ maxWidth: "140px" }}>
               <Form.Label className="text-secondary small mb-1">
@@ -175,8 +193,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 size="sm"
                 className="bg-dark text-light border-secondary"
                 disabled={!registrationRequired}
-                {...register("maxCapacity")}
+                isInvalid={!!errors.maxCapacity}
+                {...register("maxCapacity", { min: { value: 1, message: "Must be at least 1" } })}
               />
+              {errors.maxCapacity && (
+                <Form.Control.Feedback type="invalid">
+                  {errors.maxCapacity.message}
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
           </div>
 

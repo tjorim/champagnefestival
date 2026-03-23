@@ -101,7 +101,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
     watch,
     setValue,
     control,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = useForm<PersonFormFields>({
     defaultValues: {
       name: "",
@@ -155,7 +155,6 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
   }
 
   async function onSubmit(data: PersonFormFields) {
-    if (!data.name.trim()) return;
     setError(null);
     try {
       await onSave({
@@ -221,8 +220,19 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   type="email"
                   className="bg-dark text-light border-secondary"
                   maxLength={200}
-                  {...register("email")}
+                  isInvalid={!!errors.email}
+                  {...register("email", {
+                    pattern: {
+                      value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
+                      message: "Invalid email address",
+                    },
+                  })}
                 />
+                {errors.email && (
+                  <Form.Control.Feedback type="invalid">
+                    {errors.email.message}
+                  </Form.Control.Feedback>
+                )}
               </Form.Group>
             </Col>
             <Col xs={12} md={6}>

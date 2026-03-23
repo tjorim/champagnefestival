@@ -124,7 +124,7 @@ export default function EditionModal({
   const hydratedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, watch, setValue, control } =
+  const { register, handleSubmit, reset, watch, setValue, control, formState: { errors } } =
     useForm<EditionFormFields>({
       defaultValues: {
         id: "",
@@ -218,7 +218,6 @@ export default function EditionModal({
   const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
 
   async function onSubmit(data: EditionFormFields) {
-    if (!data.month.trim() || !data.venueId) return;
     if (!isEdit && data.id.trim() === "") {
       setError("ID cannot be empty or whitespace only");
       return;
@@ -292,8 +291,12 @@ export default function EditionModal({
                 className="bg-dark text-light border-secondary"
                 placeholder="e.g. march"
                 required
-                {...register("month", { required: true })}
+                isInvalid={!!errors.month}
+                {...register("month", { required: "Month is required" })}
               />
+              {errors.month && (
+                <Form.Control.Feedback type="invalid">{errors.month.message}</Form.Control.Feedback>
+              )}
             </Form.Group>
             <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
               <Form.Label className="text-secondary small mb-1">
@@ -344,7 +347,8 @@ export default function EditionModal({
             <Form.Select
               className="bg-dark text-light border-secondary"
               required
-              {...register("venueId", { required: true })}
+              isInvalid={!!errors.venueId}
+              {...register("venueId", { required: "Venue is required" })}
             >
               <option value="">{m.admin_edition_venue_placeholder()}</option>
               {venues.map((venue) => (
@@ -354,6 +358,9 @@ export default function EditionModal({
                 </option>
               ))}
             </Form.Select>
+            {errors.venueId && (
+              <Form.Control.Feedback type="invalid">{errors.venueId.message}</Form.Control.Feedback>
+            )}
           </Form.Group>
 
           <div className="border border-secondary rounded p-3 mb-3">
@@ -431,8 +438,19 @@ export default function EditionModal({
                     type="email"
                     className="bg-dark text-light border-secondary"
                     placeholder="jane@example.com"
-                    {...register("externalContactEmail")}
+                    isInvalid={!!errors.externalContactEmail}
+                    {...register("externalContactEmail", {
+                      pattern: {
+                        value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
+                        message: "Invalid email address",
+                      },
+                    })}
                   />
+                  {errors.externalContactEmail && (
+                    <Form.Control.Feedback type="invalid">
+                      {errors.externalContactEmail.message}
+                    </Form.Control.Feedback>
+                  )}
                 </div>
               </div>
             </div>

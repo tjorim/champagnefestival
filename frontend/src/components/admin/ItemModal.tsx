@@ -59,7 +59,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
-  const { register, handleSubmit, reset, control } = useForm<ItemFormFields>({
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ItemFormFields>({
     defaultValues: {
       name: "",
       image: "",
@@ -112,7 +112,6 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const loadingPersons = personOptionsQuery.isFetching;
 
   function onSubmit(data: ItemFormFields) {
-    if (!data.name.trim() || !data.image.trim()) return;
     onSave({
       id: initial?.id ?? Date.now(),
       name: data.name.trim(),
@@ -149,8 +148,12 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               className="bg-dark text-light border-secondary"
               required
               autoFocus
-              {...register("name", { required: true })}
+              isInvalid={!!errors.name}
+              {...register("name", { required: "Name is required" })}
             />
+            {errors.name && (
+              <Form.Control.Feedback type="invalid">{errors.name.message}</Form.Control.Feedback>
+            )}
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
@@ -159,8 +162,12 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             <Form.Control
               className="bg-dark text-light border-secondary"
               required
-              {...register("image", { required: true })}
+              isInvalid={!!errors.image}
+              {...register("image", { required: "Image URL is required" })}
             />
+            {errors.image && (
+              <Form.Control.Feedback type="invalid">{errors.image.message}</Form.Control.Feedback>
+            )}
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
@@ -168,8 +175,17 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               type="url"
               className="bg-dark text-light border-secondary"
               placeholder="https://…"
-              {...register("website")}
+              isInvalid={!!errors.website}
+              {...register("website", {
+                pattern: {
+                  value: /^https?:\/\/.+/,
+                  message: "Must be a valid URL starting with http(s)://",
+                },
+              })}
             />
+            {errors.website && (
+              <Form.Control.Feedback type="invalid">{errors.website.message}</Form.Control.Feedback>
+            )}
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>

@@ -37,7 +37,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
     reset,
     watch,
     control,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
   } = useForm<MemberFormData>({
     defaultValues: {
       name: "",
@@ -143,8 +143,19 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   type="email"
                   className="bg-dark text-light border-secondary"
                   maxLength={200}
-                  {...register("email")}
+                  isInvalid={!!errors.email}
+                  {...register("email", {
+                    pattern: {
+                      value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
+                      message: "Invalid email address",
+                    },
+                  })}
                 />
+                {errors.email && (
+                  <Form.Control.Feedback type="invalid">
+                    {errors.email.message}
+                  </Form.Control.Feedback>
+                )}
               </Form.Group>
             </Col>
             <Col xs={12} md={6}>
