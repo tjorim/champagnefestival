@@ -1,5 +1,6 @@
-import React, { lazy, useEffect, useMemo, useState } from "react";
+import React, { lazy, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Link } from "react-router";
 
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -11,7 +12,7 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
-import ReservationModal from "./components/ReservationModal";
+import RegistrationModal from "./components/RegistrationModal";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useLanguage } from "./hooks/useLanguage";
@@ -19,7 +20,7 @@ import { useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import type { FestivalDay } from "./config/schedule";
+import type { FestivalDay } from "./types/schedule";
 import { endOfDay } from "./utils/dateUtils";
 import "./index.css";
 
@@ -32,7 +33,7 @@ const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
-const MyReservationsPage = lazy(() => import("./components/MyReservationsPage"));
+const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -136,84 +137,90 @@ function CheckInRoute() {
   );
 }
 
-/** Route component for /my-reservations */
-function MyReservationsRoute() {
+/** Route component for /my-registrations */
+function MyRegistrationsRoute() {
   return (
     <div className="App">
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar
-        iconClass="bi bi-ticket-perforated"
-        title={m.my_reservations_title()}
-      />
+      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_registrations_title()} />
       <main id="main-content">
-        <AppSuspense errorFallbackText={m.my_reservations_error()}>
-          <MyReservationsPage />
+        <AppSuspense errorFallbackText={m.my_registrations_error()}>
+          <MyRegistrationsPage />
         </AppSuspense>
       </main>
     </div>
   );
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 function App() {
   // Use custom hooks for language
   useLanguage();
 
-  // Fetch live edition data; falls back to hardcoded editions.ts on any error
+  // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition } = useActiveEdition();
   const { producers, sponsors } = edition;
 
   // Derive festival start/end dates from the active edition
   const festivalDate = useMemo(() => {
-    const d = new Date(edition.dates.friday);
+    const d = new Date(edition.dates[0] ?? new Date());
     d.setHours(17, 0, 0, 0);
     return d;
   }, [edition]);
 
   const festivalEndDate = useMemo(() => {
-    return endOfDay(edition.dates.sunday);
+    return endOfDay(edition.dates[edition.dates.length - 1] ?? new Date());
   }, [edition]);
 
   // Derive festival days for the Schedule component
   const festivalDays = useMemo<FestivalDay[]>(() => {
-    const toISO = (d: Date) => {
-      const y = d.getFullYear();
-      const mo = String(d.getMonth() + 1).padStart(2, "0");
-      const da = String(d.getDate()).padStart(2, "0");
-      return `${y}-${mo}-${da}`;
+    const uniqueDates = [...new Set(edition.events.map((event) => event.date))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (uniqueDates.length > 0) {
+      return uniqueDates.map((date, index) => ({
+        id: index + 1,
+        date,
+      }));
+    }
+
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     };
-    return [
-      { id: 1, date: toISO(edition.dates.friday), label: "friday" },
-      { id: 2, date: toISO(edition.dates.saturday), label: "saturday" },
-      { id: 3, date: toISO(edition.dates.sunday), label: "sunday" },
-    ];
+
+    return edition.dates.map((date, index) => ({
+      id: index + 1,
+      date: formatLocalDate(date),
+    }));
   }, [edition]);
 
-  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
-  const [reservableEvents, setReservableEvents] = useState<Array<{ id: string; title: string }>>(
-    [],
-  );
-
-  // Recompute reservable events whenever the active edition changes.
-  // Runs immediately after first mount with the static fallback, then again
-  // if the API response updates the edition.
-  useEffect(() => {
+  const registrableEvents = useMemo(() => {
     const now = new Date();
-    const dayDate = (dayId: number): Date =>
-      [edition.dates.friday, edition.dates.saturday, edition.dates.sunday][dayId - 1] ??
-      edition.dates.friday;
-    const events = edition.schedule
-      .filter((ev) => ev.reservation)
-      .filter((ev) => {
-        const eventEnd = endOfDay(dayDate(ev.dayId));
+    return edition.events
+      .filter((event) => event.registrationRequired)
+      .filter((event) => {
+        const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
         return eventEnd >= now;
       })
-      .filter((ev) => !ev.reservationsOpenFrom || ev.reservationsOpenFrom <= now)
-      .map((ev) => ({ id: ev.id, title: ev.title }));
-    setReservableEvents(events);
-  }, [edition]);
+      .filter((event) => !event.registrationsOpenFrom || event.registrationsOpenFrom <= now)
+      .map((event) => ({ id: event.id, title: event.title }));
+  }, [edition.events]);
 
   // --- Main marketing page ---
 
@@ -305,7 +312,7 @@ function App() {
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
                   <AppSuspense errorFallbackText={m.error_schedule()}>
-                    <Schedule days={festivalDays} events={edition.schedule} />
+                    <Schedule days={festivalDays} events={edition.events} />
                   </AppSuspense>
                 </div>
               </div>
@@ -397,21 +404,21 @@ function App() {
           </div>
         </section>
 
-        {/* VIP Reservations Section */}
-        <section id="reservations" className="content-section highlight-section">
+        {/* VIP Registrations Section */}
+        <section id="registrations" className="content-section highlight-section">
           <div className="container text-center">
             <SectionHeading
-              id="reservations-heading"
-              title={m.reservation_title()}
-              subtitle={m.reservation_description()}
+              id="registrations-heading"
+              title={m.registration_title()}
+              subtitle={m.registration_description()}
             />
             <button
               type="button"
               className="btn btn-warning btn-lg rounded-pill px-5 fw-bold"
-              onClick={() => setShowReservationModal(true)}
+              onClick={() => setShowRegistrationModal(true)}
             >
               <i className="bi bi-calendar-plus me-2" aria-hidden="true" />
-              {m.reservation_cta()}
+              {m.registration_cta()}
             </button>
           </div>
         </section>
@@ -420,11 +427,11 @@ function App() {
       {/* Footer */}
       <Footer />
 
-      {/* VIP Reservation Modal */}
-      <ReservationModal
-        show={showReservationModal}
-        onHide={() => setShowReservationModal(false)}
-        reservableEvents={reservableEvents}
+      {/* VIP Registration Modal */}
+      <RegistrationModal
+        show={showRegistrationModal}
+        onHide={() => setShowRegistrationModal(false)}
+        registrableEvents={registrableEvents}
       />
     </div>
   );
@@ -438,13 +445,15 @@ if (!rootElement) {
 }
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Routes>
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/check-in" element={<CheckInRoute />} />
-        <Route path="/my-reservations" element={<MyReservationsRoute />} />
-        <Route path="*" element={<App />} />
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <Routes>
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/check-in" element={<CheckInRoute />} />
+          <Route path="/my-registrations" element={<MyRegistrationsRoute />} />
+          <Route path="*" element={<App />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   </React.StrictMode>,
 );

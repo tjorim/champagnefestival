@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -10,55 +11,15 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
-import type { PaymentStatus, ReservationStatus } from "@/types/reservation";
+import { queryKeys } from "@/utils/queryKeys";
+import {
+  fetchAdminPersonRegistrations,
+} from "@/utils/adminRegistrationApi";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
-
-interface PersonReservation {
-  id: string;
-  eventTitle: string;
-  guestCount: number;
-  status: ReservationStatus;
-  paymentStatus: PaymentStatus;
-  checkedIn: boolean;
-  createdAt: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isReservationStatus(value: unknown): value is ReservationStatus {
-  return value === "pending" || value === "confirmed" || value === "cancelled";
-}
-
-function isPaymentStatus(value: unknown): value is PaymentStatus {
-  return value === "unpaid" || value === "partial" || value === "paid";
-}
-
-function isPersonReservationRecord(value: unknown): value is Record<string, unknown> & {
-  id: string;
-  event_title: string;
-  guest_count: number;
-  status: ReservationStatus;
-  payment_status: PaymentStatus;
-  checked_in: boolean;
-  created_at: string;
-} {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.event_title === "string" &&
-    typeof value.guest_count === "number" &&
-    isReservationStatus(value.status) &&
-    isPaymentStatus(value.payment_status) &&
-    typeof value.checked_in === "boolean" &&
-    typeof value.created_at === "string"
-  );
-}
 
 interface PeopleManagementProps {
   people: Person[];
-  reservationCountByPersonId: Record<string, number>;
+  registrationCountByPersonId: Record<string, number>;
   isLoading: boolean;
   authHeaders: () => Record<string, string>;
   onMerge: (canonicalId: string, duplicateId: string) => Promise<void>;
@@ -74,7 +35,7 @@ interface MergeState {
 
 export default function PeopleManagement({
   people,
-  reservationCountByPersonId,
+  registrationCountByPersonId,
   isLoading,
   authHeaders,
   onMerge,
@@ -97,11 +58,7 @@ export default function PeopleManagement({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
-  const [viewReservationsPerson, setViewReservationsPerson] = useState<Person | null>(null);
-  const [personReservations, setPersonReservations] = useState<PersonReservation[]>([]);
-  const [loadingPersonReservations, setLoadingPersonReservations] = useState(false);
-  const [personReservationsError, setPersonReservationsError] = useState(false);
-  const reservationsFetchControllerRef = useRef<AbortController | null>(null);
+  const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
 
   const filtered = q.trim() || roleFilter !== "all"
     ? people.filter((p) => {
@@ -164,9 +121,9 @@ export default function PeopleManagement({
   };
 
   const openMerge = (a: Person, b: Person) => {
-    // Default: keep the one with more reservations as canonical
-    const aCount = reservationCountByPersonId[a.id] ?? 0;
-    const bCount = reservationCountByPersonId[b.id] ?? 0;
+    // Default: keep the one with more registrations as canonical
+    const aCount = registrationCountByPersonId[a.id] ?? 0;
+    const bCount = registrationCountByPersonId[b.id] ?? 0;
     setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
     setMergeError("");
     setMergeSuccess(false);
@@ -197,76 +154,22 @@ export default function PeopleManagement({
     }
   };
 
-  const closePersonReservations = useCallback(() => {
-    reservationsFetchControllerRef.current?.abort();
-    reservationsFetchControllerRef.current = null;
-    setLoadingPersonReservations(false);
-    setViewReservationsPerson(null);
+  const closePersonRegistrations = useCallback(() => {
+    setViewRegistrationsPerson(null);
   }, []);
 
-  const openPersonReservations = useCallback(
-    async (person: Person) => {
-      reservationsFetchControllerRef.current?.abort();
-      const controller = new AbortController();
-      reservationsFetchControllerRef.current = controller;
+  const personRegistrationsQuery = useQuery({
+    queryKey: queryKeys.admin.peopleRegistrations(viewRegistrationsPerson?.id ?? ""),
+    queryFn: ({ signal }) =>
+      fetchAdminPersonRegistrations(viewRegistrationsPerson!.id, authHeaders, signal),
+    enabled: viewRegistrationsPerson !== null,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
 
-      setViewReservationsPerson(person);
-      setPersonReservations([]);
-      setPersonReservationsError(false);
-      setLoadingPersonReservations(true);
-      try {
-        const res = await fetch(`/api/people/${encodeURIComponent(person.id)}/reservations`, {
-          signal: controller.signal,
-          headers: authHeaders(),
-        });
-        if (reservationsFetchControllerRef.current !== controller) {
-          return;
-        }
-        if (res.ok) {
-          const raw: unknown = await res.json();
-          if (reservationsFetchControllerRef.current !== controller) {
-            return;
-          }
-          if (!Array.isArray(raw) || !raw.every(isPersonReservationRecord)) {
-            setPersonReservationsError(true);
-            return;
-          }
-          setPersonReservations(
-            raw.map((d) => ({
-              id: d.id,
-              eventTitle: d.event_title,
-              guestCount: d.guest_count,
-              status: d.status,
-              paymentStatus: d.payment_status,
-              checkedIn: d.checked_in,
-              createdAt: d.created_at,
-            })),
-          );
-        } else {
-          setPersonReservationsError(true);
-        }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-        if (reservationsFetchControllerRef.current !== controller) {
-          return;
-        }
-        setPersonReservationsError(true);
-      } finally {
-        if (reservationsFetchControllerRef.current === controller) {
-          reservationsFetchControllerRef.current = null;
-          setLoadingPersonReservations(false);
-        }
-      }
-    },
-    [authHeaders],
-  );
-
-  useEffect(() => () => {
-    reservationsFetchControllerRef.current?.abort();
-    reservationsFetchControllerRef.current = null;
-  }, []);
+  const personRegistrations = personRegistrationsQuery.data ?? [];
+  const loadingPersonRegistrations = personRegistrationsQuery.isPending;
+  const personRegistrationsError = personRegistrationsQuery.isError;
 
   return (
     <>
@@ -376,11 +279,11 @@ export default function PeopleManagement({
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <thead>
                   <tr>
-                    <th>{m.reservation_name()}</th>
-                    <th className="d-none d-md-table-cell">{m.reservation_email()}</th>
-                    <th className="d-none d-lg-table-cell">{m.reservation_phone()}</th>
+                    <th>{m.registration_name()}</th>
+                    <th className="d-none d-md-table-cell">{m.registration_email()}</th>
+                    <th className="d-none d-lg-table-cell">{m.registration_phone()}</th>
                     <th className="d-none d-lg-table-cell">{m.admin_people_roles_label()}</th>
-                    <th>{m.admin_reservations_tab()}</th>
+                    <th>{m.admin_registrations_tab()}</th>
                     <th>{m.admin_actions_label()}</th>
                   </tr>
                 </thead>
@@ -392,7 +295,7 @@ export default function PeopleManagement({
                           (p) => p.id !== person.id,
                         )
                       : [];
-                    const resCount = reservationCountByPersonId[person.id] ?? 0;
+                    const resCount = registrationCountByPersonId[person.id] ?? 0;
 
                     return (
                       <tr key={person.id}>
@@ -432,9 +335,9 @@ export default function PeopleManagement({
                               size="sm"
                               variant="link"
                               className="text-secondary p-0 ms-1"
-                              onClick={() => openPersonReservations(person)}
-                              title={m.admin_people_view_reservations()}
-                              aria-label={`${m.admin_people_view_reservations()}: ${person.name}`}
+                              onClick={() => setViewRegistrationsPerson(person)}
+                              title={m.admin_people_view_registrations()}
+                              aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
                             >
                               <i className="bi bi-eye" aria-hidden="true" />
                             </Button>
@@ -511,7 +414,7 @@ export default function PeopleManagement({
 
             {(["canonical", "duplicate"] as const).map((role) => {
               const person = mergeState[role];
-              const resCount = reservationCountByPersonId[person.id] ?? 0;
+              const resCount = registrationCountByPersonId[person.id] ?? 0;
               const label =
                 role === "canonical"
                   ? m.admin_people_merge_into()
@@ -540,7 +443,7 @@ export default function PeopleManagement({
                     {person.phone && <div className="text-secondary">{person.phone}</div>}
                     <div className="mt-1">
                       <Badge bg={resCount > 0 ? "warning" : "secondary"} text={resCount > 0 ? "dark" : undefined}>
-                        {resCount} {m.admin_people_reservations_count()}
+                        {resCount} {m.admin_people_registrations_count()}
                       </Badge>
                       {person.roles.map((r) => (
                         <Badge key={r} bg="secondary" className="ms-1 text-capitalize">
@@ -612,39 +515,39 @@ export default function PeopleManagement({
         }}
       />
 
-      {/* Person reservations modal */}
-      {viewReservationsPerson && (
+      {/* Person registrations modal */}
+      {viewRegistrationsPerson && (
         <Modal
           show
-          onHide={closePersonReservations}
+          onHide={closePersonRegistrations}
           centered
           data-bs-theme="dark"
         >
           <Modal.Header closeButton className="bg-dark border-secondary">
             <Modal.Title className="text-warning fs-6">
               <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-              {m.admin_people_reservations_modal_title()} — {viewReservationsPerson.name}
+              {m.admin_people_registrations_modal_title()} — {viewRegistrationsPerson.name}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className="bg-dark text-light p-0">
-            {loadingPersonReservations && (
+            {loadingPersonRegistrations && (
               <div className="text-center py-4">
                 <Spinner animation="border" size="sm" variant="warning" />
               </div>
             )}
-            {!loadingPersonReservations && personReservationsError && (
+            {!loadingPersonRegistrations && personRegistrationsError && (
               <Alert variant="danger" className="m-3">
-                {m.admin_people_reservations_load_error()}
+                {m.admin_people_registrations_load_error()}
               </Alert>
             )}
-            {!loadingPersonReservations && !personReservationsError && personReservations.length === 0 && (
+            {!loadingPersonRegistrations && !personRegistrationsError && personRegistrations.length === 0 && (
               <p className="text-secondary text-center py-4 mb-0">
-                {m.admin_people_reservations_empty()}
+                {m.admin_people_registrations_empty()}
               </p>
             )}
-            {!loadingPersonReservations && !personReservationsError && personReservations.length > 0 && (
+            {!loadingPersonRegistrations && !personRegistrationsError && personRegistrations.length > 0 && (
               <ListGroup variant="flush">
-                {personReservations.map((r) => (
+                {personRegistrations.map((r) => (
                   <ListGroup.Item key={r.id} className="bg-dark border-secondary text-light py-2">
                     <div className="d-flex justify-content-between align-items-start gap-2">
                       <div>
@@ -705,7 +608,7 @@ export default function PeopleManagement({
             <Button
               variant="outline-secondary"
               size="sm"
-              onClick={closePersonReservations}
+              onClick={closePersonRegistrations}
             >
               {m.close()}
             </Button>

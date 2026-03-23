@@ -3,7 +3,8 @@
  */
 
 import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -13,9 +14,18 @@ import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
-import ItemModal, { type ItemDraft } from "./ItemModal";
+import ItemModal from "./ItemModal";
+import type { ItemDraft } from "./itemTypes";
 import type { Edition } from "./editionTypes";
 import type { Venue } from "@/types/admin";
+import { queryKeys } from "@/utils/queryKeys";
+import {
+  deleteContentSectionItem,
+  fetchContentSectionItems,
+  fetchEditions,
+  saveContentSectionItem,
+  updateContentSectionItemActive,
+} from "@/utils/adminContentApi";
 
 function typeBadgeVariant(type: string | undefined): string {
   switch (type) {
@@ -39,31 +49,15 @@ function typeLabel(type: string | undefined): string {
   }
 }
 
-function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
-  const cp = (d.contact_person ?? null) as {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-  } | null;
-  return {
-    id: d.id as number,
-    name: d.name as string,
-    image: d.image as string,
-    website: d.website as string | undefined,
-    active: d.active as boolean | undefined,
-    type: d.type as string | undefined,
-    contactPersonId: (d.contact_person_id as string | null) ?? null,
-    contactPerson: cp,
-  };
-}
-
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
   venues: Venue[];
   onExhibitorSaved?: (item: ItemDraft) => void;
   onExhibitorDeleted?: (id: number) => void;
 }
+
+const contentSectionQueryKey = queryKeys.admin.contentManagement.section;
+const contentEditionsQueryKey = queryKeys.admin.contentManagement.editions;
 
 // ---------------------------------------------------------------------------
 // ContentSection
@@ -78,48 +72,45 @@ interface ContentSectionProps {
 }
 
 function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDeleted }: ContentSectionProps) {
-  const [items, setItems] = useState<ItemDraft[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
 
-  const activeItems = items.filter((i) => i.active !== false);
-  const archivedItems = items.filter((i) => i.active === false);
+  const itemsQuery = useQuery({
+    queryKey: contentSectionQueryKey(sectionKey),
+    queryFn: () => fetchContentSectionItems(sectionKey, authHeaders),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
 
-  const apiBase = `/api/${sectionKey}`;
+  const saveItemMutation = useMutation({
+    mutationFn: (draft: ItemDraft) => saveContentSectionItem(sectionKey, draft, authHeaders),
+    retry: false,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch(apiBase, { headers: authHeaders() });
-        if (res.ok && !cancelled) {
-          const data = (await res.json()) as Record<string, unknown>[];
-          if (Array.isArray(data)) setItems(data.map(apiToItemDraft));
-        } else if (!cancelled) {
-          setLoadError(true);
-        }
-      } catch (err) {
-        console.error(`Failed to load ${sectionKey}`, err);
-        if (!cancelled) setLoadError(true);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [sectionKey, apiBase, authHeaders]);
+  const updateItemActiveMutation = useMutation({
+    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
+      updateContentSectionItemActive(sectionKey, id, active, authHeaders),
+    retry: false,
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: (id: number) => deleteContentSectionItem(sectionKey, id, authHeaders),
+    retry: false,
+  });
+
+  const items = itemsQuery.data ?? [];
+  const activeItems = items.filter((item) => item.active !== false);
+  const archivedItems = items.filter((item) => item.active === false);
 
   function openAdd() {
     setModalItem(null);
     setModalOpen(true);
   }
+
   function openEdit(item: ItemDraft) {
     setModalItem(item);
     setModalOpen(true);
@@ -129,38 +120,12 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
     async (draft: ItemDraft) => {
       setActionError(null);
       try {
-        const isNew = !items.find((i) => i.id === draft.id);
-        const res = isNew
-          ? await fetch(apiBase, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({
-                name: draft.name,
-                image: draft.image,
-                website: draft.website ?? "",
-                type: draft.type ?? "vendor",
-                contact_person_id: draft.contactPersonId ?? null,
-              }),
-            })
-          : await fetch(`${apiBase}/${draft.id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json", ...authHeaders() },
-              body: JSON.stringify({
-                name: draft.name,
-                image: draft.image,
-                website: draft.website ?? "",
-                type: draft.type ?? "vendor",
-                contact_person_id: draft.contactPersonId ?? null,
-              }),
-            });
-        if (!res.ok) {
-          setActionError(m.admin_content_error_save());
-          return;
-        }
-        const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
-        setItems((prev) => {
-          const idx = prev.findIndex((i) => i.id === saved.id);
-          return idx >= 0 ? prev.map((i) => (i.id === saved.id ? saved : i)) : [...prev, saved];
+        const saved = await saveItemMutation.mutateAsync(draft);
+        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) => {
+          const idx = prev.findIndex((item) => item.id === saved.id);
+          return idx >= 0
+            ? prev.map((item) => (item.id === saved.id ? saved : item))
+            : [...prev, saved];
         });
         setImageErrors((prev) => {
           const copy = new Set(prev);
@@ -168,80 +133,60 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
           return copy;
         });
         onItemSaved?.(saved);
-      } catch {
-        setActionError(m.admin_content_error_save());
+        setModalOpen(false);
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
-      setModalOpen(false);
     },
-    [items, apiBase, authHeaders, onItemSaved],
+    [onItemSaved, queryClient, saveItemMutation, sectionKey],
   );
 
   const handleArchive = useCallback(
     async (id: number) => {
       setActionError(null);
       try {
-        const res = await fetch(`${apiBase}/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({ active: false }),
-        });
-        if (res.ok) {
-          const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
-          setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
-          onItemSaved?.(saved);
-        } else {
-          setActionError(m.admin_content_error_save());
-        }
-      } catch {
-        setActionError(m.admin_content_error_save());
+        const saved = await updateItemActiveMutation.mutateAsync({ id, active: false });
+        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
+          prev.map((item) => (item.id === id ? saved : item)),
+        );
+        onItemSaved?.(saved);
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
     },
-    [apiBase, authHeaders, onItemSaved],
+    [onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
   );
 
   const handleRestore = useCallback(
     async (id: number) => {
       setActionError(null);
       try {
-        const res = await fetch(`${apiBase}/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({ active: true }),
-        });
-        if (res.ok) {
-          const saved = apiToItemDraft((await res.json()) as Record<string, unknown>);
-          setItems((prev) => prev.map((i) => (i.id === id ? saved : i)));
-          onItemSaved?.(saved);
-        } else {
-          setActionError(m.admin_content_error_save());
-        }
-      } catch {
-        setActionError(m.admin_content_error_save());
+        const saved = await updateItemActiveMutation.mutateAsync({ id, active: true });
+        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
+          prev.map((item) => (item.id === id ? saved : item)),
+        );
+        onItemSaved?.(saved);
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
     },
-    [apiBase, authHeaders, onItemSaved],
+    [onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
   );
 
   const handleDelete = useCallback(
     async (id: number) => {
       setActionError(null);
       try {
-        const res = await fetch(`${apiBase}/${id}`, {
-          method: "DELETE",
-          headers: authHeaders(),
-        });
-        if (res.ok || res.status === 204) {
-          setItems((prev) => prev.filter((i) => i.id !== id));
-          onItemDeleted?.(id);
-        } else {
-          const data = await res.json().catch(() => ({}));
-          setActionError((data as { detail?: string }).detail ?? m.admin_content_error_save());
-        }
-      } catch {
-        setActionError(m.admin_content_error_save());
+        await deleteItemMutation.mutateAsync(id);
+        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
+          prev.filter((item) => item.id !== id),
+        );
+        onItemDeleted?.(id);
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
     },
-    [apiBase, authHeaders, onItemDeleted],
+    [deleteItemMutation, onItemDeleted, queryClient, sectionKey],
   );
 
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
@@ -338,7 +283,7 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
     );
   }
 
-  if (isLoading) {
+  if (itemsQuery.isPending) {
     return (
       <div className="text-center py-3">
         <Spinner animation="border" size="sm" variant="warning" />
@@ -367,7 +312,7 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
         </Button>
       </div>
 
-      {loadError && (
+      {itemsQuery.isError && (
         <Alert variant="danger" className="py-1 mb-2">
           {m.admin_content_error_load()}
         </Alert>
@@ -399,7 +344,7 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
             variant="link"
             size="sm"
             className="text-secondary text-decoration-none p-0 mb-1"
-            onClick={() => setArchivedOpen((o) => !o)}
+            onClick={() => setArchivedOpen((open) => !open)}
             aria-expanded={archivedOpen}
           >
             <i
@@ -440,44 +385,43 @@ interface EditionsSectionProps {
 }
 
 function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
-  const [editions, setEditions] = useState<Edition[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const queryClient = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setIsLoading(true);
-      setLoadError(false);
-      try {
-        const res = await fetch("/api/editions?include_inactive=true", { headers: authHeaders() });
-        if (res.ok && !cancelled) setEditions((await res.json()) as Edition[]);
-        else if (!cancelled) setLoadError(true);
-      } catch {
-        if (!cancelled) setLoadError(true);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [authHeaders]);
+  const editionsQuery = useQuery({
+    queryKey: contentEditionsQueryKey,
+    queryFn: () => fetchEditions(authHeaders),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
 
-  const handleCreated = useCallback((edition: Edition) => {
-    setEditions((prev) => [...prev, edition]);
-    setAddModalOpen(false);
-  }, []);
+  const editions = editionsQuery.data ?? [];
 
-  const handleDeleted = useCallback((id: string) => {
-    setEditions((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+  const handleCreated = useCallback(
+    (edition: Edition) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => [...prev, edition]);
+      setAddModalOpen(false);
+    },
+    [queryClient],
+  );
 
-  const handleUpdated = useCallback((updated: Edition) => {
-    setEditions((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
-  }, []);
+  const handleDeleted = useCallback(
+    (id: string) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
+        prev.filter((edition) => edition.id !== id),
+      );
+    },
+    [queryClient],
+  );
+
+  const handleUpdated = useCallback(
+    (updated: Edition) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
+        prev.map((edition) => (edition.id === updated.id ? updated : edition)),
+      );
+    },
+    [queryClient],
+  );
 
   return (
     <div className="mb-4">
@@ -489,26 +433,26 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
         </Button>
       </div>
 
-      {isLoading && (
+      {editionsQuery.isPending && (
         <div className="text-center py-3">
           <Spinner animation="border" size="sm" variant="warning" />
           <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
         </div>
       )}
-      {!isLoading && loadError && (
+      {!editionsQuery.isPending && editionsQuery.isError && (
         <Alert variant="danger" className="py-2 small">
           {m.admin_content_error_load()}
         </Alert>
       )}
-      {!isLoading && !loadError && editions.length === 0 && (
+      {!editionsQuery.isPending && !editionsQuery.isError && editions.length === 0 && (
         <p className="text-secondary fst-italic small">No editions yet.</p>
       )}
-      {!isLoading &&
-        !loadError &&
-        editions.map((ed) => (
+      {!editionsQuery.isPending &&
+        !editionsQuery.isError &&
+        editions.map((edition) => (
           <EditionCard
-            key={ed.id}
-            edition={ed}
+            key={edition.id}
+            edition={edition}
             venues={venues}
             authHeaders={authHeaders}
             onDeleted={handleDeleted}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -6,9 +6,9 @@ import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { m } from "@/paraglide/messages";
-import type { Reservation, ReservationStatus, PaymentStatus } from "@/types/reservation";
+import type { Registration, RegistrationStatus, PaymentStatus } from "@/types/registration";
 import type { FloorTable } from "@/types/admin";
-import ReservationCreateModal from "./ReservationCreateModal";
+import RegistrationCreateModal from "./RegistrationCreateModal";
 
 interface AllocationRef {
   id: number;
@@ -16,21 +16,21 @@ interface AllocationRef {
   contactPersonId: string | null;
 }
 
-interface ReservationListProps {
-  reservations: Reservation[];
+interface RegistrationListProps {
+  registrations: Registration[];
   tables: FloorTable[];
   exhibitors: AllocationRef[];
-  filter: "all" | ReservationStatus;
-  onFilterChange: (filter: "all" | ReservationStatus) => void;
-  onUpdateStatus: (id: string, status: ReservationStatus) => void;
+  filter: "all" | RegistrationStatus;
+  onFilterChange: (filter: "all" | RegistrationStatus) => void;
+  onUpdateStatus: (id: string, status: RegistrationStatus) => void;
   onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => void;
-  onAssignTable: (reservationId: string, tableId: string | undefined) => void;
-  onViewDetail: (reservation: Reservation) => void;
-  onAddReservation: (reservation: Reservation) => void;
+  onAssignTable: (registrationId: string, tableId: string | undefined) => void;
+  onViewDetail: (registration: Registration) => void;
+  onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
 }
 
-function statusBadgeVariant(status: ReservationStatus): string {
+function statusBadgeVariant(status: RegistrationStatus): string {
   switch (status) {
     case "confirmed":
       return "success";
@@ -52,7 +52,7 @@ function paymentBadgeVariant(payment: PaymentStatus): string {
   }
 }
 
-function statusLabel(status: ReservationStatus): string {
+function statusLabel(status: RegistrationStatus): string {
   switch (status) {
     case "confirmed":
       return m.admin_status_confirmed();
@@ -74,8 +74,8 @@ function paymentLabel(payment: PaymentStatus): string {
   }
 }
 
-export default function ReservationList({
-  reservations,
+export default function RegistrationList({
+  registrations,
   tables,
   exhibitors,
   filter,
@@ -84,17 +84,17 @@ export default function ReservationList({
   onUpdatePayment,
   onAssignTable,
   onViewDetail,
-  onAddReservation,
+  onAddRegistration,
   authHeaders,
-}: ReservationListProps) {
+}: RegistrationListProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [allocationFilter, setAllocationFilter] = useState("");
 
-  // Build allocation entities that appear in the current reservation list
-  const reservationPersonIds = new Set(reservations.map((r) => r.personId));
+  // Build allocation entities that appear in the current registration list
+  const registrationPersonIds = new Set(registrations.map((r) => r.personId));
   const allocationOptions: { key: string; label: string; personId: string }[] = [
     ...exhibitors
-      .filter((e) => e.contactPersonId && reservationPersonIds.has(e.contactPersonId))
+      .filter((e) => e.contactPersonId && registrationPersonIds.has(e.contactPersonId))
       .map((e) => ({
         key: `e:${e.id}`,
         label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`,
@@ -102,7 +102,7 @@ export default function ReservationList({
       })),
   ];
 
-  // Find which reservations are linked to an exhibitor contact person
+  // Find which registrations are linked to an exhibitor contact person
   const allContactPersonIds = new Set(
     exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null),
   );
@@ -111,24 +111,33 @@ export default function ReservationList({
     ? (allocationOptions.find((o) => o.key === allocationFilter)?.personId ?? null)
     : null;
 
-  const filtered = reservations.filter((r) => {
+  const filtered = registrations.filter((r) => {
     if (filter !== "all" && r.status !== filter) return false;
     if (filterPersonId && r.person.id !== filterPersonId) return false;
     return true;
   });
 
   const handleAssignTable = useCallback(
-    (reservationId: string, tableId: string) => {
-      onAssignTable(reservationId, tableId || undefined);
+    (registrationId: string, tableId: string) => {
+      onAssignTable(registrationId, tableId || undefined);
     },
     [onAssignTable],
+  );
+
+  const statusCounts = useMemo(
+    () => ({
+      all: registrations.length,
+      pending: registrations.filter((r) => r.status === "pending").length,
+      confirmed: registrations.filter((r) => r.status === "confirmed").length,
+    }),
+    [registrations],
   );
 
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <span className="fw-semibold">{m.admin_reservations_tab()}</span>
+          <span className="fw-semibold">{m.admin_registrations_tab()}</span>
           <div className="d-flex flex-wrap gap-2 align-items-center">
             {allocationOptions.length > 0 && (
               <Form.Select
@@ -152,39 +161,39 @@ export default function ReservationList({
                 variant={filter === "all" ? "warning" : "outline-secondary"}
                 onClick={() => onFilterChange("all")}
               >
-                {m.admin_filter_all()} ({reservations.length})
+                {m.admin_filter_all()} ({statusCounts.all})
               </Button>
               <Button
                 variant={filter === "pending" ? "warning" : "outline-secondary"}
                 onClick={() => onFilterChange("pending")}
               >
                 {m.admin_filter_pending()} (
-                {reservations.filter((r) => r.status === "pending").length})
+                {statusCounts.pending})
               </Button>
               <Button
                 variant={filter === "confirmed" ? "warning" : "outline-secondary"}
                 onClick={() => onFilterChange("confirmed")}
               >
                 {m.admin_filter_confirmed()} (
-                {reservations.filter((r) => r.status === "confirmed").length})
+                {statusCounts.confirmed})
               </Button>
             </ButtonGroup>
             <Button variant="outline-warning" size="sm" onClick={() => setShowCreateModal(true)}>
               <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              {m.admin_add_reservation()}
+              {m.admin_add_registration()}
             </Button>
           </div>
         </Card.Header>
 
         <Card.Body className="p-0">
           {filtered.length === 0 ? (
-            <p className="text-secondary text-center py-4 mb-0">{m.admin_no_reservations()}</p>
+            <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
           ) : (
             <div className="table-responsive">
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <thead>
                   <tr>
-                    <th>{m.reservation_name()}</th>
+                    <th>{m.registration_name()}</th>
                     <th className="d-none d-md-table-cell">{m.admin_event_label()}</th>
                     <th>{m.admin_guests_count()}</th>
                     <th>{m.admin_status_label()}</th>
@@ -320,11 +329,11 @@ export default function ReservationList({
         </Card.Body>
       </Card>
 
-      <ReservationCreateModal
+      <RegistrationCreateModal
         show={showCreateModal}
         authHeaders={authHeaders}
         onSaved={(r) => {
-          onAddReservation(r);
+          onAddRegistration(r);
           setShowCreateModal(false);
         }}
         onHide={() => setShowCreateModal(false)}

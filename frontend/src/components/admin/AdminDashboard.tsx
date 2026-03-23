@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -8,23 +9,25 @@ import Tab from "react-bootstrap/Tab";
 import Nav from "react-bootstrap/Nav";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import ReservationList from "./ReservationList";
-import ReservationDetail from "./ReservationDetail";
+import RegistrationList from "./RegistrationList";
+import RegistrationDetail from "./RegistrationDetail";
 import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
-import type { ItemDraft } from "./ItemModal";
+import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";
 import type { MemberFormData } from "./MemberFormModal";
 import type { PersonFormData } from "./PersonFormModal";
 import type { VolunteerFormData } from "./VolunteerFormModal";
-import type { Reservation, ReservationStatus, PaymentStatus, OrderItem } from "@/types/reservation";
-import { apiToReservation } from "@/types/reservationMapper";
+import type { Registration, RegistrationStatus, PaymentStatus, OrderItem } from "@/types/registration";
+import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
+import { useActiveEdition } from "@/hooks/useActiveEdition";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -51,7 +54,7 @@ function apiLayoutToLayout(d: Record<string, unknown>): Layout {
     id: d.id as string,
     editionId: (d.edition_id as string | null) ?? null,
     roomId: d.room_id as string,
-    dayId: d.day_id as number,
+    date: (d.date as string | null) ?? null,
     label: (d.label ?? "") as string,
     createdAt: d.created_at as string,
   };
@@ -95,7 +98,7 @@ function apiTableToTable(d: Record<string, unknown>): FloorTable {
     tableTypeId: d.table_type_id as string,
     rotation: (d.rotation ?? 0) as number,
     layoutId: d.layout_id as string,
-    reservationIds: (d.reservation_ids as string[]) ?? [],
+    registrationIds: (d.registration_ids as string[]) ?? [],
   };
 }
 
@@ -186,31 +189,171 @@ function syncMembersWithPerson(members: Person[], person: Person): Person[] {
   return members.map((member) => (member.id === person.id ? person : member));
 }
 
+interface AdminDashboardData {
+  registrations: Registration[];
+  tables: FloorTable[];
+  venues: Venue[];
+  rooms: Room[];
+  tableTypes: TableType[];
+  layouts: Layout[];
+  exhibitors: { id: number; name: string; active: boolean; contactPersonId: string | null }[];
+  areas: FloorArea[];
+  people: Person[];
+  members: Person[];
+}
+
+function createEmptyDashboardData(): AdminDashboardData {
+  return {
+    registrations: [],
+    tables: [],
+    venues: [],
+    rooms: [],
+    tableTypes: [],
+    layouts: [],
+    exhibitors: [],
+    areas: [],
+    people: [],
+    members: [],
+  };
+}
+
+async function loadMembers(
+  authHeaders: () => Record<string, string>,
+): Promise<Person[]> {
+  const response = await fetch("/api/members", { headers: authHeaders() });
+  if (response.status === 401) {
+    throw new Error("unauthorized");
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_error_load_data());
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload.map(apiToPerson) : [];
+}
+
+async function loadVolunteers(
+  authHeaders: () => Record<string, string>,
+): Promise<Person[]> {
+  const response = await fetch("/api/volunteers", { headers: authHeaders() });
+  if (response.status === 401) {
+    throw new Error("unauthorized");
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_error_load_data());
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload.map(apiToPerson) : [];
+}
+
+async function fetchAdminDashboardData(
+  authHeaders: () => Record<string, string>,
+): Promise<AdminDashboardData> {
+  const [
+    registrationsResponse,
+    tablesResponse,
+    venuesResponse,
+    roomsResponse,
+    tableTypesResponse,
+    layoutsResponse,
+    exhibitorsResponse,
+    areasResponse,
+    peopleResponse,
+    members,
+    volunteers,
+  ] = await Promise.all([
+    fetch("/api/registrations", { headers: authHeaders() }),
+    fetch("/api/tables", { headers: authHeaders() }),
+    fetch("/api/venues", { headers: authHeaders() }),
+    fetch("/api/rooms", { headers: authHeaders() }),
+    fetch("/api/table-types", { headers: authHeaders() }),
+    fetch("/api/layouts", { headers: authHeaders() }),
+    fetch("/api/exhibitors", { headers: authHeaders() }),
+    fetch("/api/areas", { headers: authHeaders() }),
+    fetch("/api/people", { headers: authHeaders() }),
+    loadMembers(authHeaders),
+    loadVolunteers(authHeaders),
+  ]);
+
+  const responses = [
+    registrationsResponse,
+    tablesResponse,
+    venuesResponse,
+    roomsResponse,
+    tableTypesResponse,
+    layoutsResponse,
+    exhibitorsResponse,
+    areasResponse,
+    peopleResponse,
+  ];
+
+  if (responses.some((response) => response.status === 401)) {
+    throw new Error("unauthorized");
+  }
+
+  const firstFailed = responses.find((response) => !response.ok);
+  if (firstFailed) {
+    throw new Error(`dashboard-load-failed:${firstFailed.status}`);
+  }
+
+  const registrationsPayload = await registrationsResponse.json();
+  const rawRegistrations: Record<string, unknown>[] = Array.isArray(registrationsPayload)
+    ? registrationsPayload
+    : [];
+
+  const tablesPayload = await tablesResponse.json();
+  const rawTables: Record<string, unknown>[] = Array.isArray(tablesPayload)
+    ? tablesPayload
+    : (tablesPayload.tables ?? []);
+
+  const venuesPayload = await venuesResponse.json();
+  const roomsPayload = await roomsResponse.json();
+  const tableTypesPayload = await tableTypesResponse.json();
+  const layoutsPayload = await layoutsResponse.json();
+  const exhibitorsPayload = await exhibitorsResponse.json();
+  const areasPayload = await areasResponse.json();
+  const peoplePayload = await peopleResponse.json();
+  const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
+
+  return {
+    registrations: rawRegistrations.map(apiToRegistration),
+    tables: rawTables.map(apiTableToTable),
+    venues: Array.isArray(venuesPayload) ? venuesPayload.map(apiVenueToVenue) : [],
+    rooms: Array.isArray(roomsPayload) ? roomsPayload.map(apiRoomToRoom) : [],
+    tableTypes: Array.isArray(tableTypesPayload)
+      ? tableTypesPayload.map(apiTableTypeToTableType)
+      : [],
+    layouts: Array.isArray(layoutsPayload) ? layoutsPayload.map(apiLayoutToLayout) : [],
+    exhibitors: Array.isArray(exhibitorsPayload)
+      ? exhibitorsPayload.map((exhibitor: Record<string, unknown>) => ({
+          id: exhibitor.id as number,
+          name: exhibitor.name as string,
+          active: (exhibitor.active ?? true) as boolean,
+          contactPersonId: (exhibitor.contact_person_id as string | null) ?? null,
+        }))
+      : [],
+    areas: Array.isArray(areasPayload) ? areasPayload.map(apiAreaToArea) : [],
+    people: mergePeopleWithVolunteers(nextPeople, volunteers),
+    members,
+  };
+}
+
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
+  const { edition: activeEdition } = useActiveEdition();
+  const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const autoAuthRan = useRef(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [tables, setTables] = useState<FloorTable[]>([]);
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [tableTypes, setTableTypes] = useState<TableType[]>([]);
-  const [layouts, setLayouts] = useState<Layout[]>([]);
-  const [exhibitors, setExhibitors] = useState<
-    { id: number; name: string; active: boolean; contactPersonId: string | null }[]
-  >([]);
-  const [areas, setAreas] = useState<FloorArea[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [members, setMembers] = useState<Person[]>([]);
-  const [filter, setFilter] = useState<"all" | ReservationStatus>("all");
-  /** Full reservation (with checkInToken) shown in the detail modal */
-  const [detailReservation, setDetailReservation] = useState<Reservation | null>(null);
+  const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
+  /** Full registration (with checkInToken) shown in the detail modal */
+  const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
 
   const authHeaders = useCallback(
     () => ({
@@ -220,145 +363,72 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [],
   );
 
-  const loadMembers = useCallback(async (): Promise<Person[]> => {
-    const response = await fetch("/api/members", { headers: authHeaders() });
-    if (response.status === 401) {
-      throw new Error("unauthorized");
-    }
-    if (!response.ok) {
-      const d = await response.json().catch(() => ({}));
-      throw new Error((d as { detail?: string }).detail ?? m.admin_error_load_data());
-    }
-    const data = await response.json();
-    return Array.isArray(data) ? data.map(apiToPerson) : [];
-  }, [authHeaders]);
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.adminDashboard(storedTokenRef.current),
+    queryFn: () => fetchAdminDashboardData(authHeaders),
+    enabled: visible && isAuthenticated,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  const currentDashboardQueryKey = queryKeys.adminDashboard(storedTokenRef.current);
+  const dashboardData = dashboardQuery.data ?? createEmptyDashboardData();
+  const {
+    registrations,
+    tables,
+    venues,
+    rooms,
+    tableTypes,
+    layouts,
+    exhibitors,
+    areas,
+    people,
+    members,
+  } = dashboardData;
+  const updateDashboardData = useCallback(
+    (updater: (prev: AdminDashboardData) => AdminDashboardData) => {
+      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (prev) =>
+        updater(prev ?? createEmptyDashboardData()),
+      );
+    },
+    [currentDashboardQueryKey, queryClient],
+  );
+  const updateDashboardField = useCallback(
+    <K extends keyof AdminDashboardData>(
+      key: K,
+      updater: (value: AdminDashboardData[K]) => AdminDashboardData[K],
+    ) => {
+      updateDashboardData((prev) => ({
+        ...prev,
+        [key]: updater(prev[key]),
+      }));
+    },
+    [updateDashboardData],
+  );
 
-  const loadVolunteers = useCallback(async (): Promise<Person[]> => {
-    const response = await fetch("/api/volunteers", { headers: authHeaders() });
-    if (response.status === 401) {
-      throw new Error("unauthorized");
-    }
-    if (!response.ok) {
-      const d = await response.json().catch(() => ({}));
-      throw new Error((d as { detail?: string }).detail ?? m.admin_error_load_data());
-    }
-    const data = await response.json();
-    return Array.isArray(data) ? data.map(apiToPerson) : [];
-  }, [authHeaders]);
+  const layoutDayOptions = useMemo(() => {
+    const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    return uniqueDates.map((date) => ({
+      date,
+      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
+    }));
+  }, [activeEdition.events]);
 
   const loadData = useCallback(async () => {
-    setIsLoading(true);
     setError("");
-    try {
-      const [
-        resResponse,
-        tablesResponse,
-        venuesResponse,
-        roomsResponse,
-        tableTypesResponse,
-        layoutsResponse,
-        exhibitorsResponse,
-        areasResponse,
-        peopleResponse,
-        membersData,
-        volunteersData,
-      ] = await Promise.all([
-        fetch("/api/reservations", { headers: authHeaders() }),
-        fetch("/api/tables", { headers: authHeaders() }),
-        fetch("/api/venues", { headers: authHeaders() }),
-        fetch("/api/rooms", { headers: authHeaders() }),
-        fetch("/api/table-types", { headers: authHeaders() }),
-        fetch("/api/layouts", { headers: authHeaders() }),
-        fetch("/api/exhibitors", { headers: authHeaders() }),
-        fetch("/api/areas", { headers: authHeaders() }),
-        fetch("/api/people", { headers: authHeaders() }),
-        loadMembers(),
-        loadVolunteers(),
-      ]);
-
-      const responses = [
-        resResponse,
-        tablesResponse,
-        venuesResponse,
-        roomsResponse,
-        tableTypesResponse,
-        layoutsResponse,
-        exhibitorsResponse,
-        areasResponse,
-        peopleResponse,
-      ];
-
-      if (responses.some((r) => r.status === 401)) {
-        setIsAuthenticated(false);
-        setLoginError(m.admin_login_error());
-        return;
-      }
-
-      if (responses.some((r) => !r.ok)) {
-        setError(m.admin_error_load_data());
-        return;
-      }
-
-      const data = await resResponse.json();
-      const rawRes: Record<string, unknown>[] = Array.isArray(data) ? data : [];
-      setReservations(rawRes.map(apiToReservation));
-
-      const tablesData = await tablesResponse.json();
-      const rawTables: Record<string, unknown>[] = Array.isArray(tablesData)
-        ? tablesData
-        : (tablesData.tables ?? []);
-      setTables(rawTables.map(apiTableToTable));
-
-      const venuesData = await venuesResponse.json();
-      setVenues(Array.isArray(venuesData) ? venuesData.map(apiVenueToVenue) : []);
-
-      const roomsData = await roomsResponse.json();
-      setRooms(Array.isArray(roomsData) ? roomsData.map(apiRoomToRoom) : []);
-
-      const tableTypesData = await tableTypesResponse.json();
-      setTableTypes(
-        Array.isArray(tableTypesData) ? tableTypesData.map(apiTableTypeToTableType) : [],
-      );
-
-      const layoutsData = await layoutsResponse.json();
-      setLayouts(Array.isArray(layoutsData) ? layoutsData.map(apiLayoutToLayout) : []);
-
-      const exhibitorsData = await exhibitorsResponse.json();
-      setExhibitors(
-        Array.isArray(exhibitorsData)
-          ? exhibitorsData.map((e: Record<string, unknown>) => ({
-              id: e.id as number,
-              name: e.name as string,
-              active: (e.active ?? true) as boolean,
-              contactPersonId: (e.contact_person_id as string | null) ?? null,
-            }))
-          : [],
-      );
-
-      const areasData = await areasResponse.json();
-      setAreas(Array.isArray(areasData) ? areasData.map(apiAreaToArea) : []);
-
-      const peopleData = await peopleResponse.json();
-      const nextPeople = Array.isArray(peopleData) ? peopleData.map(apiToPerson) : [];
-      setPeople(mergePeopleWithVolunteers(nextPeople, volunteersData));
-      setMembers(membersData);
-    } catch (err) {
-      if (err instanceof Error && err.message === "unauthorized") {
-        setIsAuthenticated(false);
-        setLoginError(m.admin_login_error());
-        return;
-      }
-      console.error("Failed to load dashboard data", err);
-      setError(m.admin_error_load_data());
-    } finally {
-      setIsLoading(false);
-    }
-  }, [authHeaders, loadMembers, loadVolunteers]);
+    await dashboardQuery.refetch();
+  }, [dashboardQuery]);
 
   const validateToken = useCallback(
     async (tokenToValidate: string): Promise<"valid" | "invalid" | "transientError"> => {
       try {
-        const response = await fetch("/api/reservations", {
+        const response = await fetch("/api/registrations", {
           headers: { Authorization: `Bearer ${tokenToValidate}` },
         });
 
@@ -420,15 +490,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleLogout = useCallback(() => {
     sessionStorage.removeItem("adminToken");
     storedTokenRef.current = "";
+    queryClient.removeQueries({
+      predicate: (query) => {
+        const key = query.queryKey[0];
+        return key === "admin-dashboard" || key === "admin";
+      },
+    });
     setIsAuthenticated(false);
     setToken("");
-    setReservations([]);
-    setTables([]);
-    setRooms([]);
-    setTableTypes([]);
-    setPeople([]);
-    setMembers([]);
-  }, []);
+    setDetailRegistration(null);
+  }, [queryClient]);
 
   const handleMergePeople = useCallback(
     async (canonicalId: string, duplicateId: string) => {
@@ -455,20 +526,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           })
         : canonicalPerson;
       // Replace both the canonical and duplicate in the canonical people list.
-      setPeople((prev) =>
+      updateDashboardField("people", (prev) =>
         prev
           .filter((p) => p.id !== duplicateId)
           .map((p) => (p.id === canonicalId ? mergedCanonical : p)),
       );
-      setMembers((prev) =>
+      updateDashboardField("members", (prev) =>
         syncMembersWithPerson(
           prev.filter((member) => member.id !== duplicateId),
           mergedCanonical,
         ),
       );
-      // Re-point any reservations in state that were on the duplicate;
-      // also refresh person data on any already-canonical reservations (merged fields may have changed).
-      setReservations((prev) =>
+      // Re-point any registrations in state that were on the duplicate;
+      // also refresh person data on any already-canonical registrations (merged fields may have changed).
+      updateDashboardField("registrations", (prev) =>
         prev.map((r) =>
           r.personId === duplicateId
             ? { ...r, personId: canonicalId, person: canonicalPerson }
@@ -478,13 +549,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
       // Re-point any exhibitors in state that were linked to the duplicate contact person
-      setExhibitors((prev) =>
+      updateDashboardField("exhibitors", (prev) =>
         prev.map((ex) =>
           ex.contactPersonId === duplicateId ? { ...ex, contactPersonId: canonicalId } : ex,
         ),
       );
     },
-    [authHeaders, people],
+    [authHeaders, people, updateDashboardField],
   );
 
   const handleCreateMember = useCallback(
@@ -508,10 +579,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const createdMember = apiToPerson(d as Record<string, unknown>);
-      setMembers((prev) => [createdMember, ...prev]);
-      setPeople((prev) => [createdMember, ...prev]);
+      updateDashboardField("members", (prev) => [createdMember, ...prev]);
+      updateDashboardField("people", (prev) => [createdMember, ...prev]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateMember = useCallback(
@@ -535,9 +606,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const updatedMember = apiToPerson(d as Record<string, unknown>);
-      setMembers((prev) => prev.map((member) => (member.id === id ? updatedMember : member)));
-      setPeople((prev) => replacePersonById(prev, updatedMember));
-      setReservations((prev) =>
+      updateDashboardField("members", (prev) =>
+        prev.map((member) => (member.id === id ? updatedMember : member)),
+      );
+      updateDashboardField("people", (prev) => replacePersonById(prev, updatedMember));
+      updateDashboardField("registrations", (prev) =>
         prev.map((r) =>
           r.personId === id
             ? {
@@ -552,7 +625,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : r,
         ),
       );
-      setDetailReservation((prev) =>
+      setDetailRegistration((prev) =>
         prev?.person.id === id
           ? {
               ...prev,
@@ -566,7 +639,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           : prev,
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteMember = useCallback(
@@ -579,10 +652,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_delete());
       }
-      setMembers((prev) => prev.filter((member) => member.id !== id));
-      setPeople((prev) => prev.filter((person) => person.id !== id));
+      updateDashboardField("members", (prev) => prev.filter((member) => member.id !== id));
+      updateDashboardField("people", (prev) => prev.filter((person) => person.id !== id));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleCreatePerson = useCallback(
@@ -607,10 +680,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const createdPerson = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => [createdPerson, ...prev]);
-      setMembers((prev) => syncMembersWithPerson(prev, createdPerson));
+      updateDashboardField("people", (prev) => [createdPerson, ...prev]);
+      updateDashboardField("members", (prev) => syncMembersWithPerson(prev, createdPerson));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdatePerson = useCallback(
@@ -635,9 +708,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const updated = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => replacePersonById(prev, updated));
-      setMembers((prev) => syncMembersWithPerson(prev, updated));
-      setReservations((prev) =>
+      updateDashboardField("people", (prev) => replacePersonById(prev, updated));
+      updateDashboardField("members", (prev) => syncMembersWithPerson(prev, updated));
+      updateDashboardField("registrations", (prev) =>
         prev.map((r) =>
           r.personId === id
             ? {
@@ -652,7 +725,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : r,
         ),
       );
-      setDetailReservation((prev) =>
+      setDetailRegistration((prev) =>
         prev?.person.id === id
           ? {
               ...prev,
@@ -666,7 +739,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           : prev,
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeletePerson = useCallback(
@@ -679,10 +752,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_person());
       }
-      setPeople((prev) => prev.filter((p) => p.id !== id));
-      setMembers((prev) => prev.filter((member) => member.id !== id));
+      updateDashboardField("people", (prev) => prev.filter((p) => p.id !== id));
+      updateDashboardField("members", (prev) => prev.filter((member) => member.id !== id));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleCreateVolunteer = useCallback(
@@ -708,9 +781,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const createdVolunteer = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => [mergeVolunteerPerson(undefined, createdVolunteer), ...prev]);
+      updateDashboardField("people", (prev) => [
+        mergeVolunteerPerson(undefined, createdVolunteer),
+        ...prev,
+      ]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateVolunteer = useCallback(
@@ -736,8 +812,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const d = await response.json();
       const updatedVolunteer = apiToPerson(d as Record<string, unknown>);
-      setPeople((prev) => replaceVolunteerById(prev, updatedVolunteer));
-      setMembers((prev) =>
+      updateDashboardField("people", (prev) => replaceVolunteerById(prev, updatedVolunteer));
+      updateDashboardField("members", (prev) =>
         prev.map((member) =>
           member.id === id
             ? {
@@ -751,7 +827,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteVolunteer = useCallback(
@@ -767,7 +843,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       // The person record is preserved (soft archive); only the volunteer role
       // and help periods are removed.  Update local state accordingly so that
       // the person remains visible in People/Members tabs if applicable.
-      setPeople((prev) =>
+      updateDashboardField("people", (prev) =>
         prev.map((person) =>
           person.id !== id
             ? person
@@ -775,11 +851,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleExhibitorSaved = useCallback((item: ItemDraft) => {
-    setExhibitors((prev) => {
+    updateDashboardField("exhibitors", (prev) => {
       const entry = {
         id: item.id,
         name: item.name,
@@ -792,11 +868,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       return [...prev, entry];
     });
-  }, []);
+  }, [updateDashboardField]);
 
   const handleExhibitorDeleted = useCallback((id: number) => {
-    setExhibitors((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+    updateDashboardField("exhibitors", (prev) => prev.filter((e) => e.id !== id));
+  }, [updateDashboardField]);
 
   const volunteers = useMemo(
     () => people.filter((person) => person.roles.includes("volunteer")),
@@ -804,10 +880,27 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   useEffect(() => {
-    if (isAuthenticated && visible) {
-      loadData();
+    if (dashboardQuery.data) {
+      setError("");
     }
-  }, [isAuthenticated, visible, loadData]);
+  }, [dashboardQuery.data]);
+
+  useEffect(() => {
+    if (!dashboardQuery.error) {
+      return;
+    }
+
+    if (dashboardQuery.error instanceof Error && dashboardQuery.error.message === "unauthorized") {
+      sessionStorage.removeItem("adminToken");
+      storedTokenRef.current = "";
+      setIsAuthenticated(false);
+      setLoginError(m.admin_login_error());
+      return;
+    }
+
+    console.error("Failed to load dashboard data", dashboardQuery.error);
+    setError(m.admin_error_load_data());
+  }, [dashboardQuery.error]);
 
   // Auto-authenticate on mount if a token was previously stored in sessionStorage
   useEffect(() => {
@@ -836,38 +929,38 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   }, [isAuthenticated, validateToken]);
 
   const handleUpdateStatus = useCallback(
-    async (id: string, status: ReservationStatus) => {
+    async (id: string, status: RegistrationStatus) => {
       try {
-        const response = await fetch(`/api/reservations/${id}`, {
+        const response = await fetch(`/api/registrations/${id}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ status }),
         });
         if (response.ok) {
-          setReservations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
               r.id === id ? { ...r, status, updatedAt: new Date().toISOString() } : r,
             ),
           );
         }
       } catch (err) {
-        console.error("Failed to update reservation status", err);
-        setError(m.admin_error_update_reservation());
+        console.error("Failed to update registration status", err);
+        setError(m.admin_error_update_registration());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdatePayment = useCallback(
     async (id: string, paymentStatus: PaymentStatus) => {
       try {
-        const response = await fetch(`/api/reservations/${id}`, {
+        const response = await fetch(`/api/registrations/${id}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ payment_status: paymentStatus }),
         });
         if (response.ok) {
-          setReservations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
               r.id === id ? { ...r, paymentStatus, updatedAt: new Date().toISOString() } : r,
             ),
@@ -878,37 +971,37 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_update_payment());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAssignTable = useCallback(
-    async (reservationId: string, tableId: string | undefined) => {
+    async (registrationId: string, tableId: string | undefined) => {
       try {
-        const response = await fetch(`/api/reservations/${reservationId}`, {
+        const response = await fetch(`/api/registrations/${registrationId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ table_id: tableId ?? null }),
         });
         if (response.ok) {
-          setReservations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
-              r.id === reservationId ? { ...r, tableId, updatedAt: new Date().toISOString() } : r,
+              r.id === registrationId ? { ...r, tableId, updatedAt: new Date().toISOString() } : r,
             ),
           );
 
-          // Update the tables' reservationIds lists
-          setTables((prevTables) =>
+          // Update the tables' registrationIds lists
+          updateDashboardField("tables", (prevTables) =>
             prevTables.map((t) => {
-              const wasAssigned = t.reservationIds.includes(reservationId);
+              const wasAssigned = t.registrationIds.includes(registrationId);
               const shouldBeAssigned = t.id === tableId;
               if (wasAssigned && !shouldBeAssigned) {
                 return {
                   ...t,
-                  reservationIds: t.reservationIds.filter((id) => id !== reservationId),
+                  registrationIds: t.registrationIds.filter((id) => id !== registrationId),
                 };
               }
               if (!wasAssigned && shouldBeAssigned) {
-                return { ...t, reservationIds: [...t.reservationIds, reservationId] };
+                return { ...t, registrationIds: [...t.registrationIds, registrationId] };
               }
               return t;
             }),
@@ -919,7 +1012,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_assign_table());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddTable = useCallback(
@@ -942,15 +1035,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
       const data = await response.json();
       const table = data.table ?? data;
-      setTables((prev) => [...prev, apiTableToTable(table)]);
+      updateDashboardField("tables", (prev) => [...prev, apiTableToTable(table)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleMoveTable = useCallback(
     async (tableId: string, x: number, y: number) => {
       // Optimistic update
-      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, x, y } : t)));
+      updateDashboardField("tables", (prev) =>
+        prev.map((t) => (t.id === tableId ? { ...t, x, y } : t)),
+      );
       try {
         await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
@@ -962,14 +1057,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist table position", err);
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleRotateTable = useCallback(
     async (tableId: string, rotation: number) => {
       // Normalise to [0, 360)
       const normalised = ((rotation % 360) + 360) % 360;
-      setTables((prev) => prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)));
+      updateDashboardField("tables", (prev) =>
+        prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)),
+      );
       try {
         await fetch(`/api/tables/${tableId}`, {
           method: "PUT",
@@ -980,7 +1077,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist table rotation", err);
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteTable = useCallback(
@@ -993,9 +1090,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_table());
       }
-      setTables((prev) => prev.filter((t) => t.id !== tableId));
+      updateDashboardField("tables", (prev) => prev.filter((t) => t.id !== tableId));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddVenue = useCallback(
@@ -1010,9 +1107,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_venue());
       }
       const d = await response.json();
-      setVenues((prev) => [...prev, apiVenueToVenue(d)]);
+      updateDashboardField("venues", (prev) => [...prev, apiVenueToVenue(d)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleArchiveVenue = useCallback(
@@ -1027,9 +1124,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_archive_venue());
       }
       const d = await response.json();
-      setVenues((prev) => prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)));
+      updateDashboardField("venues", (prev) =>
+        prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleRestoreVenue = useCallback(
@@ -1044,9 +1143,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_restore_venue());
       }
       const d = await response.json();
-      setVenues((prev) => prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)));
+      updateDashboardField("venues", (prev) =>
+        prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleDeleteVenue = useCallback(
@@ -1059,17 +1160,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_venue());
       }
-      setVenues((prev) => prev.filter((v) => v.id !== venueId));
+      updateDashboardField("venues", (prev) => prev.filter((v) => v.id !== venueId));
       // Cascade: remove rooms and their layouts/tables from local state
       const venueRoomIds = rooms.filter((r) => r.venueId === venueId).map((r) => r.id);
-      setRooms((prev) => prev.filter((r) => r.venueId !== venueId));
+      updateDashboardField("rooms", (prev) => prev.filter((r) => r.venueId !== venueId));
       const venueLayoutIds = layouts
         .filter((l) => venueRoomIds.includes(l.roomId ?? ""))
         .map((l) => l.id);
-      setLayouts((prev) => prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")));
-      setTables((prev) => prev.filter((t) => !venueLayoutIds.includes(t.layoutId)));
+      updateDashboardField("layouts", (prev) =>
+        prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")),
+      );
+      updateDashboardField("tables", (prev) =>
+        prev.filter((t) => !venueLayoutIds.includes(t.layoutId)),
+      );
     },
-    [authHeaders, rooms, layouts],
+    [authHeaders, layouts, rooms, updateDashboardField],
   );
 
   const handleAddRoom = useCallback(
@@ -1090,9 +1195,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_add_room());
       }
       const data = await response.json();
-      setRooms((prev) => [...prev, apiRoomToRoom(data)]);
+      updateDashboardField("rooms", (prev) => [...prev, apiRoomToRoom(data)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleArchiveRoom = useCallback(
@@ -1107,9 +1212,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_error_delete_room());
       }
       const data = await response.json();
-      setRooms((prev) => prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)));
+      updateDashboardField("rooms", (prev) =>
+        prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleRestoreRoom = useCallback(
@@ -1124,26 +1231,33 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
       }
       const data = await response.json();
-      setRooms((prev) => prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)));
+      updateDashboardField("rooms", (prev) =>
+        prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, dayId: number, label: string) => {
+    async (roomId: string, date: string, label?: string) => {
       const response = await fetch("/api/layouts", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ room_id: roomId, day_id: dayId, label }),
+        body: JSON.stringify({
+          edition_id: activeEdition.id,
+          room_id: roomId,
+          date,
+          ...(label?.trim() ? { label: label.trim() } : {}),
+        }),
       });
       if (!response.ok) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_layout());
       }
       const d = await response.json();
-      setLayouts((prev) => [...prev, apiLayoutToLayout(d)]);
+      updateDashboardField("layouts", (prev) => [...prev, apiLayoutToLayout(d)]);
     },
-    [authHeaders],
+    [activeEdition.id, authHeaders, updateDashboardField],
   );
 
   const handleDeleteLayout = useCallback(
@@ -1156,11 +1270,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const d = await response.json().catch(() => ({}));
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_layout());
       }
-      setLayouts((prev) => prev.filter((l) => l.id !== layoutId));
-      setTables((prev) => prev.filter((t) => t.layoutId !== layoutId));
-      setAreas((prev) => prev.filter((a) => a.layoutId !== layoutId));
+      updateDashboardField("layouts", (prev) => prev.filter((l) => l.id !== layoutId));
+      updateDashboardField("tables", (prev) => prev.filter((t) => t.layoutId !== layoutId));
+      updateDashboardField("areas", (prev) => prev.filter((a) => a.layoutId !== layoutId));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAddArea = useCallback(
@@ -1191,15 +1305,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((data as { detail?: string }).detail ?? "Failed to add area.");
       }
       const data = await response.json();
-      setAreas((prev) => [...prev, apiAreaToArea(data)]);
+      updateDashboardField("areas", (prev) => [...prev, apiAreaToArea(data)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleMoveArea = useCallback(
     async (areaId: string, x: number, y: number) => {
       const prev = areas.find((a) => a.id === areaId);
-      setAreas((prevAreas) => prevAreas.map((a) => (a.id === areaId ? { ...a, x, y } : a)));
+      updateDashboardField("areas", (prevAreas) =>
+        prevAreas.map((a) => (a.id === areaId ? { ...a, x, y } : a)),
+      );
       try {
         const response = await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
@@ -1208,7 +1324,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         });
         if (!response.ok) {
           if (prev)
-            setAreas((prevAreas) =>
+            updateDashboardField("areas", (prevAreas) =>
               prevAreas.map((a) => (a.id === areaId ? { ...a, x: prev.x, y: prev.y } : a)),
             );
           const data = await response.json().catch(() => ({}));
@@ -1220,14 +1336,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist area position", err);
       }
     },
-    [authHeaders, areas],
+    [areas, authHeaders, updateDashboardField],
   );
 
   const handleRotateArea = useCallback(
     async (areaId: string, rotation: number) => {
       const prev = areas.find((a) => a.id === areaId);
       const normalised = ((rotation % 360) + 360) % 360;
-      setAreas((prevAreas) =>
+      updateDashboardField("areas", (prevAreas) =>
         prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)),
       );
       try {
@@ -1238,7 +1354,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         });
         if (!response.ok) {
           if (prev)
-            setAreas((prevAreas) =>
+            updateDashboardField("areas", (prevAreas) =>
               prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: prev.rotation } : a)),
             );
           const data = await response.json().catch(() => ({}));
@@ -1250,7 +1366,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist area rotation", err);
       }
     },
-    [authHeaders, areas],
+    [areas, authHeaders, updateDashboardField],
   );
 
   const handleDeleteArea = useCallback(
@@ -1263,9 +1379,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         const data = await response.json().catch(() => ({}));
         throw new Error((data as { detail?: string }).detail ?? "Failed to delete area.");
       }
-      setAreas((prev) => prev.filter((a) => a.id !== areaId));
+      updateDashboardField("areas", (prev) => prev.filter((a) => a.id !== areaId));
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleAssignAreaToItem = useCallback(
@@ -1285,14 +1401,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? "Failed to assign area.");
       }
       const d = await response.json();
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? apiAreaToArea(d) : a)));
+      updateDashboardField("areas", (prev) =>
+        prev.map((a) => (a.id === areaId ? apiAreaToArea(d) : a)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateAreaLabel = useCallback(
     async (areaId: string, label: string) => {
-      setAreas((prev) => prev.map((a) => (a.id === areaId ? { ...a, label } : a)));
+      updateDashboardField("areas", (prev) =>
+        prev.map((a) => (a.id === areaId ? { ...a, label } : a)),
+      );
       try {
         await fetch(`/api/areas/${areaId}`, {
           method: "PUT",
@@ -1303,13 +1423,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist area label", err);
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleChangeTableType = useCallback(
     async (tableId: string, tableTypeId: string) => {
       let previousTable: FloorTable | undefined;
-      setTables((prev) => {
+      updateDashboardField("tables", (prev) => {
         previousTable = prev.find((t) => t.id === tableId);
         return prev.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t));
       });
@@ -1330,18 +1450,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         console.error("Failed to persist table type change", err);
         if (previousTable !== undefined) {
           const snapshot = previousTable;
-          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+          updateDashboardField("tables", (prev) =>
+            prev.map((t) => (t.id === tableId ? snapshot : t)),
+          );
         }
         throw err;
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateTable = useCallback(
     async (tableId: string, name: string) => {
       let previousTable: FloorTable | undefined;
-      setTables((prev) => {
+      updateDashboardField("tables", (prev) => {
         previousTable = prev.find((t) => t.id === tableId);
         return prev.map((t) => (t.id === tableId ? { ...t, name } : t));
       });
@@ -1361,13 +1483,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         if (previousTable !== undefined) {
           const snapshot = previousTable;
-          setTables((prev) => prev.map((t) => (t.id === tableId ? snapshot : t)));
+          updateDashboardField("tables", (prev) =>
+            prev.map((t) => (t.id === tableId ? snapshot : t)),
+          );
         }
         console.error("Failed to persist table name", err);
         throw err;
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleResizeArea = useCallback(
@@ -1391,7 +1515,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       }
 
       let previousArea: FloorArea | undefined;
-      setAreas((prev) => {
+      updateDashboardField("areas", (prev) => {
         previousArea = prev.find((a) => a.id === areaId);
         return prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a));
       });
@@ -1411,18 +1535,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         if (previousArea !== undefined) {
           const snapshot = previousArea;
-          setAreas((prev) => prev.map((a) => (a.id === areaId ? snapshot : a)));
+          updateDashboardField("areas", (prev) =>
+            prev.map((a) => (a.id === areaId ? snapshot : a)),
+          );
         }
         console.error("Failed to persist area resize", err);
         throw err;
       }
     },
-    [authHeaders, areas, layouts, rooms],
+    [areas, authHeaders, layouts, rooms, updateDashboardField],
   );
 
-  const handleAddReservation = useCallback((reservation: Reservation) => {
-    setReservations((prev) => [reservation, ...prev]);
-  }, []);
+  const handleAddRegistration = useCallback((registration: Registration) => {
+    updateDashboardField("registrations", (prev) => [registration, ...prev]);
+  }, [updateDashboardField]);
 
   const handleAddTableType = useCallback(
     async (data: Omit<TableType, "id">) => {
@@ -1443,9 +1569,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_add_table_type());
       }
       const d = await response.json();
-      setTableTypes((prev) => [...prev, apiTableTypeToTableType(d)]);
+      updateDashboardField("tableTypes", (prev) => [...prev, apiTableTypeToTableType(d)]);
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleUpdateTableType = useCallback(
@@ -1468,9 +1594,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw new Error((d as { detail?: string }).detail ?? m.admin_error_update_table_type());
       }
       const d = await response.json();
-      setTableTypes((prev) => prev.map((tt) => (tt.id === id ? apiTableTypeToTableType(d) : tt)));
+      updateDashboardField("tableTypes", (prev) =>
+        prev.map((tt) => (tt.id === id ? apiTableTypeToTableType(d) : tt)),
+      );
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleArchiveTableType = useCallback(
@@ -1483,32 +1611,32 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [handleUpdateTableType],
   );
 
-  /** Fetch the full reservation (including checkInToken) and open detail modal */
+  /** Fetch the full registration (including checkInToken) and open detail modal */
   const handleViewDetail = useCallback(
-    async (res: Reservation) => {
+    async (res: Registration) => {
       try {
-        const response = await fetch(`/api/reservations/${res.id}`, {
+        const response = await fetch(`/api/registrations/${res.id}`, {
           headers: authHeaders(),
         });
         if (response.ok) {
           const data = await response.json();
-          setDetailReservation(apiToReservation(data as Record<string, unknown>));
+          setDetailRegistration(apiToRegistration(data as Record<string, unknown>));
         } else {
           // Fall back to the list version (no token available)
-          setDetailReservation(res);
+          setDetailRegistration(res);
         }
       } catch (err) {
-        console.error("Failed to fetch reservation detail, falling back to list data", err);
-        setDetailReservation(res);
+        console.error("Failed to fetch registration detail, falling back to list data", err);
+        setDetailRegistration(res);
       }
     },
     [authHeaders],
   );
 
   const handleToggleDelivered = useCallback(
-    async (reservationId: string, updatedOrders: OrderItem[]) => {
+    async (registrationId: string, updatedOrders: OrderItem[]) => {
       try {
-        const response = await fetch(`/api/reservations/${reservationId}`, {
+        const response = await fetch(`/api/registrations/${registrationId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({
@@ -1523,16 +1651,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           }),
         });
         if (response.ok) {
-          setReservations((prev) =>
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
-              r.id === reservationId
+              r.id === registrationId
                 ? { ...r, preOrders: updatedOrders, updatedAt: new Date().toISOString() }
                 : r,
             ),
           );
           // Also update the detail modal
-          setDetailReservation((prev) =>
-            prev?.id === reservationId ? { ...prev, preOrders: updatedOrders } : prev,
+          setDetailRegistration((prev) =>
+            prev?.id === registrationId ? { ...prev, preOrders: updatedOrders } : prev,
           );
         }
       } catch (err) {
@@ -1540,29 +1668,29 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_bottle_delivery());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleCheckIn = useCallback(
-    async (reservationId: string) => {
+    async (registrationId: string) => {
       try {
-        const response = await fetch(`/api/reservations/${reservationId}`, {
+        const response = await fetch(`/api/registrations/${registrationId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ checked_in: true }),
         });
         if (response.ok) {
           const data = await response.json();
-          const updated = apiToReservation(data as Record<string, unknown>);
-          setReservations((prev) =>
+          const updated = apiToRegistration(data as Record<string, unknown>);
+          updateDashboardField("registrations", (prev) =>
             prev.map((r) =>
-              r.id === reservationId
+              r.id === registrationId
                 ? { ...r, checkedIn: true, checkedInAt: updated.checkedInAt }
                 : r,
             ),
           );
-          setDetailReservation((prev) =>
-            prev?.id === reservationId
+          setDetailRegistration((prev) =>
+            prev?.id === registrationId
               ? { ...prev, checkedIn: true, checkedInAt: updated.checkedInAt }
               : prev,
           );
@@ -1572,23 +1700,23 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_check_in());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
   const handleIssueStrap = useCallback(
-    async (reservationId: string) => {
+    async (registrationId: string) => {
       try {
-        const response = await fetch(`/api/reservations/${reservationId}`, {
+        const response = await fetch(`/api/registrations/${registrationId}`, {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({ strap_issued: true }),
         });
         if (response.ok) {
-          setReservations((prev) =>
-            prev.map((r) => (r.id === reservationId ? { ...r, strapIssued: true } : r)),
+          updateDashboardField("registrations", (prev) =>
+            prev.map((r) => (r.id === registrationId ? { ...r, strapIssued: true } : r)),
           );
-          setDetailReservation((prev) =>
-            prev?.id === reservationId ? { ...prev, strapIssued: true } : prev,
+          setDetailRegistration((prev) =>
+            prev?.id === registrationId ? { ...prev, strapIssued: true } : prev,
           );
         }
       } catch (err) {
@@ -1596,19 +1724,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setError(m.admin_error_issue_strap());
       }
     },
-    [authHeaders],
+    [authHeaders, updateDashboardField],
   );
 
-  // Computed maps derived from people/reservations state — must stay above any early return
+  // Computed maps derived from people/registrations state — must stay above any early return
   // to satisfy the Rules of Hooks (hooks must be called unconditionally).
-  const reservationCountByPersonId = useMemo(() => {
+  const registrationCountByPersonId = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const r of reservations) {
+    for (const r of registrations) {
       if (r.personId == null) continue;
       counts[r.personId] = (counts[r.personId] ?? 0) + 1;
     }
     return Object.fromEntries(people.map((p) => [p.id, counts[p.id] ?? 0]));
-  }, [people, reservations]);
+  }, [people, registrations]);
 
   if (!visible) return null;
 
@@ -1684,7 +1812,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   variant="outline-secondary"
                   size="sm"
                   onClick={loadData}
-                  disabled={isLoading}
+                  disabled={dashboardQuery.isFetching}
                 >
                   <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
                   {m.admin_refresh()}
@@ -1702,20 +1830,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </Alert>
             )}
 
-            {isLoading ? (
+            {dashboardQuery.isPending ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="warning" role="status">
                   <span className="visually-hidden">{m.admin_loading()}</span>
                 </Spinner>
               </div>
             ) : (
-              <Tab.Container defaultActiveKey="reservations">
+              <Tab.Container defaultActiveKey="registrations">
                 <Nav variant="tabs" className="mb-3">
                   <Nav.Item>
-                    <Nav.Link eventKey="reservations" className="text-light">
+                    <Nav.Link eventKey="registrations" className="text-light">
                       <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                      {m.admin_reservations_tab()}
-                      <span className="badge bg-warning text-dark ms-2">{reservations.length}</span>
+                      {m.admin_registrations_tab()}
+                      <span className="badge bg-warning text-dark ms-2">{registrations.length}</span>
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
@@ -1766,9 +1894,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   </Nav.Item>
                 </Nav>
                 <Tab.Content>
-                  <Tab.Pane eventKey="reservations">
-                    <ReservationList
-                      reservations={reservations}
+                  <Tab.Pane eventKey="registrations">
+                    <RegistrationList
+                      registrations={registrations}
                       tables={tables}
                       exhibitors={exhibitors}
                       filter={filter}
@@ -1777,16 +1905,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       onUpdatePayment={handleUpdatePayment}
                       onAssignTable={handleAssignTable}
                       onViewDetail={handleViewDetail}
-                      onAddReservation={handleAddReservation}
+                      onAddRegistration={handleAddRegistration}
                       authHeaders={authHeaders}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="tables">
                     <LayoutEditor
+                      dayOptions={layoutDayOptions}
                       tables={tables}
                       tableTypes={tableTypes}
                       layouts={layouts}
-                      reservations={reservations}
+                      registrations={registrations}
                       rooms={rooms}
                       exhibitors={exhibitors}
                       areas={areas}
@@ -1840,8 +1969,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Tab.Pane eventKey="people">
                     <PeopleManagement
                       people={people}
-                      reservationCountByPersonId={reservationCountByPersonId}
-                      isLoading={isLoading}
+                      registrationCountByPersonId={registrationCountByPersonId}
+                      isLoading={dashboardQuery.isFetching}
                       authHeaders={authHeaders}
                       onMerge={handleMergePeople}
                       onCreate={handleCreatePerson}
@@ -1852,8 +1981,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Tab.Pane eventKey="members">
                     <MembersManagement
                       members={members}
-                      reservationCountByPersonId={reservationCountByPersonId}
-                      isLoading={isLoading}
+                      registrationCountByPersonId={registrationCountByPersonId}
+                      isLoading={dashboardQuery.isFetching}
                       onCreate={handleCreateMember}
                       onUpdate={handleUpdateMember}
                       onDelete={handleDeleteMember}
@@ -1862,7 +1991,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Tab.Pane eventKey="volunteers">
                     <VolunteersManagement
                       volunteers={volunteers}
-                      isLoading={isLoading}
+                      isLoading={dashboardQuery.isFetching}
                       onCreate={handleCreateVolunteer}
                       onUpdate={handleUpdateVolunteer}
                       onDelete={handleDeleteVolunteer}
@@ -1874,30 +2003,30 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           </>
         )}
 
-        {/* Reservation detail modal (with QR code + bottle delivery) */}
-        {detailReservation && (
-          <ReservationDetail
-            reservation={detailReservation}
+        {/* Registration detail modal (with QR code + bottle delivery) */}
+        {detailRegistration && (
+          <RegistrationDetail
+            registration={detailRegistration}
             baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
             emailDuplicates={(() => {
-              const personEmail = detailReservation.person.email.toLowerCase();
+              const personEmail = detailRegistration.person.email.toLowerCase();
               return people
                 .filter(
                   (p) =>
-                    p.id !== detailReservation.personId &&
+                    p.id !== detailRegistration.personId &&
                     p.email &&
                     p.email.toLowerCase() === personEmail,
                 )
                 .map((p) => ({ id: p.id, name: p.name }));
             })()}
-            onClose={() => setDetailReservation(null)}
+            onClose={() => setDetailRegistration(null)}
             onToggleDelivered={handleToggleDelivered}
             onCheckIn={handleCheckIn}
             onIssueStrap={handleIssueStrap}
             onMergeDuplicate={async (canonicalId, duplicateId) => {
               try {
                 await handleMergePeople(canonicalId, duplicateId);
-                setDetailReservation(null);
+                setDetailRegistration(null);
               } catch (err) {
                 console.error("Failed to merge people", err);
                 setError(err instanceof Error ? err.message : m.admin_people_merge_error());

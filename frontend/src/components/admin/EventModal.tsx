@@ -11,10 +11,8 @@ const EMPTY_EVENT: ScheduleEvent = {
   start_time: "",
   end_time: null,
   description: "",
-  reservation: false,
-  reservations_open_from: null,
-  location: null,
-  presenter: null,
+  registration: false,
+  registrations_open_from: null,
   category: "other",
   day_id: 1,
 };
@@ -34,10 +32,8 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
   const [endTime, setEndTime] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("other");
-  const [reservation, setReservation] = useState(false);
-  const [reservationsOpenFrom, setReservationsOpenFrom] = useState("");
-  const [location, setLocation] = useState("");
-  const [presenter, setPresenter] = useState("");
+  const [registration, setRegistration] = useState(false);
+  const [registrationsOpenFrom, setRegistrationsOpenFrom] = useState("");
 
   useEffect(() => {
     if (show) {
@@ -49,10 +45,8 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
       setEndTime(ev.end_time ?? "");
       setDescription(ev.description);
       setCategory(ev.category);
-      setReservation(ev.reservation);
-      setReservationsOpenFrom(ev.reservations_open_from ?? "");
-      setLocation(ev.location ?? "");
-      setPresenter(ev.presenter ?? "");
+      setRegistration(ev.registration);
+      setRegistrationsOpenFrom(ev.registrations_open_from ?? "");
     }
   }, [show, initial]);
 
@@ -65,10 +59,8 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
       start_time: startTime.trim(),
       end_time: endTime.trim() || null,
       description: description.trim(),
-      reservation,
-      reservations_open_from: reservation ? reservationsOpenFrom.trim() || null : null,
-      location: location.trim() || null,
-      presenter: presenter.trim() || null,
+      registration,
+      registrations_open_from: registration ? registrationsOpenFrom.trim() || null : null,
       category: category.trim(),
       day_id: dayId,
     });
@@ -169,33 +161,6 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
               />
             </Form.Group>
           </div>
-          <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group controlId="event-location" style={{ minWidth: "160px", flex: "1 1 160px" }}>
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_event_location()}
-              </Form.Label>
-              <Form.Control
-                size="sm"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-            <Form.Group
-              controlId="event-presenter"
-              style={{ minWidth: "160px", flex: "1 1 160px" }}
-            >
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_event_presenter()}
-              </Form.Label>
-              <Form.Control
-                size="sm"
-                value={presenter}
-                onChange={(e) => setPresenter(e.target.value)}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-          </div>
           <Form.Group controlId="event-description" className="mb-3">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_content_event_description()}
@@ -211,22 +176,22 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
           </Form.Group>
           <Form.Check
             type="checkbox"
-            id="modal-event-reservation"
-            label={m.admin_content_event_requires_reservation()}
-            checked={reservation}
-            onChange={(e) => setReservation(e.target.checked)}
+            id="modal-event-registration"
+            label={m.admin_content_event_requires_registration()}
+            checked={registration}
+            onChange={(e) => setRegistration(e.target.checked)}
             className="text-light mb-2"
           />
-          {reservation && (
+          {registration && (
             <Form.Group>
               <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_edition_reservation_opens()}
+                {m.admin_content_edition_registration_opens()}
               </Form.Label>
               <Form.Control
                 type="datetime-local"
                 size="sm"
-                value={reservationsOpenFrom}
-                onChange={(e) => setReservationsOpenFrom(e.target.value)}
+                value={registrationsOpenFrom}
+                onChange={(e) => setRegistrationsOpenFrom(e.target.value)}
                 className="bg-dark text-light border-secondary"
                 style={{ maxWidth: "240px" }}
               />

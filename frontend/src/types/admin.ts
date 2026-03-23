@@ -30,7 +30,7 @@ export interface FloorTable {
   rotation: number;
   /** Layout this table belongs to */
   layoutId: string;
-  reservationIds: string[];
+  registrationIds: string[];
 }
 
 export interface FloorArea {
@@ -51,8 +51,8 @@ export interface Layout {
   editionId: string | null;
   /** Room this layout applies to */
   roomId: string;
-  /** 1 = Friday, 2 = Saturday, 3 = Sunday */
-  dayId: number;
+  /** Actual layout date within the edition when available from the API */
+  date: string | null;
   label: string;
   createdAt: string;
 }

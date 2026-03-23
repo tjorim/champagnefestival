@@ -13,7 +13,7 @@ import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 
 interface MembersManagementProps {
   members: Person[];
-  reservationCountByPersonId: Record<string, number>;
+  registrationCountByPersonId: Record<string, number>;
   isLoading: boolean;
   onCreate: (data: MemberFormData) => Promise<void>;
   onUpdate: (id: string, data: MemberFormData) => Promise<void>;
@@ -31,7 +31,7 @@ function truncateText(value: string, limit = 80): string {
 
 export default function MembersManagement({
   members,
-  reservationCountByPersonId,
+  registrationCountByPersonId,
   isLoading,
   onCreate,
   onUpdate,
@@ -178,12 +178,12 @@ export default function MembersManagement({
                 <caption className="visually-hidden">{m.admin_members_table_caption()}</caption>
                 <thead>
                   <tr>
-                    <th>{m.reservation_name()}</th>
-                    <th>{m.reservation_email()}</th>
-                    <th>{m.reservation_phone()}</th>
+                    <th>{m.registration_name()}</th>
+                    <th>{m.registration_email()}</th>
+                    <th>{m.registration_phone()}</th>
                     <th>{m.admin_people_club_name_label()}</th>
-                    <th>{m.reservation_notes()}</th>
-                    <th>{m.admin_reservations_tab()}</th>
+                    <th>{m.registration_notes()}</th>
+                    <th>{m.admin_registrations_tab()}</th>
                     <th>{m.admin_actions_label()}</th>
                   </tr>
                 </thead>
@@ -208,7 +208,7 @@ export default function MembersManagement({
                         <td className="small text-secondary" title={member.notes || undefined}>
                           {notesPreview || "—"}
                         </td>
-                        <td className="small">{reservationCountByPersonId[member.id] ?? 0}</td>
+                        <td className="small">{registrationCountByPersonId[member.id] ?? 0}</td>
                         <td>
                           <div className="d-flex flex-wrap gap-1">
                             <Button

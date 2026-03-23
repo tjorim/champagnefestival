@@ -1,39 +1,40 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
-import ReservationModal from "@/components/ReservationModal";
+import RegistrationModal from "@/components/RegistrationModal";
+import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
-    reservation_modal_title: () => "VIP Reservation",
-    reservation_name: () => "Name",
-    reservation_email: () => "Email",
-    reservation_phone: () => "Phone Number",
-    reservation_event: () => "Event",
-    reservation_select_event: () => "Select an event",
-    reservation_guests: () => "Number of Guests",
-    reservation_preorder_title: () => "Pre-order",
-    reservation_preorder_description: () => "Order champagne or snacks in advance",
-    reservation_notes: () => "Notes",
-    reservation_notes_placeholder: () => "Any special requests...",
-    reservation_submit: () => "Place Reservation",
-    reservation_submitting: () => "Placing reservation...",
-    reservation_success: () => "Your reservation has been received!",
-    reservation_error: () => "An error occurred. Please try again.",
-    reservation_network_error: () => "Network error. Please check your connection.",
-    reservation_errors_name_required: () => "Name is required",
-    reservation_errors_email_required: () => "Email address is required",
-    reservation_errors_email_invalid: () => "Please enter a valid email address",
-    reservation_errors_phone_required: () => "Phone number is required",
-    reservation_errors_event_required: () => "Please select an event",
-    reservation_errors_guests_required: () => "Please enter the number of guests",
-    reservation_errors_guests_min: () => "Minimum 1 guest required",
-    reservation_errors_guests_max: () => "Maximum 20 guests per reservation",
-    reservation_errors_security_failed: () => "Security verification failed",
-    reservation_product_champagne_standard: () => "Champagne Bottle (Standard) - EUR65",
-    reservation_product_champagne_prestige: () => "Champagne Bottle (Prestige) - EUR120",
-    reservation_product_champagne_glass: () => "Glass of Champagne - EUR12",
-    reservation_product_food_cheese: () => "Cheese Platter - EUR25",
-    reservation_product_food_charcuterie: () => "Charcuterie Board - EUR20",
+    registration_modal_title: () => "VIP Registration",
+    registration_name: () => "Name",
+    registration_email: () => "Email",
+    registration_phone: () => "Phone Number",
+    registration_event: () => "Event",
+    registration_select_event: () => "Select an event",
+    registration_guests: () => "Number of Guests",
+    registration_preorder_title: () => "Pre-order",
+    registration_preorder_description: () => "Order champagne or snacks in advance",
+    registration_notes: () => "Notes",
+    registration_notes_placeholder: () => "Any special requests...",
+    registration_submit: () => "Place Registration",
+    registration_submitting: () => "Placing registration...",
+    registration_success: () => "Your registration has been received!",
+    registration_error: () => "An error occurred. Please try again.",
+    registration_network_error: () => "Network error. Please check your connection.",
+    registration_errors_name_required: () => "Name is required",
+    registration_errors_email_required: () => "Email address is required",
+    registration_errors_email_invalid: () => "Please enter a valid email address",
+    registration_errors_phone_required: () => "Phone number is required",
+    registration_errors_event_required: () => "Please select an event",
+    registration_errors_guests_required: () => "Please enter the number of guests",
+    registration_errors_guests_min: () => "Minimum 1 guest required",
+    registration_errors_guests_max: () => "Maximum 20 guests per registration",
+    registration_errors_security_failed: () => "Security verification failed",
+    registration_product_champagne_standard: () => "Champagne Bottle (Standard) - EUR65",
+    registration_product_champagne_prestige: () => "Champagne Bottle (Prestige) - EUR120",
+    registration_product_champagne_glass: () => "Glass of Champagne - EUR12",
+    registration_product_food_cheese: () => "Cheese Platter - EUR25",
+    registration_product_food_charcuterie: () => "Charcuterie Board - EUR20",
     close: () => "Close",
   },
 }));
@@ -43,12 +44,12 @@ vi.mock("@/paraglide/runtime", () => ({
   setLocale: vi.fn(),
 }));
 
-const reservableEvents = [
+const registrableEvents = [
   { id: "fri-vip", title: "VIP Reception" },
   { id: "sat-party", title: "Champagne Party" },
 ];
 
-describe("ReservationModal component", () => {
+describe("RegistrationModal component", () => {
   let fetchMock: Mock;
 
   beforeEach(() => {
@@ -61,29 +62,47 @@ describe("ReservationModal component", () => {
     vi.clearAllMocks();
   });
 
+  function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
+    const wrapper = createTestQueryClientWrapper();
+
+    return render(
+      <RegistrationModal
+        show={true}
+        onHide={() => {}}
+        registrableEvents={registrableEvents}
+        {...props}
+      />,
+      { wrapper },
+    );
+  }
+
   it("does not render when show=false", () => {
-    render(<ReservationModal show={false} onHide={() => {}} reservableEvents={reservableEvents} />);
-    expect(screen.queryByText("VIP Reservation")).not.toBeInTheDocument();
+    const wrapper = createTestQueryClientWrapper();
+    render(
+      <RegistrationModal show={false} onHide={() => {}} registrableEvents={registrableEvents} />,
+      { wrapper },
+    );
+    expect(screen.queryByText("VIP Registration")).not.toBeInTheDocument();
   });
 
   it("renders the modal when show=true", () => {
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
-    expect(screen.getByText("VIP Reservation")).toBeInTheDocument();
+    renderModal();
+    expect(screen.getByText("VIP Registration")).toBeInTheDocument();
     expect(screen.getByLabelText(/Name \*/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Email \*/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Phone Number \*/i)).toBeInTheDocument();
   });
 
   it("shows all reservable events in the event dropdown", () => {
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
     expect(screen.getByText("VIP Reception")).toBeInTheDocument();
     expect(screen.getByText("Champagne Party")).toBeInTheDocument();
   });
 
   it("shows validation errors when submitting empty form", async () => {
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
 
-    fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Name is required")).toBeInTheDocument();
@@ -94,7 +113,7 @@ describe("ReservationModal component", () => {
   });
 
   it("shows email validation error for invalid email", async () => {
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), {
       target: { value: "John Doe" },
@@ -103,7 +122,7 @@ describe("ReservationModal component", () => {
       target: { value: "not-an-email" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
@@ -111,9 +130,9 @@ describe("ReservationModal component", () => {
   });
 
   it("clears field error when the user starts typing", async () => {
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
 
-    fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
     await waitFor(() => {
       expect(screen.getByText("Name is required")).toBeInTheDocument();
     });
@@ -130,7 +149,7 @@ describe("ReservationModal component", () => {
       json: async () => ({ success: true, id: "res_123" }),
     });
 
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
@@ -139,10 +158,10 @@ describe("ReservationModal component", () => {
     });
     fireEvent.change(screen.getByLabelText(/Event \*/i), { target: { value: "fri-vip" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Your reservation has been received!")).toBeInTheDocument();
+      expect(screen.getByText("Your registration has been received!")).toBeInTheDocument();
     });
   });
 
@@ -152,7 +171,7 @@ describe("ReservationModal component", () => {
       json: async () => ({ error: "Server error" }),
     });
 
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
@@ -161,7 +180,7 @@ describe("ReservationModal component", () => {
     });
     fireEvent.change(screen.getByLabelText(/Event \*/i), { target: { value: "fri-vip" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Server error")).toBeInTheDocument();
@@ -171,7 +190,7 @@ describe("ReservationModal component", () => {
   it("shows network error when fetch throws", async () => {
     fetchMock.mockRejectedValueOnce(new Error("Network failure"));
 
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
@@ -180,7 +199,7 @@ describe("ReservationModal component", () => {
     });
     fireEvent.change(screen.getByLabelText(/Event \*/i), { target: { value: "fri-vip" } });
 
-    fireEvent.click(screen.getByRole("button", { name: /Place Reservation/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Network error. Please check your connection.")).toBeInTheDocument();
@@ -188,14 +207,14 @@ describe("ReservationModal component", () => {
   });
 
   it("shows pre-order products", () => {
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
     expect(screen.getByText("Champagne Bottle (Standard) - EUR65")).toBeInTheDocument();
     expect(screen.getByText("Champagne Bottle (Prestige) - EUR120")).toBeInTheDocument();
     expect(screen.getByText("Glass of Champagne - EUR12")).toBeInTheDocument();
   });
 
   it("increments product quantity", () => {
-    render(<ReservationModal show={true} onHide={() => {}} reservableEvents={reservableEvents} />);
+    renderModal();
     const plusButtons = screen.getAllByRole("button", { name: /Increase quantity/i });
     fireEvent.click(plusButtons[0]!);
 
@@ -205,7 +224,7 @@ describe("ReservationModal component", () => {
 
   it("calls onHide when close button is clicked", () => {
     const onHide = vi.fn();
-    render(<ReservationModal show={true} onHide={onHide} reservableEvents={reservableEvents} />);
+    renderModal({ onHide });
     const closeButton = screen.getByRole("button", { name: /close/i });
     fireEvent.click(closeButton);
     expect(onHide).toHaveBeenCalled();

@@ -6,10 +6,10 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
-import type { Reservation, OrderItem } from "@/types/reservation";
+import type { Registration, OrderItem } from "@/types/registration";
 
-interface ReservationDetailProps {
-  reservation: Reservation | null;
+interface RegistrationDetailProps {
+  registration: Registration | null;
   /**
    * Base URL for the check-in link — must include the full origin plus any
    * router basename (the path prefix up to but not including `/check-in`).
@@ -18,17 +18,17 @@ interface ReservationDetailProps {
    * subpath deployments.
    */
   baseUrl: string;
-  /** Other people sharing the same email as this reservation's person — used to surface merge suggestions. */
+  /** Other people sharing the same email as this registration's person — used to surface merge suggestions. */
   emailDuplicates?: { id: string; name: string }[];
   onClose: () => void;
-  onToggleDelivered: (reservationId: string, updatedOrders: OrderItem[]) => void;
-  onCheckIn: (reservationId: string) => void;
-  onIssueStrap: (reservationId: string) => void;
+  onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
+  onCheckIn: (registrationId: string) => void;
+  onIssueStrap: (registrationId: string) => void;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
 }
 
-export default function ReservationDetail({
-  reservation,
+export default function RegistrationDetail({
+  registration,
   baseUrl,
   emailDuplicates = [],
   onClose,
@@ -36,30 +36,30 @@ export default function ReservationDetail({
   onCheckIn,
   onIssueStrap,
   onMergeDuplicate,
-}: ReservationDetailProps) {
-  const checkInUrl = reservation
-    ? `${baseUrl}/check-in?id=${encodeURIComponent(reservation.id)}&token=${encodeURIComponent(reservation.checkInToken ?? "")}`
+}: RegistrationDetailProps) {
+  const checkInUrl = registration
+    ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}&token=${encodeURIComponent(registration.checkInToken ?? "")}`
     : "";
 
   const handleToggleDelivered = useCallback(
     (productId: string) => {
-      if (!reservation) return;
-      const updatedOrders = reservation.preOrders.map((item) =>
+      if (!registration) return;
+      const updatedOrders = registration.preOrders.map((item) =>
         item.productId === productId ? { ...item, delivered: !item.delivered } : item,
       );
-      onToggleDelivered(reservation.id, updatedOrders);
+      onToggleDelivered(registration.id, updatedOrders);
     },
-    [reservation, onToggleDelivered],
+    [registration, onToggleDelivered],
   );
 
-  if (!reservation) return null;
+  if (!registration) return null;
 
   return (
     <Modal show onHide={onClose} size="lg" centered aria-labelledby="res-detail-modal-title">
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
         <Modal.Title id="res-detail-modal-title">
           <i className="bi bi-person-fill me-2" aria-hidden="true" />
-          {reservation.person.name}
+          {registration.person.name}
         </Modal.Title>
       </Modal.Header>
 
@@ -68,48 +68,48 @@ export default function ReservationDetail({
         <div className="d-flex flex-wrap gap-2 mb-3">
           <Badge
             bg={
-              reservation.status === "confirmed"
+              registration.status === "confirmed"
                 ? "success"
-                : reservation.status === "cancelled"
+                : registration.status === "cancelled"
                   ? "danger"
                   : "warning"
             }
           >
-            {reservation.status === "confirmed"
+            {registration.status === "confirmed"
               ? m.admin_status_confirmed()
-              : reservation.status === "cancelled"
+              : registration.status === "cancelled"
                 ? m.admin_status_cancelled()
                 : m.admin_status_pending()}
           </Badge>
           <Badge
             bg={
-              reservation.paymentStatus === "paid"
+              registration.paymentStatus === "paid"
                 ? "success"
-                : reservation.paymentStatus === "partial"
+                : registration.paymentStatus === "partial"
                   ? "warning"
                   : "secondary"
             }
           >
-            {reservation.paymentStatus === "paid"
+            {registration.paymentStatus === "paid"
               ? m.admin_payment_paid()
-              : reservation.paymentStatus === "partial"
+              : registration.paymentStatus === "partial"
                 ? m.admin_payment_partial()
                 : m.admin_payment_unpaid()}
           </Badge>
-          {reservation.checkedIn ? (
+          {registration.checkedIn ? (
             <Badge bg="success">
               <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
               {m.admin_checked_in()}
-              {reservation.checkedInAt && (
+              {registration.checkedInAt && (
                 <span className="ms-1 fw-normal">
-                  {new Date(reservation.checkedInAt).toLocaleTimeString()}
+                  {new Date(registration.checkedInAt).toLocaleTimeString()}
                 </span>
               )}
             </Badge>
           ) : (
             <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
           )}
-          {reservation.strapIssued ? (
+          {registration.strapIssued ? (
             <Badge bg="info">
               <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
               {m.admin_strap_issued()}
@@ -133,7 +133,7 @@ export default function ReservationDetail({
                   key={dup.id}
                   size="sm"
                   variant="warning"
-                  onClick={() => onMergeDuplicate?.(reservation.personId, dup.id)}
+                  onClick={() => onMergeDuplicate?.(registration.personId, dup.id)}
                 >
                   <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
                   {m.admin_people_merge_title()}: {dup.name}
@@ -146,49 +146,49 @@ export default function ReservationDetail({
         {/* Basic info */}
         <ListGroup variant="flush" className="mb-3">
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.reservation_email()}</span>
-            <a href={`mailto:${reservation.person.email}`} className="text-warning">
-              {reservation.person.email}
+            <span className="text-secondary">{m.registration_email()}</span>
+            <a href={`mailto:${registration.person.email}`} className="text-warning">
+              {registration.person.email}
             </a>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.reservation_phone()}</span>
-            <span>{reservation.person.phone}</span>
+            <span className="text-secondary">{m.registration_phone()}</span>
+            <span>{registration.person.phone}</span>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.admin_event_label()}</span>
-            <span>{reservation.eventTitle || reservation.eventId}</span>
+            <span>{registration.eventTitle || registration.eventId}</span>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.admin_guests_count()}</span>
-            <span>{reservation.guestCount}</span>
+            <span>{registration.guestCount}</span>
           </ListGroup.Item>
-          {reservation.notes && (
+          {registration.notes && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
               <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
-              <span className="small">{reservation.notes}</span>
+              <span className="small">{registration.notes}</span>
             </ListGroup.Item>
           )}
-          {reservation.accessibilityNote && (
+          {registration.accessibilityNote && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
               <span className="text-secondary d-block mb-1">
                 <i className="bi bi-universal-access me-1" aria-hidden="true" />
                 {m.admin_accessibility_note_label()}
               </span>
-              <span className="small">{reservation.accessibilityNote}</span>
+              <span className="small">{registration.accessibilityNote}</span>
             </ListGroup.Item>
           )}
         </ListGroup>
 
         {/* Bottle fulfillment */}
-        {reservation.preOrders.length > 0 && (
+        {registration.preOrders.length > 0 && (
           <div className="mb-4">
             <h6 className="text-warning mb-2">
               <i className="bi bi-basket-fill me-2" aria-hidden="true" />
               {m.admin_bottle_fulfillment()}
             </h6>
             <ListGroup>
-              {reservation.preOrders.map((item) => (
+              {registration.preOrders.map((item) => (
                 <ListGroup.Item
                   key={item.productId}
                   className="bg-dark text-light border-secondary d-flex align-items-center justify-content-between"
@@ -230,14 +230,14 @@ export default function ReservationDetail({
             {m.admin_check_in_title()}
           </h6>
           <div className="d-flex gap-2 flex-wrap">
-            {!reservation.checkedIn && (
-              <Button variant="outline-success" size="sm" onClick={() => onCheckIn(reservation.id)}>
+            {!registration.checkedIn && (
+              <Button variant="outline-success" size="sm" onClick={() => onCheckIn(registration.id)}>
                 <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true" />
                 {m.admin_mark_checked_in()}
               </Button>
             )}
-            {!reservation.strapIssued && (
-              <Button variant="outline-info" size="sm" onClick={() => onIssueStrap(reservation.id)}>
+            {!registration.strapIssued && (
+              <Button variant="outline-info" size="sm" onClick={() => onIssueStrap(registration.id)}>
                 <i className="bi bi-person-badge me-1" aria-hidden="true" />
                 {m.admin_issue_strap()}
               </Button>
@@ -246,7 +246,7 @@ export default function ReservationDetail({
         </div>
 
         {/* QR Code */}
-        {reservation.checkInToken && (
+        {registration.checkInToken && (
           <div className="text-center">
             <h6 className="text-warning mb-2">
               <i className="bi bi-qr-code me-2" aria-hidden="true" />

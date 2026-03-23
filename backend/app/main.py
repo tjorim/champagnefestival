@@ -17,11 +17,12 @@ from app.routers import (
     members,
     check_in,
     contact,
+    events,
     exhibitors,
     editions,
     layouts,
     people,
-    reservations,
+    registrations,
     rooms,
     table_types,
     tables,
@@ -99,8 +100,9 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
     )
 
 
-app.include_router(reservations.router)
+app.include_router(registrations.router)
 app.include_router(members.router)
+app.include_router(events.router)
 app.include_router(check_in.router)
 app.include_router(contact.router)
 app.include_router(tables.router)

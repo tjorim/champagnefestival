@@ -6,10 +6,8 @@ export interface ScheduleEvent {
   start_time: string;
   end_time: string | null;
   description: string;
-  reservation: boolean;
-  reservations_open_from: string | null;
-  location: string | null;
-  presenter: string | null;
+  registration: boolean;
+  registrations_open_from: string | null;
   category: string;
   day_id: number;
 }

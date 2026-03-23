@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Layout, Reservation, Table, TableType
+from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableCreate, TableOut, TableUpdate
 from app.utils import make_id, table_to_dict
 
@@ -62,9 +62,9 @@ async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
     result = await db.execute(select(Table).order_by(Table.created_at))
     tables = result.scalars().all()
 
-    # Compute reservation_ids from the Reservation.table_id FK (source of truth)
+    # Compute registration_ids from the Registration.table_id FK (source of truth)
     res_result = await db.execute(
-        select(Reservation.id, Reservation.table_id).where(Reservation.table_id.isnot(None))
+        select(Registration.id, Registration.table_id).where(Registration.table_id.isnot(None))
     )
     table_res_map: dict[str, list[str]] = {}
     for res_id, tbl_id in res_result.all():
@@ -82,10 +82,10 @@ async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
 async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     t = await _get_or_404(db, table_id)
     res_result = await db.execute(
-        select(Reservation.id).where(Reservation.table_id == table_id)
+        select(Registration.id).where(Registration.table_id == table_id)
     )
-    reservation_ids = [row[0] for row in res_result.all()]
-    return table_to_dict(t, reservation_ids)
+    registration_ids = [row[0] for row in res_result.all()]
+    return table_to_dict(t, registration_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -129,10 +129,10 @@ async def update_table(
     await db.commit()
     await db.refresh(t)
     res_result = await db.execute(
-        select(Reservation.id).where(Reservation.table_id == table_id)
+        select(Registration.id).where(Registration.table_id == table_id)
     )
-    reservation_ids = [row[0] for row in res_result.all()]
-    return table_to_dict(t, reservation_ids)
+    registration_ids = [row[0] for row in res_result.all()]
+    return table_to_dict(t, registration_ids)
 
 
 # ---------------------------------------------------------------------------

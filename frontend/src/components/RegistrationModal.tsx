@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
@@ -5,16 +6,20 @@ import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/reservation";
-import type { ReservationFormData, ReservationFormErrors, OrderItem } from "@/types/reservation";
+import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/registration";
+import type { RegistrationFormData, RegistrationFormErrors, OrderItem } from "@/types/registration";
+import {
+  RegistrationSubmitError,
+  submitRegistration,
+} from "@/utils/publicRegistrationApi";
 
-interface ReservationModalProps {
+interface RegistrationModalProps {
   show: boolean;
   onHide: () => void;
   /** Pre-selected event id, if triggered from the schedule */
   defaultEventId?: string;
-  /** Available events that require reservation */
-  reservableEvents: { id: string; title: string }[];
+  /** Available events that require registration */
+  registrableEvents: { id: string; title: string }[];
 }
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -22,27 +27,27 @@ const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 function getProductName(nameKey: string): string {
   switch (nameKey) {
     case "champagne_standard":
-      return m.reservation_product_champagne_standard();
+      return m.registration_product_champagne_standard();
     case "champagne_prestige":
-      return m.reservation_product_champagne_prestige();
+      return m.registration_product_champagne_prestige();
     case "champagne_glass":
-      return m.reservation_product_champagne_glass();
+      return m.registration_product_champagne_glass();
     case "food_cheese":
-      return m.reservation_product_food_cheese();
+      return m.registration_product_food_cheese();
     case "food_charcuterie":
-      return m.reservation_product_food_charcuterie();
+      return m.registration_product_food_charcuterie();
     default:
       return nameKey;
   }
 }
 
-export default function ReservationModal({
+export default function RegistrationModal({
   show,
   onHide,
   defaultEventId = "",
-  reservableEvents,
-}: ReservationModalProps) {
-  const [formData, setFormData] = useState<ReservationFormData>({
+  registrableEvents,
+}: RegistrationModalProps) {
+  const [formData, setFormData] = useState<RegistrationFormData>({
     name: "",
     email: "",
     phone: "",
@@ -53,10 +58,16 @@ export default function ReservationModal({
     honeypot: "",
     formStartTime: new Date().toISOString(),
   });
-  const [errors, setErrors] = useState<ReservationFormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<RegistrationFormErrors>({});
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  const submitRegistrationMutation = useMutation({
+    mutationFn: (payload: RegistrationFormData) => submitRegistration(payload),
+    retry: false,
+  });
+
+  const isSubmitting = submitRegistrationMutation.isPending;
 
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -68,28 +79,28 @@ export default function ReservationModal({
   }, [defaultEventId]);
 
   const validate = useCallback((): boolean => {
-    const newErrors: ReservationFormErrors = {};
+    const newErrors: RegistrationFormErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = m.reservation_errors_name_required();
+      newErrors.name = m.registration_errors_name_required();
     }
     if (!formData.email.trim()) {
-      newErrors.email = m.reservation_errors_email_required();
+      newErrors.email = m.registration_errors_email_required();
     } else if (!EMAIL_REGEX.test(formData.email)) {
-      newErrors.email = m.reservation_errors_email_invalid();
+      newErrors.email = m.registration_errors_email_invalid();
     }
     if (!formData.phone.trim()) {
-      newErrors.phone = m.reservation_errors_phone_required();
+      newErrors.phone = m.registration_errors_phone_required();
     }
     if (!formData.eventId) {
-      newErrors.eventId = m.reservation_errors_event_required();
+      newErrors.eventId = m.registration_errors_event_required();
     }
     if (!formData.guestCount) {
-      newErrors.guestCount = m.reservation_errors_guests_required();
+      newErrors.guestCount = m.registration_errors_guests_required();
     } else if (formData.guestCount < MIN_GUESTS) {
-      newErrors.guestCount = m.reservation_errors_guests_min();
+      newErrors.guestCount = m.registration_errors_guests_min();
     } else if (formData.guestCount > MAX_GUESTS) {
-      newErrors.guestCount = m.reservation_errors_guests_max();
+      newErrors.guestCount = m.registration_errors_guests_max();
     }
 
     setErrors(newErrors);
@@ -142,49 +153,18 @@ export default function ReservationModal({
       e.preventDefault();
       if (!validate()) return;
 
-      setIsSubmitting(true);
       setSubmitError("");
 
-      const selectedEvent = reservableEvents.find((ev) => ev.id === formData.eventId);
-
       try {
-        const response = await fetch("/api/reservations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            event_id: formData.eventId,
-            event_title: selectedEvent?.title ?? formData.eventId,
-            guest_count: formData.guestCount,
-            pre_orders: formData.preOrders.map((o) => ({
-              product_id: o.productId,
-              name: o.name,
-              quantity: o.quantity,
-              price: o.price,
-              category: o.category,
-              delivered: o.delivered,
-            })),
-            notes: formData.notes,
-            honeypot: formData.honeypot ?? "",
-            form_start_time: formData.formStartTime,
-          }),
-        });
-
-        if (response.ok) {
-          setSubmitSuccess(true);
-        } else {
-          const data = await response.json().catch(() => ({}));
-          setSubmitError((data as { error?: string }).error ?? m.reservation_error());
-        }
-      } catch {
-        setSubmitError(m.reservation_network_error());
-      } finally {
-        setIsSubmitting(false);
+        await submitRegistrationMutation.mutateAsync(formData);
+        setSubmitSuccess(true);
+      } catch (error) {
+        setSubmitError(
+          error instanceof RegistrationSubmitError ? error.message : m.registration_network_error(),
+        );
       }
     },
-    [formData, validate, reservableEvents],
+    [formData, submitRegistrationMutation, validate],
   );
 
   const handleClose = useCallback(() => {
@@ -211,12 +191,12 @@ export default function ReservationModal({
       onHide={handleClose}
       size="lg"
       centered
-      aria-labelledby="reservation-modal-title"
+      aria-labelledby="registration-modal-title"
     >
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
-        <Modal.Title id="reservation-modal-title">
+        <Modal.Title id="registration-modal-title">
           <i className="bi bi-star-fill text-warning me-2" aria-hidden="true" />
-          {m.reservation_modal_title()}
+          {m.registration_modal_title()}
         </Modal.Title>
       </Modal.Header>
 
@@ -224,7 +204,7 @@ export default function ReservationModal({
         {submitSuccess ? (
           <Alert variant="success" className="mb-0">
             <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
-            {m.reservation_success()}
+            {m.registration_success()}
           </Alert>
         ) : (
           <Form onSubmit={handleSubmit} noValidate>
@@ -242,7 +222,7 @@ export default function ReservationModal({
 
             {/* Personal details */}
             <Form.Group className="mb-3" controlId="res-name">
-              <Form.Label>{m.reservation_name()} *</Form.Label>
+              <Form.Label>{m.registration_name()} *</Form.Label>
               <Form.Control
                 type="text"
                 name="name"
@@ -257,7 +237,7 @@ export default function ReservationModal({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="res-email">
-              <Form.Label>{m.reservation_email()} *</Form.Label>
+              <Form.Label>{m.registration_email()} *</Form.Label>
               <Form.Control
                 type="email"
                 name="email"
@@ -272,7 +252,7 @@ export default function ReservationModal({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="res-phone">
-              <Form.Label>{m.reservation_phone()} *</Form.Label>
+              <Form.Label>{m.registration_phone()} *</Form.Label>
               <Form.Control
                 type="tel"
                 name="phone"
@@ -288,7 +268,7 @@ export default function ReservationModal({
 
             {/* Event selection */}
             <Form.Group className="mb-3" controlId="res-event">
-              <Form.Label>{m.reservation_event()} *</Form.Label>
+              <Form.Label>{m.registration_event()} *</Form.Label>
               <Form.Select
                 name="eventId"
                 value={formData.eventId}
@@ -297,8 +277,8 @@ export default function ReservationModal({
                 className="bg-dark text-light border-secondary"
                 required
               >
-                <option value="">{m.reservation_select_event()}</option>
-                {reservableEvents.map((ev) => (
+                <option value="">{m.registration_select_event()}</option>
+                {registrableEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>
                     {ev.title}
                   </option>
@@ -308,7 +288,7 @@ export default function ReservationModal({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="res-guests">
-              <Form.Label>{m.reservation_guests()} *</Form.Label>
+              <Form.Label>{m.registration_guests()} *</Form.Label>
               <Form.Control
                 type="number"
                 name="guestCount"
@@ -325,8 +305,8 @@ export default function ReservationModal({
 
             {/* Pre-order */}
             <fieldset className="mb-3">
-              <legend className="fs-6 fw-semibold mb-1">{m.reservation_preorder_title()}</legend>
-              <p className="text-secondary small mb-2">{m.reservation_preorder_description()}</p>
+              <legend className="fs-6 fw-semibold mb-1">{m.registration_preorder_title()}</legend>
+              <p className="text-secondary small mb-2">{m.registration_preorder_description()}</p>
 
               {ALL_PRODUCTS.filter((p) => p.available).map((product) => {
                 const currentItem = formData.preOrders.find((o) => o.productId === product.id);
@@ -369,14 +349,14 @@ export default function ReservationModal({
 
             {/* Notes */}
             <Form.Group className="mb-3" controlId="res-notes">
-              <Form.Label>{m.reservation_notes()}</Form.Label>
+              <Form.Label>{m.registration_notes()}</Form.Label>
               <Form.Control
                 as="textarea"
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
                 rows={3}
-                placeholder={m.reservation_notes_placeholder()}
+                placeholder={m.registration_notes_placeholder()}
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
@@ -405,12 +385,12 @@ export default function ReservationModal({
                     aria-hidden="true"
                     className="me-2"
                   />
-                  {m.reservation_submitting()}
+                  {m.registration_submitting()}
                 </>
               ) : (
                 <>
                   <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                  {m.reservation_submit()}
+                  {m.registration_submit()}
                 </>
               )}
             </Button>

@@ -1,23 +1,20 @@
 /**
  * Schedule configuration for the Champagne Festival.
  *
- * All data is derived from the active edition defined in `editions.ts`.
- * To update the schedule, edit the edition's `schedule` array there.
+ * This module now exposes only empty frontend fallbacks.
+ * The live schedule is sourced from the active-edition API response.
  */
 
-import { getActiveEdition } from "./editions";
-import type { ScheduleEvent } from "./editions";
-
-// Re-export ScheduleEvent type from editions for backward compatibility
-export type { ScheduleEvent };
+import { EMPTY_EDITION } from "./editions";
+import type { Event } from "./editions";
 
 export interface FestivalDay {
   id: number;
   date: string; // ISO date format
-  label: string; // e.g., "friday", "saturday", "sunday"
+  label: string; // fallback label only; live schedule days come from API dates
 }
 
-const activeEdition = getActiveEdition();
+const activeEdition = EMPTY_EDITION;
 
 // Helper function to format date as ISO string in local time (Belgian time)
 const toLocalISOString = (date: Date): string => {
@@ -31,53 +28,53 @@ const toLocalISOString = (date: Date): string => {
 export const festivalDays: FestivalDay[] = [
   {
     id: 1,
-    date: toLocalISOString(activeEdition.dates.friday),
+    date: toLocalISOString(activeEdition.dates[0] ?? new Date()),
     label: "friday",
   },
   {
     id: 2,
-    date: toLocalISOString(activeEdition.dates.saturday),
+    date: toLocalISOString(activeEdition.dates[1] ?? activeEdition.dates[0] ?? new Date()),
     label: "saturday",
   },
   {
     id: 3,
-    date: toLocalISOString(activeEdition.dates.sunday),
+    date: toLocalISOString(activeEdition.dates[activeEdition.dates.length - 1] ?? new Date()),
     label: "sunday",
   },
 ];
 
-// Schedule events from the active edition (shallow copy to protect the registry from external mutation)
+// Schedule events from the frontend fallback edition shape.
 export const scheduleEvents = [...activeEdition.schedule];
 
 /**
- * Helper function to get events for a specific day
+ * Helper function to get events for a specific date
  */
-export function getEventsByDay(dayId: number) {
-  return scheduleEvents.filter((event) => event.dayId === dayId);
+export function getEventsByDate(date: string) {
+  return scheduleEvents.filter((event) => event.date === date);
 }
 
 /**
  * Helper function to get events by category
  */
-export function getEventsByCategory(category: ScheduleEvent["category"]) {
+export function getEventsByCategory(category: Event["category"]) {
   return scheduleEvents.filter((event) => event.category === category);
 }
 
 /**
- * Helper function to get all events sorted by day and time
+ * Helper function to get all events sorted by date then time
  */
 export function getAllEventsSorted() {
   return [...scheduleEvents].sort((a, b) => {
-    if (a.dayId !== b.dayId) {
-      return a.dayId - b.dayId;
+    if (a.date !== b.date) {
+      return a.date.localeCompare(b.date);
     }
     return a.startTime.localeCompare(b.startTime);
   });
 }
 
 /**
- * Helper function to check if an event requires reservation
+ * Helper function to check if an event requires registration
  */
-export function requiresReservation(event: ScheduleEvent): boolean {
-  return Boolean(event.reservation);
+export function requiresRegistration(event: Event): boolean {
+  return event.registrationRequired;
 }
