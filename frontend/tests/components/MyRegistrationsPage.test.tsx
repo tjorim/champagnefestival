@@ -6,6 +6,7 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    my_registrations_title: () => "My Registrations",
     my_reservations_title: () => "My Registrations",
     my_reservations_description: () => "Request a secure link by email.",
     my_reservations_email_label: () => "Email",

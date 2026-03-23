@@ -77,7 +77,11 @@ describe("CheckInPage", () => {
       expect(screen.getByText("VIP Reception")).toBeInTheDocument();
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/check-in/res_123?token=secure-token");
+    expect(fetchMock).toHaveBeenCalledWith("/api/check-in/res_123/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: "secure-token" }),
+    });
   });
 
   it("submits check-in via the mutation", async () => {
