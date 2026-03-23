@@ -446,7 +446,28 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const loadData = useCallback(async () => {
     setError("");
-    await queryClient.refetchQueries({ predicate: (query) => query.queryKey[0] === "admin" });
+    const adminResourcesToRefetch = new Set([
+      "registrations",
+      "tables",
+      "venues",
+      "rooms",
+      "table-types",
+      "layouts",
+      "exhibitors",
+      "areas",
+      "people",
+      "members",
+    ]);
+    await queryClient.refetchQueries({
+      predicate: (query) => {
+        const queryKey = query.queryKey as unknown[];
+        return (
+          queryKey[0] === "admin" &&
+          typeof queryKey[1] === "string" &&
+          adminResourcesToRefetch.has(queryKey[1])
+        );
+      },
+    });
   }, [queryClient]);
 
   const mergePeopleMutation = useMutation({

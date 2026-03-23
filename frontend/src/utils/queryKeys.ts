@@ -7,7 +7,6 @@ export const queryKeys = {
     registrations: (token: string) => ["admin", "registrations", token] as const,
     tables: (token: string) => ["admin", "tables", token] as const,
     venues: (token: string) => ["admin", "venues", token] as const,
-    events: (token: string) => ["admin", "events", token] as const,
     rooms: (token: string) => ["admin", "rooms", token] as const,
     tableTypes: (token: string) => ["admin", "table-types", token] as const,
     layouts: (token: string) => ["admin", "layouts", token] as const,
