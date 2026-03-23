@@ -54,7 +54,11 @@ export async function fetchContentSectionItems(
   sectionKey: string,
   authHeaders: () => Record<string, string>,
 ): Promise<ItemDraft[]> {
-  const response = await safeFetch(`/api/${sectionKey}`, { headers: authHeaders() }, `load ${sectionKey}`);
+  const response = await safeFetch(
+    `/api/${sectionKey}`,
+    { headers: authHeaders() },
+    `load ${sectionKey}`,
+  );
   const data = (await response.json()) as Record<string, unknown>[];
   return Array.isArray(data) ? data.map(apiToItemDraft) : [];
 }
@@ -120,13 +124,15 @@ export async function deleteContentSectionItem(
   id: number,
   authHeaders: () => Record<string, string>,
 ): Promise<number> {
-  await safeFetch(`/api/${sectionKey}/${id}`, { method: "DELETE", headers: authHeaders() }, `delete ${sectionKey}`);
+  await safeFetch(
+    `/api/${sectionKey}/${id}`,
+    { method: "DELETE", headers: authHeaders() },
+    `delete ${sectionKey}`,
+  );
   return id;
 }
 
-export async function fetchEditions(
-  authHeaders: () => Record<string, string>,
-): Promise<Edition[]> {
+export async function fetchEditions(authHeaders: () => Record<string, string>): Promise<Edition[]> {
   const response = await safeFetch(
     "/api/editions?include_inactive=true",
     { headers: authHeaders() },
@@ -147,7 +153,11 @@ interface ApiExhibitor {
 export async function fetchEditionModalExhibitors(
   authHeaders: () => Record<string, string>,
 ): Promise<ItemDraft[]> {
-  const response = await safeFetch("/api/exhibitors", { headers: authHeaders() }, "load exhibitors");
+  const response = await safeFetch(
+    "/api/exhibitors",
+    { headers: authHeaders() },
+    "load exhibitors",
+  );
 
   const data = (await response.json()) as ApiExhibitor[];
   return Array.isArray(data)
@@ -193,9 +203,7 @@ export async function saveEdition(
         external_contact_name: payload.externalContactName?.trim() || null,
         external_contact_email: payload.externalContactEmail?.trim() || null,
         active: payload.active,
-        ...(payload.editionType === "festival"
-          ? { exhibitors: payload.exhibitorIds }
-          : {}),
+        ...(payload.editionType === "festival" ? { exhibitors: payload.exhibitorIds } : {}),
       }),
     },
     isEdit ? "update edition" : "create edition",

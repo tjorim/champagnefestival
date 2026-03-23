@@ -24,7 +24,12 @@ import VolunteersManagement from "./VolunteersManagement";
 import type { MemberFormData } from "./MemberFormModal";
 import type { PersonFormData } from "./PersonFormModal";
 import type { VolunteerFormData } from "./VolunteerFormModal";
-import type { Registration, RegistrationStatus, PaymentStatus, OrderItem } from "@/types/registration";
+import type {
+  Registration,
+  RegistrationStatus,
+  PaymentStatus,
+  OrderItem,
+} from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
@@ -227,15 +232,16 @@ function createEmptyDashboardData(): AdminDashboardData {
   };
 }
 
-async function loadMembers(
-  authHeaders: () => Record<string, string>,
-): Promise<Person[]> {
-  return fetchArrayOrThrow("/api/members", { headers: authHeaders() }, m.admin_error_load_data(), apiToPerson);
+async function loadMembers(authHeaders: () => Record<string, string>): Promise<Person[]> {
+  return fetchArrayOrThrow(
+    "/api/members",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiToPerson,
+  );
 }
 
-async function loadVolunteers(
-  authHeaders: () => Record<string, string>,
-): Promise<Person[]> {
+async function loadVolunteers(authHeaders: () => Record<string, string>): Promise<Person[]> {
   return fetchArrayOrThrow(
     "/api/volunteers",
     { headers: authHeaders() },
@@ -266,11 +272,9 @@ async function fetchAdminDashboardData(
       { headers: authHeaders() },
       m.admin_error_load_data(),
     ),
-    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[] | { tables?: Record<string, unknown>[] }>(
-      "/api/tables",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-    ),
+    fetchJsonOrThrowWithUnauthorized<
+      Record<string, unknown>[] | { tables?: Record<string, unknown>[] }
+    >("/api/tables", { headers: authHeaders() }, m.admin_error_load_data()),
     fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
       "/api/venues",
       { headers: authHeaders() },
@@ -489,7 +493,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteMemberMutation = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrowWithUnauthorized(`/api/members/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_members_error_delete()),
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/members/${id}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_members_error_delete(),
+      ),
     retry: false,
   });
 
@@ -541,7 +549,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deletePersonMutation = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrowWithUnauthorized(`/api/people/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_person()),
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/people/${id}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_person(),
+      ),
     retry: false,
   });
 
@@ -595,12 +607,24 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteVolunteerMutation = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrowWithUnauthorized(`/api/volunteers/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_volunteers_error_delete()),
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/volunteers/${id}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_volunteers_error_delete(),
+      ),
     retry: false,
   });
 
   const updateRegistrationMutation = useMutation({
-    mutationFn: ({ id, payload, fallbackMessage }: { id: string; payload: Record<string, unknown>; fallbackMessage: string }) =>
+    mutationFn: ({
+      id,
+      payload,
+      fallbackMessage,
+    }: {
+      id: string;
+      payload: Record<string, unknown>;
+      fallbackMessage: string;
+    }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/registrations/${id}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(payload) },
@@ -610,40 +634,81 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   });
 
   const createTableMutation = useMutation({
-    mutationFn: ({ name, capacity, layoutId, tableTypeId }: { name: string; capacity: number; layoutId: string; tableTypeId: string }) =>
+    mutationFn: ({
+      name,
+      capacity,
+      layoutId,
+      tableTypeId,
+    }: {
+      name: string;
+      capacity: number;
+      layoutId: string;
+      tableTypeId: string;
+    }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/tables",
         {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ name, capacity, x: 10, y: 10, layout_id: layoutId, table_type_id: tableTypeId }),
+          body: JSON.stringify({
+            name,
+            capacity,
+            x: 10,
+            y: 10,
+            layout_id: layoutId,
+            table_type_id: tableTypeId,
+          }),
         },
         m.admin_error_add_table(),
       ),
     retry: false,
   });
 
-  const changeTableTypeMutation = useMutation<Record<string, unknown>, Error, { tableId: string; tableTypeId: string }, { previousData: AdminDashboardData | undefined }>({
+  const changeTableTypeMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { tableId: string; tableTypeId: string },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ tableId, tableTypeId }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ table_type_id: tableTypeId }) },
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ table_type_id: tableTypeId }),
+        },
         m.admin_error_change_table_type_status({ status: 500 }),
       ),
     onMutate: ({ tableId, tableTypeId }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, tableTypeId } : t)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                tables: old.tables.map((t: FloorTable) =>
+                  t.id === tableId ? { ...t, tableTypeId } : t,
+                ),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
     },
     retry: false,
   });
 
-  const updateTableNameMutation = useMutation<Record<string, unknown>, Error, { tableId: string; name: string }, { previousData: AdminDashboardData | undefined }>({
+  const updateTableNameMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { tableId: string; name: string },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ tableId, name }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
@@ -652,18 +717,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     onMutate: ({ tableId, name }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, name } : t)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, name } : t)),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
     },
     retry: false,
   });
 
-  const moveTableMutation = useMutation<Record<string, unknown>, Error, { tableId: string; x: number; y: number }, { previousData: AdminDashboardData | undefined }>({
+  const moveTableMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { tableId: string; x: number; y: number },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ tableId, x, y }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
@@ -672,19 +750,32 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     onMutate: ({ tableId, x, y }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, x, y } : t)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, x, y } : t)),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist table position");
     },
     retry: false,
   });
 
-  const rotateTableMutation = useMutation<Record<string, unknown>, Error, { tableId: string; rotation: number }, { previousData: AdminDashboardData | undefined }>({
+  const rotateTableMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { tableId: string; rotation: number },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ tableId, rotation }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
@@ -693,13 +784,23 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     onMutate: ({ tableId, rotation }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, rotation } : t)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                tables: old.tables.map((t: FloorTable) =>
+                  t.id === tableId ? { ...t, rotation } : t,
+                ),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist table rotation");
     },
     retry: false,
@@ -707,12 +808,28 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteTableMutation = useMutation({
     mutationFn: (tableId: string) =>
-      fetchVoidOrThrowWithUnauthorized(`/api/tables/${tableId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_table()),
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/tables/${tableId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_table(),
+      ),
     retry: false,
   });
 
   const createVenueMutation = useMutation({
-    mutationFn: ({ name, address, city, postalCode, country }: { name: string; address: string; city: string; postalCode: string; country: string }) =>
+    mutationFn: ({
+      name,
+      address,
+      city,
+      postalCode,
+      country,
+    }: {
+      name: string;
+      address: string;
+      city: string;
+      postalCode: string;
+      country: string;
+    }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/venues",
         {
@@ -737,18 +854,40 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteVenueMutation = useMutation({
     mutationFn: (venueId: string) =>
-      fetchVoidOrThrowWithUnauthorized(`/api/venues/${venueId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_venue()),
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/venues/${venueId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_venue(),
+      ),
     retry: false,
   });
 
   const createRoomMutation = useMutation({
-    mutationFn: ({ venueId, name, widthM, lengthM, color }: { venueId: string; name: string; widthM: number; lengthM: number; color: string }) =>
+    mutationFn: ({
+      venueId,
+      name,
+      widthM,
+      lengthM,
+      color,
+    }: {
+      venueId: string;
+      name: string;
+      widthM: number;
+      lengthM: number;
+      color: string;
+    }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/rooms",
         {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ venue_id: venueId, name, width_m: widthM, length_m: lengthM, color }),
+          body: JSON.stringify({
+            venue_id: venueId,
+            name,
+            width_m: widthM,
+            length_m: lengthM,
+            color,
+          }),
         },
         m.admin_error_add_room(),
       ),
@@ -756,7 +895,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   });
 
   const updateRoomMutation = useMutation({
-    mutationFn: ({ roomId, active, fallbackMessage }: { roomId: string; active: boolean; fallbackMessage: string }) =>
+    mutationFn: ({
+      roomId,
+      active,
+      fallbackMessage,
+    }: {
+      roomId: string;
+      active: boolean;
+      fallbackMessage: string;
+    }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/rooms/${roomId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ active }) },
@@ -772,7 +919,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ edition_id: activeEdition.id, room_id: roomId, date, ...(label?.trim() ? { label: label.trim() } : {}) }),
+          body: JSON.stringify({
+            edition_id: activeEdition.id,
+            room_id: roomId,
+            date,
+            ...(label?.trim() ? { label: label.trim() } : {}),
+          }),
         },
         m.admin_error_add_layout(),
       ),
@@ -781,25 +933,57 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteLayoutMutation = useMutation({
     mutationFn: (layoutId: string) =>
-      fetchVoidOrThrowWithUnauthorized(`/api/layouts/${layoutId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_layout()),
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/layouts/${layoutId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_layout(),
+      ),
     retry: false,
   });
 
   const createAreaMutation = useMutation({
-    mutationFn: ({ label, icon, layoutId, widthM, lengthM, exhibitorId }: { label: string; icon: string; layoutId: string; widthM: number; lengthM: number; exhibitorId?: number }) =>
+    mutationFn: ({
+      label,
+      icon,
+      layoutId,
+      widthM,
+      lengthM,
+      exhibitorId,
+    }: {
+      label: string;
+      icon: string;
+      layoutId: string;
+      widthM: number;
+      lengthM: number;
+      exhibitorId?: number;
+    }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/areas",
         {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ label, icon, layout_id: layoutId, width_m: widthM, length_m: lengthM, x: 10, y: 10, exhibitor_id: exhibitorId ?? null }),
+          body: JSON.stringify({
+            label,
+            icon,
+            layout_id: layoutId,
+            width_m: widthM,
+            length_m: lengthM,
+            x: 10,
+            y: 10,
+            exhibitor_id: exhibitorId ?? null,
+          }),
         },
         m.admin_error_add_area(),
       ),
     retry: false,
   });
 
-  const updateAreaLabelMutation = useMutation<Record<string, unknown>, Error, { areaId: string; label: string }, { previousData: AdminDashboardData | undefined }>({
+  const updateAreaLabelMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { areaId: string; label: string },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ areaId, label }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
@@ -808,34 +992,61 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     onMutate: ({ areaId, label }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, label } : a)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, label } : a)),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area label");
     },
     retry: false,
   });
 
-  const resizeAreaMutation = useMutation<Record<string, unknown>, Error, { areaId: string; widthM: number; lengthM: number; x: number; y: number }, { previousData: AdminDashboardData | undefined }>({
+  const resizeAreaMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { areaId: string; widthM: number; lengthM: number; x: number; y: number },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ areaId, widthM, lengthM, x, y }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ width_m: widthM, length_m: lengthM, x, y }) },
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ width_m: widthM, length_m: lengthM, x, y }),
+        },
         m.admin_error_resize_area_status({ status: 500 }),
       ),
     onMutate: ({ areaId, widthM, lengthM, x, y }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                areas: old.areas.map((a: FloorArea) =>
+                  a.id === areaId ? { ...a, widthM, lengthM, x, y } : a,
+                ),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area resize");
     },
     retry: false,
@@ -848,7 +1059,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
         "Failed to assign area.",
       ),
-    onSuccess: (d: Record<string, unknown>, { areaId }: { areaId: string; body: Record<string, unknown> }) => {
+    onSuccess: (
+      d: Record<string, unknown>,
+      { areaId }: { areaId: string; body: Record<string, unknown> },
+    ) => {
       updateDashboardField("areas", (prev: FloorArea[]) =>
         prev.map((a: FloorArea) => (a.id === areaId ? apiAreaToArea(d) : a)),
       );
@@ -856,7 +1070,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
-  const moveAreaMutation = useMutation<Record<string, unknown>, Error, { areaId: string; x: number; y: number }, { previousData: AdminDashboardData | undefined }>({
+  const moveAreaMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { areaId: string; x: number; y: number },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ areaId, x, y }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
@@ -865,19 +1084,32 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     onMutate: ({ areaId, x, y }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, x, y } : a)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, x, y } : a)),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area position");
     },
     retry: false,
   });
 
-  const rotateAreaMutation = useMutation<Record<string, unknown>, Error, { areaId: string; rotation: number }, { previousData: AdminDashboardData | undefined }>({
+  const rotateAreaMutation = useMutation<
+    Record<string, unknown>,
+    Error,
+    { areaId: string; rotation: number },
+    { previousData: AdminDashboardData | undefined }
+  >({
     mutationFn: ({ areaId, rotation }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
@@ -886,13 +1118,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     onMutate: ({ areaId, rotation }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
-      queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
-        old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, rotation } : a)) } : old,
+      queryClient.setQueryData<AdminDashboardData>(
+        currentDashboardQueryKey,
+        (old: AdminDashboardData | undefined) =>
+          old
+            ? {
+                ...old,
+                areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, rotation } : a)),
+              }
+            : old,
       );
       return { previousData };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
+      if (context?.previousData)
+        queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area rotation");
     },
     retry: false,
@@ -900,7 +1140,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteAreaMutation = useMutation({
     mutationFn: (areaId: string) =>
-      fetchVoidOrThrowWithUnauthorized(`/api/areas/${areaId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_area()),
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/areas/${areaId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_area(),
+      ),
     retry: false,
   });
 
@@ -946,7 +1190,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       ),
     retry: false,
   });
-
 
   const validateToken = useCallback(
     async (tokenToValidate: string): Promise<"valid" | "invalid" | "transientError"> => {
@@ -1240,25 +1483,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [deleteVolunteerMutation, updateDashboardField],
   );
 
-  const handleExhibitorSaved = useCallback((item: ItemDraft) => {
-    updateDashboardField("exhibitors", (prev) => {
-      const entry = {
-        id: item.id,
-        name: item.name,
-        active: item.active ?? true,
-        contactPersonId: item.contactPersonId ?? null,
-      };
-      const idx = prev.findIndex((e) => e.id === item.id);
-      if (idx >= 0) {
-        return prev.map((e) => (e.id === item.id ? entry : e));
-      }
-      return [...prev, entry];
-    });
-  }, [updateDashboardField]);
+  const handleExhibitorSaved = useCallback(
+    (item: ItemDraft) => {
+      updateDashboardField("exhibitors", (prev) => {
+        const entry = {
+          id: item.id,
+          name: item.name,
+          active: item.active ?? true,
+          contactPersonId: item.contactPersonId ?? null,
+        };
+        const idx = prev.findIndex((e) => e.id === item.id);
+        if (idx >= 0) {
+          return prev.map((e) => (e.id === item.id ? entry : e));
+        }
+        return [...prev, entry];
+      });
+    },
+    [updateDashboardField],
+  );
 
-  const handleExhibitorDeleted = useCallback((id: number) => {
-    updateDashboardField("exhibitors", (prev) => prev.filter((e) => e.id !== id));
-  }, [updateDashboardField]);
+  const handleExhibitorDeleted = useCallback(
+    (id: number) => {
+      updateDashboardField("exhibitors", (prev) => prev.filter((e) => e.id !== id));
+    },
+    [updateDashboardField],
+  );
 
   const volunteers = useMemo(
     () => people.filter((person) => person.roles.includes("volunteer")),
@@ -1325,9 +1574,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           }),
         );
         updateDashboardField("registrations", (prev) =>
-          prev.map((r) => (r.id === id ? { ...r, status: updated.status, updatedAt: updated.updatedAt } : r)),
+          prev.map((r) =>
+            r.id === id ? { ...r, status: updated.status, updatedAt: updated.updatedAt } : r,
+          ),
         );
-        setDetailRegistration((prev) => (prev?.id === id ? { ...prev, status: updated.status, updatedAt: updated.updatedAt } : prev));
+        setDetailRegistration((prev) =>
+          prev?.id === id
+            ? { ...prev, status: updated.status, updatedAt: updated.updatedAt }
+            : prev,
+        );
       } catch (err) {
         console.error("Failed to update registration status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_registration());
@@ -1347,9 +1602,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           }),
         );
         updateDashboardField("registrations", (prev) =>
-          prev.map((r) => (r.id === id ? { ...r, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt } : r)),
+          prev.map((r) =>
+            r.id === id
+              ? { ...r, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt }
+              : r,
+          ),
         );
-        setDetailRegistration((prev) => (prev?.id === id ? { ...prev, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt } : prev));
+        setDetailRegistration((prev) =>
+          prev?.id === id
+            ? { ...prev, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt }
+            : prev,
+        );
       } catch (err) {
         console.error("Failed to update payment status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_payment());
@@ -1369,7 +1632,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           }),
         );
         updateDashboardField("registrations", (prev) =>
-          prev.map((r) => (r.id === registrationId ? { ...r, tableId: updated.tableId, updatedAt: updated.updatedAt } : r)),
+          prev.map((r) =>
+            r.id === registrationId
+              ? { ...r, tableId: updated.tableId, updatedAt: updated.updatedAt }
+              : r,
+          ),
         );
 
         updateDashboardField("tables", (prevTables) =>
@@ -1377,7 +1644,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             const wasAssigned = t.registrationIds.includes(registrationId);
             const shouldBeAssigned = t.id === updated.tableId;
             if (wasAssigned && !shouldBeAssigned) {
-              return { ...t, registrationIds: t.registrationIds.filter((id) => id !== registrationId) };
+              return {
+                ...t,
+                registrationIds: t.registrationIds.filter((id) => id !== registrationId),
+              };
             }
             if (!wasAssigned && shouldBeAssigned) {
               return { ...t, registrationIds: [...t.registrationIds, registrationId] };
@@ -1385,7 +1655,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             return t;
           }),
         );
-        setDetailRegistration((prev) => (prev?.id === registrationId ? { ...prev, tableId: updated.tableId, updatedAt: updated.updatedAt } : prev));
+        setDetailRegistration((prev) =>
+          prev?.id === registrationId
+            ? { ...prev, tableId: updated.tableId, updatedAt: updated.updatedAt }
+            : prev,
+        );
       } catch (err) {
         console.error("Failed to assign table", err);
         setError(err instanceof Error ? err.message : m.admin_error_assign_table());
@@ -1486,7 +1760,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleArchiveRoom = useCallback(
     async (roomId: string) => {
-      const data = await updateRoomMutation.mutateAsync({ roomId, active: false, fallbackMessage: m.admin_error_delete_room() });
+      const data = await updateRoomMutation.mutateAsync({
+        roomId,
+        active: false,
+        fallbackMessage: m.admin_error_delete_room(),
+      });
       updateDashboardField("rooms", (prev) =>
         prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)),
       );
@@ -1496,7 +1774,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleRestoreRoom = useCallback(
     async (roomId: string) => {
-      const data = await updateRoomMutation.mutateAsync({ roomId, active: true, fallbackMessage: m.admin_content_error_save() });
+      const data = await updateRoomMutation.mutateAsync({
+        roomId,
+        active: true,
+        fallbackMessage: m.admin_content_error_save(),
+      });
       updateDashboardField("rooms", (prev) =>
         prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)),
       );
@@ -1531,7 +1813,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       lengthM: number,
       exhibitorId?: number,
     ) => {
-      const data = await createAreaMutation.mutateAsync({ label, icon, layoutId, widthM, lengthM, exhibitorId });
+      const data = await createAreaMutation.mutateAsync({
+        label,
+        icon,
+        layoutId,
+        widthM,
+        lengthM,
+        exhibitorId,
+      });
       updateDashboardField("areas", (prev) => [...prev, apiAreaToArea(data)]);
     },
     [createAreaMutation, updateDashboardField],
@@ -1577,12 +1866,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleChangeTableType = useCallback(
-    async (tableId: string, tableTypeId: string) => { await changeTableTypeMutation.mutateAsync({ tableId, tableTypeId }); },
+    async (tableId: string, tableTypeId: string) => {
+      await changeTableTypeMutation.mutateAsync({ tableId, tableTypeId });
+    },
     [changeTableTypeMutation],
   );
 
   const handleUpdateTable = useCallback(
-    async (tableId: string, name: string) => { await updateTableNameMutation.mutateAsync({ tableId, name }); },
+    async (tableId: string, name: string) => {
+      await updateTableNameMutation.mutateAsync({ tableId, name });
+    },
     [updateTableNameMutation],
   );
 
@@ -1611,9 +1904,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [areas, layouts, rooms, resizeAreaMutation],
   );
 
-  const handleAddRegistration = useCallback((registration: Registration) => {
-    updateDashboardField("registrations", (prev) => [registration, ...prev]);
-  }, [updateDashboardField]);
+  const handleAddRegistration = useCallback(
+    (registration: Registration) => {
+      updateDashboardField("registrations", (prev) => [registration, ...prev]);
+    },
+    [updateDashboardField],
+  );
 
   const handleAddTableType = useCallback(
     async (data: Omit<TableType, "id">) => {
@@ -1680,7 +1976,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             fallbackMessage: m.admin_error_bottle_delivery(),
           }),
         );
-        updateDashboardField("registrations", (prev) => prev.map((r) => (r.id === registrationId ? updated : r)));
+        updateDashboardField("registrations", (prev) =>
+          prev.map((r) => (r.id === registrationId ? updated : r)),
+        );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         console.error("Failed to update bottle delivery status", err);
@@ -1700,7 +1998,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             fallbackMessage: m.admin_error_check_in(),
           }),
         );
-        updateDashboardField("registrations", (prev) => prev.map((r) => (r.id === registrationId ? updated : r)));
+        updateDashboardField("registrations", (prev) =>
+          prev.map((r) => (r.id === registrationId ? updated : r)),
+        );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         console.error("Failed to check in guest", err);
@@ -1720,7 +2020,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             fallbackMessage: m.admin_error_issue_strap(),
           }),
         );
-        updateDashboardField("registrations", (prev) => prev.map((r) => (r.id === registrationId ? updated : r)));
+        updateDashboardField("registrations", (prev) =>
+          prev.map((r) => (r.id === registrationId ? updated : r)),
+        );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         console.error("Failed to issue strap", err);
@@ -1846,7 +2148,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     <Nav.Link eventKey="registrations" className="text-light">
                       <i className="bi bi-calendar-check me-2" aria-hidden="true" />
                       {m.admin_registrations_tab()}
-                      <span className="badge bg-warning text-dark ms-2">{registrations.length}</span>
+                      <span className="badge bg-warning text-dark ms-2">
+                        {registrations.length}
+                      </span>
                     </Nav.Link>
                   </Nav.Item>
                   <Nav.Item>
@@ -1971,7 +2275,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                         void Promise.all([
                           dashboardQuery.refetch(),
                           queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
-                          queryClient.invalidateQueries({ queryKey: queryKeys.admin.activeEditionEvents }),
+                          queryClient.invalidateQueries({
+                            queryKey: queryKeys.admin.activeEditionEvents,
+                          }),
                         ]);
                       }}
                     />

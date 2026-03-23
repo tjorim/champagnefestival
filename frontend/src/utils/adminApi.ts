@@ -46,7 +46,9 @@ export async function fetchArrayOrThrow<T>(
   }
 
   const payload = await response.json();
-  return Array.isArray(payload) ? payload.map((item) => mapper(item as Record<string, unknown>)) : [];
+  return Array.isArray(payload)
+    ? payload.map((item) => mapper(item as Record<string, unknown>))
+    : [];
 }
 
 export async function fetchJsonOrThrowWithUnauthorized<T>(
@@ -79,10 +81,7 @@ export async function fetchVoidOrThrowWithUnauthorized(
   }
 }
 
-export async function fetchStatus(
-  url: string,
-  options: RequestInit,
-): Promise<number> {
+export async function fetchStatus(url: string, options: RequestInit): Promise<number> {
   const response = await requestApi(url, options);
   return response.status;
 }

@@ -48,9 +48,7 @@ export const festivalEndDate =
 
 // Clone the source Date objects to prevent external mutation of the shared Edition data.
 export const festivalDays: readonly Date[] =
-  edition.dates.length === 0
-    ? []
-    : edition.dates.map((date) => new Date(date.getTime()));
+  edition.dates.length === 0 ? [] : edition.dates.map((date) => new Date(date.getTime()));
 
 // ── Localised date-range strings ──────────────────────────────────────────────
 

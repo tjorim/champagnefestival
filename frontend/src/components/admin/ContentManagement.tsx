@@ -82,7 +82,13 @@ interface ContentSectionProps {
   onItemDeleted?: (id: number) => void;
 }
 
-function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDeleted }: ContentSectionProps) {
+function ContentSection({
+  sectionKey,
+  title,
+  authHeaders,
+  onItemSaved,
+  onItemDeleted,
+}: ContentSectionProps) {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
@@ -134,7 +140,9 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
         const saved = await saveItemMutation.mutateAsync(draft);
         queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) => {
           const idx = prev.findIndex((item) => item.id === saved.id);
-          return idx >= 0 ? prev.map((item) => (item.id === saved.id ? saved : item)) : [...prev, saved];
+          return idx >= 0
+            ? prev.map((item) => (item.id === saved.id ? saved : item))
+            : [...prev, saved];
         });
         setImageErrors((prev) => {
           const copy = new Set(prev);
@@ -209,9 +217,14 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
       >
         <span className="d-flex align-items-center gap-2 flex-grow-1 text-truncate">
           {item.image && (
-            <span className="d-inline-flex align-items-center justify-content-center" style={{ width: 32, height: 32, flexShrink: 0 }}>
+            <span
+              className="d-inline-flex align-items-center justify-content-center"
+              style={{ width: 32, height: 32, flexShrink: 0 }}
+            >
               {imageErrors.has(item.id) ? (
-                <span role="img" aria-label={`Image unavailable for ${item.name}`}>🖼</span>
+                <span role="img" aria-label={`Image unavailable for ${item.name}`}>
+                  🖼
+                </span>
               ) : (
                 <img
                   src={item.image}
@@ -222,8 +235,14 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
               )}
             </span>
           )}
-          <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>{item.name}</span>
-          <Badge bg={typeBadgeVariant(item.type)} className="flex-shrink-0" aria-label={`${m.admin_item_type()}: ${typeLabel(item.type)}`}>
+          <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
+            {item.name}
+          </span>
+          <Badge
+            bg={typeBadgeVariant(item.type)}
+            className="flex-shrink-0"
+            aria-label={`${m.admin_item_type()}: ${typeLabel(item.type)}`}
+          >
             {typeLabel(item.type)}
           </Badge>
           <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
@@ -236,20 +255,42 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
         </span>
         <span className="d-flex gap-1 flex-shrink-0">
           {!isArchived && (
-            <Button variant="outline-secondary" size="sm" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => openEdit(item)}
+              aria-label={`Edit ${item.name}`}
+            >
               <i className="bi bi-pencil" aria-hidden="true" />
             </Button>
           )}
           {!isArchived ? (
-            <Button variant="outline-secondary" size="sm" onClick={() => handleArchive(item.id)} aria-label={`${m.admin_content_archive()} ${item.name}`} title={m.admin_content_archive()}>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => handleArchive(item.id)}
+              aria-label={`${m.admin_content_archive()} ${item.name}`}
+              title={m.admin_content_archive()}
+            >
               <i className="bi bi-archive" aria-hidden="true" />
             </Button>
           ) : (
             <>
-              <Button variant="outline-success" size="sm" onClick={() => handleRestore(item.id)} aria-label={`${m.admin_content_restore()} ${item.name}`} title={m.admin_content_restore()}>
+              <Button
+                variant="outline-success"
+                size="sm"
+                onClick={() => handleRestore(item.id)}
+                aria-label={`${m.admin_content_restore()} ${item.name}`}
+                title={m.admin_content_restore()}
+              >
                 <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
               </Button>
-              <Button variant="outline-danger" size="sm" onClick={() => handleDelete(item.id)} aria-label={`${m.admin_delete()} ${item.name}`}>
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={() => handleDelete(item.id)}
+                aria-label={`${m.admin_delete()} ${item.name}`}
+              >
                 <i className="bi bi-trash" aria-hidden="true" />
               </Button>
             </>
@@ -260,7 +301,12 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
   }
 
   if (itemsQuery.isPending) {
-    return <div className="text-center py-3"><Spinner animation="border" size="sm" variant="warning" /><span className="ms-2 text-secondary">{m.admin_content_loading()}</span></div>;
+    return (
+      <div className="text-center py-3">
+        <Spinner animation="border" size="sm" variant="warning" />
+        <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
+      </div>
+    );
   }
 
   return (
@@ -268,13 +314,26 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
       <div className="d-flex justify-content-between align-items-center mb-2">
         <h6 className="mb-0 text-warning">
           {title}
-          <Badge bg="secondary" className="ms-2">{activeItems.length}</Badge>
-          {archivedItems.length > 0 && <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">{archivedItems.length} {m.admin_content_archived_section()}</Badge>}
+          <Badge bg="secondary" className="ms-2">
+            {activeItems.length}
+          </Badge>
+          {archivedItems.length > 0 && (
+            <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">
+              {archivedItems.length} {m.admin_content_archived_section()}
+            </Badge>
+          )}
         </h6>
-        <Button variant="outline-secondary" size="sm" onClick={openAdd}><i className="bi bi-plus-lg me-1" aria-hidden="true" />{m.admin_content_add_item()}</Button>
+        <Button variant="outline-secondary" size="sm" onClick={openAdd}>
+          <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+          {m.admin_content_add_item()}
+        </Button>
       </div>
 
-      {itemsQuery.isError && <Alert variant="danger" className="py-1 mb-2">{m.admin_content_error_load()}</Alert>}
+      {itemsQuery.isError && (
+        <Alert variant="danger" className="py-1 mb-2">
+          {m.admin_content_error_load()}
+        </Alert>
+      )}
       {actionError && (
         <Alert
           variant="danger"
@@ -288,15 +347,33 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
       <ListGroup variant="flush">{activeItems.map((item) => renderItemRow(item, false))}</ListGroup>
       {archivedItems.length > 0 && (
         <div className="mt-2">
-          <Button variant="link" size="sm" className="text-secondary px-0" onClick={() => setArchivedOpen((value) => !value)}>
-            <i className={`bi bi-chevron-${archivedOpen ? "down" : "right"} me-1`} aria-hidden="true" />
+          <Button
+            variant="link"
+            size="sm"
+            className="text-secondary px-0"
+            onClick={() => setArchivedOpen((value) => !value)}
+          >
+            <i
+              className={`bi bi-chevron-${archivedOpen ? "down" : "right"} me-1`}
+              aria-hidden="true"
+            />
             {m.admin_content_archived_section()}
           </Button>
-          {archivedOpen && <ListGroup variant="flush">{archivedItems.map((item) => renderItemRow(item, true))}</ListGroup>}
+          {archivedOpen && (
+            <ListGroup variant="flush">
+              {archivedItems.map((item) => renderItemRow(item, true))}
+            </ListGroup>
+          )}
         </div>
       )}
 
-      <ItemModal show={modalOpen} initial={modalItem} authHeaders={authHeaders} onSave={handleModalSave} onHide={() => setModalOpen(false)} />
+      <ItemModal
+        show={modalOpen}
+        initial={modalItem}
+        authHeaders={authHeaders}
+        onSave={handleModalSave}
+        onHide={() => setModalOpen(false)}
+      />
     </div>
   );
 }
@@ -319,35 +396,55 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
     retry: false,
   });
 
-  const editions = editionsQuery.data ?? [];
   const visibleEditions = useMemo(
-    () => editions.filter((edition) => editionTypeFilter === "all" || edition.editionType === editionTypeFilter),
-    [editionTypeFilter, editions],
+    () =>
+      (editionsQuery.data ?? []).filter(
+        (edition) => editionTypeFilter === "all" || edition.editionType === editionTypeFilter,
+      ),
+    [editionTypeFilter, editionsQuery.data],
   );
   const groupedEditions = useMemo(
     () => ({
       festival: visibleEditions.filter((edition) => edition.editionType === "festival"),
       bourse: visibleEditions.filter((edition) => edition.editionType === "bourse"),
-      capsule_exchange: visibleEditions.filter((edition) => edition.editionType === "capsule_exchange"),
+      capsule_exchange: visibleEditions.filter(
+        (edition) => edition.editionType === "capsule_exchange",
+      ),
     }),
     [visibleEditions],
   );
 
-  const handleCreated = useCallback((edition: Edition) => {
-    queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => [...prev, edition]);
-    setAddModalOpen(false);
-    onEditionMutated?.();
-  }, [onEditionMutated, queryClient]);
+  const handleCreated = useCallback(
+    (edition: Edition) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => [
+        ...prev,
+        edition,
+      ]);
+      setAddModalOpen(false);
+      onEditionMutated?.();
+    },
+    [onEditionMutated, queryClient],
+  );
 
-  const handleDeleted = useCallback((id: string) => {
-    queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => prev.filter((edition) => edition.id !== id));
-    onEditionMutated?.();
-  }, [onEditionMutated, queryClient]);
+  const handleDeleted = useCallback(
+    (id: string) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
+        prev.filter((edition) => edition.id !== id),
+      );
+      onEditionMutated?.();
+    },
+    [onEditionMutated, queryClient],
+  );
 
-  const handleUpdated = useCallback((updated: Edition) => {
-    queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => prev.map((edition) => (edition.id === updated.id ? updated : edition)));
-    onEditionMutated?.();
-  }, [onEditionMutated, queryClient]);
+  const handleUpdated = useCallback(
+    (updated: Edition) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
+        prev.map((edition) => (edition.id === updated.id ? updated : edition)),
+      );
+      onEditionMutated?.();
+    },
+    [onEditionMutated, queryClient],
+  );
 
   const handleEventMutation = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: contentEditionsQueryKey });
@@ -361,7 +458,11 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
           <h6 className="mb-1 text-warning">{m.admin_content_editions_section()}</h6>
           <ButtonGroup size="sm">
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
-              <Button key={type} variant={editionTypeFilter === type ? "warning" : "outline-secondary"} onClick={() => setEditionTypeFilter(type)}>
+              <Button
+                key={type}
+                variant={editionTypeFilter === type ? "warning" : "outline-secondary"}
+                onClick={() => setEditionTypeFilter(type)}
+              >
                 {editionTypeLabel(type)}
               </Button>
             ))}
@@ -373,9 +474,22 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
         </Button>
       </div>
 
-      {editionsQuery.isPending && <div className="text-center py-3"><Spinner animation="border" size="sm" variant="warning" /><span className="ms-2 text-secondary">{m.admin_content_loading()}</span></div>}
-      {!editionsQuery.isPending && editionsQuery.isError && <Alert variant="danger" className="py-2 small">{m.admin_content_error_load()}</Alert>}
-      {!editionsQuery.isPending && !editionsQuery.isError && editions.length === 0 && <p className="text-secondary fst-italic small">{m.admin_content_no_editions()}</p>}
+      {editionsQuery.isPending && (
+        <div className="text-center py-3">
+          <Spinner animation="border" size="sm" variant="warning" />
+          <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
+        </div>
+      )}
+      {!editionsQuery.isPending && editionsQuery.isError && (
+        <Alert variant="danger" className="py-2 small">
+          {m.admin_content_error_load()}
+        </Alert>
+      )}
+      {!editionsQuery.isPending &&
+        !editionsQuery.isError &&
+        (editionsQuery.data ?? []).length === 0 && (
+          <p className="text-secondary fst-italic small">{m.admin_content_no_editions()}</p>
+        )}
       {!editionsQuery.isPending && !editionsQuery.isError && (
         <div className="d-flex flex-column gap-3">
           {(["festival", "bourse", "capsule_exchange"] as const).map((type) => {
@@ -388,7 +502,15 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
                   <Badge bg="secondary">{grouped.length}</Badge>
                 </div>
                 {grouped.map((edition) => (
-                  <EditionCard key={edition.id} edition={edition} venues={venues} authHeaders={authHeaders} onDeleted={handleDeleted} onUpdated={handleUpdated} onEventMutation={handleEventMutation} />
+                  <EditionCard
+                    key={edition.id}
+                    edition={edition}
+                    venues={venues}
+                    authHeaders={authHeaders}
+                    onDeleted={handleDeleted}
+                    onUpdated={handleUpdated}
+                    onEventMutation={handleEventMutation}
+                  />
                 ))}
               </div>
             );
@@ -396,19 +518,42 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
         </div>
       )}
 
-      <EditionModal show={addModalOpen} initial={null} venues={venues} authHeaders={authHeaders} onSaved={handleCreated} onHide={() => setAddModalOpen(false)} />
+      <EditionModal
+        show={addModalOpen}
+        initial={null}
+        venues={venues}
+        authHeaders={authHeaders}
+        onSaved={handleCreated}
+        onHide={() => setAddModalOpen(false)}
+      />
     </div>
   );
 }
 
-export default function ContentManagement({ authHeaders, venues, onExhibitorSaved, onExhibitorDeleted, onEditionMutated }: ContentManagementProps) {
+export default function ContentManagement({
+  authHeaders,
+  venues,
+  onExhibitorSaved,
+  onExhibitorDeleted,
+  onEditionMutated,
+}: ContentManagementProps) {
   return (
     <div>
       <Card bg="dark" text="white" border="secondary" className="mb-3">
         <Card.Body>
-          <ContentSection sectionKey="exhibitors" title={m.admin_content_exhibitors_section()} authHeaders={authHeaders} onItemSaved={onExhibitorSaved} onItemDeleted={onExhibitorDeleted} />
+          <ContentSection
+            sectionKey="exhibitors"
+            title={m.admin_content_exhibitors_section()}
+            authHeaders={authHeaders}
+            onItemSaved={onExhibitorSaved}
+            onItemDeleted={onExhibitorDeleted}
+          />
           <hr className="border-secondary" />
-          <EditionsSection authHeaders={authHeaders} venues={venues} onEditionMutated={onEditionMutated} />
+          <EditionsSection
+            authHeaders={authHeaders}
+            venues={venues}
+            onEditionMutated={onEditionMutated}
+          />
         </Card.Body>
       </Card>
     </div>

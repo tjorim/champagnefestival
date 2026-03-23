@@ -12,9 +12,7 @@ import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
-import {
-  fetchAdminPersonRegistrations,
-} from "@/utils/adminRegistrationApi";
+import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 
 interface PeopleManagementProps {
@@ -60,20 +58,20 @@ export default function PeopleManagement({
   const [copySuccess, setCopySuccess] = useState(false);
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
 
-  const filtered = q.trim() || roleFilter !== "all"
-    ? people.filter((p) => {
-        const s = q.trim().toLowerCase();
-        const phoneQ = s.replace(/[\s\-().+]/g, "");
-        const matchesQ =
-          !s ||
-          p.name.toLowerCase().includes(s) ||
-          p.email.toLowerCase().includes(s) ||
-          (phoneQ.length > 0 && p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ));
-        const matchesRole =
-          roleFilter === "all" || p.roles.includes(roleFilter);
-        return matchesQ && matchesRole;
-      })
-    : people;
+  const filtered =
+    q.trim() || roleFilter !== "all"
+      ? people.filter((p) => {
+          const s = q.trim().toLowerCase();
+          const phoneQ = s.replace(/[\s\-().+]/g, "");
+          const matchesQ =
+            !s ||
+            p.name.toLowerCase().includes(s) ||
+            p.email.toLowerCase().includes(s) ||
+            (phoneQ.length > 0 && p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ));
+          const matchesRole = roleFilter === "all" || p.roles.includes(roleFilter);
+          return matchesQ && matchesRole;
+        })
+      : people;
 
   // Group people by email to surface duplicates
   const emailGroups = new Map<string, Person[]>();
@@ -200,7 +198,10 @@ export default function PeopleManagement({
               title={m.admin_people_copy_emails_tooltip()}
               aria-label={`${m.admin_people_copy_emails_tooltip()} (${filteredEmails.length})`}
             >
-              <i className={`bi ${copySuccess ? "bi-check2" : "bi-clipboard-fill"} me-1`} aria-hidden="true" />
+              <i
+                className={`bi ${copySuccess ? "bi-check2" : "bi-clipboard-fill"} me-1`}
+                aria-hidden="true"
+              />
               {copySuccess ? m.admin_people_emails_copied() : `${filteredEmails.length}`}
             </Button>
             <Form.Control
@@ -289,7 +290,8 @@ export default function PeopleManagement({
                 </thead>
                 <tbody>
                   {filtered.map((person) => {
-                    const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
+                    const isDuplicate =
+                      person.email && duplicateEmails.has(person.email.toLowerCase());
                     const duplicates = isDuplicate
                       ? (emailGroups.get(person.email.toLowerCase()) ?? []).filter(
                           (p) => p.id !== person.id,
@@ -310,7 +312,10 @@ export default function PeopleManagement({
                           </div>
                           {isDuplicate && (
                             <div className="text-warning small">
-                              <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+                              <i
+                                className="bi bi-exclamation-triangle-fill me-1"
+                                aria-hidden="true"
+                              />
                               {m.admin_people_duplicates_same_email()}
                             </div>
                           )}
@@ -327,7 +332,10 @@ export default function PeopleManagement({
                           </div>
                         </td>
                         <td>
-                          <Badge bg={resCount > 0 ? "warning" : "secondary"} text={resCount > 0 ? "dark" : undefined}>
+                          <Badge
+                            bg={resCount > 0 ? "warning" : "secondary"}
+                            text={resCount > 0 ? "dark" : undefined}
+                          >
                             {resCount}
                           </Badge>
                           {resCount > 0 && (
@@ -394,12 +402,7 @@ export default function PeopleManagement({
       </Card>
 
       {mergeState && (
-        <Modal
-          show
-          onHide={() => setMergeState(null)}
-          centered
-          aria-labelledby="merge-modal-title"
-        >
+        <Modal show onHide={() => setMergeState(null)} centered aria-labelledby="merge-modal-title">
           <Modal.Header closeButton className="bg-dark text-light border-secondary">
             <Modal.Title id="merge-modal-title">
               <i className="bi bi-person-fill-gear me-2" aria-hidden="true" />
@@ -416,14 +419,14 @@ export default function PeopleManagement({
               const person = mergeState[role];
               const resCount = registrationCountByPersonId[person.id] ?? 0;
               const label =
-                role === "canonical"
-                  ? m.admin_people_merge_into()
-                  : m.admin_people_merge_discard();
+                role === "canonical" ? m.admin_people_merge_into() : m.admin_people_merge_discard();
               const variant = role === "canonical" ? "success" : "danger";
 
               return (
                 <Card key={role} bg="dark" border={variant} className="mb-3">
-                  <Card.Header className={`border-${variant} text-${variant} small fw-semibold d-flex justify-content-between`}>
+                  <Card.Header
+                    className={`border-${variant} text-${variant} small fw-semibold d-flex justify-content-between`}
+                  >
                     <span>{label}</span>
                     <Button
                       size="sm"
@@ -431,7 +434,10 @@ export default function PeopleManagement({
                       aria-label={m.admin_people_merge_swap_label()}
                       title={m.admin_people_merge_swap_label()}
                       onClick={() =>
-                        setMergeState({ canonical: mergeState.duplicate, duplicate: mergeState.canonical })
+                        setMergeState({
+                          canonical: mergeState.duplicate,
+                          duplicate: mergeState.canonical,
+                        })
                       }
                     >
                       <i className="bi bi-arrow-left-right" aria-hidden="true" />
@@ -442,7 +448,10 @@ export default function PeopleManagement({
                     <div className="text-secondary">{person.email}</div>
                     {person.phone && <div className="text-secondary">{person.phone}</div>}
                     <div className="mt-1">
-                      <Badge bg={resCount > 0 ? "warning" : "secondary"} text={resCount > 0 ? "dark" : undefined}>
+                      <Badge
+                        bg={resCount > 0 ? "warning" : "secondary"}
+                        text={resCount > 0 ? "dark" : undefined}
+                      >
                         {resCount} {m.admin_people_registrations_count()}
                       </Badge>
                       {person.roles.map((r) => (
@@ -517,12 +526,7 @@ export default function PeopleManagement({
 
       {/* Person registrations modal */}
       {viewRegistrationsPerson && (
-        <Modal
-          show
-          onHide={closePersonRegistrations}
-          centered
-          data-bs-theme="dark"
-        >
+        <Modal show onHide={closePersonRegistrations} centered data-bs-theme="dark">
           <Modal.Header closeButton className="bg-dark border-secondary">
             <Modal.Title className="text-warning fs-6">
               <i className="bi bi-calendar-check me-2" aria-hidden="true" />
@@ -540,76 +544,76 @@ export default function PeopleManagement({
                 {m.admin_people_registrations_load_error()}
               </Alert>
             )}
-            {!loadingPersonRegistrations && !personRegistrationsError && personRegistrations.length === 0 && (
-              <p className="text-secondary text-center py-4 mb-0">
-                {m.admin_people_registrations_empty()}
-              </p>
-            )}
-            {!loadingPersonRegistrations && !personRegistrationsError && personRegistrations.length > 0 && (
-              <ListGroup variant="flush">
-                {personRegistrations.map((r) => (
-                  <ListGroup.Item key={r.id} className="bg-dark border-secondary text-light py-2">
-                    <div className="d-flex justify-content-between align-items-start gap-2">
-                      <div>
-                        <div className="fw-semibold small">{r.eventTitle}</div>
-                        <div className="text-secondary small">
-                          <i className="bi bi-people me-1" aria-hidden="true" />
-                          {r.guestCount}
+            {!loadingPersonRegistrations &&
+              !personRegistrationsError &&
+              personRegistrations.length === 0 && (
+                <p className="text-secondary text-center py-4 mb-0">
+                  {m.admin_people_registrations_empty()}
+                </p>
+              )}
+            {!loadingPersonRegistrations &&
+              !personRegistrationsError &&
+              personRegistrations.length > 0 && (
+                <ListGroup variant="flush">
+                  {personRegistrations.map((r) => (
+                    <ListGroup.Item key={r.id} className="bg-dark border-secondary text-light py-2">
+                      <div className="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                          <div className="fw-semibold small">{r.eventTitle}</div>
+                          <div className="text-secondary small">
+                            <i className="bi bi-people me-1" aria-hidden="true" />
+                            {r.guestCount}
+                          </div>
+                        </div>
+                        <div className="d-flex gap-1 flex-wrap justify-content-end">
+                          <Badge
+                            bg={
+                              r.status === "confirmed"
+                                ? "success"
+                                : r.status === "cancelled"
+                                  ? "danger"
+                                  : "warning"
+                            }
+                          >
+                            {r.status === "confirmed"
+                              ? m.admin_status_confirmed()
+                              : r.status === "cancelled"
+                                ? m.admin_status_cancelled()
+                                : m.admin_status_pending()}
+                          </Badge>
+                          <Badge
+                            bg={
+                              r.paymentStatus === "paid"
+                                ? "success"
+                                : r.paymentStatus === "partial"
+                                  ? "warning"
+                                  : "secondary"
+                            }
+                          >
+                            {r.paymentStatus === "paid"
+                              ? m.admin_payment_paid()
+                              : r.paymentStatus === "partial"
+                                ? m.admin_payment_partial()
+                                : m.admin_payment_unpaid()}
+                          </Badge>
+                          {r.checkedIn && (
+                            <Badge bg="success">
+                              <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                              {m.admin_checked_in()}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="d-flex gap-1 flex-wrap justify-content-end">
-                        <Badge
-                          bg={
-                            r.status === "confirmed"
-                              ? "success"
-                              : r.status === "cancelled"
-                                ? "danger"
-                                : "warning"
-                          }
-                        >
-                          {r.status === "confirmed"
-                            ? m.admin_status_confirmed()
-                            : r.status === "cancelled"
-                              ? m.admin_status_cancelled()
-                              : m.admin_status_pending()}
-                        </Badge>
-                        <Badge
-                          bg={
-                            r.paymentStatus === "paid"
-                              ? "success"
-                              : r.paymentStatus === "partial"
-                                ? "warning"
-                                : "secondary"
-                          }
-                        >
-                          {r.paymentStatus === "paid"
-                            ? m.admin_payment_paid()
-                            : r.paymentStatus === "partial"
-                              ? m.admin_payment_partial()
-                              : m.admin_payment_unpaid()}
-                        </Badge>
-                        {r.checkedIn && (
-                          <Badge bg="success">
-                            <i className="bi bi-check2-circle me-1" aria-hidden="true" />
-                            {m.admin_checked_in()}
-                          </Badge>
-                        )}
+                      <div className="text-secondary" style={{ fontSize: "0.7rem" }}>
+                        {new Date(r.createdAt).toLocaleDateString()}
                       </div>
-                    </div>
-                    <div className="text-secondary" style={{ fontSize: "0.7rem" }}>
-                      {new Date(r.createdAt).toLocaleDateString()}
-                    </div>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            )}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              )}
           </Modal.Body>
           <Modal.Footer className="bg-dark border-secondary">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={closePersonRegistrations}
-            >
+            <Button variant="outline-secondary" size="sm" onClick={closePersonRegistrations}>
               {m.close()}
             </Button>
           </Modal.Footer>

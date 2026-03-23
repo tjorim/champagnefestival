@@ -14,16 +14,16 @@ The dev server proxies `/api/*` to `http://localhost:8000` (backend).
 
 ## Available scripts
 
-| Command | Description |
-|---|---|
-| `pnpm dev` | Start Vite dev server |
-| `pnpm build` | Production build → `dist/` |
-| `pnpm preview` | Preview the production build locally |
-| `pnpm lint` | Run oxlint |
-| `pnpm format` | Format with Prettier |
-| `pnpm typecheck` | TypeScript check (no emit) |
-| `pnpm test` | Run tests with Vitest |
-| `pnpm test:ui` | Vitest with browser UI |
+| Command                  | Description                                        |
+| ------------------------ | -------------------------------------------------- |
+| `pnpm dev`               | Start Vite dev server                              |
+| `pnpm build`             | Production build → `dist/`                         |
+| `pnpm preview`           | Preview the production build locally               |
+| `pnpm lint`              | Run oxlint                                         |
+| `pnpm format`            | Format with Prettier                               |
+| `pnpm typecheck`         | TypeScript check (no emit)                         |
+| `pnpm test`              | Run tests with Vitest                              |
+| `pnpm test:ui`           | Vitest with browser UI                             |
 | `pnpm paraglide:compile` | Regenerate i18n message functions from `messages/` |
 
 ## Project structure
@@ -53,7 +53,7 @@ Use generated message functions in components:
 
 ```tsx
 import * as m from "../paraglide/messages.js";
-<h1>{m.welcome_title()}</h1>
+<h1>{m.welcome_title()}</h1>;
 ```
 
 ## Code style guidelines

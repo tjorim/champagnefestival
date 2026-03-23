@@ -26,12 +26,7 @@ export interface MemberFormData {
   active: boolean;
 }
 
-export default function MemberFormModal({
-  show,
-  member,
-  onSave,
-  onHide,
-}: MemberFormModalProps) {
+export default function MemberFormModal({ show, member, onSave, onHide }: MemberFormModalProps) {
   const isEdit = member != null;
 
   const [name, setName] = useState("");
@@ -176,7 +171,9 @@ export default function MemberFormModal({
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="member-address">
-            <Form.Label className="text-secondary small">{m.admin_people_address_label()}</Form.Label>
+            <Form.Label className="text-secondary small">
+              {m.admin_people_address_label()}
+            </Form.Label>
             <Form.Control
               type="text"
               value={address}

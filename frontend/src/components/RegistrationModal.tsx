@@ -8,10 +8,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/registration";
 import type { RegistrationFormData, RegistrationFormErrors, OrderItem } from "@/types/registration";
-import {
-  RegistrationSubmitError,
-  submitRegistration,
-} from "@/utils/publicRegistrationApi";
+import { RegistrationSubmitError, submitRegistration } from "@/utils/publicRegistrationApi";
 
 interface RegistrationModalProps {
   show: boolean;

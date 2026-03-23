@@ -41,7 +41,10 @@ export default function CheckInPage() {
       setSuccess(false);
       setAlreadyCheckedIn(false);
     },
-    onSuccess: ({ registration: updatedRegistration, alreadyCheckedIn: mutationAlreadyCheckedIn }) => {
+    onSuccess: ({
+      registration: updatedRegistration,
+      alreadyCheckedIn: mutationAlreadyCheckedIn,
+    }) => {
       queryClient.setQueryData(checkInQueryKey, updatedRegistration);
       setSuccess(true);
       setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
@@ -55,12 +58,11 @@ export default function CheckInPage() {
   const isLoading = registrationQuery.isPending;
   const isCheckingIn = checkInMutation.isPending;
   const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
-  const mutationError =
-    checkInMutation.isError
-      ? checkInMutation.error instanceof CheckInError
-        ? checkInMutation.error.message
-        : m.checkin_error()
-      : "";
+  const mutationError = checkInMutation.isError
+    ? checkInMutation.error instanceof CheckInError
+      ? checkInMutation.error.message
+      : m.checkin_error()
+    : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
 
   const handleCheckIn = useCallback(() => {

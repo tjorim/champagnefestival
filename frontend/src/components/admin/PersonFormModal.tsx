@@ -71,12 +71,7 @@ function roleLabel(role: string): string {
   }
 }
 
-export default function PersonFormModal({
-  show,
-  person,
-  onSave,
-  onHide,
-}: PersonFormModalProps) {
+export default function PersonFormModal({ show, person, onSave, onHide }: PersonFormModalProps) {
   const isEdit = person != null;
 
   const [name, setName] = useState("");
@@ -149,8 +144,8 @@ export default function PersonFormModal({
         err instanceof Error
           ? err.message
           : isEdit
-          ? m.admin_people_error_update()
-          : m.admin_people_error_create(),
+            ? m.admin_people_error_update()
+            : m.admin_people_error_create(),
       );
     } finally {
       setSaving(false);
@@ -159,9 +154,7 @@ export default function PersonFormModal({
 
   function toggleRole(role: string) {
     const current = parseRoles(rolesInput);
-    const next = current.includes(role)
-      ? current.filter((r) => r !== role)
-      : [...current, role];
+    const next = current.includes(role) ? current.filter((r) => r !== role) : [...current, role];
     setRolesInput(next.join(", "));
   }
 
@@ -190,9 +183,7 @@ export default function PersonFormModal({
           )}
 
           <Form.Group className="mb-3" controlId="person-name">
-            <Form.Label className="text-secondary small">
-              {m.registration_name()} *
-            </Form.Label>
+            <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <Form.Control
               type="text"
               value={name}
@@ -206,9 +197,7 @@ export default function PersonFormModal({
           <Row className="mb-3">
             <Col xs={12} md={6}>
               <Form.Group controlId="person-email">
-                <Form.Label className="text-secondary small">
-                  {m.registration_email()}
-                </Form.Label>
+                <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
                 <Form.Control
                   type="email"
                   value={email}
@@ -220,9 +209,7 @@ export default function PersonFormModal({
             </Col>
             <Col xs={12} md={6}>
               <Form.Group controlId="person-phone">
-                <Form.Label className="text-secondary small">
-                  {m.registration_phone()}
-                </Form.Label>
+                <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
                 <Form.Control
                   type="tel"
                   value={phone}
@@ -261,9 +248,7 @@ export default function PersonFormModal({
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">
-              {m.admin_people_roles_label()}
-            </Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_people_roles_label()}</Form.Label>
             <div className="d-flex flex-wrap gap-2 mb-2">
               {KNOWN_ROLES.map((role) => (
                 <Button
@@ -287,9 +272,7 @@ export default function PersonFormModal({
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="person-notes">
-            <Form.Label className="text-secondary small">
-              {m.admin_notes()}
-            </Form.Label>
+            <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
             <Form.Control
               as="textarea"
               rows={2}
@@ -314,12 +297,7 @@ export default function PersonFormModal({
           <Button variant="outline-secondary" size="sm" onClick={onHide}>
             {m.admin_action_cancel()}
           </Button>
-          <Button
-            type="submit"
-            variant="warning"
-            size="sm"
-            disabled={saving || !name.trim()}
-          >
+          <Button type="submit" variant="warning" size="sm" disabled={saving || !name.trim()}>
             {saving ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (

@@ -392,7 +392,9 @@ function RoomCanvas({
   );
 
   const handleDragEnd = useCallback(
-    (event: Parameters<NonNullable<React.ComponentProps<typeof DragDropProvider>["onDragEnd"]>>[0]) => {
+    (
+      event: Parameters<NonNullable<React.ComponentProps<typeof DragDropProvider>["onDragEnd"]>>[0],
+    ) => {
       const { operation, canceled } = event;
       if (canceled || !operation.source) return;
 
@@ -974,7 +976,9 @@ export default function LayoutEditor({
                   <Button
                     variant="outline-secondary"
                     size="sm"
-                    onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)}
+                    onClick={() =>
+                      onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)
+                    }
                     title={m.admin_layout_rotate_ccw()}
                     aria-label={m.admin_layout_rotate_ccw()}
                   >
@@ -989,7 +993,9 @@ export default function LayoutEditor({
                   <Button
                     variant="outline-secondary"
                     size="sm"
-                    onClick={() => onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)}
+                    onClick={() =>
+                      onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)
+                    }
                     title={m.admin_layout_rotate_cw()}
                     aria-label={m.admin_layout_rotate_cw()}
                   >

@@ -13,7 +13,14 @@ export interface Edition {
   externalContactName?: string;
   externalContactEmail?: string;
   dates: string[];
-  venue: { id: string; name: string; city: string; active: boolean; address?: string; country?: string };
+  venue: {
+    id: string;
+    name: string;
+    city: string;
+    active: boolean;
+    address?: string;
+    country?: string;
+  };
   events: Event[];
   producers?: { id: number; name: string; image: string; website: string }[];
   sponsors?: { id: number; name: string; image: string; website: string }[];
@@ -43,23 +50,29 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
     dates: Array.isArray(data.dates)
       ? data.dates.filter((value): value is string => typeof value === "string")
       : [],
-    venue: typeof data.venue === "object" && data.venue !== null
-      ? {
-          id: String((data.venue as Record<string, unknown>).id ?? ""),
-          name: String((data.venue as Record<string, unknown>).name ?? ""),
-          city: String((data.venue as Record<string, unknown>).city ?? ""),
-          active: (data.venue as Record<string, unknown>).active !== false,
-          address: typeof (data.venue as Record<string, unknown>).address === "string"
-            ? (data.venue as Record<string, unknown>).address as string
-            : undefined,
-          country: typeof (data.venue as Record<string, unknown>).country === "string"
-            ? (data.venue as Record<string, unknown>).country as string
-            : undefined,
-        }
-      : { id: "", name: "", city: "", active: true },
+    venue:
+      typeof data.venue === "object" && data.venue !== null
+        ? {
+            id: String((data.venue as Record<string, unknown>).id ?? ""),
+            name: String((data.venue as Record<string, unknown>).name ?? ""),
+            city: String((data.venue as Record<string, unknown>).city ?? ""),
+            active: (data.venue as Record<string, unknown>).active !== false,
+            address:
+              typeof (data.venue as Record<string, unknown>).address === "string"
+                ? ((data.venue as Record<string, unknown>).address as string)
+                : undefined,
+            country:
+              typeof (data.venue as Record<string, unknown>).country === "string"
+                ? ((data.venue as Record<string, unknown>).country as string)
+                : undefined,
+          }
+        : { id: "", name: "", city: "", active: true },
     events: Array.isArray(data.events)
       ? data.events
-          .filter((event): event is Record<string, unknown> => typeof event === "object" && event !== null)
+          .filter(
+            (event): event is Record<string, unknown> =>
+              typeof event === "object" && event !== null,
+          )
           .map(apiToEvent)
       : [],
     producers: Array.isArray(data.producers)

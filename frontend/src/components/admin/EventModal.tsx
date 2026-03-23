@@ -32,7 +32,10 @@ const EMPTY_FORM: EventFormData = {
 export default function EventModal({ show, edition, initial, onSave, onHide }: EventModalProps) {
   const [formData, setFormData] = useState<EventFormData>(EMPTY_FORM);
   const isFestival = edition.editionType === "festival";
-  const derivedStandaloneDate = useMemo(() => edition.dates[0] ?? initial?.date ?? "", [edition.dates, initial?.date]);
+  const derivedStandaloneDate = useMemo(
+    () => edition.dates[0] ?? initial?.date ?? "",
+    [edition.dates, initial?.date],
+  );
 
   useEffect(() => {
     if (!show) return;
@@ -55,7 +58,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
         : {
             ...EMPTY_FORM,
             editionId: edition.id,
-            date: isFestival ? edition.dates[0] ?? "" : derivedStandaloneDate,
+            date: isFestival ? (edition.dates[0] ?? "") : derivedStandaloneDate,
           },
     );
   }, [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival, show]);
@@ -64,7 +67,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
-  const effectiveDate = isFestival ? formData.date : (formData.date || derivedStandaloneDate);
+  const effectiveDate = isFestival ? formData.date : formData.date || derivedStandaloneDate;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,18 +81,38 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
   return (
     <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">{isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}</Modal.Title>
+        <Modal.Title className="text-warning fs-6">
+          {isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}
+        </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="bg-dark">
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group controlId="event-title" style={{ minWidth: "240px", flex: "2 1 240px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_title()}</Form.Label>
-              <Form.Control size="sm" value={formData.title} onChange={(e) => updateField("title", e.target.value)} className="bg-dark text-light border-secondary" required autoFocus />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_title()}
+              </Form.Label>
+              <Form.Control
+                size="sm"
+                value={formData.title}
+                onChange={(e) => updateField("title", e.target.value)}
+                className="bg-dark text-light border-secondary"
+                required
+                autoFocus
+              />
             </Form.Group>
             <Form.Group controlId="event-category" style={{ minWidth: "160px", flex: "1 1 160px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_category()}</Form.Label>
-              <Form.Control size="sm" value={formData.category} onChange={(e) => updateField("category", e.target.value)} className="bg-dark text-light border-secondary" placeholder={m.admin_event_category_placeholder()} required />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_category()}
+              </Form.Label>
+              <Form.Control
+                size="sm"
+                value={formData.category}
+                onChange={(e) => updateField("category", e.target.value)}
+                className="bg-dark text-light border-secondary"
+                placeholder={m.admin_event_category_placeholder()}
+                required
+              />
             </Form.Group>
           </div>
 
@@ -107,29 +130,80 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               />
             </Form.Group>
             <Form.Group controlId="event-start-time" style={{ maxWidth: "140px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_start_time()}</Form.Label>
-              <Form.Control type="time" size="sm" value={formData.startTime} onChange={(e) => updateField("startTime", e.target.value)} className="bg-dark text-light border-secondary" required />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_start_time()}
+              </Form.Label>
+              <Form.Control
+                type="time"
+                size="sm"
+                value={formData.startTime}
+                onChange={(e) => updateField("startTime", e.target.value)}
+                className="bg-dark text-light border-secondary"
+                required
+              />
             </Form.Group>
             <Form.Group controlId="event-end-time" style={{ maxWidth: "140px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_event_end_time()}</Form.Label>
-              <Form.Control type="time" size="sm" value={formData.endTime} onChange={(e) => updateField("endTime", e.target.value)} className="bg-dark text-light border-secondary" />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_event_end_time()}
+              </Form.Label>
+              <Form.Control
+                type="time"
+                size="sm"
+                value={formData.endTime}
+                onChange={(e) => updateField("endTime", e.target.value)}
+                className="bg-dark text-light border-secondary"
+              />
             </Form.Group>
             <Form.Group controlId="event-max-capacity" style={{ maxWidth: "160px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_event_max_capacity()}</Form.Label>
-              <Form.Control type="number" min={1} size="sm" value={formData.maxCapacity} onChange={(e) => updateField("maxCapacity", e.target.value)} className="bg-dark text-light border-secondary" disabled={!formData.registrationRequired} />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_event_max_capacity()}
+              </Form.Label>
+              <Form.Control
+                type="number"
+                min={1}
+                size="sm"
+                value={formData.maxCapacity}
+                onChange={(e) => updateField("maxCapacity", e.target.value)}
+                className="bg-dark text-light border-secondary"
+                disabled={!formData.registrationRequired}
+              />
             </Form.Group>
           </div>
 
           <Form.Group controlId="event-description" className="mb-3">
-            <Form.Label className="text-secondary small mb-1">{m.admin_content_event_description()}</Form.Label>
-            <Form.Control as="textarea" size="sm" rows={2} value={formData.description} onChange={(e) => updateField("description", e.target.value)} className="bg-dark text-light border-secondary" />
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_content_event_description()}
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              size="sm"
+              rows={2}
+              value={formData.description}
+              onChange={(e) => updateField("description", e.target.value)}
+              className="bg-dark text-light border-secondary"
+            />
           </Form.Group>
 
-          <Form.Check type="checkbox" id="modal-event-registration" label={m.admin_content_event_requires_registration()} checked={formData.registrationRequired} onChange={(e) => updateField("registrationRequired", e.target.checked)} className="text-light mb-2" />
+          <Form.Check
+            type="checkbox"
+            id="modal-event-registration"
+            label={m.admin_content_event_requires_registration()}
+            checked={formData.registrationRequired}
+            onChange={(e) => updateField("registrationRequired", e.target.checked)}
+            className="text-light mb-2"
+          />
           {formData.registrationRequired && (
             <Form.Group className="mb-2" style={{ maxWidth: "280px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_content_edition_registration_opens()}</Form.Label>
-              <Form.Control type="datetime-local" size="sm" value={formData.registrationsOpenFrom} onChange={(e) => updateField("registrationsOpenFrom", e.target.value)} className="bg-dark text-light border-secondary" />
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_content_edition_registration_opens()}
+              </Form.Label>
+              <Form.Control
+                type="datetime-local"
+                size="sm"
+                value={formData.registrationsOpenFrom}
+                onChange={(e) => updateField("registrationsOpenFrom", e.target.value)}
+                className="bg-dark text-light border-secondary"
+              />
             </Form.Group>
           )}
 
@@ -138,8 +212,13 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           )}
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>{m.close()}</Button>
-          <Button type="submit" variant="warning" size="sm"><i className="bi bi-floppy me-1" aria-hidden="true" />{m.admin_save()}</Button>
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            {m.close()}
+          </Button>
+          <Button type="submit" variant="warning" size="sm">
+            <i className="bi bi-floppy me-1" aria-hidden="true" />
+            {m.admin_save()}
+          </Button>
         </Modal.Footer>
       </Form>
     </Modal>
