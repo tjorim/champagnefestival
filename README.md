@@ -17,7 +17,7 @@ champagnefestival/
 | Tool | Purpose | Install |
 |---|---|---|
 | Node.js 24+ + pnpm | Frontend | [nodejs.org](https://nodejs.org) / [pnpm.io](https://pnpm.io) |
-| Python 3.11+ + uv | Backend | [uv install](https://docs.astral.sh/uv/getting-started/installation/) |
+| Python 3.13+ + uv | Backend | [uv install](https://docs.astral.sh/uv/getting-started/installation/) |
 | Docker (optional) | Containerised backend | [docs.docker.com](https://docs.docker.com) |
 
 ## Quick start
