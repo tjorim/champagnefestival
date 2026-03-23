@@ -1911,7 +1911,7 @@ async def test_people_crud_roles_and_filters(client):
     assert r.status_code == 201
     assert r.json()["person_id"] != person_id
 
-    r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
+    r = await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert (
         len(r.json()) == 0
@@ -2015,7 +2015,7 @@ async def test_person_reservations_include_event_payload(client):
     )
     assert reservation.status_code == 201
 
-    r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
+    r = await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)
 
     assert r.status_code == 200
     assert len(r.json()) == 1

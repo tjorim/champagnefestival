@@ -246,8 +246,8 @@ async def update_person(
     return person_to_dict(person)
 
 
-@router.get("/{person_id}/reservations")
-async def list_person_reservations(
+@router.get("/{person_id}/registrations")
+async def list_person_registrations(
     person_id: str,
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
