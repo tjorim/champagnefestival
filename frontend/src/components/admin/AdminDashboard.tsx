@@ -145,6 +145,33 @@ async function fetchVoidOrThrow(
   }
 }
 
+async function fetchArrayOrThrow<T>(
+  url: string,
+  options: RequestInit,
+  fallbackMessage: string,
+  mapper: (item: Record<string, unknown>) => T,
+): Promise<T[]> {
+  const response = await fetch(url, options);
+  if (response.status === 401) {
+    throw new Error("unauthorized");
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload) ? payload.map((item) => mapper(item as Record<string, unknown>)) : [];
+}
+
+async function fetchStatus(
+  url: string,
+  options: RequestInit,
+): Promise<number> {
+  const response = await fetch(url, options);
+  return response.status;
+}
+
 function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): Person {
   const roles = new Set(existing?.roles ?? volunteer.roles);
   roles.add("volunteer");
@@ -249,33 +276,18 @@ function createEmptyDashboardData(): AdminDashboardData {
 async function loadMembers(
   authHeaders: () => Record<string, string>,
 ): Promise<Person[]> {
-  const response = await fetch("/api/members", { headers: authHeaders() });
-  if (response.status === 401) {
-    throw new Error("unauthorized");
-  }
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_error_load_data());
-  }
-
-  const payload = await response.json();
-  return Array.isArray(payload) ? payload.map(apiToPerson) : [];
+  return fetchArrayOrThrow("/api/members", { headers: authHeaders() }, m.admin_error_load_data(), apiToPerson);
 }
 
 async function loadVolunteers(
   authHeaders: () => Record<string, string>,
 ): Promise<Person[]> {
-  const response = await fetch("/api/volunteers", { headers: authHeaders() });
-  if (response.status === 401) {
-    throw new Error("unauthorized");
-  }
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_error_load_data());
-  }
-
-  const payload = await response.json();
-  return Array.isArray(payload) ? payload.map(apiToPerson) : [];
+  return fetchArrayOrThrow(
+    "/api/volunteers",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiToPerson,
+  );
 }
 
 async function fetchAdminDashboardData(
@@ -825,21 +837,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const validateToken = useCallback(
     async (tokenToValidate: string): Promise<"valid" | "invalid" | "transientError"> => {
       try {
-        const response = await fetch("/api/registrations", {
+        const status = await fetchStatus("/api/registrations", {
           headers: { Authorization: `Bearer ${tokenToValidate}` },
         });
 
-        if (response.ok) {
+        if (status >= 200 && status < 300) {
           return "valid";
         }
 
         // Auth failures: 401 Unauthorized, 403 Forbidden
-        if (response.status === 401 || response.status === 403) {
+        if (status === 401 || status === 403) {
           return "invalid";
         }
 
         // Server errors (5xx) are transient
-        if (response.status >= 500) {
+        if (status >= 500) {
           return "transientError";
         }
 
