@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -46,38 +47,50 @@ interface ItemModalProps {
   onHide: () => void;
 }
 
+interface ItemFormFields {
+  name: string;
+  image: string;
+  website: string;
+  type: string;
+  contactOption: SingleValue<PersonOption>;
+}
+
 export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
-  const [name, setName] = useState("");
-  const [image, setImage] = useState("");
-  const [website, setWebsite] = useState("");
-  const [type, setType] = useState<string>("vendor");
-  const [contactOption, setContactOption] = useState<SingleValue<PersonOption>>(null);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
+  const { register, handleSubmit, reset, control } = useForm<ItemFormFields>({
+    defaultValues: {
+      name: "",
+      image: "",
+      website: "",
+      type: "vendor",
+      contactOption: null,
+    },
+  });
+
   useEffect(() => {
-    if (show) {
-      setName(initial?.name ?? "");
-      setImage(initial?.image ?? "");
-      setWebsite(initial?.website ?? "");
-      setType(initial?.type ?? "vendor");
-      const cp = initial?.contactPerson;
-      setContactOption(
-        cp
-          ? {
-              value: cp.id,
-              label: cp.name,
-              sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
-              name: cp.name,
-              email: cp.email ?? "",
-              phone: cp.phone ?? "",
-            }
-          : null,
-      );
-      setPersonQuery("");
-      setDebouncedPersonQuery("");
-    }
-  }, [show, initial]);
+    if (!show) return;
+    const cp = initial?.contactPerson;
+    reset({
+      name: initial?.name ?? "",
+      image: initial?.image ?? "",
+      website: initial?.website ?? "",
+      type: initial?.type ?? "vendor",
+      contactOption: cp
+        ? {
+            value: cp.id,
+            label: cp.name,
+            sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
+            name: cp.name,
+            email: cp.email ?? "",
+            phone: cp.phone ?? "",
+          }
+        : null,
+    });
+    setPersonQuery("");
+    setDebouncedPersonQuery("");
+  }, [show, initial, reset]);
 
   useEffect(() => {
     if (!show) return;
@@ -98,23 +111,22 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const personOptions = personOptionsQuery.data ?? [];
   const loadingPersons = personOptionsQuery.isFetching;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !image.trim()) return;
+  function onSubmit(data: ItemFormFields) {
+    if (!data.name.trim() || !data.image.trim()) return;
     onSave({
       id: initial?.id ?? Date.now(),
-      name: name.trim(),
-      image: image.trim(),
-      website: website.trim(),
+      name: data.name.trim(),
+      image: data.image.trim(),
+      website: data.website.trim(),
       active: initial?.active ?? true,
-      type,
-      contactPersonId: contactOption?.value ?? null,
-      contactPerson: contactOption
+      type: data.type,
+      contactPersonId: data.contactOption?.value ?? null,
+      contactPerson: data.contactOption
         ? {
-            id: contactOption.value,
-            name: contactOption.label,
-            email: contactOption.email,
-            phone: contactOption.phone,
+            id: data.contactOption.value,
+            name: data.contactOption.label,
+            email: data.contactOption.email,
+            phone: data.contactOption.phone,
           }
         : null,
     });
@@ -127,18 +139,17 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit(onSubmit)} noValidate>
         <Modal.Body className="bg-dark">
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
               {m.admin_content_name_placeholder()}
             </Form.Label>
             <Form.Control
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               className="bg-dark text-light border-secondary"
               required
               autoFocus
+              {...register("name", { required: true })}
             />
           </Form.Group>
           <Form.Group className="mb-3">
@@ -146,28 +157,25 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               {m.admin_content_image_url_placeholder()}
             </Form.Label>
             <Form.Control
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
               className="bg-dark text-light border-secondary"
               required
+              {...register("image", { required: true })}
             />
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
             <Form.Control
               type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
               className="bg-dark text-light border-secondary"
               placeholder="https://…"
+              {...register("website")}
             />
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
             <Form.Select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
               className="bg-dark text-light border-secondary"
+              {...register("type")}
             >
               <option value="vendor">{m.admin_item_vendor()}</option>
               <option value="producer">{m.admin_item_producer()}</option>
@@ -178,23 +186,29 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             <Form.Label className="text-secondary small">
               {m.admin_item_contact_person()}
             </Form.Label>
-            <Select<PersonOption, false>
-              isClearable
-              options={personOptions}
-              value={contactOption}
-              onChange={setContactOption}
-              onInputChange={(v) => setPersonQuery(v)}
-              inputValue={personQuery}
-              isLoading={loadingPersons}
-              filterOption={null}
-              styles={darkSelectStyles}
-              placeholder={m.admin_search_person_placeholder()}
-              classNamePrefix="rs"
-              formatOptionLabel={(opt) => (
-                <div>
-                  <div>{opt.label}</div>
-                  {opt.sub && <small className="text-secondary">{opt.sub}</small>}
-                </div>
+            <Controller
+              name="contactOption"
+              control={control}
+              render={({ field: { value, onChange } }) => (
+                <Select<PersonOption, false>
+                  isClearable
+                  options={personOptions}
+                  value={value}
+                  onChange={onChange}
+                  onInputChange={(v) => setPersonQuery(v)}
+                  inputValue={personQuery}
+                  isLoading={loadingPersons}
+                  filterOption={null}
+                  styles={darkSelectStyles}
+                  placeholder={m.admin_search_person_placeholder()}
+                  classNamePrefix="rs"
+                  formatOptionLabel={(opt) => (
+                    <div>
+                      <div>{opt.label}</div>
+                      {opt.sub && <small className="text-secondary">{opt.sub}</small>}
+                    </div>
+                  )}
+                />
               )}
             />
           </Form.Group>

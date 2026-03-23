@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -28,59 +29,66 @@ export interface MemberFormData {
 
 export default function MemberFormModal({ show, member, onSave, onHide }: MemberFormModalProps) {
   const isEdit = member != null;
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [clubName, setClubName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [active, setActive] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    control,
+    formState: { isSubmitting },
+  } = useForm<MemberFormData>({
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      clubName: "",
+      notes: "",
+      active: true,
+    },
+  });
 
   useEffect(() => {
     if (!show) return;
-    if (member) {
-      setName(member.name);
-      setEmail(member.email ?? "");
-      setPhone(member.phone ?? "");
-      setAddress(member.address ?? "");
-      setClubName(member.clubName ?? "");
-      setNotes(member.notes ?? "");
-      setActive(member.active);
-    } else {
-      setName("");
-      setEmail("");
-      setPhone("");
-      setAddress("");
-      setClubName("");
-      setNotes("");
-      setActive(true);
-    }
+    reset(
+      member
+        ? {
+            name: member.name,
+            email: member.email ?? "",
+            phone: member.phone ?? "",
+            address: member.address ?? "",
+            clubName: member.clubName ?? "",
+            notes: member.notes ?? "",
+            active: member.active,
+          }
+        : {
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            clubName: "",
+            notes: "",
+            active: true,
+          },
+    );
     setError(null);
-    setSaving(false);
-  }, [show, member]);
+  }, [show, member, reset]);
 
-  useEffect(() => {
-    setError(null);
-  }, [name, email, phone, address, clubName, notes, active]);
+  const nameValue = watch("name");
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    setSaving(true);
+  async function onSubmit(data: MemberFormData) {
     setError(null);
     try {
       await onSave({
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-        clubName: clubName.trim(),
-        notes: notes.trim(),
-        active,
+        name: data.name.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        address: data.address.trim(),
+        clubName: data.clubName.trim(),
+        notes: data.notes.trim(),
+        active: data.active,
       });
       onHide();
     } catch (err) {
@@ -91,8 +99,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             ? m.admin_members_error_update()
             : m.admin_members_error_create(),
       );
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -105,7 +111,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         </Modal.Title>
       </Modal.Header>
 
-      <Form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit(onSubmit)} noValidate>
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -122,11 +128,10 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <Form.Control
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               className="bg-dark text-light border-secondary"
               required
               maxLength={200}
+              {...register("name", { required: true })}
             />
           </Form.Group>
 
@@ -136,10 +141,9 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
                 <Form.Control
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className="bg-dark text-light border-secondary"
                   maxLength={200}
+                  {...register("email")}
                 />
               </Form.Group>
             </Col>
@@ -148,10 +152,9 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
                 <Form.Control
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
                   className="bg-dark text-light border-secondary"
                   maxLength={50}
+                  {...register("phone")}
                 />
               </Form.Group>
             </Col>
@@ -163,10 +166,9 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             </Form.Label>
             <Form.Control
               type="text"
-              value={clubName}
-              onChange={(e) => setClubName(e.target.value)}
               className="bg-dark text-light border-secondary border-warning"
               maxLength={200}
+              {...register("clubName")}
             />
           </Form.Group>
 
@@ -176,10 +178,9 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             </Form.Label>
             <Form.Control
               type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
               className="bg-dark text-light border-secondary"
               maxLength={300}
+              {...register("address")}
             />
           </Form.Group>
 
@@ -188,29 +189,39 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Form.Control
               as="textarea"
               rows={4}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
               className="bg-dark text-light border-secondary"
               maxLength={2000}
+              {...register("notes")}
             />
           </Form.Group>
 
-          <Form.Check
-            type="switch"
-            id="member-active"
-            className="text-secondary"
-            label={m.admin_people_active_label()}
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
+          <Controller
+            name="active"
+            control={control}
+            render={({ field: { value, onChange, ref } }) => (
+              <Form.Check
+                type="switch"
+                id="member-active"
+                className="text-secondary"
+                label={m.admin_people_active_label()}
+                checked={value}
+                onChange={(e) => onChange(e.target.checked)}
+                ref={ref}
+              />
+            )}
           />
         </Modal.Body>
 
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" onClick={onHide} disabled={saving}>
+          <Button variant="outline-secondary" onClick={onHide} disabled={isSubmitting}>
             {m.admin_action_cancel()}
           </Button>
-          <Button variant="warning" type="submit" disabled={saving || !name.trim()}>
-            {saving ? (
+          <Button
+            variant="warning"
+            type="submit"
+            disabled={isSubmitting || !nameValue?.trim()}
+          >
+            {isSubmitting ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
                 {m.admin_save()}

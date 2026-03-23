@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import React, { useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import React, { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
 import { m } from "@/paraglide/messages";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -15,9 +15,8 @@ interface FormData {
   name: string;
   email: string;
   message: string;
-  honeypot?: string; // Anti-spam honeypot field
-  formStartTime: string; // When the form was loaded (to detect bots filling too quickly)
-  recaptchaToken?: string; // Optional reCAPTCHA token obtained via reCAPTCHA API integration (e.g., using grecaptcha.execute)
+  honeypot: string;
+  formStartTime: string;
 }
 
 class ContactSubmissionError extends Error {
@@ -55,16 +54,25 @@ async function submitContactForm(form: FormData): Promise<void> {
  * Contact form component with validation using react-bootstrap components
  */
 const ContactForm: React.FC = () => {
-  const [form, setForm] = useState<FormData>(() => ({
-    name: "",
-    email: "",
-    message: "",
-    honeypot: "",
-    formStartTime: new Date().toISOString(), // Initialize only once
-  }));
+  const formStartTime = useRef(new Date().toISOString());
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    clearErrors,
+    formState: { errors },
+  } = useForm<FormData>({
+    defaultValues: {
+      name: "",
+      email: "",
+      message: "",
+      honeypot: "",
+      formStartTime: formStartTime.current,
+    },
+  });
 
   const submitContactMutation = useMutation({
     mutationFn: submitContactForm,
@@ -73,62 +81,27 @@ const ContactForm: React.FC = () => {
 
   const isSubmitting = submitContactMutation.isPending;
 
-  // Handle form field changes
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-    // Clear error when user starts typing again
-    if (errors[name as keyof FormData]) {
-      setErrors({ ...errors, [name]: null });
-    }
-
-    // Clear general error when user makes any changes
-    if (generalError) {
-      setGeneralError(null);
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setGeneralError(null); // Reset general error on new submission attempt
-
-    // Basic validation
-    // Check if required fields are filled
-    const newErrors: Partial<Record<keyof FormData, string | null>> = {};
-    if (!form.name) newErrors.name = m.contact_errors_name_required();
-    if (!form.email) newErrors.email = m.contact_errors_email_required();
-    else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = m.contact_errors_email_invalid();
-    if (!form.message) newErrors.message = m.contact_errors_message_required();
+  const onSubmit = async (data: FormData) => {
+    setGeneralError(null);
 
     // Anti-spam check: if honeypot is filled, silently "succeed" without sending
-    if (form.honeypot) {
+    if (data.honeypot) {
       console.warn("Honeypot triggered - likely bot submission");
       // Fake success to confuse bots
       setIsSubmitted(true);
       return;
     }
 
-    // Check if there are any validation errors
-    // If there are errors, set them and stop submission
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    // If no errors, proceed with submission
     try {
-      await submitContactMutation.mutateAsync(form);
+      await submitContactMutation.mutateAsync(data);
       setIsSubmitted(true);
-      setForm({
+      reset({
         name: "",
         email: "",
         message: "",
         honeypot: "",
-        formStartTime: form.formStartTime, // Keep original form start time
+        formStartTime: formStartTime.current,
       });
-      setErrors({});
     } catch (error) {
       console.warn("Form submission error:", error);
       if (error instanceof TypeError && error.message.includes("fetch")) {
@@ -149,7 +122,18 @@ const ContactForm: React.FC = () => {
         {isSubmitted ? (
           <Alert variant="success">{m.contact_success_message()}</Alert>
         ) : (
-          <Form onSubmit={handleSubmit} className="my-3" name="contact-form" autoComplete="on">
+          <Form
+            onSubmit={handleSubmit(onSubmit)}
+            onChange={(e: React.ChangeEvent<HTMLFormElement>) => {
+              const name = (e.target as Element).getAttribute("name") as keyof FormData | null;
+              if (name) clearErrors(name);
+              if (generalError) setGeneralError(null);
+            }}
+            className="my-3"
+            name="contact-form"
+            autoComplete="on"
+            noValidate
+          >
             {generalError && (
               <Alert variant="danger" className="d-flex align-items-center">
                 <i className="bi bi-exclamation-circle me-2"></i>
@@ -160,47 +144,48 @@ const ContactForm: React.FC = () => {
             {/* Hidden honeypot field to catch bots - placed early to trap bots */}
             <div className="d-none">
               <Form.Control
-                name="honeypot"
                 type="text"
                 autoComplete="off"
-                value={form.honeypot}
-                onChange={handleChange}
                 tabIndex={-1}
                 aria-hidden="true"
+                {...register("honeypot")}
               />
             </div>
+            <Form.Control type="hidden" {...register("formStartTime")} />
 
             <Form.Group className="mb-3 text-start">
               <Form.Label htmlFor="name">{m.contact_name()}</Form.Label>
               <Form.Control
                 id="name"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
                 placeholder={m.contact_placeholder_name()}
                 disabled={isSubmitting}
                 isInvalid={!!errors.name}
                 autoComplete="name"
                 required
+                {...register("name", { required: m.contact_errors_name_required() })}
               />
-              <Form.Control.Feedback type="invalid">{errors.name}</Form.Control.Feedback>
+              <Form.Control.Feedback type="invalid">{errors.name?.message}</Form.Control.Feedback>
             </Form.Group>
 
             <Form.Group className="mb-3 text-start">
               <Form.Label htmlFor="email">{m.contact_email()}</Form.Label>
               <Form.Control
                 id="email"
-                name="email"
                 type="email"
-                value={form.email}
-                onChange={handleChange}
                 placeholder={m.contact_placeholder_email()}
                 disabled={isSubmitting}
                 isInvalid={!!errors.email}
                 autoComplete="email"
                 required
+                {...register("email", {
+                  required: m.contact_errors_email_required(),
+                  pattern: {
+                    value: /\S+@\S+\.\S+/,
+                    message: m.contact_errors_email_invalid(),
+                  },
+                })}
               />
-              <Form.Control.Feedback type="invalid">{errors.email}</Form.Control.Feedback>
+              <Form.Control.Feedback type="invalid">{errors.email?.message}</Form.Control.Feedback>
             </Form.Group>
 
             <Form.Group className="mb-3 text-start">
@@ -208,17 +193,17 @@ const ContactForm: React.FC = () => {
               <Form.Control
                 as="textarea"
                 id="message"
-                name="message"
-                value={form.message}
-                onChange={handleChange}
                 placeholder={m.contact_placeholder_message()}
                 style={{ minHeight: "120px" }}
                 disabled={isSubmitting}
                 isInvalid={!!errors.message}
                 autoComplete="off"
                 required
+                {...register("message", { required: m.contact_errors_message_required() })}
               />
-              <Form.Control.Feedback type="invalid">{errors.message}</Form.Control.Feedback>
+              <Form.Control.Feedback type="invalid">
+                {errors.message?.message}
+              </Form.Control.Feedback>
             </Form.Group>
 
             <Button

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useForm, Controller } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -30,16 +31,19 @@ const EMPTY_FORM: EventFormData = {
 };
 
 export default function EventModal({ show, edition, initial, onSave, onHide }: EventModalProps) {
-  const [formData, setFormData] = useState<EventFormData>(EMPTY_FORM);
   const isFestival = edition.editionType === "festival";
   const derivedStandaloneDate = useMemo(
     () => edition.dates[0] ?? initial?.date ?? "",
     [edition.dates, initial?.date],
   );
 
+  const { register, handleSubmit, reset, watch, setValue, control } = useForm<EventFormData>({
+    defaultValues: EMPTY_FORM,
+  });
+
   useEffect(() => {
     if (!show) return;
-    setFormData(
+    reset(
       initial
         ? {
             editionId: initial.editionId,
@@ -61,20 +65,24 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             date: isFestival ? (edition.dates[0] ?? "") : derivedStandaloneDate,
           },
     );
-  }, [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival, show]);
+  }, [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival, reset, show]);
 
-  function updateField<K extends keyof EventFormData>(key: K, value: EventFormData[K]) {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  }
+  // Keep standalone date field in sync with derived date
+  useEffect(() => {
+    if (!isFestival && derivedStandaloneDate) {
+      setValue("date", derivedStandaloneDate);
+    }
+  }, [derivedStandaloneDate, isFestival, setValue]);
 
-  const effectiveDate = isFestival ? formData.date : formData.date || derivedStandaloneDate;
+  const dateValue = watch("date");
+  const registrationRequired = watch("registrationRequired");
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!formData.title.trim() || !effectiveDate || !formData.startTime.trim()) return;
+  const effectiveDate = isFestival ? dateValue : dateValue || derivedStandaloneDate;
 
-    onSave({ ...formData, date: effectiveDate });
-  }
+  const onSubmit = (data: EventFormData) => {
+    if (!data.title.trim() || !effectiveDate || !data.startTime.trim()) return;
+    onSave({ ...data, date: effectiveDate });
+  };
 
   const isEdit = !!initial;
 
@@ -85,7 +93,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           {isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit(onSubmit)} noValidate>
         <Modal.Body className="bg-dark">
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group controlId="event-title" style={{ minWidth: "240px", flex: "2 1 240px" }}>
@@ -94,11 +102,10 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <Form.Control
                 size="sm"
-                value={formData.title}
-                onChange={(e) => updateField("title", e.target.value)}
                 className="bg-dark text-light border-secondary"
                 required
                 autoFocus
+                {...register("title", { required: true })}
               />
             </Form.Group>
             <Form.Group controlId="event-category" style={{ minWidth: "160px", flex: "1 1 160px" }}>
@@ -107,11 +114,10 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <Form.Control
                 size="sm"
-                value={formData.category}
-                onChange={(e) => updateField("category", e.target.value)}
                 className="bg-dark text-light border-secondary"
                 placeholder={m.admin_event_category_placeholder()}
                 required
+                {...register("category", { required: true })}
               />
             </Form.Group>
           </div>
@@ -119,14 +125,21 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group controlId="event-date" style={{ maxWidth: "180px" }}>
               <Form.Label className="text-secondary small mb-1">{m.admin_event_date()}</Form.Label>
-              <Form.Control
-                type="date"
-                size="sm"
-                value={effectiveDate}
-                onChange={(e) => updateField("date", e.target.value)}
-                className="bg-dark text-light border-secondary"
-                readOnly={!isFestival && Boolean(derivedStandaloneDate)}
-                required
+              <Controller
+                name="date"
+                control={control}
+                render={({ field }) => (
+                  <Form.Control
+                    type="date"
+                    size="sm"
+                    className="bg-dark text-light border-secondary"
+                    readOnly={!isFestival && Boolean(derivedStandaloneDate)}
+                    required
+                    {...field}
+                    value={effectiveDate}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                )}
               />
             </Form.Group>
             <Form.Group controlId="event-start-time" style={{ maxWidth: "140px" }}>
@@ -136,10 +149,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Form.Control
                 type="time"
                 size="sm"
-                value={formData.startTime}
-                onChange={(e) => updateField("startTime", e.target.value)}
                 className="bg-dark text-light border-secondary"
                 required
+                {...register("startTime", { required: true })}
               />
             </Form.Group>
             <Form.Group controlId="event-end-time" style={{ maxWidth: "140px" }}>
@@ -149,9 +161,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Form.Control
                 type="time"
                 size="sm"
-                value={formData.endTime}
-                onChange={(e) => updateField("endTime", e.target.value)}
                 className="bg-dark text-light border-secondary"
+                {...register("endTime")}
               />
             </Form.Group>
             <Form.Group controlId="event-max-capacity" style={{ maxWidth: "160px" }}>
@@ -162,10 +173,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 type="number"
                 min={1}
                 size="sm"
-                value={formData.maxCapacity}
-                onChange={(e) => updateField("maxCapacity", e.target.value)}
                 className="bg-dark text-light border-secondary"
-                disabled={!formData.registrationRequired}
+                disabled={!registrationRequired}
+                {...register("maxCapacity")}
               />
             </Form.Group>
           </div>
@@ -178,21 +188,27 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               as="textarea"
               size="sm"
               rows={2}
-              value={formData.description}
-              onChange={(e) => updateField("description", e.target.value)}
               className="bg-dark text-light border-secondary"
+              {...register("description")}
             />
           </Form.Group>
 
-          <Form.Check
-            type="checkbox"
-            id="modal-event-registration"
-            label={m.admin_content_event_requires_registration()}
-            checked={formData.registrationRequired}
-            onChange={(e) => updateField("registrationRequired", e.target.checked)}
-            className="text-light mb-2"
+          <Controller
+            name="registrationRequired"
+            control={control}
+            render={({ field: { value, onChange, ref } }) => (
+              <Form.Check
+                type="checkbox"
+                id="modal-event-registration"
+                label={m.admin_content_event_requires_registration()}
+                checked={value}
+                onChange={(e) => onChange(e.target.checked)}
+                ref={ref}
+                className="text-light mb-2"
+              />
+            )}
           />
-          {formData.registrationRequired && (
+          {registrationRequired && (
             <Form.Group className="mb-2" style={{ maxWidth: "280px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_edition_registration_opens()}
@@ -200,9 +216,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Form.Control
                 type="datetime-local"
                 size="sm"
-                value={formData.registrationsOpenFrom}
-                onChange={(e) => updateField("registrationsOpenFrom", e.target.value)}
                 className="bg-dark text-light border-secondary"
+                {...register("registrationsOpenFrom")}
               />
             </Form.Group>
           )}

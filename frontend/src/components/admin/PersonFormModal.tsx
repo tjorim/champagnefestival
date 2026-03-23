@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -22,6 +23,17 @@ export interface PersonFormData {
   phone: string;
   address: string;
   roles: string[];
+  notes: string;
+  clubName: string;
+  active: boolean;
+}
+
+interface PersonFormFields {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  rolesInput: string;
   notes: string;
   clubName: string;
   active: boolean;
@@ -71,72 +83,90 @@ function roleLabel(role: string): string {
   }
 }
 
+function parseRoles(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((r) => canonicalizeRole(r))
+    .filter(Boolean);
+}
+
 export default function PersonFormModal({ show, person, onSave, onHide }: PersonFormModalProps) {
   const isEdit = person != null;
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [rolesInput, setRolesInput] = useState("");
-  const [notes, setNotes] = useState("");
-  const [clubName, setClubName] = useState("");
-  const [active, setActive] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    control,
+    formState: { isSubmitting },
+  } = useForm<PersonFormFields>({
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      rolesInput: "",
+      notes: "",
+      clubName: "",
+      active: true,
+    },
+  });
 
   useEffect(() => {
     if (!show) return;
-    if (person) {
-      setName(person.name);
-      setEmail(person.email ?? "");
-      setPhone(person.phone ?? "");
-      setAddress(person.address ?? "");
-      setRolesInput(person.roles.join(", "));
-      setNotes(person.notes ?? "");
-      setClubName(person.clubName ?? "");
-      setActive(person.active);
-    } else {
-      setName("");
-      setEmail("");
-      setPhone("");
-      setAddress("");
-      setRolesInput("");
-      setNotes("");
-      setClubName("");
-      setActive(true);
-    }
+    reset(
+      person
+        ? {
+            name: person.name,
+            email: person.email ?? "",
+            phone: person.phone ?? "",
+            address: person.address ?? "",
+            rolesInput: person.roles.join(", "),
+            notes: person.notes ?? "",
+            clubName: person.clubName ?? "",
+            active: person.active,
+          }
+        : {
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            rolesInput: "",
+            notes: "",
+            clubName: "",
+            active: true,
+          },
+    );
     setError(null);
-    setSaving(false);
-  }, [show, person]);
+  }, [show, person, reset]);
 
-  // Clear any stale submit error as soon as the user edits any field
-  useEffect(() => {
-    setError(null);
-  }, [name, email, phone, address, clubName, rolesInput, notes, active]);
+  const nameValue = watch("name");
+  const rolesInput = watch("rolesInput") ?? "";
+  const currentRoles = parseRoles(rolesInput);
 
-  function parseRoles(raw: string): string[] {
-    return raw
-      .split(",")
-      .map((r) => canonicalizeRole(r))
-      .filter(Boolean);
+  function toggleRole(role: string) {
+    const next = currentRoles.includes(role)
+      ? currentRoles.filter((r) => r !== role)
+      : [...currentRoles, role];
+    setValue("rolesInput", next.join(", "));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSaving(true);
+  async function onSubmit(data: PersonFormFields) {
+    if (!data.name.trim()) return;
     setError(null);
     try {
       await onSave({
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-        roles: parseRoles(rolesInput),
-        notes: notes.trim(),
-        clubName: clubName.trim(),
-        active,
+        name: data.name.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        address: data.address.trim(),
+        roles: parseRoles(data.rolesInput),
+        notes: data.notes.trim(),
+        clubName: data.clubName.trim(),
+        active: data.active,
       });
       onHide();
     } catch (err) {
@@ -147,18 +177,8 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             ? m.admin_people_error_update()
             : m.admin_people_error_create(),
       );
-    } finally {
-      setSaving(false);
     }
   }
-
-  function toggleRole(role: string) {
-    const current = parseRoles(rolesInput);
-    const next = current.includes(role) ? current.filter((r) => r !== role) : [...current, role];
-    setRolesInput(next.join(", "));
-  }
-
-  const currentRoles = parseRoles(rolesInput);
 
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
@@ -169,7 +189,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
         </Modal.Title>
       </Modal.Header>
 
-      <Form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit(onSubmit)} noValidate>
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -186,11 +206,10 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <Form.Control
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               className="bg-dark text-light border-secondary"
               required
               maxLength={200}
+              {...register("name", { required: true })}
             />
           </Form.Group>
 
@@ -200,10 +219,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
                 <Form.Control
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   className="bg-dark text-light border-secondary"
                   maxLength={200}
+                  {...register("email")}
                 />
               </Form.Group>
             </Col>
@@ -212,10 +230,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
                 <Form.Control
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
                   className="bg-dark text-light border-secondary"
                   maxLength={50}
+                  {...register("phone")}
                 />
               </Form.Group>
             </Col>
@@ -227,10 +244,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             </Form.Label>
             <Form.Control
               type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
               className="bg-dark text-light border-secondary"
               maxLength={300}
+              {...register("address")}
             />
           </Form.Group>
 
@@ -240,10 +256,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             </Form.Label>
             <Form.Control
               type="text"
-              value={clubName}
-              onChange={(e) => setClubName(e.target.value)}
               className="bg-dark text-light border-secondary"
               maxLength={200}
+              {...register("clubName")}
             />
           </Form.Group>
 
@@ -264,10 +279,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             </div>
             <Form.Control
               type="text"
-              value={rolesInput}
-              onChange={(e) => setRolesInput(e.target.value)}
               className="bg-dark text-light border-secondary"
               placeholder={m.admin_people_roles_placeholder()}
+              {...register("rolesInput")}
             />
           </Form.Group>
 
@@ -276,20 +290,26 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             <Form.Control
               as="textarea"
               rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
               className="bg-dark text-light border-secondary"
               maxLength={2000}
+              {...register("notes")}
             />
           </Form.Group>
 
-          <Form.Check
-            id="person-active"
-            type="switch"
-            label={m.admin_people_active_label()}
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-            className="text-secondary small"
+          <Controller
+            name="active"
+            control={control}
+            render={({ field: { value, onChange, ref } }) => (
+              <Form.Check
+                id="person-active"
+                type="switch"
+                label={m.admin_people_active_label()}
+                checked={value}
+                onChange={(e) => onChange(e.target.checked)}
+                ref={ref}
+                className="text-secondary small"
+              />
+            )}
           />
         </Modal.Body>
 
@@ -297,8 +317,13 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
           <Button variant="outline-secondary" size="sm" onClick={onHide}>
             {m.admin_action_cancel()}
           </Button>
-          <Button type="submit" variant="warning" size="sm" disabled={saving || !name.trim()}>
-            {saving ? (
+          <Button
+            type="submit"
+            variant="warning"
+            size="sm"
+            disabled={isSubmitting || !nameValue?.trim()}
+          >
+            {isSubmitting ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />
