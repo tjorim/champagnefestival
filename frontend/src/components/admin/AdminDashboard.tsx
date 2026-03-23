@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -118,6 +118,31 @@ function apiAreaToArea(d: Record<string, unknown>): FloorArea {
     widthM: (d.width_m ?? 1.5) as number,
     lengthM: (d.length_m ?? 1.0) as number,
   };
+}
+
+async function fetchJsonOrThrow<T>(
+  url: string,
+  options: RequestInit,
+  fallbackMessage: string,
+): Promise<T> {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+  }
+  return (await response.json()) as T;
+}
+
+async function fetchVoidOrThrow(
+  url: string,
+  options: RequestInit,
+  fallbackMessage: string,
+): Promise<void> {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+  }
 }
 
 function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): Person {
@@ -434,6 +459,182 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     await dashboardQuery.refetch();
   }, [dashboardQuery]);
 
+  const mergePeopleMutation = useMutation({
+    mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        `/api/people/${canonicalId}/merge/${duplicateId}`,
+        { method: "POST", headers: authHeaders() },
+        m.admin_people_merge_error(),
+      ),
+    retry: false,
+  });
+
+  const createMemberMutation = useMutation({
+    mutationFn: (data: MemberFormData) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        "/api/members",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone,
+            address: data.address,
+            club_name: data.clubName,
+            notes: data.notes,
+            active: data.active,
+          }),
+        },
+        m.admin_members_error_create(),
+      ),
+    retry: false,
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: MemberFormData }) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        `/api/members/${id}`,
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone,
+            address: data.address,
+            club_name: data.clubName,
+            notes: data.notes,
+            active: data.active,
+          }),
+        },
+        m.admin_members_error_update(),
+      ),
+    retry: false,
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchVoidOrThrow(`/api/members/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_members_error_delete()),
+    retry: false,
+  });
+
+  const createPersonMutation = useMutation({
+    mutationFn: (data: PersonFormData) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        "/api/people",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone,
+            address: data.address,
+            roles: data.roles,
+            notes: data.notes,
+            club_name: data.clubName,
+            active: data.active,
+          }),
+        },
+        m.admin_people_error_create(),
+      ),
+    retry: false,
+  });
+
+  const updatePersonMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: PersonFormData }) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        `/api/people/${id}`,
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone,
+            address: data.address,
+            roles: data.roles,
+            notes: data.notes,
+            club_name: data.clubName,
+            active: data.active,
+          }),
+        },
+        m.admin_people_error_update(),
+      ),
+    retry: false,
+  });
+
+  const deletePersonMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchVoidOrThrow(`/api/people/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_person()),
+    retry: false,
+  });
+
+  const createVolunteerMutation = useMutation({
+    mutationFn: (data: VolunteerFormData) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        "/api/volunteers",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            address: data.address,
+            national_register_number: data.nationalRegisterNumber,
+            eid_document_number: data.eidDocumentNumber,
+            active: data.active,
+            help_periods: data.helpPeriods.map((period) => ({
+              first_help_day: period.firstHelpDay,
+              last_help_day: period.lastHelpDay,
+            })),
+          }),
+        },
+        m.admin_volunteers_error_create(),
+      ),
+    retry: false,
+  });
+
+  const updateVolunteerMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: VolunteerFormData }) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        `/api/volunteers/${id}`,
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            address: data.address,
+            national_register_number: data.nationalRegisterNumber,
+            eid_document_number: data.eidDocumentNumber,
+            active: data.active,
+            help_periods: data.helpPeriods.map((period) => ({
+              first_help_day: period.firstHelpDay,
+              last_help_day: period.lastHelpDay,
+            })),
+          }),
+        },
+        m.admin_volunteers_error_update(),
+      ),
+    retry: false,
+  });
+
+  const deleteVolunteerMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchVoidOrThrow(`/api/volunteers/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_volunteers_error_delete()),
+    retry: false,
+  });
+
+  const updateRegistrationMutation = useMutation({
+    mutationFn: ({ id, payload, fallbackMessage }: { id: string; payload: Record<string, unknown>; fallbackMessage: string }) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        `/api/registrations/${id}`,
+        { method: "PUT", headers: authHeaders(), body: JSON.stringify(payload) },
+        fallbackMessage,
+      ),
+    retry: false,
+  });
+
   const validateToken = useCallback(
     async (tokenToValidate: string): Promise<"valid" | "invalid" | "transientError"> => {
       try {
@@ -512,15 +713,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleMergePeople = useCallback(
     async (canonicalId: string, duplicateId: string) => {
-      const response = await fetch(`/api/people/${canonicalId}/merge/${duplicateId}`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error((data as { detail?: string }).detail ?? m.admin_people_merge_error());
-      }
-      const updated = await response.json();
+      const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
       const duplicate = people.find((p) => p.id === duplicateId);
       const existingCanonical = people.find((p) => p.id === canonicalId);
@@ -564,56 +757,22 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
     },
-    [authHeaders, people, updateDashboardField],
+    [mergePeopleMutation, people, updateDashboardField],
   );
 
   const handleCreateMember = useCallback(
     async (data: MemberFormData) => {
-      const response = await fetch("/api/members", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email || null,
-          phone: data.phone,
-          address: data.address,
-          club_name: data.clubName,
-          notes: data.notes,
-          active: data.active,
-        }),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_create());
-      }
-      const d = await response.json();
+      const d = await createMemberMutation.mutateAsync(data);
       const createdMember = apiToPerson(d as Record<string, unknown>);
       updateDashboardField("members", (prev) => [createdMember, ...prev]);
       updateDashboardField("people", (prev) => [createdMember, ...prev]);
     },
-    [authHeaders, updateDashboardField],
+    [createMemberMutation, updateDashboardField],
   );
 
   const handleUpdateMember = useCallback(
     async (id: string, data: MemberFormData) => {
-      const response = await fetch(`/api/members/${id}`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email || null,
-          phone: data.phone,
-          address: data.address,
-          club_name: data.clubName,
-          notes: data.notes,
-          active: data.active,
-        }),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_update());
-      }
-      const d = await response.json();
+      const d = await updateMemberMutation.mutateAsync({ id, data });
       const updatedMember = apiToPerson(d as Record<string, unknown>);
       updateDashboardField("members", (prev) =>
         prev.map((member) => (member.id === id ? updatedMember : member)),
@@ -648,74 +807,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           : prev,
       );
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateMemberMutation],
   );
 
   const handleDeleteMember = useCallback(
     async (id: string) => {
-      const response = await fetch(`/api/members/${id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_members_error_delete());
-      }
+      await deleteMemberMutation.mutateAsync(id);
       updateDashboardField("members", (prev) => prev.filter((member) => member.id !== id));
       updateDashboardField("people", (prev) => prev.filter((person) => person.id !== id));
     },
-    [authHeaders, updateDashboardField],
+    [deleteMemberMutation, updateDashboardField],
   );
 
   const handleCreatePerson = useCallback(
     async (data: PersonFormData) => {
-      const response = await fetch("/api/people", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email || null,
-          phone: data.phone,
-          address: data.address,
-          roles: data.roles,
-          notes: data.notes,
-          club_name: data.clubName,
-          active: data.active,
-        }),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_people_error_create());
-      }
-      const d = await response.json();
+      const d = await createPersonMutation.mutateAsync(data);
       const createdPerson = apiToPerson(d as Record<string, unknown>);
       updateDashboardField("people", (prev) => [createdPerson, ...prev]);
       updateDashboardField("members", (prev) => syncMembersWithPerson(prev, createdPerson));
     },
-    [authHeaders, updateDashboardField],
+    [createPersonMutation, updateDashboardField],
   );
 
   const handleUpdatePerson = useCallback(
     async (id: string, data: PersonFormData) => {
-      const response = await fetch(`/api/people/${id}`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email || null,
-          phone: data.phone,
-          address: data.address,
-          roles: data.roles,
-          notes: data.notes,
-          club_name: data.clubName,
-          active: data.active,
-        }),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_people_error_update());
-      }
-      const d = await response.json();
+      const d = await updatePersonMutation.mutateAsync({ id, data });
       const updated = apiToPerson(d as Record<string, unknown>);
       updateDashboardField("people", (prev) => replacePersonById(prev, updated));
       updateDashboardField("members", (prev) => syncMembersWithPerson(prev, updated));
@@ -748,78 +864,33 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           : prev,
       );
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updatePersonMutation],
   );
 
   const handleDeletePerson = useCallback(
     async (id: string) => {
-      const response = await fetch(`/api/people/${id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_error_delete_person());
-      }
+      await deletePersonMutation.mutateAsync(id);
       updateDashboardField("people", (prev) => prev.filter((p) => p.id !== id));
       updateDashboardField("members", (prev) => prev.filter((member) => member.id !== id));
     },
-    [authHeaders, updateDashboardField],
+    [deletePersonMutation, updateDashboardField],
   );
 
   const handleCreateVolunteer = useCallback(
     async (data: VolunteerFormData) => {
-      const response = await fetch("/api/volunteers", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: data.name,
-          address: data.address,
-          national_register_number: data.nationalRegisterNumber,
-          eid_document_number: data.eidDocumentNumber,
-          active: data.active,
-          help_periods: data.helpPeriods.map((period) => ({
-            first_help_day: period.firstHelpDay,
-            last_help_day: period.lastHelpDay,
-          })),
-        }),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_create());
-      }
-      const d = await response.json();
+      const d = await createVolunteerMutation.mutateAsync(data);
       const createdVolunteer = apiToPerson(d as Record<string, unknown>);
       updateDashboardField("people", (prev) => [
         mergeVolunteerPerson(undefined, createdVolunteer),
         ...prev,
       ]);
     },
-    [authHeaders, updateDashboardField],
+    [createVolunteerMutation, updateDashboardField],
   );
 
   const handleUpdateVolunteer = useCallback(
     async (id: string, data: VolunteerFormData) => {
-      const response = await fetch(`/api/volunteers/${id}`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: data.name,
-          address: data.address,
-          national_register_number: data.nationalRegisterNumber,
-          eid_document_number: data.eidDocumentNumber,
-          active: data.active,
-          help_periods: data.helpPeriods.map((period) => ({
-            first_help_day: period.firstHelpDay,
-            last_help_day: period.lastHelpDay,
-          })),
-        }),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_update());
-      }
-      const d = await response.json();
+      const d = await updateVolunteerMutation.mutateAsync({ id, data });
       const updatedVolunteer = apiToPerson(d as Record<string, unknown>);
       updateDashboardField("people", (prev) => replaceVolunteerById(prev, updatedVolunteer));
       updateDashboardField("members", (prev) =>
@@ -836,19 +907,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateVolunteerMutation],
   );
 
   const handleDeleteVolunteer = useCallback(
     async (id: string) => {
-      const response = await fetch(`/api/volunteers/${id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (!response.ok) {
-        const d = await response.json().catch(() => ({}));
-        throw new Error((d as { detail?: string }).detail ?? m.admin_volunteers_error_delete());
-      }
+      await deleteVolunteerMutation.mutateAsync(id);
       // The person record is preserved (soft archive); only the volunteer role
       // and help periods are removed.  Update local state accordingly so that
       // the person remains visible in People/Members tabs if applicable.
@@ -860,7 +924,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         ),
       );
     },
-    [authHeaders, updateDashboardField],
+    [deleteVolunteerMutation, updateDashboardField],
   );
 
   const handleExhibitorSaved = useCallback((item: ItemDraft) => {
@@ -940,88 +1004,81 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleUpdateStatus = useCallback(
     async (id: string, status: RegistrationStatus) => {
       try {
-        const response = await fetch(`/api/registrations/${id}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ status }),
-        });
-        if (response.ok) {
-          updateDashboardField("registrations", (prev) =>
-            prev.map((r) =>
-              r.id === id ? { ...r, status, updatedAt: new Date().toISOString() } : r,
-            ),
-          );
-        }
+        const updated = apiToRegistration(
+          await updateRegistrationMutation.mutateAsync({
+            id,
+            payload: { status },
+            fallbackMessage: m.admin_error_update_registration(),
+          }),
+        );
+        updateDashboardField("registrations", (prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: updated.status, updatedAt: updated.updatedAt } : r)),
+        );
+        setDetailRegistration((prev) => (prev?.id === id ? { ...prev, status: updated.status, updatedAt: updated.updatedAt } : prev));
       } catch (err) {
         console.error("Failed to update registration status", err);
-        setError(m.admin_error_update_registration());
+        setError(err instanceof Error ? err.message : m.admin_error_update_registration());
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateRegistrationMutation],
   );
 
   const handleUpdatePayment = useCallback(
     async (id: string, paymentStatus: PaymentStatus) => {
       try {
-        const response = await fetch(`/api/registrations/${id}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ payment_status: paymentStatus }),
-        });
-        if (response.ok) {
-          updateDashboardField("registrations", (prev) =>
-            prev.map((r) =>
-              r.id === id ? { ...r, paymentStatus, updatedAt: new Date().toISOString() } : r,
-            ),
-          );
-        }
+        const updated = apiToRegistration(
+          await updateRegistrationMutation.mutateAsync({
+            id,
+            payload: { payment_status: paymentStatus },
+            fallbackMessage: m.admin_error_update_payment(),
+          }),
+        );
+        updateDashboardField("registrations", (prev) =>
+          prev.map((r) => (r.id === id ? { ...r, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt } : r)),
+        );
+        setDetailRegistration((prev) => (prev?.id === id ? { ...prev, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt } : prev));
       } catch (err) {
         console.error("Failed to update payment status", err);
-        setError(m.admin_error_update_payment());
+        setError(err instanceof Error ? err.message : m.admin_error_update_payment());
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateRegistrationMutation],
   );
 
   const handleAssignTable = useCallback(
     async (registrationId: string, tableId: string | undefined) => {
       try {
-        const response = await fetch(`/api/registrations/${registrationId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ table_id: tableId ?? null }),
-        });
-        if (response.ok) {
-          updateDashboardField("registrations", (prev) =>
-            prev.map((r) =>
-              r.id === registrationId ? { ...r, tableId, updatedAt: new Date().toISOString() } : r,
-            ),
-          );
+        const updated = apiToRegistration(
+          await updateRegistrationMutation.mutateAsync({
+            id: registrationId,
+            payload: { table_id: tableId ?? null },
+            fallbackMessage: m.admin_error_assign_table(),
+          }),
+        );
+        updateDashboardField("registrations", (prev) =>
+          prev.map((r) => (r.id === registrationId ? { ...r, tableId: updated.tableId, updatedAt: updated.updatedAt } : r)),
+        );
 
-          // Update the tables' registrationIds lists
-          updateDashboardField("tables", (prevTables) =>
-            prevTables.map((t) => {
-              const wasAssigned = t.registrationIds.includes(registrationId);
-              const shouldBeAssigned = t.id === tableId;
-              if (wasAssigned && !shouldBeAssigned) {
-                return {
-                  ...t,
-                  registrationIds: t.registrationIds.filter((id) => id !== registrationId),
-                };
-              }
-              if (!wasAssigned && shouldBeAssigned) {
-                return { ...t, registrationIds: [...t.registrationIds, registrationId] };
-              }
-              return t;
-            }),
-          );
-        }
+        updateDashboardField("tables", (prevTables) =>
+          prevTables.map((t) => {
+            const wasAssigned = t.registrationIds.includes(registrationId);
+            const shouldBeAssigned = t.id === updated.tableId;
+            if (wasAssigned && !shouldBeAssigned) {
+              return { ...t, registrationIds: t.registrationIds.filter((id) => id !== registrationId) };
+            }
+            if (!wasAssigned && shouldBeAssigned) {
+              return { ...t, registrationIds: [...t.registrationIds, registrationId] };
+            }
+            return t;
+          }),
+        );
+        setDetailRegistration((prev) => (prev?.id === registrationId ? { ...prev, tableId: updated.tableId, updatedAt: updated.updatedAt } : prev));
       } catch (err) {
         console.error("Failed to assign table", err);
-        setError(m.admin_error_assign_table());
+        setError(err instanceof Error ? err.message : m.admin_error_assign_table());
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateRegistrationMutation],
   );
 
   const handleAddTable = useCallback(
@@ -1645,95 +1702,70 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleToggleDelivered = useCallback(
     async (registrationId: string, updatedOrders: OrderItem[]) => {
       try {
-        const response = await fetch(`/api/registrations/${registrationId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({
-            pre_orders: updatedOrders.map((o) => ({
-              product_id: o.productId,
-              name: o.name,
-              quantity: o.quantity,
-              price: o.price,
-              category: o.category,
-              delivered: o.delivered,
-            })),
+        const updated = apiToRegistration(
+          await updateRegistrationMutation.mutateAsync({
+            id: registrationId,
+            payload: {
+              pre_orders: updatedOrders.map((o) => ({
+                product_id: o.productId,
+                name: o.name,
+                quantity: o.quantity,
+                price: o.price,
+                category: o.category,
+                delivered: o.delivered,
+              })),
+            },
+            fallbackMessage: m.admin_error_bottle_delivery(),
           }),
-        });
-        if (response.ok) {
-          updateDashboardField("registrations", (prev) =>
-            prev.map((r) =>
-              r.id === registrationId
-                ? { ...r, preOrders: updatedOrders, updatedAt: new Date().toISOString() }
-                : r,
-            ),
-          );
-          // Also update the detail modal
-          setDetailRegistration((prev) =>
-            prev?.id === registrationId ? { ...prev, preOrders: updatedOrders } : prev,
-          );
-        }
+        );
+        updateDashboardField("registrations", (prev) => prev.map((r) => (r.id === registrationId ? updated : r)));
+        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         console.error("Failed to update bottle delivery status", err);
-        setError(m.admin_error_bottle_delivery());
+        setError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateRegistrationMutation],
   );
 
   const handleCheckIn = useCallback(
     async (registrationId: string) => {
       try {
-        const response = await fetch(`/api/registrations/${registrationId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ checked_in: true }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const updated = apiToRegistration(data as Record<string, unknown>);
-          updateDashboardField("registrations", (prev) =>
-            prev.map((r) =>
-              r.id === registrationId
-                ? { ...r, checkedIn: true, checkedInAt: updated.checkedInAt }
-                : r,
-            ),
-          );
-          setDetailRegistration((prev) =>
-            prev?.id === registrationId
-              ? { ...prev, checkedIn: true, checkedInAt: updated.checkedInAt }
-              : prev,
-          );
-        }
+        const updated = apiToRegistration(
+          await updateRegistrationMutation.mutateAsync({
+            id: registrationId,
+            payload: { checked_in: true },
+            fallbackMessage: m.admin_error_check_in(),
+          }),
+        );
+        updateDashboardField("registrations", (prev) => prev.map((r) => (r.id === registrationId ? updated : r)));
+        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         console.error("Failed to check in guest", err);
-        setError(m.admin_error_check_in());
+        setError(err instanceof Error ? err.message : m.admin_error_check_in());
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateRegistrationMutation],
   );
 
   const handleIssueStrap = useCallback(
     async (registrationId: string) => {
       try {
-        const response = await fetch(`/api/registrations/${registrationId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ strap_issued: true }),
-        });
-        if (response.ok) {
-          updateDashboardField("registrations", (prev) =>
-            prev.map((r) => (r.id === registrationId ? { ...r, strapIssued: true } : r)),
-          );
-          setDetailRegistration((prev) =>
-            prev?.id === registrationId ? { ...prev, strapIssued: true } : prev,
-          );
-        }
+        const updated = apiToRegistration(
+          await updateRegistrationMutation.mutateAsync({
+            id: registrationId,
+            payload: { strap_issued: true },
+            fallbackMessage: m.admin_error_issue_strap(),
+          }),
+        );
+        updateDashboardField("registrations", (prev) => prev.map((r) => (r.id === registrationId ? updated : r)));
+        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         console.error("Failed to issue strap", err);
-        setError(m.admin_error_issue_strap());
+        setError(err instanceof Error ? err.message : m.admin_error_issue_strap());
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateRegistrationMutation],
   );
 
   // Computed maps derived from people/registrations state — must stay above any early return
