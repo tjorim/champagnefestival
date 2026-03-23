@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import secrets
 import time
+from datetime import date
 from typing import Any
 
 from sqlalchemy import Text, cast
@@ -139,11 +140,19 @@ def registration_to_guest_dict(r: Registration) -> dict:
     """Serialise a Registration for the visitor self-lookup endpoint."""
     person: Person | None = getattr(r, "_person", None)
     event: Event | None = getattr(r, "_event", None)
+    if person is None:
+        raise ValueError(
+            f"Registration {r.id!r} has no attached _person; caller must set r._person before serialising."
+        )
+    if event is None:
+        raise ValueError(
+            f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising."
+        )
     return {
         "id": r.id,
-        "name": person.name if person else "",
+        "name": person.name,
         "event_id": r.event_id,
-        "event_title": event.title if event else "",
+        "event_title": event.title,
         "guest_count": r.guest_count,
         "pre_orders": r.pre_orders,
         "status": r.status,
@@ -218,7 +227,7 @@ def table_type_to_dict(tt: TableType) -> dict:
     }
 
 
-def layout_to_dict(lay: Layout, date: object | None = None) -> dict:
+def layout_to_dict(lay: Layout, date: date | None = None) -> dict:
     return {
         "id": lay.id,
         "edition_id": lay.edition_id,
@@ -231,7 +240,7 @@ def layout_to_dict(lay: Layout, date: object | None = None) -> dict:
     }
 
 
-def table_to_dict(t: Table, reservation_ids: list[str] | None = None) -> dict:
+def table_to_dict(t: Table, registration_ids: list[str] | None = None) -> dict:
     return {
         "id": t.id,
         "name": t.name,
@@ -241,7 +250,7 @@ def table_to_dict(t: Table, reservation_ids: list[str] | None = None) -> dict:
         "table_type_id": t.table_type_id,
         "rotation": t.rotation,
         "layout_id": t.layout_id,
-        "reservation_ids": reservation_ids if reservation_ids is not None else t.reservation_ids,
+        "registration_ids": registration_ids if registration_ids is not None else t.reservation_ids,
         "created_at": t.created_at,
         "updated_at": t.updated_at,
     }

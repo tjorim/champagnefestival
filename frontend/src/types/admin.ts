@@ -30,7 +30,7 @@ export interface FloorTable {
   rotation: number;
   /** Layout this table belongs to */
   layoutId: string;
-  reservationIds: string[];
+  registrationIds: string[];
 }
 
 export interface FloorArea {

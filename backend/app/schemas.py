@@ -377,13 +377,17 @@ class CheckInGuestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CheckInLookupRequest(BaseModel):
+    token: str
+
+
 class CheckInRequest(BaseModel):
     token: str
     issue_strap: bool = True
 
 
 class CheckInOut(BaseModel):
-    reservation: CheckInGuestOut
+    registration: CheckInGuestOut
     already_checked_in: bool
 
 
@@ -572,7 +576,7 @@ class TableOut(BaseModel):
     table_type_id: str
     rotation: int
     layout_id: str
-    reservation_ids: list[str]
+    registration_ids: list[str]
     created_at: datetime
     updated_at: datetime
 
@@ -759,7 +763,7 @@ class EditionOut(BaseModel):
     external_partner: str | None
     external_contact_name: str | None
     external_contact_email: EmailStr | None
-    dates: list[date] = Field(default_factory=list)
+    dates: list[dt_date] = Field(default_factory=list)
     venue: VenueOut
     events: list[EventOut]
     producers: list[EditionItemOut]

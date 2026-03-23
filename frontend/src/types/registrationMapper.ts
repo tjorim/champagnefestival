@@ -1,14 +1,15 @@
 import type {
   OrderItemCategory,
   PaymentStatus,
-  Reservation,
-  ReservationStatus,
-} from "./reservation";
+  Registration,
+  RegistrationStatus,
+} from "./registration";
 
-/** Map a FastAPI snake_case reservation response to the frontend camelCase Reservation type. */
-export function apiToReservation(d: Record<string, unknown>): Reservation {
-  const rawOrders = (d.pre_orders ?? []) as Record<string, unknown>[];
-  const rawPerson = (d.person ?? {}) as Record<string, unknown>;
+/** Map a FastAPI snake_case registration response to the frontend camelCase Registration type. */
+export function apiToRegistration(d: Record<string, unknown>): Registration {
+  // Add runtime guards for API data
+  const rawOrders = Array.isArray(d.pre_orders) ? d.pre_orders as Record<string, unknown>[] : [];
+  const rawPerson = (typeof d.person === 'object' && d.person !== null) ? d.person as Record<string, unknown> : {};
   return {
     id: d.id as string,
     personId: (d.person_id ?? "") as string,
@@ -32,7 +33,7 @@ export function apiToReservation(d: Record<string, unknown>): Reservation {
     notes: (d.notes ?? "") as string,
     accessibilityNote: (d.accessibility_note ?? "") as string,
     tableId: (d.table_id as string | undefined) ?? undefined,
-    status: (d.status ?? "pending") as ReservationStatus,
+    status: (d.status ?? "pending") as RegistrationStatus,
     paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
     checkedIn: (d.checked_in ?? false) as boolean,
     checkedInAt: (d.checked_in_at as string | undefined) ?? undefined,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,6 +17,7 @@ from app.schemas import EditionCreate, EditionOut, EditionType, EditionUpdate
 from app.utils import edition_to_dict, event_to_summary_dict, venue_to_dict
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/active", response_model=EditionOut)
@@ -39,7 +41,7 @@ async def get_active_edition(
         None,
     )
     if active is None:
-        active = dated[-1]
+        raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
     return await _edition_payload(db, active)
 
 
@@ -237,6 +239,11 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
     payloads = []
     for edition in editions:
         if edition.venue_id not in venues:
+            logger.warning(
+                "Skipping edition payload because venue is missing. edition_id=%s venue_id=%s",
+                edition.id,
+                edition.venue_id,
+            )
             continue
         producers, sponsors = _resolve_exhibitors(edition, exhibitor_map)
         payloads.append(

@@ -6,8 +6,9 @@
  * initial render / network failures, then replaces it with `/api/editions/active`.
  */
 
-import { useEffect, useState } from "react";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates, type Event, type SliderItem } from "@/config/editions";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface ActiveEditionVenue {
   venueName: string;
@@ -71,10 +72,48 @@ export interface ActiveEditionState {
   isLoaded: boolean;
 }
 
+export const activeEditionQueryKey = queryKeys.activeEdition;
+
 /** Parse "YYYY-MM-DD" as a local date (avoids UTC-midnight → previous day shift). */
 function parseLocalDate(s: string): Date {
-  const [year, month, day] = s.split("-").map(Number);
-  return new Date(year!, month! - 1, day!);
+  if (typeof s !== "string") {
+    throw new Error(`Invalid edition date: expected a string, received ${typeof s}.`);
+  }
+
+  const parts = s.split("-");
+  if (parts.length !== 3) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: expected YYYY-MM-DD.`);
+  }
+
+  const numericParts = parts.map(Number);
+  const year = numericParts[0];
+  const month = numericParts[1];
+  const day = numericParts[2];
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: expected YYYY-MM-DD.`);
+  }
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: expected numeric YYYY-MM-DD.`);
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    throw new Error(`Invalid edition date ${JSON.stringify(s)}: out-of-range calendar date.`);
+  }
+
+  return parsed;
 }
 
 function deriveEditionDates(
@@ -113,7 +152,11 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
     id: api.id,
     year: api.year,
     month: api.month as ActiveEdition["month"],
-    dates: deriveEditionDates(api.dates, events.map((event) => event.date), fallbackDates),
+    dates: deriveEditionDates(
+      api.dates,
+      events.map((event) => event.date),
+      fallbackDates,
+    ),
     venue: {
       venueName: api.venue.name,
       address: api.venue.address,
@@ -141,36 +184,30 @@ function createFallbackEdition(): ActiveEdition {
   };
 }
 
+export async function fetchActiveEdition(): Promise<ActiveEdition> {
+  const res = await fetch("/api/editions/active");
+  if (!res.ok) {
+    throw new Error(`Failed to load active edition: ${res.status}`);
+  }
+
+  const api = (await res.json()) as ApiEdition;
+  return mapApiEdition(api, EMPTY_EDITION.dates);
+}
+
+export function activeEditionQueryOptions() {
+  return queryOptions({
+    queryKey: activeEditionQueryKey,
+    queryFn: fetchActiveEdition,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
 export function useActiveEdition(): ActiveEditionState {
-  const [edition, setEdition] = useState<ActiveEdition>(createFallbackEdition);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const query = useQuery(activeEditionQueryOptions());
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch("/api/editions/active");
-        if (!res.ok) {
-          setIsLoaded(true);
-          return;
-        }
-
-        const api = (await res.json()) as ApiEdition;
-        if (cancelled) return;
-        setEdition((current) => mapApiEdition(api, current.dates));
-        setIsLoaded(true);
-      } catch {
-        // Network error or parse failure — keep the empty fallback silently.
-        setIsLoaded(true);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { edition, isLoaded };
+  return {
+    edition: query.data ?? createFallbackEdition(),
+    isLoaded: query.status !== "pending",
+  };
 }

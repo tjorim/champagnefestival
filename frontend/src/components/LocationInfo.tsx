@@ -6,7 +6,7 @@ import { contactConfig } from "@/config/contact";
 type Location = typeof contactConfig.location;
 
 interface LocationInfoProps {
-  location?: Location;
+  location: Location;
 }
 
 /**
@@ -15,7 +15,7 @@ interface LocationInfoProps {
  * Public pages should pass the active edition venue from the API. The config
  * fallback only exists for isolated renders/tests.
  */
-const LocationInfo: React.FC<LocationInfoProps> = ({ location = contactConfig.location }) => {
+const LocationInfo: React.FC<LocationInfoProps> = ({ location }) => {
   return (
     <Card className="border-0 shadow-sm">
       <Card.Body className="p-4">

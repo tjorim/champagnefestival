@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -10,6 +11,42 @@ import EventModal from "./EventModal";
 import { parseEditionDate } from "./editionTypes";
 import type { Edition, ScheduleEvent } from "./editionTypes";
 import type { Venue } from "@/types/admin";
+
+async function saveEditionSchedule(
+  editionId: string,
+  schedule: ScheduleEvent[],
+  authHeaders: () => Record<string, string>,
+): Promise<Edition> {
+  const response = await fetch(`/api/editions/${editionId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ schedule }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
+  }
+
+  return (await response.json()) as Edition;
+}
+
+async function deleteEdition(
+  editionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<string> {
+  const response = await fetch(`/api/editions/${editionId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+  if (!response.ok && response.status !== 204) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
+  }
+
+  return editionId;
+}
 
 interface EditionCardProps {
   edition: Edition;
@@ -28,10 +65,10 @@ export default function EditionCard({
 }: EditionCardProps) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [editionModalOpen, setEditionModalOpen] = useState(false);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
@@ -39,19 +76,25 @@ export default function EditionCard({
   const friday = parseEditionDate(edition.friday);
   const sunday = parseEditionDate(edition.sunday);
 
+  const saveScheduleMutation = useMutation({
+    mutationFn: (schedule: ScheduleEvent[]) => saveEditionSchedule(edition.id, schedule, authHeaders),
+    retry: false,
+  });
+
+  const deleteEditionMutation = useMutation({
+    mutationFn: () => deleteEdition(edition.id, authHeaders),
+    retry: false,
+  });
+
   async function saveSchedule(newSchedule: ScheduleEvent[]) {
     setSaving(true);
-    setSaveError(false);
+    setSaveError('');
     try {
-      const res = await fetch(`/api/editions/${edition.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ schedule: newSchedule }),
-      });
-      if (res.ok) onUpdated((await res.json()) as Edition);
-      else setSaveError(true);
-    } catch {
-      setSaveError(true);
+      const updatedEdition = await saveScheduleMutation.mutateAsync(newSchedule);
+      onUpdated(updatedEdition);
+    } catch (error) {
+      console.error("Failed to save edition schedule", error);
+      setSaveError(error instanceof Error ? error.message : m.admin_content_error_save());
     } finally {
       setSaving(false);
     }
@@ -80,20 +123,14 @@ export default function EditionCard({
 
   async function handleDelete() {
     setDeleting(true);
-    setDeleteError(false);
+    setDeleteError('');
     try {
-      const res = await fetch(`/api/editions/${edition.id}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
-      if (res.ok || res.status === 204) {
-        setConfirmDelete(false);
-        onDeleted(edition.id);
-      } else {
-        setDeleteError(true);
-      }
-    } catch {
-      setDeleteError(true);
+      await deleteEditionMutation.mutateAsync();
+      setConfirmDelete(false);
+      onDeleted(edition.id);
+    } catch (error) {
+      console.error("Failed to delete edition", error);
+      setDeleteError(error instanceof Error ? error.message : m.admin_content_error_save());
     } finally {
       setDeleting(false);
     }
@@ -137,13 +174,13 @@ export default function EditionCard({
         {saveError && (
           <span className="text-danger small">
             <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
-            {m.admin_content_error_save()}
+            {saveError}
           </span>
         )}
         {deleteError && (
           <span className="text-danger small">
             <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
-            {m.admin_content_error_save()}
+            {deleteError}
           </span>
         )}
         {confirmDelete ? (
@@ -235,7 +272,7 @@ export default function EditionCard({
                     <Badge bg="info" text="dark" className="text-capitalize fs-3xs">
                       {ev.category}
                     </Badge>
-                    {ev.reservation && (
+                    {ev.registration && (
                       <Badge bg="warning" text="dark" className="fs-3xs">
                         {m.schedule_reservation()}
                       </Badge>

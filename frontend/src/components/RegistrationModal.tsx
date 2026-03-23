@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
@@ -5,16 +6,20 @@ import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/reservation";
-import type { ReservationFormData, ReservationFormErrors, OrderItem } from "@/types/reservation";
+import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/registration";
+import type { RegistrationFormData, RegistrationFormErrors, OrderItem } from "@/types/registration";
+import {
+  RegistrationSubmitError,
+  submitRegistration,
+} from "@/utils/publicRegistrationApi";
 
-interface ReservationModalProps {
+interface RegistrationModalProps {
   show: boolean;
   onHide: () => void;
   /** Pre-selected event id, if triggered from the schedule */
   defaultEventId?: string;
-  /** Available events that require reservation */
-  reservableEvents: { id: string; title: string }[];
+  /** Available events that require registration */
+  registrableEvents: { id: string; title: string }[];
 }
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -36,13 +41,13 @@ function getProductName(nameKey: string): string {
   }
 }
 
-export default function ReservationModal({
+export default function RegistrationModal({
   show,
   onHide,
   defaultEventId = "",
-  reservableEvents,
-}: ReservationModalProps) {
-  const [formData, setFormData] = useState<ReservationFormData>({
+  registrableEvents,
+}: RegistrationModalProps) {
+  const [formData, setFormData] = useState<RegistrationFormData>({
     name: "",
     email: "",
     phone: "",
@@ -53,10 +58,16 @@ export default function ReservationModal({
     honeypot: "",
     formStartTime: new Date().toISOString(),
   });
-  const [errors, setErrors] = useState<ReservationFormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<RegistrationFormErrors>({});
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  const submitRegistrationMutation = useMutation({
+    mutationFn: (payload: RegistrationFormData) => submitRegistration(payload),
+    retry: false,
+  });
+
+  const isSubmitting = submitRegistrationMutation.isPending;
 
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -68,7 +79,7 @@ export default function ReservationModal({
   }, [defaultEventId]);
 
   const validate = useCallback((): boolean => {
-    const newErrors: ReservationFormErrors = {};
+    const newErrors: RegistrationFormErrors = {};
 
     if (!formData.name.trim()) {
       newErrors.name = m.reservation_errors_name_required();
@@ -142,49 +153,18 @@ export default function ReservationModal({
       e.preventDefault();
       if (!validate()) return;
 
-      setIsSubmitting(true);
       setSubmitError("");
 
-      const selectedEvent = reservableEvents.find((ev) => ev.id === formData.eventId);
-
       try {
-        const response = await fetch("/api/reservations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            event_id: formData.eventId,
-            event_title: selectedEvent?.title ?? formData.eventId,
-            guest_count: formData.guestCount,
-            pre_orders: formData.preOrders.map((o) => ({
-              product_id: o.productId,
-              name: o.name,
-              quantity: o.quantity,
-              price: o.price,
-              category: o.category,
-              delivered: o.delivered,
-            })),
-            notes: formData.notes,
-            honeypot: formData.honeypot ?? "",
-            form_start_time: formData.formStartTime,
-          }),
-        });
-
-        if (response.ok) {
-          setSubmitSuccess(true);
-        } else {
-          const data = await response.json().catch(() => ({}));
-          setSubmitError((data as { error?: string }).error ?? m.reservation_error());
-        }
-      } catch {
-        setSubmitError(m.reservation_network_error());
-      } finally {
-        setIsSubmitting(false);
+        await submitRegistrationMutation.mutateAsync(formData);
+        setSubmitSuccess(true);
+      } catch (error) {
+        setSubmitError(
+          error instanceof RegistrationSubmitError ? error.message : m.reservation_network_error(),
+        );
       }
     },
-    [formData, validate, reservableEvents],
+    [formData, submitRegistrationMutation, validate],
   );
 
   const handleClose = useCallback(() => {
@@ -211,10 +191,10 @@ export default function ReservationModal({
       onHide={handleClose}
       size="lg"
       centered
-      aria-labelledby="reservation-modal-title"
+      aria-labelledby="registration-modal-title"
     >
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
-        <Modal.Title id="reservation-modal-title">
+        <Modal.Title id="registration-modal-title">
           <i className="bi bi-star-fill text-warning me-2" aria-hidden="true" />
           {m.reservation_modal_title()}
         </Modal.Title>
@@ -298,7 +278,7 @@ export default function ReservationModal({
                 required
               >
                 <option value="">{m.reservation_select_event()}</option>
-                {reservableEvents.map((ev) => (
+                {registrableEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>
                     {ev.title}
                   </option>

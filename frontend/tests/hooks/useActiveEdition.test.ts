@@ -2,6 +2,12 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useActiveEdition } from "@/hooks/useActiveEdition";
+import { createTestQueryClientWrapper } from "../utils/queryClient";
+
+const toNormalizedLocalDate = (date: Date) => {
+  const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return adjusted.toISOString().slice(0, 10);
+};
 
 const apiEdition = {
   id: "2026-march",
@@ -62,17 +68,18 @@ describe("useActiveEdition", () => {
   });
 
   it("uses the API as the source of truth for edition, venue, dates, and events", async () => {
-    const { result } = renderHook(() => useActiveEdition());
+    const wrapper = createTestQueryClientWrapper();
+    const { result } = renderHook(() => useActiveEdition(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
     expect(result.current.edition.id).toBe("2026-march");
     expect(result.current.edition.venue.venueName).toBe("Staf Versluys");
-    expect(result.current.edition.dates[0]?.getFullYear()).toBe(2026);
-    expect(result.current.edition.dates[0]?.getMonth()).toBe(2);
-    expect(result.current.edition.dates[0]?.getDate()).toBe(13);
-    expect(result.current.edition.dates[1]?.getDate()).toBe(14);
-    expect(result.current.edition.dates[2]?.getDate()).toBe(15);
+    expect(result.current.edition.dates.map(toNormalizedLocalDate)).toEqual([
+      "2026-03-13",
+      "2026-03-14",
+      "2026-03-15",
+    ]);
 
     expect(result.current.edition.events).toEqual([
       expect.objectContaining({
@@ -89,7 +96,6 @@ describe("useActiveEdition", () => {
       }),
     ]);
   });
-
 
   it("deduplicates dates when the API omits dates and multiple events share one day", async () => {
     vi.stubGlobal(
@@ -118,15 +124,33 @@ describe("useActiveEdition", () => {
       } as Response),
     );
 
-    const { result } = renderHook(() => useActiveEdition());
+    const wrapper = createTestQueryClientWrapper();
+    const { result } = renderHook(() => useActiveEdition(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
-    expect(result.current.edition.dates.map((date) => date.toISOString().slice(0, 10))).toEqual([
+    expect(result.current.edition.dates.map(toNormalizedLocalDate)).toEqual([
       "2026-03-13",
       "2026-03-14",
     ]);
     expect(result.current.edition.events).toHaveLength(3);
   });
+  it("keeps the fallback edition when the active-edition query fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      } as Response),
+    );
 
+    const wrapper = createTestQueryClientWrapper();
+    const { result } = renderHook(() => useActiveEdition(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+
+    expect(result.current.edition.events).toEqual([]);
+    expect(result.current.edition.producers).toEqual([]);
+    expect(result.current.edition.sponsors).toEqual([]);
+  });
 });

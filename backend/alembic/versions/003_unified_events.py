@@ -51,7 +51,12 @@ def _event_id(edition_id: str, schedule_item_id: str | None, index: int) -> str:
 
 def _day_to_date(row, day_id):
     mapping = {1: row.friday, 2: row.saturday, 3: row.sunday}
-    return mapping.get(day_id) or row.friday or row.saturday or row.sunday
+    date_value = mapping.get(day_id)
+    if date_value is not None:
+        return date_value
+    if row.friday is None and row.saturday is None and row.sunday is None:
+        return None
+    return row.friday or row.saturday or row.sunday
 
 
 def upgrade() -> None:
@@ -105,6 +110,9 @@ def upgrade() -> None:
                     continue
                 schedule_item_id = item.get("id")
                 event_title = item.get("title") or f"Event {index + 1}"
+                event_date = _day_to_date(row, item.get("day_id"))
+                if event_date is None:
+                    continue
                 event_id = _event_id(row.id, schedule_item_id, index)
                 event_rows.append(
                     {
@@ -112,7 +120,7 @@ def upgrade() -> None:
                         "edition_id": row.id,
                         "title": event_title,
                         "description": item.get("description") or "",
-                        "date": _day_to_date(row, item.get("day_id")),
+                        "date": event_date,
                         "start_time": item.get("start_time") or "00:00",
                         "end_time": item.get("end_time"),
                         "category": item.get("category") or "general",
@@ -167,6 +175,14 @@ def upgrade() -> None:
                 ),
                 mapping,
             )
+            bind.execute(
+                sa.text(
+                    "UPDATE registrations "
+                    "SET event_id = :event_id "
+                    "WHERE event_id = :schedule_item_id"
+                ),
+                mapping,
+            )
 
     registration_indexes = {index["name"] for index in inspect(bind).get_indexes("registrations")}
     for old_name in (
@@ -177,6 +193,20 @@ def upgrade() -> None:
     ):
         if old_name in registration_indexes:
             op.drop_index(old_name, table_name="registrations")
+
+    orphaned_registration_count = bind.execute(
+        sa.text(
+            "SELECT COUNT(*) "
+            "FROM registrations r "
+            "LEFT JOIN events e ON e.id = r.event_id "
+            "WHERE r.event_id IS NOT NULL AND e.id IS NULL"
+        )
+    ).scalar_one()
+    if orphaned_registration_count:
+        raise RuntimeError(
+            "Cannot create registrations.event_id foreign key; "
+            f"found {orphaned_registration_count} registrations referencing missing events."
+        )
 
     registration_cols = {col["name"] for col in inspect(bind).get_columns("registrations")}
     with op.batch_alter_table("registrations") as batch_op:
