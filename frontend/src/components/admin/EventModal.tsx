@@ -10,7 +10,7 @@ interface EventModalProps {
   show: boolean;
   edition: Edition;
   initial: Event | null;
-  onSave: (event: Event, formData: EventFormData) => void;
+  onSave: (formData: EventFormData) => void;
   onHide: () => void;
 }
 
@@ -70,29 +70,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     e.preventDefault();
     if (!formData.title.trim() || !effectiveDate || !formData.startTime.trim()) return;
 
-    const maxCapacityNum = formData.registrationRequired && formData.maxCapacity ? Number(formData.maxCapacity) : undefined;
-    const sortOrderNum = formData.sortOrder ? Number(formData.sortOrder) : undefined;
-
-    onSave(
-      {
-        id: initial?.id ?? "",
-        editionId: edition.id,
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        date: effectiveDate,
-        startTime: formData.startTime.trim(),
-        endTime: formData.endTime.trim() || undefined,
-        category: formData.category.trim(),
-        registrationRequired: formData.registrationRequired,
-        registrationsOpenFrom: formData.registrationRequired ? formData.registrationsOpenFrom || undefined : undefined,
-        maxCapacity: maxCapacityNum !== undefined && Number.isFinite(maxCapacityNum) && maxCapacityNum > 0 ? maxCapacityNum : undefined,
-        sortOrder: sortOrderNum !== undefined && Number.isFinite(sortOrderNum) ? sortOrderNum : undefined,
-        active: formData.active,
-        createdAt: initial?.createdAt ?? "",
-        updatedAt: initial?.updatedAt ?? "",
-      },
-      { ...formData, date: effectiveDate },
-    );
+    onSave({ ...formData, date: effectiveDate });
   }
 
   const isEdit = !!initial;

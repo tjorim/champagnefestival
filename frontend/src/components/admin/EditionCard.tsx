@@ -70,7 +70,7 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
 
   const deleteEditionMutation = useMutation({ mutationFn: () => deleteEditionById(edition.id, authHeaders), retry: false });
   const saveEventMutation = useMutation({
-    mutationFn: ({ formData }: { event: Event; formData: EventFormData }) =>
+    mutationFn: (formData: EventFormData) =>
       saveEditionEvent(
         { editionId: edition.id, editingEventId: editingEvent?.id, formData },
         authHeaders,
@@ -97,10 +97,10 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
     setEventModalOpen(true);
   }
 
-  async function handleEventSaved(event: Event, formData: EventFormData) {
+  async function handleEventSaved(formData: EventFormData) {
     setSaveError("");
     try {
-      const savedEvent = await saveEventMutation.mutateAsync({ event, formData });
+      const savedEvent = await saveEventMutation.mutateAsync(formData);
       queryClient.setQueryData<Event[]>(editionEventsQueryKey, (prev = edition.events ?? []) =>
         upsertEditionEvent(prev, savedEvent),
       );
