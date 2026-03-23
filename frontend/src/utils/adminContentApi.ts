@@ -1,4 +1,4 @@
-import type { Edition } from "@/components/admin/editionTypes";
+import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
 
 /**
@@ -14,7 +14,6 @@ async function safeFetch(
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      // Try to extract server error details
       const data = await response.json().catch(() => ({}));
       const detail = (data as { detail?: string }).detail;
       const errorMsg = detail ?? (operation ? `Failed to ${operation}` : "Request failed");
@@ -23,7 +22,6 @@ async function safeFetch(
 
     return response;
   } catch (error) {
-    // Handle network errors or rethrow API errors with better messages
     if (error instanceof Error) {
       throw error;
     }
@@ -54,12 +52,7 @@ export async function fetchContentSectionItems(
   sectionKey: string,
   authHeaders: () => Record<string, string>,
 ): Promise<ItemDraft[]> {
-  const response = await safeFetch(
-    `/api/${sectionKey}`,
-    { headers: authHeaders() },
-    `load ${sectionKey}`,
-  );
-
+  const response = await safeFetch(`/api/${sectionKey}`, { headers: authHeaders() }, `load ${sectionKey}`);
   const data = (await response.json()) as Record<string, unknown>[];
   return Array.isArray(data) ? data.map(apiToItemDraft) : [];
 }
@@ -125,15 +118,7 @@ export async function deleteContentSectionItem(
   id: number,
   authHeaders: () => Record<string, string>,
 ): Promise<number> {
-  await safeFetch(
-    `/api/${sectionKey}/${id}`,
-    {
-      method: "DELETE",
-      headers: authHeaders(),
-    },
-    `delete ${sectionKey}`,
-  );
-
+  await safeFetch(`/api/${sectionKey}/${id}`, { method: "DELETE", headers: authHeaders() }, `delete ${sectionKey}`);
   return id;
 }
 
@@ -146,8 +131,8 @@ export async function fetchEditions(
     "load editions",
   );
 
-  const data = (await response.json()) as Edition[];
-  return Array.isArray(data) ? data : [];
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToEdition) : [];
 }
 
 interface ApiExhibitor {
@@ -160,11 +145,7 @@ interface ApiExhibitor {
 export async function fetchEditionModalExhibitors(
   authHeaders: () => Record<string, string>,
 ): Promise<ItemDraft[]> {
-  const response = await safeFetch(
-    "/api/exhibitors",
-    { headers: authHeaders() },
-    "load exhibitors",
-  );
+  const response = await safeFetch("/api/exhibitors", { headers: authHeaders() }, "load exhibitors");
 
   const data = (await response.json()) as ApiExhibitor[];
   return Array.isArray(data)
@@ -183,12 +164,13 @@ export async function saveEdition(
     id: string;
     year: number;
     month: string;
-    friday: string;
-    saturday: string;
-    sunday: string;
+    editionType: Edition["editionType"];
     venueId: string;
     active: boolean;
     exhibitorIds: number[];
+    externalPartner?: string;
+    externalContactName?: string;
+    externalContactEmail?: string;
   },
   authHeaders: () => Record<string, string>,
   initialId?: string,
@@ -203,10 +185,11 @@ export async function saveEdition(
         ...(isEdit ? {} : { id: payload.id }),
         year: payload.year,
         month: payload.month,
-        friday: payload.friday,
-        saturday: payload.saturday,
-        sunday: payload.sunday,
         venue_id: payload.venueId,
+        edition_type: payload.editionType,
+        external_partner: payload.externalPartner?.trim() || null,
+        external_contact_name: payload.externalContactName?.trim() || null,
+        external_contact_email: payload.externalContactEmail?.trim() || null,
         active: payload.active,
         exhibitors: payload.exhibitorIds,
       }),
@@ -214,5 +197,5 @@ export async function saveEdition(
     isEdit ? "update edition" : "create edition",
   );
 
-  return (await response.json()) as Edition;
+  return apiToEdition((await response.json()) as Record<string, unknown>);
 }

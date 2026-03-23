@@ -1,3 +1,4 @@
+import { apiToEvent } from "./event";
 import type {
   OrderItemCategory,
   PaymentStatus,
@@ -7,9 +8,12 @@ import type {
 
 /** Map a FastAPI snake_case registration response to the frontend camelCase Registration type. */
 export function apiToRegistration(d: Record<string, unknown>): Registration {
-  // Add runtime guards for API data
-  const rawOrders = Array.isArray(d.pre_orders) ? d.pre_orders as Record<string, unknown>[] : [];
-  const rawPerson = (typeof d.person === 'object' && d.person !== null) ? d.person as Record<string, unknown> : {};
+  const rawOrders = Array.isArray(d.pre_orders) ? (d.pre_orders as Record<string, unknown>[]) : [];
+  const rawPerson =
+    typeof d.person === "object" && d.person !== null ? (d.person as Record<string, unknown>) : {};
+  const rawEvent =
+    typeof d.event === "object" && d.event !== null ? (d.event as Record<string, unknown>) : null;
+
   return {
     id: d.id as string,
     personId: (d.person_id ?? "") as string,
@@ -20,7 +24,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
       phone: (rawPerson.phone ?? "") as string,
     },
     eventId: (d.event_id ?? "") as string,
-    eventTitle: (d.event_title ?? "") as string,
+    event: rawEvent ? apiToEvent(rawEvent) : null,
     guestCount: (d.guest_count ?? 1) as number,
     preOrders: rawOrders.map((item) => ({
       productId: (item.product_id ?? "") as string,

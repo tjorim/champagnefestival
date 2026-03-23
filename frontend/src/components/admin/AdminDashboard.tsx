@@ -15,6 +15,8 @@ import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import ContentManagement from "./ContentManagement";
+import type { Event } from "@/types/event";
+import { apiToEvent } from "@/types/event";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
@@ -26,7 +28,7 @@ import type { Registration, RegistrationStatus, PaymentStatus, OrderItem } from 
 import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
-import { useActiveEdition } from "@/hooks/useActiveEdition";
+import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
 import { queryKeys } from "@/utils/queryKeys";
 
 interface AdminDashboardProps {
@@ -193,6 +195,7 @@ interface AdminDashboardData {
   registrations: Registration[];
   tables: FloorTable[];
   venues: Venue[];
+  events: Event[];
   rooms: Room[];
   tableTypes: TableType[];
   layouts: Layout[];
@@ -207,6 +210,7 @@ function createEmptyDashboardData(): AdminDashboardData {
     registrations: [],
     tables: [],
     venues: [],
+    events: [],
     rooms: [],
     tableTypes: [],
     layouts: [],
@@ -256,6 +260,7 @@ async function fetchAdminDashboardData(
     registrationsResponse,
     tablesResponse,
     venuesResponse,
+    eventsResponse,
     roomsResponse,
     tableTypesResponse,
     layoutsResponse,
@@ -268,6 +273,7 @@ async function fetchAdminDashboardData(
     fetch("/api/registrations", { headers: authHeaders() }),
     fetch("/api/tables", { headers: authHeaders() }),
     fetch("/api/venues", { headers: authHeaders() }),
+    fetch("/api/events", { headers: authHeaders() }),
     fetch("/api/rooms", { headers: authHeaders() }),
     fetch("/api/table-types", { headers: authHeaders() }),
     fetch("/api/layouts", { headers: authHeaders() }),
@@ -282,6 +288,7 @@ async function fetchAdminDashboardData(
     registrationsResponse,
     tablesResponse,
     venuesResponse,
+    eventsResponse,
     roomsResponse,
     tableTypesResponse,
     layoutsResponse,
@@ -310,6 +317,7 @@ async function fetchAdminDashboardData(
     : (tablesPayload.tables ?? []);
 
   const venuesPayload = await venuesResponse.json();
+  const eventsPayload = await eventsResponse.json();
   const roomsPayload = await roomsResponse.json();
   const tableTypesPayload = await tableTypesResponse.json();
   const layoutsPayload = await layoutsResponse.json();
@@ -322,6 +330,7 @@ async function fetchAdminDashboardData(
     registrations: rawRegistrations.map(apiToRegistration),
     tables: rawTables.map(apiTableToTable),
     venues: Array.isArray(venuesPayload) ? venuesPayload.map(apiVenueToVenue) : [],
+    events: Array.isArray(eventsPayload) ? eventsPayload.map(apiToEvent) : [],
     rooms: Array.isArray(roomsPayload) ? roomsPayload.map(apiRoomToRoom) : [],
     tableTypes: Array.isArray(tableTypesPayload)
       ? tableTypesPayload.map(apiTableTypeToTableType)
@@ -1842,7 +1851,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Nav.Item>
                     <Nav.Link eventKey="registrations" className="text-light">
                       <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                      {m.admin_registrations_tab()}
+                      Registrations
                       <span className="badge bg-warning text-dark ms-2">{registrations.length}</span>
                     </Nav.Link>
                   </Nav.Item>
@@ -1964,6 +1973,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       venues={venues}
                       onExhibitorSaved={handleExhibitorSaved}
                       onExhibitorDeleted={handleExhibitorDeleted}
+                      onEditionMutated={() => {
+                        void Promise.all([
+                          dashboardQuery.refetch(),
+                          queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
+                          queryClient.invalidateQueries({ queryKey: queryKeys.admin.activeEditionEvents }),
+                        ]);
+                      }}
                     />
                   </Tab.Pane>
                   <Tab.Pane eventKey="people">

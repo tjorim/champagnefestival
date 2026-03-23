@@ -1,4 +1,5 @@
 import { m } from "@/paraglide/messages";
+import { apiToEvent, type Event } from "@/types/event";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
 
@@ -18,11 +19,7 @@ interface PersonSearchResult {
   phone: string;
 }
 
-export interface EditionEvent {
-  id: string;
-  title: string;
-  registration_required: boolean;
-}
+export type EditionEvent = Event;
 
 export interface CreateRegistrationPayload {
   personId: string;
@@ -74,64 +71,30 @@ function isPersonRegistrationRecord(value: unknown): value is Record<string, unk
   );
 }
 
-export async function fetchRegistrableEvents(
-  authHeaders: () => Record<string, string>,
-): Promise<EditionEvent[]> {
+export async function fetchRegistrableEvents(authHeaders: () => Record<string, string>): Promise<EditionEvent[]> {
   const response = await fetch("/api/editions/active", { headers: authHeaders() });
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(m.admin_content_edition_no_events());
-    }
+    if (response.status === 404) throw new Error(m.admin_content_edition_no_events());
     throw new Error(`Failed to load active edition (${response.status})`);
   }
 
-  const data = (await response.json()) as { events?: EditionEvent[] };
-  return (data.events ?? []).filter((event) => event.registration_required);
+  const data = (await response.json()) as { events?: Record<string, unknown>[] };
+  return (data.events ?? []).map(apiToEvent).filter((event) => event.registrationRequired);
 }
 
-export async function fetchAdminPersonOptions(
-  query: string,
-  authHeaders: () => Record<string, string>,
-  signal?: AbortSignal,
-): Promise<PersonOption[]> {
-  const response = await fetch(`/api/people?q=${encodeURIComponent(query)}&active=true`, {
-    headers: authHeaders(),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to load people");
-  }
-
+export async function fetchAdminPersonOptions(query: string, authHeaders: () => Record<string, string>, signal?: AbortSignal): Promise<PersonOption[]> {
+  const response = await fetch(`/api/people?q=${encodeURIComponent(query)}&active=true`, { headers: authHeaders(), signal });
+  if (!response.ok) throw new Error("Failed to load people");
   const data = (await response.json()) as PersonSearchResult[];
-  return data.map((person) => ({
-    value: person.id,
-    label: person.name,
-    sub: [person.email, person.phone].filter(Boolean).join(" · "),
-    name: person.name,
-    email: person.email,
-    phone: person.phone,
-  }));
+  return data.map((person) => ({ value: person.id, label: person.name, sub: [person.email, person.phone].filter(Boolean).join(" · "), name: person.name, email: person.email, phone: person.phone }));
 }
 
-export async function fetchAdminPersonRegistrations(
-  personId: string,
-  authHeaders: () => Record<string, string>,
-  signal?: AbortSignal,
-): Promise<PersonRegistration[]> {
-  const response = await fetch(`/api/people/${encodeURIComponent(personId)}/registrations`, {
-    signal,
-    headers: authHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load registrations: ${response.status}`);
-  }
+export async function fetchAdminPersonRegistrations(personId: string, authHeaders: () => Record<string, string>, signal?: AbortSignal): Promise<PersonRegistration[]> {
+  const response = await fetch(`/api/people/${encodeURIComponent(personId)}/registrations`, { signal, headers: authHeaders() });
+  if (!response.ok) throw new Error(`Failed to load registrations: ${response.status}`);
 
   const raw: unknown = await response.json();
-  if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord)) {
-    throw new Error(`Invalid registrations payload for person ${personId}.`);
-  }
+  if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord)) throw new Error(`Invalid registrations payload for person ${personId}.`);
 
   return raw.map((registration) => ({
     id: registration.id,
@@ -144,10 +107,7 @@ export async function fetchAdminPersonRegistrations(
   }));
 }
 
-export async function createAdminRegistration(
-  payload: CreateRegistrationPayload,
-  authHeaders: () => Record<string, string>,
-): Promise<Registration> {
+export async function createAdminRegistration(payload: CreateRegistrationPayload, authHeaders: () => Record<string, string>): Promise<Registration> {
   const res = await fetch("/api/registrations/admin", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

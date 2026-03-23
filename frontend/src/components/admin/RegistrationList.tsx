@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
-import Card from "react-bootstrap/Card";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Table from "react-bootstrap/Table";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { m } from "@/paraglide/messages";
-import type { Registration, RegistrationStatus, PaymentStatus } from "@/types/registration";
 import type { FloorTable } from "@/types/admin";
+import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 
 interface AllocationRef {
@@ -15,6 +15,8 @@ interface AllocationRef {
   name: string;
   contactPersonId: string | null;
 }
+
+type EditionFilter = "all" | "festival" | "standalone";
 
 interface RegistrationListProps {
   registrations: Registration[];
@@ -74,114 +76,71 @@ function paymentLabel(payment: PaymentStatus): string {
   }
 }
 
-export default function RegistrationList({
-  registrations,
-  tables,
-  exhibitors,
-  filter,
-  onFilterChange,
-  onUpdateStatus,
-  onUpdatePayment,
-  onAssignTable,
-  onViewDetail,
-  onAddRegistration,
-  authHeaders,
-}: RegistrationListProps) {
+function isStandaloneRegistration(registration: Registration) {
+  return registration.event?.edition?.editionType !== undefined && registration.event.edition.editionType !== "festival";
+}
+
+export default function RegistrationList({ registrations, tables, exhibitors, filter, onFilterChange, onUpdateStatus, onUpdatePayment, onAssignTable, onViewDetail, onAddRegistration, authHeaders }: RegistrationListProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [allocationFilter, setAllocationFilter] = useState("");
+  const [editionFilter, setEditionFilter] = useState<EditionFilter>("all");
 
-  // Build allocation entities that appear in the current registration list
   const registrationPersonIds = new Set(registrations.map((r) => r.personId));
-  const allocationOptions: { key: string; label: string; personId: string }[] = [
-    ...exhibitors
-      .filter((e) => e.contactPersonId && registrationPersonIds.has(e.contactPersonId))
-      .map((e) => ({
-        key: `e:${e.id}`,
-        label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`,
-        personId: e.contactPersonId!,
-      })),
-  ];
+  const allocationOptions: { key: string; label: string; personId: string }[] = exhibitors
+    .filter((e) => e.contactPersonId && registrationPersonIds.has(e.contactPersonId))
+    .map((e) => ({ key: `e:${e.id}`, label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`, personId: e.contactPersonId! }));
 
-  // Find which registrations are linked to an exhibitor contact person
-  const allContactPersonIds = new Set(
-    exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null),
-  );
+  const allContactPersonIds = new Set(exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null));
+  const filterPersonId = allocationFilter ? allocationOptions.find((o) => o.key === allocationFilter)?.personId ?? null : null;
 
-  const filterPersonId = allocationFilter
-    ? (allocationOptions.find((o) => o.key === allocationFilter)?.personId ?? null)
-    : null;
-
-  const filtered = registrations.filter((r) => {
-    if (filter !== "all" && r.status !== filter) return false;
-    if (filterPersonId && r.person.id !== filterPersonId) return false;
+  const filtered = registrations.filter((registration) => {
+    if (filter !== "all" && registration.status !== filter) return false;
+    if (filterPersonId && registration.person.id !== filterPersonId) return false;
+    const standalone = isStandaloneRegistration(registration);
+    if (editionFilter === "festival" && standalone) return false;
+    if (editionFilter === "standalone" && !standalone) return false;
     return true;
   });
 
-  const handleAssignTable = useCallback(
-    (registrationId: string, tableId: string) => {
-      onAssignTable(registrationId, tableId || undefined);
-    },
-    [onAssignTable],
-  );
+  const handleAssignTable = useCallback((registrationId: string, tableId: string) => {
+    onAssignTable(registrationId, tableId || undefined);
+  }, [onAssignTable]);
 
-  const statusCounts = useMemo(
-    () => ({
-      all: registrations.length,
-      pending: registrations.filter((r) => r.status === "pending").length,
-      confirmed: registrations.filter((r) => r.status === "confirmed").length,
-    }),
-    [registrations],
-  );
+  const statusCounts = useMemo(() => ({
+    all: registrations.length,
+    pending: registrations.filter((r) => r.status === "pending").length,
+    confirmed: registrations.filter((r) => r.status === "confirmed").length,
+  }), [registrations]);
+
+  const editionCounts = useMemo(() => ({
+    all: registrations.length,
+    festival: registrations.filter((registration) => !isStandaloneRegistration(registration)).length,
+    standalone: registrations.filter((registration) => isStandaloneRegistration(registration)).length,
+  }), [registrations]);
 
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <span className="fw-semibold">{m.admin_registrations_tab()}</span>
+          <span className="fw-semibold">Registrations</span>
           <div className="d-flex flex-wrap gap-2 align-items-center">
+            <ButtonGroup size="sm">
+              <Button variant={editionFilter === "all" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("all")}>All ({editionCounts.all})</Button>
+              <Button variant={editionFilter === "festival" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("festival")}>Festivals ({editionCounts.festival})</Button>
+              <Button variant={editionFilter === "standalone" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("standalone")}>Standalone ({editionCounts.standalone})</Button>
+            </ButtonGroup>
             {allocationOptions.length > 0 && (
-              <Form.Select
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                style={{ maxWidth: 200 }}
-                value={allocationFilter}
-                onChange={(e) => setAllocationFilter(e.target.value)}
-                aria-label={m.admin_filter_allocation_aria()}
-              >
+              <Form.Select size="sm" className="bg-dark text-light border-secondary" style={{ maxWidth: 200 }} value={allocationFilter} onChange={(e) => setAllocationFilter(e.target.value)} aria-label={m.admin_filter_allocation_aria()}>
                 <option value="">{m.admin_all_allocations()}</option>
-                {allocationOptions.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
+                {allocationOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
               </Form.Select>
             )}
             <ButtonGroup size="sm">
-              <Button
-                variant={filter === "all" ? "warning" : "outline-secondary"}
-                onClick={() => onFilterChange("all")}
-              >
-                {m.admin_filter_all()} ({statusCounts.all})
-              </Button>
-              <Button
-                variant={filter === "pending" ? "warning" : "outline-secondary"}
-                onClick={() => onFilterChange("pending")}
-              >
-                {m.admin_filter_pending()} (
-                {statusCounts.pending})
-              </Button>
-              <Button
-                variant={filter === "confirmed" ? "warning" : "outline-secondary"}
-                onClick={() => onFilterChange("confirmed")}
-              >
-                {m.admin_filter_confirmed()} (
-                {statusCounts.confirmed})
-              </Button>
+              <Button variant={filter === "all" ? "warning" : "outline-secondary"} onClick={() => onFilterChange("all")}>{m.admin_filter_all()} ({statusCounts.all})</Button>
+              <Button variant={filter === "pending" ? "warning" : "outline-secondary"} onClick={() => onFilterChange("pending")}>{m.admin_filter_pending()} ({statusCounts.pending})</Button>
+              <Button variant={filter === "confirmed" ? "warning" : "outline-secondary"} onClick={() => onFilterChange("confirmed")}>{m.admin_filter_confirmed()} ({statusCounts.confirmed})</Button>
             </ButtonGroup>
-            <Button variant="outline-warning" size="sm" onClick={() => setShowCreateModal(true)}>
-              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              {m.admin_add_registration()}
-            </Button>
+            <Button variant="outline-warning" size="sm" onClick={() => setShowCreateModal(true)}><i className="bi bi-plus-lg me-1" aria-hidden="true" />{m.admin_add_registration()}</Button>
           </div>
         </Card.Header>
 
@@ -204,119 +163,46 @@ export default function RegistrationList({
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((res) => {
-                    const isLinked = allContactPersonIds.has(res.person.id);
+                  {filtered.map((registration) => {
+                    const isLinked = allContactPersonIds.has(registration.person.id);
+                    const isStandalone = isStandaloneRegistration(registration);
                     return (
-                      <tr key={res.id}>
+                      <tr key={registration.id}>
                         <td>
                           <div className="fw-semibold d-flex align-items-center gap-1">
-                            {res.person.name}
-                            {isLinked && (
-                              <i
-                                className="bi bi-person-badge text-info"
-                                title={m.admin_linked_exhibitor_title()}
-                                aria-label={m.admin_allocation_contact_aria()}
-                              />
-                            )}
+                            {registration.person.name}
+                            {isLinked && <i className="bi bi-person-badge text-info" title={m.admin_linked_exhibitor_title()} aria-label={m.admin_allocation_contact_aria()} />}
+                            <Badge bg={isStandalone ? "info" : "warning"} text="dark">{isStandalone ? "Standalone" : "Festival"}</Badge>
                           </div>
-                          <div className="text-secondary small">{res.person.email}</div>
-                          {res.preOrders.length > 0 && (
-                            <div className="text-warning small">
-                              <i className="bi bi-cart-fill me-1" aria-hidden="true" />
-                              {res.preOrders.filter((o) => o.delivered).length}/
-                              {res.preOrders.length} {m.admin_pre_orders()}
-                            </div>
+                          <div className="text-secondary small">{registration.person.email}</div>
+                          {!isStandalone && registration.preOrders.length > 0 && (
+                            <div className="text-warning small"><i className="bi bi-cart-fill me-1" aria-hidden="true" />{registration.preOrders.filter((o) => o.delivered).length}/{registration.preOrders.length} {m.admin_pre_orders()}</div>
                           )}
                         </td>
-                        <td className="d-none d-md-table-cell small">
-                          {res.eventTitle || res.eventId}
-                        </td>
-                        <td>{res.guestCount}</td>
-                        <td>
-                          <Badge bg={statusBadgeVariant(res.status)}>
-                            {statusLabel(res.status)}
-                          </Badge>
-                        </td>
-                        <td className="d-none d-lg-table-cell">
-                          <Badge bg={paymentBadgeVariant(res.paymentStatus)}>
-                            {paymentLabel(res.paymentStatus)}
-                          </Badge>
-                        </td>
+                        <td className="d-none d-md-table-cell small">{registration.event?.title ?? registration.eventId}</td>
+                        <td>{registration.guestCount}</td>
+                        <td><Badge bg={statusBadgeVariant(registration.status)}>{statusLabel(registration.status)}</Badge></td>
+                        <td className="d-none d-lg-table-cell"><Badge bg={paymentBadgeVariant(registration.paymentStatus)}>{paymentLabel(registration.paymentStatus)}</Badge></td>
                         <td className="d-none d-xl-table-cell">
-                          {res.checkedIn ? (
-                            <Badge bg="success">
-                              <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
-                              {m.admin_checked_in()}
-                            </Badge>
-                          ) : (
-                            <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
-                          )}
-                          {res.strapIssued && (
-                            <Badge bg="info" className="ms-1">
-                              <i className="bi bi-person-badge-fill" aria-hidden="true" />
-                            </Badge>
-                          )}
+                          {registration.checkedIn ? <Badge bg="success"><i className="bi bi-check-circle-fill me-1" aria-hidden="true" />{m.admin_checked_in()}</Badge> : <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>}
+                          {!isStandalone && registration.strapIssued && <Badge bg="info" className="ms-1"><i className="bi bi-person-badge-fill" aria-hidden="true" /></Badge>}
                         </td>
                         <td className="d-none d-lg-table-cell">
-                          <Form.Select
-                            size="sm"
-                            className="bg-dark text-light border-secondary"
-                            value={res.tableId ?? ""}
-                            onChange={(e) => handleAssignTable(res.id, e.target.value)}
-                            aria-label={m.admin_action_assign_table()}
-                          >
-                            <option value="">{m.admin_unassigned()}</option>
-                            {tables.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name} ({t.capacity})
-                              </option>
-                            ))}
-                          </Form.Select>
+                          {isStandalone ? (
+                            <span className="text-secondary small">—</span>
+                          ) : (
+                            <Form.Select size="sm" className="bg-dark text-light border-secondary" value={registration.tableId ?? ""} onChange={(e) => handleAssignTable(registration.id, e.target.value)} aria-label={m.admin_action_assign_table()}>
+                              <option value="">{m.admin_unassigned()}</option>
+                              {tables.map((table) => <option key={table.id} value={table.id}>{table.name} ({table.capacity})</option>)}
+                            </Form.Select>
+                          )}
                         </td>
                         <td>
                           <div className="d-flex flex-wrap gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline-light"
-                              onClick={() => onViewDetail(res)}
-                              title={m.admin_qr_code()}
-                              aria-label={m.admin_qr_code()}
-                            >
-                              <i className="bi bi-qr-code" aria-hidden="true" />
-                            </Button>
-                            {res.status === "pending" && (
-                              <Button
-                                size="sm"
-                                variant="outline-success"
-                                onClick={() => onUpdateStatus(res.id, "confirmed")}
-                                title={m.admin_action_confirm()}
-                                aria-label={m.admin_action_confirm()}
-                              >
-                                <i className="bi bi-check-lg" aria-hidden="true" />
-                              </Button>
-                            )}
-                            {res.status !== "cancelled" && (
-                              <Button
-                                size="sm"
-                                variant="outline-danger"
-                                onClick={() => onUpdateStatus(res.id, "cancelled")}
-                                title={m.admin_action_cancel()}
-                                aria-label={m.admin_action_cancel()}
-                              >
-                                <i className="bi bi-x-lg" aria-hidden="true" />
-                              </Button>
-                            )}
-                            {res.paymentStatus !== "paid" && (
-                              <Button
-                                size="sm"
-                                variant="outline-warning"
-                                onClick={() => onUpdatePayment(res.id, "paid")}
-                                title={m.admin_action_mark_paid()}
-                                aria-label={m.admin_action_mark_paid()}
-                              >
-                                <i className="bi bi-currency-euro" aria-hidden="true" />
-                              </Button>
-                            )}
+                            <Button size="sm" variant="outline-light" onClick={() => onViewDetail(registration)} title={m.admin_qr_code()} aria-label={m.admin_qr_code()}><i className="bi bi-qr-code" aria-hidden="true" /></Button>
+                            {registration.status === "pending" && <Button size="sm" variant="outline-success" onClick={() => onUpdateStatus(registration.id, "confirmed")} title={m.admin_action_confirm()} aria-label={m.admin_action_confirm()}><i className="bi bi-check-lg" aria-hidden="true" /></Button>}
+                            {registration.status !== "cancelled" && <Button size="sm" variant="outline-danger" onClick={() => onUpdateStatus(registration.id, "cancelled")} title={m.admin_action_cancel()} aria-label={m.admin_action_cancel()}><i className="bi bi-x-lg" aria-hidden="true" /></Button>}
+                            {registration.paymentStatus !== "paid" && <Button size="sm" variant="outline-warning" onClick={() => onUpdatePayment(registration.id, "paid")} title={m.admin_action_mark_paid()} aria-label={m.admin_action_mark_paid()}><i className="bi bi-currency-euro" aria-hidden="true" /></Button>}
                           </div>
                         </td>
                       </tr>
@@ -329,15 +215,7 @@ export default function RegistrationList({
         </Card.Body>
       </Card>
 
-      <RegistrationCreateModal
-        show={showCreateModal}
-        authHeaders={authHeaders}
-        onSaved={(r) => {
-          onAddRegistration(r);
-          setShowCreateModal(false);
-        }}
-        onHide={() => setShowCreateModal(false)}
-      />
+      <RegistrationCreateModal show={showCreateModal} authHeaders={authHeaders} onSaved={(registration) => { onAddRegistration(registration); setShowCreateModal(false); }} onHide={() => setShowCreateModal(false)} />
     </>
   );
 }

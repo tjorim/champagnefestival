@@ -136,6 +136,7 @@ export default function RegistrationCreateModal({
       : null;
 
   const events = eventsQuery.data ?? [];
+  const sortedEvents = [...events].sort((a, b) => a.title.localeCompare(b.title));
   const personOptions = personOptionsQuery.data ?? [];
   const loadingEvents = eventsQuery.isPending;
   const loadingPersons = personOptionsQuery.isFetching;
@@ -202,9 +203,9 @@ export default function RegistrationCreateModal({
                 required
               >
                 <option value="">{m.admin_select_event_placeholder()}</option>
-                {events.map((ev) => (
+                {sortedEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>
-                    {ev.title}
+                    {[ev.title, ev.edition?.editionType && ev.edition.editionType !== "festival" ? "Standalone" : null].filter(Boolean).join(" · ")}
                   </option>
                 ))}
               </Form.Select>
