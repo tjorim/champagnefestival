@@ -6,25 +6,24 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
-import type { Registration, OrderItem } from "@/types/registration";
+import type { OrderItem, Registration } from "@/types/registration";
 
 interface RegistrationDetailProps {
   registration: Registration | null;
-  /**
-   * Base URL for the check-in link — must include the full origin plus any
-   * router basename (the path prefix up to but not including `/check-in`).
-   * e.g. `https://festival.example.com` or `https://festival.example.com/subpath`
-   * Callers must include the basename; only the origin is not sufficient for
-   * subpath deployments.
-   */
+  /** Full origin + router basename (e.g. `https://example.com`). Used to build the check-in QR code URL. */
   baseUrl: string;
-  /** Other people sharing the same email as this registration's person — used to surface merge suggestions. */
+  /** Other people sharing the same email address, shown in the merge-duplicate alert. */
   emailDuplicates?: { id: string; name: string }[];
   onClose: () => void;
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
+}
+
+function isSimpleRsvp(registration: Registration) {
+  if (!registration.event || !registration.event.edition) return false;
+  return registration.event.edition.editionType !== "festival";
 }
 
 export default function RegistrationDetail({
@@ -53,6 +52,7 @@ export default function RegistrationDetail({
   );
 
   if (!registration) return null;
+  const simpleRsvp = isSimpleRsvp(registration);
 
   return (
     <Modal show onHide={onClose} size="lg" centered aria-labelledby="res-detail-modal-title">
@@ -64,7 +64,6 @@ export default function RegistrationDetail({
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
-        {/* Status badges */}
         <div className="d-flex flex-wrap gap-2 mb-3">
           <Badge
             bg={
@@ -109,17 +108,17 @@ export default function RegistrationDetail({
           ) : (
             <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
           )}
-          {registration.strapIssued ? (
-            <Badge bg="info">
-              <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
-              {m.admin_strap_issued()}
-            </Badge>
-          ) : (
-            <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>
-          )}
+          {!simpleRsvp &&
+            (registration.strapIssued ? (
+              <Badge bg="info">
+                <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
+                {m.admin_strap_issued()}
+              </Badge>
+            ) : (
+              <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>
+            ))}
         </div>
 
-        {/* Duplicate person warning */}
         {emailDuplicates.length > 0 && (
           <Alert variant="warning" className="py-2 mb-3">
             <div className="fw-semibold mb-1">
@@ -143,7 +142,6 @@ export default function RegistrationDetail({
           </Alert>
         )}
 
-        {/* Basic info */}
         <ListGroup variant="flush" className="mb-3">
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.registration_email()}</span>
@@ -157,7 +155,15 @@ export default function RegistrationDetail({
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.admin_event_label()}</span>
-            <span>{registration.eventTitle || registration.eventId}</span>
+            <span>{registration.event?.title ?? registration.eventId}</span>
+          </ListGroup.Item>
+          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
+            <span className="text-secondary">{m.registration_edition_type_label()}</span>
+            <span>
+              {simpleRsvp
+                ? m.registration_edition_type_standalone()
+                : m.registration_edition_type_festival()}
+            </span>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.admin_guests_count()}</span>
@@ -180,8 +186,7 @@ export default function RegistrationDetail({
           )}
         </ListGroup>
 
-        {/* Bottle fulfillment */}
-        {registration.preOrders.length > 0 && (
+        {!simpleRsvp && registration.preOrders.length > 0 && (
           <div className="mb-4">
             <h6 className="text-warning mb-2">
               <i className="bi bi-basket-fill me-2" aria-hidden="true" />
@@ -223,7 +228,6 @@ export default function RegistrationDetail({
           </div>
         )}
 
-        {/* Check-in actions */}
         <div className="mb-4">
           <h6 className="text-warning mb-2">
             <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
@@ -231,13 +235,21 @@ export default function RegistrationDetail({
           </h6>
           <div className="d-flex gap-2 flex-wrap">
             {!registration.checkedIn && (
-              <Button variant="outline-success" size="sm" onClick={() => onCheckIn(registration.id)}>
+              <Button
+                variant="outline-success"
+                size="sm"
+                onClick={() => onCheckIn(registration.id)}
+              >
                 <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true" />
                 {m.admin_mark_checked_in()}
               </Button>
             )}
-            {!registration.strapIssued && (
-              <Button variant="outline-info" size="sm" onClick={() => onIssueStrap(registration.id)}>
+            {!simpleRsvp && !registration.strapIssued && (
+              <Button
+                variant="outline-info"
+                size="sm"
+                onClick={() => onIssueStrap(registration.id)}
+              >
                 <i className="bi bi-person-badge me-1" aria-hidden="true" />
                 {m.admin_issue_strap()}
               </Button>
@@ -245,7 +257,6 @@ export default function RegistrationDetail({
           </div>
         </div>
 
-        {/* QR Code */}
         {registration.checkInToken && (
           <div className="text-center">
             <h6 className="text-warning mb-2">

@@ -188,10 +188,7 @@ export interface RegistrationLookupRequestAcceptedResponse {
 export class RegistrationLookupError extends Error {
   code: "invalid_email" | "invalid_token" | "request_failed";
 
-  constructor(
-    code: "invalid_email" | "invalid_token" | "request_failed",
-    message: string,
-  ) {
+  constructor(code: "invalid_email" | "invalid_token" | "request_failed", message: string) {
     super(message);
     this.code = code;
   }
@@ -334,9 +331,7 @@ export class RegistrationSubmitError extends Error {
   }
 }
 
-export async function submitRegistration(
-  payload: RegistrationFormData,
-): Promise<void> {
+export async function submitRegistration(payload: RegistrationFormData): Promise<void> {
   const response = await fetch("/api/registrations", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -362,8 +357,6 @@ export async function submitRegistration(
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new RegistrationSubmitError(
-      (data as { error?: string }).error ?? m.registration_error(),
-    );
+    throw new RegistrationSubmitError((data as { error?: string }).error ?? m.registration_error());
   }
 }

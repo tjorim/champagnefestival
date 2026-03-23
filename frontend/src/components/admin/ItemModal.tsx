@@ -7,10 +7,7 @@ import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import type { ItemDraft } from "./itemTypes";
-import {
-  fetchAdminPersonOptions,
-  type PersonOption,
-} from "@/utils/adminRegistrationApi";
+import { fetchAdminPersonOptions, type PersonOption } from "@/utils/adminRegistrationApi";
 
 const darkSelectStyles: StylesConfig<PersonOption, false> = {
   control: (base) => ({

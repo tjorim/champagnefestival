@@ -5,17 +5,17 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
-import Select, { type MultiValue, type StylesConfig, type GroupBase } from "react-select";
+import Select, { type GroupBase, type MultiValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
 import type { ItemDraft } from "./itemTypes";
-import type { Edition } from "./editionTypes";
+import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchEditionModalExhibitors, saveEdition } from "@/utils/adminContentApi";
 
 interface EditionModalProps {
   show: boolean;
-  initial: Edition | null; // null = new edition
+  initial: Edition | null;
   venues: Venue[];
   authHeaders: () => Record<string, string>;
   onSaved: (edition: Edition) => void;
@@ -86,6 +86,17 @@ function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOp
   return { active, archived };
 }
 
+function typeLabel(type: EditionType) {
+  switch (type) {
+    case "bourse":
+      return m.admin_edition_type_bourse();
+    case "capsule_exchange":
+      return m.admin_edition_type_capsule_exchange();
+    default:
+      return m.admin_edition_type_festival();
+  }
+}
+
 export default function EditionModal({
   show,
   initial,
@@ -94,43 +105,36 @@ export default function EditionModal({
   onSaved,
   onHide,
 }: EditionModalProps) {
-  // Keep a stable ref to venues so the open-modal effect can read the
-  // current list without listing venues as a dependency (which would reset
-  // the whole form whenever a venue is added or archived while the modal is open).
   const venuesRef = useRef(venues);
   venuesRef.current = venues;
-
-  // Track whether exhibitor selections have been hydrated from the full pool
-  // so that a background refetch of allExhibitors doesn't wipe user edits.
   const hydratedRef = useRef(false);
 
   const [id, setId] = useState("");
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState("");
-  const [friday, setFriday] = useState("");
-  const [saturday, setSaturday] = useState("");
-  const [sunday, setSunday] = useState("");
+  const [editionType, setEditionType] = useState<EditionType>("festival");
   const [venueId, setVenueId] = useState<string>("");
   const [active, setActive] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedExhibitors, setSelectedExhibitors] = useState<MultiValue<ItemOption>>([]);
+  const [externalPartner, setExternalPartner] = useState("");
+  const [externalContactName, setExternalContactName] = useState("");
+  const [externalContactEmail, setExternalContactEmail] = useState("");
 
   useEffect(() => {
     if (!show) return;
-    // Reset hydration flag so allExhibitors effect will re-hydrate on next modal open
     hydratedRef.current = false;
     setId(initial?.id ?? "");
     setYear(initial?.year ?? new Date().getFullYear());
     setMonth(initial?.month ?? "");
-    setFriday(initial?.friday ?? "");
-    setSaturday(initial?.saturday ?? "");
-    setSunday(initial?.sunday ?? "");
+    setEditionType(initial?.editionType ?? "festival");
     setVenueId(initial?.venue?.id ?? venuesRef.current.find((v) => v.active)?.id ?? "");
     setActive(initial?.active ?? true);
     setError(null);
+    setExternalPartner(initial?.externalPartner ?? "");
+    setExternalContactName(initial?.externalContactName ?? "");
+    setExternalContactEmail(initial?.externalContactEmail ?? "");
 
-    // Pre-seed selections immediately from initial data so the select isn't empty while loading
     if (initial) {
       const preseeded = [...(initial.producers ?? []), ...(initial.sponsors ?? [])].map((e) => ({
         value: e.id,
@@ -156,20 +160,19 @@ export default function EditionModal({
       id: string;
       year: number;
       month: string;
-      friday: string;
-      saturday: string;
-      sunday: string;
+      editionType: EditionType;
       venueId: string;
       active: boolean;
       exhibitorIds: number[];
+      externalPartner?: string;
+      externalContactName?: string;
+      externalContactEmail?: string;
     }) => saveEdition(payload, authHeaders, initial?.id),
     retry: false,
   });
 
   const allExhibitors = useMemo(() => exhibitorsQuery.data ?? [], [exhibitorsQuery.data]);
 
-  // Sync selections once pool is loaded — guard with hydratedRef so a background
-  // refetch does not overwrite selections the user has already made.
   useEffect(() => {
     if (allExhibitors.length === 0 || hydratedRef.current) return;
     const ids = new Set(
@@ -181,12 +184,10 @@ export default function EditionModal({
   }, [allExhibitors, initial]);
 
   const isEdit = !!initial;
-
-  // Only producers and sponsors can be linked to editions; vendors are excluded.
+  const isFestival = editionType === "festival";
   const programmableExhibitors = allExhibitors.filter(
     (exhibitor) => exhibitor.type === "producer" || exhibitor.type === "sponsor",
   );
-
   const exhibitorGroups = useMemo(() => {
     const { active: act, archived: arch } = toOptions(programmableExhibitors);
     const groups: GroupBase<ItemOption>[] = [];
@@ -195,39 +196,37 @@ export default function EditionModal({
     return groups;
   }, [programmableExhibitors]);
 
+  const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!month.trim() || !friday || !saturday || !sunday || !venueId) return;
-
-    // When creating a new edition, reject whitespace-only IDs
+    if (!month.trim() || !venueId) return;
     if (!isEdit && id.trim() === "") {
       setError("ID cannot be empty or whitespace only");
       return;
     }
-
-    setSaving(true);
-    setError(null);
 
     try {
       const savedEdition = await saveEditionMutation.mutateAsync({
         id: id.trim(),
         year,
         month: month.trim(),
-        friday,
-        saturday,
-        sunday,
+        editionType,
         venueId,
         active,
-        exhibitorIds: selectedExhibitors.map((option: ItemOption) => option.value),
+        exhibitorIds:
+          editionType === "festival"
+            ? selectedExhibitors.map((option: ItemOption) => option.value)
+            : [],
+        externalPartner,
+        externalContactName,
+        externalContactEmail,
       });
-
       onSaved(savedEdition);
     } catch (mutationError) {
       setError(
         mutationError instanceof Error ? mutationError.message : m.admin_content_error_save(),
       );
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -281,6 +280,24 @@ export default function EditionModal({
                 required
               />
             </Form.Group>
+            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_edition_type_label()}
+              </Form.Label>
+              <Form.Select
+                value={editionType}
+                onChange={(e) => {
+                  const newType = e.target.value as EditionType;
+                  setEditionType(newType);
+                  if (newType !== "festival") setSelectedExhibitors([]);
+                }}
+                className="bg-dark text-light border-secondary"
+              >
+                <option value="festival">{m.admin_edition_type_festival()}</option>
+                <option value="bourse">{m.admin_edition_type_bourse()}</option>
+                <option value="capsule_exchange">{m.admin_edition_type_capsule_exchange()}</option>
+              </Form.Select>
+            </Form.Group>
             <Form.Check
               type="checkbox"
               id="modal-edition-active"
@@ -291,103 +308,148 @@ export default function EditionModal({
             />
           </div>
 
-          <div className="d-flex gap-3 flex-wrap mb-3">
-            <Form.Group>
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_edition_friday()}
-              </Form.Label>
-              <Form.Control
-                type="date"
-                value={friday}
-                onChange={(e) => setFriday(e.target.value)}
-                className="bg-dark text-light border-secondary"
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_edition_saturday()}
-              </Form.Label>
-              <Form.Control
-                type="date"
-                value={saturday}
-                onChange={(e) => setSaturday(e.target.value)}
-                className="bg-dark text-light border-secondary"
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_edition_sunday()}
-              </Form.Label>
-              <Form.Control
-                type="date"
-                value={sunday}
-                onChange={(e) => setSunday(e.target.value)}
-                className="bg-dark text-light border-secondary"
-                required
-              />
-            </Form.Group>
-          </div>
-
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small mb-1">
-              {m.admin_content_edition_venue()}
+              {m.admin_edition_venue_label()}
             </Form.Label>
             <Form.Select
-              size="sm"
               value={venueId}
               onChange={(e) => setVenueId(e.target.value)}
               className="bg-dark text-light border-secondary"
               required
             >
-              {venues
-                .filter((v) => v.active || v.id === venueId)
-                .map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                    {v.city ? ` (${v.city})` : ""}
-                    {!v.active ? ` — ${m.admin_venue_archived_badge()}` : ""}
-                  </option>
-                ))}
+              <option value="">{m.admin_edition_venue_placeholder()}</option>
+              {venues.map((venue) => (
+                <option key={venue.id} value={venue.id}>
+                  {venue.name}
+                  {venue.active ? "" : " (archived)"}
+                </option>
+              ))}
             </Form.Select>
           </Form.Group>
 
-          <Form.Group>
-            <Form.Label className="text-secondary small mb-1">
-              {m.admin_content_edition_exhibitors_label()}
-            </Form.Label>
-            {exhibitorsQuery.isError && (
-              <Alert variant="danger" className="py-1 mb-2 small">
-                {m.admin_content_error_load()}
-              </Alert>
+          <div className="border border-secondary rounded p-3 mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <div className="text-light small fw-semibold">
+                {typeLabel(editionType)} {m.admin_edition_date_handling()}
+              </div>
+              <span className="text-secondary small">{m.admin_edition_dates_info()}</span>
+            </div>
+            {isFestival ? (
+              <div className="row g-2">
+                {["Friday", "Saturday", "Sunday"].map((label, index) => (
+                  <div className="col-md-4" key={label}>
+                    <Form.Label className="text-secondary small mb-1">{label}</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={previewDates[index] ?? ""}
+                      className="bg-dark text-light border-secondary"
+                      readOnly
+                      disabled={!previewDates[index]}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Form.Group>
+                <Form.Label className="text-secondary small mb-1">Edition date</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={previewDates[0] ?? ""}
+                  className="bg-dark text-light border-secondary"
+                  readOnly
+                  disabled={!previewDates[0]}
+                />
+              </Form.Group>
             )}
-            <Select<ItemOption, true, GroupBase<ItemOption>>
-              isMulti
-              options={exhibitorGroups}
-              value={selectedExhibitors}
-              onChange={setSelectedExhibitors}
-              styles={darkSelectStyles}
-              isLoading={exhibitorsQuery.isFetching}
-              placeholder={m.admin_content_edition_exhibitors_placeholder()}
-              classNamePrefix="rs"
-            />
-          </Form.Group>
+            <div className="text-secondary small mt-2">
+              {isEdit
+                ? m.admin_edition_update_event_dates()
+                : m.admin_edition_create_first_then_events()}
+            </div>
+          </div>
+
+          {!isFestival && (
+            <div className="border border-secondary rounded p-3 mb-3">
+              <div className="text-light small fw-semibold mb-2">
+                {m.admin_edition_external_partner()}
+              </div>
+              <div className="row g-2">
+                <div className="col-md-6">
+                  <Form.Label className="text-secondary small mb-1">
+                    {m.admin_edition_partner_label()}
+                  </Form.Label>
+                  <Form.Control
+                    value={externalPartner}
+                    onChange={(e) => setExternalPartner(e.target.value)}
+                    className="bg-dark text-light border-secondary"
+                    placeholder="Partner organisation"
+                  />
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="text-secondary small mb-1">
+                    {m.admin_edition_contact_name_label()}
+                  </Form.Label>
+                  <Form.Control
+                    value={externalContactName}
+                    onChange={(e) => setExternalContactName(e.target.value)}
+                    className="bg-dark text-light border-secondary"
+                    placeholder="Jane Doe"
+                  />
+                </div>
+                <div className="col-md-3">
+                  <Form.Label className="text-secondary small mb-1">
+                    {m.admin_edition_contact_email_label()}
+                  </Form.Label>
+                  <Form.Control
+                    type="email"
+                    value={externalContactEmail}
+                    onChange={(e) => setExternalContactEmail(e.target.value)}
+                    className="bg-dark text-light border-secondary"
+                    placeholder="jane@example.com"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isFestival && (
+            <Form.Group className="mb-3">
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_edition_festival_exhibitors()}
+              </Form.Label>
+              {exhibitorsQuery.isPending ? (
+                <div className="text-secondary small">
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {m.admin_edition_loading_exhibitors()}
+                </div>
+              ) : (
+                <Select<ItemOption, true>
+                  isMulti
+                  closeMenuOnSelect={false}
+                  styles={darkSelectStyles}
+                  options={exhibitorGroups}
+                  value={selectedExhibitors}
+                  onChange={setSelectedExhibitors}
+                  classNamePrefix="rs"
+                  placeholder={m.admin_edition_exhibitors()}
+                />
+              )}
+            </Form.Group>
+          )}
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="outline-secondary" size="sm" onClick={onHide}>
             {m.close()}
           </Button>
-          <Button type="submit" variant="warning" size="sm" disabled={saving || !venueId}>
-            {saving ? (
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-1"
-              />
+          <Button
+            type="submit"
+            variant="warning"
+            size="sm"
+            disabled={saveEditionMutation.isPending}
+          >
+            {saveEditionMutation.isPending ? (
+              <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />
             )}

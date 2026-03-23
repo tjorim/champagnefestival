@@ -72,7 +72,8 @@ export default function RegistrationCreateModal({
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
   const createRegistrationMutation = useMutation({
-    mutationFn: (payload: CreateRegistrationPayload) => createAdminRegistration(payload, authHeaders),
+    mutationFn: (payload: CreateRegistrationPayload) =>
+      createAdminRegistration(payload, authHeaders),
     retry: false,
     onSuccess: async (registration) => {
       await Promise.all([
@@ -128,14 +129,14 @@ export default function RegistrationCreateModal({
     retry: false,
   });
 
-  const error =
-    createRegistrationMutation.isError
-      ? createRegistrationMutation.error instanceof Error
-        ? createRegistrationMutation.error.message
-        : m.admin_error_create_registration()
-      : null;
+  const error = createRegistrationMutation.isError
+    ? createRegistrationMutation.error instanceof Error
+      ? createRegistrationMutation.error.message
+      : m.admin_error_create_registration()
+    : null;
 
   const events = eventsQuery.data ?? [];
+  const sortedEvents = [...events].sort((a, b) => a.title.localeCompare(b.title));
   const personOptions = personOptionsQuery.data ?? [];
   const loadingEvents = eventsQuery.isPending;
   const loadingPersons = personOptionsQuery.isFetching;
@@ -202,9 +203,16 @@ export default function RegistrationCreateModal({
                 required
               >
                 <option value="">{m.admin_select_event_placeholder()}</option>
-                {events.map((ev) => (
+                {sortedEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>
-                    {ev.title}
+                    {[
+                      ev.title,
+                      ev.edition?.editionType && ev.edition.editionType !== "festival"
+                        ? m.admin_filter_edition_standalone()
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </option>
                 ))}
               </Form.Select>
@@ -274,7 +282,9 @@ export default function RegistrationCreateModal({
             type="submit"
             variant="warning"
             size="sm"
-            disabled={createRegistrationMutation.isPending || !personOption || !hasValidEventSelection}
+            disabled={
+              createRegistrationMutation.isPending || !personOption || !hasValidEventSelection
+            }
           >
             {createRegistrationMutation.isPending ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />

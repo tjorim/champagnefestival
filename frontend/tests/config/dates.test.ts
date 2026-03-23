@@ -22,9 +22,8 @@ vi.mock("@/config/editions", () => ({
 
 describe("config/dates", () => {
   it("returns empty/null values when the fallback edition has no dates", async () => {
-    const { festivalDate, festivalEndDate, festivalDays, festivalDateRange } = await import(
-      "@/config/dates"
-    );
+    const { festivalDate, festivalEndDate, festivalDays, festivalDateRange } =
+      await import("@/config/dates");
 
     expect(festivalDate).toBeNull();
     expect(festivalEndDate).toBeNull();

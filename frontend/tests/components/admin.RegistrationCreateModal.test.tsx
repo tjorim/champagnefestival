@@ -37,9 +37,7 @@ describe("RegistrationCreateModal", () => {
   it("renders a disabled empty-state selector when no reservable events are available", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({
-        events: [{ id: "evt-public", title: "Public talk", registration_required: false }],
-      }),
+      json: async () => [],
     });
 
     const queryClient = createTestQueryClient();
@@ -56,7 +54,7 @@ describe("RegistrationCreateModal", () => {
     );
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith("/api/editions/active", {
+      expect(fetchMock).toHaveBeenCalledWith("/api/events?registration_required=true", {
         headers: { Authorization: "Bearer test" },
       });
     });

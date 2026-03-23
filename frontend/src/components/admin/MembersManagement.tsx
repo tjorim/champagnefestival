@@ -62,8 +62,7 @@ export default function MembersManagement({
             member.clubName.toLowerCase().includes(s) ||
             member.notes.toLowerCase().includes(s);
           const matchesActive =
-            activeFilter === "all" ||
-            (activeFilter === "active" ? member.active : !member.active);
+            activeFilter === "all" || (activeFilter === "active" ? member.active : !member.active);
           return matchesQ && matchesActive;
         })
       : members;

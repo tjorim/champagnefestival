@@ -2,6 +2,8 @@
  * Types for the VIP registration and ordering system.
  */
 
+import type { Event } from "./event";
+
 export type OrderItemCategory = "champagne" | "food" | "other";
 
 export type RegistrationStatus = "pending" | "confirmed" | "cancelled";
@@ -39,7 +41,7 @@ export interface Registration {
   personId: string;
   person: PersonSummary;
   eventId: string;
-  eventTitle: string;
+  event?: Event | null;
   guestCount: number;
   preOrders: OrderItem[];
   notes: string;

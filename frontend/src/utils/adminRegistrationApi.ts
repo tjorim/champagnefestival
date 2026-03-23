@@ -1,4 +1,5 @@
 import { m } from "@/paraglide/messages";
+import { apiToEvent, type Event } from "@/types/event";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
 
@@ -18,11 +19,7 @@ interface PersonSearchResult {
   phone: string;
 }
 
-export interface EditionEvent {
-  id: string;
-  title: string;
-  registration_required: boolean;
-}
+export type EditionEvent = Event;
 
 export interface CreateRegistrationPayload {
   personId: string;
@@ -77,16 +74,16 @@ function isPersonRegistrationRecord(value: unknown): value is Record<string, unk
 export async function fetchRegistrableEvents(
   authHeaders: () => Record<string, string>,
 ): Promise<EditionEvent[]> {
-  const response = await fetch("/api/editions/active", { headers: authHeaders() });
+  const response = await fetch("/api/events?registration_required=true", {
+    headers: authHeaders(),
+  });
   if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(m.admin_content_edition_no_events());
-    }
-    throw new Error(`Failed to load active edition (${response.status})`);
+    if (response.status === 404) throw new Error(m.admin_content_edition_no_events());
+    throw new Error(`Failed to load registrable events (${response.status})`);
   }
 
-  const data = (await response.json()) as { events?: EditionEvent[] };
-  return (data.events ?? []).filter((event) => event.registration_required);
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToEvent) : [];
 }
 
 export async function fetchAdminPersonOptions(
@@ -98,11 +95,7 @@ export async function fetchAdminPersonOptions(
     headers: authHeaders(),
     signal,
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to load people");
-  }
-
+  if (!response.ok) throw new Error("Failed to load people");
   const data = (await response.json()) as PersonSearchResult[];
   return data.map((person) => ({
     value: person.id,
@@ -123,15 +116,11 @@ export async function fetchAdminPersonRegistrations(
     signal,
     headers: authHeaders(),
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load registrations: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Failed to load registrations: ${response.status}`);
 
   const raw: unknown = await response.json();
-  if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord)) {
+  if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord))
     throw new Error(`Invalid registrations payload for person ${personId}.`);
-  }
 
   return raw.map((registration) => ({
     id: registration.id,

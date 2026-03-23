@@ -3,7 +3,7 @@
  */
 
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -11,12 +11,13 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal from "./ItemModal";
 import type { ItemDraft } from "./itemTypes";
-import type { Edition } from "./editionTypes";
+import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -49,19 +50,29 @@ function typeLabel(type: string | undefined): string {
   }
 }
 
+function editionTypeLabel(type: EditionType | "all") {
+  switch (type) {
+    case "festival":
+      return m.admin_filter_edition_festivals();
+    case "bourse":
+      return m.admin_edition_type_bourse();
+    case "capsule_exchange":
+      return m.admin_edition_type_capsule_exchange();
+    default:
+      return m.admin_filter_edition_all();
+  }
+}
+
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
   venues: Venue[];
   onExhibitorSaved?: (item: ItemDraft) => void;
   onExhibitorDeleted?: (id: number) => void;
+  onEditionMutated?: () => void;
 }
 
 const contentSectionQueryKey = queryKeys.admin.contentManagement.section;
 const contentEditionsQueryKey = queryKeys.admin.contentManagement.editions;
-
-// ---------------------------------------------------------------------------
-// ContentSection
-// ---------------------------------------------------------------------------
 
 interface ContentSectionProps {
   sectionKey: string;
@@ -71,7 +82,13 @@ interface ContentSectionProps {
   onItemDeleted?: (id: number) => void;
 }
 
-function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDeleted }: ContentSectionProps) {
+function ContentSection({
+  sectionKey,
+  title,
+  authHeaders,
+  onItemSaved,
+  onItemDeleted,
+}: ContentSectionProps) {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
@@ -327,34 +344,20 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
           {actionError}
         </Alert>
       )}
-
-      <ListGroup variant="flush" className="mb-2">
-        {activeItems.length === 0 ? (
-          <ListGroup.Item className="bg-dark text-secondary fst-italic">
-            {m.admin_content_no_active_items()}
-          </ListGroup.Item>
-        ) : (
-          activeItems.map((item) => renderItemRow(item, false))
-        )}
-      </ListGroup>
-
+      <ListGroup variant="flush">{activeItems.map((item) => renderItemRow(item, false))}</ListGroup>
       {archivedItems.length > 0 && (
-        <div className="mb-1">
+        <div className="mt-2">
           <Button
             variant="link"
             size="sm"
-            className="text-secondary text-decoration-none p-0 mb-1"
-            onClick={() => setArchivedOpen((open) => !open)}
-            aria-expanded={archivedOpen}
+            className="text-secondary px-0"
+            onClick={() => setArchivedOpen((value) => !value)}
           >
             <i
               className={`bi bi-chevron-${archivedOpen ? "down" : "right"} me-1`}
               aria-hidden="true"
             />
             {m.admin_content_archived_section()}
-            <Badge bg="secondary" className="ms-2">
-              {archivedItems.length}
-            </Badge>
           </Button>
           {archivedOpen && (
             <ListGroup variant="flush">
@@ -375,18 +378,16 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
   );
 }
 
-// ---------------------------------------------------------------------------
-// EditionsSection — list + add
-// ---------------------------------------------------------------------------
-
 interface EditionsSectionProps {
   authHeaders: () => Record<string, string>;
   venues: Venue[];
+  onEditionMutated?: () => void;
 }
 
-function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
+function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSectionProps) {
   const queryClient = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editionTypeFilter, setEditionTypeFilter] = useState<EditionType | "all">("all");
 
   const editionsQuery = useQuery({
     queryKey: contentEditionsQueryKey,
@@ -395,14 +396,34 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
     retry: false,
   });
 
-  const editions = editionsQuery.data ?? [];
+  const visibleEditions = useMemo(
+    () =>
+      (editionsQuery.data ?? []).filter(
+        (edition) => editionTypeFilter === "all" || edition.editionType === editionTypeFilter,
+      ),
+    [editionTypeFilter, editionsQuery.data],
+  );
+  const groupedEditions = useMemo(
+    () => ({
+      festival: visibleEditions.filter((edition) => edition.editionType === "festival"),
+      bourse: visibleEditions.filter((edition) => edition.editionType === "bourse"),
+      capsule_exchange: visibleEditions.filter(
+        (edition) => edition.editionType === "capsule_exchange",
+      ),
+    }),
+    [visibleEditions],
+  );
 
   const handleCreated = useCallback(
     (edition: Edition) => {
-      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => [...prev, edition]);
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => [
+        ...prev,
+        edition,
+      ]);
       setAddModalOpen(false);
+      onEditionMutated?.();
     },
-    [queryClient],
+    [onEditionMutated, queryClient],
   );
 
   const handleDeleted = useCallback(
@@ -410,8 +431,9 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
       queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
         prev.filter((edition) => edition.id !== id),
       );
+      onEditionMutated?.();
     },
-    [queryClient],
+    [onEditionMutated, queryClient],
   );
 
   const handleUpdated = useCallback(
@@ -419,14 +441,33 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
       queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
         prev.map((edition) => (edition.id === updated.id ? updated : edition)),
       );
+      onEditionMutated?.();
     },
-    [queryClient],
+    [onEditionMutated, queryClient],
   );
+
+  const handleEventMutation = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: contentEditionsQueryKey });
+    onEditionMutated?.();
+  }, [onEditionMutated, queryClient]);
 
   return (
     <div className="mb-4">
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="mb-0 text-warning">{m.admin_content_editions_section()}</h6>
+      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <h6 className="mb-1 text-warning">{m.admin_content_editions_section()}</h6>
+          <ButtonGroup size="sm">
+            {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
+              <Button
+                key={type}
+                variant={editionTypeFilter === type ? "warning" : "outline-secondary"}
+                onClick={() => setEditionTypeFilter(type)}
+              >
+                {editionTypeLabel(type)}
+              </Button>
+            ))}
+          </ButtonGroup>
+        </div>
         <Button size="sm" variant="outline-secondary" onClick={() => setAddModalOpen(true)}>
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           {m.admin_content_edition_add()}
@@ -444,21 +485,38 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
           {m.admin_content_error_load()}
         </Alert>
       )}
-      {!editionsQuery.isPending && !editionsQuery.isError && editions.length === 0 && (
-        <p className="text-secondary fst-italic small">No editions yet.</p>
-      )}
       {!editionsQuery.isPending &&
         !editionsQuery.isError &&
-        editions.map((edition) => (
-          <EditionCard
-            key={edition.id}
-            edition={edition}
-            venues={venues}
-            authHeaders={authHeaders}
-            onDeleted={handleDeleted}
-            onUpdated={handleUpdated}
-          />
-        ))}
+        (editionsQuery.data ?? []).length === 0 && (
+          <p className="text-secondary fst-italic small">{m.admin_content_no_editions()}</p>
+        )}
+      {!editionsQuery.isPending && !editionsQuery.isError && (
+        <div className="d-flex flex-column gap-3">
+          {(["festival", "bourse", "capsule_exchange"] as const).map((type) => {
+            const grouped = groupedEditions[type];
+            if (grouped.length === 0) return null;
+            return (
+              <div key={type}>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <h6 className="mb-0 text-light">{editionTypeLabel(type)}</h6>
+                  <Badge bg="secondary">{grouped.length}</Badge>
+                </div>
+                {grouped.map((edition) => (
+                  <EditionCard
+                    key={edition.id}
+                    edition={edition}
+                    venues={venues}
+                    authHeaders={authHeaders}
+                    onDeleted={handleDeleted}
+                    onUpdated={handleUpdated}
+                    onEventMutation={handleEventMutation}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <EditionModal
         show={addModalOpen}
@@ -472,11 +530,13 @@ function EditionsSection({ authHeaders, venues }: EditionsSectionProps) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// ContentManagement — root export
-// ---------------------------------------------------------------------------
-
-export default function ContentManagement({ authHeaders, venues, onExhibitorSaved, onExhibitorDeleted }: ContentManagementProps) {
+export default function ContentManagement({
+  authHeaders,
+  venues,
+  onExhibitorSaved,
+  onExhibitorDeleted,
+  onEditionMutated,
+}: ContentManagementProps) {
   return (
     <div>
       <Card bg="dark" text="white" border="secondary" className="mb-3">
@@ -489,7 +549,11 @@ export default function ContentManagement({ authHeaders, venues, onExhibitorSave
             onItemDeleted={onExhibitorDeleted}
           />
           <hr className="border-secondary" />
-          <EditionsSection authHeaders={authHeaders} venues={venues} />
+          <EditionsSection
+            authHeaders={authHeaders}
+            venues={venues}
+            onEditionMutated={onEditionMutated}
+          />
         </Card.Body>
       </Card>
     </div>

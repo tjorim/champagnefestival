@@ -1,5 +1,7 @@
-import type { Edition } from "@/components/admin/editionTypes";
+import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
+import { m } from "@/paraglide/messages";
+import { apiToEvent, type Event, type EventFormData } from "@/types/event";
 
 /**
  * Safe fetch wrapper that handles network errors and non-ok responses
@@ -14,7 +16,6 @@ async function safeFetch(
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      // Try to extract server error details
       const data = await response.json().catch(() => ({}));
       const detail = (data as { detail?: string }).detail;
       const errorMsg = detail ?? (operation ? `Failed to ${operation}` : "Request failed");
@@ -23,7 +24,6 @@ async function safeFetch(
 
     return response;
   } catch (error) {
-    // Handle network errors or rethrow API errors with better messages
     if (error instanceof Error) {
       throw error;
     }
@@ -59,7 +59,6 @@ export async function fetchContentSectionItems(
     { headers: authHeaders() },
     `load ${sectionKey}`,
   );
-
   const data = (await response.json()) as Record<string, unknown>[];
   return Array.isArray(data) ? data.map(apiToItemDraft) : [];
 }
@@ -127,27 +126,21 @@ export async function deleteContentSectionItem(
 ): Promise<number> {
   await safeFetch(
     `/api/${sectionKey}/${id}`,
-    {
-      method: "DELETE",
-      headers: authHeaders(),
-    },
+    { method: "DELETE", headers: authHeaders() },
     `delete ${sectionKey}`,
   );
-
   return id;
 }
 
-export async function fetchEditions(
-  authHeaders: () => Record<string, string>,
-): Promise<Edition[]> {
+export async function fetchEditions(authHeaders: () => Record<string, string>): Promise<Edition[]> {
   const response = await safeFetch(
     "/api/editions?include_inactive=true",
     { headers: authHeaders() },
     "load editions",
   );
 
-  const data = (await response.json()) as Edition[];
-  return Array.isArray(data) ? data : [];
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToEdition) : [];
 }
 
 interface ApiExhibitor {
@@ -183,12 +176,13 @@ export async function saveEdition(
     id: string;
     year: number;
     month: string;
-    friday: string;
-    saturday: string;
-    sunday: string;
+    editionType: Edition["editionType"];
     venueId: string;
     active: boolean;
     exhibitorIds: number[];
+    externalPartner?: string;
+    externalContactName?: string;
+    externalContactEmail?: string;
   },
   authHeaders: () => Record<string, string>,
   initialId?: string,
@@ -203,16 +197,93 @@ export async function saveEdition(
         ...(isEdit ? {} : { id: payload.id }),
         year: payload.year,
         month: payload.month,
-        friday: payload.friday,
-        saturday: payload.saturday,
-        sunday: payload.sunday,
         venue_id: payload.venueId,
+        edition_type: payload.editionType,
+        external_partner: payload.externalPartner?.trim() || null,
+        external_contact_name: payload.externalContactName?.trim() || null,
+        external_contact_email: payload.externalContactEmail?.trim() || null,
         active: payload.active,
-        exhibitors: payload.exhibitorIds,
+        ...(payload.editionType === "festival" ? { exhibitors: payload.exhibitorIds } : {}),
       }),
     },
     isEdit ? "update edition" : "create edition",
   );
 
-  return (await response.json()) as Edition;
+  return apiToEdition((await response.json()) as Record<string, unknown>);
+}
+
+export async function fetchEditionEvents(
+  editionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Event[]> {
+  const response = await safeFetch(
+    `/api/events?edition_id=${encodeURIComponent(editionId)}`,
+    { headers: authHeaders() },
+    m.admin_content_error_load(),
+  );
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToEvent) : [];
+}
+
+export async function saveEditionEvent(
+  payload: {
+    editionId: string;
+    editingEventId?: string;
+    formData: EventFormData;
+  },
+  authHeaders: () => Record<string, string>,
+): Promise<Event> {
+  const response = await safeFetch(
+    payload.editingEventId ? `/api/events/${payload.editingEventId}` : "/api/events",
+    {
+      method: payload.editingEventId ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        edition_id: payload.editionId,
+        title: payload.formData.title.trim(),
+        description: payload.formData.description.trim(),
+        date: payload.formData.date,
+        start_time: payload.formData.startTime,
+        end_time: payload.formData.endTime || null,
+        category: payload.formData.category.trim(),
+        registration_required: payload.formData.registrationRequired,
+        registrations_open_from:
+          payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
+            ? payload.formData.registrationsOpenFrom
+            : null,
+        max_capacity: (() => {
+          if (!payload.formData.registrationRequired || !payload.formData.maxCapacity) return null;
+          const n = Number(payload.formData.maxCapacity);
+          return Number.isFinite(n) && n > 0 ? Math.trunc(n) : null;
+        })(),
+        active: payload.formData.active,
+      }),
+    },
+    m.admin_content_error_save(),
+  );
+
+  return apiToEvent((await response.json()) as Record<string, unknown>);
+}
+
+export async function deleteEditionEvent(
+  eventId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<void> {
+  await safeFetch(
+    `/api/events/${eventId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
+}
+
+export async function deleteEditionById(
+  editionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<string> {
+  await safeFetch(
+    `/api/editions/${editionId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
+  return editionId;
 }

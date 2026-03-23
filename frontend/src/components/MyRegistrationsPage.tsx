@@ -47,7 +47,9 @@ export default function MyRegistrationsPage() {
   const isSubmittingEmail = requestLookupMutation.isPending;
   const isLoadingRegistrations = registrationsQuery.isPending;
   const tokenError = registrationsQuery.isError
-    ? (registrationsQuery.error instanceof Error ? registrationsQuery.error.message : String(registrationsQuery.error))
+    ? registrationsQuery.error instanceof Error
+      ? registrationsQuery.error.message
+      : String(registrationsQuery.error)
     : "";
   const showRecoveryCTA =
     registrationsQuery.isError &&
@@ -191,12 +193,7 @@ export default function MyRegistrationsPage() {
                     ) : registrations !== null ? (
                       <div className="d-flex flex-column gap-3">
                         {registrations.map((registration) => (
-                          <Card
-                            key={registration.id}
-                            bg="dark"
-                            text="white"
-                            border="secondary"
-                          >
+                          <Card key={registration.id} bg="dark" text="white" border="secondary">
                             <Card.Header className="d-flex align-items-center justify-content-between">
                               <span className="fw-semibold">
                                 <i className="bi bi-calendar-event me-2" aria-hidden="true" />
