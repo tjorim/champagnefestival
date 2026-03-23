@@ -125,7 +125,7 @@ async function fetchJsonOrThrow<T>(
   options: RequestInit,
   fallbackMessage: string,
 ): Promise<T> {
-  const response = await fetch(url, options);
+  const response = await requestApi(url, options);
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
@@ -138,11 +138,15 @@ async function fetchVoidOrThrow(
   options: RequestInit,
   fallbackMessage: string,
 ): Promise<void> {
-  const response = await fetch(url, options);
+  const response = await requestApi(url, options);
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
   }
+}
+
+async function requestApi(url: string, options: RequestInit): Promise<Response> {
+  return fetch(url, options);
 }
 
 async function fetchArrayOrThrow<T>(
@@ -151,7 +155,7 @@ async function fetchArrayOrThrow<T>(
   fallbackMessage: string,
   mapper: (item: Record<string, unknown>) => T,
 ): Promise<T[]> {
-  const response = await fetch(url, options);
+  const response = await requestApi(url, options);
   if (response.status === 401) {
     throw new Error("unauthorized");
   }
@@ -168,7 +172,7 @@ async function fetchStatus(
   url: string,
   options: RequestInit,
 ): Promise<number> {
-  const response = await fetch(url, options);
+  const response = await requestApi(url, options);
   return response.status;
 }
 
