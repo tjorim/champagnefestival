@@ -79,9 +79,7 @@ def normalize_phone(phone: str | None, default_country_prefix: str = DEFAULT_COU
 def _raise_identity_conflict() -> None:
     raise HTTPException(
         status_code=409,
-        detail=(
-            "Person with this national register number or eID document number already exists."
-        ),
+        detail="Person with this national register number or eID document number already exists.",
     )
 
 
@@ -340,15 +338,9 @@ async def merge_people(
     await db.flush()
 
     # Re-point all reservations and exhibitor contacts.
+    await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=person_id))
     await db.execute(
-        update(Registration)
-        .where(Registration.person_id == duplicate_id)
-        .values(person_id=person_id)
-    )
-    await db.execute(
-        update(Exhibitor)
-        .where(Exhibitor.contact_person_id == duplicate_id)
-        .values(contact_person_id=person_id)
+        update(Exhibitor).where(Exhibitor.contact_person_id == duplicate_id).values(contact_person_id=person_id)
     )
 
     await db.delete(duplicate)

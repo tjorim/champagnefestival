@@ -1,18 +1,20 @@
 # ── build stage ──────────────────────────────────────────────────────────────
 FROM python:3.12-slim AS builder
 
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 WORKDIR /app
-COPY pyproject.toml .
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
 FROM python:3.12-slim
 
 WORKDIR /app
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /app/.venv /app/.venv
 COPY . .
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Data directory — mount a named volume here on the VPS to persist the DB.
 RUN mkdir -p /var/data/champagne

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -30,7 +30,7 @@ async def get_active_edition(
     if not editions:
         raise HTTPException(status_code=404, detail="No active editions found.")
 
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     dated = _sorted_editions(editions)
     active = next(
         (
@@ -51,7 +51,7 @@ async def list_upcoming_editions(
     edition_type: EditionType | None = Query(default=None),
 ) -> list[dict]:
     """List upcoming active editions across all supported edition types."""
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
     upcoming = [edition for edition in editions if (_edition_end_date(edition) or date.min) >= today]
     return await _edition_payloads(db, _sorted_editions(upcoming))
@@ -107,9 +107,7 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
 
 
 @router.put("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
-async def update_edition(
-    edition_id: str, body: EditionUpdate, db: AsyncSession = Depends(get_db)
-) -> dict:
+async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession = Depends(get_db)) -> dict:
     edition = await _get_or_404(db, edition_id)
 
     for field in [
@@ -132,11 +130,11 @@ async def update_edition(
         edition.venue_id = body.venue_id
 
     if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
-        _validate_exhibitors_allowed(edition.edition_type, body.exhibitors)
+        _validate_exhibitors_allowed(edition.edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
         await _validate_exhibitor_ids(db, body.exhibitors)
         edition.exhibitors = list(body.exhibitors)
 
-    _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)
+    _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
 
     await db.commit()
     edition = await _get_or_404(db, edition.id)
@@ -164,15 +162,11 @@ async def _load_editions(
         stmt = stmt.where(Edition.active.is_(True))
     if edition_type is not None:
         stmt = stmt.where(Edition.edition_type == edition_type)
-    return (await db.execute(stmt)).scalars().all()
+    return list((await db.execute(stmt)).scalars().all())
 
 
 async def _get_or_404(db: AsyncSession, edition_id: str) -> Edition:
-    result = await db.execute(
-        select(Edition)
-        .options(selectinload(Edition.events))
-        .where(Edition.id == edition_id)
-    )
+    result = await db.execute(select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id))
     edition = result.scalar_one_or_none()
     if edition is None:
         raise HTTPException(status_code=404, detail="Edition not found.")
@@ -197,9 +191,7 @@ async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, dict
 async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, dict]:
     if not ids:
         return {}
-    result = await db.execute(
-        select(Exhibitor).where(Exhibitor.id.in_(ids), Exhibitor.active.is_(True))
-    )
+    result = await db.execute(select(Exhibitor).where(Exhibitor.id.in_(ids), Exhibitor.active.is_(True)))
     return {
         exhibitor.id: {
             "id": exhibitor.id,
@@ -223,10 +215,7 @@ async def _validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) ->
     if vendors:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Only producers and sponsors may be linked to editions. "
-                f"Rejected vendor IDs: {vendors}"
-            ),
+            detail=(f"Only producers and sponsors may be linked to editions. Rejected vendor IDs: {vendors}"),
         )
 
 
@@ -272,9 +261,7 @@ async def _edition_payload(db: AsyncSession, edition: Edition) -> dict:
     return payloads[0]
 
 
-def _resolve_exhibitors(
-    edition: Edition, exhibitor_map: dict[int, dict]
-) -> tuple[list[dict], list[dict]]:
+def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tuple[list[dict], list[dict]]:
     producers: list[dict] = []
     sponsors: list[dict] = []
     for exhibitor_id in edition.exhibitors:

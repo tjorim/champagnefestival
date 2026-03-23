@@ -1,7 +1,7 @@
 """QR-code check-in endpoints (public, token-gated)."""
 
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
@@ -83,7 +83,7 @@ async def post_check_in(
 
     if not already:
         r.checked_in = True
-        r.checked_in_at = datetime.now(timezone.utc)
+        r.checked_in_at = datetime.now(UTC)
         changed = True
 
     if body.issue_strap and not r.strap_issued:
@@ -105,12 +105,8 @@ async def post_check_in(
 # ---------------------------------------------------------------------------
 
 
-async def _get_by_token_or_401(
-    db: AsyncSession, reservation_id: str, token: str
-) -> Registration:
-    result = await db.execute(
-        select(Registration).where(Registration.id == reservation_id)
-    )
+async def _get_by_token_or_401(db: AsyncSession, reservation_id: str, token: str) -> Registration:
+    result = await db.execute(select(Registration).where(Registration.id == reservation_id))
     r = result.scalar_one_or_none()
     if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
         raise HTTPException(

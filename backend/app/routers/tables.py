@@ -81,9 +81,7 @@ async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
 @router.get("/{table_id}", response_model=TableOut)
 async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     t = await _get_or_404(db, table_id)
-    res_result = await db.execute(
-        select(Registration.id).where(Registration.table_id == table_id)
-    )
+    res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
     registration_ids = [row[0] for row in res_result.all()]
     return table_to_dict(t, registration_ids)
 
@@ -128,9 +126,7 @@ async def update_table(
         t.layout_id = body.layout_id
     await db.commit()
     await db.refresh(t)
-    res_result = await db.execute(
-        select(Registration.id).where(Registration.table_id == table_id)
-    )
+    res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
     registration_ids = [row[0] for row in res_result.all()]
     return table_to_dict(t, registration_ids)
 

@@ -39,7 +39,9 @@ async def list_exhibitors(
     exhibitors = result.scalars().all()
     person_ids = [e.contact_person_id for e in exhibitors if e.contact_person_id]
     contacts = await _load_contacts_by_ids(db, person_ids)
-    return [exhibitor_to_dict(e, contacts.get(e.contact_person_id)) for e in exhibitors]
+    return [
+        exhibitor_to_dict(e, contacts.get(e.contact_person_id) if e.contact_person_id else None) for e in exhibitors
+    ]
 
 
 @router.post(
@@ -67,9 +69,7 @@ async def create_exhibitor(body: ExhibitorCreate, db: AsyncSession = Depends(get
 
 
 @router.put("/{exhibitor_id}", response_model=ExhibitorOut, dependencies=[Depends(require_admin)])
-async def update_exhibitor(
-    exhibitor_id: int, body: ExhibitorUpdate, db: AsyncSession = Depends(get_db)
-) -> dict:
+async def update_exhibitor(exhibitor_id: int, body: ExhibitorUpdate, db: AsyncSession = Depends(get_db)) -> dict:
     e = await _get_or_404(db, exhibitor_id)
     if body.name is not None:
         e.name = body.name

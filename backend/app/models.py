@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
 )
@@ -21,25 +21,21 @@ from app.database import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Registration(Base):
     __tablename__ = "registrations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    event_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("events.id", ondelete="RESTRICT"), nullable=False
-    )
+    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="RESTRICT"), nullable=False)
     guest_count: Mapped[int] = mapped_column(Integer)
     pre_orders: Mapped[list[dict]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     accessibility_note: Mapped[str] = mapped_column(Text, default="")
     """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
 
-    person_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("people.id", ondelete="RESTRICT"), nullable=False
-    )
+    person_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="RESTRICT"), nullable=False)
     table_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
     )
@@ -51,20 +47,14 @@ class Registration(Base):
     """unpaid | partial | paid"""
 
     checked_in: Mapped[bool] = mapped_column(Boolean, default=False)
-    checked_in_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     strap_issued: Mapped[bool] = mapped_column(Boolean, default=False)
     check_in_token: Mapped[str] = mapped_column(String(64), unique=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    event: Mapped["Event"] = relationship(back_populates="registrations")
+    event: Mapped[Event] = relationship(back_populates="registrations")
 
 
 class ReservationAccessToken(Base):
@@ -76,12 +66,8 @@ class ReservationAccessToken(Base):
     email: Mapped[str] = mapped_column(String(200), unique=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    last_used_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Exhibitor(Base):
@@ -100,12 +86,8 @@ class Exhibitor(Base):
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class Venue(Base):
@@ -123,12 +105,8 @@ class Venue(Base):
     lng: Mapped[float] = mapped_column(Float, default=0.0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class Room(Base):
@@ -142,9 +120,7 @@ class Room(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
-    venue_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
-    )
+    venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     """FK to the Venue this room belongs to."""
 
     width_m: Mapped[float] = mapped_column(default=20.0)
@@ -158,12 +134,8 @@ class Room(Base):
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class Layout(Base):
@@ -180,9 +152,7 @@ class Layout(Base):
     edition_id: Mapped[str | None] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="SET NULL"), nullable=True
     )
-    room_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False
-    )
+    room_id: Mapped[str] = mapped_column(String(64), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False)
     """FK to the room this layout belongs to."""
 
     day_id: Mapped[int] = mapped_column(Integer)
@@ -191,12 +161,8 @@ class Layout(Base):
     label: Mapped[str] = mapped_column(String(200), default="")
     """Human-readable version label, e.g. 'pre-event', 'after cancellations'."""
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class TableType(Base):
@@ -217,12 +183,8 @@ class TableType(Base):
     max_capacity: Mapped[int] = mapped_column(Integer)
     """Physical maximum number of seats for this table shape/size."""
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class Table(Base):
@@ -242,19 +204,13 @@ class Table(Base):
     rotation: Mapped[int] = mapped_column(Integer, default=0)
     """Rotation angle in whole degrees [0, 359], clockwise."""
 
-    layout_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False
-    )
+    layout_id: Mapped[str] = mapped_column(String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False)
     """FK to the Layout this table belongs to."""
 
     reservation_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class Area(Base):
@@ -263,9 +219,7 @@ class Area(Base):
     __tablename__ = "areas"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    layout_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False
-    )
+    layout_id: Mapped[str] = mapped_column(String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False)
     exhibitor_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
     )
@@ -279,12 +233,8 @@ class Area(Base):
     width_m: Mapped[float] = mapped_column(default=1.5)
     length_m: Mapped[float] = mapped_column(default=1.0)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class Edition(Base):
@@ -298,29 +248,19 @@ class Edition(Base):
     year: Mapped[int] = mapped_column(Integer)
     month: Mapped[str] = mapped_column(String(20))
 
-    venue_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False
-    )
+    venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     edition_type: Mapped[str] = mapped_column(String(20), default="festival")
     external_partner: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    external_contact_name: Mapped[str | None] = mapped_column(
-        String(200), nullable=True
-    )
-    external_contact_email: Mapped[str | None] = mapped_column(
-        String(200), nullable=True
-    )
+    external_contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    external_contact_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
     exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    events: Mapped[list["Event"]] = relationship(
+    events: Mapped[list[Event]] = relationship(
         back_populates="edition",
         cascade="all, delete-orphan",
         order_by="Event.date, Event.start_time, Event.created_at",
@@ -331,27 +271,19 @@ class Event(Base):
     __tablename__ = "events"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    edition_id: Mapped[str] = mapped_column(
-        String(100), ForeignKey("editions.id", ondelete="CASCADE"), nullable=False
-    )
+    edition_id: Mapped[str] = mapped_column(String(100), ForeignKey("editions.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
-    date: Mapped[date] = mapped_column(Date)
+    date: Mapped[date] = mapped_column(Date)  # ty: ignore[invalid-type-form]
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
-    registrations_open_from: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     edition: Mapped[Edition] = relationship(back_populates="events")
     registrations: Mapped[list[Registration]] = relationship(back_populates="event")
@@ -369,23 +301,15 @@ class Person(Base):
     address: Mapped[str] = mapped_column(String(300), default="")
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
-    national_register_number: Mapped[str | None] = mapped_column(
-        String(20), unique=True, nullable=True
-    )
-    eid_document_number: Mapped[str | None] = mapped_column(
-        String(50), unique=True, nullable=True
-    )
+    national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
+    eid_document_number: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class VolunteerPeriod(Base):
@@ -394,15 +318,9 @@ class VolunteerPeriod(Base):
     __tablename__ = "volunteer_periods"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    volunteer_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("people.id", ondelete="CASCADE"), nullable=False
-    )
+    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), nullable=False)
     first_help_day: Mapped[date] = mapped_column(Date, nullable=False)
     last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

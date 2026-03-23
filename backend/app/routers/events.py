@@ -17,6 +17,7 @@ from app.utils import event_to_summary_dict, make_id
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
+
 @router.get("", response_model=list[EventOut], dependencies=[Depends(require_admin)])
 async def list_events(
     db: AsyncSession = Depends(get_db),
@@ -27,9 +28,7 @@ async def list_events(
     registration_required: bool | None = Query(default=None),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    stmt = select(Event).options(selectinload(Event.edition)).order_by(
-        Event.date, Event.start_time, Event.created_at
-    )
+    stmt = select(Event).options(selectinload(Event.edition)).order_by(Event.date, Event.start_time, Event.created_at)
     if edition_id is not None:
         stmt = stmt.where(Event.edition_id == edition_id)
     if date_from is not None:
@@ -87,9 +86,7 @@ async def create_event(body: EventCreate, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.put("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
-async def update_event(
-    event_id: str, body: EventUpdate, db: AsyncSession = Depends(get_db)
-) -> dict:
+async def update_event(event_id: str, body: EventUpdate, db: AsyncSession = Depends(get_db)) -> dict:
     event = await _get_or_404(db, event_id)
     edition = event.edition
 
@@ -110,9 +107,7 @@ async def update_event(
             if "registrations_open_from" in body.model_fields_set
             else event.registrations_open_from
         ),
-        max_capacity=(
-            body.max_capacity if "max_capacity" in body.model_fields_set else event.max_capacity
-        ),
+        max_capacity=(body.max_capacity if "max_capacity" in body.model_fields_set else event.max_capacity),
     )
 
     for field in [
@@ -143,9 +138,7 @@ async def delete_event(event_id: str, db: AsyncSession = Depends(get_db)) -> Non
 
 
 async def _get_or_404(db: AsyncSession, event_id: str) -> Event:
-    result = await db.execute(
-        select(Event).options(selectinload(Event.edition)).where(Event.id == event_id)
-    )
+    result = await db.execute(select(Event).options(selectinload(Event.edition)).where(Event.id == event_id))
     event = result.scalar_one_or_none()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found.")
@@ -191,8 +184,5 @@ def _validate_registration_settings(
     if registrations_open_from is not None or max_capacity is not None:
         raise HTTPException(
             status_code=400,
-            detail=(
-                "registrations_open_from and max_capacity may only be set when "
-                "registration_required is true."
-            ),
+            detail=("registrations_open_from and max_capacity may only be set when registration_required is true."),
         )

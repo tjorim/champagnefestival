@@ -51,9 +51,7 @@ async def _ensure_unique_fields(
         eid_document_number = eid_document_number.strip() or None
 
     if national_register_number is not None:
-        stmt = select(Person).where(
-            Person.national_register_number == national_register_number
-        )
+        stmt = select(Person).where(Person.national_register_number == national_register_number)
         if exclude_id:
             stmt = stmt.where(Person.id != exclude_id)
         existing = (await db.execute(stmt)).scalar_one_or_none()
@@ -80,9 +78,7 @@ async def _replace_help_periods(
     volunteer_id: str,
     help_periods: list[VolunteerHelpPeriodIn],
 ) -> None:
-    await db.execute(
-        delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)
-    )
+    await db.execute(delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id))
     for period in help_periods:
         db.add(
             VolunteerPeriod(
@@ -93,9 +89,7 @@ async def _replace_help_periods(
         )
 
 
-async def _load_periods_map(
-    db: AsyncSession, volunteer_ids: list[str]
-) -> dict[str, list[VolunteerPeriod]]:
+async def _load_periods_map(db: AsyncSession, volunteer_ids: list[str]) -> dict[str, list[VolunteerPeriod]]:
     if not volunteer_ids:
         return {}
     rows = (
@@ -120,9 +114,7 @@ async def _load_periods_map(
 
 
 @router.post("", response_model=VolunteerOut, status_code=status.HTTP_201_CREATED)
-async def create_volunteer(
-    body: VolunteerCreate, db: AsyncSession = Depends(get_db)
-) -> dict:
+async def create_volunteer(body: VolunteerCreate, db: AsyncSession = Depends(get_db)) -> dict:
     await _ensure_unique_fields(
         db,
         national_register_number=body.national_register_number,
@@ -151,9 +143,7 @@ async def create_volunteer(
 @router.get("", response_model=list[VolunteerOut])
 async def list_volunteers(
     db: AsyncSession = Depends(get_db),
-    q: str | None = Query(
-        default=None, description="Search by name, address, NISS, or eID doc number"
-    ),
+    q: str | None = Query(default=None, description="Search by name, address, NISS, or eID doc number"),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
     stmt = select(Person).where(roles_contains("volunteer"))
@@ -162,9 +152,7 @@ async def list_volunteers(
         stmt = stmt.where(Person.active == active)
 
     if q:
-        q_escaped = (
-            q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        )
+        q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
         q_like = f"%{q_escaped}%"
         stmt = stmt.where(
             or_(
@@ -195,19 +183,13 @@ async def update_volunteer(
 ) -> dict:
     volunteer = await _get_or_404(db, volunteer_id)
 
-    if (
-        "national_register_number" in body.model_fields_set
-        and body.national_register_number is not None
-    ):
+    if "national_register_number" in body.model_fields_set and body.national_register_number is not None:
         await _ensure_unique_fields(
             db,
             national_register_number=body.national_register_number,
             exclude_id=volunteer_id,
         )
-    if (
-        "eid_document_number" in body.model_fields_set
-        and body.eid_document_number is not None
-    ):
+    if "eid_document_number" in body.model_fields_set and body.eid_document_number is not None:
         await _ensure_unique_fields(
             db,
             eid_document_number=body.eid_document_number,
@@ -236,9 +218,7 @@ async def update_volunteer(
 
 
 @router.delete("/{volunteer_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_volunteer(
-    volunteer_id: str, db: AsyncSession = Depends(get_db)
-) -> None:
+async def delete_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> None:
     """Remove the volunteer role from a person (soft archive).
 
     The underlying Person record is kept intact so that reservations,
@@ -246,9 +226,7 @@ async def delete_volunteer(
     role and associated help periods are removed.
     """
     volunteer = await _get_or_404(db, volunteer_id)
-    await db.execute(
-        delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)
-    )
+    await db.execute(delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id))
     _remove_volunteer_role(volunteer)
     await db.commit()
 

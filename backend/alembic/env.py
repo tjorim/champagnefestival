@@ -4,9 +4,10 @@ import asyncio
 import os
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
+
+from alembic import context
 
 # Import our models so Alembic can detect schema changes
 from app.models import Base  # noqa: F401
@@ -51,6 +52,8 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
+    if not async_url:
+        raise RuntimeError("No DATABASE_URL configured for async migrations.")
     connectable = create_async_engine(async_url)
     async with connectable.connect() as conn:
         await conn.run_sync(do_run_migrations)

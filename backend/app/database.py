@@ -27,17 +27,16 @@ if _is_sqlite:
             _parent.mkdir(parents=True, exist_ok=True)
             logger.info(f"✓ SQLite data directory ready: {_parent}")
         except (PermissionError, OSError) as e:
-            raise RuntimeError(
-                f"Cannot create SQLite data directory {_parent}: {e}"
-            ) from e
+            raise RuntimeError(f"Cannot create SQLite data directory {_parent}: {e}") from e
 
 engine = create_async_engine(
     settings.database_url,
     # echo=True,  # uncomment for SQL query logging during development
-    **( {"connect_args": {"check_same_thread": False}} if _is_sqlite else {}),
+    **({"connect_args": {"check_same_thread": False}} if _is_sqlite else {}),
 )
 
 if _is_sqlite:
+
     @event.listens_for(engine.sync_engine, "connect")
     def _set_sqlite_pragma(dbapi_conn, connection_record) -> None:  # noqa: ANN001
         cursor = dbapi_conn.cursor()
@@ -46,6 +45,7 @@ if _is_sqlite:
         cursor.execute("PRAGMA synchronous=NORMAL")
         cursor.execute("PRAGMA busy_timeout=5000")  # milliseconds to wait before returning SQLITE_BUSY
         cursor.close()
+
 
 async_session_factory = async_sessionmaker(
     engine,

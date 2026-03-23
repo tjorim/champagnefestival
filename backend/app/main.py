@@ -1,8 +1,8 @@
 """FastAPI application entry point."""
 
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,13 +14,13 @@ from app.config import settings
 from app.database import create_tables
 from app.routers import (
     areas,
-    members,
     check_in,
     contact,
+    editions,
     events,
     exhibitors,
-    editions,
     layouts,
+    members,
     people,
     registrations,
     rooms,
@@ -77,19 +77,18 @@ app = FastAPI(
 _cors_origins = settings.get_cors_origins_list()
 
 if not _cors_origins:
-    logger.warning(
-        "No CORS origins configured — all cross-origin requests will be blocked!"
-    )
+    logger.warning("No CORS origins configured — all cross-origin requests will be blocked!")
 else:
     logger.info(f"CORS middleware configured with origins: {_cors_origins}")
 
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # ty: ignore[invalid-argument-type]
     allow_origins=_cors_origins,
-    allow_credentials=False if "*" in _cors_origins else True,
+    allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
+
 
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:

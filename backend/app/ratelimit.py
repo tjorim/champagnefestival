@@ -10,7 +10,7 @@ required.
 from __future__ import annotations
 
 import collections
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 _RATE_LIMIT_MAX_REQUESTS = 5
 _RATE_LIMIT_WINDOW_SECONDS = 600
@@ -19,7 +19,7 @@ _rate_limit_buckets: dict[str, collections.deque[datetime]] = {}
 
 def check_rate_limit(client_ip: str) -> bool:
     """Return True if the request is within the rate limit, False otherwise."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cutoff = now - timedelta(seconds=_RATE_LIMIT_WINDOW_SECONDS)
     bucket = _rate_limit_buckets.setdefault(client_ip, collections.deque())
     while bucket and bucket[0] < cutoff:
