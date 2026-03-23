@@ -44,7 +44,7 @@ def _event_id(edition_id: str, schedule_item_id: str | None, index: int) -> str:
     new relational ``events`` table always gets generated ``evt-...`` IDs.
     """
     seed = f"{edition_id}:{schedule_item_id or index}".encode("utf-8")
-    digest = hashlib.sha1(seed).hexdigest()[:16]
+    digest = hashlib.sha256(seed).hexdigest()[:16]
     prefix = (schedule_item_id or f"event-{index + 1}").replace(" ", "-")[:32]
     return f"evt-{prefix}-{digest}"[:64]
 
