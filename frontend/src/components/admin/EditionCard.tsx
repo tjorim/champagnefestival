@@ -6,6 +6,7 @@ import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import { fetchArrayOrThrow, fetchJsonOrThrow, fetchVoidOrThrow } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EventModal from "./EventModal";
@@ -14,44 +15,42 @@ import type { Venue } from "@/types/admin";
 import { apiToEvent, type Event, type EventFormData } from "@/types/event";
 
 async function fetchEditionEvents(editionId: string, authHeaders: () => Record<string, string>): Promise<Event[]> {
-  const response = await fetch(`/api/events?edition_id=${encodeURIComponent(editionId)}`, { headers: authHeaders() });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_load());
-  }
-  const payload = await response.json();
-  return Array.isArray(payload)
-    ? payload.filter((value): value is Record<string, unknown> => typeof value === "object" && value !== null).map(apiToEvent)
-    : [];
+  return fetchArrayOrThrow(
+    `/api/events?edition_id=${encodeURIComponent(editionId)}`,
+    { headers: authHeaders() },
+    m.admin_content_error_load(),
+    apiToEvent,
+  );
 }
 
 async function persistEvent(method: "POST" | "PUT", url: string, body: Record<string, unknown>, authHeaders: () => Record<string, string>): Promise<Event> {
-  const response = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
-  }
-  return apiToEvent((await response.json()) as Record<string, unknown>);
+  return apiToEvent(
+    await fetchJsonOrThrow<Record<string, unknown>>(
+      url,
+      {
+        method,
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(body),
+      },
+      m.admin_content_error_save(),
+    ),
+  );
 }
 
 async function deleteEvent(eventId: string, authHeaders: () => Record<string, string>): Promise<void> {
-  const response = await fetch(`/api/events/${eventId}`, { method: "DELETE", headers: authHeaders() });
-  if (!response.ok && response.status !== 204) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
-  }
+  await fetchVoidOrThrow(
+    `/api/events/${eventId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
 }
 
 async function deleteEdition(editionId: string, authHeaders: () => Record<string, string>): Promise<string> {
-  const response = await fetch(`/api/editions/${editionId}`, { method: "DELETE", headers: authHeaders() });
-  if (!response.ok && response.status !== 204) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_content_error_save());
-  }
+  await fetchVoidOrThrow(
+    `/api/editions/${editionId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
   return editionId;
 }
 
