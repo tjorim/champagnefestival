@@ -570,5 +570,10 @@
   "admin_event_location": "Location",
   "admin_event_presenter": "Presenter",
   "admin_event_standalone_help": "Standalone edition events inherit the edition date; change the edition date by editing the existing standalone event.",
-  "admin_event_optional_placeholder": "Optional"
+  "admin_event_optional_placeholder": "Optional",
+  "admin_error_server_transient": "Server temporarily unavailable. Please try again.",
+  "admin_error_server_transient_refresh": "Server temporarily unavailable. Please refresh or try logging in again.",
+  "admin_error_auto_auth_failed": "Failed to authenticate. Please log in manually.",
+  "admin_error_add_area": "Failed to add area.",
+  "admin_error_delete_area": "Failed to delete area."
 }

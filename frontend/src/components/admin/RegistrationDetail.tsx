@@ -20,7 +20,8 @@ interface RegistrationDetailProps {
 }
 
 function isSimpleRsvp(registration: Registration) {
-  return registration.event?.edition?.editionType !== undefined && registration.event.edition.editionType !== "festival";
+  if (!registration.event || !registration.event.edition) return false;
+  return registration.event.edition.editionType !== "festival";
 }
 
 export default function RegistrationDetail({ registration, baseUrl, emailDuplicates = [], onClose, onToggleDelivered, onCheckIn, onIssueStrap, onMergeDuplicate }: RegistrationDetailProps) {

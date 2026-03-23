@@ -570,5 +570,10 @@
   "admin_event_location": "Lieu",
   "admin_event_presenter": "Présentateur",
   "admin_event_standalone_help": "Les événements d'édition autonome héritent de la date de l'édition; modifiez la date en éditant l'événement autonome existant.",
-  "admin_event_optional_placeholder": "Optionnel"
+  "admin_event_optional_placeholder": "Optionnel",
+  "admin_error_server_transient": "Serveur temporairement indisponible. Veuillez réessayer.",
+  "admin_error_server_transient_refresh": "Serveur temporairement indisponible. Veuillez actualiser ou vous reconnecter.",
+  "admin_error_auto_auth_failed": "Échec de l'authentification. Veuillez vous connecter manuellement.",
+  "admin_error_add_area": "Impossible d'ajouter la zone.",
+  "admin_error_delete_area": "Impossible de supprimer la zone."
 }

@@ -64,6 +64,21 @@ export async function fetchJsonOrThrowWithUnauthorized<T>(
   return (await response.json()) as T;
 }
 
+export async function fetchVoidOrThrowWithUnauthorized(
+  url: string,
+  options: RequestInit,
+  fallbackMessage: string,
+): Promise<void> {
+  const response = await requestApi(url, options);
+  if (response.status === 401) {
+    throw new Error("unauthorized");
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+  }
+}
+
 export async function fetchStatus(
   url: string,
   options: RequestInit,

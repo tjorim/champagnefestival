@@ -77,7 +77,8 @@ function paymentLabel(payment: PaymentStatus): string {
 }
 
 function isStandaloneRegistration(registration: Registration) {
-  return registration.event?.edition?.editionType !== undefined && registration.event.edition.editionType !== "festival";
+  if (!registration.event || !registration.event.edition) return true;
+  return registration.event.edition.editionType !== "festival";
 }
 
 export default function RegistrationList({ registrations, tables, exhibitors, filter, onFilterChange, onUpdateStatus, onUpdatePayment, onAssignTable, onViewDetail, onAddRegistration, authHeaders }: RegistrationListProps) {

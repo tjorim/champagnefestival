@@ -66,7 +66,7 @@ export function apiToEvent(data: Record<string, unknown>): Event {
       typeof data.registrations_open_from === "string" ? data.registrations_open_from : undefined,
     maxCapacity: typeof data.max_capacity === "number" ? data.max_capacity : undefined,
     sortOrder: typeof data.sort_order === "number" ? data.sort_order : undefined,
-    active: data.active !== false,
+    active: Boolean(data.active),
     createdAt: String(data.created_at ?? ""),
     updatedAt: String(data.updated_at ?? ""),
     edition: rawEdition
@@ -78,7 +78,7 @@ export function apiToEvent(data: Record<string, unknown>): Event {
             rawEdition.edition_type === "bourse" || rawEdition.edition_type === "capsule_exchange"
               ? rawEdition.edition_type
               : "festival",
-          active: rawEdition.active !== false,
+          active: Boolean(rawEdition.active),
         }
       : null,
   };
