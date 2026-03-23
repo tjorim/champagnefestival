@@ -168,6 +168,23 @@ async function fetchArrayOrThrow<T>(
   return Array.isArray(payload) ? payload.map((item) => mapper(item as Record<string, unknown>)) : [];
 }
 
+async function fetchJsonOrThrowWithUnauthorized<T>(
+  url: string,
+  options: RequestInit,
+  fallbackMessage: string,
+): Promise<T> {
+  const response = await requestApi(url, options);
+  if (response.status === 401) {
+    throw new Error("unauthorized");
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+  }
+
+  return (await response.json()) as T;
+}
+
 async function fetchStatus(
   url: string,
   options: RequestInit,
@@ -298,73 +315,81 @@ async function fetchAdminDashboardData(
   authHeaders: () => Record<string, string>,
 ): Promise<AdminDashboardData> {
   const [
-    registrationsResponse,
-    tablesResponse,
-    venuesResponse,
-    eventsResponse,
-    roomsResponse,
-    tableTypesResponse,
-    layoutsResponse,
-    exhibitorsResponse,
-    areasResponse,
-    peopleResponse,
+    registrationsPayload,
+    tablesPayload,
+    venuesPayload,
+    eventsPayload,
+    roomsPayload,
+    tableTypesPayload,
+    layoutsPayload,
+    exhibitorsPayload,
+    areasPayload,
+    peoplePayload,
     members,
     volunteers,
   ] = await Promise.all([
-    fetch("/api/registrations", { headers: authHeaders() }),
-    fetch("/api/tables", { headers: authHeaders() }),
-    fetch("/api/venues", { headers: authHeaders() }),
-    fetch("/api/events", { headers: authHeaders() }),
-    fetch("/api/rooms", { headers: authHeaders() }),
-    fetch("/api/table-types", { headers: authHeaders() }),
-    fetch("/api/layouts", { headers: authHeaders() }),
-    fetch("/api/exhibitors", { headers: authHeaders() }),
-    fetch("/api/areas", { headers: authHeaders() }),
-    fetch("/api/people", { headers: authHeaders() }),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/registrations",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[] | { tables?: Record<string, unknown>[] }>(
+      "/api/tables",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/venues",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/events",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/rooms",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/table-types",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/layouts",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/exhibitors",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/areas",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      "/api/people",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
     loadMembers(authHeaders),
     loadVolunteers(authHeaders),
   ]);
 
-  const responses = [
-    registrationsResponse,
-    tablesResponse,
-    venuesResponse,
-    eventsResponse,
-    roomsResponse,
-    tableTypesResponse,
-    layoutsResponse,
-    exhibitorsResponse,
-    areasResponse,
-    peopleResponse,
-  ];
-
-  if (responses.some((response) => response.status === 401)) {
-    throw new Error("unauthorized");
-  }
-
-  const firstFailed = responses.find((response) => !response.ok);
-  if (firstFailed) {
-    throw new Error(`dashboard-load-failed:${firstFailed.status}`);
-  }
-
-  const registrationsPayload = await registrationsResponse.json();
   const rawRegistrations: Record<string, unknown>[] = Array.isArray(registrationsPayload)
     ? registrationsPayload
     : [];
 
-  const tablesPayload = await tablesResponse.json();
   const rawTables: Record<string, unknown>[] = Array.isArray(tablesPayload)
     ? tablesPayload
     : (tablesPayload.tables ?? []);
 
-  const venuesPayload = await venuesResponse.json();
-  const eventsPayload = await eventsResponse.json();
-  const roomsPayload = await roomsResponse.json();
-  const tableTypesPayload = await tableTypesResponse.json();
-  const layoutsPayload = await layoutsResponse.json();
-  const exhibitorsPayload = await exhibitorsResponse.json();
-  const areasPayload = await areasResponse.json();
-  const peoplePayload = await peopleResponse.json();
   const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
 
   return {
