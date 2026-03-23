@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm } from "@tanstack/react-form";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -18,6 +18,18 @@ interface RegistrationModalProps {
   defaultEventId?: string;
   /** Available events that require registration */
   registrableEvents: { id: string; title: string }[];
+}
+
+/** Form fields managed by TanStack Form (preOrders is managed via local state separately) */
+interface RegistrationFields {
+  name: string;
+  email: string;
+  phone: string;
+  eventId: string;
+  guestCount: number;
+  notes: string;
+  honeypot: string;
+  formStartTime: string;
 }
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -49,14 +61,14 @@ export default function RegistrationModal({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    clearErrors,
-    formState: { errors },
-  } = useForm<RegistrationFormData>({
+  const submitRegistrationMutation = useMutation({
+    mutationFn: (payload: RegistrationFormData) => submitRegistration(payload),
+    retry: false,
+  });
+
+  const isSubmitting = submitRegistrationMutation.isPending;
+
+  const form = useForm({
     defaultValues: {
       name: "",
       email: "",
@@ -66,15 +78,19 @@ export default function RegistrationModal({
       notes: "",
       honeypot: "",
       formStartTime: new Date().toISOString(),
+    } as RegistrationFields,
+    onSubmit: async ({ value }) => {
+      setSubmitError("");
+      try {
+        await submitRegistrationMutation.mutateAsync({ ...value, preOrders });
+        setSubmitSuccess(true);
+      } catch (error) {
+        setSubmitError(
+          error instanceof RegistrationSubmitError ? error.message : m.registration_network_error(),
+        );
+      }
     },
   });
-
-  const submitRegistrationMutation = useMutation({
-    mutationFn: (payload: RegistrationFormData) => submitRegistration(payload),
-    retry: false,
-  });
-
-  const isSubmitting = submitRegistrationMutation.isPending;
 
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -82,8 +98,8 @@ export default function RegistrationModal({
       isFirstRender.current = false;
       return;
     }
-    setValue("eventId", defaultEventId);
-  }, [defaultEventId, setValue]);
+    form.setFieldValue("eventId", defaultEventId);
+  }, [defaultEventId, form]);
 
   const handleQuantityChange = useCallback((productId: string, quantity: number) => {
     setPreOrders((prev) => {
@@ -110,23 +126,8 @@ export default function RegistrationModal({
     });
   }, []);
 
-  const onSubmit = useCallback(
-    async (data: RegistrationFormData) => {
-      setSubmitError("");
-      try {
-        await submitRegistrationMutation.mutateAsync({ ...data, preOrders });
-        setSubmitSuccess(true);
-      } catch (error) {
-        setSubmitError(
-          error instanceof RegistrationSubmitError ? error.message : m.registration_network_error(),
-        );
-      }
-    },
-    [preOrders, submitRegistrationMutation],
-  );
-
   const handleClose = useCallback(() => {
-    reset({
+    form.reset({
       name: "",
       email: "",
       phone: "",
@@ -140,7 +141,7 @@ export default function RegistrationModal({
     setSubmitSuccess(false);
     setSubmitError("");
     onHide();
-  }, [defaultEventId, reset, onHide]);
+  }, [defaultEventId, form, onHide]);
 
   return (
     <Modal
@@ -165,103 +166,196 @@ export default function RegistrationModal({
           </Alert>
         ) : (
           <Form
-            onSubmit={handleSubmit(onSubmit)}
-            onChange={(e: React.ChangeEvent<HTMLFormElement>) => {
-              const name = (e.target as Element).getAttribute("name") as keyof RegistrationFormData | null;
-              if (name) clearErrors(name);
+            onSubmit={(e) => {
+              e.preventDefault();
+              void form.handleSubmit();
             }}
             noValidate
           >
             {/* Honeypot – hidden from users, must stay empty */}
-            <Form.Control
-              type="text"
-              aria-hidden="true"
-              tabIndex={-1}
-              autoComplete="off"
-              className="d-none"
-              {...register("honeypot", { validate: (v) => !v })}
-            />
+            <form.Field name="honeypot">
+              {(field) => (
+                <Form.Control
+                  type="text"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  className="d-none"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+              )}
+            </form.Field>
 
             {/* Personal details */}
-            <Form.Group className="mb-3" controlId="res-name">
-              <Form.Label>{m.registration_name()} *</Form.Label>
-              <Form.Control
-                type="text"
-                isInvalid={!!errors.name}
-                className="bg-dark text-light border-secondary"
-                autoComplete="name"
-                {...register("name", { required: m.registration_errors_name_required() })}
-              />
-              <Form.Control.Feedback type="invalid">{errors.name?.message}</Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="name"
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.registration_errors_name_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3" controlId="res-name">
+                    <Form.Label>{m.registration_name()} *</Form.Label>
+                    <Form.Control
+                      type="text"
+                      isInvalid={showErr}
+                      className="bg-dark text-light border-secondary"
+                      autoComplete="name"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
-            <Form.Group className="mb-3" controlId="res-email">
-              <Form.Label>{m.registration_email()} *</Form.Label>
-              <Form.Control
-                type="email"
-                isInvalid={!!errors.email}
-                className="bg-dark text-light border-secondary"
-                autoComplete="email"
-                {...register("email", {
-                  required: m.registration_errors_email_required(),
-                  pattern: {
-                    value: EMAIL_REGEX,
-                    message: m.registration_errors_email_invalid(),
-                  },
-                })}
-              />
-              <Form.Control.Feedback type="invalid">{errors.email?.message}</Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="email"
+              validators={{
+                onChange: ({ value }) => {
+                  if (!value?.trim()) return m.registration_errors_email_required();
+                  if (!EMAIL_REGEX.test(value)) return m.registration_errors_email_invalid();
+                  return undefined;
+                },
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3" controlId="res-email">
+                    <Form.Label>{m.registration_email()} *</Form.Label>
+                    <Form.Control
+                      type="email"
+                      isInvalid={showErr}
+                      className="bg-dark text-light border-secondary"
+                      autoComplete="email"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
-            <Form.Group className="mb-3" controlId="res-phone">
-              <Form.Label>{m.registration_phone()} *</Form.Label>
-              <Form.Control
-                type="tel"
-                isInvalid={!!errors.phone}
-                className="bg-dark text-light border-secondary"
-                autoComplete="tel"
-                {...register("phone", { required: m.registration_errors_phone_required() })}
-              />
-              <Form.Control.Feedback type="invalid">{errors.phone?.message}</Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="phone"
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.registration_errors_phone_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3" controlId="res-phone">
+                    <Form.Label>{m.registration_phone()} *</Form.Label>
+                    <Form.Control
+                      type="tel"
+                      isInvalid={showErr}
+                      className="bg-dark text-light border-secondary"
+                      autoComplete="tel"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
             {/* Event selection */}
-            <Form.Group className="mb-3" controlId="res-event">
-              <Form.Label>{m.registration_event()} *</Form.Label>
-              <Form.Select
-                isInvalid={!!errors.eventId}
-                className="bg-dark text-light border-secondary"
-                {...register("eventId", { required: m.registration_errors_event_required() })}
-              >
-                <option value="">{m.registration_select_event()}</option>
-                {registrableEvents.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.title}
-                  </option>
-                ))}
-              </Form.Select>
-              <Form.Control.Feedback type="invalid">{errors.eventId?.message}</Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="eventId"
+              validators={{
+                onChange: ({ value }) =>
+                  !value ? m.registration_errors_event_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3" controlId="res-event">
+                    <Form.Label>{m.registration_event()} *</Form.Label>
+                    <Form.Select
+                      isInvalid={showErr}
+                      className="bg-dark text-light border-secondary"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    >
+                      <option value="">{m.registration_select_event()}</option>
+                      {registrableEvents.map((ev) => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.title}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
-            <Form.Group className="mb-3" controlId="res-guests">
-              <Form.Label>{m.registration_guests()} *</Form.Label>
-              <Form.Control
-                type="number"
-                isInvalid={!!errors.guestCount}
-                min={MIN_GUESTS}
-                max={MAX_GUESTS}
-                className="bg-dark text-light border-secondary"
-                {...register("guestCount", {
-                  required: m.registration_errors_guests_required(),
-                  valueAsNumber: true,
-                  min: { value: MIN_GUESTS, message: m.registration_errors_guests_min() },
-                  max: { value: MAX_GUESTS, message: m.registration_errors_guests_max() },
-                })}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.guestCount?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="guestCount"
+              validators={{
+                onChange: ({ value }) => {
+                  if (!value && value !== 0) return m.registration_errors_guests_required();
+                  if (value < MIN_GUESTS) return m.registration_errors_guests_min();
+                  if (value > MAX_GUESTS) return m.registration_errors_guests_max();
+                  return undefined;
+                },
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3" controlId="res-guests">
+                    <Form.Label>{m.registration_guests()} *</Form.Label>
+                    <Form.Control
+                      type="number"
+                      isInvalid={showErr}
+                      min={MIN_GUESTS}
+                      max={MAX_GUESTS}
+                      className="bg-dark text-light border-secondary"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(Number(e.target.value))}
+                      onBlur={field.handleBlur}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
             {/* Pre-order */}
             <fieldset className="mb-3">
@@ -308,16 +402,22 @@ export default function RegistrationModal({
             </fieldset>
 
             {/* Notes */}
-            <Form.Group className="mb-3" controlId="res-notes">
-              <Form.Label>{m.registration_notes()}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                placeholder={m.registration_notes_placeholder()}
-                className="bg-dark text-light border-secondary"
-                {...register("notes")}
-              />
-            </Form.Group>
+            <form.Field name="notes">
+              {(field) => (
+                <Form.Group className="mb-3" controlId="res-notes">
+                  <Form.Label>{m.registration_notes()}</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    placeholder={m.registration_notes_placeholder()}
+                    className="bg-dark text-light border-secondary"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </Form.Group>
+              )}
+            </form.Field>
 
             {submitError && (
               <Alert variant="danger" className="mb-3">

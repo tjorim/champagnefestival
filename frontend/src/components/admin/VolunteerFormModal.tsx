@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -48,107 +49,95 @@ export default function VolunteerFormModal({
   onHide,
 }: VolunteerFormModalProps) {
   const isEdit = volunteer != null;
-
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [nationalRegisterNumber, setNationalRegisterNumber] = useState("");
-  const [eidDocumentNumber, setEidDocumentNumber] = useState("");
-  const [helpPeriods, setHelpPeriods] = useState<VolunteerHelpPeriodFormData[]>([emptyPeriod()]);
-  const [active, setActive] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      address: "",
+      nationalRegisterNumber: "",
+      eidDocumentNumber: "",
+      active: true,
+      helpPeriods: [emptyPeriod()],
+    } as VolunteerFormData,
+    onSubmit: async ({ value }) => {
+      const normalized = value.helpPeriods.map((period) => ({
+        firstHelpDay: period.firstHelpDay,
+        lastHelpDay: period.lastHelpDay?.trim() ? period.lastHelpDay : null,
+      }));
+
+      if (normalized.length === 0 || normalized.some((period) => !period.firstHelpDay)) {
+        setError(m.admin_volunteers_validation_help_period_required());
+        return;
+      }
+
+      if (
+        normalized.some(
+          (period) => period.lastHelpDay != null && period.firstHelpDay > period.lastHelpDay,
+        )
+      ) {
+        setError(m.admin_volunteers_validation_help_period_range());
+        return;
+      }
+
+      setError(null);
+      try {
+        await onSave({
+          name: value.name.trim(),
+          address: value.address.trim(),
+          nationalRegisterNumber: value.nationalRegisterNumber.trim(),
+          eidDocumentNumber: value.eidDocumentNumber.trim(),
+          active: value.active,
+          helpPeriods: normalized,
+        });
+        onHide();
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : isEdit
+              ? m.admin_volunteers_error_update()
+              : m.admin_volunteers_error_create(),
+        );
+      }
+    },
+  });
 
   useEffect(() => {
     if (!show) return;
-    if (volunteer) {
-      setName(volunteer.name);
-      setAddress(volunteer.address ?? "");
-      setNationalRegisterNumber(volunteer.nationalRegisterNumber ?? "");
-      setEidDocumentNumber(volunteer.eidDocumentNumber ?? "");
-      setHelpPeriods(
-        volunteer.helpPeriods.length > 0 ? volunteer.helpPeriods.map(mapPeriod) : [emptyPeriod()],
-      );
-      setActive(volunteer.active);
-    } else {
-      setName("");
-      setAddress("");
-      setNationalRegisterNumber("");
-      setEidDocumentNumber("");
-      setHelpPeriods([emptyPeriod()]);
-      setActive(true);
-    }
+    form.reset(
+      volunteer
+        ? {
+            name: volunteer.name,
+            address: volunteer.address ?? "",
+            nationalRegisterNumber: volunteer.nationalRegisterNumber ?? "",
+            eidDocumentNumber: volunteer.eidDocumentNumber ?? "",
+            active: volunteer.active,
+            helpPeriods:
+              volunteer.helpPeriods.length > 0
+                ? volunteer.helpPeriods.map(mapPeriod)
+                : [emptyPeriod()],
+          }
+        : {
+            name: "",
+            address: "",
+            nationalRegisterNumber: "",
+            eidDocumentNumber: "",
+            active: true,
+            helpPeriods: [emptyPeriod()],
+          },
+    );
     setError(null);
-    setSaving(false);
-  }, [show, volunteer]);
+  }, [show, volunteer, form]);
 
-  useEffect(() => {
-    setError(null);
-  }, [name, address, nationalRegisterNumber, eidDocumentNumber, active, helpPeriods]);
-
-  function updateHelpPeriod(index: number, next: VolunteerHelpPeriodFormData) {
-    setHelpPeriods((prev) => prev.map((period, i) => (i === index ? next : period)));
-  }
-
-  function removeHelpPeriod(index: number) {
-    setHelpPeriods((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
-  }
-
-  function normalizeHelpPeriods(): VolunteerHelpPeriodFormData[] | null {
-    const normalized = helpPeriods.map((period) => ({
-      firstHelpDay: period.firstHelpDay,
-      lastHelpDay: period.lastHelpDay?.trim() ? period.lastHelpDay : null,
-    }));
-
-    if (normalized.length === 0 || normalized.some((period) => !period.firstHelpDay)) {
-      setError(m.admin_volunteers_validation_help_period_required());
-      return null;
-    }
-
-    if (
-      normalized.some(
-        (period) => period.lastHelpDay != null && period.firstHelpDay > period.lastHelpDay,
-      )
-    ) {
-      setError(m.admin_volunteers_validation_help_period_range());
-      return null;
-    }
-
-    return normalized;
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !nationalRegisterNumber.trim() || !eidDocumentNumber.trim()) {
-      return;
-    }
-
-    const normalizedHelpPeriods = normalizeHelpPeriods();
-    if (!normalizedHelpPeriods) return;
-
-    setSaving(true);
-    setError(null);
-    try {
-      await onSave({
-        name: name.trim(),
-        address: address.trim(),
-        nationalRegisterNumber: nationalRegisterNumber.trim(),
-        eidDocumentNumber: eidDocumentNumber.trim(),
-        active,
-        helpPeriods: normalizedHelpPeriods,
-      });
-      onHide();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : isEdit
-            ? m.admin_volunteers_error_update()
-            : m.admin_volunteers_error_create(),
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
+  const nameValue = useStore(form.store, (s) => s.values.name);
+  const nationalRegisterNumberValue = useStore(
+    form.store,
+    (s) => s.values.nationalRegisterNumber,
+  );
+  const eidDocumentNumberValue = useStore(form.store, (s) => s.values.eidDocumentNumber);
+  const helpPeriods = useStore(form.store, (s) => s.values.helpPeriods);
+  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
   return (
     <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark">
@@ -159,7 +148,12 @@ export default function VolunteerFormModal({
         </Modal.Title>
       </Modal.Header>
 
-      <Form onSubmit={handleSubmit}>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -172,61 +166,83 @@ export default function VolunteerFormModal({
             </Alert>
           )}
 
-          <Form.Group className="mb-3" controlId="volunteer-name">
-            <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
-            <Form.Control
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              required
-              maxLength={200}
-            />
-          </Form.Group>
+          <form.Field name="name">
+            {(field) => (
+              <Form.Group className="mb-3" controlId="volunteer-name">
+                <Form.Label className="text-secondary small">
+                  {m.registration_name()} *
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  className="bg-dark text-light border-secondary"
+                  required
+                  maxLength={200}
+                />
+              </Form.Group>
+            )}
+          </form.Field>
 
-          <Form.Group className="mb-3" controlId="volunteer-address">
-            <Form.Label className="text-secondary small">
-              {m.admin_people_address_label()}
-            </Form.Label>
-            <Form.Control
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              maxLength={300}
-            />
-          </Form.Group>
+          <form.Field name="address">
+            {(field) => (
+              <Form.Group className="mb-3" controlId="volunteer-address">
+                <Form.Label className="text-secondary small">
+                  {m.admin_people_address_label()}
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  className="bg-dark text-light border-secondary"
+                  maxLength={300}
+                />
+              </Form.Group>
+            )}
+          </form.Field>
 
           <Row className="mb-3">
             <Col xs={12} md={6}>
-              <Form.Group controlId="volunteer-national-register-number">
-                <Form.Label className="text-secondary small">
-                  {m.admin_people_national_register_number_label()} *
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  value={nationalRegisterNumber}
-                  onChange={(e) => setNationalRegisterNumber(e.target.value.slice(0, 20))}
-                  className="bg-dark text-light border-secondary"
-                  required
-                  maxLength={20}
-                />
-              </Form.Group>
+              <form.Field name="nationalRegisterNumber">
+                {(field) => (
+                  <Form.Group controlId="volunteer-national-register-number">
+                    <Form.Label className="text-secondary small">
+                      {m.admin_people_national_register_number_label()} *
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value.slice(0, 20))}
+                      onBlur={field.handleBlur}
+                      className="bg-dark text-light border-secondary"
+                      required
+                      maxLength={20}
+                    />
+                  </Form.Group>
+                )}
+              </form.Field>
             </Col>
             <Col xs={12} md={6}>
-              <Form.Group controlId="volunteer-eid-document-number">
-                <Form.Label className="text-secondary small">
-                  {m.admin_people_eid_document_number_label()} *
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  value={eidDocumentNumber}
-                  onChange={(e) => setEidDocumentNumber(e.target.value)}
-                  className="bg-dark text-light border-secondary"
-                  required
-                  maxLength={50}
-                />
-              </Form.Group>
+              <form.Field name="eidDocumentNumber">
+                {(field) => (
+                  <Form.Group controlId="volunteer-eid-document-number">
+                    <Form.Label className="text-secondary small">
+                      {m.admin_people_eid_document_number_label()} *
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      className="bg-dark text-light border-secondary"
+                      required
+                      maxLength={50}
+                    />
+                  </Form.Group>
+                )}
+              </form.Field>
             </Col>
           </Row>
 
@@ -239,7 +255,7 @@ export default function VolunteerFormModal({
                 type="button"
                 variant="outline-warning"
                 size="sm"
-                onClick={() => setHelpPeriods((prev) => [...prev, emptyPeriod()])}
+                onClick={() => form.pushFieldValue("helpPeriods", emptyPeriod())}
               >
                 <i className="bi bi-plus-circle me-1" aria-hidden="true" />
                 {m.admin_volunteers_add_help_period()}
@@ -258,7 +274,7 @@ export default function VolunteerFormModal({
                         type="button"
                         variant="outline-danger"
                         size="sm"
-                        onClick={() => removeHelpPeriod(index)}
+                        onClick={() => void form.removeFieldValue("helpPeriods", index)}
                         disabled={helpPeriods.length === 1}
                       >
                         <i className="bi bi-trash me-1" aria-hidden="true" />
@@ -275,7 +291,7 @@ export default function VolunteerFormModal({
                             type="date"
                             value={period.firstHelpDay}
                             onChange={(e) =>
-                              updateHelpPeriod(index, {
+                              void form.replaceFieldValue("helpPeriods", index, {
                                 ...period,
                                 firstHelpDay: e.target.value,
                               })
@@ -294,7 +310,7 @@ export default function VolunteerFormModal({
                             type="date"
                             value={period.lastHelpDay ?? ""}
                             onChange={(e) =>
-                              updateHelpPeriod(index, {
+                              void form.replaceFieldValue("helpPeriods", index, {
                                 ...period,
                                 lastHelpDay: e.target.value || null,
                               })
@@ -311,14 +327,18 @@ export default function VolunteerFormModal({
             )}
           </div>
 
-          <Form.Check
-            id="volunteer-active"
-            type="switch"
-            label={m.admin_people_active_label()}
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-            className="text-secondary small"
-          />
+          <form.Field name="active">
+            {(field) => (
+              <Form.Check
+                id="volunteer-active"
+                type="switch"
+                label={m.admin_people_active_label()}
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+                className="text-secondary small"
+              />
+            )}
+          </form.Field>
         </Modal.Body>
 
         <Modal.Footer className="bg-dark border-secondary">
@@ -330,10 +350,13 @@ export default function VolunteerFormModal({
             variant="warning"
             size="sm"
             disabled={
-              saving || !name.trim() || !nationalRegisterNumber.trim() || !eidDocumentNumber.trim()
+              isSubmitting ||
+              !nameValue.trim() ||
+              !nationalRegisterNumberValue.trim() ||
+              !eidDocumentNumberValue.trim()
             }
           >
-            {saving ? (
+            {isSubmitting ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />
