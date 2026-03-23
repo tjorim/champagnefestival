@@ -375,7 +375,7 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
 
       {editionsQuery.isPending && <div className="text-center py-3"><Spinner animation="border" size="sm" variant="warning" /><span className="ms-2 text-secondary">{m.admin_content_loading()}</span></div>}
       {!editionsQuery.isPending && editionsQuery.isError && <Alert variant="danger" className="py-2 small">{m.admin_content_error_load()}</Alert>}
-      {!editionsQuery.isPending && !editionsQuery.isError && editions.length === 0 && <p className="text-secondary fst-italic small">No editions yet.</p>}
+      {!editionsQuery.isPending && !editionsQuery.isError && editions.length === 0 && <p className="text-secondary fst-italic small">{m.admin_content_no_editions()}</p>}
       {!editionsQuery.isPending && !editionsQuery.isError && (
         <div className="d-flex flex-column gap-3">
           {(["festival", "bourse", "capsule_exchange"] as const).map((type) => {

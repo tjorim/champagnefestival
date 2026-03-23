@@ -2,6 +2,11 @@ export async function requestApi(url: string, options: RequestInit): Promise<Res
   return fetch(url, options);
 }
 
+async function extractErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
+  const data = await response.json().catch(() => ({}));
+  return (data as { detail?: string }).detail ?? fallbackMessage;
+}
+
 export async function fetchJsonOrThrow<T>(
   url: string,
   options: RequestInit,
@@ -9,8 +14,7 @@ export async function fetchJsonOrThrow<T>(
 ): Promise<T> {
   const response = await requestApi(url, options);
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+    throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
 
   return (await response.json()) as T;
@@ -23,8 +27,7 @@ export async function fetchVoidOrThrow(
 ): Promise<void> {
   const response = await requestApi(url, options);
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+    throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
 }
 
@@ -39,8 +42,7 @@ export async function fetchArrayOrThrow<T>(
     throw new Error("unauthorized");
   }
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+    throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
 
   const payload = await response.json();
@@ -57,8 +59,7 @@ export async function fetchJsonOrThrowWithUnauthorized<T>(
     throw new Error("unauthorized");
   }
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+    throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
 
   return (await response.json()) as T;
@@ -74,8 +75,7 @@ export async function fetchVoidOrThrowWithUnauthorized(
     throw new Error("unauthorized");
   }
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? fallbackMessage);
+    throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
 }
 

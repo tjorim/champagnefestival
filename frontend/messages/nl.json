@@ -572,5 +572,6 @@
   "admin_error_server_transient_refresh": "Server tijdelijk niet beschikbaar. Vernieuw de pagina of probeer opnieuw in te loggen.",
   "admin_error_auto_auth_failed": "Authenticatie mislukt. Log handmatig in.",
   "admin_error_add_area": "Kan zone niet toevoegen.",
-  "admin_error_delete_area": "Kan zone niet verwijderen."
+  "admin_error_delete_area": "Kan zone niet verwijderen.",
+  "admin_content_no_editions": "Nog geen edities."
 }
