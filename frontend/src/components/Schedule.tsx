@@ -141,7 +141,7 @@ const Schedule: React.FC<ScheduleProps> = ({ days, events }) => {
                           </Badge>
                           {event.registrationRequired && (
                             <Badge bg="warning" className="mb-2 ms-2">
-                              {m.schedule_reservation()}
+                              {m.schedule_registration()}
                             </Badge>
                           )}
                           <p className="event-description mb-1">{event.description}</p>

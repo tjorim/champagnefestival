@@ -274,7 +274,7 @@ export default function EditionCard({
                     </Badge>
                     {ev.registration && (
                       <Badge bg="warning" text="dark" className="fs-3xs">
-                        {m.schedule_reservation()}
+                        {m.schedule_registration()}
                       </Badge>
                     )}
                   </span>

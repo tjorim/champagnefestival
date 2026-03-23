@@ -279,11 +279,11 @@ export default function PeopleManagement({
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <thead>
                   <tr>
-                    <th>{m.reservation_name()}</th>
-                    <th className="d-none d-md-table-cell">{m.reservation_email()}</th>
-                    <th className="d-none d-lg-table-cell">{m.reservation_phone()}</th>
+                    <th>{m.registration_name()}</th>
+                    <th className="d-none d-md-table-cell">{m.registration_email()}</th>
+                    <th className="d-none d-lg-table-cell">{m.registration_phone()}</th>
                     <th className="d-none d-lg-table-cell">{m.admin_people_roles_label()}</th>
-                    <th>{m.admin_reservations_tab()}</th>
+                    <th>{m.admin_registrations_tab()}</th>
                     <th>{m.admin_actions_label()}</th>
                   </tr>
                 </thead>
@@ -336,8 +336,8 @@ export default function PeopleManagement({
                               variant="link"
                               className="text-secondary p-0 ms-1"
                               onClick={() => setViewRegistrationsPerson(person)}
-                              title={m.admin_people_view_reservations()}
-                              aria-label={`${m.admin_people_view_reservations()}: ${person.name}`}
+                              title={m.admin_people_view_registrations()}
+                              aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
                             >
                               <i className="bi bi-eye" aria-hidden="true" />
                             </Button>
@@ -443,7 +443,7 @@ export default function PeopleManagement({
                     {person.phone && <div className="text-secondary">{person.phone}</div>}
                     <div className="mt-1">
                       <Badge bg={resCount > 0 ? "warning" : "secondary"} text={resCount > 0 ? "dark" : undefined}>
-                        {resCount} {m.admin_people_reservations_count()}
+                        {resCount} {m.admin_people_registrations_count()}
                       </Badge>
                       {person.roles.map((r) => (
                         <Badge key={r} bg="secondary" className="ms-1 text-capitalize">
@@ -526,7 +526,7 @@ export default function PeopleManagement({
           <Modal.Header closeButton className="bg-dark border-secondary">
             <Modal.Title className="text-warning fs-6">
               <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-              {m.admin_people_reservations_modal_title()} — {viewRegistrationsPerson.name}
+              {m.admin_people_registrations_modal_title()} — {viewRegistrationsPerson.name}
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className="bg-dark text-light p-0">
@@ -537,12 +537,12 @@ export default function PeopleManagement({
             )}
             {!loadingPersonRegistrations && personRegistrationsError && (
               <Alert variant="danger" className="m-3">
-                {m.admin_people_reservations_load_error()}
+                {m.admin_people_registrations_load_error()}
               </Alert>
             )}
             {!loadingPersonRegistrations && !personRegistrationsError && personRegistrations.length === 0 && (
               <p className="text-secondary text-center py-4 mb-0">
-                {m.admin_people_reservations_empty()}
+                {m.admin_people_registrations_empty()}
               </p>
             )}
             {!loadingPersonRegistrations && !personRegistrationsError && personRegistrations.length > 0 && (

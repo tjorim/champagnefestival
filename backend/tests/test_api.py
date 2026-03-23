@@ -474,11 +474,13 @@ async def test_table_crud(client):
 
 @pytest.mark.anyio
 async def test_search_by_name(client):
-    r = await _post_registration(client, path="/api/registrations")
+    event = await _create_event(client)
+    r = await _post_registration(client, path="/api/registrations", event=event)
     assert r.status_code == 201
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         name="Marie Curie",
         email="marie@example.com",
     )
@@ -1181,11 +1183,26 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
             "id": "2026",
             "year": 2026,
             "month": "march",
-            "friday": "2026-03-20",
-            "saturday": "2026-03-21",
-            "sunday": "2099-03-22",  # far future so it's "upcoming"
             "venue_id": venue_id,
             "exhibitors": [producer_id, sponsor_id],
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    # Add a far-future event so the edition is considered "upcoming" by the active endpoint
+    r = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "2026",
+            "title": "Sunday",
+            "description": "",
+            "date": "2099-03-22",
+            "start_time": "14:00",
+            "end_time": "18:00",
+            "category": "festival",
+            "registration_required": False,
             "active": True,
         },
         headers=ADMIN_HEADERS,
@@ -1197,7 +1214,7 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
     assert r.status_code == 200
     data = r.json()
     assert data["id"] == "2026"
-    assert data["dates"] == []
+    assert data["dates"] == ["2099-03-22"]
     assert data["venue"]["name"] == "Test Venue"
     assert len(data["producers"]) == 1
     assert data["producers"][0]["name"] == "Bollinger"
@@ -1911,7 +1928,7 @@ async def test_people_crud_roles_and_filters(client):
     assert r.status_code == 201
     assert r.json()["person_id"] != person_id
 
-    r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
+    r = await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert (
         len(r.json()) == 0
@@ -1933,10 +1950,13 @@ async def test_reservation_auto_links_certain_person(client):
     assert r.status_code == 201
     bob_id = r.json()["id"]
 
+    event = await _create_event(client)
+
     # Exact match on email + phone + name → auto-link
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         email="bob@example.com",
         phone=bob_phone,
         name="Bob Martin",
@@ -1948,6 +1968,7 @@ async def test_reservation_auto_links_certain_person(client):
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         email="BOB@EXAMPLE.COM",
         phone=bob_phone,
         name="  bob  martin  ",
@@ -1959,6 +1980,7 @@ async def test_reservation_auto_links_certain_person(client):
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         email="bob@example.com",
         phone=bob_phone,
         name="Robert Martin",
@@ -1970,6 +1992,7 @@ async def test_reservation_auto_links_certain_person(client):
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         email="bob@example.com",
         phone=bob_phone,
         name="Bob Martin",
@@ -1981,6 +2004,7 @@ async def test_reservation_auto_links_certain_person(client):
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         email="bob@example.com",
         name="Bob Martin",
         phone="+32499111111",
@@ -2015,7 +2039,7 @@ async def test_person_reservations_include_event_payload(client):
     )
     assert reservation.status_code == 201
 
-    r = await client.get(f"/api/people/{person_id}/reservations", headers=ADMIN_HEADERS)
+    r = await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)
 
     assert r.status_code == 200
     assert len(r.json()) == 1
@@ -2046,10 +2070,13 @@ async def test_normalize_phone_equivalent_inputs(client):
     person_id = r.json()["id"]
     assert r.json()["phone"] == canonical_phone
 
+    event = await _create_event(client)
+
     # POST a reservation using the IDD variant → should link to the same person
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         email="phonetest@example.com",
         phone=base_phone_variants[1],
         name="Phone Test",
@@ -2061,6 +2088,7 @@ async def test_normalize_phone_equivalent_inputs(client):
     r = await _post_registration(
         client,
         path="/api/registrations",
+        event=event,
         email="phonetest@example.com",
         phone=base_phone_variants[2],
         name="Phone Test",

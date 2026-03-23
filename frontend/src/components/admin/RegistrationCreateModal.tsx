@@ -132,7 +132,7 @@ export default function RegistrationCreateModal({
     createRegistrationMutation.isError
       ? createRegistrationMutation.error instanceof Error
         ? createRegistrationMutation.error.message
-        : m.admin_error_create_reservation()
+        : m.admin_error_create_registration()
       : null;
 
   const events = eventsQuery.data ?? [];
@@ -159,7 +159,7 @@ export default function RegistrationCreateModal({
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">{m.admin_create_reservation()}</Modal.Title>
+        <Modal.Title className="text-warning fs-6">{m.admin_create_registration()}</Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="bg-dark">

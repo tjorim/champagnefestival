@@ -67,7 +67,7 @@ export default function MyRegistrationsPage() {
       const trimmed = email.trim();
       if (!trimmed) return;
       if (!EMAIL_PATTERN.test(trimmed)) {
-        setError(m.my_reservations_invalid_email());
+        setError(m.my_registrations_invalid_email());
         setIsEmailInvalid(true);
         setRequestSent(false);
         return;
@@ -87,7 +87,7 @@ export default function MyRegistrationsPage() {
           return;
         }
 
-        setError(m.my_reservations_error());
+        setError(m.my_registrations_error());
       }
     },
     [email, requestLookupMutation],
@@ -100,7 +100,7 @@ export default function MyRegistrationsPage() {
           <i className="bi bi-ticket-perforated me-2" aria-hidden="true" />
           {m.my_registrations_title()}
         </h2>
-        <p className="text-center text-secondary mb-4">{m.my_reservations_description()}</p>
+        <p className="text-center text-secondary mb-4">{m.my_registrations_description()}</p>
 
         <Row className="justify-content-center">
           <Col xs={12} sm={10} md={8} lg={6}>
@@ -108,10 +108,10 @@ export default function MyRegistrationsPage() {
               <>
                 <Form onSubmit={handleEmailSubmit} noValidate>
                   <Form.Group controlId="my-registrations-email" className="mb-3">
-                    <Form.Label>{m.my_reservations_email_label()}</Form.Label>
+                    <Form.Label>{m.my_registrations_email_label()}</Form.Label>
                     <Form.Control
                       type="email"
-                      placeholder={m.my_reservations_email_placeholder()}
+                      placeholder={m.my_registrations_email_placeholder()}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -131,8 +131,8 @@ export default function MyRegistrationsPage() {
 
                   {requestSent && (
                     <Alert variant="info" className="mb-3">
-                      <div className="fw-semibold mb-1">{m.my_reservations_request_success()}</div>
-                      <div>{m.my_reservations_request_pending_notice()}</div>
+                      <div className="fw-semibold mb-1">{m.my_registrations_request_success()}</div>
+                      <div>{m.my_registrations_request_pending_notice()}</div>
                     </Alert>
                   )}
 
@@ -152,12 +152,12 @@ export default function MyRegistrationsPage() {
                           aria-hidden="true"
                           className="me-2"
                         />
-                        {m.my_reservations_requesting()}
+                        {m.my_registrations_requesting()}
                       </>
                     ) : (
                       <>
                         <i className="bi bi-envelope-paper me-2" aria-hidden="true" />
-                        {m.my_reservations_request_link()}
+                        {m.my_registrations_request_link()}
                       </>
                     )}
                   </Button>
@@ -170,7 +170,7 @@ export default function MyRegistrationsPage() {
                 {isLoadingRegistrations && (
                   <Alert variant="secondary" className="text-center">
                     <Spinner animation="border" size="sm" className="me-2" />
-                    {m.my_reservations_loading()}
+                    {m.my_registrations_loading()}
                   </Alert>
                 )}
 
@@ -186,7 +186,7 @@ export default function MyRegistrationsPage() {
                     {registrations !== null && registrations.length === 0 ? (
                       <Alert variant="info" className="text-center">
                         <i className="bi bi-inbox me-2" aria-hidden="true" />
-                        {m.my_reservations_no_results()}
+                        {m.my_registrations_no_results()}
                       </Alert>
                     ) : registrations !== null ? (
                       <div className="d-flex flex-column gap-3">
@@ -247,7 +247,7 @@ export default function MyRegistrationsPage() {
                               </div>
                               <div className="text-secondary small">
                                 <i className="bi bi-people me-1" aria-hidden="true" />
-                                {registration.guestCount} {m.my_reservations_guests_label()}
+                                {registration.guestCount} {m.my_registrations_guests_label()}
                               </div>
                               {registration.preOrders.length > 0 && (
                                 <ListGroup variant="flush" className="mt-2">
@@ -276,7 +276,7 @@ export default function MyRegistrationsPage() {
                       onClick={resetToRequestForm}
                     >
                       <i className="bi bi-arrow-repeat me-2" aria-hidden="true" />
-                      {m.my_reservations_request_new_link()}
+                      {m.my_registrations_request_new_link()}
                     </Button>
                   </>
                 )}

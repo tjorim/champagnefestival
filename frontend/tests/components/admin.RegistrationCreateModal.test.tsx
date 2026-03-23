@@ -6,8 +6,8 @@ import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
-    admin_create_reservation: () => "Create registration",
-    admin_error_create_reservation: () => "Could not create registration",
+    admin_create_registration: () => "Create registration",
+    admin_error_create_registration: () => "Could not create registration",
     admin_event_label: () => "Event",
     admin_loading_events: () => "Loading events",
     admin_select_event_placeholder: () => "Select event",

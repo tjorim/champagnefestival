@@ -181,7 +181,7 @@ export default function VolunteersManagement({
                 </caption>
                 <thead>
                   <tr>
-                    <th>{m.reservation_name()}</th>
+                    <th>{m.registration_name()}</th>
                     <th>{m.admin_people_address_label()}</th>
                     <th>{m.admin_people_national_register_number_label()}</th>
                     <th>{m.admin_people_eid_document_number_label()}</th>

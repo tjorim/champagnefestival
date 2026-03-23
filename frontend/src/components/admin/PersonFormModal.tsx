@@ -191,7 +191,7 @@ export default function PersonFormModal({
 
           <Form.Group className="mb-3" controlId="person-name">
             <Form.Label className="text-secondary small">
-              {m.reservation_name()} *
+              {m.registration_name()} *
             </Form.Label>
             <Form.Control
               type="text"
@@ -207,7 +207,7 @@ export default function PersonFormModal({
             <Col xs={12} md={6}>
               <Form.Group controlId="person-email">
                 <Form.Label className="text-secondary small">
-                  {m.reservation_email()}
+                  {m.registration_email()}
                 </Form.Label>
                 <Form.Control
                   type="email"
@@ -221,7 +221,7 @@ export default function PersonFormModal({
             <Col xs={12} md={6}>
               <Form.Group controlId="person-phone">
                 <Form.Label className="text-secondary small">
-                  {m.reservation_phone()}
+                  {m.registration_phone()}
                 </Form.Label>
                 <Form.Control
                   type="tel"

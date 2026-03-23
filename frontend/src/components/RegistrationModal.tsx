@@ -27,15 +27,15 @@ const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 function getProductName(nameKey: string): string {
   switch (nameKey) {
     case "champagne_standard":
-      return m.reservation_product_champagne_standard();
+      return m.registration_product_champagne_standard();
     case "champagne_prestige":
-      return m.reservation_product_champagne_prestige();
+      return m.registration_product_champagne_prestige();
     case "champagne_glass":
-      return m.reservation_product_champagne_glass();
+      return m.registration_product_champagne_glass();
     case "food_cheese":
-      return m.reservation_product_food_cheese();
+      return m.registration_product_food_cheese();
     case "food_charcuterie":
-      return m.reservation_product_food_charcuterie();
+      return m.registration_product_food_charcuterie();
     default:
       return nameKey;
   }
@@ -82,25 +82,25 @@ export default function RegistrationModal({
     const newErrors: RegistrationFormErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = m.reservation_errors_name_required();
+      newErrors.name = m.registration_errors_name_required();
     }
     if (!formData.email.trim()) {
-      newErrors.email = m.reservation_errors_email_required();
+      newErrors.email = m.registration_errors_email_required();
     } else if (!EMAIL_REGEX.test(formData.email)) {
-      newErrors.email = m.reservation_errors_email_invalid();
+      newErrors.email = m.registration_errors_email_invalid();
     }
     if (!formData.phone.trim()) {
-      newErrors.phone = m.reservation_errors_phone_required();
+      newErrors.phone = m.registration_errors_phone_required();
     }
     if (!formData.eventId) {
-      newErrors.eventId = m.reservation_errors_event_required();
+      newErrors.eventId = m.registration_errors_event_required();
     }
     if (!formData.guestCount) {
-      newErrors.guestCount = m.reservation_errors_guests_required();
+      newErrors.guestCount = m.registration_errors_guests_required();
     } else if (formData.guestCount < MIN_GUESTS) {
-      newErrors.guestCount = m.reservation_errors_guests_min();
+      newErrors.guestCount = m.registration_errors_guests_min();
     } else if (formData.guestCount > MAX_GUESTS) {
-      newErrors.guestCount = m.reservation_errors_guests_max();
+      newErrors.guestCount = m.registration_errors_guests_max();
     }
 
     setErrors(newErrors);
@@ -160,7 +160,7 @@ export default function RegistrationModal({
         setSubmitSuccess(true);
       } catch (error) {
         setSubmitError(
-          error instanceof RegistrationSubmitError ? error.message : m.reservation_network_error(),
+          error instanceof RegistrationSubmitError ? error.message : m.registration_network_error(),
         );
       }
     },
@@ -196,7 +196,7 @@ export default function RegistrationModal({
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
         <Modal.Title id="registration-modal-title">
           <i className="bi bi-star-fill text-warning me-2" aria-hidden="true" />
-          {m.reservation_modal_title()}
+          {m.registration_modal_title()}
         </Modal.Title>
       </Modal.Header>
 
@@ -204,7 +204,7 @@ export default function RegistrationModal({
         {submitSuccess ? (
           <Alert variant="success" className="mb-0">
             <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
-            {m.reservation_success()}
+            {m.registration_success()}
           </Alert>
         ) : (
           <Form onSubmit={handleSubmit} noValidate>
@@ -222,7 +222,7 @@ export default function RegistrationModal({
 
             {/* Personal details */}
             <Form.Group className="mb-3" controlId="res-name">
-              <Form.Label>{m.reservation_name()} *</Form.Label>
+              <Form.Label>{m.registration_name()} *</Form.Label>
               <Form.Control
                 type="text"
                 name="name"
@@ -237,7 +237,7 @@ export default function RegistrationModal({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="res-email">
-              <Form.Label>{m.reservation_email()} *</Form.Label>
+              <Form.Label>{m.registration_email()} *</Form.Label>
               <Form.Control
                 type="email"
                 name="email"
@@ -252,7 +252,7 @@ export default function RegistrationModal({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="res-phone">
-              <Form.Label>{m.reservation_phone()} *</Form.Label>
+              <Form.Label>{m.registration_phone()} *</Form.Label>
               <Form.Control
                 type="tel"
                 name="phone"
@@ -268,7 +268,7 @@ export default function RegistrationModal({
 
             {/* Event selection */}
             <Form.Group className="mb-3" controlId="res-event">
-              <Form.Label>{m.reservation_event()} *</Form.Label>
+              <Form.Label>{m.registration_event()} *</Form.Label>
               <Form.Select
                 name="eventId"
                 value={formData.eventId}
@@ -277,7 +277,7 @@ export default function RegistrationModal({
                 className="bg-dark text-light border-secondary"
                 required
               >
-                <option value="">{m.reservation_select_event()}</option>
+                <option value="">{m.registration_select_event()}</option>
                 {registrableEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>
                     {ev.title}
@@ -288,7 +288,7 @@ export default function RegistrationModal({
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="res-guests">
-              <Form.Label>{m.reservation_guests()} *</Form.Label>
+              <Form.Label>{m.registration_guests()} *</Form.Label>
               <Form.Control
                 type="number"
                 name="guestCount"
@@ -305,8 +305,8 @@ export default function RegistrationModal({
 
             {/* Pre-order */}
             <fieldset className="mb-3">
-              <legend className="fs-6 fw-semibold mb-1">{m.reservation_preorder_title()}</legend>
-              <p className="text-secondary small mb-2">{m.reservation_preorder_description()}</p>
+              <legend className="fs-6 fw-semibold mb-1">{m.registration_preorder_title()}</legend>
+              <p className="text-secondary small mb-2">{m.registration_preorder_description()}</p>
 
               {ALL_PRODUCTS.filter((p) => p.available).map((product) => {
                 const currentItem = formData.preOrders.find((o) => o.productId === product.id);
@@ -349,14 +349,14 @@ export default function RegistrationModal({
 
             {/* Notes */}
             <Form.Group className="mb-3" controlId="res-notes">
-              <Form.Label>{m.reservation_notes()}</Form.Label>
+              <Form.Label>{m.registration_notes()}</Form.Label>
               <Form.Control
                 as="textarea"
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
                 rows={3}
-                placeholder={m.reservation_notes_placeholder()}
+                placeholder={m.registration_notes_placeholder()}
                 className="bg-dark text-light border-secondary"
               />
             </Form.Group>
@@ -385,12 +385,12 @@ export default function RegistrationModal({
                     aria-hidden="true"
                     className="me-2"
                   />
-                  {m.reservation_submitting()}
+                  {m.registration_submitting()}
                 </>
               ) : (
                 <>
                   <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                  {m.reservation_submit()}
+                  {m.registration_submit()}
                 </>
               )}
             </Button>

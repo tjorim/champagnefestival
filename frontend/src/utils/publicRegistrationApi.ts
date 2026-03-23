@@ -303,7 +303,7 @@ export async function requestRegistrationLookup(
   if (!response.ok) {
     throw new RegistrationLookupError(
       response.status === 422 ? "invalid_email" : "request_failed",
-      response.status === 422 ? m.my_reservations_invalid_email() : m.my_reservations_error(),
+      response.status === 422 ? m.my_registrations_invalid_email() : m.my_registrations_error(),
     );
   }
 
@@ -320,7 +320,7 @@ export async function fetchMyRegistrations(token: string): Promise<GuestRegistra
   if (!response.ok) {
     throw new RegistrationLookupError(
       response.status === 401 ? "invalid_token" : "request_failed",
-      response.status === 401 ? m.my_reservations_invalid_token() : m.my_reservations_error(),
+      response.status === 401 ? m.my_registrations_invalid_token() : m.my_registrations_error(),
     );
   }
 
@@ -363,7 +363,7 @@ export async function submitRegistration(
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new RegistrationSubmitError(
-      (data as { error?: string }).error ?? m.reservation_error(),
+      (data as { error?: string }).error ?? m.registration_error(),
     );
   }
 }
