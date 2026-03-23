@@ -63,30 +63,49 @@ Single process, single file database — zero extra services required.
 ```bash
 cd backend
 
-# 1. Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+# 1. Install dependencies (creates .venv automatically)
+uv sync
 
-# 2. Install dependencies
-pip install -e ".[dev]"
-
-# 3. Configure environment
+# 2. Configure environment
 cp .env.example .env
 # Edit .env — at minimum set ADMIN_TOKEN
 
-# 4. Run database migrations
-alembic upgrade head
+# 3. Run database migrations
+uv run alembic upgrade head
 
 # Note: only SQLAlchemy model/table changes require a new Alembic revision.
 # API-only changes do not need a migration by themselves, but removing or
 # replacing persisted volunteer fields such as `people.first_help_day` /
 # `people.last_help_day` would require one.
 
-# 5. Start the development server
-uvicorn app.main:app --reload
+# 4. Start the development server
+uv run uvicorn app.main:app --reload
 ```
 
 The interactive API docs are available at <http://localhost:8000/docs>.
+
+---
+
+## Development tools
+
+The project uses the [Astral](https://astral.sh) toolchain for linting, formatting, and type checking.
+
+```bash
+# Lint
+uv run ruff check .
+
+# Format (check only)
+uv run ruff format --check .
+
+# Format (apply)
+uv run ruff format .
+
+# Type check
+uv run ty check .
+
+# Run tests
+uv run pytest
+```
 
 ---
 
@@ -119,9 +138,12 @@ docker run -d \
 ### Option B — systemd service
 
 ```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install dependencies into a virtualenv
-python3 -m venv /opt/champagne/venv
-/opt/champagne/venv/bin/pip install -e /opt/champagne/backend
+cd /opt/champagne/backend
+uv sync --no-dev
 
 # Create /etc/systemd/system/champagne.service:
 # [Unit]
@@ -132,8 +154,8 @@ python3 -m venv /opt/champagne/venv
 # User=champagne
 # WorkingDirectory=/opt/champagne/backend
 # EnvironmentFile=/etc/champagne/.env
-# ExecStartPre=/opt/champagne/venv/bin/alembic upgrade head
-# ExecStart=/opt/champagne/venv/bin/uvicorn app.main:app \
+# ExecStartPre=/opt/champagne/backend/.venv/bin/alembic upgrade head
+# ExecStart=/opt/champagne/backend/.venv/bin/uvicorn app.main:app \
 #     --host 127.0.0.1 --port 8000 --workers 1
 # Restart=always
 #
