@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -53,7 +53,7 @@ async function submitContactForm(form: FormData): Promise<void> {
 /**
  * Contact form component with validation using react-bootstrap components
  */
-const ContactForm: React.FC = () => {
+const ContactForm = () => {
   const formStartTime = useRef(new Date().toISOString());
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -150,7 +150,7 @@ const ContactForm: React.FC = () => {
 
             <form.Field name="formStartTime">
               {(field) => (
-                <Form.Control type="hidden" value={field.state.value} onChange={() => {}} />
+                <Form.Control type="hidden" value={field.state.value} readOnly />
               )}
             </form.Field>
 
