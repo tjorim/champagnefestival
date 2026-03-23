@@ -77,7 +77,8 @@ function paymentLabel(payment: PaymentStatus): string {
 }
 
 function isStandaloneRegistration(registration: Registration) {
-  return registration.event?.edition?.editionType !== undefined && registration.event.edition.editionType !== "festival";
+  if (!registration.event || !registration.event.edition) return true;
+  return registration.event.edition.editionType !== "festival";
 }
 
 export default function RegistrationList({ registrations, tables, exhibitors, filter, onFilterChange, onUpdateStatus, onUpdatePayment, onAssignTable, onViewDetail, onAddRegistration, authHeaders }: RegistrationListProps) {
@@ -122,12 +123,12 @@ export default function RegistrationList({ registrations, tables, exhibitors, fi
     <>
       <Card bg="dark" text="white" border="secondary">
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <span className="fw-semibold">Registrations</span>
+          <span className="fw-semibold">{m.admin_registrations_tab_header()}</span>
           <div className="d-flex flex-wrap gap-2 align-items-center">
             <ButtonGroup size="sm">
-              <Button variant={editionFilter === "all" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("all")}>All ({editionCounts.all})</Button>
-              <Button variant={editionFilter === "festival" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("festival")}>Festivals ({editionCounts.festival})</Button>
-              <Button variant={editionFilter === "standalone" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("standalone")}>Standalone ({editionCounts.standalone})</Button>
+              <Button variant={editionFilter === "all" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("all")}>{m.admin_filter_edition_all()} ({editionCounts.all})</Button>
+              <Button variant={editionFilter === "festival" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("festival")}>{m.admin_filter_edition_festivals()} ({editionCounts.festival})</Button>
+              <Button variant={editionFilter === "standalone" ? "warning" : "outline-secondary"} onClick={() => setEditionFilter("standalone")}>{m.admin_filter_edition_standalone()} ({editionCounts.standalone})</Button>
             </ButtonGroup>
             {allocationOptions.length > 0 && (
               <Form.Select size="sm" className="bg-dark text-light border-secondary" style={{ maxWidth: 200 }} value={allocationFilter} onChange={(e) => setAllocationFilter(e.target.value)} aria-label={m.admin_filter_allocation_aria()}>
@@ -172,7 +173,7 @@ export default function RegistrationList({ registrations, tables, exhibitors, fi
                           <div className="fw-semibold d-flex align-items-center gap-1">
                             {registration.person.name}
                             {isLinked && <i className="bi bi-person-badge text-info" title={m.admin_linked_exhibitor_title()} aria-label={m.admin_allocation_contact_aria()} />}
-                            <Badge bg={isStandalone ? "info" : "warning"} text="dark">{isStandalone ? "Standalone" : "Festival"}</Badge>
+                            <Badge bg={isStandalone ? "info" : "warning"} text="dark">{isStandalone ? m.admin_filter_edition_standalone() : m.admin_edition_type_festival()}</Badge>
                           </div>
                           <div className="text-secondary small">{registration.person.email}</div>
                           {!isStandalone && registration.preOrders.length > 0 && (

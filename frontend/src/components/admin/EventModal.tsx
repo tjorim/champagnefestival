@@ -22,8 +22,6 @@ const EMPTY_FORM: EventFormData = {
   startTime: "",
   endTime: "",
   category: "other",
-  location: "",
-  presenter: "",
   registrationRequired: false,
   registrationsOpenFrom: "",
   maxCapacity: "",
@@ -48,8 +46,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             startTime: initial.startTime,
             endTime: initial.endTime ?? "",
             category: initial.category,
-            location: initial.location ?? "",
-            presenter: initial.presenter ?? "",
             registrationRequired: initial.registrationRequired,
             registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
             maxCapacity: initial.maxCapacity ? String(initial.maxCapacity) : "",
@@ -68,10 +64,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     setFormData((prev) => ({ ...prev, [key]: value }));
   }
 
+  const effectiveDate = isFestival ? formData.date : (formData.date || derivedStandaloneDate);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const date = isFestival ? formData.date : derivedStandaloneDate;
-    if (!formData.title.trim() || !date || !formData.startTime.trim()) return;
+    if (!formData.title.trim() || !effectiveDate || !formData.startTime.trim()) return;
+
+    const maxCapacityNum = formData.registrationRequired && formData.maxCapacity ? Number(formData.maxCapacity) : undefined;
+    const sortOrderNum = formData.sortOrder ? Number(formData.sortOrder) : undefined;
 
     onSave(
       {
@@ -79,21 +79,19 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
         editionId: edition.id,
         title: formData.title.trim(),
         description: formData.description.trim(),
-        date,
+        date: effectiveDate,
         startTime: formData.startTime.trim(),
         endTime: formData.endTime.trim() || undefined,
         category: formData.category.trim(),
-        location: formData.location.trim() || undefined,
-        presenter: formData.presenter.trim() || undefined,
         registrationRequired: formData.registrationRequired,
         registrationsOpenFrom: formData.registrationRequired ? formData.registrationsOpenFrom || undefined : undefined,
-        maxCapacity: formData.registrationRequired && formData.maxCapacity ? Number(formData.maxCapacity) : undefined,
-        sortOrder: formData.sortOrder ? Number(formData.sortOrder) : undefined,
+        maxCapacity: maxCapacityNum !== undefined && Number.isFinite(maxCapacityNum) && maxCapacityNum > 0 ? maxCapacityNum : undefined,
+        sortOrder: sortOrderNum !== undefined && Number.isFinite(sortOrderNum) ? sortOrderNum : undefined,
         active: formData.active,
         createdAt: initial?.createdAt ?? "",
         updatedAt: initial?.updatedAt ?? "",
       },
-      { ...formData, date },
+      { ...formData, date: effectiveDate },
     );
   }
 
@@ -119,15 +117,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
 
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group controlId="event-date" style={{ maxWidth: "180px" }}>
-              <Form.Label className="text-secondary small mb-1">Date</Form.Label>
+              <Form.Label className="text-secondary small mb-1">{m.admin_event_date()}</Form.Label>
               <Form.Control
                 type="date"
                 size="sm"
-                value={isFestival ? formData.date : derivedStandaloneDate}
+                value={effectiveDate}
                 onChange={(e) => updateField("date", e.target.value)}
                 className="bg-dark text-light border-secondary"
-                readOnly={!isFestival}
-                disabled={!isFestival && !derivedStandaloneDate}
+                readOnly={!isFestival && Boolean(derivedStandaloneDate)}
                 required
               />
             </Form.Group>
@@ -140,19 +137,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Form.Control type="time" size="sm" value={formData.endTime} onChange={(e) => updateField("endTime", e.target.value)} className="bg-dark text-light border-secondary" />
             </Form.Group>
             <Form.Group controlId="event-max-capacity" style={{ maxWidth: "160px" }}>
-              <Form.Label className="text-secondary small mb-1">Max capacity</Form.Label>
+              <Form.Label className="text-secondary small mb-1">{m.admin_event_max_capacity()}</Form.Label>
               <Form.Control type="number" min={1} size="sm" value={formData.maxCapacity} onChange={(e) => updateField("maxCapacity", e.target.value)} className="bg-dark text-light border-secondary" disabled={!formData.registrationRequired} />
-            </Form.Group>
-          </div>
-
-          <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group style={{ minWidth: "200px", flex: "1 1 200px" }}>
-              <Form.Label className="text-secondary small mb-1">Location</Form.Label>
-              <Form.Control size="sm" value={formData.location} onChange={(e) => updateField("location", e.target.value)} className="bg-dark text-light border-secondary" placeholder="Optional" />
-            </Form.Group>
-            <Form.Group style={{ minWidth: "200px", flex: "1 1 200px" }}>
-              <Form.Label className="text-secondary small mb-1">Presenter</Form.Label>
-              <Form.Control size="sm" value={formData.presenter} onChange={(e) => updateField("presenter", e.target.value)} className="bg-dark text-light border-secondary" placeholder="Optional" />
             </Form.Group>
           </div>
 
@@ -170,7 +156,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           )}
 
           {!isFestival && (
-            <div className="text-secondary small mt-2">Standalone edition events inherit the edition date; change the edition's event date pattern by editing the existing standalone event date.</div>
+            <div className="text-secondary small mt-2">{m.admin_event_standalone_help()}</div>
           )}
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">

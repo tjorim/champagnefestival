@@ -20,7 +20,8 @@ interface RegistrationDetailProps {
 }
 
 function isSimpleRsvp(registration: Registration) {
-  return registration.event?.edition?.editionType !== undefined && registration.event.edition.editionType !== "festival";
+  if (!registration.event || !registration.event.edition) return false;
+  return registration.event.edition.editionType !== "festival";
 }
 
 export default function RegistrationDetail({ registration, baseUrl, emailDuplicates = [], onClose, onToggleDelivered, onCheckIn, onIssueStrap, onMergeDuplicate }: RegistrationDetailProps) {
@@ -63,7 +64,7 @@ export default function RegistrationDetail({ registration, baseUrl, emailDuplica
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between"><span className="text-secondary">{m.registration_email()}</span><a href={`mailto:${registration.person.email}`} className="text-warning">{registration.person.email}</a></ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between"><span className="text-secondary">{m.registration_phone()}</span><span>{registration.person.phone}</span></ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between"><span className="text-secondary">{m.admin_event_label()}</span><span>{registration.event?.title ?? registration.eventId}</span></ListGroup.Item>
-          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between"><span className="text-secondary">Edition type</span><span>{simpleRsvp ? 'Standalone' : 'Festival'}</span></ListGroup.Item>
+          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between"><span className="text-secondary">{m.registration_edition_type_label()}</span><span>{simpleRsvp ? m.registration_edition_type_standalone() : m.registration_edition_type_festival()}</span></ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between"><span className="text-secondary">{m.admin_guests_count()}</span><span>{registration.guestCount}</span></ListGroup.Item>
           {registration.notes && <ListGroup.Item className="bg-dark text-light border-secondary"><span className="text-secondary d-block mb-1">{m.admin_notes()}</span><span className="small">{registration.notes}</span></ListGroup.Item>}
           {registration.accessibilityNote && <ListGroup.Item className="bg-dark text-light border-secondary"><span className="text-secondary d-block mb-1"><i className="bi bi-universal-access me-1" aria-hidden="true" />{m.admin_accessibility_note_label()}</span><span className="small">{registration.accessibilityNote}</span></ListGroup.Item>}

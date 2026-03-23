@@ -31,11 +31,11 @@ interface EditionCardProps {
 function editionTypeBadge(type: Edition["editionType"]) {
   switch (type) {
     case "bourse":
-      return { label: "Bourse", bg: "info" };
+      return { label: m.admin_edition_type_bourse(), bg: "info" };
     case "capsule_exchange":
-      return { label: "Capsule Exchange", bg: "primary" };
+      return { label: m.admin_edition_type_capsule_exchange(), bg: "primary" };
     default:
-      return { label: "Festival", bg: "warning" };
+      return { label: m.admin_edition_type_festival(), bg: "warning" };
   }
 }
 
@@ -65,6 +65,7 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
     queryFn: () => fetchEditionEvents(edition.id, authHeaders),
     staleTime: 30 * 1000,
     retry: false,
+    enabled: open,
   });
 
   const deleteEditionMutation = useMutation({ mutationFn: () => deleteEditionById(edition.id, authHeaders), retry: false });

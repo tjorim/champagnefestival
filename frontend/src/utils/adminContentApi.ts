@@ -193,7 +193,9 @@ export async function saveEdition(
         external_contact_name: payload.externalContactName?.trim() || null,
         external_contact_email: payload.externalContactEmail?.trim() || null,
         active: payload.active,
-        exhibitors: payload.exhibitorIds,
+        ...(payload.editionType === "festival"
+          ? { exhibitors: payload.exhibitorIds }
+          : {}),
       }),
     },
     isEdit ? "update edition" : "create edition",
@@ -241,10 +243,11 @@ export async function saveEditionEvent(
           payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
             ? payload.formData.registrationsOpenFrom
             : null,
-        max_capacity:
-          payload.formData.registrationRequired && payload.formData.maxCapacity
-            ? Number(payload.formData.maxCapacity)
-            : null,
+        max_capacity: (() => {
+          if (!payload.formData.registrationRequired || !payload.formData.maxCapacity) return null;
+          const n = Number(payload.formData.maxCapacity);
+          return Number.isFinite(n) && n > 0 ? Math.trunc(n) : null;
+        })(),
         active: payload.formData.active,
       }),
     },

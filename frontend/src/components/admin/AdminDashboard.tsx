@@ -31,10 +31,9 @@ import { type Person, apiToPerson } from "@/types/person";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
 import {
   fetchArrayOrThrow,
-  fetchJsonOrThrow,
   fetchJsonOrThrowWithUnauthorized,
   fetchStatus,
-  fetchVoidOrThrow,
+  fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 
@@ -436,7 +435,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/people/${canonicalId}/merge/${duplicateId}`,
         { method: "POST", headers: authHeaders() },
         m.admin_people_merge_error(),
@@ -446,7 +445,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const createMemberMutation = useMutation({
     mutationFn: (data: MemberFormData) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/members",
         {
           method: "POST",
@@ -468,7 +467,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const updateMemberMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: MemberFormData }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/members/${id}`,
         {
           method: "PUT",
@@ -490,13 +489,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteMemberMutation = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrow(`/api/members/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_members_error_delete()),
+      fetchVoidOrThrowWithUnauthorized(`/api/members/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_members_error_delete()),
     retry: false,
   });
 
   const createPersonMutation = useMutation({
     mutationFn: (data: PersonFormData) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/people",
         {
           method: "POST",
@@ -519,7 +518,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const updatePersonMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: PersonFormData }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/people/${id}`,
         {
           method: "PUT",
@@ -542,13 +541,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deletePersonMutation = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrow(`/api/people/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_person()),
+      fetchVoidOrThrowWithUnauthorized(`/api/people/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_person()),
     retry: false,
   });
 
   const createVolunteerMutation = useMutation({
     mutationFn: (data: VolunteerFormData) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/volunteers",
         {
           method: "POST",
@@ -572,7 +571,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const updateVolunteerMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: VolunteerFormData }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/volunteers/${id}`,
         {
           method: "PUT",
@@ -596,13 +595,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteVolunteerMutation = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrow(`/api/volunteers/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_volunteers_error_delete()),
+      fetchVoidOrThrowWithUnauthorized(`/api/volunteers/${id}`, { method: "DELETE", headers: authHeaders() }, m.admin_volunteers_error_delete()),
     retry: false,
   });
 
   const updateRegistrationMutation = useMutation({
     mutationFn: ({ id, payload, fallbackMessage }: { id: string; payload: Record<string, unknown>; fallbackMessage: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/registrations/${id}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(payload) },
         fallbackMessage,
@@ -612,7 +611,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const createTableMutation = useMutation({
     mutationFn: ({ name, capacity, layoutId, tableTypeId }: { name: string; capacity: number; layoutId: string; tableTypeId: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/tables",
         {
           method: "POST",
@@ -626,7 +625,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const updateTableMutation = useMutation({
     mutationFn: ({ tableId, body, fallbackMessage }: { tableId: string; body: Record<string, unknown>; fallbackMessage: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
         fallbackMessage,
@@ -636,13 +635,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteTableMutation = useMutation({
     mutationFn: (tableId: string) =>
-      fetchVoidOrThrow(`/api/tables/${tableId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_table()),
+      fetchVoidOrThrowWithUnauthorized(`/api/tables/${tableId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_table()),
     retry: false,
   });
 
   const createVenueMutation = useMutation({
     mutationFn: ({ name, address, city, postalCode, country }: { name: string; address: string; city: string; postalCode: string; country: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/venues",
         {
           method: "POST",
@@ -656,7 +655,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const updateVenueMutation = useMutation({
     mutationFn: ({ venueId, active }: { venueId: string; active: boolean }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/venues/${venueId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ active }) },
         active ? m.admin_error_restore_venue() : m.admin_error_archive_venue(),
@@ -666,13 +665,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteVenueMutation = useMutation({
     mutationFn: (venueId: string) =>
-      fetchVoidOrThrow(`/api/venues/${venueId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_venue()),
+      fetchVoidOrThrowWithUnauthorized(`/api/venues/${venueId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_venue()),
     retry: false,
   });
 
   const createRoomMutation = useMutation({
     mutationFn: ({ venueId, name, widthM, lengthM, color }: { venueId: string; name: string; widthM: number; lengthM: number; color: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/rooms",
         {
           method: "POST",
@@ -686,7 +685,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const updateRoomMutation = useMutation({
     mutationFn: ({ roomId, active, fallbackMessage }: { roomId: string; active: boolean; fallbackMessage: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/rooms/${roomId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ active }) },
         fallbackMessage,
@@ -696,7 +695,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const createLayoutMutation = useMutation({
     mutationFn: ({ roomId, date, label }: { roomId: string; date: string; label?: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/layouts",
         {
           method: "POST",
@@ -710,27 +709,27 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteLayoutMutation = useMutation({
     mutationFn: (layoutId: string) =>
-      fetchVoidOrThrow(`/api/layouts/${layoutId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_layout()),
+      fetchVoidOrThrowWithUnauthorized(`/api/layouts/${layoutId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_layout()),
     retry: false,
   });
 
   const createAreaMutation = useMutation({
     mutationFn: ({ label, icon, layoutId, widthM, lengthM, exhibitorId }: { label: string; icon: string; layoutId: string; widthM: number; lengthM: number; exhibitorId?: number }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/areas",
         {
           method: "POST",
           headers: authHeaders(),
           body: JSON.stringify({ label, icon, layout_id: layoutId, width_m: widthM, length_m: lengthM, x: 10, y: 10, exhibitor_id: exhibitorId ?? null }),
         },
-        "Failed to add area.",
+        m.admin_error_add_area(),
       ),
     retry: false,
   });
 
   const updateAreaMutation = useMutation({
     mutationFn: ({ areaId, body, fallbackMessage }: { areaId: string; body: Record<string, unknown>; fallbackMessage: string }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
         fallbackMessage,
@@ -740,13 +739,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const deleteAreaMutation = useMutation({
     mutationFn: (areaId: string) =>
-      fetchVoidOrThrow(`/api/areas/${areaId}`, { method: "DELETE", headers: authHeaders() }, "Failed to delete area."),
+      fetchVoidOrThrowWithUnauthorized(`/api/areas/${areaId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_area()),
     retry: false,
   });
 
   const createTableTypeMutation = useMutation({
     mutationFn: (data: Omit<TableType, "id">) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/table-types",
         {
           method: "POST",
@@ -767,7 +766,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const updateTableTypeMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Omit<TableType, "id">> }) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/table-types/${id}`,
         {
           method: "PUT",
@@ -789,7 +788,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const registrationDetailMutation = useMutation({
     mutationFn: (registrationId: string) =>
-      fetchJsonOrThrow<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/registrations/${registrationId}`,
         { headers: authHeaders() },
         m.admin_error_load_data(),
@@ -847,7 +846,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           setLoginError(m.admin_login_error());
         } else {
           // transientError
-          setLoginError("Server temporarily unavailable. Please try again.");
+          setLoginError(m.admin_error_server_transient());
         }
       } catch (err) {
         console.error("Login request failed", err);
@@ -1153,13 +1152,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         } else {
           // transientError: keep the token, log the error
           console.error("Auto-authentication failed due to transient error");
-          setLoginError("Server temporarily unavailable. Please refresh or try logging in again.");
+          setLoginError(m.admin_error_server_transient_refresh());
         }
       })
       .catch((err) => {
         // Unexpected error in the effect itself
         console.error("Auto-authentication exception:", err);
-        setLoginError("Failed to authenticate. Please log in manually.");
+        setLoginError(m.admin_error_auto_auth_failed());
       });
   }, [isAuthenticated, validateToken]);
 
@@ -1360,6 +1359,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       );
       updateDashboardField("tables", (prev) =>
         prev.filter((t) => !venueLayoutIds.includes(t.layoutId)),
+      );
+      updateDashboardField("areas", (prev) =>
+        prev.filter((a) => !venueLayoutIds.includes(a.layoutId)),
       );
     },
     [deleteVenueMutation, layouts, rooms, updateDashboardField],
@@ -1849,7 +1851,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Nav.Item>
                     <Nav.Link eventKey="registrations" className="text-light">
                       <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                      Registrations
+                      {m.admin_registrations_tab()}
                       <span className="badge bg-warning text-dark ms-2">{registrations.length}</span>
                     </Nav.Link>
                   </Nav.Item>

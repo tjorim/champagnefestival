@@ -161,7 +161,7 @@ export default function EditionModal({ show, initial, venues, authHeaders, onSav
         editionType,
         venueId,
         active,
-        exhibitorIds: selectedExhibitors.map((option: ItemOption) => option.value),
+        exhibitorIds: editionType === "festival" ? selectedExhibitors.map((option: ItemOption) => option.value) : [],
         externalPartner,
         externalContactName,
         externalContactEmail,
@@ -199,7 +199,11 @@ export default function EditionModal({ show, initial, venues, authHeaders, onSav
             </Form.Group>
             <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
               <Form.Label className="text-secondary small mb-1">Edition type</Form.Label>
-              <Form.Select value={editionType} onChange={(e) => setEditionType(e.target.value as EditionType)} className="bg-dark text-light border-secondary">
+              <Form.Select value={editionType} onChange={(e) => {
+                const newType = e.target.value as EditionType;
+                setEditionType(newType);
+                if (newType !== "festival") setSelectedExhibitors([]);
+              }} className="bg-dark text-light border-secondary">
                 <option value="festival">Festival</option>
                 <option value="bourse">Bourse</option>
                 <option value="capsule_exchange">Capsule Exchange</option>

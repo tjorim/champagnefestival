@@ -205,7 +205,7 @@ export default function RegistrationCreateModal({
                 <option value="">{m.admin_select_event_placeholder()}</option>
                 {sortedEvents.map((ev) => (
                   <option key={ev.id} value={ev.id}>
-                    {[ev.title, ev.edition?.editionType && ev.edition.editionType !== "festival" ? "Standalone" : null].filter(Boolean).join(" · ")}
+                    {[ev.title, ev.edition?.editionType && ev.edition.editionType !== "festival" ? m.admin_filter_edition_standalone() : null].filter(Boolean).join(" · ")}
                   </option>
                 ))}
               </Form.Select>
