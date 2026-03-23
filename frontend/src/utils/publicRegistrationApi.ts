@@ -91,9 +91,11 @@ export async function fetchCheckInRegistration(
   registrationId: string,
   checkInToken: string,
 ): Promise<CheckInData> {
-  const response = await fetch(
-    `/api/check-in/${encodeURIComponent(registrationId)}?token=${encodeURIComponent(checkInToken)}`,
-  );
+  const response = await fetch(`/api/check-in/${encodeURIComponent(registrationId)}/lookup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: checkInToken }),
+  });
 
   if (response.status === 401) {
     throw new CheckInError("invalid_token", m.checkin_invalid_token());
@@ -334,9 +336,7 @@ export class RegistrationSubmitError extends Error {
 
 export async function submitRegistration(
   payload: RegistrationFormData,
-  registrableEvents: { id: string; title: string }[],
 ): Promise<void> {
-  const selectedEvent = registrableEvents.find((event) => event.id === payload.eventId);
   const response = await fetch("/api/registrations", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -345,7 +345,6 @@ export async function submitRegistration(
       email: payload.email,
       phone: payload.phone,
       event_id: payload.eventId,
-      event_title: selectedEvent?.title ?? payload.eventId,
       guest_count: payload.guestCount,
       pre_orders: payload.preOrders.map((order) => ({
         product_id: order.productId,

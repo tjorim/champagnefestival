@@ -377,6 +377,10 @@ class CheckInGuestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CheckInLookupRequest(BaseModel):
+    token: str
+
+
 class CheckInRequest(BaseModel):
     token: str
     issue_strap: bool = True

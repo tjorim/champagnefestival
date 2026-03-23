@@ -60,11 +60,8 @@ async def send_guest_access_email(
 def _send_message_sync(message: EmailMessage) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
         smtp.ehlo()
-        try:
-            smtp.starttls()
-            smtp.ehlo()
-        except smtplib.SMTPNotSupportedError:
-            logger.info("SMTP server does not support STARTTLS; sending without TLS.")
+        smtp.starttls()
+        smtp.ehlo()
         if settings.smtp_user:
             smtp.login(settings.smtp_user, settings.smtp_password)
         smtp.send_message(message)

@@ -125,7 +125,7 @@ export async function fetchAdminPersonRegistrations(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to load registrations for person ${personId}: ${response.status}`);
+    throw new Error(`Failed to load registrations: ${response.status}`);
   }
 
   const raw: unknown = await response.json();

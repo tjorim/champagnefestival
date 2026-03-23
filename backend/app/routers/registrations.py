@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import collections
 import hashlib
 import logging
 import secrets
@@ -18,6 +17,7 @@ from app.auth import require_admin
 from app.config import settings
 from app.database import get_db
 from app.email import send_guest_access_email
+from app.ratelimit import check_rate_limit
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken
 from app.routers.people import normalize_phone
 from app.schemas import (
@@ -43,22 +43,6 @@ from app.utils import (
 
 router = APIRouter(prefix="/api/registrations", tags=["registrations"])
 logger = logging.getLogger(__name__)
-
-_RATE_LIMIT_MAX_REQUESTS = 5
-_RATE_LIMIT_WINDOW_SECONDS = 600
-_rate_limit_buckets: dict[str, collections.deque[datetime]] = {}
-
-
-def _check_rate_limit(client_ip: str) -> bool:
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(seconds=_RATE_LIMIT_WINDOW_SECONDS)
-    bucket = _rate_limit_buckets.setdefault(client_ip, collections.deque())
-    while bucket and bucket[0] < cutoff:
-        bucket.popleft()
-    if len(bucket) >= _RATE_LIMIT_MAX_REQUESTS:
-        return False
-    bucket.append(now)
-    return True
 
 
 @router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
@@ -101,7 +85,7 @@ async def create_registration(
         guest_count=body.guest_count,
         notes=body.notes,
         person_id=person.id,
-        check_in_token=make_id("tok"),
+        check_in_token=secrets.token_urlsafe(32),
     )
     registration.pre_orders = [item.model_dump() for item in body.pre_orders]
     db.add(registration)
@@ -134,7 +118,7 @@ async def admin_create_registration(
         accessibility_note=body.accessibility_note,
         status=body.status,
         person_id=person.id,
-        check_in_token=make_id("tok"),
+        check_in_token=secrets.token_urlsafe(32),
     )
     registration.pre_orders = [item.model_dump() for item in body.pre_orders]
     db.add(registration)
@@ -200,7 +184,7 @@ async def request_my_registrations_access(
     db: AsyncSession = Depends(get_db),
 ) -> RegistrationLookupRequestAccepted:
     client_ip = request.client.host if request.client else "unknown"
-    if not _check_rate_limit(client_ip):
+    if not check_rate_limit(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
@@ -285,8 +269,10 @@ async def access_my_registrations(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     token_row = await _get_guest_access_token_or_401(db, body.token)
-    token_row.last_used_at = datetime.now(timezone.utc)
-    rows = await _load_guest_registrations_by_email(db, token_row.email)
+    email_norm = token_row.email
+    # Expire the token immediately after first use so it cannot be replayed.
+    token_row.expires_at = datetime.now(timezone.utc)
+    rows = await _load_guest_registrations_by_email(db, email_norm)
     await db.commit()
     return [registration_to_guest_dict(row) for row in rows]
 
@@ -475,15 +461,21 @@ async def _ensure_public_registration_allowed(
     if event.max_capacity is None:
         return
 
+    # Re-fetch the event with a row-level lock so concurrent registrations are
+    # serialised and cannot both pass the capacity check (preventing overbooking).
+    locked_event = (
+        await db.execute(select(Event).where(Event.id == event.id).with_for_update())
+    ).scalar_one()
+
     reserved_guest_count = (
         await db.execute(
             select(func.coalesce(func.sum(Registration.guest_count), 0)).where(
-                Registration.event_id == event.id,
+                Registration.event_id == locked_event.id,
                 Registration.status != "cancelled",
             )
         )
     ).scalar_one()
-    if reserved_guest_count + requested_guest_count > event.max_capacity:
+    if reserved_guest_count + requested_guest_count > locked_event.max_capacity:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This event is fully booked.",

@@ -14,7 +14,7 @@ from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.database import Base, get_db
 from app.main import app
 from app.models import ReservationAccessToken
-import app.routers.registrations as reservations_module
+import app.ratelimit as ratelimit_module
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
@@ -29,7 +29,7 @@ def set_admin_token(monkeypatch):
 @pytest.fixture(autouse=True)
 def reset_rate_limiter(monkeypatch):
     """Reset the in-memory rate limiter before every test for isolation."""
-    monkeypatch.setattr(reservations_module, "_rate_limit_buckets", {})
+    monkeypatch.setattr(ratelimit_module, "_rate_limit_buckets", {})
 
 
 @pytest.fixture()
@@ -359,8 +359,8 @@ async def test_check_in_flow(client):
     r = await client.get(f"/api/registrations/{res_id}", headers=ADMIN_HEADERS)
     token = r.json()["check_in_token"]
 
-    # Verify token via GET
-    r = await client.get(f"/api/check-in/{res_id}", params={"token": token})
+    # Verify token via POST lookup (token in body, not query string)
+    r = await client.post(f"/api/check-in/{res_id}/lookup", json={"token": token})
     assert r.status_code == 200
 
     # Check in
@@ -685,8 +685,12 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     assert "notes" not in items[0]
     assert items[0]["status"] == "pending"
     assert items[0]["event_title"] == "Vrijdagavond"
+    # Token is expired immediately after first use to prevent replay.
     await db_session.refresh(token_rows[0])
-    assert token_rows[0].last_used_at is not None
+    expires_at = token_rows[0].expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    assert expires_at <= datetime.now(timezone.utc)
 
 
 @pytest.mark.anyio
@@ -728,8 +732,11 @@ async def test_my_reservations_access_expired_token(client, db_session):
 
 @pytest.mark.anyio
 async def test_my_reservations_access_multiple_editions(client, monkeypatch):
-    token = "guest-access-token-12345"
-    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: token)
+    # Each registration gets a unique check_in_token; the last call issues the
+    # guest access token (the value we will present to /my/access).
+    guest_token = "guest-access-token-12345"
+    token_seq = iter(["check-in-tok-fri", "check-in-tok-sat", guest_token])
+    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: next(token_seq))
 
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
@@ -749,7 +756,7 @@ async def test_my_reservations_access_multiple_editions(client, monkeypatch):
     assert r.status_code == 202
 
     r = await client.post(
-        "/api/registrations/my/access", json={"token": token}
+        "/api/registrations/my/access", json={"token": guest_token}
     )
     assert r.status_code == 200
     assert len(r.json()) == 2
@@ -827,10 +834,11 @@ async def test_my_reservations_request_recovers_from_insert_race(client, db_sess
 
 
 @pytest.mark.anyio
-async def test_my_reservations_access_token_reuse(client, monkeypatch):
-    """A valid token can be used more than once within its TTL window."""
-    token = "guest-access-token-12345"
-    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: token)
+async def test_my_reservations_access_token_single_use(client, monkeypatch):
+    """A guest access token is invalidated after first use (single-use)."""
+    guest_token = "guest-access-token-12345"
+    token_seq = iter(["check-in-tok-001", guest_token])
+    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: next(token_seq))
 
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
@@ -838,19 +846,19 @@ async def test_my_reservations_access_token_reuse(client, monkeypatch):
     r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
-    first = await client.post("/api/registrations/my/access", json={"token": token})
-    second = await client.post("/api/registrations/my/access", json={"token": token})
+    first = await client.post("/api/registrations/my/access", json={"token": guest_token})
+    second = await client.post("/api/registrations/my/access", json={"token": guest_token})
 
     assert first.status_code == 200
-    assert second.status_code == 200
     assert len(first.json()) == 1
-    assert len(second.json()) == 1
+    # Token is expired after first use; second attempt must be rejected.
+    assert second.status_code == 401
 
 
 @pytest.mark.anyio
 async def test_my_reservations_request_rate_limited(client):
     """After exceeding the per-IP request limit the endpoint returns 429."""
-    limit = reservations_module._RATE_LIMIT_MAX_REQUESTS
+    limit = ratelimit_module._RATE_LIMIT_MAX_REQUESTS
     for _ in range(limit):
         r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
         assert r.status_code == 202

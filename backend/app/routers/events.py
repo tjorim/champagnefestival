@@ -46,7 +46,7 @@ async def list_events(
     return [event_to_summary_dict(event, include_edition=True) for event in events]
 
 
-@router.get("/{event_id}", response_model=EventOut)
+@router.get("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
 async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     event = await _get_or_404(db, event_id)
     return event_to_summary_dict(event, include_edition=True)

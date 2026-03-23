@@ -63,7 +63,7 @@ export default function RegistrationModal({
   const [submitError, setSubmitError] = useState("");
 
   const submitRegistrationMutation = useMutation({
-    mutationFn: (payload: RegistrationFormData) => submitRegistration(payload, registrableEvents),
+    mutationFn: (payload: RegistrationFormData) => submitRegistration(payload),
     retry: false,
   });
 
