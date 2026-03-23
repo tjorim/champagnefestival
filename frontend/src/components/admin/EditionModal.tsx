@@ -161,7 +161,7 @@ export default function EditionModal({ show, initial, venues, authHeaders, onSav
         editionType,
         venueId,
         active,
-        exhibitorIds: selectedExhibitors.map((option: ItemOption) => option.value),
+        exhibitorIds: editionType === "festival" ? selectedExhibitors.map((option: ItemOption) => option.value) : [],
         externalPartner,
         externalContactName,
         externalContactEmail,

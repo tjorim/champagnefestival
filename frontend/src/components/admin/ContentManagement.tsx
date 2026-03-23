@@ -53,13 +53,13 @@ function typeLabel(type: string | undefined): string {
 function editionTypeLabel(type: EditionType | "all") {
   switch (type) {
     case "festival":
-      return "Festivals";
+      return m.admin_edition_type_festivals();
     case "bourse":
-      return "Bourse";
+      return m.admin_edition_type_bourse();
     case "capsule_exchange":
-      return "Capsule Exchange";
+      return m.admin_edition_type_capsule_exchange();
     default:
-      return "All";
+      return m.admin_edition_type_all();
   }
 }
 
@@ -275,7 +275,16 @@ function ContentSection({ sectionKey, title, authHeaders, onItemSaved, onItemDel
       </div>
 
       {itemsQuery.isError && <Alert variant="danger" className="py-1 mb-2">{m.admin_content_error_load()}</Alert>}
-      {actionError && <Alert variant="danger" className="py-1 mb-2">{actionError}</Alert>}
+      {actionError && (
+        <Alert
+          variant="danger"
+          className="py-1 mb-2"
+          dismissible
+          onClose={() => setActionError(null)}
+        >
+          {actionError}
+        </Alert>
+      )}
       <ListGroup variant="flush">{activeItems.map((item) => renderItemRow(item, false))}</ListGroup>
       {archivedItems.length > 0 && (
         <div className="mt-2">

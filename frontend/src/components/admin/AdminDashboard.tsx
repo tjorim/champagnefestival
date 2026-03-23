@@ -1849,7 +1849,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Nav.Item>
                     <Nav.Link eventKey="registrations" className="text-light">
                       <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                      Registrations
+                      {m.admin_registrations_tab()}
                       <span className="badge bg-warning text-dark ms-2">{registrations.length}</span>
                     </Nav.Link>
                   </Nav.Item>
