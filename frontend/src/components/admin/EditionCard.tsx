@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -6,6 +6,7 @@ import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EventModal from "./EventModal";
 import { parseEditionDate, type Edition } from "./editionTypes";
@@ -74,7 +75,17 @@ function editionTypeBadge(type: Edition["editionType"]) {
   }
 }
 
+function upsertEditionEvent(events: Event[], savedEvent: Event): Event[] {
+  const existingIndex = events.findIndex((event) => event.id === savedEvent.id);
+  if (existingIndex >= 0) {
+    return events.map((event) => (event.id === savedEvent.id ? savedEvent : event));
+  }
+
+  return [...events, savedEvent];
+}
+
 export default function EditionCard({ edition, venues, authHeaders, onDeleted, onUpdated, onEventMutation }: EditionCardProps) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -83,9 +94,10 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
   const [editionModalOpen, setEditionModalOpen] = useState(false);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const editionEventsQueryKey = queryKeys.admin.editionEvents(edition.id);
 
   const eventsQuery = useQuery({
-    queryKey: ["admin", "edition-events", edition.id],
+    queryKey: editionEventsQueryKey,
     queryFn: () => fetchEditionEvents(edition.id, authHeaders),
     staleTime: 30 * 1000,
     retry: false,
@@ -137,10 +149,12 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
   async function handleEventSaved(event: Event, formData: EventFormData) {
     setSaveError("");
     try {
-      await saveEventMutation.mutateAsync({ event, formData });
+      const savedEvent = await saveEventMutation.mutateAsync({ event, formData });
+      queryClient.setQueryData<Event[]>(editionEventsQueryKey, (prev = edition.events ?? []) =>
+        upsertEditionEvent(prev, savedEvent),
+      );
       setEventModalOpen(false);
-      await eventsQuery.refetch();
-      onEventMutation?.();
+      await onEventMutation?.();
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : m.admin_content_error_save());
     }
@@ -150,8 +164,10 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
     setSaveError("");
     try {
       await deleteEventMutation.mutateAsync(eventId);
-      await eventsQuery.refetch();
-      onEventMutation?.();
+      queryClient.setQueryData<Event[]>(editionEventsQueryKey, (prev = edition.events ?? []) =>
+        prev.filter((event) => event.id !== eventId),
+      );
+      await onEventMutation?.();
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : m.admin_content_error_save());
     }
