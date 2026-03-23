@@ -649,6 +649,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
+  const updateTableMutation = useMutation({
+    mutationFn: ({ tableId, body, fallbackMessage }: { tableId: string; body: Record<string, unknown>; fallbackMessage: string }) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        `/api/tables/${tableId}`,
+        { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
+        fallbackMessage,
+      ),
+    retry: false,
+  });
+
   const deleteTableMutation = useMutation({
     mutationFn: (tableId: string) =>
       fetchVoidOrThrow(`/api/tables/${tableId}`, { method: "DELETE", headers: authHeaders() }, m.admin_error_delete_table()),
@@ -798,6 +808,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           }),
         },
         m.admin_error_update_table_type(),
+      ),
+    retry: false,
+  });
+
+  const registrationDetailMutation = useMutation({
+    mutationFn: (registrationId: string) =>
+      fetchJsonOrThrow<Record<string, unknown>>(
+        `/api/registrations/${registrationId}`,
+        { headers: authHeaders() },
+        m.admin_error_load_data(),
       ),
     retry: false,
   });
@@ -1259,42 +1279,59 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleMoveTable = useCallback(
     async (tableId: string, x: number, y: number) => {
+      const previousTable = tables.find((table) => table.id === tableId);
       // Optimistic update
       updateDashboardField("tables", (prev) =>
         prev.map((t) => (t.id === tableId ? { ...t, x, y } : t)),
       );
       try {
-        await fetch(`/api/tables/${tableId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ x, y }),
+        await updateTableMutation.mutateAsync({
+          tableId,
+          body: { x, y },
+          fallbackMessage: "Failed to persist table position.",
         });
       } catch (err) {
-        // Non-critical: position will persist until next reload
+        if (previousTable) {
+          updateDashboardField("tables", (prev) =>
+            prev.map((table) =>
+              table.id === tableId
+                ? { ...table, x: previousTable.x, y: previousTable.y }
+                : table,
+            ),
+          );
+        }
         console.error("Failed to persist table position", err);
       }
     },
-    [authHeaders, updateDashboardField],
+    [tables, updateDashboardField, updateTableMutation],
   );
 
   const handleRotateTable = useCallback(
     async (tableId: string, rotation: number) => {
       // Normalise to [0, 360)
       const normalised = ((rotation % 360) + 360) % 360;
+      const previousTable = tables.find((table) => table.id === tableId);
       updateDashboardField("tables", (prev) =>
         prev.map((t) => (t.id === tableId ? { ...t, rotation: normalised } : t)),
       );
       try {
-        await fetch(`/api/tables/${tableId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ rotation: normalised }),
+        await updateTableMutation.mutateAsync({
+          tableId,
+          body: { rotation: normalised },
+          fallbackMessage: "Failed to persist table rotation.",
         });
       } catch (err) {
+        if (previousTable) {
+          updateDashboardField("tables", (prev) =>
+            prev.map((table) =>
+              table.id === tableId ? { ...table, rotation: previousTable.rotation } : table,
+            ),
+          );
+        }
         console.error("Failed to persist table rotation", err);
       }
     },
-    [authHeaders, updateDashboardField],
+    [tables, updateDashboardField, updateTableMutation],
   );
 
   const handleDeleteTable = useCallback(
@@ -1421,26 +1458,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         prevAreas.map((a) => (a.id === areaId ? { ...a, x, y } : a)),
       );
       try {
-        const response = await fetch(`/api/areas/${areaId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ x, y }),
+        await updateAreaMutation.mutateAsync({
+          areaId,
+          body: { x, y },
+          fallbackMessage: "Failed to persist area position.",
         });
-        if (!response.ok) {
-          if (prev)
-            updateDashboardField("areas", (prevAreas) =>
-              prevAreas.map((a) => (a.id === areaId ? { ...a, x: prev.x, y: prev.y } : a)),
-            );
-          const data = await response.json().catch(() => ({}));
-          throw new Error(
-            (data as { detail?: string }).detail ?? "Failed to persist area position.",
-          );
-        }
       } catch (err) {
+        if (prev)
+          updateDashboardField("areas", (prevAreas) =>
+            prevAreas.map((a) => (a.id === areaId ? { ...a, x: prev.x, y: prev.y } : a)),
+          );
         console.error("Failed to persist area position", err);
       }
     },
-    [areas, authHeaders, updateDashboardField],
+    [areas, updateAreaMutation, updateDashboardField],
   );
 
   const handleRotateArea = useCallback(
@@ -1451,26 +1482,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: normalised } : a)),
       );
       try {
-        const response = await fetch(`/api/areas/${areaId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ rotation: normalised }),
+        await updateAreaMutation.mutateAsync({
+          areaId,
+          body: { rotation: normalised },
+          fallbackMessage: "Failed to persist area rotation.",
         });
-        if (!response.ok) {
-          if (prev)
-            updateDashboardField("areas", (prevAreas) =>
-              prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: prev.rotation } : a)),
-            );
-          const data = await response.json().catch(() => ({}));
-          throw new Error(
-            (data as { detail?: string }).detail ?? "Failed to persist area rotation.",
-          );
-        }
       } catch (err) {
+        if (prev)
+          updateDashboardField("areas", (prevAreas) =>
+            prevAreas.map((a) => (a.id === areaId ? { ...a, rotation: prev.rotation } : a)),
+          );
         console.error("Failed to persist area rotation", err);
       }
     },
-    [areas, authHeaders, updateDashboardField],
+    [areas, updateAreaMutation, updateDashboardField],
   );
 
   const handleDeleteArea = useCallback(
@@ -1496,20 +1521,28 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleUpdateAreaLabel = useCallback(
     async (areaId: string, label: string) => {
+      const previousArea = areas.find((area) => area.id === areaId);
       updateDashboardField("areas", (prev) =>
         prev.map((a) => (a.id === areaId ? { ...a, label } : a)),
       );
       try {
-        await fetch(`/api/areas/${areaId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ label }),
+        await updateAreaMutation.mutateAsync({
+          areaId,
+          body: { label },
+          fallbackMessage: "Failed to persist area label.",
         });
       } catch (err) {
+        if (previousArea) {
+          updateDashboardField("areas", (prev) =>
+            prev.map((area) =>
+              area.id === areaId ? { ...area, label: previousArea.label } : area,
+            ),
+          );
+        }
         console.error("Failed to persist area label", err);
       }
     },
-    [authHeaders, updateDashboardField],
+    [areas, updateAreaMutation, updateDashboardField],
   );
 
   const handleChangeTableType = useCallback(
@@ -1520,18 +1553,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         return prev.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t));
       });
       try {
-        const response = await fetch(`/api/tables/${tableId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ table_type_id: tableTypeId }),
+        await updateTableMutation.mutateAsync({
+          tableId,
+          body: { table_type_id: tableTypeId },
+          fallbackMessage: m.admin_error_change_table_type_status({ status: 500 }),
         });
-        if (!response.ok) {
-          const d = await response.json().catch(() => ({}));
-          throw new Error(
-            (d as { detail?: string }).detail ??
-              m.admin_error_change_table_type_status({ status: response.status }),
-          );
-        }
       } catch (err) {
         console.error("Failed to persist table type change", err);
         if (previousTable !== undefined) {
@@ -1543,7 +1569,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw err;
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateTableMutation],
   );
 
   const handleUpdateTable = useCallback(
@@ -1554,18 +1580,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         return prev.map((t) => (t.id === tableId ? { ...t, name } : t));
       });
       try {
-        const response = await fetch(`/api/tables/${tableId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ name }),
+        await updateTableMutation.mutateAsync({
+          tableId,
+          body: { name },
+          fallbackMessage: m.admin_error_update_table_name_status({ status: 500 }),
         });
-        if (!response.ok) {
-          const d = await response.json().catch(() => ({}));
-          throw new Error(
-            (d as { detail?: string }).detail ??
-              m.admin_error_update_table_name_status({ status: response.status }),
-          );
-        }
       } catch (err) {
         if (previousTable !== undefined) {
           const snapshot = previousTable;
@@ -1577,7 +1596,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw err;
       }
     },
-    [authHeaders, updateDashboardField],
+    [updateDashboardField, updateTableMutation],
   );
 
   const handleResizeArea = useCallback(
@@ -1606,18 +1625,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         return prev.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a));
       });
       try {
-        const response = await fetch(`/api/areas/${areaId}`, {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ width_m: widthM, length_m: lengthM, x, y }),
+        await updateAreaMutation.mutateAsync({
+          areaId,
+          body: { width_m: widthM, length_m: lengthM, x, y },
+          fallbackMessage: m.admin_error_resize_area_status({ status: 500 }),
         });
-        if (!response.ok) {
-          const d = await response.json().catch(() => ({}));
-          throw new Error(
-            (d as { detail?: string }).detail ??
-              m.admin_error_resize_area_status({ status: response.status }),
-          );
-        }
       } catch (err) {
         if (previousArea !== undefined) {
           const snapshot = previousArea;
@@ -1629,7 +1641,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         throw err;
       }
     },
-    [areas, authHeaders, layouts, rooms, updateDashboardField],
+    [areas, layouts, rooms, updateAreaMutation, updateDashboardField],
   );
 
   const handleAddRegistration = useCallback((registration: Registration) => {
@@ -1668,22 +1680,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleViewDetail = useCallback(
     async (res: Registration) => {
       try {
-        const response = await fetch(`/api/registrations/${res.id}`, {
-          headers: authHeaders(),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setDetailRegistration(apiToRegistration(data as Record<string, unknown>));
-        } else {
-          // Fall back to the list version (no token available)
-          setDetailRegistration(res);
-        }
+        const data = await registrationDetailMutation.mutateAsync(res.id);
+        setDetailRegistration(apiToRegistration(data as Record<string, unknown>));
       } catch (err) {
         console.error("Failed to fetch registration detail, falling back to list data", err);
         setDetailRegistration(res);
       }
     },
-    [authHeaders],
+    [registrationDetailMutation],
   );
 
   const handleToggleDelivered = useCallback(
