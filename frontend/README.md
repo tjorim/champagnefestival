@@ -28,7 +28,7 @@ The dev server proxies `/api/*` to `http://localhost:8000` (backend).
 
 ## Project structure
 
-```
+```text
 frontend/
 ├── messages/          # i18n translation files (nl.json, en.json, fr.json)
 ├── public/            # static assets (images, fonts, …)

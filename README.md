@@ -4,7 +4,7 @@ The official website for the Champagne Festival — a React/Vite frontend with a
 
 ## Project structure
 
-```
+```text
 champagnefestival/
 ├── frontend/      # React + Vite SPA (TypeScript, pnpm)  → see frontend/README.md
 ├── backend/       # FastAPI REST API (Python, uv)         → see backend/README.md
