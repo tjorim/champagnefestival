@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
+import { useForm, Controller } from "react-hook-form";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
@@ -57,6 +58,13 @@ interface RegistrationCreateModalProps {
   onHide: () => void;
 }
 
+interface RegistrationCreateForm {
+  eventId: string;
+  guestCount: number;
+  notes: string;
+  personOption: SingleValue<PersonOption>;
+}
+
 export default function RegistrationCreateModal({
   show,
   authHeaders,
@@ -64,12 +72,17 @@ export default function RegistrationCreateModal({
   onHide,
 }: RegistrationCreateModalProps) {
   const queryClient = useQueryClient();
-  const [guestCount, setGuestCount] = useState(1);
-  const [notes, setNotes] = useState("");
-  const [eventId, setEventId] = useState("");
-  const [personOption, setPersonOption] = useState<SingleValue<PersonOption>>(null);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
+
+  const { register, handleSubmit, reset, control, watch } = useForm<RegistrationCreateForm>({
+    defaultValues: {
+      eventId: "",
+      guestCount: 1,
+      notes: "",
+      personOption: null,
+    },
+  });
 
   const createRegistrationMutation = useMutation({
     mutationFn: (payload: CreateRegistrationPayload) =>
@@ -92,14 +105,11 @@ export default function RegistrationCreateModal({
       return;
     }
 
-    setGuestCount(1);
-    setNotes("");
-    setEventId("");
-    setPersonOption(null);
+    reset({ eventId: "", guestCount: 1, notes: "", personOption: null });
     setPersonQuery("");
     setDebouncedPersonQuery("");
     resetCreateRegistrationMutation();
-  }, [resetCreateRegistrationMutation, show]);
+  }, [reset, resetCreateRegistrationMutation, show]);
 
   useEffect(() => {
     if (!show) {
@@ -140,20 +150,18 @@ export default function RegistrationCreateModal({
   const personOptions = personOptionsQuery.data ?? [];
   const loadingEvents = eventsQuery.isPending;
   const loadingPersons = personOptionsQuery.isFetching;
-  const hasValidEventSelection = events.some((event) => event.id === eventId);
 
-  function handlePersonChange(opt: SingleValue<PersonOption>) {
-    setPersonOption(opt);
-  }
+  const watchedEventId = watch("eventId");
+  const watchedPersonOption = watch("personOption");
+  const hasValidEventSelection = events.some((event) => event.id === watchedEventId);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!personOption || !hasValidEventSelection) return;
+  function onSubmit(data: RegistrationCreateForm) {
+    if (!data.personOption || !hasValidEventSelection) return;
     createRegistrationMutation.mutate({
-      personId: personOption.value,
-      eventId,
-      guestCount,
-      notes: notes.trim(),
+      personId: data.personOption.value,
+      eventId: data.eventId,
+      guestCount: data.guestCount,
+      notes: data.notes.trim(),
     });
   }
 
@@ -162,7 +170,7 @@ export default function RegistrationCreateModal({
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">{m.admin_create_registration()}</Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit(onSubmit)}>
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -197,10 +205,8 @@ export default function RegistrationCreateModal({
               </div>
             ) : events.length > 0 ? (
               <Form.Select
-                value={eventId}
-                onChange={(ev) => setEventId(ev.target.value)}
                 className="bg-dark text-light border-secondary"
-                required
+                {...register("eventId")}
               >
                 <option value="">{m.admin_select_event_placeholder()}</option>
                 {sortedEvents.map((ev) => (
@@ -230,23 +236,29 @@ export default function RegistrationCreateModal({
 
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_person_label()} *</Form.Label>
-            <Select<PersonOption, false>
-              isClearable
-              options={personOptions}
-              value={personOption}
-              onChange={handlePersonChange}
-              onInputChange={(value) => setPersonQuery(value)}
-              inputValue={personQuery}
-              isLoading={loadingPersons}
-              filterOption={null}
-              styles={darkSelectStyles}
-              placeholder={m.admin_search_person_placeholder()}
-              classNamePrefix="rs"
-              formatOptionLabel={(opt) => (
-                <div>
-                  <div>{opt.label}</div>
-                  {opt.sub && <small className="text-secondary">{opt.sub}</small>}
-                </div>
+            <Controller
+              name="personOption"
+              control={control}
+              render={({ field }) => (
+                <Select<PersonOption, false>
+                  isClearable
+                  options={personOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onInputChange={(value) => setPersonQuery(value)}
+                  inputValue={personQuery}
+                  isLoading={loadingPersons}
+                  filterOption={null}
+                  styles={darkSelectStyles}
+                  placeholder={m.admin_search_person_placeholder()}
+                  classNamePrefix="rs"
+                  formatOptionLabel={(opt) => (
+                    <div>
+                      <div>{opt.label}</div>
+                      {opt.sub && <small className="text-secondary">{opt.sub}</small>}
+                    </div>
+                  )}
+                />
               )}
             />
           </Form.Group>
@@ -257,9 +269,8 @@ export default function RegistrationCreateModal({
               type="number"
               min={1}
               max={20}
-              value={guestCount}
-              onChange={(e) => setGuestCount(Number(e.target.value))}
               className="bg-dark text-light border-secondary"
+              {...register("guestCount", { valueAsNumber: true })}
             />
           </Form.Group>
 
@@ -268,9 +279,8 @@ export default function RegistrationCreateModal({
             <Form.Control
               as="textarea"
               rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
               className="bg-dark text-light border-secondary"
+              {...register("notes")}
             />
           </Form.Group>
         </Modal.Body>
@@ -283,7 +293,9 @@ export default function RegistrationCreateModal({
             variant="warning"
             size="sm"
             disabled={
-              createRegistrationMutation.isPending || !personOption || !hasValidEventSelection
+              createRegistrationMutation.isPending ||
+              !watchedPersonOption ||
+              !hasValidEventSelection
             }
           >
             {createRegistrationMutation.isPending ? (
