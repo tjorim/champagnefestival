@@ -9,21 +9,22 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
-from typing import Sequence, Union
+from collections.abc import Sequence
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy import inspect
 
+from alembic import op
+
 revision: str = "003"
-down_revision: Union[str, None] = "002"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "002"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _normalise_schedule(value):
@@ -43,7 +44,7 @@ def _event_id(edition_id: str, schedule_item_id: str | None, index: int) -> str:
     Old schedule-item IDs are used only as remap keys during the migration; the
     new relational ``events`` table always gets generated ``evt-...`` IDs.
     """
-    seed = f"{edition_id}:{schedule_item_id or index}".encode("utf-8")
+    seed = f"{edition_id}:{schedule_item_id or index}".encode()
     digest = hashlib.sha256(seed).hexdigest()[:16]
     prefix = (schedule_item_id or f"event-{index + 1}").replace(" ", "-")[:32]
     return f"evt-{prefix}-{digest}"[:64]
@@ -99,9 +100,7 @@ def upgrade() -> None:
     event_rows: list[dict] = []
     schedule_id_remaps: list[dict[str, str]] = []
     if {"schedule", "friday", "saturday", "sunday"}.issubset(edition_cols):
-        editions = bind.execute(
-            sa.text("SELECT id, friday, saturday, sunday, schedule FROM editions")
-        ).fetchall()
+        editions = bind.execute(sa.text("SELECT id, friday, saturday, sunday, schedule FROM editions")).fetchall()
         now = _utcnow()
         for row in editions:
             schedule = _normalise_schedule(row.schedule)
@@ -125,7 +124,8 @@ def upgrade() -> None:
                         "end_time": item.get("end_time"),
                         "category": item.get("category") or "general",
                         "registration_required": bool(item.get("registration") or item.get("registration_required")),
-                        "registrations_open_from": item.get("reservations_open_from") or item.get("registrations_open_from"),
+                        "registrations_open_from": item.get("reservations_open_from")
+                        or item.get("registrations_open_from"),
                         "max_capacity": item.get("max_capacity"),
                         "active": bool(item.get("active", True)),
                         "created_at": now,
@@ -280,7 +280,9 @@ def downgrade() -> None:
                     "end_time": row.end_time,
                     "description": row.description or "",
                     "reservation": bool(row.registration_required),
-                    "reservations_open_from": row.registrations_open_from.isoformat() if row.registrations_open_from else None,
+                    "reservations_open_from": row.registrations_open_from.isoformat()
+                    if row.registrations_open_from
+                    else None,
                     "category": row.category,
                     "day_id": day_map.get(row.date, 1),
                 }

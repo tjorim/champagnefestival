@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
@@ -9,7 +9,7 @@ from app.utils import registration_to_guest_dict
 
 
 def _registration_with_backrefs(*, person=True, event=True):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return SimpleNamespace(
         id="reg_test",
         person_id="per_test",
@@ -30,7 +30,6 @@ def _registration_with_backrefs(*, person=True, event=True):
 def test_registration_to_guest_dict_requires_person_backref():
     with pytest.raises(ValueError, match="has no attached _person"):
         registration_to_guest_dict(_registration_with_backrefs(person=False))
-
 
 
 def test_registration_to_guest_dict_requires_event_backref():

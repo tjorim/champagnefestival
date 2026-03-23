@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "champagnefestival-backend"
 version = "0.1.0"
 description = "FastAPI backend for the Champagne Festival reservation system"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.32",
@@ -19,8 +19,8 @@ dependencies = [
   "python-multipart>=0.0.18",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "httpx>=0.28", "anyio>=4"]
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "httpx>=0.28", "anyio>=4", "ruff>=0.9", "ty>=0.0.1"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -28,3 +28,17 @@ packages = ["app"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ty.rules]
+unresolved-attribute = "warn"

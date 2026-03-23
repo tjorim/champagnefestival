@@ -77,9 +77,7 @@ def registration_to_dict(r: Registration) -> dict:
             f"Registration {r.id!r} has no attached _person; caller must set r._person before serialising."
         )
     if event is None:
-        raise ValueError(
-            f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising."
-        )
+        raise ValueError(f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising.")
     return {
         "id": r.id,
         "person_id": r.person_id,
@@ -106,9 +104,7 @@ def registration_to_checkin_dict(r: Registration) -> dict:
     person: Person | None = getattr(r, "_person", None)
     event: Event | None = getattr(r, "_event", None)
     if person is None or event is None:
-        raise ValueError(
-            f"Registration {r.id!r} requires attached _person and _event before serialising."
-        )
+        raise ValueError(f"Registration {r.id!r} requires attached _person and _event before serialising.")
     return {
         "id": r.id,
         "name": person.name,
@@ -145,9 +141,7 @@ def registration_to_guest_dict(r: Registration) -> dict:
             f"Registration {r.id!r} has no attached _person; caller must set r._person before serialising."
         )
     if event is None:
-        raise ValueError(
-            f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising."
-        )
+        raise ValueError(f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising.")
     return {
         "id": r.id,
         "name": person.name,

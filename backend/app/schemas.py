@@ -1,13 +1,12 @@
-from __future__ import annotations
-
 """Pydantic request / response schemas."""
 
-from datetime import date as dt_date, datetime
-from typing import Literal
+from __future__ import annotations
+
+from datetime import date as dt_date
+from datetime import datetime
+from typing import Literal, Self
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
-from typing_extensions import Self
-
 
 # ---------------------------------------------------------------------------
 # Shared value types
@@ -293,7 +292,6 @@ class VolunteerHelpPeriodIn(BaseModel):
 
 
 class VolunteerCreate(BaseModel):
-
     name: str = Field(min_length=1, max_length=200)
     address: str = Field(default="", max_length=300)
     national_register_number: str = Field(min_length=1, max_length=20)
@@ -310,9 +308,7 @@ class VolunteerCreate(BaseModel):
 class VolunteerUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     address: str | None = Field(default=None, max_length=300)
-    national_register_number: str | None = Field(
-        default=None, min_length=1, max_length=20
-    )
+    national_register_number: str | None = Field(default=None, min_length=1, max_length=20)
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
     active: bool | None = None
     help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
@@ -681,9 +677,7 @@ class RoomCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     width_m: float = Field(ge=1, le=500, default=20.0)
     length_m: float = Field(ge=1, le=500, default=15.0)
-    color: str = Field(
-        default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
-    )
+    color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
     active: bool = True
 
 
@@ -691,9 +685,7 @@ class RoomUpdate(BaseModel):
     name: str | None = None
     width_m: float | None = Field(default=None, ge=1, le=500)
     length_m: float | None = Field(default=None, ge=1, le=500)
-    color: str | None = Field(
-        default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
-    )
+    color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
     active: bool | None = None
 
 

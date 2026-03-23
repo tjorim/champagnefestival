@@ -2,6 +2,8 @@
 
 ## Build Commands
 
+### Frontend
+
 Run all frontend commands from the `frontend/` directory:
 
 - `pnpm dev`: Start React development server
@@ -9,10 +11,22 @@ Run all frontend commands from the `frontend/` directory:
 - `pnpm lint`: Run ESLint on the codebase
 - `pnpm typecheck`: Run TypeScript check with no emit
 
+### Backend
+
+Run all backend commands from the `backend/` directory (uses [uv](https://docs.astral.sh/uv/)):
+
+- `uv sync`: Install dependencies
+- `uv run uvicorn app.main:app --reload`: Start development server
+- `uv run ruff check .`: Lint
+- `uv run ruff format .`: Format
+- `uv run ty check .`: Type check
+- `uv run pytest`: Run tests
+
 ## Important Notes
 
 - The project is a standard React application using Vite as the build tool
 - The `frontend/` directory contains all frontend code; `src/` lives inside it
+- The `backend/` directory contains a FastAPI + SQLite backend managed with `uv`
 
 ## Code Style Guidelines
 

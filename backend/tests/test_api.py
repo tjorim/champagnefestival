@@ -1,7 +1,7 @@
 """Integration tests for the reservation API."""
 
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -10,11 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+import app.ratelimit as ratelimit_module
 from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.database import Base, get_db
 from app.main import app
 from app.models import ReservationAccessToken
-import app.ratelimit as ratelimit_module
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 ADMIN_TOKEN = "test-admin-token"
@@ -111,7 +111,7 @@ async def _create_event(
     )
     assert edition_response.status_code == 201
 
-    event_payload = {
+    event_payload: dict[str, object] = {
         "edition_id": edition_id,
         "title": title,
         "description": "",
@@ -183,10 +183,7 @@ def test_settings_reject_nonpositive_guest_access_token_ttl():
 def test_settings_reject_excessive_guest_access_token_ttl():
     with pytest.raises(
         ValidationError,
-        match=(
-            "GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to "
-            f"{GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}\\."
-        ),
+        match=(f"GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to {GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}\\."),
     ):
         Settings(guest_access_token_ttl_minutes=GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES + 1)
 
@@ -364,9 +361,7 @@ async def test_check_in_flow(client):
     assert r.status_code == 200
 
     # Check in
-    r = await client.post(
-        f"/api/check-in/{res_id}", json={"token": token, "issue_strap": True}
-    )
+    r = await client.post(f"/api/check-in/{res_id}", json={"token": token, "issue_strap": True})
     assert r.status_code == 200
     body = r.json()
     assert body["already_checked_in"] is False
@@ -374,9 +369,7 @@ async def test_check_in_flow(client):
     assert body["registration"]["strap_issued"] is True
 
     # Second scan
-    r = await client.post(
-        f"/api/check-in/{res_id}", json={"token": token, "issue_strap": True}
-    )
+    r = await client.post(f"/api/check-in/{res_id}", json={"token": token, "issue_strap": True})
     assert r.json()["already_checked_in"] is True
 
 
@@ -384,9 +377,7 @@ async def test_check_in_flow(client):
 async def test_check_in_wrong_token(client):
     r = await _post_registration(client, path="/api/registrations")
     res_id = r.json()["id"]
-    r = await client.post(
-        f"/api/check-in/{res_id}", json={"token": "wrong", "issue_strap": True}
-    )
+    r = await client.post(f"/api/check-in/{res_id}", json={"token": "wrong", "issue_strap": True})
     assert r.status_code == 401
 
 
@@ -399,19 +390,13 @@ async def test_check_in_wrong_token(client):
 async def test_layout_rejects_duplicate_room_day(client):
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
-    r = await client.post(
-        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
 
-    r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
 
-    r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS)
     assert r.status_code == 409
     assert r.json()["detail"] == "A layout already exists for this room and day."
 
@@ -426,17 +411,11 @@ async def test_table_crud(client):
     # Tables require a table_type and a layout (which requires a room, which requires a venue)
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
-    r = await client.post(
-        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     payload = {
@@ -455,9 +434,7 @@ async def test_table_crud(client):
     r = await client.get("/api/tables", headers=ADMIN_HEADERS)
     assert len(r.json()) == 1
 
-    r = await client.put(
-        f"/api/tables/{tbl_id}", json={"capacity": 8}, headers=ADMIN_HEADERS
-    )
+    r = await client.put(f"/api/tables/{tbl_id}", json={"capacity": 8}, headers=ADMIN_HEADERS)
     assert r.json()["capacity"] == 8
 
     r = await client.delete(f"/api/tables/{tbl_id}", headers=ADMIN_HEADERS)
@@ -486,9 +463,7 @@ async def test_search_by_name(client):
     )
     assert r.status_code == 201
 
-    r = await client.get(
-        "/api/registrations", params={"q": "jean"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/registrations", params={"q": "jean"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     items = r.json()
     assert len(items) == 1
@@ -500,9 +475,7 @@ async def test_search_by_email(client):
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
 
-    r = await client.get(
-        "/api/registrations", params={"q": "example.com"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/registrations", params={"q": "example.com"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
 
@@ -522,14 +495,10 @@ async def test_filter_by_status(client):
     )
     assert r.status_code == 200
 
-    r = await client.get(
-        "/api/registrations", params={"status": "confirmed"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/registrations", params={"status": "confirmed"}, headers=ADMIN_HEADERS)
     assert len(r.json()) == 1
 
-    r = await client.get(
-        "/api/registrations", params={"status": "pending"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/registrations", params={"status": "pending"}, headers=ADMIN_HEADERS)
     assert len(r.json()) == 0
 
 
@@ -577,9 +546,7 @@ async def test_filter_by_event(client):
     )
     assert saturday.status_code == 201
 
-    r = await client.get(
-        "/api/registrations", params={"event_id": friday.json()["event_id"]}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/registrations", params={"event_id": friday.json()["event_id"]}, headers=ADMIN_HEADERS)
     assert len(r.json()) == 1
     assert r.json()[0]["event_id"] == friday.json()["event_id"]
 
@@ -668,17 +635,13 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
-    token_rows = (
-        await db_session.execute(select(ReservationAccessToken))
-    ).scalars().all()
+    token_rows = (await db_session.execute(select(ReservationAccessToken))).scalars().all()
     assert len(token_rows) == 1
     assert token_rows[0].email == "jean@example.com"
     assert token_rows[0].token_hash != token
     assert token_rows[0].token_hash == hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-    r = await client.post(
-        "/api/registrations/my/access", json={"token": token}
-    )
+    r = await client.post("/api/registrations/my/access", json={"token": token})
     assert r.status_code == 200
     items = r.json()
     assert len(items) == 1
@@ -691,8 +654,8 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     await db_session.refresh(token_rows[0])
     expires_at = token_rows[0].expires_at
     if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    assert expires_at <= datetime.now(timezone.utc)
+        expires_at = expires_at.replace(tzinfo=UTC)
+    assert expires_at <= datetime.now(UTC)
 
 
 @pytest.mark.anyio
@@ -720,7 +683,7 @@ async def test_my_reservations_access_expired_token(client, db_session):
             id="rat_expired",
             email="jean@example.com",
             token_hash=hashlib.sha256(b"expired-token-value-12345").hexdigest(),
-            expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            expires_at=datetime.now(UTC) - timedelta(minutes=1),
         )
     )
     await db_session.commit()
@@ -757,9 +720,7 @@ async def test_my_reservations_access_multiple_editions(client, monkeypatch):
     r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
     assert r.status_code == 202
 
-    r = await client.post(
-        "/api/registrations/my/access", json={"token": guest_token}
-    )
+    r = await client.post("/api/registrations/my/access", json={"token": guest_token})
     assert r.status_code == 200
     assert len(r.json()) == 2
 
@@ -778,14 +739,10 @@ async def test_my_reservations_request_reuses_existing_token_row(client, db_sess
     assert first.status_code == 202
     assert second.status_code == 202
 
-    token_rows = (
-        await db_session.execute(select(ReservationAccessToken))
-    ).scalars().all()
+    token_rows = (await db_session.execute(select(ReservationAccessToken))).scalars().all()
     assert len(token_rows) == 1
     assert token_rows[0].email == "jean@example.com"
-    assert token_rows[0].token_hash == hashlib.sha256(
-        b"guest-access-token-67890"
-    ).hexdigest()
+    assert token_rows[0].token_hash == hashlib.sha256(b"guest-access-token-67890").hexdigest()
 
 
 @pytest.mark.anyio
@@ -812,7 +769,7 @@ async def test_my_reservations_request_recovers_from_insert_race(client, db_sess
                     id="rat-race",
                     email="jean@example.com",
                     token_hash=hashlib.sha256(b"guest-access-token-first").hexdigest(),
-                    expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+                    expires_at=datetime.now(UTC) + timedelta(minutes=5),
                 )
             )
             await other_session.commit()
@@ -825,14 +782,10 @@ async def test_my_reservations_request_recovers_from_insert_race(client, db_sess
     response = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
 
     assert response.status_code == 202
-    token_rows = (
-        await db_session.execute(select(ReservationAccessToken))
-    ).scalars().all()
+    token_rows = (await db_session.execute(select(ReservationAccessToken))).scalars().all()
     assert len(token_rows) == 1
     assert token_rows[0].email == "jean@example.com"
-    assert token_rows[0].token_hash == hashlib.sha256(
-        b"guest-access-token-first"
-    ).hexdigest()
+    assert token_rows[0].token_hash == hashlib.sha256(b"guest-access-token-first").hexdigest()
 
 
 @pytest.mark.anyio
@@ -915,9 +868,7 @@ async def test_exhibitor_crud(client):
     assert len(r.json()) == 2
 
     # Filter by type
-    r = await client.get(
-        "/api/exhibitors", params={"type": "producer"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/exhibitors", params={"type": "producer"}, headers=ADMIN_HEADERS)
     assert len(r.json()) == 1
     assert r.json()[0]["name"] == "Maison Bollinger"
 
@@ -992,13 +943,9 @@ async def _create_layout_prerequisites(client):
     """Helper: create venue → room → layout; return layout_id."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
-    r = await client.post(
-        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     return r.json()["id"]
 
 
@@ -1031,9 +978,7 @@ async def test_area_crud(client):
     area_id = area["id"]
 
     # List (filter by layout)
-    r = await client.get(
-        "/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
 
@@ -1055,9 +1000,7 @@ async def test_area_crud(client):
     r = await client.delete(f"/api/areas/{area_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
-    r = await client.get(
-        "/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/areas", params={"layout_id": layout_id}, headers=ADMIN_HEADERS)
     assert r.json() == []
 
 
@@ -1086,9 +1029,7 @@ async def test_area_linked_to_exhibitor(client):
     assert r.json()["exhibitor_id"] == exhibitor_id
 
     # Clear exhibitor assignment
-    r = await client.put(
-        f"/api/areas/{area_id}", json={"exhibitor_id": None}, headers=ADMIN_HEADERS
-    )
+    r = await client.put(f"/api/areas/{area_id}", json={"exhibitor_id": None}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert r.json()["exhibitor_id"] is None
 
@@ -1468,9 +1409,7 @@ async def test_room_crud(client):
     venue_id = r.json()["id"]
 
     # Create
-    r = await client.post(
-        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     data = r.json()
     assert data["name"] == "Main Hall"
@@ -1487,9 +1426,7 @@ async def test_room_crud(client):
     assert r.json()["name"] == "Main Hall"
 
     # Update
-    r = await client.put(
-        f"/api/rooms/{room_id}", json={"length_m": 20.0}, headers=ADMIN_HEADERS
-    )
+    r = await client.put(f"/api/rooms/{room_id}", json={"length_m": 20.0}, headers=ADMIN_HEADERS)
     assert r.json()["length_m"] == 20.0
 
     # Delete
@@ -1522,17 +1459,11 @@ async def test_table_with_layout_id(client):
     # Build the prerequisite chain: venue → room → layout + table_type
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
-    r = await client.post(
-        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Create a table assigned to that layout
@@ -1553,9 +1484,7 @@ async def test_table_with_layout_id(client):
 
     # Update layout assignment via PUT
     tbl_id = r.json()["id"]
-    r = await client.put(
-        f"/api/tables/{tbl_id}", json={"layout_id": layout_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.put(f"/api/tables/{tbl_id}", json={"layout_id": layout_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
 
 
@@ -1607,17 +1536,11 @@ async def test_table_id_can_be_cleared(client):
     # Create table prerequisites: venue → room → layout + table_type
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
-    r = await client.post(
-        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Create a table
@@ -1670,17 +1593,11 @@ async def test_table_registration_ids_computed_from_registration_table_id(client
     # Build prerequisites: venue → room → layout + table_type
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
-    r = await client.post(
-        "/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post(
-        "/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Create a table
@@ -1776,16 +1693,12 @@ async def test_volunteer_crud_and_constraints(client):
 
     volunteer_id = volunteer["id"]
 
-    r = await client.get(
-        "/api/volunteers", params={"q": "bredene"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/volunteers", params={"q": "bredene"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
 
     # active filter support
-    r = await client.get(
-        "/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
 
@@ -1796,9 +1709,7 @@ async def test_volunteer_crud_and_constraints(client):
     )
     assert r.status_code == 200
 
-    r = await client.get(
-        "/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
     r = await client.put(
@@ -1889,15 +1800,11 @@ async def test_people_crud_roles_and_filters(client):
 
     person_id = person["id"]
 
-    r = await client.get(
-        "/api/people", params={"role": "volunteer"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/people", params={"role": "volunteer"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
 
-    r = await client.get(
-        "/api/people", params={"q": "treasurer"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/people", params={"q": "treasurer"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 0
 
@@ -1930,9 +1837,7 @@ async def test_people_crud_roles_and_filters(client):
 
     r = await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert (
-        len(r.json()) == 0
-    )  # uncertain reservation belongs to the newly-created person
+    assert len(r.json()) == 0  # uncertain reservation belongs to the newly-created person
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
@@ -2123,9 +2028,7 @@ async def test_merge_people_requires_auth(client):
 
 @pytest.mark.anyio
 async def test_merge_people_not_found(client):
-    r = await client.post(
-        "/api/people/nonexistent/merge/also_nonexistent", headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/people/nonexistent/merge/also_nonexistent", headers=ADMIN_HEADERS)
     assert r.status_code == 404
 
 
@@ -2138,9 +2041,7 @@ async def test_merge_people_canonical_not_found(client):
         headers=ADMIN_HEADERS,
     )
     duplicate_id = r.json()["id"]
-    r = await client.post(
-        f"/api/people/nonexistent/merge/{duplicate_id}", headers=ADMIN_HEADERS
-    )
+    r = await client.post(f"/api/people/nonexistent/merge/{duplicate_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 404
 
 
@@ -2153,9 +2054,7 @@ async def test_merge_people_duplicate_not_found(client):
         headers=ADMIN_HEADERS,
     )
     canonical_id = r.json()["id"]
-    r = await client.post(
-        f"/api/people/{canonical_id}/merge/nonexistent", headers=ADMIN_HEADERS
-    )
+    r = await client.post(f"/api/people/{canonical_id}/merge/nonexistent", headers=ADMIN_HEADERS)
     assert r.status_code == 404
 
 
@@ -2214,9 +2113,7 @@ async def test_merge_people_repoints_reservations(client):
     res_id = r.json()["id"]
 
     # Merge dup into canonical
-    r = await client.post(
-        f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS
-    )
+    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert r.json()["id"] == canonical_id
 
@@ -2256,9 +2153,7 @@ async def test_merge_people_repoints_exhibitor_contact(client):
     exhibitor_id = r.json()["id"]
 
     # Merge dup into canonical
-    r = await client.post(
-        f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS
-    )
+    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
 
     # Exhibitor should now point to canonical
@@ -2318,9 +2213,7 @@ async def test_merge_people_fills_blank_fields(client):
     )
     dup_id = r.json()["id"]
 
-    r = await client.post(
-        f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS
-    )
+    r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     # Phone from duplicate should be adopted on canonical
     assert r.json()["phone"] == "+32470111222"
@@ -2365,9 +2258,7 @@ async def test_members_crud(client):
     assert "member" in r.json()["roles"]
     assert r.json()["active"] is False
 
-    r = await client.get(
-        "/api/members", params={"active": "false"}, headers=ADMIN_HEADERS
-    )
+    r = await client.get("/api/members", params={"active": "false"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()) == 1
 

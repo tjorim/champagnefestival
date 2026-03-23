@@ -78,9 +78,7 @@ class Settings(BaseSettings):
     def validate_environment(cls, v: str) -> str:
         v = v.lower()
         if v not in ("development", "production"):
-            raise ValueError(
-                f"ENVIRONMENT must be 'development' or 'production', got: {v}"
-            )
+            raise ValueError(f"ENVIRONMENT must be 'development' or 'production', got: {v}")
         return v
 
     @field_validator("guest_access_token_ttl_minutes")
@@ -90,8 +88,7 @@ class Settings(BaseSettings):
             raise ValueError("GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0.")
         if v > GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES:
             raise ValueError(
-                "GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to "
-                f"{GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}."
+                f"GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to {GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}."
             )
         return v
 
@@ -99,10 +96,7 @@ class Settings(BaseSettings):
     def validate_production_admin_token(self) -> "Settings":
         """Refuse to start in production with an empty admin token."""
         if self.environment == "production" and self.admin_token == DEFAULT_ADMIN_TOKEN:
-            raise ValueError(
-                "ADMIN_TOKEN must be set in production; "
-                "refusing to start with an empty token."
-            )
+            raise ValueError("ADMIN_TOKEN must be set in production; refusing to start with an empty token.")
         return self
 
     # ------------------------------------------------------------------
@@ -142,16 +136,11 @@ class Settings(BaseSettings):
 
         cors_origins = self.get_cors_origins_list()
         if not cors_origins:
-            logger.warning(
-                "No CORS origins configured — all cross-origin requests will be blocked!"
-            )
+            logger.warning("No CORS origins configured — all cross-origin requests will be blocked!")
         else:
             logger.info(f"CORS Origins:  {', '.join(cors_origins)}")
 
-        logger.info(
-            f"Admin Token:   "
-            f"{'set' if self.admin_token else 'NOT SET — admin endpoints will return 401'}"
-        )
+        logger.info(f"Admin Token:   {'set' if self.admin_token else 'NOT SET — admin endpoints will return 401'}")
         logger.info("=" * 60)
 
 

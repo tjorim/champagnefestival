@@ -1,5 +1,7 @@
 """Layout snapshot management endpoints (admin only)."""
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,7 +76,7 @@ async def list_layouts(
         stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     layouts = result.scalars().all()
-    return await _layout_payloads(db, layouts)
+    return await _layout_payloads(db, list(layouts))
 
 
 # ---------------------------------------------------------------------------
@@ -124,9 +126,7 @@ async def _layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[dict
     edition_dates_by_id: dict[str, list] = {}
     if edition_ids:
         result = await db.execute(
-            select(Edition)
-            .options(selectinload(Edition.events))
-            .where(Edition.id.in_(edition_ids))
+            select(Edition).options(selectinload(Edition.events)).where(Edition.id.in_(edition_ids))
         )
         for edition in result.scalars().all():
             edition_dates_by_id[edition.id] = sorted({event.date for event in edition.events})
@@ -142,7 +142,7 @@ async def _layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[dict
     return payloads
 
 
-async def _resolve_layout_day(db: AsyncSession, body: LayoutCreate) -> tuple[int, object | None]:
+async def _resolve_layout_day(db: AsyncSession, body: LayoutCreate) -> tuple[int, date | None]:
     if body.date is None:
         return body.day_id or 1, None
     if not body.edition_id:

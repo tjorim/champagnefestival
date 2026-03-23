@@ -5,15 +5,16 @@ Revises:
 Create Date: 2026-03-18
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -195,6 +196,7 @@ def upgrade() -> None:
         sa.Index("ix_areas_layout_id", "layout_id"),
         sa.Index("ix_areas_exhibitor_id", "exhibitor_id"),
     )
+
 
 def downgrade() -> None:
     op.drop_table("areas")

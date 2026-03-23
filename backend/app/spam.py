@@ -1,6 +1,6 @@
 """Anti-spam helpers for the public reservation endpoint."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
@@ -36,9 +36,9 @@ def check_form_timing(form_start_time: str) -> None:
 
     # Make timezone-aware if naïve
     if start.tzinfo is None:
-        start = start.replace(tzinfo=timezone.utc)
+        start = start.replace(tzinfo=UTC)
 
-    elapsed = (datetime.now(timezone.utc) - start).total_seconds()
+    elapsed = (datetime.now(UTC) - start).total_seconds()
     if elapsed < settings.min_form_seconds:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
