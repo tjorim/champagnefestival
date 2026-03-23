@@ -238,8 +238,6 @@ export async function saveEditionEvent(
         start_time: payload.formData.startTime,
         end_time: payload.formData.endTime || null,
         category: payload.formData.category.trim(),
-        location: payload.formData.location?.trim() || null,
-        presenter: payload.formData.presenter?.trim() || null,
         registration_required: payload.formData.registrationRequired,
         registrations_open_from:
           payload.formData.registrationRequired && payload.formData.registrationsOpenFrom

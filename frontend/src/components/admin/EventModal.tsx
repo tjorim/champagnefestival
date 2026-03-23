@@ -22,8 +22,6 @@ const EMPTY_FORM: EventFormData = {
   startTime: "",
   endTime: "",
   category: "other",
-  location: "",
-  presenter: "",
   registrationRequired: false,
   registrationsOpenFrom: "",
   maxCapacity: "",
@@ -48,8 +46,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             startTime: initial.startTime,
             endTime: initial.endTime ?? "",
             category: initial.category,
-            location: initial.location ?? "",
-            presenter: initial.presenter ?? "",
             registrationRequired: initial.registrationRequired,
             registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
             maxCapacity: initial.maxCapacity ? String(initial.maxCapacity) : "",
@@ -87,8 +83,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
         startTime: formData.startTime.trim(),
         endTime: formData.endTime.trim() || undefined,
         category: formData.category.trim(),
-        location: formData.location.trim() || undefined,
-        presenter: formData.presenter.trim() || undefined,
         registrationRequired: formData.registrationRequired,
         registrationsOpenFrom: formData.registrationRequired ? formData.registrationsOpenFrom || undefined : undefined,
         maxCapacity: maxCapacityNum !== undefined && Number.isFinite(maxCapacityNum) && maxCapacityNum > 0 ? maxCapacityNum : undefined,
@@ -145,17 +139,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             <Form.Group controlId="event-max-capacity" style={{ maxWidth: "160px" }}>
               <Form.Label className="text-secondary small mb-1">{m.admin_event_max_capacity()}</Form.Label>
               <Form.Control type="number" min={1} size="sm" value={formData.maxCapacity} onChange={(e) => updateField("maxCapacity", e.target.value)} className="bg-dark text-light border-secondary" disabled={!formData.registrationRequired} />
-            </Form.Group>
-          </div>
-
-          <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group style={{ minWidth: "200px", flex: "1 1 200px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_event_location()}</Form.Label>
-              <Form.Control size="sm" value={formData.location} onChange={(e) => updateField("location", e.target.value)} className="bg-dark text-light border-secondary" placeholder={m.admin_event_optional_placeholder()} />
-            </Form.Group>
-            <Form.Group style={{ minWidth: "200px", flex: "1 1 200px" }}>
-              <Form.Label className="text-secondary small mb-1">{m.admin_event_presenter()}</Form.Label>
-              <Form.Control size="sm" value={formData.presenter} onChange={(e) => updateField("presenter", e.target.value)} className="bg-dark text-light border-secondary" placeholder={m.admin_event_optional_placeholder()} />
             </Form.Group>
           </div>
 
