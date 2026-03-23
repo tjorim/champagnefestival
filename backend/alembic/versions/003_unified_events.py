@@ -175,14 +175,6 @@ def upgrade() -> None:
                 ),
                 mapping,
             )
-            bind.execute(
-                sa.text(
-                    "UPDATE registrations "
-                    "SET event_id = :event_id "
-                    "WHERE event_id = :schedule_item_id"
-                ),
-                mapping,
-            )
 
     registration_indexes = {index["name"] for index in inspect(bind).get_indexes("registrations")}
     for old_name in (
