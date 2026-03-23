@@ -623,84 +623,82 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
-  const changeTableTypeMutation = useMutation({
-    mutationFn: ({ tableId, tableTypeId }: { tableId: string; tableTypeId: string }) =>
+  const changeTableTypeMutation = useMutation<Record<string, unknown>, Error, { tableId: string; tableTypeId: string }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ tableId, tableTypeId }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ table_type_id: tableTypeId }) },
         m.admin_error_change_table_type_status({ status: 500 }),
       ),
-    onMutate: ({ tableId, tableTypeId }: { tableId: string; tableTypeId: string }) => {
+    onMutate: ({ tableId, tableTypeId }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, tableTypeId } : t)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
-      console.error("Failed to persist table type change");
     },
     retry: false,
   });
 
-  const updateTableNameMutation = useMutation({
-    mutationFn: ({ tableId, name }: { tableId: string; name: string }) =>
+  const updateTableNameMutation = useMutation<Record<string, unknown>, Error, { tableId: string; name: string }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ tableId, name }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ name }) },
         m.admin_error_update_table_name_status({ status: 500 }),
       ),
-    onMutate: ({ tableId, name }: { tableId: string; name: string }) => {
+    onMutate: ({ tableId, name }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, name } : t)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
-      console.error("Failed to persist table name");
     },
     retry: false,
   });
 
-  const moveTableMutation = useMutation({
-    mutationFn: ({ tableId, x, y }: { tableId: string; x: number; y: number }) =>
+  const moveTableMutation = useMutation<Record<string, unknown>, Error, { tableId: string; x: number; y: number }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ tableId, x, y }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
         "Failed to persist table position.",
       ),
-    onMutate: ({ tableId, x, y }: { tableId: string; x: number; y: number }) => {
+    onMutate: ({ tableId, x, y }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, x, y } : t)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist table position");
     },
     retry: false,
   });
 
-  const rotateTableMutation = useMutation({
-    mutationFn: ({ tableId, rotation }: { tableId: string; rotation: number }) =>
+  const rotateTableMutation = useMutation<Record<string, unknown>, Error, { tableId: string; rotation: number }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ tableId, rotation }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
         "Failed to persist table rotation.",
       ),
-    onMutate: ({ tableId, rotation }: { tableId: string; rotation: number }) => {
+    onMutate: ({ tableId, rotation }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, tables: old.tables.map((t: FloorTable) => (t.id === tableId ? { ...t, rotation } : t)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist table rotation");
     },
@@ -801,42 +799,42 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
-  const updateAreaLabelMutation = useMutation({
-    mutationFn: ({ areaId, label }: { areaId: string; label: string }) =>
+  const updateAreaLabelMutation = useMutation<Record<string, unknown>, Error, { areaId: string; label: string }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ areaId, label }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ label }) },
         "Failed to persist area label.",
       ),
-    onMutate: ({ areaId, label }: { areaId: string; label: string }) => {
+    onMutate: ({ areaId, label }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, label } : a)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area label");
     },
     retry: false,
   });
 
-  const resizeAreaMutation = useMutation({
-    mutationFn: ({ areaId, widthM, lengthM, x, y }: { areaId: string; widthM: number; lengthM: number; x: number; y: number }) =>
+  const resizeAreaMutation = useMutation<Record<string, unknown>, Error, { areaId: string; widthM: number; lengthM: number; x: number; y: number }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ areaId, widthM, lengthM, x, y }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ width_m: widthM, length_m: lengthM, x, y }) },
         m.admin_error_resize_area_status({ status: 500 }),
       ),
-    onMutate: ({ areaId, widthM, lengthM, x, y }: { areaId: string; widthM: number; lengthM: number; x: number; y: number }) => {
+    onMutate: ({ areaId, widthM, lengthM, x, y }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area resize");
     },
@@ -858,42 +856,42 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
-  const moveAreaMutation = useMutation({
-    mutationFn: ({ areaId, x, y }: { areaId: string; x: number; y: number }) =>
+  const moveAreaMutation = useMutation<Record<string, unknown>, Error, { areaId: string; x: number; y: number }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ areaId, x, y }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
         "Failed to persist area position.",
       ),
-    onMutate: ({ areaId, x, y }: { areaId: string; x: number; y: number }) => {
+    onMutate: ({ areaId, x, y }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, x, y } : a)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area position");
     },
     retry: false,
   });
 
-  const rotateAreaMutation = useMutation({
-    mutationFn: ({ areaId, rotation }: { areaId: string; rotation: number }) =>
+  const rotateAreaMutation = useMutation<Record<string, unknown>, Error, { areaId: string; rotation: number }, { previousData: AdminDashboardData | undefined }>({
+    mutationFn: ({ areaId, rotation }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
         "Failed to persist area rotation.",
       ),
-    onMutate: ({ areaId, rotation }: { areaId: string; rotation: number }) => {
+    onMutate: ({ areaId, rotation }) => {
       const previousData = queryClient.getQueryData<AdminDashboardData>(currentDashboardQueryKey);
       queryClient.setQueryData<AdminDashboardData>(currentDashboardQueryKey, (old: AdminDashboardData | undefined) =>
         old ? { ...old, areas: old.areas.map((a: FloorArea) => (a.id === areaId ? { ...a, rotation } : a)) } : old,
       );
       return { previousData };
     },
-    onError: (_err: unknown, _vars: unknown, context: { previousData: AdminDashboardData | undefined } | undefined) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousData) queryClient.setQueryData(currentDashboardQueryKey, context.previousData);
       console.error("Failed to persist area rotation");
     },
@@ -949,15 +947,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
-  const registrationDetailMutation = useMutation({
-    mutationFn: (registrationId: string) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/registrations/${registrationId}`,
-        { headers: authHeaders() },
-        m.admin_error_load_data(),
-      ),
-    retry: false,
-  });
 
   const validateToken = useCallback(
     async (tokenToValidate: string): Promise<"valid" | "invalid" | "transientError"> => {
@@ -1571,11 +1560,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAssignAreaToItem = useCallback(
-    (areaId: string, exhibitorId: number | null, label?: string, icon?: string) => {
+    async (areaId: string, exhibitorId: number | null, label?: string, icon?: string) => {
       const body: Record<string, unknown> = { exhibitor_id: exhibitorId };
       if (label !== undefined) body.label = label;
       if (icon !== undefined) body.icon = icon;
-      return assignAreaMutation.mutateAsync({ areaId, body });
+      await assignAreaMutation.mutateAsync({ areaId, body });
     },
     [assignAreaMutation],
   );
@@ -1588,17 +1577,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleChangeTableType = useCallback(
-    (tableId: string, tableTypeId: string) => changeTableTypeMutation.mutateAsync({ tableId, tableTypeId }),
+    async (tableId: string, tableTypeId: string) => { await changeTableTypeMutation.mutateAsync({ tableId, tableTypeId }); },
     [changeTableTypeMutation],
   );
 
   const handleUpdateTable = useCallback(
-    (tableId: string, name: string) => updateTableNameMutation.mutateAsync({ tableId, name }),
+    async (tableId: string, name: string) => { await updateTableNameMutation.mutateAsync({ tableId, name }); },
     [updateTableNameMutation],
   );
 
   const handleResizeArea = useCallback(
-    (areaId: string, widthM: number, lengthM: number) => {
+    async (areaId: string, widthM: number, lengthM: number) => {
       // Must match LayoutEditor/RoomCanvas constants
       const PX_PER_M = 28;
       const area = areas.find((a) => a.id === areaId);
@@ -1617,7 +1606,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
 
-      return resizeAreaMutation.mutateAsync({ areaId, widthM, lengthM, x, y });
+      await resizeAreaMutation.mutateAsync({ areaId, widthM, lengthM, x, y });
     },
     [areas, layouts, rooms, resizeAreaMutation],
   );
@@ -1658,14 +1647,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleViewDetail = useCallback(
     async (res: Registration) => {
       try {
-        const data = await registrationDetailMutation.mutateAsync(res.id);
-        setDetailRegistration(apiToRegistration(data as Record<string, unknown>));
+        const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+          `/api/registrations/${res.id}`,
+          { headers: authHeaders() },
+          m.admin_error_load_data(),
+        );
+        setDetailRegistration(apiToRegistration(data));
       } catch (err) {
         console.error("Failed to fetch registration detail, falling back to list data", err);
         setDetailRegistration(res);
       }
     },
-    [registrationDetailMutation],
+    [authHeaders],
   );
 
   const handleToggleDelivered = useCallback(

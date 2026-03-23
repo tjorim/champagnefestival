@@ -77,7 +77,7 @@ function paymentLabel(payment: PaymentStatus): string {
 }
 
 function isStandaloneRegistration(registration: Registration) {
-  if (!registration.event || !registration.event.edition) return true;
+  if (!registration.event || !registration.event.edition) return false;
   return registration.event.edition.editionType !== "festival";
 }
 

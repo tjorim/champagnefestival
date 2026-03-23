@@ -39,14 +39,6 @@ function editionTypeBadge(type: Edition["editionType"]) {
   }
 }
 
-function upsertEditionEvent(events: Event[], savedEvent: Event): Event[] {
-  const existingIndex = events.findIndex((event) => event.id === savedEvent.id);
-  if (existingIndex >= 0) {
-    return events.map((event) => (event.id === savedEvent.id ? savedEvent : event));
-  }
-
-  return [...events, savedEvent];
-}
 
 export default function EditionCard({ edition, venues, authHeaders, onDeleted, onUpdated, onEventMutation }: EditionCardProps) {
   const queryClient = useQueryClient();
@@ -63,16 +55,16 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
   const eventsQuery = useQuery({
     queryKey: editionEventsQueryKey,
     queryFn: () => fetchEditionEvents(edition.id, authHeaders),
-    staleTime: 30 * 1000,
+    staleTime: Infinity,
     retry: false,
     enabled: open,
   });
 
   const deleteEditionMutation = useMutation({ mutationFn: () => deleteEditionById(edition.id, authHeaders), retry: false });
   const saveEventMutation = useMutation({
-    mutationFn: (formData: EventFormData) =>
+    mutationFn: ({ formData, editingEventId }: { formData: EventFormData; editingEventId?: string }) =>
       saveEditionEvent(
-        { editionId: edition.id, editingEventId: editingEvent?.id, formData },
+        { editionId: edition.id, editingEventId, formData },
         authHeaders,
       ),
     retry: false,
@@ -100,10 +92,8 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
   async function handleEventSaved(formData: EventFormData) {
     setSaveError("");
     try {
-      const savedEvent = await saveEventMutation.mutateAsync(formData);
-      queryClient.setQueryData<Event[]>(editionEventsQueryKey, (prev = edition.events ?? []) =>
-        upsertEditionEvent(prev, savedEvent),
-      );
+      await saveEventMutation.mutateAsync({ formData, editingEventId: editingEvent?.id });
+      queryClient.invalidateQueries({ queryKey: editionEventsQueryKey });
       setEventModalOpen(false);
       await onEventMutation?.();
     } catch (error) {
@@ -115,9 +105,7 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
     setSaveError("");
     try {
       await deleteEventMutation.mutateAsync(eventId);
-      queryClient.setQueryData<Event[]>(editionEventsQueryKey, (prev = edition.events ?? []) =>
-        prev.filter((event) => event.id !== eventId),
-      );
+      queryClient.invalidateQueries({ queryKey: editionEventsQueryKey });
       await onEventMutation?.();
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : m.admin_content_error_save());
@@ -149,7 +137,9 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
         </Button>
         <span className="d-flex align-items-center gap-2 flex-wrap">
           <Badge bg={typeDisplay.bg}>{typeDisplay.label}</Badge>
-          {startDate && endDate ? <span className="text-secondary small">{startDate.toLocaleDateString()} {startDate.getTime() !== endDate.getTime() ? `– ${endDate.toLocaleDateString()}` : ''}</span> : <span className="text-secondary small">Dates defined by events</span>}
+          {startDate && endDate
+            ? <span className="text-secondary small">{startDate.toLocaleDateString()}{startDate.getTime() !== endDate.getTime() ? ` – ${endDate.toLocaleDateString()}` : ''}</span>
+            : <span className="text-secondary small">{m.admin_edition_dates_defined_by_events()}</span>}
         </span>
         <Badge bg={edition.active ? "success" : "secondary"}>{edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}</Badge>
         <Badge bg="secondary">{sortedEvents.length} {m.admin_edition_events()}</Badge>
@@ -181,7 +171,7 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
 
           {edition.editionType !== "festival" && (edition.externalPartner || edition.externalContactName || edition.externalContactEmail) && (
             <div className="text-secondary small mb-3">
-              <div className="text-light mb-1">External partner</div>
+              <div className="text-light mb-1">{m.admin_edition_external_partner()}</div>
               <div>{edition.externalPartner || '—'}</div>
               {(edition.externalContactName || edition.externalContactEmail) && <div>{[edition.externalContactName, edition.externalContactEmail].filter(Boolean).join(' · ')}</div>}
             </div>
@@ -193,7 +183,7 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
           </div>
 
           {eventsQuery.isPending ? (
-            <div className="text-secondary small py-2"><Spinner animation="border" size="sm" className="me-2" />Loading events…</div>
+            <div className="text-secondary small py-2"><Spinner animation="border" size="sm" className="me-2" />{m.admin_edition_loading_events()}</div>
           ) : sortedEvents.length === 0 ? (
             <p className="text-secondary fst-italic small">{m.admin_content_edition_no_events()}</p>
           ) : (

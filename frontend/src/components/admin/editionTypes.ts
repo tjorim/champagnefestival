@@ -43,17 +43,44 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
     dates: Array.isArray(data.dates)
       ? data.dates.filter((value): value is string => typeof value === "string")
       : [],
-    venue: (data.venue ?? { id: "", name: "", city: "", active: true }) as Edition["venue"],
+    venue: typeof data.venue === "object" && data.venue !== null
+      ? {
+          id: String((data.venue as Record<string, unknown>).id ?? ""),
+          name: String((data.venue as Record<string, unknown>).name ?? ""),
+          city: String((data.venue as Record<string, unknown>).city ?? ""),
+          active: (data.venue as Record<string, unknown>).active !== false,
+          address: typeof (data.venue as Record<string, unknown>).address === "string"
+            ? (data.venue as Record<string, unknown>).address as string
+            : undefined,
+          country: typeof (data.venue as Record<string, unknown>).country === "string"
+            ? (data.venue as Record<string, unknown>).country as string
+            : undefined,
+        }
+      : { id: "", name: "", city: "", active: true },
     events: Array.isArray(data.events)
       ? data.events
           .filter((event): event is Record<string, unknown> => typeof event === "object" && event !== null)
           .map(apiToEvent)
       : [],
     producers: Array.isArray(data.producers)
-      ? (data.producers as Edition["producers"])
+      ? data.producers
+          .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+          .map((p) => ({
+            id: Number(p.id ?? 0),
+            name: String(p.name ?? ""),
+            image: String(p.image ?? ""),
+            website: String(p.website ?? ""),
+          }))
       : [],
     sponsors: Array.isArray(data.sponsors)
-      ? (data.sponsors as Edition["sponsors"])
+      ? data.sponsors
+          .filter((s): s is Record<string, unknown> => typeof s === "object" && s !== null)
+          .map((s) => ({
+            id: Number(s.id ?? 0),
+            name: String(s.name ?? ""),
+            image: String(s.image ?? ""),
+            website: String(s.website ?? ""),
+          }))
       : [],
     active: data.active !== false,
     createdAt: String(data.created_at ?? ""),

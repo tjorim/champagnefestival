@@ -53,13 +53,13 @@ function typeLabel(type: string | undefined): string {
 function editionTypeLabel(type: EditionType | "all") {
   switch (type) {
     case "festival":
-      return m.admin_edition_type_festivals();
+      return m.admin_filter_edition_festivals();
     case "bourse":
       return m.admin_edition_type_bourse();
     case "capsule_exchange":
       return m.admin_edition_type_capsule_exchange();
     default:
-      return m.admin_edition_type_all();
+      return m.admin_filter_edition_all();
   }
 }
 

@@ -72,14 +72,14 @@ function isPersonRegistrationRecord(value: unknown): value is Record<string, unk
 }
 
 export async function fetchRegistrableEvents(authHeaders: () => Record<string, string>): Promise<EditionEvent[]> {
-  const response = await fetch("/api/editions/active", { headers: authHeaders() });
+  const response = await fetch("/api/events?registration_required=true", { headers: authHeaders() });
   if (!response.ok) {
     if (response.status === 404) throw new Error(m.admin_content_edition_no_events());
-    throw new Error(`Failed to load active edition (${response.status})`);
+    throw new Error(`Failed to load registrable events (${response.status})`);
   }
 
-  const data = (await response.json()) as { events?: Record<string, unknown>[] };
-  return (data.events ?? []).map(apiToEvent).filter((event) => event.registrationRequired);
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToEvent) : [];
 }
 
 export async function fetchAdminPersonOptions(query: string, authHeaders: () => Record<string, string>, signal?: AbortSignal): Promise<PersonOption[]> {

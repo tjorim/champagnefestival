@@ -10,7 +10,9 @@ import type { OrderItem, Registration } from "@/types/registration";
 
 interface RegistrationDetailProps {
   registration: Registration | null;
+  /** Full origin + router basename (e.g. `https://example.com`). Used to build the check-in QR code URL. */
   baseUrl: string;
+  /** Other people sharing the same email address, shown in the merge-duplicate alert. */
   emailDuplicates?: { id: string; name: string }[];
   onClose: () => void;
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
@@ -44,10 +46,22 @@ export default function RegistrationDetail({ registration, baseUrl, emailDuplica
 
       <Modal.Body className="bg-dark text-light">
         <div className="d-flex flex-wrap gap-2 mb-3">
-          <Badge bg={registration.status === "confirmed" ? "success" : registration.status === "cancelled" ? "danger" : "warning"}>{registration.status === "confirmed" ? m.admin_status_confirmed() : registration.status === "cancelled" ? m.admin_status_cancelled() : m.admin_status_pending()}</Badge>
-          <Badge bg={registration.paymentStatus === "paid" ? "success" : registration.paymentStatus === "partial" ? "warning" : "secondary"}>{registration.paymentStatus === "paid" ? m.admin_payment_paid() : registration.paymentStatus === "partial" ? m.admin_payment_partial() : m.admin_payment_unpaid()}</Badge>
-          {registration.checkedIn ? <Badge bg="success"><i className="bi bi-check-circle-fill me-1" aria-hidden="true" />{m.admin_checked_in()}{registration.checkedInAt && <span className="ms-1 fw-normal">{new Date(registration.checkedInAt).toLocaleTimeString()}</span>}</Badge> : <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>}
-          {!simpleRsvp && (registration.strapIssued ? <Badge bg="info"><i className="bi bi-person-badge-fill me-1" aria-hidden="true" />{m.admin_strap_issued()}</Badge> : <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>)}
+          <Badge bg={registration.status === "confirmed" ? "success" : registration.status === "cancelled" ? "danger" : "warning"}>
+            {registration.status === "confirmed" ? m.admin_status_confirmed() : registration.status === "cancelled" ? m.admin_status_cancelled() : m.admin_status_pending()}
+          </Badge>
+          <Badge bg={registration.paymentStatus === "paid" ? "success" : registration.paymentStatus === "partial" ? "warning" : "secondary"}>
+            {registration.paymentStatus === "paid" ? m.admin_payment_paid() : registration.paymentStatus === "partial" ? m.admin_payment_partial() : m.admin_payment_unpaid()}
+          </Badge>
+          {registration.checkedIn
+            ? <Badge bg="success">
+                <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
+                {m.admin_checked_in()}
+                {registration.checkedInAt && <span className="ms-1 fw-normal">{new Date(registration.checkedInAt).toLocaleTimeString()}</span>}
+              </Badge>
+            : <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>}
+          {!simpleRsvp && (registration.strapIssued
+            ? <Badge bg="info"><i className="bi bi-person-badge-fill me-1" aria-hidden="true" />{m.admin_strap_issued()}</Badge>
+            : <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>)}
         </div>
 
         {emailDuplicates.length > 0 && (

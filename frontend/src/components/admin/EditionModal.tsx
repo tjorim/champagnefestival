@@ -62,11 +62,11 @@ function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOp
 function typeLabel(type: EditionType) {
   switch (type) {
     case "bourse":
-      return "Bourse";
+      return m.admin_edition_type_bourse();
     case "capsule_exchange":
-      return "Capsule Exchange";
+      return m.admin_edition_type_capsule_exchange();
     default:
-      return "Festival";
+      return m.admin_edition_type_festival();
   }
 }
 
@@ -198,24 +198,24 @@ export default function EditionModal({ show, initial, venues, authHeaders, onSav
               <Form.Control value={month} onChange={(e) => setMonth(e.target.value)} className="bg-dark text-light border-secondary" placeholder="e.g. march" required />
             </Form.Group>
             <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
-              <Form.Label className="text-secondary small mb-1">Edition type</Form.Label>
+              <Form.Label className="text-secondary small mb-1">{m.admin_edition_type_label()}</Form.Label>
               <Form.Select value={editionType} onChange={(e) => {
                 const newType = e.target.value as EditionType;
                 setEditionType(newType);
                 if (newType !== "festival") setSelectedExhibitors([]);
               }} className="bg-dark text-light border-secondary">
-                <option value="festival">Festival</option>
-                <option value="bourse">Bourse</option>
-                <option value="capsule_exchange">Capsule Exchange</option>
+                <option value="festival">{m.admin_edition_type_festival()}</option>
+                <option value="bourse">{m.admin_edition_type_bourse()}</option>
+                <option value="capsule_exchange">{m.admin_edition_type_capsule_exchange()}</option>
               </Form.Select>
             </Form.Group>
             <Form.Check type="checkbox" id="modal-edition-active" label={m.admin_content_edition_active()} checked={active} onChange={(e) => setActive(e.target.checked)} className="text-light align-self-end mb-1" />
           </div>
 
           <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small mb-1">Venue</Form.Label>
+            <Form.Label className="text-secondary small mb-1">{m.admin_edition_venue_label()}</Form.Label>
             <Form.Select value={venueId} onChange={(e) => setVenueId(e.target.value)} className="bg-dark text-light border-secondary" required>
-              <option value="">Select a venue</option>
+              <option value="">{m.admin_edition_venue_placeholder()}</option>
               {venues.map((venue) => (
                 <option key={venue.id} value={venue.id}>{venue.name}{venue.active ? "" : " (archived)"}</option>
               ))}
@@ -224,8 +224,8 @@ export default function EditionModal({ show, initial, venues, authHeaders, onSav
 
           <div className="border border-secondary rounded p-3 mb-3">
             <div className="d-flex justify-content-between align-items-center mb-2">
-              <div className="text-light small fw-semibold">{typeLabel(editionType)} date handling</div>
-              <span className="text-secondary small">Dates are driven by the relational event records.</span>
+              <div className="text-light small fw-semibold">{typeLabel(editionType)} {m.admin_edition_date_handling()}</div>
+              <span className="text-secondary small">{m.admin_edition_dates_info()}</span>
             </div>
             {isFestival ? (
               <div className="row g-2">
@@ -243,24 +243,24 @@ export default function EditionModal({ show, initial, venues, authHeaders, onSav
               </Form.Group>
             )}
             <div className="text-secondary small mt-2">
-              {isEdit ? 'Update event dates from the Events section below each edition card.' : 'Create the edition first, then add events to define its dates.'}
+              {isEdit ? m.admin_edition_update_event_dates() : m.admin_edition_create_first_then_events()}
             </div>
           </div>
 
           {!isFestival && (
             <div className="border border-secondary rounded p-3 mb-3">
-              <div className="text-light small fw-semibold mb-2">External partner</div>
+              <div className="text-light small fw-semibold mb-2">{m.admin_edition_external_partner()}</div>
               <div className="row g-2">
                 <div className="col-md-6">
-                  <Form.Label className="text-secondary small mb-1">Partner</Form.Label>
+                  <Form.Label className="text-secondary small mb-1">{m.admin_edition_partner_label()}</Form.Label>
                   <Form.Control value={externalPartner} onChange={(e) => setExternalPartner(e.target.value)} className="bg-dark text-light border-secondary" placeholder="Partner organisation" />
                 </div>
                 <div className="col-md-3">
-                  <Form.Label className="text-secondary small mb-1">Contact name</Form.Label>
+                  <Form.Label className="text-secondary small mb-1">{m.admin_edition_contact_name_label()}</Form.Label>
                   <Form.Control value={externalContactName} onChange={(e) => setExternalContactName(e.target.value)} className="bg-dark text-light border-secondary" placeholder="Jane Doe" />
                 </div>
                 <div className="col-md-3">
-                  <Form.Label className="text-secondary small mb-1">Contact email</Form.Label>
+                  <Form.Label className="text-secondary small mb-1">{m.admin_edition_contact_email_label()}</Form.Label>
                   <Form.Control type="email" value={externalContactEmail} onChange={(e) => setExternalContactEmail(e.target.value)} className="bg-dark text-light border-secondary" placeholder="jane@example.com" />
                 </div>
               </div>
@@ -269,9 +269,9 @@ export default function EditionModal({ show, initial, venues, authHeaders, onSav
 
           {isFestival && (
             <Form.Group className="mb-3">
-              <Form.Label className="text-secondary small mb-1">Festival exhibitors</Form.Label>
+              <Form.Label className="text-secondary small mb-1">{m.admin_edition_festival_exhibitors()}</Form.Label>
               {exhibitorsQuery.isPending ? (
-                <div className="text-secondary small"><Spinner animation="border" size="sm" className="me-2" />Loading exhibitors…</div>
+                <div className="text-secondary small"><Spinner animation="border" size="sm" className="me-2" />{m.admin_edition_loading_exhibitors()}</div>
               ) : (
                 <Select<ItemOption, true>
                   isMulti
