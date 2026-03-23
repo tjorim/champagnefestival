@@ -945,7 +945,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         }
       } catch (err) {
         console.error("Failed to update registration status", err);
-        setError(m.admin_error_update_reservation());
+        setError(m.admin_error_update_registration());
       }
     },
     [authHeaders, updateDashboardField],
@@ -1842,7 +1842,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <Nav.Item>
                     <Nav.Link eventKey="registrations" className="text-light">
                       <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                      {m.admin_reservations_tab()}
+                      {m.admin_registrations_tab()}
                       <span className="badge bg-warning text-dark ms-2">{registrations.length}</span>
                     </Nav.Link>
                   </Nav.Item>

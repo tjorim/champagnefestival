@@ -164,7 +164,7 @@ export async function createAdminRegistration(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_error_create_reservation());
+    throw new Error((data as { detail?: string }).detail ?? m.admin_error_create_registration());
   }
 
   const data = await res.json();

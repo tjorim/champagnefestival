@@ -124,7 +124,7 @@ export default function MemberFormModal({
           )}
 
           <Form.Group className="mb-3" controlId="member-name">
-            <Form.Label className="text-secondary small">{m.reservation_name()} *</Form.Label>
+            <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <Form.Control
               type="text"
               value={name}
@@ -138,7 +138,7 @@ export default function MemberFormModal({
           <Row className="mb-3">
             <Col xs={12} md={6}>
               <Form.Group controlId="member-email">
-                <Form.Label className="text-secondary small">{m.reservation_email()}</Form.Label>
+                <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
                 <Form.Control
                   type="email"
                   value={email}
@@ -150,7 +150,7 @@ export default function MemberFormModal({
             </Col>
             <Col xs={12} md={6}>
               <Form.Group controlId="member-phone">
-                <Form.Label className="text-secondary small">{m.reservation_phone()}</Form.Label>
+                <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
                 <Form.Control
                   type="tel"
                   value={phone}
@@ -187,7 +187,7 @@ export default function MemberFormModal({
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="member-notes">
-            <Form.Label className="text-secondary small">{m.reservation_notes()}</Form.Label>
+            <Form.Label className="text-secondary small">{m.registration_notes()}</Form.Label>
             <Form.Control
               as="textarea"
               rows={4}

@@ -178,12 +178,12 @@ export default function MembersManagement({
                 <caption className="visually-hidden">{m.admin_members_table_caption()}</caption>
                 <thead>
                   <tr>
-                    <th>{m.reservation_name()}</th>
-                    <th>{m.reservation_email()}</th>
-                    <th>{m.reservation_phone()}</th>
+                    <th>{m.registration_name()}</th>
+                    <th>{m.registration_email()}</th>
+                    <th>{m.registration_phone()}</th>
                     <th>{m.admin_people_club_name_label()}</th>
-                    <th>{m.reservation_notes()}</th>
-                    <th>{m.admin_reservations_tab()}</th>
+                    <th>{m.registration_notes()}</th>
+                    <th>{m.admin_registrations_tab()}</th>
                     <th>{m.admin_actions_label()}</th>
                   </tr>
                 </thead>

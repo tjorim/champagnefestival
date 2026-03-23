@@ -173,7 +173,7 @@ export default function VolunteerFormModal({
           )}
 
           <Form.Group className="mb-3" controlId="volunteer-name">
-            <Form.Label className="text-secondary small">{m.reservation_name()} *</Form.Label>
+            <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <Form.Control
               type="text"
               value={name}

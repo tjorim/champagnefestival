@@ -409,8 +409,8 @@ function App() {
           <div className="container text-center">
             <SectionHeading
               id="registrations-heading"
-              title={m.reservation_title()}
-              subtitle={m.reservation_description()}
+              title={m.registration_title()}
+              subtitle={m.registration_description()}
             />
             <button
               type="button"
@@ -418,7 +418,7 @@ function App() {
               onClick={() => setShowRegistrationModal(true)}
             >
               <i className="bi bi-calendar-plus me-2" aria-hidden="true" />
-              {m.reservation_cta()}
+              {m.registration_cta()}
             </button>
           </div>
         </section>

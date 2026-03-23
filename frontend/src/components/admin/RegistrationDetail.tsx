@@ -146,13 +146,13 @@ export default function RegistrationDetail({
         {/* Basic info */}
         <ListGroup variant="flush" className="mb-3">
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.reservation_email()}</span>
+            <span className="text-secondary">{m.registration_email()}</span>
             <a href={`mailto:${registration.person.email}`} className="text-warning">
               {registration.person.email}
             </a>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.reservation_phone()}</span>
+            <span className="text-secondary">{m.registration_phone()}</span>
             <span>{registration.person.phone}</span>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">

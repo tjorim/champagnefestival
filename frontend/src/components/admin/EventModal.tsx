@@ -177,7 +177,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
           <Form.Check
             type="checkbox"
             id="modal-event-registration"
-            label={m.admin_content_event_requires_reservation()}
+            label={m.admin_content_event_requires_registration()}
             checked={registration}
             onChange={(e) => setRegistration(e.target.checked)}
             className="text-light mb-2"
@@ -185,7 +185,7 @@ export default function EventModal({ show, initial, onSave, onHide }: EventModal
           {registration && (
             <Form.Group>
               <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_edition_reservation_opens()}
+                {m.admin_content_edition_registration_opens()}
               </Form.Label>
               <Form.Control
                 type="datetime-local"

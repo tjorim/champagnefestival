@@ -137,7 +137,7 @@ export default function RegistrationList({
     <>
       <Card bg="dark" text="white" border="secondary">
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <span className="fw-semibold">{m.admin_reservations_tab()}</span>
+          <span className="fw-semibold">{m.admin_registrations_tab()}</span>
           <div className="d-flex flex-wrap gap-2 align-items-center">
             {allocationOptions.length > 0 && (
               <Form.Select
@@ -180,20 +180,20 @@ export default function RegistrationList({
             </ButtonGroup>
             <Button variant="outline-warning" size="sm" onClick={() => setShowCreateModal(true)}>
               <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              {m.admin_add_reservation()}
+              {m.admin_add_registration()}
             </Button>
           </div>
         </Card.Header>
 
         <Card.Body className="p-0">
           {filtered.length === 0 ? (
-            <p className="text-secondary text-center py-4 mb-0">{m.admin_no_reservations()}</p>
+            <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
           ) : (
             <div className="table-responsive">
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <thead>
                   <tr>
-                    <th>{m.reservation_name()}</th>
+                    <th>{m.registration_name()}</th>
                     <th className="d-none d-md-table-cell">{m.admin_event_label()}</th>
                     <th>{m.admin_guests_count()}</th>
                     <th>{m.admin_status_label()}</th>

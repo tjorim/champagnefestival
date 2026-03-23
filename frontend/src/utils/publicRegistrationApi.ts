@@ -363,7 +363,7 @@ export async function submitRegistration(
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new RegistrationSubmitError(
-      (data as { error?: string }).error ?? m.reservation_error(),
+      (data as { error?: string }).error ?? m.registration_error(),
     );
   }
 }
