@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -37,13 +37,17 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     [edition.dates, initial?.date],
   );
 
-  const { register, handleSubmit, reset, watch, setValue, control, formState: { errors } } = useForm<EventFormData>({
+  const form = useForm({
     defaultValues: EMPTY_FORM,
+    onSubmit: ({ value }) => {
+      const submitDate = isFestival ? value.date : value.date || derivedStandaloneDate;
+      onSave({ ...value, date: submitDate });
+    },
   });
 
   useEffect(() => {
     if (!show) return;
-    reset(
+    form.reset(
       initial
         ? {
             editionId: initial.editionId,
@@ -65,23 +69,19 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             date: isFestival ? (edition.dates[0] ?? "") : derivedStandaloneDate,
           },
     );
-  }, [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival, reset, show]);
+  }, [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival, form, show]);
 
   // Keep standalone date field in sync with derived date
   useEffect(() => {
     if (!isFestival && derivedStandaloneDate) {
-      setValue("date", derivedStandaloneDate);
+      form.setFieldValue("date", derivedStandaloneDate);
     }
-  }, [derivedStandaloneDate, isFestival, setValue]);
+  }, [derivedStandaloneDate, isFestival, form]);
 
-  const dateValue = watch("date");
-  const registrationRequired = watch("registrationRequired");
+  const dateValue = useStore(form.store, (s) => s.values.date);
+  const registrationRequired = useStore(form.store, (s) => s.values.registrationRequired);
 
   const effectiveDate = isFestival ? dateValue : dateValue || derivedStandaloneDate;
-
-  const onSubmit = (data: EventFormData) => {
-    onSave({ ...data, date: effectiveDate });
-  };
 
   const isEdit = !!initial;
 
@@ -92,115 +92,173 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           {isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
         <Modal.Body className="bg-dark">
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group controlId="event-title" style={{ minWidth: "240px", flex: "2 1 240px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_title()}
               </Form.Label>
-              <Form.Control
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                required
-                autoFocus
-                isInvalid={!!errors.title}
-                {...register("title", { required: "Title is required" })}
-              />
-              {errors.title && (
-                <Form.Control.Feedback type="invalid">{errors.title.message}</Form.Control.Feedback>
-              )}
+              <form.Field
+                name="title"
+                validators={{ onChange: ({ value }) => !value?.trim() ? "Title is required" : undefined }}
+              >
+                {(field) => {
+                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        size="sm"
+                        className="bg-dark text-light border-secondary"
+                        autoFocus
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.state.meta.errors[0]}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
             </Form.Group>
             <Form.Group controlId="event-category" style={{ minWidth: "160px", flex: "1 1 160px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_category()}
               </Form.Label>
-              <Form.Control
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                placeholder={m.admin_event_category_placeholder()}
-                required
-                {...register("category", { required: true })}
-              />
+              <form.Field name="category">
+                {(field) => (
+                  <Form.Control
+                    size="sm"
+                    className="bg-dark text-light border-secondary"
+                    placeholder={m.admin_event_category_placeholder()}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
           </div>
 
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group controlId="event-date" style={{ maxWidth: "180px" }}>
               <Form.Label className="text-secondary small mb-1">{m.admin_event_date()}</Form.Label>
-              <Controller
+              <form.Field
                 name="date"
-                control={control}
-                rules={{ required: "Date is required" }}
-                render={({ field }) => (
-                  <>
-                    <Form.Control
-                      type="date"
-                      size="sm"
-                      className="bg-dark text-light border-secondary"
-                      readOnly={!isFestival && Boolean(derivedStandaloneDate)}
-                      required
-                      isInvalid={!!errors.date}
-                      {...field}
-                      value={effectiveDate}
-                      onChange={(e) => field.onChange(e.target.value)}
-                    />
-                    {errors.date && (
-                      <Form.Control.Feedback type="invalid">
-                        {errors.date.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </>
-                )}
-              />
+                validators={{ onChange: ({ value }) => !value ? "Date is required" : undefined }}
+              >
+                {(field) => {
+                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        type="date"
+                        size="sm"
+                        className="bg-dark text-light border-secondary"
+                        readOnly={!isFestival && Boolean(derivedStandaloneDate)}
+                        isInvalid={showErr}
+                        value={effectiveDate}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.state.meta.errors[0]}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
             </Form.Group>
             <Form.Group controlId="event-start-time" style={{ maxWidth: "140px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_start_time()}
               </Form.Label>
-              <Form.Control
-                type="time"
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                required
-                isInvalid={!!errors.startTime}
-                {...register("startTime", { required: "Start time is required" })}
-              />
-              {errors.startTime && (
-                <Form.Control.Feedback type="invalid">
-                  {errors.startTime.message}
-                </Form.Control.Feedback>
-              )}
+              <form.Field
+                name="startTime"
+                validators={{ onChange: ({ value }) => !value ? "Start time is required" : undefined }}
+              >
+                {(field) => {
+                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        type="time"
+                        size="sm"
+                        className="bg-dark text-light border-secondary"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.state.meta.errors[0]}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
             </Form.Group>
             <Form.Group controlId="event-end-time" style={{ maxWidth: "140px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_event_end_time()}
               </Form.Label>
-              <Form.Control
-                type="time"
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                {...register("endTime")}
-              />
+              <form.Field name="endTime">
+                {(field) => (
+                  <Form.Control
+                    type="time"
+                    size="sm"
+                    className="bg-dark text-light border-secondary"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
             <Form.Group controlId="event-max-capacity" style={{ maxWidth: "160px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_event_max_capacity()}
               </Form.Label>
-              <Form.Control
-                type="number"
-                min={1}
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                disabled={!registrationRequired}
-                isInvalid={!!errors.maxCapacity}
-                {...register("maxCapacity", { min: { value: 1, message: "Must be at least 1" } })}
-              />
-              {errors.maxCapacity && (
-                <Form.Control.Feedback type="invalid">
-                  {errors.maxCapacity.message}
-                </Form.Control.Feedback>
-              )}
+              <form.Field
+                name="maxCapacity"
+                validators={{
+                  onChange: ({ value }) =>
+                    value && Number(value) < 1 ? "Must be at least 1" : undefined,
+                }}
+              >
+                {(field) => {
+                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        type="number"
+                        min={1}
+                        size="sm"
+                        className="bg-dark text-light border-secondary"
+                        disabled={!registrationRequired}
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.state.meta.errors[0]}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
             </Form.Group>
           </div>
 
@@ -208,41 +266,50 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             <Form.Label className="text-secondary small mb-1">
               {m.admin_content_event_description()}
             </Form.Label>
-            <Form.Control
-              as="textarea"
-              size="sm"
-              rows={2}
-              className="bg-dark text-light border-secondary"
-              {...register("description")}
-            />
+            <form.Field name="description">
+              {(field) => (
+                <Form.Control
+                  as="textarea"
+                  size="sm"
+                  rows={2}
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
 
-          <Controller
-            name="registrationRequired"
-            control={control}
-            render={({ field: { value, onChange, ref } }) => (
+          <form.Field name="registrationRequired">
+            {(field) => (
               <Form.Check
                 type="checkbox"
                 id="modal-event-registration"
                 label={m.admin_content_event_requires_registration()}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                ref={ref}
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
                 className="text-light mb-2"
               />
             )}
-          />
+          </form.Field>
           {registrationRequired && (
             <Form.Group className="mb-2" style={{ maxWidth: "280px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_edition_registration_opens()}
               </Form.Label>
-              <Form.Control
-                type="datetime-local"
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                {...register("registrationsOpenFrom")}
-              />
+              <form.Field name="registrationsOpenFrom">
+                {(field) => (
+                  <Form.Control
+                    type="datetime-local"
+                    size="sm"
+                    className="bg-dark text-light border-secondary"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
           )}
 

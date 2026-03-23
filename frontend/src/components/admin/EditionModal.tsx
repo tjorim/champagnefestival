@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -98,19 +98,6 @@ function typeLabel(type: EditionType) {
   }
 }
 
-interface EditionFormFields {
-  id: string;
-  year: number;
-  month: string;
-  editionType: EditionType;
-  venueId: string;
-  active: boolean;
-  externalPartner: string;
-  externalContactName: string;
-  externalContactEmail: string;
-  selectedExhibitors: MultiValue<ItemOption>;
-}
-
 export default function EditionModal({
   show,
   initial,
@@ -124,21 +111,48 @@ export default function EditionModal({
   const hydratedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, watch, setValue, control, formState: { errors } } =
-    useForm<EditionFormFields>({
-      defaultValues: {
-        id: "",
-        year: new Date().getFullYear(),
-        month: "",
-        editionType: "festival",
-        venueId: "",
-        active: true,
-        externalPartner: "",
-        externalContactName: "",
-        externalContactEmail: "",
-        selectedExhibitors: [],
-      },
-    });
+  const form = useForm({
+    defaultValues: {
+      id: "",
+      year: new Date().getFullYear(),
+      month: "",
+      editionType: "festival" as EditionType,
+      venueId: "",
+      active: true,
+      externalPartner: "",
+      externalContactName: "",
+      externalContactEmail: "",
+      selectedExhibitors: [] as MultiValue<ItemOption>,
+    },
+    onSubmit: async ({ value }) => {
+      if (!initial && value.id.trim() === "") {
+        setError("ID cannot be empty or whitespace only");
+        return;
+      }
+      try {
+        const savedEdition = await saveEditionMutation.mutateAsync({
+          id: value.id.trim(),
+          year: value.year,
+          month: value.month.trim(),
+          editionType: value.editionType,
+          venueId: value.venueId,
+          active: value.active,
+          exhibitorIds:
+            value.editionType === "festival"
+              ? value.selectedExhibitors.map((option: ItemOption) => option.value)
+              : [],
+          externalPartner: value.externalPartner,
+          externalContactName: value.externalContactName,
+          externalContactEmail: value.externalContactEmail,
+        });
+        onSaved(savedEdition);
+      } catch (mutationError) {
+        setError(
+          mutationError instanceof Error ? mutationError.message : m.admin_content_error_save(),
+        );
+      }
+    },
+  });
 
   useEffect(() => {
     if (!show) return;
@@ -150,7 +164,7 @@ export default function EditionModal({
           isArchived: false,
         }))
       : [];
-    reset({
+    form.reset({
       id: initial?.id ?? "",
       year: initial?.year ?? new Date().getFullYear(),
       month: initial?.month ?? "",
@@ -163,7 +177,7 @@ export default function EditionModal({
       selectedExhibitors: preseeded,
     });
     setError(null);
-  }, [show, initial, reset]);
+  }, [show, initial, form]);
 
   const exhibitorsQuery = useQuery({
     queryKey: editionModalExhibitorsQueryKey,
@@ -197,12 +211,12 @@ export default function EditionModal({
       [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
     );
     const { active: act, archived: arch } = toOptions(allExhibitors);
-    setValue("selectedExhibitors", [...act, ...arch].filter((o) => ids.has(o.value)));
+    form.setFieldValue("selectedExhibitors", [...act, ...arch].filter((o) => ids.has(o.value)));
     hydratedRef.current = true;
-  }, [allExhibitors, initial, setValue]);
+  }, [allExhibitors, initial, form]);
 
   const isEdit = !!initial;
-  const editionType = watch("editionType");
+  const editionType = useStore(form.store, (s) => s.values.editionType as EditionType);
   const isFestival = editionType === "festival";
   const programmableExhibitors = allExhibitors.filter(
     (exhibitor) => exhibitor.type === "producer" || exhibitor.type === "sponsor",
@@ -217,36 +231,6 @@ export default function EditionModal({
 
   const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
 
-  async function onSubmit(data: EditionFormFields) {
-    if (!isEdit && data.id.trim() === "") {
-      setError("ID cannot be empty or whitespace only");
-      return;
-    }
-
-    try {
-      const savedEdition = await saveEditionMutation.mutateAsync({
-        id: data.id.trim(),
-        year: data.year,
-        month: data.month.trim(),
-        editionType: data.editionType,
-        venueId: data.venueId,
-        active: data.active,
-        exhibitorIds:
-          data.editionType === "festival"
-            ? data.selectedExhibitors.map((option: ItemOption) => option.value)
-            : [],
-        externalPartner: data.externalPartner,
-        externalContactName: data.externalContactName,
-        externalContactEmail: data.externalContactEmail,
-      });
-      onSaved(savedEdition);
-    } catch (mutationError) {
-      setError(
-        mutationError instanceof Error ? mutationError.message : m.admin_content_error_save(),
-      );
-    }
-  }
-
   return (
     <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
@@ -254,7 +238,7 @@ export default function EditionModal({
           {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
         <Modal.Body className="bg-dark">
           {error && (
             <Alert variant="danger" className="py-1 mb-3 small">
@@ -265,53 +249,79 @@ export default function EditionModal({
           {!isEdit && (
             <Form.Group className="mb-3">
               <Form.Label className="text-secondary small mb-1">ID</Form.Label>
-              <Form.Control
-                className="bg-dark text-light border-secondary"
-                placeholder="e.g. 2026-march"
-                required
-                autoFocus
-                {...register("id", { required: true })}
-              />
+              <form.Field name="id">
+                {(field) => (
+                  <Form.Control
+                    className="bg-dark text-light border-secondary"
+                    placeholder="e.g. 2026-march"
+                    autoFocus
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
           )}
 
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group style={{ maxWidth: "100px" }}>
               <Form.Label className="text-secondary small mb-1">Year</Form.Label>
-              <Form.Control
-                type="number"
-                className="bg-dark text-light border-secondary"
-                required
-                {...register("year", { valueAsNumber: true, required: true })}
-              />
+              <form.Field name="year">
+                {(field) => (
+                  <Form.Control
+                    type="number"
+                    className="bg-dark text-light border-secondary"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(Number(e.target.value))}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
             <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }}>
               <Form.Label className="text-secondary small mb-1">Month</Form.Label>
-              <Form.Control
-                className="bg-dark text-light border-secondary"
-                placeholder="e.g. march"
-                required
-                isInvalid={!!errors.month}
-                {...register("month", { required: "Month is required" })}
-              />
-              {errors.month && (
-                <Form.Control.Feedback type="invalid">{errors.month.message}</Form.Control.Feedback>
-              )}
+              <form.Field
+                name="month"
+                validators={{ onChange: ({ value }) => !value?.trim() ? "Month is required" : undefined }}
+              >
+                {(field) => {
+                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        className="bg-dark text-light border-secondary"
+                        placeholder="e.g. march"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.state.meta.errors[0]}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
             </Form.Group>
             <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_edition_type_label()}
               </Form.Label>
-              <Controller
-                name="editionType"
-                control={control}
-                render={({ field }) => (
+              <form.Field name="editionType">
+                {(field) => (
                   <Form.Select
-                    {...field}
+                    value={field.state.value}
                     onChange={(e) => {
-                      field.onChange(e);
-                      if (e.target.value !== "festival") setValue("selectedExhibitors", []);
+                      field.handleChange(e.target.value as EditionType);
+                      if (e.target.value !== "festival") {
+                        form.setFieldValue("selectedExhibitors", [] as MultiValue<ItemOption>);
+                      }
                     }}
+                    onBlur={field.handleBlur}
                     className="bg-dark text-light border-secondary"
                   >
                     <option value="festival">{m.admin_edition_type_festival()}</option>
@@ -321,46 +331,58 @@ export default function EditionModal({
                     </option>
                   </Form.Select>
                 )}
-              />
+              </form.Field>
             </Form.Group>
-            <Controller
-              name="active"
-              control={control}
-              render={({ field: { value, onChange, ref } }) => (
+            <form.Field name="active">
+              {(field) => (
                 <Form.Check
                   type="checkbox"
                   id="modal-edition-active"
                   label={m.admin_content_edition_active()}
-                  checked={value}
-                  onChange={(e) => onChange(e.target.checked)}
-                  ref={ref}
+                  checked={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.checked)}
                   className="text-light align-self-end mb-1"
                 />
               )}
-            />
+            </form.Field>
           </div>
 
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_edition_venue_label()}
             </Form.Label>
-            <Form.Select
-              className="bg-dark text-light border-secondary"
-              required
-              isInvalid={!!errors.venueId}
-              {...register("venueId", { required: "Venue is required" })}
+            <form.Field
+              name="venueId"
+              validators={{ onChange: ({ value }) => !value ? "Venue is required" : undefined }}
             >
-              <option value="">{m.admin_edition_venue_placeholder()}</option>
-              {venues.map((venue) => (
-                <option key={venue.id} value={venue.id}>
-                  {venue.name}
-                  {venue.active ? "" : " (archived)"}
-                </option>
-              ))}
-            </Form.Select>
-            {errors.venueId && (
-              <Form.Control.Feedback type="invalid">{errors.venueId.message}</Form.Control.Feedback>
-            )}
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Select
+                      className="bg-dark text-light border-secondary"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    >
+                      <option value="">{m.admin_edition_venue_placeholder()}</option>
+                      {venues.map((venue) => (
+                        <option key={venue.id} value={venue.id}>
+                          {venue.name}
+                          {venue.active ? "" : " (archived)"}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
 
           <div className="border border-secondary rounded p-3 mb-3">
@@ -414,43 +436,70 @@ export default function EditionModal({
                   <Form.Label className="text-secondary small mb-1">
                     {m.admin_edition_partner_label()}
                   </Form.Label>
-                  <Form.Control
-                    className="bg-dark text-light border-secondary"
-                    placeholder="Partner organisation"
-                    {...register("externalPartner")}
-                  />
+                  <form.Field name="externalPartner">
+                    {(field) => (
+                      <Form.Control
+                        className="bg-dark text-light border-secondary"
+                        placeholder="Partner organisation"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </form.Field>
                 </div>
                 <div className="col-md-3">
                   <Form.Label className="text-secondary small mb-1">
                     {m.admin_edition_contact_name_label()}
                   </Form.Label>
-                  <Form.Control
-                    className="bg-dark text-light border-secondary"
-                    placeholder="Jane Doe"
-                    {...register("externalContactName")}
-                  />
+                  <form.Field name="externalContactName">
+                    {(field) => (
+                      <Form.Control
+                        className="bg-dark text-light border-secondary"
+                        placeholder="Jane Doe"
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </form.Field>
                 </div>
                 <div className="col-md-3">
                   <Form.Label className="text-secondary small mb-1">
                     {m.admin_edition_contact_email_label()}
                   </Form.Label>
-                  <Form.Control
-                    type="email"
-                    className="bg-dark text-light border-secondary"
-                    placeholder="jane@example.com"
-                    isInvalid={!!errors.externalContactEmail}
-                    {...register("externalContactEmail", {
-                      pattern: {
-                        value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/,
-                        message: "Invalid email address",
-                      },
-                    })}
-                  />
-                  {errors.externalContactEmail && (
-                    <Form.Control.Feedback type="invalid">
-                      {errors.externalContactEmail.message}
-                    </Form.Control.Feedback>
-                  )}
+                  <form.Field
+                    name="externalContactEmail"
+                    validators={{
+                      onChange: ({ value }) =>
+                        value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
+                          ? "Invalid email address"
+                          : undefined,
+                    }}
+                  >
+                    {(field) => {
+                      const showErr =
+                        field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                      return (
+                        <>
+                          <Form.Control
+                            type="email"
+                            className="bg-dark text-light border-secondary"
+                            placeholder="jane@example.com"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                            isInvalid={showErr}
+                          />
+                          {showErr && (
+                            <Form.Control.Feedback type="invalid">
+                              {field.state.meta.errors[0]}
+                            </Form.Control.Feedback>
+                          )}
+                        </>
+                      );
+                    }}
+                  </form.Field>
                 </div>
               </div>
             </div>
@@ -467,22 +516,20 @@ export default function EditionModal({
                   {m.admin_edition_loading_exhibitors()}
                 </div>
               ) : (
-                <Controller
-                  name="selectedExhibitors"
-                  control={control}
-                  render={({ field: { value, onChange } }) => (
+                <form.Field name="selectedExhibitors">
+                  {(field) => (
                     <Select<ItemOption, true>
                       isMulti
                       closeMenuOnSelect={false}
                       styles={darkSelectStyles}
                       options={exhibitorGroups}
-                      value={value}
-                      onChange={onChange}
+                      value={field.state.value}
+                      onChange={(options) => field.handleChange(options)}
                       classNamePrefix="rs"
                       placeholder={m.admin_edition_exhibitors()}
                     />
                   )}
-                />
+                </form.Field>
               )}
             </Form.Group>
           )}
