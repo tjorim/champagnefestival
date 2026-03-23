@@ -10,14 +10,17 @@ champagnefestival/
 └── backend/    # FastAPI REST API (Python, uv)
 ```
 
-## Frontend
+## Prerequisites
 
-All frontend commands run from the `frontend/` directory.
+- **Node.js** 24+ and **pnpm** — for the frontend
+- **Python** 3.11+ and **uv** — for the backend ([install uv](https://docs.astral.sh/uv/getting-started/installation/))
+
+## Frontend
 
 ```bash
 cd frontend
 pnpm install        # install dependencies
-pnpm dev            # start dev server → http://localhost:5173
+pnpm dev            # dev server → http://localhost:5173
 pnpm build          # production build → dist/
 pnpm lint           # oxlint
 pnpm typecheck      # TypeScript check
@@ -37,21 +40,40 @@ pnpm test           # run tests (vitest)
 
 ## Backend
 
-All backend commands run from the `backend/` directory.
-
 ```bash
 cd backend
-uv sync                                    # install dependencies
-uv run uvicorn app.main:app --reload       # start dev server → http://localhost:8000
-uv run ruff check .                        # lint
-uv run ruff format .                       # format
-uv run ty check .                          # type check
-uv run pytest                              # run tests
+cp .env.example .env          # configure — at minimum set ADMIN_TOKEN
+uv sync                       # install dependencies (creates .venv)
+uv run alembic upgrade head   # run database migrations
+uv run uvicorn app.main:app --reload  # dev server → http://localhost:8000
 ```
 
-See `backend/.env.example` for environment variable configuration.
+**Development tools:**
+
+```bash
+uv run ruff check .   # lint
+uv run ruff format .  # format
+uv run ty check .     # type check
+uv run pytest         # run tests
+```
+
+See `backend/.env.example` for all environment variable options.
 
 **Technologies:** FastAPI, SQLite (aiosqlite), Alembic, uv, Ruff, ty
+
+## Running the full stack
+
+Start both servers in separate terminals:
+
+```bash
+# Terminal 1 — backend
+cd backend && uv run uvicorn app.main:app --reload
+
+# Terminal 2 — frontend
+cd frontend && pnpm dev
+```
+
+The frontend dev server proxies `/api/*` to `http://localhost:8000`.
 
 ## Internationalization
 
