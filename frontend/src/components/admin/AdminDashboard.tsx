@@ -456,20 +456,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     peopleQuery.isFetching ||
     membersQuery.isFetching;
 
-  const allQueryErrors = [
-    registrationsQuery.error,
-    tablesQuery.error,
-    venuesQuery.error,
-    eventsQuery.error,
-    roomsQuery.error,
-    tableTypesQuery.error,
-    layoutsQuery.error,
-    exhibitorsQuery.error,
-    areasQuery.error,
-    peopleQuery.error,
-    membersQuery.error,
-  ];
-
   const layoutDayOptions = useMemo(() => {
     const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
       .filter(Boolean)
@@ -1698,7 +1684,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           active: item.active ?? true,
           contactPersonId: item.contactPersonId ?? null,
         };
-        if (!prev) return [entry];
+        if (!prev) return prev;
         const idx = prev.findIndex((e) => e.id === item.id);
         if (idx >= 0) {
           return prev.map((e) => (e.id === item.id ? entry : e));
@@ -1724,15 +1710,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   useEffect(() => {
-    const hasData = allQueryErrors.every((e) => e === null);
-    if (hasData) {
-      setError("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registrationsQuery.data, tablesQuery.data, peopleQuery.data]);
+    const errors = [
+      registrationsQuery.error,
+      tablesQuery.error,
+      venuesQuery.error,
+      eventsQuery.error,
+      roomsQuery.error,
+      tableTypesQuery.error,
+      layoutsQuery.error,
+      exhibitorsQuery.error,
+      areasQuery.error,
+      peopleQuery.error,
+      membersQuery.error,
+    ];
 
-  useEffect(() => {
-    const unauthorizedError = allQueryErrors.find(
+    const unauthorizedError = errors.find(
       (e) => e instanceof Error && e.message === "unauthorized",
     );
     if (unauthorizedError) {
@@ -1743,12 +1735,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       return;
     }
 
-    const firstError = allQueryErrors.find((e) => e !== null);
+    const firstError = errors.find((e) => e !== null);
     if (firstError) {
       console.error("Failed to load dashboard data", firstError);
       setError(m.admin_error_load_data());
+    } else {
+      // All queries succeeded or are still loading — clear any previous error.
+      setError("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     registrationsQuery.error,
     tablesQuery.error,
