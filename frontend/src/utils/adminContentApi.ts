@@ -1,5 +1,7 @@
 import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
+import { m } from "@/paraglide/messages";
+import { apiToEvent, type Event, type EventFormData } from "@/types/event";
 
 /**
  * Safe fetch wrapper that handles network errors and non-ok responses
@@ -198,4 +200,79 @@ export async function saveEdition(
   );
 
   return apiToEdition((await response.json()) as Record<string, unknown>);
+}
+
+export async function fetchEditionEvents(
+  editionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Event[]> {
+  const response = await safeFetch(
+    `/api/events?edition_id=${encodeURIComponent(editionId)}`,
+    { headers: authHeaders() },
+    m.admin_content_error_load(),
+  );
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToEvent) : [];
+}
+
+export async function saveEditionEvent(
+  payload: {
+    editionId: string;
+    editingEventId?: string;
+    formData: EventFormData;
+  },
+  authHeaders: () => Record<string, string>,
+): Promise<Event> {
+  const response = await safeFetch(
+    payload.editingEventId ? `/api/events/${payload.editingEventId}` : "/api/events",
+    {
+      method: payload.editingEventId ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        edition_id: payload.editionId,
+        title: payload.formData.title.trim(),
+        description: payload.formData.description.trim(),
+        date: payload.formData.date,
+        start_time: payload.formData.startTime,
+        end_time: payload.formData.endTime || null,
+        category: payload.formData.category.trim(),
+        registration_required: payload.formData.registrationRequired,
+        registrations_open_from:
+          payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
+            ? payload.formData.registrationsOpenFrom
+            : null,
+        max_capacity:
+          payload.formData.registrationRequired && payload.formData.maxCapacity
+            ? Number(payload.formData.maxCapacity)
+            : null,
+        active: payload.formData.active,
+      }),
+    },
+    m.admin_content_error_save(),
+  );
+
+  return apiToEvent((await response.json()) as Record<string, unknown>);
+}
+
+export async function deleteEditionEvent(
+  eventId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<void> {
+  await safeFetch(
+    `/api/events/${eventId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
+}
+
+export async function deleteEditionById(
+  editionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<string> {
+  await safeFetch(
+    `/api/editions/${editionId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
+  return editionId;
 }

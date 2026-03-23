@@ -6,53 +6,18 @@ import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import { fetchArrayOrThrow, fetchJsonOrThrow, fetchVoidOrThrow } from "@/utils/adminApi";
+import {
+  deleteEditionById,
+  deleteEditionEvent,
+  fetchEditionEvents,
+  saveEditionEvent,
+} from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EventModal from "./EventModal";
 import { parseEditionDate, type Edition } from "./editionTypes";
 import type { Venue } from "@/types/admin";
-import { apiToEvent, type Event, type EventFormData } from "@/types/event";
-
-async function fetchEditionEvents(editionId: string, authHeaders: () => Record<string, string>): Promise<Event[]> {
-  return fetchArrayOrThrow(
-    `/api/events?edition_id=${encodeURIComponent(editionId)}`,
-    { headers: authHeaders() },
-    m.admin_content_error_load(),
-    apiToEvent,
-  );
-}
-
-async function persistEvent(method: "POST" | "PUT", url: string, body: Record<string, unknown>, authHeaders: () => Record<string, string>): Promise<Event> {
-  return apiToEvent(
-    await fetchJsonOrThrow<Record<string, unknown>>(
-      url,
-      {
-        method,
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify(body),
-      },
-      m.admin_content_error_save(),
-    ),
-  );
-}
-
-async function deleteEvent(eventId: string, authHeaders: () => Record<string, string>): Promise<void> {
-  await fetchVoidOrThrow(
-    `/api/events/${eventId}`,
-    { method: "DELETE", headers: authHeaders() },
-    m.admin_content_error_save(),
-  );
-}
-
-async function deleteEdition(editionId: string, authHeaders: () => Record<string, string>): Promise<string> {
-  await fetchVoidOrThrow(
-    `/api/editions/${editionId}`,
-    { method: "DELETE", headers: authHeaders() },
-    m.admin_content_error_save(),
-  );
-  return editionId;
-}
+import type { Event, EventFormData } from "@/types/event";
 
 interface EditionCardProps {
   edition: Edition;
@@ -102,30 +67,16 @@ export default function EditionCard({ edition, venues, authHeaders, onDeleted, o
     retry: false,
   });
 
-  const deleteEditionMutation = useMutation({ mutationFn: () => deleteEdition(edition.id, authHeaders), retry: false });
+  const deleteEditionMutation = useMutation({ mutationFn: () => deleteEditionById(edition.id, authHeaders), retry: false });
   const saveEventMutation = useMutation({
     mutationFn: ({ formData }: { event: Event; formData: EventFormData }) =>
-      persistEvent(
-        editingEvent ? "PUT" : "POST",
-        editingEvent ? `/api/events/${editingEvent.id}` : "/api/events",
-        {
-          edition_id: edition.id,
-          title: formData.title.trim(),
-          description: formData.description.trim(),
-          date: formData.date,
-          start_time: formData.startTime,
-          end_time: formData.endTime || null,
-          category: formData.category.trim(),
-          registration_required: formData.registrationRequired,
-          registrations_open_from: formData.registrationRequired && formData.registrationsOpenFrom ? formData.registrationsOpenFrom : null,
-          max_capacity: formData.registrationRequired && formData.maxCapacity ? Number(formData.maxCapacity) : null,
-          active: formData.active,
-        },
+      saveEditionEvent(
+        { editionId: edition.id, editingEventId: editingEvent?.id, formData },
         authHeaders,
       ),
     retry: false,
   });
-  const deleteEventMutation = useMutation({ mutationFn: (eventId: string) => deleteEvent(eventId, authHeaders), retry: false });
+  const deleteEventMutation = useMutation({ mutationFn: (eventId: string) => deleteEditionEvent(eventId, authHeaders), retry: false });
 
   const events = eventsQuery.data ?? edition.events ?? [];
   const sortedEvents = useMemo(() => [...events].sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`)), [events]);
