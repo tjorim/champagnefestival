@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useState, useCallback, useEffect, useRef } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
@@ -65,8 +65,6 @@ export default function RegistrationModal({
     retry: false,
   });
 
-  const isSubmitting = submitRegistrationMutation.isPending;
-
   const form = useForm({
     defaultValues: {
       name: "",
@@ -90,6 +88,8 @@ export default function RegistrationModal({
       }
     },
   });
+
+  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
   const isFirstRender = useRef(true);
   useEffect(() => {

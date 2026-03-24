@@ -57,7 +57,14 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         onHide();
       } catch (err) {
         console.error("Member save error:", err);
-        setError(isEdit ? m.admin_members_error_update() : m.admin_members_error_create());
+        const backendMessage =
+          err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+            ? ((err as { message: string }).message).trim()
+            : "";
+        setError(
+          backendMessage ||
+            (isEdit ? m.admin_members_error_update() : m.admin_members_error_create()),
+        );
       }
     },
   });
