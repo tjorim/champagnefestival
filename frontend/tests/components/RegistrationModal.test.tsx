@@ -132,4 +132,88 @@ describe("RegistrationModal component", () => {
     renderModal({ event: { ...vipEvent, category: "general" } });
     expect(screen.queryByText("Champagne Bottle (Standard) - EUR65")).not.toBeInTheDocument();
   });
+
+  it("shows error message on submission failure (server error)", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: "Internal server error" }),
+    });
+
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Internal server error")).toBeInTheDocument();
+    });
+  });
+
+  it("shows generic error message on network error", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Network error. Please check your connection.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows error state when event is null", () => {
+    renderModal({ event: null });
+    expect(screen.getByText("An error occurred. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Name \*/i)).not.toBeInTheDocument();
+  });
+
+  it("increments pre-order quantity when + button is clicked", () => {
+    renderModal();
+
+    const increaseButton = screen.getByRole("button", {
+      name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+    });
+    fireEvent.click(increaseButton);
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("decrements pre-order quantity when - button is clicked", () => {
+    renderModal();
+
+    const increaseButton = screen.getByRole("button", {
+      name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+    });
+    const decreaseButton = screen.getByRole("button", {
+      name: /Decrease quantity of Champagne Bottle \(Standard\)/i,
+    });
+
+    fireEvent.click(increaseButton);
+    fireEvent.click(increaseButton);
+    fireEvent.click(decreaseButton);
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("does not decrement pre-order quantity below zero", () => {
+    renderModal();
+
+    const decreaseButton = screen.getByRole("button", {
+      name: /Decrease quantity of Champagne Bottle \(Standard\)/i,
+    });
+
+    expect(decreaseButton).toBeDisabled();
+  });
 });

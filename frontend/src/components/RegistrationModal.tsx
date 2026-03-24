@@ -142,7 +142,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
-        {submitSuccess ? (
+        {!event ? (
+          <Alert variant="danger" className="mb-0">
+            <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+            {m.registration_error()}
+          </Alert>
+        ) : submitSuccess ? (
           <Alert variant="success" className="mb-0">
             <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
             {m.registration_success()}
