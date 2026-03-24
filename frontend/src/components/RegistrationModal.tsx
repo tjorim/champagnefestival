@@ -8,6 +8,7 @@ import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/registration";
+import { EMAIL_REGEX } from "@/utils/validation";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import { RegistrationSubmitError, submitRegistration } from "@/utils/publicRegistrationApi";
 
@@ -32,7 +33,6 @@ interface RegistrationFields {
   formStartTime: string;
 }
 
-const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 function getProductName(nameKey: string): string {
   switch (nameKey) {

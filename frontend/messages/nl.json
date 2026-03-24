@@ -589,7 +589,7 @@
   "admin_event_title_required": "Titel is verplicht",
   "admin_event_date_required": "Datum is verplicht",
   "admin_event_start_time_required": "Starttijd is verplicht",
-  "admin_event_capacity_min": "Minimum 1 vereist",
+  "admin_event_capacity_min": "Moet 0 of meer zijn",
   "admin_edition_id_required": "ID is verplicht",
   "admin_edition_month_required": "Maand is verplicht",
   "admin_edition_venue_required": "Locatie is verplicht",

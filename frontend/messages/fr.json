@@ -589,7 +589,7 @@
   "admin_event_title_required": "Le titre est requis",
   "admin_event_date_required": "La date est requise",
   "admin_event_start_time_required": "L'heure de début est requise",
-  "admin_event_capacity_min": "Minimum 1 requis",
+  "admin_event_capacity_min": "Doit être 0 ou plus",
   "admin_edition_id_required": "L'identifiant est requis",
   "admin_edition_month_required": "Le mois est requis",
   "admin_edition_venue_required": "Le lieu est requis",

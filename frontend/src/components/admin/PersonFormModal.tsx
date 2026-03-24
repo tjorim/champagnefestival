@@ -9,6 +9,7 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import { EMAIL_REGEX } from "@/utils/validation";
 
 interface PersonFormModalProps {
   show: boolean;
@@ -220,7 +221,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   name="email"
                   validators={{
                     onChange: ({ value }) =>
-                      value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
+                      value && !EMAIL_REGEX.test(value)
                         ? m.registration_errors_email_invalid()
                         : undefined,
                   }}

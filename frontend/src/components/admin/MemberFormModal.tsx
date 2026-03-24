@@ -8,6 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import { EMAIL_REGEX } from "@/utils/validation";
 import type { Person } from "@/types/person";
 
 interface MemberFormModalProps {
@@ -150,7 +151,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   name="email"
                   validators={{
                     onChange: ({ value }) =>
-                      value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
+                      value && !EMAIL_REGEX.test(value)
                         ? m.registration_errors_email_invalid()
                         : undefined,
                   }}

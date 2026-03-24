@@ -7,6 +7,7 @@ import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
+import { EMAIL_REGEX } from "@/utils/validation";
 
 /**
  * Form data structure
@@ -186,7 +187,7 @@ const ContactForm = () => {
               validators={{
                 onChange: ({ value }) => {
                   if (!value?.trim()) return m.contact_errors_email_required();
-                  if (!/\S+@\S+\.\S+/.test(value)) return m.contact_errors_email_invalid();
+                  if (!EMAIL_REGEX.test(value)) return m.contact_errors_email_invalid();
                   return undefined;
                 },
               }}

@@ -8,6 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type GroupBase, type MultiValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
+import { EMAIL_REGEX } from "@/utils/validation";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
@@ -486,7 +487,7 @@ export default function EditionModal({
                     name="externalContactEmail"
                     validators={{
                       onChange: ({ value }) =>
-                        value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
+                        value && !EMAIL_REGEX.test(value)
                           ? m.registration_errors_email_invalid()
                           : undefined,
                     }}

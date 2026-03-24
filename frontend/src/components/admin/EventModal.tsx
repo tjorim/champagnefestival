@@ -232,7 +232,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 name="maxCapacity"
                 validators={{
                   onChange: ({ value }) =>
-                    value && Number(value) < 1 ? m.admin_event_capacity_min() : undefined,
+                    value && Number(value) < 0 ? m.admin_event_capacity_min() : undefined,
                 }}
               >
                 {(field) => {
@@ -241,7 +241,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     <>
                       <Form.Control
                         type="number"
-                        min={1}
+                        min={0}
                         size="sm"
                         className="bg-dark text-light border-secondary"
                         disabled={!registrationRequired}
