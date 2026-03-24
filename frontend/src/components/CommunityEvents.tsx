@@ -65,22 +65,20 @@ export default function CommunityEvents() {
   });
 
   const items = useMemo<CommunityEventCardData[]>(() => {
-    return data
-      .map((edition) => {
-        const event = (edition.events ?? []).map(apiToEvent)[0];
-        if (!event) return null;
+    return data.flatMap((edition): CommunityEventCardData[] => {
+      const event = (edition.events ?? []).map(apiToEvent)[0];
+      if (!event) return [];
 
-        return {
-          id: edition.id,
-          editionType: edition.edition_type,
-          event,
-          venueName: edition.venue?.name ?? "",
-          externalPartner: edition.external_partner ?? undefined,
-          externalContactName: edition.external_contact_name ?? undefined,
-          externalContactEmail: edition.external_contact_email ?? undefined,
-        };
-      })
-      .filter((entry): entry is CommunityEventCardData => entry !== null);
+      return [{
+        id: edition.id,
+        editionType: edition.edition_type,
+        event,
+        venueName: edition.venue?.name ?? "",
+        externalPartner: edition.external_partner ?? undefined,
+        externalContactName: edition.external_contact_name ?? undefined,
+        externalContactEmail: edition.external_contact_email ?? undefined,
+      }];
+    });
   }, [data]);
 
   return (
