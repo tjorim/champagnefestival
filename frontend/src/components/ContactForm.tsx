@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm } from "@tanstack/react-form";
 import { useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
 import Card from "react-bootstrap/Card";
@@ -64,6 +64,8 @@ const ContactForm = () => {
     retry: false,
   });
 
+  const isSubmitting = submitContactMutation.isPending;
+
   const form = useForm({
     defaultValues: {
       name: "",
@@ -107,8 +109,6 @@ const ContactForm = () => {
       }
     },
   });
-
-  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
   return (
     <Card className="mx-auto border-0 shadow">
