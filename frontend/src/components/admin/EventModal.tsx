@@ -92,7 +92,13 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           {isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+      >
         <Modal.Body className="bg-dark">
           <div className="d-flex gap-2 flex-wrap mb-3">
             <Form.Group controlId="event-title" style={{ minWidth: "240px", flex: "2 1 240px" }}>
@@ -101,7 +107,10 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <form.Field
                 name="title"
-                validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_event_title_required() : undefined }}
+                validators={{
+                  onChange: ({ value }) =>
+                    !value?.trim() ? m.admin_event_title_required() : undefined,
+                }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -150,7 +159,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Form.Label className="text-secondary small mb-1">{m.admin_event_date()}</Form.Label>
               <form.Field
                 name="date"
-                validators={{ onChange: ({ value }) => !value ? m.admin_event_date_required() : undefined }}
+                validators={{
+                  onChange: ({ value }) => (!value ? m.admin_event_date_required() : undefined),
+                }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -182,7 +193,10 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <form.Field
                 name="startTime"
-                validators={{ onChange: ({ value }) => !value ? m.admin_event_start_time_required() : undefined }}
+                validators={{
+                  onChange: ({ value }) =>
+                    !value ? m.admin_event_start_time_required() : undefined,
+                }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;

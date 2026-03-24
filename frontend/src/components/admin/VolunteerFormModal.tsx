@@ -131,10 +131,7 @@ export default function VolunteerFormModal({
   }, [show, volunteer, form]);
 
   const nameValue = useStore(form.store, (s) => s.values.name);
-  const nationalRegisterNumberValue = useStore(
-    form.store,
-    (s) => s.values.nationalRegisterNumber,
-  );
+  const nationalRegisterNumberValue = useStore(form.store, (s) => s.values.nationalRegisterNumber);
   const eidDocumentNumberValue = useStore(form.store, (s) => s.values.eidDocumentNumber);
   const helpPeriods = useStore(form.store, (s) => s.values.helpPeriods);
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
@@ -169,9 +166,7 @@ export default function VolunteerFormModal({
           <form.Field name="name">
             {(field) => (
               <Form.Group className="mb-3" controlId="volunteer-name">
-                <Form.Label className="text-secondary small">
-                  {m.registration_name()} *
-                </Form.Label>
+                <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
                 <Form.Control
                   type="text"
                   value={field.state.value}

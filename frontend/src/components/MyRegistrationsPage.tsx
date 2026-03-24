@@ -18,7 +18,7 @@ import {
   isRegistrationLookupError,
   requestRegistrationLookup,
 } from "@/utils/publicRegistrationApi";
-import { EMAIL_REGEX } from "@/utils/validation";
+import { EMAIL_REGEX } from "@/config/constants";
 
 export default function MyRegistrationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();

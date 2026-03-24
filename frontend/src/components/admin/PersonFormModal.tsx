@@ -9,7 +9,7 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
-import { EMAIL_REGEX } from "@/utils/validation";
+import { EMAIL_REGEX } from "@/config/constants";
 
 interface PersonFormModalProps {
   show: boolean;
@@ -170,7 +170,13 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
         </Modal.Title>
       </Modal.Header>
 
-      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+      >
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -187,7 +193,10 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <form.Field
               name="name"
-              validators={{ onChange: ({ value }) => !value?.trim() ? m.registration_errors_name_required() : undefined }}
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.registration_errors_name_required() : undefined,
+              }}
             >
               {(field) => {
                 const showErr = !!field.state.meta.errors.length && field.state.meta.isTouched;

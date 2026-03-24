@@ -8,7 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import { EMAIL_REGEX } from "@/utils/validation";
+import { EMAIL_REGEX } from "@/config/constants";
 import type { Person } from "@/types/person";
 
 interface MemberFormModalProps {
@@ -100,7 +100,13 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         </Modal.Title>
       </Modal.Header>
 
-      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+      >
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -117,7 +123,10 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <form.Field
               name="name"
-              validators={{ onChange: ({ value }) => !value?.trim() ? m.registration_errors_name_required() : undefined }}
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.registration_errors_name_required() : undefined,
+              }}
             >
               {(field) => {
                 const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -271,11 +280,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           <Button variant="outline-secondary" onClick={onHide} disabled={isSubmitting}>
             {m.admin_action_cancel()}
           </Button>
-          <Button
-            variant="warning"
-            type="submit"
-            disabled={isSubmitting || !nameValue?.trim()}
-          >
+          <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
             {isSubmitting ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />

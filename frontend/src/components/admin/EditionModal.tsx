@@ -8,7 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type GroupBase, type MultiValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
-import { EMAIL_REGEX } from "@/utils/validation";
+import { EMAIL_REGEX } from "@/config/constants";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
@@ -212,7 +212,10 @@ export default function EditionModal({
       [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
     );
     const { active: act, archived: arch } = toOptions(allExhibitors);
-    form.setFieldValue("selectedExhibitors", [...act, ...arch].filter((o) => ids.has(o.value)));
+    form.setFieldValue(
+      "selectedExhibitors",
+      [...act, ...arch].filter((o) => ids.has(o.value)),
+    );
     hydratedRef.current = true;
   }, [allExhibitors, initial, form]);
 
@@ -239,7 +242,13 @@ export default function EditionModal({
           {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+      >
         <Modal.Body className="bg-dark">
           {error && (
             <Alert variant="danger" className="py-1 mb-3 small">
@@ -252,7 +261,10 @@ export default function EditionModal({
               <Form.Label className="text-secondary small mb-1">ID</Form.Label>
               <form.Field
                 name="id"
-                validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_edition_id_required() : undefined }}
+                validators={{
+                  onChange: ({ value }) =>
+                    !value?.trim() ? m.admin_edition_id_required() : undefined,
+                }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -298,7 +310,10 @@ export default function EditionModal({
               <Form.Label className="text-secondary small mb-1">Month</Form.Label>
               <form.Field
                 name="month"
-                validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_edition_month_required() : undefined }}
+                validators={{
+                  onChange: ({ value }) =>
+                    !value?.trim() ? m.admin_edition_month_required() : undefined,
+                }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -368,7 +383,9 @@ export default function EditionModal({
             </Form.Label>
             <form.Field
               name="venueId"
-              validators={{ onChange: ({ value }) => !value ? m.admin_edition_venue_required() : undefined }}
+              validators={{
+                onChange: ({ value }) => (!value ? m.admin_edition_venue_required() : undefined),
+              }}
             >
               {(field) => {
                 const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;

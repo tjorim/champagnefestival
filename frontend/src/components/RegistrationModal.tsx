@@ -8,7 +8,7 @@ import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/registration";
-import { EMAIL_REGEX } from "@/utils/validation";
+import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import { RegistrationSubmitError, submitRegistration } from "@/utils/publicRegistrationApi";
 
@@ -32,7 +32,6 @@ interface RegistrationFields {
   honeypot: string;
   formStartTime: string;
 }
-
 
 function getProductName(nameKey: string): string {
   switch (nameKey) {

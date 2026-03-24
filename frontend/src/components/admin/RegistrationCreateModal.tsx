@@ -175,7 +175,12 @@ export default function RegistrationCreateModal({
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">{m.admin_create_registration()}</Modal.Title>
       </Modal.Header>
-      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }}>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -313,11 +318,7 @@ export default function RegistrationCreateModal({
             type="submit"
             variant="warning"
             size="sm"
-            disabled={
-              isSubmitting ||
-              !watchedPersonOption ||
-              !hasValidEventSelection
-            }
+            disabled={isSubmitting || !watchedPersonOption || !hasValidEventSelection}
           >
             {isSubmitting ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />

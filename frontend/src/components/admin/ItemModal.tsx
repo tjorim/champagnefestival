@@ -129,7 +129,13 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+      >
         <Modal.Body className="bg-dark">
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
@@ -137,7 +143,10 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </Form.Label>
             <form.Field
               name="name"
-              validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_item_name_required() : undefined }}
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.admin_item_name_required() : undefined,
+              }}
             >
               {(field) => {
                 const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -167,7 +176,10 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </Form.Label>
             <form.Field
               name="image"
-              validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_item_image_required() : undefined }}
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.admin_item_image_required() : undefined,
+              }}
             >
               {(field) => {
                 const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -196,9 +208,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               name="website"
               validators={{
                 onChange: ({ value }) =>
-                  value && !/^https?:\/\/.+/.test(value)
-                    ? m.admin_item_url_invalid()
-                    : undefined,
+                  value && !/^https?:\/\/.+/.test(value) ? m.admin_item_url_invalid() : undefined,
               }}
             >
               {(field) => {
