@@ -7,6 +7,10 @@ vi.mock("@/paraglide/messages", () => ({
     festival_name: () => "Champagne Festival",
     language_select: () => "Select language",
     header_logo_alt: () => "Champagne Festival logo",
+    nav_schedule: () => "Schedule",
+    nav_community_events: () => "Community events",
+    nav_faq: () => "FAQ",
+    nav_contact: () => "Contact",
   },
 }));
 
