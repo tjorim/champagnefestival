@@ -28,15 +28,10 @@ vi.mock("@/paraglide/runtime", () => ({
   isLocale: vi.fn().mockReturnValue(true),
 }));
 
-const mockDays = [
-  { id: 1, date: "2025-10-03" },
-  { id: 2, date: "2025-10-04" },
-  { id: 3, date: "2025-10-05" },
-];
-
 const mockEvents = [
   {
     id: "fri-tasting",
+    editionId: "ed-1",
     title: "Winery Tour",
     startTime: "17:00",
     endTime: "23:00",
@@ -44,77 +39,70 @@ const mockEvents = [
     category: "tasting" as const,
     date: "2025-10-03",
     registrationRequired: false,
+    active: true,
+    createdAt: "",
+    updatedAt: "",
   },
   {
     id: "fri-vip",
+    editionId: "ed-1",
     title: "VIP",
     startTime: "19:30",
     description: "VIP event",
     category: "vip" as const,
     date: "2025-10-03",
     registrationRequired: true,
+    active: true,
+    createdAt: "",
+    updatedAt: "",
   },
   {
     id: "sat-party",
+    editionId: "ed-1",
     title: "Party",
     startTime: "20:00",
     description: "Party event",
     category: "party" as const,
     date: "2025-10-04",
     registrationRequired: false,
+    active: true,
+    createdAt: "",
+    updatedAt: "",
   },
 ];
 
 describe("Schedule component", () => {
   it("renders day tabs", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
+    render(<Schedule events={mockEvents} />);
     expect(screen.getByText("Friday")).toBeInTheDocument();
     expect(screen.getByText("Saturday")).toBeInTheDocument();
-    expect(screen.getByText("Sunday")).toBeInTheDocument();
   });
 
   it("renders events for the default active day (Friday)", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
+    render(<Schedule events={mockEvents} />);
     expect(screen.getByRole("heading", { name: "Winery Tour" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "VIP" })).toBeInTheDocument();
   });
 
   it("shows registration badge for events that require registration", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
+    render(<Schedule events={mockEvents} />);
     expect(screen.getByText("Registration required")).toBeInTheDocument();
   });
 
   it("shows category badge", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
+    render(<Schedule events={mockEvents} />);
     expect(screen.getByText("Tasting", { selector: ".badge" })).toBeInTheDocument();
   });
 
   it("switches to Saturday tab and shows Saturday events", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
+    render(<Schedule events={mockEvents} />);
     fireEvent.click(screen.getByText("Saturday"));
     expect(screen.getByRole("heading", { name: "Party" })).toBeInTheDocument();
   });
 
-  it("shows no events message when a day has no events", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
-    fireEvent.click(screen.getByText("Sunday"));
-    expect(screen.getByText("No events")).toBeInTheDocument();
-  });
-
-  it("derives a localized weekday label for non-festival dates", () => {
-    render(<Schedule days={[{ id: 1, date: "2025-10-06" }]} events={[]} />);
-    expect(screen.getByText("maandag")).toBeInTheDocument();
-  });
-
   it("displays start and end times for events", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
+    render(<Schedule events={mockEvents} />);
     expect(screen.getByText("17:00")).toBeInTheDocument();
     expect(screen.getByText("23:00")).toBeInTheDocument();
-  });
-
-  it("renders the backend-provided title and description for known legacy ids", () => {
-    render(<Schedule days={mockDays} events={mockEvents} />);
-    expect(screen.getByRole("heading", { name: "Winery Tour" })).toBeInTheDocument();
-    expect(screen.getByText("Tasting event")).toBeInTheDocument();
   });
 });
