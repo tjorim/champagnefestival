@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useForm, useStore } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
-import { useForm, Controller } from "react-hook-form";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
@@ -75,12 +75,26 @@ export default function RegistrationCreateModal({
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
-  const { register, handleSubmit, reset, control, watch } = useForm<RegistrationCreateForm>({
+  const form = useForm({
     defaultValues: {
       eventId: "",
       guestCount: 1,
       notes: "",
       personOption: null,
+    } as RegistrationCreateForm,
+    onSubmit: async ({ value }) => {
+      const isValidEvent = events.some((event) => event.id === value.eventId);
+      if (!value.personOption || !isValidEvent) return;
+      try {
+        await createRegistrationMutation.mutateAsync({
+          personId: value.personOption.value,
+          eventId: value.eventId,
+          guestCount: value.guestCount,
+          notes: value.notes.trim(),
+        });
+      } catch {
+        // Error is surfaced via createRegistrationMutation.isError
+      }
     },
   });
 
@@ -105,11 +119,11 @@ export default function RegistrationCreateModal({
       return;
     }
 
-    reset({ eventId: "", guestCount: 1, notes: "", personOption: null });
+    form.reset({ eventId: "", guestCount: 1, notes: "", personOption: null });
     setPersonQuery("");
     setDebouncedPersonQuery("");
     resetCreateRegistrationMutation();
-  }, [reset, resetCreateRegistrationMutation, show]);
+  }, [form, resetCreateRegistrationMutation, show]);
 
   useEffect(() => {
     if (!show) {
@@ -151,26 +165,17 @@ export default function RegistrationCreateModal({
   const loadingEvents = eventsQuery.isPending;
   const loadingPersons = personOptionsQuery.isFetching;
 
-  const watchedEventId = watch("eventId");
-  const watchedPersonOption = watch("personOption");
+  const watchedEventId = useStore(form.store, (state) => state.values.eventId);
+  const watchedPersonOption = useStore(form.store, (state) => state.values.personOption);
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
   const hasValidEventSelection = events.some((event) => event.id === watchedEventId);
-
-  function onSubmit(data: RegistrationCreateForm) {
-    if (!data.personOption || !hasValidEventSelection) return;
-    createRegistrationMutation.mutate({
-      personId: data.personOption.value,
-      eventId: data.eventId,
-      guestCount: data.guestCount,
-      notes: data.notes.trim(),
-    });
-  }
 
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">{m.admin_create_registration()}</Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit(onSubmit)}>
+      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }}>
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -204,24 +209,30 @@ export default function RegistrationCreateModal({
                 </Button>
               </div>
             ) : events.length > 0 ? (
-              <Form.Select
-                className="bg-dark text-light border-secondary"
-                {...register("eventId")}
-              >
-                <option value="">{m.admin_select_event_placeholder()}</option>
-                {sortedEvents.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {[
-                      ev.title,
-                      ev.edition?.editionType && ev.edition.editionType !== "festival"
-                        ? m.admin_filter_edition_standalone()
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </option>
-                ))}
-              </Form.Select>
+              <form.Field name="eventId">
+                {(field) => (
+                  <Form.Select
+                    className="bg-dark text-light border-secondary"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  >
+                    <option value="">{m.admin_select_event_placeholder()}</option>
+                    {sortedEvents.map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {[
+                          ev.title,
+                          ev.edition?.editionType && ev.edition.editionType !== "festival"
+                            ? m.admin_filter_edition_standalone()
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </option>
+                    ))}
+                  </Form.Select>
+                )}
+              </form.Field>
             ) : (
               <Form.Select
                 value=""
@@ -236,15 +247,13 @@ export default function RegistrationCreateModal({
 
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_person_label()} *</Form.Label>
-            <Controller
-              name="personOption"
-              control={control}
-              render={({ field }) => (
+            <form.Field name="personOption">
+              {(field) => (
                 <Select<PersonOption, false>
                   isClearable
                   options={personOptions}
-                  value={field.value}
-                  onChange={field.onChange}
+                  value={field.state.value}
+                  onChange={(option) => field.handleChange(option)}
                   onInputChange={(value) => setPersonQuery(value)}
                   inputValue={personQuery}
                   isLoading={loadingPersons}
@@ -260,29 +269,41 @@ export default function RegistrationCreateModal({
                   )}
                 />
               )}
-            />
+            </form.Field>
           </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label className="text-secondary small">{m.admin_guests_count()}</Form.Label>
-            <Form.Control
-              type="number"
-              min={1}
-              max={20}
-              className="bg-dark text-light border-secondary"
-              {...register("guestCount", { valueAsNumber: true })}
-            />
-          </Form.Group>
+          <form.Field name="guestCount">
+            {(field) => (
+              <Form.Group className="mb-3">
+                <Form.Label className="text-secondary small">{m.admin_guests_count()}</Form.Label>
+                <Form.Control
+                  type="number"
+                  min={1}
+                  max={20}
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(Number(e.target.value))}
+                  onBlur={field.handleBlur}
+                />
+              </Form.Group>
+            )}
+          </form.Field>
 
-          <Form.Group>
-            <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={2}
-              className="bg-dark text-light border-secondary"
-              {...register("notes")}
-            />
-          </Form.Group>
+          <form.Field name="notes">
+            {(field) => (
+              <Form.Group>
+                <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              </Form.Group>
+            )}
+          </form.Field>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="outline-secondary" size="sm" onClick={onHide}>
@@ -293,12 +314,12 @@ export default function RegistrationCreateModal({
             variant="warning"
             size="sm"
             disabled={
-              createRegistrationMutation.isPending ||
+              isSubmitting ||
               !watchedPersonOption ||
               !hasValidEventSelection
             }
           >
-            {createRegistrationMutation.isPending ? (
+            {isSubmitting ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />

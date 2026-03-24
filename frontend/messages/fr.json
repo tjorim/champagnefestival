@@ -585,5 +585,15 @@
   "admin_error_auto_auth_failed": "Échec de l'authentification. Veuillez vous connecter manuellement.",
   "admin_error_add_area": "Impossible d'ajouter la zone.",
   "admin_error_delete_area": "Impossible de supprimer la zone.",
-  "admin_content_no_editions": "Aucune édition pour l'instant."
+  "admin_content_no_editions": "Aucune édition pour l'instant.",
+  "admin_event_title_required": "Le titre est requis",
+  "admin_event_date_required": "La date est requise",
+  "admin_event_start_time_required": "L'heure de début est requise",
+  "admin_event_capacity_min": "Minimum 1 requis",
+  "admin_edition_id_required": "L'identifiant est requis",
+  "admin_edition_month_required": "Le mois est requis",
+  "admin_edition_venue_required": "Le lieu est requis",
+  "admin_item_name_required": "Le nom est requis",
+  "admin_item_image_required": "L'URL de l'image est requise",
+  "admin_item_url_invalid": "L'URL doit commencer par http(s)://"
 }

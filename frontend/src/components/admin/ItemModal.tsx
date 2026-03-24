@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -47,32 +47,43 @@ interface ItemModalProps {
   onHide: () => void;
 }
 
-interface ItemFormFields {
-  name: string;
-  image: string;
-  website: string;
-  type: string;
-  contactOption: SingleValue<PersonOption>;
-}
-
 export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ItemFormFields>({
+  const form = useForm({
     defaultValues: {
       name: "",
       image: "",
       website: "",
       type: "vendor",
-      contactOption: null,
+      contactOption: null as SingleValue<PersonOption>,
+    },
+    onSubmit: ({ value }) => {
+      onSave({
+        id: initial?.id ?? Date.now(),
+        name: value.name.trim(),
+        image: value.image.trim(),
+        website: value.website.trim(),
+        active: initial?.active ?? true,
+        type: value.type,
+        contactPersonId: value.contactOption?.value ?? null,
+        contactPerson: value.contactOption
+          ? {
+              id: value.contactOption.value,
+              name: value.contactOption.label,
+              email: value.contactOption.email,
+              phone: value.contactOption.phone,
+            }
+          : null,
+      });
     },
   });
 
   useEffect(() => {
     if (!show) return;
     const cp = initial?.contactPerson;
-    reset({
+    form.reset({
       name: initial?.name ?? "",
       image: initial?.image ?? "",
       website: initial?.website ?? "",
@@ -90,7 +101,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
     });
     setPersonQuery("");
     setDebouncedPersonQuery("");
-  }, [show, initial, reset]);
+  }, [show, initial, form]);
 
   useEffect(() => {
     if (!show) return;
@@ -111,26 +122,6 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const personOptions = personOptionsQuery.data ?? [];
   const loadingPersons = personOptionsQuery.isFetching;
 
-  function onSubmit(data: ItemFormFields) {
-    onSave({
-      id: initial?.id ?? Date.now(),
-      name: data.name.trim(),
-      image: data.image.trim(),
-      website: data.website.trim(),
-      active: initial?.active ?? true,
-      type: data.type,
-      contactPersonId: data.contactOption?.value ?? null,
-      contactPerson: data.contactOption
-        ? {
-            id: data.contactOption.value,
-            name: data.contactOption.label,
-            email: data.contactOption.email,
-            phone: data.contactOption.phone,
-          }
-        : null,
-    });
-  }
-
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
@@ -138,79 +129,130 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }} noValidate>
         <Modal.Body className="bg-dark">
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
               {m.admin_content_name_placeholder()}
             </Form.Label>
-            <Form.Control
-              className="bg-dark text-light border-secondary"
-              required
-              autoFocus
-              isInvalid={!!errors.name}
-              {...register("name", { required: "Name is required" })}
-            />
-            {errors.name && (
-              <Form.Control.Feedback type="invalid">{errors.name.message}</Form.Control.Feedback>
-            )}
+            <form.Field
+              name="name"
+              validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_item_name_required() : undefined }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      className="bg-dark text-light border-secondary"
+                      autoFocus
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
               {m.admin_content_image_url_placeholder()}
             </Form.Label>
-            <Form.Control
-              className="bg-dark text-light border-secondary"
-              required
-              isInvalid={!!errors.image}
-              {...register("image", { required: "Image URL is required" })}
-            />
-            {errors.image && (
-              <Form.Control.Feedback type="invalid">{errors.image.message}</Form.Control.Feedback>
-            )}
+            <form.Field
+              name="image"
+              validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_item_image_required() : undefined }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      className="bg-dark text-light border-secondary"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
-            <Form.Control
-              type="url"
-              className="bg-dark text-light border-secondary"
-              placeholder="https://…"
-              isInvalid={!!errors.website}
-              {...register("website", {
-                pattern: {
-                  value: /^https?:\/\/.+/,
-                  message: "Must be a valid URL starting with http(s)://",
-                },
-              })}
-            />
-            {errors.website && (
-              <Form.Control.Feedback type="invalid">{errors.website.message}</Form.Control.Feedback>
-            )}
+            <form.Field
+              name="website"
+              validators={{
+                onChange: ({ value }) =>
+                  value && !/^https?:\/\/.+/.test(value)
+                    ? m.admin_item_url_invalid()
+                    : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      type="url"
+                      className="bg-dark text-light border-secondary"
+                      placeholder="https://…"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
-            <Form.Select
-              className="bg-dark text-light border-secondary"
-              {...register("type")}
-            >
-              <option value="vendor">{m.admin_item_vendor()}</option>
-              <option value="producer">{m.admin_item_producer()}</option>
-              <option value="sponsor">{m.admin_item_sponsor()}</option>
-            </Form.Select>
+            <form.Field name="type">
+              {(field) => (
+                <Form.Select
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                >
+                  <option value="vendor">{m.admin_item_vendor()}</option>
+                  <option value="producer">{m.admin_item_producer()}</option>
+                  <option value="sponsor">{m.admin_item_sponsor()}</option>
+                </Form.Select>
+              )}
+            </form.Field>
           </Form.Group>
           <Form.Group>
             <Form.Label className="text-secondary small">
               {m.admin_item_contact_person()}
             </Form.Label>
-            <Controller
-              name="contactOption"
-              control={control}
-              render={({ field: { value, onChange } }) => (
+            <form.Field name="contactOption">
+              {(field) => (
                 <Select<PersonOption, false>
                   isClearable
                   options={personOptions}
-                  value={value}
-                  onChange={onChange}
+                  value={field.state.value}
+                  onChange={(option) => field.handleChange(option)}
+                  onBlur={field.handleBlur}
                   onInputChange={(v) => setPersonQuery(v)}
                   inputValue={personQuery}
                   isLoading={loadingPersons}
@@ -226,7 +268,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   )}
                 />
               )}
-            />
+            </form.Field>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">

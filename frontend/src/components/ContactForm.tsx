@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import React, { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm } from "@tanstack/react-form";
+import { useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
@@ -53,26 +53,10 @@ async function submitContactForm(form: FormData): Promise<void> {
 /**
  * Contact form component with validation using react-bootstrap components
  */
-const ContactForm: React.FC = () => {
+const ContactForm = () => {
   const formStartTime = useRef(new Date().toISOString());
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    clearErrors,
-    formState: { errors },
-  } = useForm<FormData>({
-    defaultValues: {
-      name: "",
-      email: "",
-      message: "",
-      honeypot: "",
-      formStartTime: formStartTime.current,
-    },
-  });
 
   const submitContactMutation = useMutation({
     mutationFn: submitContactForm,
@@ -81,40 +65,49 @@ const ContactForm: React.FC = () => {
 
   const isSubmitting = submitContactMutation.isPending;
 
-  const onSubmit = async (data: FormData) => {
-    setGeneralError(null);
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      message: "",
+      honeypot: "",
+      formStartTime: formStartTime.current,
+    } as FormData,
+    onSubmit: async ({ value }) => {
+      setGeneralError(null);
 
-    // Anti-spam check: if honeypot is filled, silently "succeed" without sending
-    if (data.honeypot) {
-      console.warn("Honeypot triggered - likely bot submission");
-      // Fake success to confuse bots
-      setIsSubmitted(true);
-      return;
-    }
-
-    try {
-      await submitContactMutation.mutateAsync(data);
-      setIsSubmitted(true);
-      reset({
-        name: "",
-        email: "",
-        message: "",
-        honeypot: "",
-        formStartTime: formStartTime.current,
-      });
-    } catch (error) {
-      console.warn("Form submission error:", error);
-      if (error instanceof TypeError && error.message.includes("fetch")) {
-        // Network connectivity issues
-        setGeneralError(m.contact_network_error());
-      } else if (error instanceof ContactSubmissionError) {
-        setGeneralError(error.message);
-      } else {
-        // General server or validation errors
-        setGeneralError(m.contact_submission_error());
+      // Anti-spam check: if honeypot is filled, silently "succeed" without sending
+      if (value.honeypot) {
+        console.warn("Honeypot triggered - likely bot submission");
+        // Fake success to confuse bots
+        setIsSubmitted(true);
+        return;
       }
-    }
-  };
+
+      try {
+        await submitContactMutation.mutateAsync(value);
+        setIsSubmitted(true);
+        form.reset({
+          name: "",
+          email: "",
+          message: "",
+          honeypot: "",
+          formStartTime: formStartTime.current,
+        });
+      } catch (error) {
+        console.warn("Form submission error:", error);
+        if (error instanceof TypeError && error.message.includes("fetch")) {
+          // Network connectivity issues
+          setGeneralError(m.contact_network_error());
+        } else if (error instanceof ContactSubmissionError) {
+          setGeneralError(error.message);
+        } else {
+          // General server or validation errors
+          setGeneralError(m.contact_submission_error());
+        }
+      }
+    },
+  });
 
   return (
     <Card className="mx-auto border-0 shadow">
@@ -123,11 +116,9 @@ const ContactForm: React.FC = () => {
           <Alert variant="success">{m.contact_success_message()}</Alert>
         ) : (
           <Form
-            onSubmit={handleSubmit(onSubmit)}
-            onChange={(e: React.ChangeEvent<HTMLFormElement>) => {
-              const name = (e.target as Element).getAttribute("name") as keyof FormData | null;
-              if (name) clearErrors(name);
-              if (generalError) setGeneralError(null);
+            onSubmit={(e) => {
+              e.preventDefault();
+              void form.handleSubmit();
             }}
             className="my-3"
             name="contact-form"
@@ -142,69 +133,125 @@ const ContactForm: React.FC = () => {
             )}
 
             {/* Hidden honeypot field to catch bots - placed early to trap bots */}
-            <div className="d-none">
-              <Form.Control
-                type="text"
-                autoComplete="off"
-                tabIndex={-1}
-                aria-hidden="true"
-                {...register("honeypot")}
-              />
-            </div>
-            <Form.Control type="hidden" {...register("formStartTime")} />
+            <form.Field name="honeypot">
+              {(field) => (
+                <div className="d-none">
+                  <Form.Control
+                    type="text"
+                    autoComplete="off"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                </div>
+              )}
+            </form.Field>
 
-            <Form.Group className="mb-3 text-start">
-              <Form.Label htmlFor="name">{m.contact_name()}</Form.Label>
-              <Form.Control
-                id="name"
-                placeholder={m.contact_placeholder_name()}
-                disabled={isSubmitting}
-                isInvalid={!!errors.name}
-                autoComplete="name"
-                required
-                {...register("name", { required: m.contact_errors_name_required() })}
-              />
-              <Form.Control.Feedback type="invalid">{errors.name?.message}</Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="name"
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.contact_errors_name_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3 text-start">
+                    <Form.Label htmlFor="name">{m.contact_name()}</Form.Label>
+                    <Form.Control
+                      id="name"
+                      placeholder={m.contact_placeholder_name()}
+                      disabled={isSubmitting}
+                      isInvalid={showErr}
+                      autoComplete="name"
+                      required
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
-            <Form.Group className="mb-3 text-start">
-              <Form.Label htmlFor="email">{m.contact_email()}</Form.Label>
-              <Form.Control
-                id="email"
-                type="email"
-                placeholder={m.contact_placeholder_email()}
-                disabled={isSubmitting}
-                isInvalid={!!errors.email}
-                autoComplete="email"
-                required
-                {...register("email", {
-                  required: m.contact_errors_email_required(),
-                  pattern: {
-                    value: /\S+@\S+\.\S+/,
-                    message: m.contact_errors_email_invalid(),
-                  },
-                })}
-              />
-              <Form.Control.Feedback type="invalid">{errors.email?.message}</Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="email"
+              validators={{
+                onChange: ({ value }) => {
+                  if (!value?.trim()) return m.contact_errors_email_required();
+                  if (!/\S+@\S+\.\S+/.test(value)) return m.contact_errors_email_invalid();
+                  return undefined;
+                },
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3 text-start">
+                    <Form.Label htmlFor="email">{m.contact_email()}</Form.Label>
+                    <Form.Control
+                      id="email"
+                      type="email"
+                      placeholder={m.contact_placeholder_email()}
+                      disabled={isSubmitting}
+                      isInvalid={showErr}
+                      autoComplete="email"
+                      required
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
-            <Form.Group className="mb-3 text-start">
-              <Form.Label htmlFor="message">{m.contact_message()}</Form.Label>
-              <Form.Control
-                as="textarea"
-                id="message"
-                placeholder={m.contact_placeholder_message()}
-                style={{ minHeight: "120px" }}
-                disabled={isSubmitting}
-                isInvalid={!!errors.message}
-                autoComplete="off"
-                required
-                {...register("message", { required: m.contact_errors_message_required() })}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.message?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
+            <form.Field
+              name="message"
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.contact_errors_message_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <Form.Group className="mb-3 text-start">
+                    <Form.Label htmlFor="message">{m.contact_message()}</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      id="message"
+                      placeholder={m.contact_placeholder_message()}
+                      style={{ minHeight: "120px" }}
+                      disabled={isSubmitting}
+                      isInvalid={showErr}
+                      autoComplete="off"
+                      required
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </Form.Group>
+                );
+              }}
+            </form.Field>
 
             <Button
               type="submit"
