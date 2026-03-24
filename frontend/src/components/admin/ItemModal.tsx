@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -47,37 +48,60 @@ interface ItemModalProps {
 }
 
 export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
-  const [name, setName] = useState("");
-  const [image, setImage] = useState("");
-  const [website, setWebsite] = useState("");
-  const [type, setType] = useState<string>("vendor");
-  const [contactOption, setContactOption] = useState<SingleValue<PersonOption>>(null);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
-  useEffect(() => {
-    if (show) {
-      setName(initial?.name ?? "");
-      setImage(initial?.image ?? "");
-      setWebsite(initial?.website ?? "");
-      setType(initial?.type ?? "vendor");
-      const cp = initial?.contactPerson;
-      setContactOption(
-        cp
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      image: "",
+      website: "",
+      type: "vendor",
+      contactOption: null as SingleValue<PersonOption>,
+    },
+    onSubmit: ({ value }) => {
+      onSave({
+        id: initial?.id ?? Date.now(),
+        name: value.name.trim(),
+        image: value.image.trim(),
+        website: value.website.trim(),
+        active: initial?.active ?? true,
+        type: value.type,
+        contactPersonId: value.contactOption?.value ?? null,
+        contactPerson: value.contactOption
           ? {
-              value: cp.id,
-              label: cp.name,
-              sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
-              name: cp.name,
-              email: cp.email ?? "",
-              phone: cp.phone ?? "",
+              id: value.contactOption.value,
+              name: value.contactOption.label,
+              email: value.contactOption.email,
+              phone: value.contactOption.phone,
             }
           : null,
-      );
-      setPersonQuery("");
-      setDebouncedPersonQuery("");
-    }
-  }, [show, initial]);
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (!show) return;
+    const cp = initial?.contactPerson;
+    form.reset({
+      name: initial?.name ?? "",
+      image: initial?.image ?? "",
+      website: initial?.website ?? "",
+      type: initial?.type ?? "vendor",
+      contactOption: cp
+        ? {
+            value: cp.id,
+            label: cp.name,
+            sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
+            name: cp.name,
+            email: cp.email ?? "",
+            phone: cp.phone ?? "",
+          }
+        : null,
+    });
+    setPersonQuery("");
+    setDebouncedPersonQuery("");
+  }, [show, initial, form]);
 
   useEffect(() => {
     if (!show) return;
@@ -98,28 +122,6 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const personOptions = personOptionsQuery.data ?? [];
   const loadingPersons = personOptionsQuery.isFetching;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !image.trim()) return;
-    onSave({
-      id: initial?.id ?? Date.now(),
-      name: name.trim(),
-      image: image.trim(),
-      website: website.trim(),
-      active: initial?.active ?? true,
-      type,
-      contactPersonId: contactOption?.value ?? null,
-      contactPerson: contactOption
-        ? {
-            id: contactOption.value,
-            name: contactOption.label,
-            email: contactOption.email,
-            phone: contactOption.phone,
-          }
-        : null,
-    });
-  }
-
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
@@ -127,76 +129,156 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
         </Modal.Title>
       </Modal.Header>
-      <Form onSubmit={handleSubmit}>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+      >
         <Modal.Body className="bg-dark">
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
               {m.admin_content_name_placeholder()}
             </Form.Label>
-            <Form.Control
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              required
-              autoFocus
-            />
+            <form.Field
+              name="name"
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.admin_item_name_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      className="bg-dark text-light border-secondary"
+                      autoFocus
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">
               {m.admin_content_image_url_placeholder()}
             </Form.Label>
-            <Form.Control
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              required
-            />
+            <form.Field
+              name="image"
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.admin_item_image_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      className="bg-dark text-light border-secondary"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
-            <Form.Control
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              placeholder="https://…"
-            />
+            <form.Field
+              name="website"
+              validators={{
+                onChange: ({ value }) =>
+                  value && !/^https?:\/\/.+/.test(value) ? m.admin_item_url_invalid() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      type="url"
+                      className="bg-dark text-light border-secondary"
+                      placeholder="https://…"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
-            <Form.Select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="bg-dark text-light border-secondary"
-            >
-              <option value="vendor">{m.admin_item_vendor()}</option>
-              <option value="producer">{m.admin_item_producer()}</option>
-              <option value="sponsor">{m.admin_item_sponsor()}</option>
-            </Form.Select>
+            <form.Field name="type">
+              {(field) => (
+                <Form.Select
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                >
+                  <option value="vendor">{m.admin_item_vendor()}</option>
+                  <option value="producer">{m.admin_item_producer()}</option>
+                  <option value="sponsor">{m.admin_item_sponsor()}</option>
+                </Form.Select>
+              )}
+            </form.Field>
           </Form.Group>
           <Form.Group>
             <Form.Label className="text-secondary small">
               {m.admin_item_contact_person()}
             </Form.Label>
-            <Select<PersonOption, false>
-              isClearable
-              options={personOptions}
-              value={contactOption}
-              onChange={setContactOption}
-              onInputChange={(v) => setPersonQuery(v)}
-              inputValue={personQuery}
-              isLoading={loadingPersons}
-              filterOption={null}
-              styles={darkSelectStyles}
-              placeholder={m.admin_search_person_placeholder()}
-              classNamePrefix="rs"
-              formatOptionLabel={(opt) => (
-                <div>
-                  <div>{opt.label}</div>
-                  {opt.sub && <small className="text-secondary">{opt.sub}</small>}
-                </div>
+            <form.Field name="contactOption">
+              {(field) => (
+                <Select<PersonOption, false>
+                  isClearable
+                  options={personOptions}
+                  value={field.state.value}
+                  onChange={(option) => field.handleChange(option)}
+                  onBlur={field.handleBlur}
+                  onInputChange={(v) => setPersonQuery(v)}
+                  inputValue={personQuery}
+                  isLoading={loadingPersons}
+                  filterOption={null}
+                  styles={darkSelectStyles}
+                  placeholder={m.admin_search_person_placeholder()}
+                  classNamePrefix="rs"
+                  formatOptionLabel={(opt) => (
+                    <div>
+                      <div>{opt.label}</div>
+                      {opt.sub && <small className="text-secondary">{opt.sub}</small>}
+                    </div>
+                  )}
+                />
               )}
-            />
+            </form.Field>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">

@@ -9,3 +9,9 @@ export const CAROUSEL_SPEED_MS = 2000;
 
 /** Swiper carousel autoplay delay (ms) */
 export const CAROUSEL_AUTOPLAY_DELAY_MS = 3000;
+
+/**
+ * RFC 5321-inspired email regex. Matches the most common valid email addresses
+ * and rejects obvious invalid ones. Used consistently across all form components.
+ */
+export const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

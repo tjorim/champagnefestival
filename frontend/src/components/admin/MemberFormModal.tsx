@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -7,6 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import { EMAIL_REGEX } from "@/config/constants";
 import type { Person } from "@/types/person";
 
 interface MemberFormModalProps {
@@ -28,73 +30,73 @@ export interface MemberFormData {
 
 export default function MemberFormModal({ show, member, onSave, onHide }: MemberFormModalProps) {
   const isEdit = member != null;
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [clubName, setClubName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [active, setActive] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      clubName: "",
+      notes: "",
+      active: true,
+    },
+    onSubmit: async ({ value }) => {
+      setError(null);
+      try {
+        await onSave({
+          name: value.name.trim(),
+          email: value.email.trim(),
+          phone: value.phone.trim(),
+          address: value.address.trim(),
+          clubName: value.clubName.trim(),
+          notes: value.notes.trim(),
+          active: value.active,
+        });
+        onHide();
+      } catch (err) {
+        console.error("Member save error:", err);
+        const backendMessage =
+          err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+            ? ((err as { message: string }).message).trim()
+            : "";
+        setError(
+          backendMessage ||
+            (isEdit ? m.admin_members_error_update() : m.admin_members_error_create()),
+        );
+      }
+    },
+  });
 
   useEffect(() => {
     if (!show) return;
-    if (member) {
-      setName(member.name);
-      setEmail(member.email ?? "");
-      setPhone(member.phone ?? "");
-      setAddress(member.address ?? "");
-      setClubName(member.clubName ?? "");
-      setNotes(member.notes ?? "");
-      setActive(member.active);
-    } else {
-      setName("");
-      setEmail("");
-      setPhone("");
-      setAddress("");
-      setClubName("");
-      setNotes("");
-      setActive(true);
-    }
+    form.reset(
+      member
+        ? {
+            name: member.name,
+            email: member.email ?? "",
+            phone: member.phone ?? "",
+            address: member.address ?? "",
+            clubName: member.clubName ?? "",
+            notes: member.notes ?? "",
+            active: member.active,
+          }
+        : {
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            clubName: "",
+            notes: "",
+            active: true,
+          },
+    );
     setError(null);
-    setSaving(false);
-  }, [show, member]);
+  }, [show, member, form]);
 
-  useEffect(() => {
-    setError(null);
-  }, [name, email, phone, address, clubName, notes, active]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    setSaving(true);
-    setError(null);
-    try {
-      await onSave({
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-        clubName: clubName.trim(),
-        notes: notes.trim(),
-        active,
-      });
-      onHide();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : isEdit
-            ? m.admin_members_error_update()
-            : m.admin_members_error_create(),
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
+  const nameValue = useStore(form.store, (s) => s.values.name);
+  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
@@ -105,7 +107,13 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         </Modal.Title>
       </Modal.Header>
 
-      <Form onSubmit={handleSubmit}>
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+      >
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -120,39 +128,90 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
 
           <Form.Group className="mb-3" controlId="member-name">
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
-            <Form.Control
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              required
-              maxLength={200}
-            />
+            <form.Field
+              name="name"
+              validators={{
+                onChange: ({ value }) =>
+                  !value?.trim() ? m.registration_errors_name_required() : undefined,
+              }}
+            >
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      type="text"
+                      className="bg-dark text-light border-secondary"
+                      maxLength={200}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
+            </form.Field>
           </Form.Group>
 
           <Row className="mb-3">
             <Col xs={12} md={6}>
               <Form.Group controlId="member-email">
                 <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-dark text-light border-secondary"
-                  maxLength={200}
-                />
+                <form.Field
+                  name="email"
+                  validators={{
+                    onChange: ({ value }) =>
+                      value && !EMAIL_REGEX.test(value)
+                        ? m.registration_errors_email_invalid()
+                        : undefined,
+                  }}
+                >
+                  {(field) => {
+                    const showErr =
+                      field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                    return (
+                      <>
+                        <Form.Control
+                          type="email"
+                          className="bg-dark text-light border-secondary"
+                          maxLength={200}
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          isInvalid={showErr}
+                        />
+                        {showErr && (
+                          <Form.Control.Feedback type="invalid">
+                            {field.state.meta.errors[0]}
+                          </Form.Control.Feedback>
+                        )}
+                      </>
+                    );
+                  }}
+                </form.Field>
               </Form.Group>
             </Col>
             <Col xs={12} md={6}>
               <Form.Group controlId="member-phone">
                 <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
-                <Form.Control
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="bg-dark text-light border-secondary"
-                  maxLength={50}
-                />
+                <form.Field name="phone">
+                  {(field) => (
+                    <Form.Control
+                      type="tel"
+                      className="bg-dark text-light border-secondary"
+                      maxLength={50}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                  )}
+                </form.Field>
               </Form.Group>
             </Col>
           </Row>
@@ -161,56 +220,75 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Form.Label className="text-secondary small fw-semibold text-warning-emphasis">
               {m.admin_people_club_name_label()}
             </Form.Label>
-            <Form.Control
-              type="text"
-              value={clubName}
-              onChange={(e) => setClubName(e.target.value)}
-              className="bg-dark text-light border-secondary border-warning"
-              maxLength={200}
-            />
+            <form.Field name="clubName">
+              {(field) => (
+                <Form.Control
+                  type="text"
+                  className="bg-dark text-light border-secondary border-warning"
+                  maxLength={200}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="member-address">
             <Form.Label className="text-secondary small">
               {m.admin_people_address_label()}
             </Form.Label>
-            <Form.Control
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              maxLength={300}
-            />
+            <form.Field name="address">
+              {(field) => (
+                <Form.Control
+                  type="text"
+                  className="bg-dark text-light border-secondary"
+                  maxLength={300}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="member-notes">
             <Form.Label className="text-secondary small">{m.registration_notes()}</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={4}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="bg-dark text-light border-secondary"
-              maxLength={2000}
-            />
+            <form.Field name="notes">
+              {(field) => (
+                <Form.Control
+                  as="textarea"
+                  rows={4}
+                  className="bg-dark text-light border-secondary"
+                  maxLength={2000}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
 
-          <Form.Check
-            type="switch"
-            id="member-active"
-            className="text-secondary"
-            label={m.admin_people_active_label()}
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
-          />
+          <form.Field name="active">
+            {(field) => (
+              <Form.Check
+                type="switch"
+                id="member-active"
+                className="text-secondary"
+                label={m.admin_people_active_label()}
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+              />
+            )}
+          </form.Field>
         </Modal.Body>
 
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" onClick={onHide} disabled={saving}>
+          <Button variant="outline-secondary" onClick={onHide} disabled={isSubmitting}>
             {m.admin_action_cancel()}
           </Button>
-          <Button variant="warning" type="submit" disabled={saving || !name.trim()}>
-            {saving ? (
+          <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
+            {isSubmitting ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
                 {m.admin_save()}

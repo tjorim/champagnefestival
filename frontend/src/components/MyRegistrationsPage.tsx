@@ -18,8 +18,7 @@ import {
   isRegistrationLookupError,
   requestRegistrationLookup,
 } from "@/utils/publicRegistrationApi";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_REGEX } from "@/config/constants";
 
 export default function MyRegistrationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -68,7 +67,7 @@ export default function MyRegistrationsPage() {
       e.preventDefault();
       const trimmed = email.trim();
       if (!trimmed) return;
-      if (!EMAIL_PATTERN.test(trimmed)) {
+      if (!EMAIL_REGEX.test(trimmed)) {
         setError(m.my_registrations_invalid_email());
         setIsEmailInvalid(true);
         setRequestSent(false);
