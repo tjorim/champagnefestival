@@ -24,11 +24,6 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
     return [...dayEvents].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [activeDay, days, events]);
 
-  const getEventTranslation = (event: Event) => ({
-    title: event.title,
-    description: event.description,
-  });
-
   const getCategoryColor = (category: Event["category"]) => {
     switch (category) {
       case "tasting":
@@ -95,10 +90,16 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
               <Nav.Link eventKey={day.id} className="px-4">
                 {getDayName(day.date)}
                 <span className="d-block small">
-                  {new Date(day.date + "T00:00:00").toLocaleDateString(getLocale(), {
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  {(() => {
+                    try {
+                      return new Date(day.date + "T00:00:00").toLocaleDateString(getLocale(), {
+                        month: "short",
+                        day: "numeric",
+                      });
+                    } catch {
+                      return day.date;
+                    }
+                  })()}
                 </span>
               </Nav.Link>
             </Nav.Item>
@@ -110,8 +111,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
             {sortedEvents.length > 0 ? (
               <div className="events-list">
                 {sortedEvents.map((event) => {
-                  const translated = getEventTranslation(event);
-                  return (
+                    return (
                     <Card key={event.id} className="mb-3 shadow-sm border-0">
                       <Card.Body>
                         <div className="d-flex justify-content-between align-items-start">
@@ -129,7 +129,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                             )}
                           </div>
                           <div className="flex-grow-1">
-                            <h5 className="event-title mb-1">{translated.title}</h5>
+                            <h5 className="event-title mb-1">{event.title}</h5>
                             <Badge bg={getCategoryColor(event.category)} className="mb-2">
                               {getCategoryLabel(event.category)}
                             </Badge>
@@ -138,13 +138,13 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                                 {m.schedule_registration()}
                               </Badge>
                             )}
-                            <p className="event-description mb-1">{translated.description}</p>
+                            <p className="event-description mb-1">{event.description}</p>
                           </div>
                         </div>
                       </Card.Body>
                     </Card>
-                  );
-                })}
+                    );
+                  })}
               </div>
             ) : (
               <div className="text-center py-5">

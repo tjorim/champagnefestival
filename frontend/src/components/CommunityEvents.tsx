@@ -30,9 +30,14 @@ interface CommunityEventCardData {
 }
 
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
-  if (editionType === "bourse") return "Community Bourse";
-  if (editionType === "capsule_exchange") return "Capsule Exchange";
-  return "Community Event";
+  switch (editionType) {
+    case "bourse":
+      return "Community Bourse";
+    case "capsule_exchange":
+      return "Capsule Exchange";
+    default:
+      return "Community Event";
+  }
 }
 
 function formatDate(date: string): string {
