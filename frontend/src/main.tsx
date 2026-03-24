@@ -20,7 +20,6 @@ import { useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
-import type { FestivalDay } from "./types/schedule";
 import { endOfDay } from "./utils/dateUtils";
 import "./index.css";
 
@@ -31,6 +30,7 @@ const Countdown = lazy(() => import("./components/Countdown"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
+const CommunityEvents = lazy(() => import("./components/CommunityEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
@@ -182,32 +182,6 @@ function App() {
     return endOfDay(edition.dates[edition.dates.length - 1] ?? new Date());
   }, [edition]);
 
-  // Derive festival days for the Schedule component
-  const festivalDays = useMemo<FestivalDay[]>(() => {
-    const uniqueDates = [...new Set(edition.events.map((event) => event.date))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-
-    if (uniqueDates.length > 0) {
-      return uniqueDates.map((date, index) => ({
-        id: index + 1,
-        date,
-      }));
-    }
-
-    const formatLocalDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    return edition.dates.map((date, index) => ({
-      id: index + 1,
-      date: formatLocalDate(date),
-    }));
-  }, [edition]);
-
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   const registrableEvents = useMemo(() => {
@@ -218,8 +192,9 @@ function App() {
         const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
         return eventEnd >= now;
       })
-      .filter((event) => !event.registrationsOpenFrom || event.registrationsOpenFrom <= now)
-      .map((event) => ({ id: event.id, title: event.title }));
+      .filter(
+        (event) => !event.registrationsOpenFrom || new Date(event.registrationsOpenFrom) <= now,
+      );
   }, [edition.events]);
 
   // --- Main marketing page ---
@@ -312,13 +287,18 @@ function App() {
               <div className="col-md-10 col-lg-8">
                 <div className="schedule-container">
                   <AppSuspense errorFallbackText={m.error_schedule()}>
-                    <Schedule days={festivalDays} events={edition.events} />
+                    <Schedule events={edition.events} />
                   </AppSuspense>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
+        {/* Community Events */}
+        <AppSuspense errorFallbackText={m.community_events_error_load()}>
+          <CommunityEvents />
+        </AppSuspense>
 
         {/* Producers Carousel */}
         <section id="producers" className="content-section">
@@ -416,6 +396,7 @@ function App() {
               type="button"
               className="btn btn-warning btn-lg rounded-pill px-5 fw-bold"
               onClick={() => setShowRegistrationModal(true)}
+              disabled={registrableEvents.length === 0}
             >
               <i className="bi bi-calendar-plus me-2" aria-hidden="true" />
               {m.registration_cta()}
@@ -431,7 +412,7 @@ function App() {
       <RegistrationModal
         show={showRegistrationModal}
         onHide={() => setShowRegistrationModal(false)}
-        registrableEvents={registrableEvents}
+        event={registrableEvents[0] ?? null}
       />
     </div>
   );

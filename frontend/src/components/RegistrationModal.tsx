@@ -1,32 +1,28 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS, MIN_FORM_SECONDS } from "@/config/registration";
+import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
+import type { Event } from "@/types/event";
 import { RegistrationSubmitError, submitRegistration } from "@/utils/publicRegistrationApi";
 
 interface RegistrationModalProps {
   show: boolean;
   onHide: () => void;
-  /** Pre-selected event id, if triggered from the schedule */
-  defaultEventId?: string;
-  /** Available events that require registration */
-  registrableEvents: { id: string; title: string }[];
+  event: Event | null;
 }
 
-/** Form fields managed by TanStack Form (preOrders is managed via local state separately) */
 interface RegistrationFields {
   name: string;
   email: string;
   phone: string;
-  eventId: string;
   guestCount: number;
   notes: string;
   honeypot: string;
@@ -50,12 +46,7 @@ function getProductName(nameKey: string): string {
   }
 }
 
-export default function RegistrationModal({
-  show,
-  onHide,
-  defaultEventId = "",
-  registrableEvents,
-}: RegistrationModalProps) {
+export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
   const [preOrders, setPreOrders] = useState<OrderItem[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -66,13 +57,13 @@ export default function RegistrationModal({
   });
 
   const isSubmitting = submitRegistrationMutation.isPending;
+  const showPreOrders = event?.category === "vip";
 
   const form = useForm({
     defaultValues: {
       name: "",
       email: "",
       phone: "",
-      eventId: defaultEventId,
       guestCount: 1,
       notes: "",
       honeypot: "",
@@ -80,8 +71,17 @@ export default function RegistrationModal({
     } as RegistrationFields,
     onSubmit: async ({ value }) => {
       setSubmitError("");
+      if (!event?.id) {
+        setSubmitError(m.registration_error());
+        return;
+      }
+
       try {
-        await submitRegistrationMutation.mutateAsync({ ...value, preOrders });
+        await submitRegistrationMutation.mutateAsync({
+          ...value,
+          eventId: event.id,
+          preOrders: showPreOrders ? preOrders : [],
+        });
         setSubmitSuccess(true);
       } catch (error) {
         setSubmitError(
@@ -90,15 +90,6 @@ export default function RegistrationModal({
       }
     },
   });
-
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    form.setFieldValue("eventId", defaultEventId);
-  }, [defaultEventId, form]);
 
   const handleQuantityChange = useCallback((productId: string, quantity: number) => {
     setPreOrders((prev) => {
@@ -130,7 +121,6 @@ export default function RegistrationModal({
       name: "",
       email: "",
       phone: "",
-      eventId: defaultEventId,
       guestCount: 1,
       notes: "",
       honeypot: "",
@@ -140,7 +130,7 @@ export default function RegistrationModal({
     setSubmitSuccess(false);
     setSubmitError("");
     onHide();
-  }, [defaultEventId, form, onHide]);
+  }, [form, onHide]);
 
   return (
     <Modal
@@ -152,13 +142,18 @@ export default function RegistrationModal({
     >
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
         <Modal.Title id="registration-modal-title">
-          <i className="bi bi-star-fill text-warning me-2" aria-hidden="true" />
-          {m.registration_modal_title()}
+          <i className="bi bi-ticket-perforated-fill text-warning me-2" aria-hidden="true" />
+          {event?.title ?? m.registration_modal_title()}
         </Modal.Title>
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
-        {submitSuccess ? (
+        {!event ? (
+          <Alert variant="danger" className="mb-0">
+            <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+            {m.registration_error()}
+          </Alert>
+        ) : submitSuccess ? (
           <Alert variant="success" className="mb-0">
             <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
             {m.registration_success()}
@@ -171,7 +166,6 @@ export default function RegistrationModal({
             }}
             noValidate
           >
-            {/* Honeypot – hidden from users, must stay empty */}
             <form.Field name="honeypot">
               {(field) => (
                 <Form.Control
@@ -186,7 +180,6 @@ export default function RegistrationModal({
               )}
             </form.Field>
 
-            {/* Personal details */}
             <form.Field
               name="name"
               validators={{
@@ -283,43 +276,6 @@ export default function RegistrationModal({
               }}
             </form.Field>
 
-            {/* Event selection */}
-            <form.Field
-              name="eventId"
-              validators={{
-                onChange: ({ value }) =>
-                  !value ? m.registration_errors_event_required() : undefined,
-              }}
-            >
-              {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
-                return (
-                  <Form.Group className="mb-3" controlId="res-event">
-                    <Form.Label>{m.registration_event()} *</Form.Label>
-                    <Form.Select
-                      isInvalid={showErr}
-                      className="bg-dark text-light border-secondary"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    >
-                      <option value="">{m.registration_select_event()}</option>
-                      {registrableEvents.map((ev) => (
-                        <option key={ev.id} value={ev.id}>
-                          {ev.title}
-                        </option>
-                      ))}
-                    </Form.Select>
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                );
-              }}
-            </form.Field>
-
             <form.Field
               name="guestCount"
               validators={{
@@ -356,51 +312,51 @@ export default function RegistrationModal({
               }}
             </form.Field>
 
-            {/* Pre-order */}
-            <fieldset className="mb-3">
-              <legend className="fs-6 fw-semibold mb-1">{m.registration_preorder_title()}</legend>
-              <p className="text-secondary small mb-2">{m.registration_preorder_description()}</p>
+            {showPreOrders && (
+              <fieldset className="mb-3">
+                <legend className="fs-6 fw-semibold mb-1">{m.registration_preorder_title()}</legend>
+                <p className="text-secondary small mb-2">{m.registration_preorder_description()}</p>
 
-              {ALL_PRODUCTS.filter((p) => p.available).map((product) => {
-                const currentItem = preOrders.find((o) => o.productId === product.id);
-                const qty = currentItem?.quantity ?? 0;
-                return (
-                  <div
-                    key={product.id}
-                    className="d-flex align-items-center justify-content-between mb-2"
-                  >
-                    <span className="text-light small">{getProductName(product.nameKey)}</span>
-                    <div className="d-flex align-items-center gap-2">
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => handleQuantityChange(product.id, qty - 1)}
-                        disabled={qty === 0}
-                        aria-label={`Decrease quantity of ${getProductName(product.nameKey)}`}
-                      >
-                        <i className="bi bi-dash" aria-hidden="true" />
-                      </Button>
-                      <span
-                        className="text-light"
-                        style={{ minWidth: "1.5rem", textAlign: "center" }}
-                      >
-                        {qty}
-                      </span>
-                      <Button
-                        variant="outline-warning"
-                        size="sm"
-                        onClick={() => handleQuantityChange(product.id, qty + 1)}
-                        aria-label={`Increase quantity of ${getProductName(product.nameKey)}`}
-                      >
-                        <i className="bi bi-plus" aria-hidden="true" />
-                      </Button>
+                {ALL_PRODUCTS.filter((p) => p.available).map((product) => {
+                  const currentItem = preOrders.find((o) => o.productId === product.id);
+                  const qty = currentItem?.quantity ?? 0;
+                  return (
+                    <div
+                      key={product.id}
+                      className="d-flex align-items-center justify-content-between mb-2"
+                    >
+                      <span className="text-light small">{getProductName(product.nameKey)}</span>
+                      <div className="d-flex align-items-center gap-2">
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          onClick={() => handleQuantityChange(product.id, qty - 1)}
+                          disabled={qty === 0}
+                          aria-label={`Decrease quantity of ${getProductName(product.nameKey)}`}
+                        >
+                          <i className="bi bi-dash" aria-hidden="true" />
+                        </Button>
+                        <span
+                          className="text-light"
+                          style={{ minWidth: "1.5rem", textAlign: "center" }}
+                        >
+                          {qty}
+                        </span>
+                        <Button
+                          variant="outline-warning"
+                          size="sm"
+                          onClick={() => handleQuantityChange(product.id, qty + 1)}
+                          aria-label={`Increase quantity of ${getProductName(product.nameKey)}`}
+                        >
+                          <i className="bi bi-plus" aria-hidden="true" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </fieldset>
+                  );
+                })}
+              </fieldset>
+            )}
 
-            {/* Notes */}
             <form.Field name="notes">
               {(field) => (
                 <Form.Group className="mb-3" controlId="res-notes">
@@ -465,6 +421,3 @@ export default function RegistrationModal({
     </Modal>
   );
 }
-
-/** Minimum time check export for testing */
-export { MIN_FORM_SECONDS };

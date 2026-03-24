@@ -7,7 +7,8 @@
  */
 
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { EMPTY_EDITION, type EditionDates, type Event, type SliderItem } from "@/config/editions";
+import { EMPTY_EDITION, type EditionDates, type SliderItem } from "@/config/editions";
+import { apiToEvent, type Event } from "@/types/event";
 import { queryKeys } from "@/utils/queryKeys";
 
 interface ActiveEditionVenue {
@@ -43,25 +44,13 @@ interface ApiVenue {
   lng: number;
 }
 
-interface ApiEvent {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  start_time: string;
-  end_time: string | null;
-  category: string;
-  registration_required: boolean;
-  registrations_open_from: string | null;
-}
-
 interface ApiEdition {
   id: string;
   year: number;
   month: string;
   dates?: string[] | null;
   venue: ApiVenue;
-  events: ApiEvent[];
+  events: Record<string, unknown>[];
   producers: SliderItem[];
   sponsors: SliderItem[];
 }
@@ -134,19 +123,7 @@ function deriveEditionDates(
 }
 
 function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdition {
-  const events: Event[] = (api.events ?? []).map((event) => ({
-    id: event.id,
-    title: event.title,
-    description: event.description,
-    date: event.date,
-    startTime: event.start_time,
-    endTime: event.end_time ?? undefined,
-    category: event.category,
-    registrationRequired: event.registration_required,
-    registrationsOpenFrom: event.registrations_open_from
-      ? new Date(event.registrations_open_from)
-      : undefined,
-  }));
+  const events: Event[] = (api.events ?? []).map((event) => apiToEvent(event));
 
   return {
     id: api.id,

@@ -183,7 +183,7 @@ export default function VolunteersManagement({
                     <th>{m.admin_people_address_label()}</th>
                     <th>{m.admin_people_national_register_number_label()}</th>
                     <th>{m.admin_people_eid_document_number_label()}</th>
-                    <th>{m.admin_volunteers_periods_column()}</th>
+                    <th>{m.admin_volunteers_help_periods_label()}</th>
                     <th>{m.admin_actions_label()}</th>
                   </tr>
                 </thead>

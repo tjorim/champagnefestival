@@ -291,7 +291,7 @@ export default function EditionCard({
           {eventsQuery.isPending ? (
             <div className="text-secondary small py-2">
               <Spinner animation="border" size="sm" className="me-2" />
-              {m.admin_edition_loading_events()}
+              {m.admin_loading_events()}
             </div>
           ) : sortedEvents.length === 0 ? (
             <p className="text-secondary fst-italic small">{m.admin_content_edition_no_events()}</p>
