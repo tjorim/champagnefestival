@@ -1,5 +1,6 @@
 """People CRUD endpoints (admin-only)."""
 
+import phonenumbers
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import Text, cast, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -40,40 +41,32 @@ def _normalise_optional_identity(value: str | None) -> str | None:
     return value or None
 
 
-DEFAULT_COUNTRY_PREFIX = "32"  # Belgium; used when a local number starts with "0"
+def parse_phone(raw: str | None) -> str:
+    """Parse and normalise a phone number to E.164 format.
 
+    Uses the ``phonenumbers`` library (Google libphonenumber binding) with
+    ``"BE"`` as the default region for numbers that lack a country code prefix.
+    Numbers that already carry a ``+`` or ``00`` IDD prefix are parsed
+    regardless of the default region.
 
-def normalize_phone(phone: str | None, default_country_prefix: str = DEFAULT_COUNTRY_PREFIX) -> str:
-    """Produce an E.164-like canonical form so that equivalent numbers such as
-    '+32 470 12 34 56', '0032 470 12 34 56' and '0470 12 34 56' all normalise to
-    '+32470123456'.
-
-    Rules applied in order:
-    1. Return '' for falsy input.
-    2. Strip all characters except digits and a leading '+'.
-    3. Convert a leading '00' in the digit string to '+'.
-    4. If the digit string starts with a single leading '0', replace it with
-       '+{default_country_prefix}'.
-    5. Prepend '+' if the result contains only digits (no international prefix).
+    Returns ``""`` for empty/None input.
+    Raises :class:`fastapi.HTTPException` (422) for unparseable or invalid input.
     """
-    if not phone:
+    if not raw or not raw.strip():
         return ""
-    # Detect an explicit leading '+' before stripping.
-    has_plus = phone.lstrip().startswith("+")
-    digits = "".join(c for c in phone if c.isdigit())
-    if not digits:
-        return ""
-    if has_plus:
-        # Already had a '+'; keep the digit string as-is (international form).
-        return "+" + digits
-    if digits.startswith("00"):
-        # Leading '00' is the international dialling prefix — convert to '+'.
-        return "+" + digits[2:]
-    if digits.startswith("0"):
-        # Local number with trunk prefix '0' — replace with country prefix.
-        return "+" + default_country_prefix + digits[1:]
-    # Bare digits with no prefix — assume already an international number body.
-    return "+" + digits
+    try:
+        parsed = phonenumbers.parse(raw, "BE")
+    except phonenumbers.NumberParseException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Invalid phone number: {exc}",
+        ) from exc
+    if not phonenumbers.is_valid_number(parsed):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Invalid phone number.",
+        )
+    return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
 
 def _raise_identity_conflict() -> None:
@@ -120,7 +113,7 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
         id=make_id("per"),
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
-        phone=normalize_phone(body.phone),
+        phone=parse_phone(body.phone),
         address=body.address,
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
@@ -204,7 +197,7 @@ async def update_person(
             setattr(person, field, getattr(body, field))
 
     if "phone" in body.model_fields_set:
-        person.phone = normalize_phone(body.phone)
+        person.phone = parse_phone(body.phone)
 
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""
