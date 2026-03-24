@@ -111,7 +111,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
             {sortedEvents.length > 0 ? (
               <div className="events-list">
                 {sortedEvents.map((event) => {
-                    return (
+                  return (
                     <Card key={event.id} className="mb-3 shadow-sm border-0">
                       <Card.Body>
                         <div className="d-flex justify-content-between align-items-start">
@@ -121,7 +121,10 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                                 <div title={m.schedule_start_time()}>{event.startTime}</div>
                                 <div title={m.schedule_end_time()}>{event.endTime}</div>
                                 <span className="visually-hidden">
-                                  {m.schedule_time_range({ start: event.startTime, end: event.endTime })}
+                                  {m.schedule_time_range({
+                                    start: event.startTime,
+                                    end: event.endTime,
+                                  })}
                                 </span>
                               </>
                             ) : (
@@ -143,8 +146,8 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                         </div>
                       </Card.Body>
                     </Card>
-                    );
-                  })}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-5">

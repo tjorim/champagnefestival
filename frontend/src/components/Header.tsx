@@ -20,7 +20,7 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
         <div className="d-none d-lg-flex align-items-center gap-3">
           {navigationItems.map((item) => (
             <a key={item.href} href={item.href} className="small text-decoration-none text-light">
-              {item.label}
+              {item.getLabel()}
             </a>
           ))}
         </div>

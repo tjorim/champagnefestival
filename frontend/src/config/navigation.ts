@@ -1,11 +1,13 @@
+import { m } from "@/paraglide/messages";
+
 export interface NavigationItem {
   href: string;
-  label: string;
+  getLabel: () => string;
 }
 
 export const navigationItems: NavigationItem[] = [
-  { href: "#schedule", label: "Schedule" },
-  { href: "#community-events", label: "Community events" },
-  { href: "#faq", label: "FAQ" },
-  { href: "#contact", label: "Contact" },
+  { href: "#schedule", getLabel: () => m.nav_schedule() },
+  { href: "#community-events", getLabel: () => m.nav_community_events() },
+  { href: "#faq", getLabel: () => m.nav_faq() },
+  { href: "#contact", getLabel: () => m.nav_contact() },
 ];

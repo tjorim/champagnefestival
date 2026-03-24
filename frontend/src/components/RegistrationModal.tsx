@@ -133,7 +133,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   }, [form, onHide]);
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered aria-labelledby="registration-modal-title">
+    <Modal
+      show={show}
+      onHide={handleClose}
+      size="lg"
+      centered
+      aria-labelledby="registration-modal-title"
+    >
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
         <Modal.Title id="registration-modal-title">
           <i className="bi bi-ticket-perforated-fill text-warning me-2" aria-hidden="true" />
@@ -330,7 +336,10 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                         >
                           <i className="bi bi-dash" aria-hidden="true" />
                         </Button>
-                        <span className="text-light" style={{ minWidth: "1.5rem", textAlign: "center" }}>
+                        <span
+                          className="text-light"
+                          style={{ minWidth: "1.5rem", textAlign: "center" }}
+                        >
                           {qty}
                         </span>
                         <Button
@@ -372,7 +381,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               </Alert>
             )}
 
-            <Button type="submit" variant="warning" className="w-100" disabled={isSubmitting} aria-busy={isSubmitting}>
+            <Button
+              type="submit"
+              variant="warning"
+              className="w-100"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
               {isSubmitting ? (
                 <>
                   <Spinner

@@ -595,5 +595,18 @@
   "admin_edition_venue_required": "Venue is required",
   "admin_item_name_required": "Name is required",
   "admin_item_image_required": "Image URL is required",
-  "admin_item_url_invalid": "Must be a valid URL starting with http(s)://"
+  "admin_item_url_invalid": "Must be a valid URL starting with http(s)://",
+  "community_events_title": "Community Events",
+  "community_events_subtitle": "Discover non-festival bourses and capsule exchanges.",
+  "community_events_loading": "Loading community events\u2026",
+  "community_events_error": "Could not load community events right now. Please retry later.",
+  "community_events_empty": "No upcoming community events are currently scheduled.",
+  "community_events_error_load": "Could not load community events.",
+  "community_events_partner": "Partner: {partner}",
+  "community_events_table_reservations": "Table reservations:",
+  "community_events_rsvp": "RSVP",
+  "nav_schedule": "Schedule",
+  "nav_community_events": "Community events",
+  "nav_faq": "FAQ",
+  "nav_contact": "Contact"
 }

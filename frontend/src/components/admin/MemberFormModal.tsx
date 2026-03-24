@@ -58,8 +58,11 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
       } catch (err) {
         console.error("Member save error:", err);
         const backendMessage =
-          err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
-            ? ((err as { message: string }).message).trim()
+          err &&
+          typeof err === "object" &&
+          "message" in err &&
+          typeof (err as { message: unknown }).message === "string"
+            ? (err as { message: string }).message.trim()
             : "";
         setError(
           backendMessage ||

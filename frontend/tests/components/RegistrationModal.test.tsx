@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import RegistrationModal from "@/components/RegistrationModal";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
@@ -70,10 +70,9 @@ describe("RegistrationModal component", () => {
   function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
     const wrapper = createTestQueryClientWrapper();
 
-    return render(
-      <RegistrationModal show={true} onHide={() => {}} event={vipEvent} {...props} />,
-      { wrapper },
-    );
+    return render(<RegistrationModal show={true} onHide={() => {}} event={vipEvent} {...props} />, {
+      wrapper,
+    });
   }
 
   it("does not render when show=false", () => {
@@ -155,7 +154,7 @@ describe("RegistrationModal component", () => {
     });
   });
 
-  it("shows generic error message on network error", async () => {
+  it("shows network error message on network error", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
     renderModal();
@@ -187,7 +186,8 @@ describe("RegistrationModal component", () => {
     });
     fireEvent.click(increaseButton);
 
-    expect(screen.getByText("1")).toBeInTheDocument();
+    const controlsContainer = increaseButton.closest("div") as HTMLElement;
+    expect(within(controlsContainer).getByText("1")).toBeInTheDocument();
   });
 
   it("decrements pre-order quantity when - button is clicked", () => {
@@ -204,7 +204,8 @@ describe("RegistrationModal component", () => {
     fireEvent.click(increaseButton);
     fireEvent.click(decreaseButton);
 
-    expect(screen.getByText("1")).toBeInTheDocument();
+    const controlsContainer = increaseButton.closest("div") as HTMLElement;
+    expect(within(controlsContainer).getByText("1")).toBeInTheDocument();
   });
 
   it("does not decrement pre-order quantity below zero", () => {

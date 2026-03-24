@@ -8,6 +8,7 @@ import SectionHeading from "@/components/SectionHeading";
 import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";
 import { apiToEvent } from "@/types/event";
+import { m } from "@/paraglide/messages";
 
 interface ApiUpcomingEdition {
   id: string;
@@ -58,7 +59,11 @@ async function fetchCommunityEditions(): Promise<ApiUpcomingEdition[]> {
 export default function CommunityEvents() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
-  const { data = [], isLoading, isError } = useQuery({
+  const {
+    data = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["community-events"],
     queryFn: fetchCommunityEditions,
     staleTime: 5 * 60 * 1000,
@@ -69,15 +74,17 @@ export default function CommunityEvents() {
       const event = (edition.events ?? []).map(apiToEvent)[0];
       if (!event) return [];
 
-      return [{
-        id: edition.id,
-        editionType: edition.edition_type,
-        event,
-        venueName: edition.venue?.name ?? "",
-        externalPartner: edition.external_partner ?? undefined,
-        externalContactName: edition.external_contact_name ?? undefined,
-        externalContactEmail: edition.external_contact_email ?? undefined,
-      }];
+      return [
+        {
+          id: edition.id,
+          editionType: edition.edition_type,
+          event,
+          venueName: edition.venue?.name ?? "",
+          externalPartner: edition.external_partner ?? undefined,
+          externalContactName: edition.external_contact_name ?? undefined,
+          externalContactEmail: edition.external_contact_email ?? undefined,
+        },
+      ];
     });
   }, [data]);
 
@@ -87,20 +94,18 @@ export default function CommunityEvents() {
         <div className="container">
           <SectionHeading
             id="community-events-heading"
-            title="Community Events"
-            subtitle="Discover non-festival bourses and capsule exchanges."
+            title={m.community_events_title()}
+            subtitle={m.community_events_subtitle()}
           />
 
           <div className="row justify-content-center">
             <div className="col-md-10 col-lg-8">
-              {isLoading && <p className="text-center">Loading community events…</p>}
+              {isLoading && <p className="text-center">{m.community_events_loading()}</p>}
 
-              {isError && (
-                <Alert variant="danger">Could not load community events right now. Please retry later.</Alert>
-              )}
+              {isError && <Alert variant="danger">{m.community_events_error()}</Alert>}
 
               {!isLoading && !isError && items.length === 0 && (
-                <p className="text-center mb-0">No upcoming community events are currently scheduled.</p>
+                <p className="text-center mb-0">{m.community_events_empty()}</p>
               )}
 
               {items.map((item) => (
@@ -121,21 +126,25 @@ export default function CommunityEvents() {
 
                         {item.externalPartner && (
                           <Badge bg="secondary" className="mb-2">
-                            Partner: {item.externalPartner}
+                            {m.community_events_partner({ partner: item.externalPartner })}
                           </Badge>
                         )}
 
                         {item.externalContactName && item.externalContactEmail && (
                           <Alert variant="warning" className="py-2 mb-0">
-                            <strong>Table reservations:</strong> {item.externalContactName} (
-                            <a href={`mailto:${item.externalContactEmail}`}>{item.externalContactEmail}</a>)
+                            <strong>{m.community_events_table_reservations()}</strong>{" "}
+                            {item.externalContactName} (
+                            <a href={`mailto:${item.externalContactEmail}`}>
+                              {item.externalContactEmail}
+                            </a>
+                            )
                           </Alert>
                         )}
                       </div>
 
                       {item.event.registrationRequired && (
                         <Button variant="warning" onClick={() => setSelectedEvent(item.event)}>
-                          RSVP
+                          {m.community_events_rsvp()}
                         </Button>
                       )}
                     </div>

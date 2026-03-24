@@ -595,5 +595,18 @@
   "admin_edition_venue_required": "Locatie is verplicht",
   "admin_item_name_required": "Naam is verplicht",
   "admin_item_image_required": "Afbeeldings-URL is verplicht",
-  "admin_item_url_invalid": "URL moet beginnen met http(s)://"
+  "admin_item_url_invalid": "URL moet beginnen met http(s)://",
+  "community_events_title": "Gemeenschapsevenementen",
+  "community_events_subtitle": "Ontdek beurzen en capsule-uitwisselingen buiten het festival.",
+  "community_events_loading": "Gemeenschapsevenementen laden\u2026",
+  "community_events_error": "Gemeenschapsevenementen konden niet worden geladen. Probeer het later opnieuw.",
+  "community_events_empty": "Er zijn momenteel geen aankomende gemeenschapsevenementen gepland.",
+  "community_events_error_load": "Gemeenschapsevenementen konden niet worden geladen.",
+  "community_events_partner": "Partner: {partner}",
+  "community_events_table_reservations": "Tafelreserveringen:",
+  "community_events_rsvp": "RSVP",
+  "nav_schedule": "Programma",
+  "nav_community_events": "Gemeenschapsevenementen",
+  "nav_faq": "FAQ",
+  "nav_contact": "Contact"
 }

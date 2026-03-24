@@ -595,5 +595,18 @@
   "admin_edition_venue_required": "Le lieu est requis",
   "admin_item_name_required": "Le nom est requis",
   "admin_item_image_required": "L'URL de l'image est requise",
-  "admin_item_url_invalid": "L'URL doit commencer par http(s)://"
+  "admin_item_url_invalid": "L'URL doit commencer par http(s)://",
+  "community_events_title": "Événements Communautaires",
+  "community_events_subtitle": "Découvrez les bourses et échanges de capsules hors festival.",
+  "community_events_loading": "Chargement des événements communautaires\u2026",
+  "community_events_error": "Impossible de charger les événements communautaires. Veuillez réessayer.",
+  "community_events_empty": "Aucun événement communautaire à venir n'est actuellement prévu.",
+  "community_events_error_load": "Impossible de charger les événements communautaires.",
+  "community_events_partner": "Partenaire\u00a0: {partner}",
+  "community_events_table_reservations": "Réservations de tables\u00a0:",
+  "community_events_rsvp": "RSVP",
+  "nav_schedule": "Programme",
+  "nav_community_events": "Événements communautaires",
+  "nav_faq": "FAQ",
+  "nav_contact": "Contact"
 }

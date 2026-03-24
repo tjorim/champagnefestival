@@ -192,7 +192,9 @@ function App() {
         const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
         return eventEnd >= now;
       })
-      .filter((event) => !event.registrationsOpenFrom || new Date(event.registrationsOpenFrom) <= now);
+      .filter(
+        (event) => !event.registrationsOpenFrom || new Date(event.registrationsOpenFrom) <= now,
+      );
   }, [edition.events]);
 
   // --- Main marketing page ---
@@ -294,7 +296,7 @@ function App() {
         </section>
 
         {/* Community Events */}
-        <AppSuspense errorFallbackText="Could not load community events.">
+        <AppSuspense errorFallbackText={m.community_events_error_load()}>
           <CommunityEvents />
         </AppSuspense>
 
