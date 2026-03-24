@@ -149,6 +149,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
   }, [show, person, form]);
 
   const nameValue = useStore(form.store, (s) => s.values.name);
+  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
   const rolesInput = useStore(form.store, (s) => s.values.rolesInput) ?? "";
   const currentRoles = parseRoles(rolesInput);
 
@@ -185,18 +186,29 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <form.Field
               name="name"
-              validators={{ onChange: ({ value }) => !value?.trim() ? "Name is required" : undefined }}
+              validators={{ onChange: ({ value }) => !value?.trim() ? m.registration_errors_name_required() : undefined }}
             >
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  className="bg-dark text-light border-secondary"
-                  maxLength={200}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
+              {(field) => {
+                const showErr = !!field.state.meta.errors.length && field.state.meta.isTouched;
+                return (
+                  <>
+                    <Form.Control
+                      type="text"
+                      className="bg-dark text-light border-secondary"
+                      maxLength={200}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
             </form.Field>
           </Form.Group>
 
@@ -209,7 +221,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   validators={{
                     onChange: ({ value }) =>
                       value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
-                        ? "Invalid email address"
+                        ? m.registration_errors_email_invalid()
                         : undefined,
                   }}
                 >
@@ -361,9 +373,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             type="submit"
             variant="warning"
             size="sm"
-            disabled={form.state.isSubmitting || !nameValue?.trim()}
+            disabled={isSubmitting || !nameValue?.trim()}
           >
-            {form.state.isSubmitting ? (
+            {isSubmitting ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />

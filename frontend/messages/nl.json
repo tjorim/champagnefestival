@@ -585,5 +585,15 @@
   "admin_error_auto_auth_failed": "Authenticatie mislukt. Log handmatig in.",
   "admin_error_add_area": "Kan zone niet toevoegen.",
   "admin_error_delete_area": "Kan zone niet verwijderen.",
-  "admin_content_no_editions": "Nog geen edities."
+  "admin_content_no_editions": "Nog geen edities.",
+  "admin_event_title_required": "Titel is verplicht",
+  "admin_event_date_required": "Datum is verplicht",
+  "admin_event_start_time_required": "Starttijd is verplicht",
+  "admin_event_capacity_min": "Minimum 1 vereist",
+  "admin_edition_id_required": "ID is verplicht",
+  "admin_edition_month_required": "Maand is verplicht",
+  "admin_edition_venue_required": "Locatie is verplicht",
+  "admin_item_name_required": "Naam is verplicht",
+  "admin_item_image_required": "Afbeeldings-URL is verplicht",
+  "admin_item_url_invalid": "URL moet beginnen met http(s)://"
 }

@@ -55,13 +55,8 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         });
         onHide();
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : isEdit
-              ? m.admin_members_error_update()
-              : m.admin_members_error_create(),
-        );
+        console.error("Member save error:", err);
+        setError(isEdit ? m.admin_members_error_update() : m.admin_members_error_create());
       }
     },
   });
@@ -93,6 +88,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
   }, [show, member, form]);
 
   const nameValue = useStore(form.store, (s) => s.values.name);
+  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
@@ -120,18 +116,29 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <form.Field
               name="name"
-              validators={{ onChange: ({ value }) => !value?.trim() ? "Name is required" : undefined }}
+              validators={{ onChange: ({ value }) => !value?.trim() ? m.registration_errors_name_required() : undefined }}
             >
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  className="bg-dark text-light border-secondary"
-                  maxLength={200}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
+              {(field) => {
+                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                return (
+                  <>
+                    <Form.Control
+                      type="text"
+                      className="bg-dark text-light border-secondary"
+                      maxLength={200}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      isInvalid={showErr}
+                    />
+                    {showErr && (
+                      <Form.Control.Feedback type="invalid">
+                        {field.state.meta.errors[0]}
+                      </Form.Control.Feedback>
+                    )}
+                  </>
+                );
+              }}
             </form.Field>
           </Form.Group>
 
@@ -144,7 +151,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   validators={{
                     onChange: ({ value }) =>
                       value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
-                        ? "Invalid email address"
+                        ? m.registration_errors_email_invalid()
                         : undefined,
                   }}
                 >
@@ -260,15 +267,15 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         </Modal.Body>
 
         <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" onClick={onHide} disabled={form.state.isSubmitting}>
+          <Button variant="outline-secondary" onClick={onHide} disabled={isSubmitting}>
             {m.admin_action_cancel()}
           </Button>
           <Button
             variant="warning"
             type="submit"
-            disabled={form.state.isSubmitting || !nameValue?.trim()}
+            disabled={isSubmitting || !nameValue?.trim()}
           >
-            {form.state.isSubmitting ? (
+            {isSubmitting ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
                 {m.admin_save()}

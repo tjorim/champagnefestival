@@ -82,6 +82,20 @@ export default function RegistrationCreateModal({
       notes: "",
       personOption: null,
     } as RegistrationCreateForm,
+    onSubmit: async ({ value }) => {
+      const isValidEvent = events.some((event) => event.id === value.eventId);
+      if (!value.personOption || !isValidEvent) return;
+      try {
+        await createRegistrationMutation.mutateAsync({
+          personId: value.personOption.value,
+          eventId: value.eventId,
+          guestCount: value.guestCount,
+          notes: value.notes.trim(),
+        });
+      } catch {
+        // Error is surfaced via createRegistrationMutation.isError
+      }
+    },
   });
 
   const createRegistrationMutation = useMutation({
@@ -153,6 +167,7 @@ export default function RegistrationCreateModal({
 
   const watchedEventId = useStore(form.store, (state) => state.values.eventId);
   const watchedPersonOption = useStore(form.store, (state) => state.values.personOption);
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
   const hasValidEventSelection = events.some((event) => event.id === watchedEventId);
 
   return (
@@ -160,19 +175,7 @@ export default function RegistrationCreateModal({
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">{m.admin_create_registration()}</Modal.Title>
       </Modal.Header>
-      <Form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const values = form.state.values;
-          if (!values.personOption || !hasValidEventSelection) return;
-          createRegistrationMutation.mutate({
-            personId: values.personOption.value,
-            eventId: values.eventId,
-            guestCount: values.guestCount,
-            notes: values.notes.trim(),
-          });
-        }}
-      >
+      <Form onSubmit={(e) => { e.preventDefault(); void form.handleSubmit(); }}>
         <Modal.Body className="bg-dark">
           {error && (
             <Alert
@@ -311,12 +314,12 @@ export default function RegistrationCreateModal({
             variant="warning"
             size="sm"
             disabled={
-              createRegistrationMutation.isPending ||
+              isSubmitting ||
               !watchedPersonOption ||
               !hasValidEventSelection
             }
           >
-            {createRegistrationMutation.isPending ? (
+            {isSubmitting ? (
               <Spinner as="span" animation="border" size="sm" className="me-1" />
             ) : (
               <i className="bi bi-floppy me-1" aria-hidden="true" />

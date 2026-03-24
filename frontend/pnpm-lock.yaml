@@ -15,7 +15,7 @@ importers:
         specifier: ^0.3.2
         version: 0.3.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tanstack/react-form':
-        specifier: 1.28.5
+        specifier: ^1.28.5
         version: 1.28.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tanstack/react-query':
         specifier: ^5.94.5

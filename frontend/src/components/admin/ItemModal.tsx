@@ -137,7 +137,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </Form.Label>
             <form.Field
               name="name"
-              validators={{ onChange: ({ value }) => !value?.trim() ? "Name is required" : undefined }}
+              validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_item_name_required() : undefined }}
             >
               {(field) => {
                 const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -167,7 +167,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </Form.Label>
             <form.Field
               name="image"
-              validators={{ onChange: ({ value }) => !value?.trim() ? "Image URL is required" : undefined }}
+              validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_item_image_required() : undefined }}
             >
               {(field) => {
                 const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -197,7 +197,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               validators={{
                 onChange: ({ value }) =>
                   value && !/^https?:\/\/.+/.test(value)
-                    ? "Must be a valid URL starting with http(s)://"
+                    ? m.admin_item_url_invalid()
                     : undefined,
               }}
             >

@@ -59,8 +59,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             category: initial.category,
             registrationRequired: initial.registrationRequired,
             registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
-            maxCapacity: initial.maxCapacity ? String(initial.maxCapacity) : "",
-            sortOrder: initial.sortOrder ? String(initial.sortOrder) : "",
+            maxCapacity: initial.maxCapacity != null ? String(initial.maxCapacity) : "",
+            sortOrder: initial.sortOrder != null ? String(initial.sortOrder) : "",
             active: initial.active,
           }
         : {
@@ -101,7 +101,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <form.Field
                 name="title"
-                validators={{ onChange: ({ value }) => !value?.trim() ? "Title is required" : undefined }}
+                validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_event_title_required() : undefined }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -150,7 +150,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Form.Label className="text-secondary small mb-1">{m.admin_event_date()}</Form.Label>
               <form.Field
                 name="date"
-                validators={{ onChange: ({ value }) => !value ? "Date is required" : undefined }}
+                validators={{ onChange: ({ value }) => !value ? m.admin_event_date_required() : undefined }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -182,7 +182,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <form.Field
                 name="startTime"
-                validators={{ onChange: ({ value }) => !value ? "Start time is required" : undefined }}
+                validators={{ onChange: ({ value }) => !value ? m.admin_event_start_time_required() : undefined }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -232,7 +232,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 name="maxCapacity"
                 validators={{
                   onChange: ({ value }) =>
-                    value && Number(value) < 1 ? "Must be at least 1" : undefined,
+                    value && Number(value) < 1 ? m.admin_event_capacity_min() : undefined,
                 }}
               >
                 {(field) => {

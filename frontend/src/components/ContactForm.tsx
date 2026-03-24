@@ -148,12 +148,6 @@ const ContactForm = () => {
               )}
             </form.Field>
 
-            <form.Field name="formStartTime">
-              {(field) => (
-                <Form.Control type="hidden" value={field.state.value} readOnly />
-              )}
-            </form.Field>
-
             <form.Field
               name="name"
               validators={{

@@ -126,7 +126,7 @@ export default function EditionModal({
     },
     onSubmit: async ({ value }) => {
       if (!initial && value.id.trim() === "") {
-        setError("ID cannot be empty or whitespace only");
+        setError(m.admin_edition_id_required());
         return;
       }
       try {
@@ -249,17 +249,31 @@ export default function EditionModal({
           {!isEdit && (
             <Form.Group className="mb-3">
               <Form.Label className="text-secondary small mb-1">ID</Form.Label>
-              <form.Field name="id">
-                {(field) => (
-                  <Form.Control
-                    className="bg-dark text-light border-secondary"
-                    placeholder="e.g. 2026-march"
-                    autoFocus
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
+              <form.Field
+                name="id"
+                validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_edition_id_required() : undefined }}
+              >
+                {(field) => {
+                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        className="bg-dark text-light border-secondary"
+                        placeholder="e.g. 2026-march"
+                        autoFocus
+                        value={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.state.meta.errors[0]}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
               </form.Field>
             </Form.Group>
           )}
@@ -283,7 +297,7 @@ export default function EditionModal({
               <Form.Label className="text-secondary small mb-1">Month</Form.Label>
               <form.Field
                 name="month"
-                validators={{ onChange: ({ value }) => !value?.trim() ? "Month is required" : undefined }}
+                validators={{ onChange: ({ value }) => !value?.trim() ? m.admin_edition_month_required() : undefined }}
               >
                 {(field) => {
                   const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -353,7 +367,7 @@ export default function EditionModal({
             </Form.Label>
             <form.Field
               name="venueId"
-              validators={{ onChange: ({ value }) => !value ? "Venue is required" : undefined }}
+              validators={{ onChange: ({ value }) => !value ? m.admin_edition_venue_required() : undefined }}
             >
               {(field) => {
                 const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
@@ -473,7 +487,7 @@ export default function EditionModal({
                     validators={{
                       onChange: ({ value }) =>
                         value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)
-                          ? "Invalid email address"
+                          ? m.registration_errors_email_invalid()
                           : undefined,
                     }}
                   >

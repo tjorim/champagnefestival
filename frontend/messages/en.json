@@ -585,5 +585,15 @@
   "admin_error_auto_auth_failed": "Failed to authenticate. Please log in manually.",
   "admin_error_add_area": "Failed to add area.",
   "admin_error_delete_area": "Failed to delete area.",
-  "admin_content_no_editions": "No editions yet."
+  "admin_content_no_editions": "No editions yet.",
+  "admin_event_title_required": "Title is required",
+  "admin_event_date_required": "Date is required",
+  "admin_event_start_time_required": "Start time is required",
+  "admin_event_capacity_min": "Must be at least 1",
+  "admin_edition_id_required": "ID is required",
+  "admin_edition_month_required": "Month is required",
+  "admin_edition_venue_required": "Venue is required",
+  "admin_item_name_required": "Name is required",
+  "admin_item_image_required": "Image URL is required",
+  "admin_item_url_invalid": "Must be a valid URL starting with http(s)://"
 }
