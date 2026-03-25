@@ -1,6 +1,12 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import MyRegistrationsPage from "@/components/MyRegistrationsPage";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
@@ -45,16 +51,23 @@ describe("MyRegistrationsPage", () => {
     vi.clearAllMocks();
   });
 
-  function renderPage(initialEntry = "/my-registrations") {
-    const wrapper = createTestQueryClientWrapper();
-    return render(
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route path="/my-registrations" element={<MyRegistrationsPage />} />
-        </Routes>
-      </MemoryRouter>,
-      { wrapper },
-    );
+  async function renderPage(initialEntry = "/my-registrations") {
+    const rootRoute = createRootRoute();
+    const myRegistrationsRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/my-registrations",
+      validateSearch: (search: Record<string, unknown>) => ({
+        token: typeof search.token === "string" ? search.token : undefined,
+      }),
+      component: MyRegistrationsPage,
+    });
+    const routeTree = rootRoute.addChildren([myRegistrationsRoute]);
+    const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
+    const router = createRouter({ routeTree, history: memoryHistory });
+    await router.load();
+    const Wrapper = createTestQueryClientWrapper();
+
+    return render(<RouterProvider router={router} />, { wrapper: Wrapper });
   }
 
   it("requests a secure link instead of looking registrations up by email", async () => {
@@ -67,7 +80,7 @@ describe("MyRegistrationsPage", () => {
       }),
     });
 
-    renderPage();
+    await renderPage();
 
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "guest@example.com" },
@@ -104,7 +117,7 @@ describe("MyRegistrationsPage", () => {
       ],
     });
 
-    renderPage("/my-registrations?token=secure-token");
+    await renderPage("/my-registrations?token=secure-token");
 
     await waitFor(() => {
       expect(screen.getByText("VIP Reception")).toBeInTheDocument();
@@ -123,7 +136,7 @@ describe("MyRegistrationsPage", () => {
       status: 401,
     });
 
-    renderPage("/my-registrations?token=expired-token");
+    await renderPage("/my-registrations?token=expired-token");
 
     await waitFor(() => {
       expect(screen.getByText("This secure link is invalid or expired.")).toBeInTheDocument();
@@ -134,7 +147,7 @@ describe("MyRegistrationsPage", () => {
   });
 
   it("validates the email before sending the request", async () => {
-    renderPage();
+    await renderPage();
 
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "not-an-email" },
@@ -154,7 +167,7 @@ describe("MyRegistrationsPage", () => {
       status: 422,
     });
 
-    renderPage();
+    await renderPage();
 
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "guest@example.com" },

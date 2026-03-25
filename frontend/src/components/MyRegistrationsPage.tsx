@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useCallback, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -21,8 +21,9 @@ import {
 import { EMAIL_REGEX } from "@/config/constants";
 
 export default function MyRegistrationsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const token = useMemo(() => searchParams.get("token")?.trim() ?? "", [searchParams]);
+  const { token: rawToken } = useSearch({ from: "/my-registrations" });
+  const token = rawToken?.trim() ?? "";
+  const navigate = useNavigate({ from: "/my-registrations" });
 
   const [email, setEmail] = useState("");
   const [requestSent, setRequestSent] = useState(false);
@@ -56,11 +57,11 @@ export default function MyRegistrationsPage() {
     registrationsQuery.error.code === "invalid_token";
 
   const resetToRequestForm = useCallback(() => {
-    setSearchParams({}, { replace: true });
+    void navigate({ search: {}, replace: true });
     setRequestSent(false);
     setError("");
     setIsEmailInvalid(false);
-  }, [setSearchParams]);
+  }, [navigate]);
 
   const handleEmailSubmit = useCallback(
     async (e: React.FormEvent) => {

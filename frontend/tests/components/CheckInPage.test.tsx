@@ -1,6 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import CheckInPage from "@/components/CheckInPage";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
@@ -39,17 +45,24 @@ describe("CheckInPage", () => {
     vi.clearAllMocks();
   });
 
-  function renderPage(initialEntry = "/check-in?id=res_123&token=secure-token") {
-    const wrapper = createTestQueryClientWrapper();
+  async function renderPage(initialEntry = "/check-in?id=res_123&token=secure-token") {
+    const rootRoute = createRootRoute();
+    const checkInRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/check-in",
+      validateSearch: (search: Record<string, unknown>) => ({
+        id: typeof search.id === "string" ? search.id : undefined,
+        token: typeof search.token === "string" ? search.token : undefined,
+      }),
+      component: CheckInPage,
+    });
+    const routeTree = rootRoute.addChildren([checkInRoute]);
+    const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
+    const router = createRouter({ routeTree, history: memoryHistory });
+    await router.load();
+    const Wrapper = createTestQueryClientWrapper();
 
-    return render(
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route path="/check-in" element={<CheckInPage />} />
-        </Routes>
-      </MemoryRouter>,
-      { wrapper },
-    );
+    return render(<RouterProvider router={router} />, { wrapper: Wrapper });
   }
 
   it("loads the registration via the lookup query", async () => {
@@ -70,7 +83,7 @@ describe("CheckInPage", () => {
       }),
     });
 
-    renderPage();
+    await renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("Taylor Guest")).toBeInTheDocument();
@@ -140,7 +153,7 @@ describe("CheckInPage", () => {
         }),
       });
 
-    renderPage();
+    await renderPage();
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();

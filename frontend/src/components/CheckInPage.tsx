@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { useSearchParams } from "react-router";
+import { useSearch } from "@tanstack/react-router";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -19,9 +19,7 @@ import {
 
 export default function CheckInPage() {
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
-  const registrationId = searchParams.get("id") ?? undefined;
-  const checkInToken = searchParams.get("token") ?? undefined;
+  const { id: registrationId, token: checkInToken } = useSearch({ from: "/check-in" });
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
