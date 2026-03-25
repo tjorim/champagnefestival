@@ -1,7 +1,13 @@
 import React, { lazy, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Link } from "react-router";
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Link,
+  RouterProvider,
+} from "@tanstack/react-router";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -153,15 +159,6 @@ function MyRegistrationsRoute() {
     </div>
   );
 }
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 function App() {
   // Use custom hooks for language
@@ -418,6 +415,68 @@ function App() {
   );
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+const rootRoute = createRootRoute({
+  notFoundComponent: App,
+});
+
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: App,
+});
+
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin",
+  component: AdminPage,
+});
+
+const checkInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/check-in",
+  validateSearch: (search: Record<string, unknown>): { id?: string; token?: string } => ({
+    id: typeof search.id === "string" ? search.id : undefined,
+    token: typeof search.token === "string" ? search.token : undefined,
+  }),
+  component: CheckInRoute,
+});
+
+const myRegistrationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/my-registrations",
+  validateSearch: (search: Record<string, unknown>): { token?: string } => ({
+    token: typeof search.token === "string" ? search.token : undefined,
+  }),
+  component: MyRegistrationsRoute,
+});
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  adminRoute,
+  checkInRoute,
+  myRegistrationsRoute,
+]);
+
+const router = createRouter({
+  routeTree,
+  basepath: import.meta.env.BASE_URL,
+});
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
 // Render the App
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -427,14 +486,7 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <Routes>
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/check-in" element={<CheckInRoute />} />
-          <Route path="/my-registrations" element={<MyRegistrationsRoute />} />
-          <Route path="*" element={<App />} />
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   </React.StrictMode>,
 );
