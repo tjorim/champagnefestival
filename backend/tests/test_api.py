@@ -2015,6 +2015,51 @@ async def test_normalize_phone_equivalent_inputs(client):
     assert r.json()["phone"] == canonical_phone
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "raw_phone,expected",
+    [
+        ("+32470123456", "+32470123456"),  # already E.164
+        ("+32 470 12 34 56", "+32470123456"),  # E.164 with spaces
+        ("0032 470 12 34 56", "+32470123456"),  # IDD 00 prefix
+        ("0470 12 34 56", "+32470123456"),  # local trunk 0 (Belgian)
+        ("+491701234567", "+491701234567"),  # German number with +
+        ("+33612345678", "+33612345678"),  # French number with +
+        ("0033 6 12 34 56 78", "+33612345678"),  # French with IDD 00
+        ("", ""),  # empty string
+    ],
+)
+async def test_parse_phone_valid_inputs(client, raw_phone, expected):
+    """Valid phone numbers are stored in E.164 canonical form."""
+    safe_id = "".join(c for c in raw_phone if c.isalnum()) or "empty"
+    r = await client.post(
+        "/api/people",
+        json={"name": "Phone Tester", "email": f"ptest_{safe_id}@example.com", "phone": raw_phone},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.json()
+    assert r.json()["phone"] == expected
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "bad_phone",
+    [
+        "not-a-number",
+        "1234",  # too short to be valid
+        "00",  # IDD prefix only — no number
+    ],
+)
+async def test_parse_phone_invalid_inputs(client, bad_phone):
+    """Invalid phone numbers are rejected with 422 Unprocessable Entity."""
+    r = await client.post(
+        "/api/people",
+        json={"name": "Bad Phone", "email": "badphone@example.com", "phone": bad_phone},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422, r.json()
+
+
 # ---------------------------------------------------------------------------
 # People merge endpoint
 # ---------------------------------------------------------------------------

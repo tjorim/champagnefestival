@@ -19,7 +19,7 @@ from app.database import get_db
 from app.email import send_guest_access_email
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken
 from app.ratelimit import check_rate_limit
-from app.routers.people import normalize_phone
+from app.routers.people import parse_phone
 from app.schemas import (
     RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
@@ -58,7 +58,7 @@ async def create_registration(
 
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
-    phone_norm = normalize_phone(body.phone)
+    phone_norm = parse_phone(body.phone)
 
     candidates = (
         (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm))).scalars().all()
