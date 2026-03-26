@@ -51,3 +51,10 @@ Run Alembic migrations on first deploy and after each schema change:
 ```bash
 docker compose run --rm champagnefestival-api alembic upgrade head
 ```
+
+> **Note:** The migration files are baked into the Docker image at build time. If new migrations were added since the last build, rebuild the image first — otherwise Alembic will report `(head)` at the old revision without applying anything:
+>
+> ```bash
+> docker compose build champagnefestival-api
+> docker compose run --rm champagnefestival-api alembic upgrade head
+> ```
