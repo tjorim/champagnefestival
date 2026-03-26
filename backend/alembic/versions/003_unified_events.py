@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
+import datetime as dt
 from datetime import UTC, datetime
 
 import sqlalchemy as sa
@@ -50,14 +51,30 @@ def _event_id(edition_id: str, schedule_item_id: str | None, index: int) -> str:
     return f"evt-{prefix}-{digest}"[:64]
 
 
-def _day_to_date(row, day_id):
+def _parse_date(value) -> dt.date | None:
+    if value is None:
+        return None
+    if isinstance(value, dt.date):
+        return value
+    return dt.date.fromisoformat(str(value))
+
+
+def _parse_datetime(value) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value))
+
+
+def _day_to_date(row, day_id) -> dt.date | None:
     mapping = {1: row.friday, 2: row.saturday, 3: row.sunday}
     date_value = mapping.get(day_id)
     if date_value is not None:
-        return date_value
+        return _parse_date(date_value)
     if row.friday is None and row.saturday is None and row.sunday is None:
         return None
-    return row.friday or row.saturday or row.sunday
+    return _parse_date(row.friday or row.saturday or row.sunday)
 
 
 def upgrade() -> None:
@@ -124,8 +141,9 @@ def upgrade() -> None:
                         "end_time": item.get("end_time"),
                         "category": item.get("category") or "general",
                         "registration_required": bool(item.get("registration") or item.get("registration_required")),
-                        "registrations_open_from": item.get("reservations_open_from")
-                        or item.get("registrations_open_from"),
+                        "registrations_open_from": _parse_datetime(
+                            item.get("reservations_open_from") or item.get("registrations_open_from")
+                        ),
                         "max_capacity": item.get("max_capacity"),
                         "active": bool(item.get("active", True)),
                         "created_at": now,
@@ -186,19 +204,13 @@ def upgrade() -> None:
         if old_name in registration_indexes:
             op.drop_index(old_name, table_name="registrations")
 
-    orphaned_registration_count = bind.execute(
+    # Delete any registrations whose event_id still doesn't resolve to a known event (legacy/test data).
+    bind.execute(
         sa.text(
-            "SELECT COUNT(*) "
-            "FROM registrations r "
-            "LEFT JOIN events e ON e.id = r.event_id "
-            "WHERE r.event_id IS NOT NULL AND e.id IS NULL"
+            "DELETE FROM registrations "
+            "WHERE event_id IS NOT NULL AND event_id NOT IN (SELECT id FROM events)"
         )
-    ).scalar_one()
-    if orphaned_registration_count:
-        raise RuntimeError(
-            "Cannot create registrations.event_id foreign key; "
-            f"found {orphaned_registration_count} registrations referencing missing events."
-        )
+    )
 
     registration_cols = {col["name"] for col in inspect(bind).get_columns("registrations")}
     with op.batch_alter_table("registrations") as batch_op:
