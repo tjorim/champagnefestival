@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
-import Tab from "react-bootstrap/Tab";
-import Nav from "react-bootstrap/Nav";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
 import LayoutEditor from "./LayoutEditor";
@@ -324,6 +324,24 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   /** Full registration (with checkInToken) shown in the detail modal */
   const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
+
+  // Sidebar navigation state
+  const [activeKey, setActiveKey] = useState("registrations");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(["programme"]),
+  );
+  const [venueTab, setVenueTab] = useState<"venues" | "table-types">("venues");
+  const [peopleTab, setPeopleTab] = useState<"directory" | "members" | "volunteers">("directory");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleGroup = useCallback((group: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  }, []);
 
   const authHeaders = useCallback(
     () => ({
@@ -2256,14 +2274,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   if (!visible) return null;
 
   return (
-    <section id="admin" aria-labelledby="admin-title" className="py-5">
-      <Container>
-        <h2 id="admin-title" className="text-center mb-4 text-warning">
-          <i className="bi bi-shield-lock me-2" aria-hidden="true" />
-          {m.admin_title()}
-        </h2>
-
-        {!isAuthenticated ? (
+    <section
+      id="admin"
+      aria-labelledby="admin-title"
+      className={isAuthenticated ? "admin-authenticated" : "py-5"}
+    >
+      {!isAuthenticated ? (
+        /* ---- Login ---- */
+        <Container>
+          <h2 id="admin-title" className="text-center mb-4 text-warning">
+            <i className="bi bi-shield-lock me-2" aria-hidden="true" />
+            {m.admin_title()}
+          </h2>
           <div className="row justify-content-center">
             <div className="col-12 col-sm-8 col-md-6 col-lg-4">
               <Card bg="dark" text="white" border="warning">
@@ -2315,250 +2337,393 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </Card>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-              <span className="text-secondary">
-                <i className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" />
-                {m.admin_authenticated()}
-              </span>
+        </Container>
+      ) : (
+        /* ---- Authenticated: sidebar layout ---- */
+        <div className="admin-layout">
+          {/* Mobile overlay */}
+          {sidebarOpen && (
+            <div
+              className="admin-sidebar-overlay"
+              onClick={() => setSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Sidebar */}
+          <aside className={clsx("admin-sidebar", sidebarOpen && "admin-sidebar-open")}>
+            {/* Brand */}
+            <div className="admin-sidebar-brand">
+              <i className="bi bi-shield-lock" aria-hidden="true" />
+              <h2 id="admin-title">{m.admin_title()}</h2>
+            </div>
+
+            {/* Navigation */}
+            <nav className="admin-nav" aria-label={m.admin_title()}>
+              {/* Registrations */}
+              <button
+                className={clsx("admin-nav-item", activeKey === "registrations" && "is-active")}
+                onClick={() => { setActiveKey("registrations"); setSidebarOpen(false); }}
+              >
+                <i className="bi bi-calendar-check" aria-hidden="true" />
+                <span>{m.admin_registrations_tab()}</span>
+                {registrations.length > 0 && (
+                  <span className="admin-nav-count">{registrations.length}</span>
+                )}
+              </button>
+
+              {/* Programme group */}
+              <div className="admin-nav-group">
+                <button
+                  className={clsx(
+                    "admin-nav-group-header",
+                    ["content", "floor-plans"].includes(activeKey) && "has-active",
+                  )}
+                  onClick={() => toggleGroup("programme")}
+                  aria-expanded={expandedGroups.has("programme")}
+                >
+                  <i className="bi bi-collection" aria-hidden="true" />
+                  <span>Programme</span>
+                  <i
+                    className={clsx(
+                      "bi admin-nav-chevron",
+                      expandedGroups.has("programme") ? "bi-chevron-up" : "bi-chevron-down",
+                    )}
+                    aria-hidden="true"
+                  />
+                </button>
+                {expandedGroups.has("programme") && (
+                  <div className="admin-nav-sub">
+                    <button
+                      className={clsx("admin-nav-item", activeKey === "content" && "is-active")}
+                      onClick={() => { setActiveKey("content"); setSidebarOpen(false); }}
+                    >
+                      <i className="bi bi-images" aria-hidden="true" />
+                      <span>{m.admin_content_tab()}</span>
+                    </button>
+                    <button
+                      className={clsx(
+                        "admin-nav-item",
+                        activeKey === "floor-plans" && "is-active",
+                      )}
+                      onClick={() => { setActiveKey("floor-plans"); setSidebarOpen(false); }}
+                    >
+                      <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
+                      <span>{m.admin_tables_tab()}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Venue */}
+              <button
+                className={clsx("admin-nav-item", activeKey === "venue" && "is-active")}
+                onClick={() => { setActiveKey("venue"); setSidebarOpen(false); }}
+              >
+                <i className="bi bi-geo-alt" aria-hidden="true" />
+                <span>{m.admin_venues_tab()}</span>
+              </button>
+
+              {/* People group */}
+              <button
+                className={clsx("admin-nav-item", activeKey === "people" && "is-active")}
+                onClick={() => { setActiveKey("people"); setSidebarOpen(false); }}
+              >
+                <i className="bi bi-people" aria-hidden="true" />
+                <span>{m.admin_people_tab()}</span>
+                {people.length > 0 && (
+                  <span className="admin-nav-count">{people.length}</span>
+                )}
+              </button>
+            </nav>
+
+            {/* Footer: status + actions */}
+            <div className="admin-sidebar-footer">
+              <div className="admin-auth-status">
+                <i className="bi bi-check-circle-fill" aria-hidden="true" />
+                <span>{m.admin_authenticated()}</span>
+              </div>
               <div className="d-flex gap-2">
                 <Button
                   variant="outline-secondary"
                   size="sm"
                   onClick={loadData}
                   disabled={isAnyFetching}
+                  title={m.admin_refresh()}
+                  aria-label={m.admin_refresh()}
                 >
-                  <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
-                  {m.admin_refresh()}
+                  <i
+                    className={clsx("bi bi-arrow-clockwise", isAnyFetching && "spin")}
+                    aria-hidden="true"
+                  />
                 </Button>
-                <Button variant="outline-danger" size="sm" onClick={handleLogout}>
-                  <i className="bi bi-box-arrow-right me-1" aria-hidden="true" />
-                  {m.admin_logout()}
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={handleLogout}
+                  title={m.admin_logout()}
+                  aria-label={m.admin_logout()}
+                >
+                  <i className="bi bi-box-arrow-right" aria-hidden="true" />
                 </Button>
               </div>
             </div>
+          </aside>
 
+          {/* Mobile toggle */}
+          <button
+            className="admin-mobile-toggle"
+            onClick={() => setSidebarOpen((s) => !s)}
+            aria-label="Toggle navigation"
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-content"
+          >
+            <i className={clsx("bi", sidebarOpen ? "bi-x-lg" : "bi-list")} aria-hidden="true" />
+          </button>
+
+          {/* Main content */}
+          <div className="admin-main" id="admin-content">
             {error && (
-              <Alert variant="danger" className="mb-3" dismissible onClose={() => setError("")}>
+              <Alert variant="danger" className="mb-4" dismissible onClose={() => setError("")}>
                 {error}
               </Alert>
             )}
 
             {isAnyPending ? (
               <div className="text-center py-5">
-                <Spinner animation="border" variant="warning" role="status">
+                <Spinner animation="border" variant="primary" role="status">
                   <span className="visually-hidden">{m.admin_loading()}</span>
                 </Spinner>
               </div>
             ) : (
-              <Tab.Container defaultActiveKey="registrations">
-                <Nav variant="tabs" className="mb-3">
-                  <Nav.Item>
-                    <Nav.Link eventKey="registrations" className="text-light">
-                      <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                      {m.admin_registrations_tab()}
-                      <span className="badge bg-warning text-dark ms-2">
-                        {registrations.length}
-                      </span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="tables" className="text-light">
-                      <i className="bi bi-grid-3x3-gap me-2" aria-hidden="true" />
-                      {m.admin_tables_tab()}
-                      <span className="badge bg-secondary ms-2">{tables.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="venues" className="text-light">
-                      <i className="bi bi-geo-alt me-2" aria-hidden="true" />
-                      {m.admin_venues_tab()}
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="table-types" className="text-light">
-                      <i className="bi bi-grid me-2" aria-hidden="true" />
-                      {m.admin_table_types_tab()}
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="content" className="text-light">
-                      <i className="bi bi-images me-2" aria-hidden="true" />
-                      {m.admin_content_tab()}
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="people" className="text-light">
-                      <i className="bi bi-people me-2" aria-hidden="true" />
-                      {m.admin_people_tab()}
-                      <span className="badge bg-secondary ms-2">{people.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="members" className="text-light">
-                      <i className="bi bi-person-badge me-2" aria-hidden="true" />
-                      {m.admin_members_tab()}
-                      <span className="badge bg-secondary ms-2">{members.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="volunteers" className="text-light">
-                      <i className="bi bi-hand-thumbs-up me-2" aria-hidden="true" />
-                      {m.admin_volunteers_tab()}
-                      <span className="badge bg-secondary ms-2">{volunteers.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                </Nav>
-                <Tab.Content>
-                  <Tab.Pane eventKey="registrations">
-                    <RegistrationList
-                      registrations={registrations}
-                      tables={tables}
-                      exhibitors={exhibitors}
-                      filter={filter}
-                      onFilterChange={setFilter}
-                      onUpdateStatus={handleUpdateStatus}
-                      onUpdatePayment={handleUpdatePayment}
-                      onAssignTable={handleAssignTable}
-                      onViewDetail={handleViewDetail}
-                      onAddRegistration={handleAddRegistration}
-                      authHeaders={authHeaders}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="tables">
-                    <LayoutEditor
-                      dayOptions={layoutDayOptions}
-                      tables={tables}
-                      tableTypes={tableTypes}
-                      layouts={layouts}
-                      registrations={registrations}
-                      rooms={rooms}
-                      exhibitors={exhibitors}
-                      areas={areas}
-                      onAddTable={handleAddTable}
-                      onMoveTable={handleMoveTable}
-                      onDeleteTable={handleDeleteTable}
-                      onRotateTable={handleRotateTable}
-                      onAddLayout={handleAddLayout}
-                      onDeleteLayout={handleDeleteLayout}
-                      onAddArea={handleAddArea}
-                      onMoveArea={handleMoveArea}
-                      onDeleteArea={handleDeleteArea}
-                      onRotateArea={handleRotateArea}
-                      onAssignAreaToItem={handleAssignAreaToItem}
-                      onUpdateAreaLabel={handleUpdateAreaLabel}
-                      onChangeTableType={handleChangeTableType}
-                      onUpdateTable={handleUpdateTable}
-                      onResizeArea={handleResizeArea}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="venues">
-                    <VenueManagement
-                      venues={venues}
-                      rooms={rooms}
-                      onAdd={handleAddVenue}
-                      onArchive={handleArchiveVenue}
-                      onRestore={handleRestoreVenue}
-                      onDelete={handleDeleteVenue}
-                      onAddRoom={handleAddRoom}
-                      onArchiveRoom={handleArchiveRoom}
-                      onRestoreRoom={handleRestoreRoom}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="table-types">
-                    <TableTypeManagement
-                      tableTypes={tableTypes}
-                      onAdd={handleAddTableType}
-                      onUpdate={handleUpdateTableType}
-                      onArchive={handleArchiveTableType}
-                      onRestore={handleRestoreTableType}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="content">
-                    <ContentManagement
-                      authHeaders={authHeaders}
-                      venues={venues}
-                      onExhibitorSaved={handleExhibitorSaved}
-                      onExhibitorDeleted={handleExhibitorDeleted}
-                      onEditionMutated={() => {
-                        void loadData();
-                        void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
-                        void queryClient.invalidateQueries({
-                          queryKey: queryKeys.admin.activeEditionEvents,
-                        });
-                      }}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="people">
-                    <PeopleManagement
-                      people={people}
-                      registrationCountByPersonId={registrationCountByPersonId}
-                      isLoading={isAnyFetching}
-                      authHeaders={authHeaders}
-                      onMerge={handleMergePeople}
-                      onCreate={handleCreatePerson}
-                      onUpdate={handleUpdatePerson}
-                      onDelete={handleDeletePerson}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="members">
-                    <MembersManagement
-                      members={members}
-                      registrationCountByPersonId={registrationCountByPersonId}
-                      isLoading={isAnyFetching}
-                      onCreate={handleCreateMember}
-                      onUpdate={handleUpdateMember}
-                      onDelete={handleDeleteMember}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="volunteers">
-                    <VolunteersManagement
-                      volunteers={volunteers}
-                      isLoading={isAnyFetching}
-                      onCreate={handleCreateVolunteer}
-                      onUpdate={handleUpdateVolunteer}
-                      onDelete={handleDeleteVolunteer}
-                    />
-                  </Tab.Pane>
-                </Tab.Content>
-              </Tab.Container>
+              <div className="admin-content-pane" key={activeKey}>
+                {activeKey === "registrations" && (
+                  <RegistrationList
+                    registrations={registrations}
+                    tables={tables}
+                    exhibitors={exhibitors}
+                    filter={filter}
+                    onFilterChange={setFilter}
+                    onUpdateStatus={handleUpdateStatus}
+                    onUpdatePayment={handleUpdatePayment}
+                    onAssignTable={handleAssignTable}
+                    onViewDetail={handleViewDetail}
+                    onAddRegistration={handleAddRegistration}
+                    authHeaders={authHeaders}
+                  />
+                )}
+                {activeKey === "content" && (
+                  <ContentManagement
+                    authHeaders={authHeaders}
+                    venues={venues}
+                    onExhibitorSaved={handleExhibitorSaved}
+                    onExhibitorDeleted={handleExhibitorDeleted}
+                    onEditionMutated={() => {
+                      void loadData();
+                      void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
+                      void queryClient.invalidateQueries({
+                        queryKey: queryKeys.admin.activeEditionEvents,
+                      });
+                    }}
+                  />
+                )}
+                {activeKey === "floor-plans" && (
+                  <LayoutEditor
+                    editionLabel={`${activeEdition.year} – ${activeEdition.month.charAt(0).toUpperCase()}${activeEdition.month.slice(1)}`}
+                    dayOptions={layoutDayOptions}
+                    tables={tables}
+                    tableTypes={tableTypes}
+                    layouts={layouts}
+                    registrations={registrations}
+                    rooms={rooms}
+                    exhibitors={exhibitors}
+                    areas={areas}
+                    onAddTable={handleAddTable}
+                    onMoveTable={handleMoveTable}
+                    onDeleteTable={handleDeleteTable}
+                    onRotateTable={handleRotateTable}
+                    onAddLayout={handleAddLayout}
+                    onDeleteLayout={handleDeleteLayout}
+                    onAddArea={handleAddArea}
+                    onMoveArea={handleMoveArea}
+                    onDeleteArea={handleDeleteArea}
+                    onRotateArea={handleRotateArea}
+                    onAssignAreaToItem={handleAssignAreaToItem}
+                    onUpdateAreaLabel={handleUpdateAreaLabel}
+                    onChangeTableType={handleChangeTableType}
+                    onUpdateTable={handleUpdateTable}
+                    onResizeArea={handleResizeArea}
+                  />
+                )}
+                {activeKey === "venue" && (
+                  <>
+                    <div className="d-flex gap-2 mb-3">
+                      <button
+                        className={clsx("admin-nav-item", venueTab === "venues" && "is-active")}
+                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
+                        onClick={() => setVenueTab("venues")}
+                      >
+                        <i className="bi bi-building me-1" aria-hidden="true" />
+                        Venues &amp; Rooms
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          venueTab === "table-types" && "is-active",
+                        )}
+                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
+                        onClick={() => setVenueTab("table-types")}
+                      >
+                        <i className="bi bi-grid me-1" aria-hidden="true" />
+                        {m.admin_table_types_tab()}
+                      </button>
+                    </div>
+                    {venueTab === "venues" && (
+                      <VenueManagement
+                        key="venues"
+                        venues={venues}
+                        rooms={rooms}
+                        onAdd={handleAddVenue}
+                        onArchive={handleArchiveVenue}
+                        onRestore={handleRestoreVenue}
+                        onDelete={handleDeleteVenue}
+                        onAddRoom={handleAddRoom}
+                        onArchiveRoom={handleArchiveRoom}
+                        onRestoreRoom={handleRestoreRoom}
+                      />
+                    )}
+                    {venueTab === "table-types" && (
+                      <TableTypeManagement
+                        key="table-types"
+                        tableTypes={tableTypes}
+                        onAdd={handleAddTableType}
+                        onUpdate={handleUpdateTableType}
+                        onArchive={handleArchiveTableType}
+                        onRestore={handleRestoreTableType}
+                      />
+                    )}
+                  </>
+                )}
+                {activeKey === "people" && (
+                  <>
+                    {/* People sub-tab bar */}
+                    <div className="d-flex gap-2 mb-3">
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          peopleTab === "directory" && "is-active",
+                        )}
+                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
+                        onClick={() => setPeopleTab("directory")}
+                      >
+                        <i className="bi bi-person me-1" aria-hidden="true" />
+                        Directory
+                        {people.length > 0 && (
+                          <span className="admin-nav-count ms-1">{people.length}</span>
+                        )}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          peopleTab === "members" && "is-active",
+                        )}
+                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
+                        onClick={() => setPeopleTab("members")}
+                      >
+                        <i className="bi bi-person-badge me-1" aria-hidden="true" />
+                        {m.admin_members_tab()}
+                        {members.length > 0 && (
+                          <span className="admin-nav-count ms-1">{members.length}</span>
+                        )}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          peopleTab === "volunteers" && "is-active",
+                        )}
+                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
+                        onClick={() => setPeopleTab("volunteers")}
+                      >
+                        <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
+                        {m.admin_volunteers_tab()}
+                        {volunteers.length > 0 && (
+                          <span className="admin-nav-count ms-1">{volunteers.length}</span>
+                        )}
+                      </button>
+                    </div>
+                    {peopleTab === "directory" && (
+                      <PeopleManagement
+                        key="directory"
+                        people={people}
+                        registrationCountByPersonId={registrationCountByPersonId}
+                        isLoading={isAnyFetching}
+                        authHeaders={authHeaders}
+                        onMerge={handleMergePeople}
+                        onCreate={handleCreatePerson}
+                        onUpdate={handleUpdatePerson}
+                        onDelete={handleDeletePerson}
+                      />
+                    )}
+                    {peopleTab === "members" && (
+                      <MembersManagement
+                        key="members"
+                        members={members}
+                        registrationCountByPersonId={registrationCountByPersonId}
+                        isLoading={isAnyFetching}
+                        onCreate={handleCreateMember}
+                        onUpdate={handleUpdateMember}
+                        onDelete={handleDeleteMember}
+                      />
+                    )}
+                    {peopleTab === "volunteers" && (
+                      <VolunteersManagement
+                        key="volunteers"
+                        volunteers={volunteers}
+                        isLoading={isAnyFetching}
+                        onCreate={handleCreateVolunteer}
+                        onUpdate={handleUpdateVolunteer}
+                        onDelete={handleDeleteVolunteer}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
             )}
-          </>
-        )}
+          </div>
+        </div>
+      )}
 
-        {/* Registration detail modal (with QR code + bottle delivery) */}
-        {detailRegistration && (
-          <RegistrationDetail
-            registration={detailRegistration}
-            baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
-            emailDuplicates={(() => {
-              const personEmail = detailRegistration.person.email.toLowerCase();
-              return people
-                .filter(
-                  (p) =>
-                    p.id !== detailRegistration.personId &&
-                    p.email &&
-                    p.email.toLowerCase() === personEmail,
-                )
-                .map((p) => ({ id: p.id, name: p.name }));
-            })()}
-            onClose={() => setDetailRegistration(null)}
-            onToggleDelivered={handleToggleDelivered}
-            onCheckIn={handleCheckIn}
-            onIssueStrap={handleIssueStrap}
-            onMergeDuplicate={async (canonicalId, duplicateId) => {
-              try {
-                await handleMergePeople(canonicalId, duplicateId);
-                setDetailRegistration(null);
-              } catch (err) {
-                console.error("Failed to merge people", err);
-                setError(err instanceof Error ? err.message : m.admin_people_merge_error());
-              }
-            }}
-          />
-        )}
-      </Container>
+      {/* Registration detail modal */}
+      {detailRegistration && (
+        <RegistrationDetail
+          registration={detailRegistration}
+          baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
+          emailDuplicates={(() => {
+            const personEmail = detailRegistration.person.email.toLowerCase();
+            return people
+              .filter(
+                (p) =>
+                  p.id !== detailRegistration.personId &&
+                  p.email &&
+                  p.email.toLowerCase() === personEmail,
+              )
+              .map((p) => ({ id: p.id, name: p.name }));
+          })()}
+          onClose={() => setDetailRegistration(null)}
+          onToggleDelivered={handleToggleDelivered}
+          onCheckIn={handleCheckIn}
+          onIssueStrap={handleIssueStrap}
+          onMergeDuplicate={async (canonicalId, duplicateId) => {
+            try {
+              await handleMergePeople(canonicalId, duplicateId);
+              setDetailRegistration(null);
+            } catch (err) {
+              console.error("Failed to merge people", err);
+              setError(err instanceof Error ? err.message : m.admin_people_merge_error());
+            }
+          }}
+        />
+      )}
     </section>
   );
 }

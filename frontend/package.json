@@ -21,6 +21,8 @@
     "@dnd-kit/react": "^0.3.2",
     "@tanstack/react-form": "^1.28.5",
     "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-router": "^1.168.3",
+    "@tanstack/react-table": "^8.21.3",
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
     "clsx": "^2.1.1",
@@ -32,7 +34,6 @@
     "react-dom": "^19.1.1",
     "react-error-boundary": "^6.1.1",
     "react-leaflet": "^5.0.0",
-    "@tanstack/react-router": "^1.168.3",
     "react-select": "^5.10.2",
     "swiper": "^12.1.3"
   },

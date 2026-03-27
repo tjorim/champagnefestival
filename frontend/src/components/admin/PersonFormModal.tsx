@@ -162,7 +162,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
   }
 
   return (
-    <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
+    <Modal show={show} onHide={onHide} centered data-bs-theme="dark" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           <i className="bi bi-person-plus me-2" aria-hidden="true" />

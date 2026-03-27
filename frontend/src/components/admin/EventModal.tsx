@@ -86,7 +86,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
   const isEdit = !!initial;
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark">
+    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           {isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}

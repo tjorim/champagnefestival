@@ -12,6 +12,7 @@ import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
 import Spinner from "react-bootstrap/Spinner";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Form from "react-bootstrap/Form";
 import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
@@ -95,6 +96,8 @@ function ContentSection({
   const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<"all" | "producer" | "sponsor" | "vendor">("all");
+  const [q, setQ] = useState("");
 
   const itemsQuery = useQuery({
     queryKey: contentSectionQueryKey(sectionKey),
@@ -120,8 +123,27 @@ function ContentSection({
   });
 
   const items = itemsQuery.data ?? [];
-  const activeItems = items.filter((item) => item.active !== false);
-  const archivedItems = items.filter((item) => item.active === false);
+
+  const { activeItems, archivedItems, totalActive, totalArchived } = useMemo(() => {
+    const s = q.toLowerCase();
+    const matches = (item: ItemDraft): boolean => {
+      const itemType = item.type ?? "vendor";
+      if (typeFilter !== "all" && itemType !== typeFilter) return false;
+      if (s) {
+        return (
+          item.name.toLowerCase().includes(s) ||
+          (item.contactPerson?.name ?? "").toLowerCase().includes(s)
+        );
+      }
+      return true;
+    };
+    return {
+      activeItems: items.filter((item) => item.active !== false && matches(item)),
+      archivedItems: items.filter((item) => item.active === false && matches(item)),
+      totalActive: items.filter((item) => item.active !== false).length,
+      totalArchived: items.filter((item) => item.active === false).length,
+    };
+  }, [items, typeFilter, q]);
 
   function openAdd() {
     setModalItem(null);
@@ -303,7 +325,7 @@ function ContentSection({
   if (itemsQuery.isPending) {
     return (
       <div className="text-center py-3">
-        <Spinner animation="border" size="sm" variant="warning" />
+        <Spinner animation="border" size="sm" variant="primary" />
         <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
       </div>
     );
@@ -311,22 +333,50 @@ function ContentSection({
 
   return (
     <div className="mb-4">
-      <div className="d-flex justify-content-between align-items-center mb-2">
+      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
         <h6 className="mb-0 text-warning">
           {title}
           <Badge bg="secondary" className="ms-2">
-            {activeItems.length}
+            {totalActive}
           </Badge>
-          {archivedItems.length > 0 && (
+          {totalArchived > 0 && (
             <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">
-              {archivedItems.length} {m.admin_content_archived_section()}
+              {totalArchived} {m.admin_content_archived_section()}
             </Badge>
           )}
         </h6>
-        <Button variant="outline-secondary" size="sm" onClick={openAdd}>
+        <Button variant="outline-primary" size="sm" onClick={openAdd}>
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           {m.admin_content_add_item()}
         </Button>
+      </div>
+      <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+        <ButtonGroup size="sm">
+          {(["all", "producer", "sponsor", "vendor"] as const).map((type) => (
+            <Button
+              key={type}
+              variant={typeFilter === type ? "primary" : "outline-secondary"}
+              onClick={() => setTypeFilter(type)}
+            >
+              {type === "all"
+                ? m.admin_filter_all()
+                : type === "producer"
+                  ? m.admin_item_producer()
+                  : type === "sponsor"
+                    ? m.admin_item_sponsor()
+                    : m.admin_item_vendor()}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Form.Control
+          size="sm"
+          type="search"
+          placeholder={m.admin_content_search_placeholder()}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="bg-dark text-light border-secondary"
+          style={{ maxWidth: 260 }}
+        />
       </div>
 
       {itemsQuery.isError && (
@@ -460,7 +510,7 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
               <Button
                 key={type}
-                variant={editionTypeFilter === type ? "warning" : "outline-secondary"}
+                variant={editionTypeFilter === type ? "primary" : "outline-secondary"}
                 onClick={() => setEditionTypeFilter(type)}
               >
                 {editionTypeLabel(type)}
@@ -468,7 +518,7 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
             ))}
           </ButtonGroup>
         </div>
-        <Button size="sm" variant="outline-secondary" onClick={() => setAddModalOpen(true)}>
+        <Button size="sm" variant="outline-primary" onClick={() => setAddModalOpen(true)}>
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           {m.admin_content_edition_add()}
         </Button>
@@ -476,7 +526,7 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
 
       {editionsQuery.isPending && (
         <div className="text-center py-3">
-          <Spinner animation="border" size="sm" variant="warning" />
+          <Spinner animation="border" size="sm" variant="primary" />
           <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
         </div>
       )}

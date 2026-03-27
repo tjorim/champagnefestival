@@ -226,6 +226,7 @@
   "admin_content_editions_section": "Festival Edities",
   "admin_content_name_placeholder": "Producent naam",
   "admin_content_image_url_placeholder": "https://example.com/image.jpg",
+  "admin_content_search_placeholder": "Zoek op naam of contactpersoon…",
   "admin_content_add_item": "Item toevoegen",
   "admin_content_edit_item": "Item bewerken",
   "admin_content_error_save": "Opslaan mislukt.",

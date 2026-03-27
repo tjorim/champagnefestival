@@ -236,7 +236,7 @@ export default function EditionModal({
   const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark">
+    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}

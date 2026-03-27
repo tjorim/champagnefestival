@@ -226,6 +226,7 @@
   "admin_content_editions_section": "Éditions du festival",
   "admin_content_name_placeholder": "Nom du producteur",
   "admin_content_image_url_placeholder": "https://example.com/image.jpg",
+  "admin_content_search_placeholder": "Rechercher par nom ou personne de contact…",
   "admin_content_add_item": "Ajouter un élément",
   "admin_content_edit_item": "Modifier l'élément",
   "admin_content_error_save": "Échec de la sauvegarde.",

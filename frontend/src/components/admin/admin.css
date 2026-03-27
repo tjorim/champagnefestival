@@ -1,0 +1,575 @@
+/* ===================================================================
+   CHAMPAGNE FESTIVAL — ADMIN STYLES
+   Aligns the admin UI with the public site's brand:
+   primary #5a7ff0, secondary #9a5df6, dark theme, Inter font.
+   All rules are scoped to #admin or .admin-dialog to avoid
+   bleeding into the public-facing pages.
+   =================================================================== */
+
+/* ---- Brand tokens (mirrored from index.css :root) ---- */
+#admin {
+  --adm-primary:      #5a7ff0;
+  --adm-secondary:    #9a5df6;
+  --adm-primary-rgb:  90, 127, 240;
+  --adm-secondary-rgb: 154, 93, 246;
+  --adm-gradient:     linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
+
+  --adm-bg:           #121212;
+  --adm-surface:      #1e1e1e;
+  --adm-surface-2:    #252525;
+  --adm-border:       rgba(255, 255, 255, 0.10);
+  --adm-border-focus: rgba(90, 127, 240, 0.50);
+
+  --adm-text:         #f0f0f0;
+  --adm-text-muted:   #c5c5c5;
+  --adm-text-dim:     #6e6e6e;
+
+  --adm-success:      #4caf82;
+  --adm-danger:       #e05a5a;
+
+  --adm-radius:       6px;
+  --adm-radius-lg:    10px;
+  --adm-t:            180ms;
+  --adm-ease:         cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Page title — matches .gradient-text from the public site ---- */
+#admin h2#admin-title {
+  background: var(--adm-gradient) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  padding-bottom: 0.2em;
+  margin-bottom: -0.1em;
+  /* icon inherits gradient, so reset it */
+}
+
+#admin h2#admin-title i {
+  -webkit-text-fill-color: initial;
+  background: none;
+  color: var(--adm-primary);
+  opacity: 0.7;
+}
+
+/* ---- Cards ---- */
+#admin .card {
+  background: var(--adm-surface) !important;
+  border-color: var(--adm-border) !important;
+}
+
+#admin .card.border-warning {
+  border-color: rgba(var(--adm-primary-rgb), 0.35) !important;
+  box-shadow: 0 0 0 1px rgba(var(--adm-primary-rgb), 0.15),
+              0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+#admin .card-header {
+  background: var(--adm-surface-2) !important;
+  border-bottom-color: var(--adm-border) !important;
+}
+
+#admin .card-header .card-title {
+  background: var(--adm-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- Form controls ---- */
+#admin .form-control,
+#admin .form-select {
+  background-color: var(--adm-surface-2) !important;
+  border-color: var(--adm-border) !important;
+  color: var(--adm-text) !important;
+}
+
+#admin .form-control:focus,
+#admin .form-select:focus {
+  background-color: var(--adm-surface-2) !important;
+  border-color: var(--adm-primary) !important;
+  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.20) !important;
+  color: var(--adm-text) !important;
+}
+
+#admin .form-control.bg-dark,
+#admin .form-control.text-light {
+  background-color: var(--adm-surface-2) !important;
+  color: var(--adm-text) !important;
+  border-color: var(--adm-border) !important;
+}
+
+#admin .form-control.border-secondary {
+  border-color: var(--adm-border) !important;
+}
+
+#admin .form-control::placeholder {
+  color: var(--adm-text-dim) !important;
+}
+
+#admin .input-group-text {
+  background: var(--adm-surface-2) !important;
+  border-color: var(--adm-border) !important;
+  color: var(--adm-text-muted) !important;
+}
+
+/* ---- Buttons — replace warning (yellow) with brand blue ---- */
+#admin .btn-warning {
+  background: var(--adm-gradient) !important;
+  border-color: var(--adm-primary) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+#admin .btn-warning:hover,
+#admin .btn-warning:focus {
+  filter: brightness(1.1);
+  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.25) !important;
+}
+
+#admin .btn-warning:disabled {
+  filter: none;
+  opacity: 0.55;
+}
+
+/* keep outline-secondary and outline-danger as-is — they already work with dark theme */
+
+/* ---- Tab navigation ---- */
+#admin .nav-tabs {
+  border-bottom-color: var(--adm-border) !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+}
+
+#admin .nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#admin .nav-tabs .nav-item {
+  flex-shrink: 0;
+}
+
+#admin .nav-tabs .nav-link {
+  color: var(--adm-text-muted) !important;
+  border-color: transparent !important;
+  border-bottom: 2px solid transparent !important;
+  white-space: nowrap;
+  transition: color var(--adm-t) var(--adm-ease),
+              border-color var(--adm-t) var(--adm-ease) !important;
+}
+
+#admin .nav-tabs .nav-link:hover {
+  color: var(--adm-text) !important;
+  border-bottom-color: var(--adm-border) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+#admin .nav-tabs .nav-link.active {
+  color: var(--adm-primary) !important;
+  border-color: transparent !important;
+  border-bottom: 2px solid var(--adm-primary) !important;
+  background: transparent !important;
+}
+
+/* ---- Tab content fade-in ---- */
+#admin .tab-pane.show.active {
+  animation: admTabIn 220ms var(--adm-ease) both;
+}
+
+@keyframes admTabIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Badges — swap warning yellow for brand blue ---- */
+#admin .badge.bg-warning,
+#admin .badge.bg-warning.text-dark {
+  background: rgba(var(--adm-primary-rgb), 0.18) !important;
+  color: var(--adm-primary) !important;
+  border: 1px solid rgba(var(--adm-primary-rgb), 0.30) !important;
+  /* reset text-dark override */
+  --bs-badge-color: var(--adm-primary) !important;
+}
+
+/* ---- Spinner — match brand ---- */
+#admin .spinner-border.text-warning {
+  color: var(--adm-primary) !important;
+}
+
+/* ---- text-warning overrides ---- */
+#admin .text-warning {
+  color: var(--adm-primary) !important;
+}
+
+/* ---- Success icon in auth bar ---- */
+#admin .bi-check-circle-fill.text-success {
+  color: var(--adm-success) !important;
+}
+
+/* ---- Spinning refresh icon ---- */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+#admin .spin {
+  display: inline-block;
+  animation: spin 700ms linear infinite;
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  #admin .tab-pane.show.active,
+  #admin .admin-content-pane {
+    animation: none !important;
+  }
+}
+
+/* ================================================================
+   SIDEBAR LAYOUT
+   ================================================================ */
+
+/* Remove page padding when the sidebar layout is active */
+#admin.admin-authenticated {
+  padding: 0 !important;
+}
+
+/* Two-column flex layout */
+.admin-layout {
+  display: flex;
+  min-height: calc(100vh - var(--header-height, 4rem));
+  position: relative;
+}
+
+/* ---- Sidebar ---- */
+.admin-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #1a1a1a;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: var(--header-height, 4rem);
+  height: calc(100vh - var(--header-height, 4rem));
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+  z-index: 10;
+}
+
+.admin-sidebar::-webkit-scrollbar { width: 4px; }
+.admin-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+/* Brand / title area */
+.admin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.admin-sidebar-brand i {
+  font-size: 1rem;
+  background: linear-gradient(135deg, #5a7ff0, #9a5df6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  flex-shrink: 0;
+}
+
+/* Override h2 styles for compact sidebar brand */
+.admin-sidebar-brand h2#admin-title {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  letter-spacing: 0.02em !important;
+  text-align: left !important;
+  /* gradient text is inherited from the #admin h2#admin-title rule */
+}
+
+.admin-sidebar-brand h2#admin-title::after {
+  display: none !important;
+}
+
+/* Navigation */
+.admin-nav {
+  flex: 1;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.admin-nav::-webkit-scrollbar { display: none; }
+
+/* Shared reset for nav buttons */
+.admin-nav-item,
+.admin-nav-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Direct nav items (Registrations) */
+.admin-nav-item {
+  padding: 0.5rem 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #b0b0b0;
+  border-left: 2px solid transparent;
+}
+
+.admin-nav-item i {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+  width: 1rem;
+  text-align: center;
+}
+
+.admin-nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f0f0f0;
+}
+
+.admin-nav-item.is-active {
+  background: rgba(90, 127, 240, 0.10);
+  color: #5a7ff0;
+  border-left-color: #5a7ff0;
+  font-weight: 500;
+}
+
+.admin-nav-item.is-active i {
+  opacity: 1;
+}
+
+/* Count badges in the nav */
+.admin-nav-count {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 0.1em 0.5em;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #888;
+  flex-shrink: 0;
+}
+
+.admin-nav-item.is-active .admin-nav-count {
+  background: rgba(90, 127, 240, 0.15);
+  color: #5a7ff0;
+}
+
+/* Group headers */
+.admin-nav-group {
+  margin-top: 0.25rem;
+}
+
+.admin-nav-group-header {
+  padding: 0.45rem 1.1rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #5a5a5a;
+}
+
+.admin-nav-group-header:hover {
+  color: #888;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-nav-group-header.has-active {
+  color: #7a8ab0;
+}
+
+.admin-nav-chevron {
+  margin-left: auto;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+  transition: transform 180ms ease;
+}
+
+/* Sub-items (indented) */
+.admin-nav-sub {
+  margin-bottom: 0.25rem;
+}
+
+.admin-nav-sub .admin-nav-item {
+  padding-left: 2.4rem;
+  font-size: 0.8rem;
+}
+
+/* Sidebar footer — status + actions */
+.admin-sidebar-footer {
+  flex-shrink: 0;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-auth-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #6b6b6b;
+}
+
+.admin-auth-status .bi-check-circle-fill {
+  color: #4caf82 !important;
+  font-size: 0.7rem;
+}
+
+/* ---- Main content area ---- */
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  padding: 1.75rem 2rem;
+  overflow-x: auto;
+}
+
+/* Fade-in when switching sections */
+.admin-content-pane {
+  animation: admTabIn 200ms ease both;
+}
+
+/* ---- Mobile toggle button ---- */
+.admin-mobile-toggle {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 300;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 1px solid rgba(90, 127, 240, 0.4);
+  background: #1a1a1a;
+  color: #5a7ff0;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  transition: background 150ms ease, box-shadow 150ms ease;
+}
+
+.admin-mobile-toggle:hover {
+  background: #222;
+  box-shadow: 0 4px 20px rgba(90, 127, 240, 0.2);
+}
+
+/* ---- Mobile sidebar overlay ---- */
+.admin-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 199;
+}
+
+/* ---- Responsive: sidebar slides in on mobile ---- */
+@media (max-width: 991px) {
+  .admin-sidebar {
+    position: fixed;
+    top: var(--header-height, 4rem);
+    left: -220px;
+    height: calc(100vh - var(--header-height, 4rem));
+    transition: left 220ms ease;
+    z-index: 200;
+    box-shadow: none;
+  }
+
+  .admin-sidebar.admin-sidebar-open {
+    left: 0;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .admin-main {
+    padding: 1.25rem 1rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .admin-mobile-toggle {
+    display: none !important;
+  }
+}
+
+/* ================================================================
+   MODAL DIALOGS (.admin-dialog added to each modal's dialogClassName)
+   Modals render in a portal outside #admin so need their own scope.
+   ================================================================ */
+
+.admin-dialog .modal-content {
+  background: var(--bs-body-bg, #1e1e1e) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.admin-dialog .modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.admin-dialog .modal-title {
+  background: linear-gradient(135deg, #5a7ff0, #9a5df6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.admin-dialog .modal-footer {
+  border-top-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.admin-dialog .form-control,
+.admin-dialog .form-select {
+  background-color: #252525 !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  color: #f0f0f0 !important;
+}
+
+.admin-dialog .form-control:focus,
+.admin-dialog .form-select:focus {
+  background-color: #252525 !important;
+  border-color: #5a7ff0 !important;
+  box-shadow: 0 0 0 3px rgba(90, 127, 240, 0.20) !important;
+}
+
+.admin-dialog .form-control::placeholder {
+  color: #6e6e6e !important;
+}
+
+.admin-dialog .btn-warning {
+  background: linear-gradient(135deg, #5a7ff0, #9a5df6) !important;
+  border-color: #5a7ff0 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.admin-dialog .btn-warning:hover {
+  filter: brightness(1.1);
+}
+
+.admin-dialog .text-warning {
+  color: #5a7ff0 !important;
+}
+
+.admin-dialog .badge.bg-warning,
+.admin-dialog .badge.bg-warning.text-dark {
+  background: rgba(90, 127, 240, 0.18) !important;
+  color: #5a7ff0 !important;
+  border: 1px solid rgba(90, 127, 240, 0.30) !important;
+}
