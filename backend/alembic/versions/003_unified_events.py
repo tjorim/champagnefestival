@@ -7,11 +7,10 @@ Create Date: 2026-03-21
 
 from __future__ import annotations
 
-import datetime as dt
 import hashlib
 import json
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import sqlalchemy as sa
 from sqlalchemy import inspect
@@ -51,12 +50,12 @@ def _event_id(edition_id: str, schedule_item_id: str | None, index: int) -> str:
     return f"evt-{prefix}-{digest}"[:64]
 
 
-def _parse_date(value) -> dt.date | None:
+def _parse_date(value) -> date | None:
     if value is None:
         return None
-    if isinstance(value, dt.date):
+    if isinstance(value, date):
         return value
-    return dt.date.fromisoformat(str(value))
+    return date.fromisoformat(str(value))
 
 
 def _parse_datetime(value) -> datetime | None:
@@ -67,7 +66,7 @@ def _parse_datetime(value) -> datetime | None:
     return datetime.fromisoformat(str(value))
 
 
-def _day_to_date(row, day_id) -> dt.date | None:
+def _day_to_date(row, day_id) -> date | None:
     mapping = {1: row.friday, 2: row.saturday, 3: row.sunday}
     date_value = mapping.get(day_id)
     if date_value is not None:
@@ -206,10 +205,7 @@ def upgrade() -> None:
 
     # Delete any registrations whose event_id still doesn't resolve to a known event (legacy/test data).
     bind.execute(
-        sa.text(
-            "DELETE FROM registrations "
-            "WHERE event_id IS NOT NULL AND event_id NOT IN (SELECT id FROM events)"
-        )
+        sa.text("DELETE FROM registrations WHERE event_id IS NOT NULL AND event_id NOT IN (SELECT id FROM events)")
     )
 
     registration_cols = {col["name"] for col in inspect(bind).get_columns("registrations")}

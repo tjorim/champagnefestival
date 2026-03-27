@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date as dt_date
-from datetime import datetime
+from datetime import date as dt_date, datetime
 from typing import Literal, Self
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
