@@ -1,6 +1,10 @@
 """Shared FastAPI dependencies."""
 
+from typing import TypeVar, cast
+
 from fastapi import Query
+
+S = TypeVar("S")
 
 
 class Pagination:
@@ -15,8 +19,8 @@ class Pagination:
         self.limit = limit
 
 
-def apply_pagination(stmt, pagination: Pagination):
+def apply_pagination(stmt: S, pagination: Pagination) -> S:
     """Apply offset/limit pagination only when a limit is provided."""
     if pagination.limit is not None:
-        return stmt.offset((pagination.page - 1) * pagination.limit).limit(pagination.limit)
+        return cast(S, stmt.offset((pagination.page - 1) * pagination.limit).limit(pagination.limit))
     return stmt
