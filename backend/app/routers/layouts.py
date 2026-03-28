@@ -109,21 +109,32 @@ async def copy_layout(
     db.add(cloned)
     await db.flush()
 
-    tables_to_copy = source_tables if body.copy_tables else []
-    if body.copy_areas and body.tables_in_exhibitor_areas_only:
-        exhibitor_areas = [area for area in source_areas if area.exhibitor_id is not None]
-        areas_for_membership = exhibitor_areas or source_areas
-        if areas_for_membership:
-            tables_to_copy = [
+    # Tables inside areas travel with copy_areas; tables outside areas travel with copy_tables.
+    tables_inside: list[Table] = []
+    if body.copy_areas and source_areas:
+        if body.tables_in_exhibitor_areas_only:
+            exhibitor_areas = [area for area in source_areas if area.exhibitor_id is not None]
+            areas_for_inside = exhibitor_areas or list(source_areas)
+        else:
+            areas_for_inside = list(source_areas)
+        tables_inside = [
+            table
+            for table in source_tables
+            if _table_in_any_area(table, areas_for_inside, table_types, source_room)
+        ]
+
+    tables_outside: list[Table] = []
+    if body.copy_tables:
+        if source_areas:
+            tables_outside = [
                 table
                 for table in source_tables
-                if _table_in_any_area(table, areas_for_membership, table_types, source_room)
+                if not _table_in_any_area(table, list(source_areas), table_types, source_room)
             ]
         else:
-            tables_to_copy = []
-    elif body.copy_areas and not body.copy_tables:
-        # Areas were requested without explicit table copy: keep table clone off.
-        tables_to_copy = []
+            tables_outside = list(source_tables)
+
+    tables_to_copy = tables_inside + tables_outside
 
     for table in tables_to_copy:
         db.add(
