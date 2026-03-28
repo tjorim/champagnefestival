@@ -2133,36 +2133,52 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         tablesToCopy = sourceTables;
       }
 
-      for (const source of tablesToCopy) {
-        const createdTable = await createTableMutation.mutateAsync({
-          name: source.name,
-          capacity: source.capacity,
-          layoutId: createdLayout.id,
-          tableTypeId: source.tableTypeId,
-          x: source.x,
-          y: source.y,
-          rotation: source.rotation,
-        });
+      const createdTables =
+        tablesToCopy.length > 0
+          ? await Promise.all(
+              tablesToCopy.map((source) =>
+                createTableMutation.mutateAsync({
+                  name: source.name,
+                  capacity: source.capacity,
+                  layoutId: createdLayout.id,
+                  tableTypeId: source.tableTypeId,
+                  x: source.x,
+                  y: source.y,
+                  rotation: source.rotation,
+                }),
+              ),
+            )
+          : [];
+      if (createdTables.length > 0) {
+        const mappedTables = createdTables.map(apiTableToTable);
         queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-          prev ? [...prev, apiTableToTable(createdTable)] : [apiTableToTable(createdTable)],
+          prev ? [...prev, ...mappedTables] : mappedTables,
         );
       }
 
       if (shouldCopyAreas) {
-        for (const source of sourceAreas) {
-          const createdArea = await createAreaMutation.mutateAsync({
-            label: source.label,
-            icon: source.icon,
-            layoutId: createdLayout.id,
-            widthM: source.widthM,
-            lengthM: source.lengthM,
-            exhibitorId: source.exhibitorId ?? undefined,
-            x: source.x,
-            y: source.y,
-            rotation: source.rotation,
-          });
+        const createdAreas =
+          sourceAreas.length > 0
+            ? await Promise.all(
+                sourceAreas.map((source) =>
+                  createAreaMutation.mutateAsync({
+                    label: source.label,
+                    icon: source.icon,
+                    layoutId: createdLayout.id,
+                    widthM: source.widthM,
+                    lengthM: source.lengthM,
+                    exhibitorId: source.exhibitorId ?? undefined,
+                    x: source.x,
+                    y: source.y,
+                    rotation: source.rotation,
+                  }),
+                ),
+              )
+            : [];
+        if (createdAreas.length > 0) {
+          const mappedAreas = createdAreas.map(apiAreaToArea);
           queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-            prev ? [...prev, apiAreaToArea(createdArea)] : [apiAreaToArea(createdArea)],
+            prev ? [...prev, ...mappedAreas] : mappedAreas,
           );
         }
       }
