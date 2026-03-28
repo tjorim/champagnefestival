@@ -208,13 +208,13 @@
 }
 
 /* ---- Spinning refresh icon ---- */
-@keyframes spin {
+@keyframes admSpin {
   to { transform: rotate(360deg); }
 }
 
 #admin .spin {
   display: inline-block;
-  animation: spin 700ms linear infinite;
+  animation: admSpin 700ms linear infinite;
 }
 
 /* ---- Reduced motion ---- */

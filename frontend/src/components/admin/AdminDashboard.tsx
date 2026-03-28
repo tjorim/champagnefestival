@@ -2383,7 +2383,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   aria-expanded={expandedGroups.has("programme")}
                 >
                   <i className="bi bi-collection" aria-hidden="true" />
-                  <span>Programme</span>
+                  <span>{m.admin_programme_group()}</span>
                   <i
                     className={clsx(
                       "bi admin-nav-chevron",
@@ -2474,7 +2474,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           <button
             className="admin-mobile-toggle"
             onClick={() => setSidebarOpen((s) => !s)}
-            aria-label="Toggle navigation"
+            aria-label={m.admin_toggle_navigation()}
             aria-expanded={sidebarOpen}
             aria-controls="admin-content"
           >
@@ -2564,7 +2564,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                         onClick={() => setVenueTab("venues")}
                       >
                         <i className="bi bi-building me-1" aria-hidden="true" />
-                        Venues &amp; Rooms
+                        {m.admin_venues_rooms_tab()}
                       </button>
                       <button
                         className={clsx(
@@ -2617,7 +2617,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                         onClick={() => setPeopleTab("directory")}
                       >
                         <i className="bi bi-person me-1" aria-hidden="true" />
-                        Directory
+                        {m.admin_directory_tab()}
                         {people.length > 0 && (
                           <span className="admin-nav-count ms-1">{people.length}</span>
                         )}

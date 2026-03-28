@@ -21,14 +21,6 @@ import type { FloorTable } from "@/types/admin";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 
-// Extend TanStack column meta to carry td/th className for responsive hiding
-declare module "@tanstack/react-table" {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface ColumnMeta<TData, TValue> {
-    tdClassName?: string;
-  }
-}
-
 interface AllocationRef {
   id: number;
   name: string;

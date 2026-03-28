@@ -137,11 +137,29 @@ function ContentSection({
       }
       return true;
     };
+    const activeItems: ItemDraft[] = [];
+    const archivedItems: ItemDraft[] = [];
+    let totalActive = 0;
+    let totalArchived = 0;
+    for (const item of items) {
+      const isActive = item.active !== false;
+      if (isActive) {
+        totalActive += 1;
+        if (matches(item)) {
+          activeItems.push(item);
+        }
+      } else {
+        totalArchived += 1;
+        if (matches(item)) {
+          archivedItems.push(item);
+        }
+      }
+    }
     return {
-      activeItems: items.filter((item) => item.active !== false && matches(item)),
-      archivedItems: items.filter((item) => item.active === false && matches(item)),
-      totalActive: items.filter((item) => item.active !== false).length,
-      totalArchived: items.filter((item) => item.active === false).length,
+      activeItems,
+      archivedItems,
+      totalActive,
+      totalArchived,
     };
   }, [items, typeFilter, q]);
 
