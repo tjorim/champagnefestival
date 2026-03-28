@@ -34,7 +34,12 @@ export const publicHandlers = [
 
   /** POST /api/registrations — public registration submission. */
   http.post("/api/registrations", async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
 
     // Basic honeypot check
     if (typeof body.honeypot === "string" && body.honeypot.length > 0) {
@@ -73,7 +78,12 @@ export const publicHandlers = [
 
   /** POST /api/registrations/my/request — request lookup email. */
   http.post("/api/registrations/my/request", async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
     const email = String(body.email ?? "");
 
     if (!email.includes("@")) {
@@ -89,7 +99,12 @@ export const publicHandlers = [
 
   /** POST /api/registrations/my/access — fetch my registrations by token. */
   http.post("/api/registrations/my/access", async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
     const token = String(body.token ?? "");
 
     // Accept any non-empty token and return all registrations (dev convenience)
@@ -116,7 +131,12 @@ export const publicHandlers = [
   /** POST /api/check-in/:id/lookup — look up a registration for check-in. */
   http.post("/api/check-in/:id/lookup", async ({ params, request }) => {
     const { id } = params;
-    const body = (await request.json()) as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
     const token = String(body.token ?? "");
 
     const reg = sharedStore.registrations.find((r) => r.id === id);
@@ -149,7 +169,12 @@ export const publicHandlers = [
   /** POST /api/check-in/:id — perform the check-in. */
   http.post("/api/check-in/:id", async ({ params, request }) => {
     const { id } = params;
-    const body = (await request.json()) as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
     const token = String(body.token ?? "");
 
     const idx = sharedStore.registrations.findIndex((r) => r.id === id);

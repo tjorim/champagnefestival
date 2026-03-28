@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { editions, events, resetEditionStore } from "../data/editionStore";
+import { editions, events, resetEditionStore, type SeedEdition, type SeedEvent } from "../data/editionStore";
 import { seedExhibitors } from "../data/exhibitors";
 import { seedPeople } from "../data/people";
 import { sharedStore, resetSharedStore } from "../data/registrations";
@@ -427,7 +427,7 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    editions.push(newEdition);
+    editions.push(newEdition as SeedEdition);
     return HttpResponse.json(newEdition, { status: 201 });
   }),
 
@@ -493,7 +493,7 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    events.push(newEvent);
+    events.push(newEvent as SeedEvent);
     return HttpResponse.json(newEvent, { status: 201 });
   }),
 

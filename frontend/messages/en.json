@@ -187,6 +187,7 @@
   "admin_refresh": "Refresh",
   "admin_status_label": "Status",
   "admin_actions_label": "Actions",
+  "admin_more_actions_for": "More actions for {name}",
   "admin_payment_label": "Payment",
   "admin_error_load_data": "Failed to load data. Check your connection.",
   "admin_error_load_dashboard": "Failed to load admin dashboard",

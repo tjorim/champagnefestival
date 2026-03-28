@@ -469,32 +469,57 @@ export default function PeopleManagement({
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className={header.column.columnDef.meta?.tdClassName}
-                          onClick={header.column.getToggleSortingHandler()}
-                          style={{
-                            cursor: header.column.getCanSort() ? "pointer" : "default",
-                            userSelect: "none",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          <table.FlexRender header={header} />
-                          {header.column.getCanSort() && (
-                            <i
-                              className={`bi ms-1 small ${
-                                header.column.getIsSorted() === "asc"
-                                  ? "bi-arrow-up"
-                                  : header.column.getIsSorted() === "desc"
-                                    ? "bi-arrow-down"
-                                    : "bi-arrow-down-up opacity-25"
-                              }`}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </th>
-                      ))}
+                      {headerGroup.headers.map((header) => {
+                          const canSort = header.column.getCanSort();
+                          const sorted = header.column.getIsSorted();
+                          return (
+                            <th
+                              key={header.id}
+                              className={header.column.columnDef.meta?.tdClassName}
+                              onClick={header.column.getToggleSortingHandler()}
+                              onKeyDown={
+                                canSort
+                                  ? (e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        header.column.getToggleSortingHandler()?.(e);
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              role={canSort ? "button" : undefined}
+                              tabIndex={canSort ? 0 : undefined}
+                              aria-sort={
+                                canSort
+                                  ? sorted === "asc"
+                                    ? "ascending"
+                                    : sorted === "desc"
+                                      ? "descending"
+                                      : "none"
+                                  : undefined
+                              }
+                              style={{
+                                cursor: canSort ? "pointer" : "default",
+                                userSelect: "none",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <table.FlexRender header={header} />
+                              {canSort && (
+                                <i
+                                  className={`bi ms-1 small ${
+                                    sorted === "asc"
+                                      ? "bi-arrow-up"
+                                      : sorted === "desc"
+                                        ? "bi-arrow-down"
+                                        : "bi-arrow-down-up opacity-25"
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </th>
+                          );
+                        })}
                     </tr>
                   ))}
                 </thead>

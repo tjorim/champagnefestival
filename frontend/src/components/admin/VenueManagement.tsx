@@ -299,6 +299,7 @@ export default function VenueManagement({
         }),
         columnHelper.display({
           id: "actions",
+          header: () => m.admin_actions_label(),
           enableSorting: false,
           cell: ({ row }) => {
             const venue = row.original;

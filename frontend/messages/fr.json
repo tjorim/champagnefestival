@@ -187,6 +187,7 @@
   "admin_refresh": "Actualiser",
   "admin_status_label": "Statut",
   "admin_actions_label": "Actions",
+  "admin_more_actions_for": "Plus d'actions pour {name}",
   "admin_payment_label": "Paiement",
   "admin_error_load_data": "Échec du chargement. Vérifiez votre connexion.",
   "admin_error_load_dashboard": "Échec du chargement du tableau de bord admin",

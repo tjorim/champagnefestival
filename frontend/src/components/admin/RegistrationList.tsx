@@ -338,7 +338,12 @@ export default function RegistrationList({
               )}
               {hasMoreActions && (
                 <Dropdown>
-                  <Dropdown.Toggle size="sm" variant="outline-secondary" id={`reg-more-${reg.id}`}>
+                  <Dropdown.Toggle
+                    size="sm"
+                    variant="outline-secondary"
+                    id={`reg-more-${reg.id}`}
+                    aria-label={m.admin_more_actions_for({ name: reg.person.name })}
+                  >
                     <i className="bi bi-three-dots" aria-hidden="true" />
                   </Dropdown.Toggle>
                   <Dropdown.Menu variant="dark">
@@ -488,13 +493,37 @@ export default function RegistrationList({
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
+                      {headerGroup.headers.map((header) => {
+                          const canSort = header.column.getCanSort();
+                          const sorted = header.column.getIsSorted();
+                          return (
                         <th
                           key={header.id}
                           className={header.column.columnDef.meta?.tdClassName}
                           onClick={header.column.getToggleSortingHandler()}
+                          onKeyDown={
+                            canSort
+                              ? (e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    header.column.getToggleSortingHandler()?.(e);
+                                  }
+                                }
+                              : undefined
+                          }
+                          role={canSort ? "button" : undefined}
+                          tabIndex={canSort ? 0 : undefined}
+                          aria-sort={
+                            canSort
+                              ? sorted === "asc"
+                                ? "ascending"
+                                : sorted === "desc"
+                                  ? "descending"
+                                  : "none"
+                              : undefined
+                          }
                           style={{
-                            cursor: header.column.getCanSort() ? "pointer" : "default",
+                            cursor: canSort ? "pointer" : "default",
                             userSelect: "none",
                             whiteSpace: "nowrap",
                           }}
@@ -513,7 +542,8 @@ export default function RegistrationList({
                             />
                           )}
                         </th>
-                      ))}
+                          );
+                        })}
                     </tr>
                   ))}
                 </thead>
