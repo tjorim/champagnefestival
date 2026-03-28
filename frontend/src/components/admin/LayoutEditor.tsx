@@ -1465,7 +1465,7 @@ export default function LayoutEditor({
               />
               {newLayout.copyAreas && (
                 <div className="text-secondary small">
-                  Tables inside copied exhibitor areas are included automatically.
+                  Tables inside copied areas are included automatically.
                 </div>
               )}
             </div>

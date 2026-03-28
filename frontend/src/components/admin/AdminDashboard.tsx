@@ -2070,7 +2070,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               ...(label?.trim() ? { label: label.trim() } : {}),
               copy_tables: shouldCopyTables,
               copy_areas: shouldCopyAreas,
-              tables_in_exhibitor_areas_only: shouldCopyAreas,
             }),
           },
           m.admin_error_add_layout(),

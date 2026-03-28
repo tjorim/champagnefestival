@@ -110,26 +110,22 @@ async def copy_layout(
     await db.flush()
 
     # Tables inside areas travel with copy_areas; tables outside areas travel with copy_tables.
+    all_areas = list(source_areas)
     tables_inside: list[Table] = []
-    if body.copy_areas and source_areas:
-        if body.tables_in_exhibitor_areas_only:
-            exhibitor_areas = [area for area in source_areas if area.exhibitor_id is not None]
-            areas_for_inside = exhibitor_areas or list(source_areas)
-        else:
-            areas_for_inside = list(source_areas)
+    if body.copy_areas and all_areas:
         tables_inside = [
             table
             for table in source_tables
-            if _table_in_any_area(table, areas_for_inside, table_types, source_room)
+            if _table_in_any_area(table, all_areas, table_types, source_room)
         ]
 
     tables_outside: list[Table] = []
     if body.copy_tables:
-        if source_areas:
+        if all_areas:
             tables_outside = [
                 table
                 for table in source_tables
-                if not _table_in_any_area(table, list(source_areas), table_types, source_room)
+                if not _table_in_any_area(table, all_areas, table_types, source_room)
             ]
         else:
             tables_outside = list(source_tables)
