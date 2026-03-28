@@ -548,5 +548,6 @@
   "registration_success_vip": "Your VIP registration has been submitted successfully.",
   "admin_edition_type": "Edition type",
   "admin_edition_external_contact": "External contact",
-  "admin_event_registration_required": "Registration required"
+  "admin_event_registration_required": "Registration required",
+  "admin_export_csv": "Export CSV"
 }

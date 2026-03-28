@@ -15,6 +15,7 @@ import {
   createAppColumnHelper,
   type AdminTableFeatures,
 } from "@/hooks/useAdminTable";
+import { exportToCsv } from "@/utils/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 
 interface AllocationRef {
@@ -386,6 +387,21 @@ export default function RegistrationList({
     (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
   );
 
+  const handleExportCsv = useCallback(() => {
+    const rows = table.getRowModel().rows.map(({ original: reg }) => ({
+      [m.registration_name()]: reg.person.name,
+      [m.registration_email()]: reg.person.email,
+      [m.registration_phone()]: reg.person.phone,
+      [m.admin_event_label()]: reg.event?.title ?? reg.eventId,
+      [m.admin_guests_count()]: reg.guestCount,
+      [m.admin_status_label()]: reg.status,
+      [m.admin_payment_label()]: reg.paymentStatus,
+      [m.admin_check_in_title()]: reg.checkedIn ? "yes" : "no",
+      "Created": reg.createdAt,
+    }));
+    exportToCsv("registrations.csv", rows);
+  }, [table]);
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
@@ -408,10 +424,16 @@ export default function RegistrationList({
                 </span>
               </span>
             </div>
-            <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
-              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              {m.admin_add_registration()}
-            </Button>
+            <div className="d-flex gap-2">
+              <Button variant="outline-secondary" size="sm" onClick={handleExportCsv} title={m.admin_export_csv()} aria-label={m.admin_export_csv()}>
+                <i className="bi bi-download me-1" aria-hidden="true" />
+                {m.admin_export_csv()}
+              </Button>
+              <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
+                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                {m.admin_add_registration()}
+              </Button>
+            </div>
           </div>
           {/* Row 2: filters + search */}
           <div className="d-flex flex-wrap gap-2 align-items-center">

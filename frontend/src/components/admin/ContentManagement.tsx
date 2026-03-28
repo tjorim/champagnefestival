@@ -357,7 +357,7 @@ function ContentSection({
   return (
     <div className="mb-4">
       <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-        <h6 className="mb-0 text-warning">
+        <h6 className="mb-0 text-primary">
           {title}
           <Badge bg="secondary" className="ms-2">
             {totalActive}
@@ -536,7 +536,7 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
     <div className="mb-4">
       <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
         <div>
-          <h6 className="mb-1 text-warning">{m.admin_content_editions_section()}</h6>
+          <h6 className="mb-1 text-primary">{m.admin_content_editions_section()}</h6>
           <ButtonGroup size="sm">
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
               <Button

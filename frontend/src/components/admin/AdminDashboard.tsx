@@ -2565,6 +2565,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {activeKey === "venue" && (
                   <>
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_venues_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {venueTab === "venues" ? m.admin_venues_rooms_tab() : m.admin_table_types_tab()}
+                      </span>
+                    </nav>
                     <div className="d-flex gap-2 mb-3">
                       <button
                         className={clsx(
@@ -2617,6 +2624,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {activeKey === "people" && (
                   <>
+                    {/* Breadcrumb trail */}
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_people_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {peopleTab === "directory"
+                          ? m.admin_directory_tab()
+                          : peopleTab === "members"
+                            ? m.admin_members_tab()
+                            : m.admin_volunteers_tab()}
+                      </span>
+                    </nav>
                     {/* People sub-tab bar */}
                     <div className="d-flex gap-2 mb-3">
                       <button
