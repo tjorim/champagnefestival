@@ -1,14 +1,17 @@
 import { useState, useMemo } from "react";
 import {
   flexRender,
+  type FilterFn,
+  type SortingState,
+  type StockFeatures,
+} from "@tanstack/react-table";
+import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+  useLegacyTable,
+  type LegacyColumnDef as ColumnDef,
+} from "@tanstack/react-table/legacy";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -37,7 +40,11 @@ function formatPeriod(period: Person["helpPeriods"][number]): string {
     : `${period.firstHelpDay} →`;
 }
 
-const volunteersGlobalFilter: FilterFn<Person> = (row, _columnId, filterValue: string) => {
+const volunteersGlobalFilter: FilterFn<StockFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   return (
     row.original.name.toLowerCase().includes(s) ||
@@ -201,7 +208,7 @@ export default function VolunteersManagement({
     [setEditingVolunteer, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useReactTable({
+  const table = useLegacyTable({
     data: preFiltered,
     columns,
     state: { sorting, globalFilter: q },

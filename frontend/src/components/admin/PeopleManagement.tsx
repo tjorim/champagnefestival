@@ -1,14 +1,17 @@
 import { useState, useCallback, useMemo } from "react";
 import {
   flexRender,
+  type FilterFn,
+  type SortingState,
+  type StockFeatures,
+} from "@tanstack/react-table";
+import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+  useLegacyTable,
+  type LegacyColumnDef as ColumnDef,
+} from "@tanstack/react-table/legacy";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -25,7 +28,11 @@ import { queryKeys } from "@/utils/queryKeys";
 import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 
-const peopleGlobalFilter: FilterFn<Person> = (row, _columnId, filterValue: string) => {
+const peopleGlobalFilter: FilterFn<StockFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   const phoneQ = s.replace(/[\s\-().+]/g, "");
   return (
@@ -338,7 +345,7 @@ export default function PeopleManagement({
     ],
   );
 
-  const table = useReactTable({
+  const table = useLegacyTable({
     data: preFiltered,
     columns,
     state: { sorting, globalFilter: q },

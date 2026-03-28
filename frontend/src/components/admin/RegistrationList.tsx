@@ -1,14 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   flexRender,
+  type FilterFn,
+  type SortingState,
+  type StockFeatures,
+} from "@tanstack/react-table";
+import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+  useLegacyTable,
+  type LegacyColumnDef as ColumnDef,
+} from "@tanstack/react-table/legacy";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -92,7 +95,11 @@ function isStandaloneRegistration(registration: Registration) {
   return registration.event.edition.editionType !== "festival";
 }
 
-const registrationGlobalFilter: FilterFn<Registration> = (row, _columnId, filterValue: string) => {
+const registrationGlobalFilter: FilterFn<StockFeatures, Registration> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   return (
     row.original.person.name.toLowerCase().includes(s) ||
@@ -373,7 +380,7 @@ export default function RegistrationList({
     [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
   );
 
-  const table = useReactTable({
+  const table = useLegacyTable({
     data: preFiltered,
     columns,
     state: { sorting, globalFilter: q },

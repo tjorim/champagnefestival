@@ -1,14 +1,17 @@
 import { useState, useMemo } from "react";
 import {
   flexRender,
+  type FilterFn,
+  type SortingState,
+  type StockFeatures,
+} from "@tanstack/react-table";
+import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+  useLegacyTable,
+  type LegacyColumnDef as ColumnDef,
+} from "@tanstack/react-table/legacy";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -39,7 +42,11 @@ function truncateText(value: string, limit = 80): string {
   return `${value.slice(0, limit - 1)}…`;
 }
 
-const membersGlobalFilter: FilterFn<Person> = (row, _columnId, filterValue: string) => {
+const membersGlobalFilter: FilterFn<StockFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   const phoneQ = s.replace(/[\s\-().+]/g, "");
   return (
@@ -203,7 +210,7 @@ export default function MembersManagement({
     [registrationCountByPersonId, setEditingMember, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useReactTable({
+  const table = useLegacyTable({
     data: preFiltered,
     columns,
     state: { sorting, globalFilter: q },
