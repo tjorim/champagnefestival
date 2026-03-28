@@ -115,7 +115,7 @@ export default function EditionModal({
     if (!show) return;
     hydratedRef.current = false;
     const preseeded: MultiValue<ItemOption> = initial
-      ? [...(initial.producers ?? []), ...(initial.sponsors ?? [])].map((e) => ({
+      ? [...(initial.producers ?? []), ...(initial.sponsors ?? []), ...(initial.vendors ?? [])].map((e) => ({
           value: e.id,
           label: e.name,
           isArchived: false,
@@ -165,7 +165,7 @@ export default function EditionModal({
   useEffect(() => {
     if (allExhibitors.length === 0 || hydratedRef.current) return;
     const ids = new Set(
-      [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
+      [...(initial?.producers ?? []), ...(initial?.sponsors ?? []), ...(initial?.vendors ?? [])].map((e) => e.id),
     );
     const { active: act, archived: arch } = toOptions(allExhibitors);
     form.setFieldValue(
@@ -178,9 +178,7 @@ export default function EditionModal({
   const isEdit = !!initial;
   const editionType = useStore(form.store, (s) => s.values.editionType as EditionType);
   const isFestival = editionType === "festival";
-  const programmableExhibitors = allExhibitors.filter(
-    (exhibitor) => exhibitor.type === "producer" || exhibitor.type === "sponsor",
-  );
+  const programmableExhibitors = allExhibitors;
   const exhibitorGroups = useMemo(() => {
     const { active: act, archived: arch } = toOptions(programmableExhibitors);
     const groups: GroupBase<ItemOption>[] = [];

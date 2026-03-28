@@ -760,6 +760,7 @@ class EditionOut(BaseModel):
     events: list[EventOut]
     producers: list[EditionItemOut]
     sponsors: list[EditionItemOut]
+    vendors: list[EditionItemOut]
     active: bool
     created_at: datetime
     updated_at: datetime

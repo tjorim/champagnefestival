@@ -423,6 +423,7 @@ export const adminHandlers = [
       events: [],
       producers: [],
       sponsors: [],
+      vendors: [],
       active: body.active === true,
       created_at: now(),
       updated_at: now(),
