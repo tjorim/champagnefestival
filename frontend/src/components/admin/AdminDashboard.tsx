@@ -39,6 +39,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -738,11 +739,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       capacity,
       layoutId,
       tableTypeId,
+      x,
+      y,
+      rotation,
     }: {
       name: string;
       capacity: number;
       layoutId: string;
       tableTypeId: string;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/tables",
@@ -752,8 +759,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({
             name,
             capacity,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             layout_id: layoutId,
             table_type_id: tableTypeId,
           }),
@@ -1057,6 +1065,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM,
       lengthM,
       exhibitorId,
+      x,
+      y,
+      rotation,
     }: {
       label: string;
       icon: string;
@@ -1064,6 +1075,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM: number;
       lengthM: number;
       exhibitorId?: number;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/areas",
@@ -1076,8 +1090,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             layout_id: layoutId,
             width_m: widthM,
             length_m: lengthM,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             exhibitor_id: exhibitorId ?? null,
           }),
         },
@@ -2033,13 +2048,58 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, date: string, label?: string) => {
+    async (
+      roomId: string,
+      date: string,
+      label?: string,
+      copyFromLayoutId?: string | null,
+      copyOptions?: { tables: boolean; areas: boolean },
+    ) => {
+      if (copyFromLayoutId) {
+        const shouldCopyTables = copyOptions?.tables ?? true;
+        const shouldCopyAreas = copyOptions?.areas ?? true;
+        const copied = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+          `/api/layouts/${copyFromLayoutId}/copy`,
+          {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              edition_id: activeEdition.id,
+              room_id: roomId,
+              date,
+              ...(label?.trim() ? { label: label.trim() } : {}),
+              copy_tables: shouldCopyTables,
+              copy_areas: shouldCopyAreas,
+            }),
+          },
+          m.admin_error_add_layout(),
+        );
+        const createdLayout = apiLayoutToLayout(copied);
+        queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
+          prev ? [...prev, createdLayout] : [createdLayout],
+        );
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: layoutsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
+          queryClient.invalidateQueries({ queryKey: areasQueryKey }),
+        ]);
+        return;
+      }
+
       const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? [...prev, apiLayoutToLayout(d)] : [apiLayoutToLayout(d)],
       );
     },
-    [createLayoutMutation, layoutsQueryKey, queryClient],
+    [
+      activeEdition.id,
+      areasQueryKey,
+      authHeaders,
+      createLayoutMutation,
+      layoutsQueryKey,
+      queryClient,
+      tablesQueryKey,
+    ],
   );
 
   const handleDeleteLayout = useCallback(
@@ -2139,8 +2199,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
-      // Must match LayoutEditor/RoomCanvas constants
-      const PX_PER_M = 28;
       const area = (areasQuery.data ?? []).find((a) => a.id === areaId);
       const layout = (layoutsQuery.data ?? []).find((l) => l.id === area?.layoutId);
       const room = (roomsQuery.data ?? []).find((r) => r.id === layout?.roomId);
@@ -2149,10 +2207,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       let x = area?.x ?? 0;
       let y = area?.y ?? 0;
       if (area && room) {
-        const canvasW = Math.max(280, room.widthM * PX_PER_M);
-        const canvasH = Math.max(180, room.lengthM * PX_PER_M);
-        const areaW = Math.max(40, Math.round(widthM * PX_PER_M));
-        const areaH = Math.max(24, Math.round(lengthM * PX_PER_M));
+        const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
+        const { width: areaW, height: areaH } = getAreaSizePx(widthM, lengthM);
         x = (Math.max(0, Math.min((area.x / 100) * canvasW, canvasW - areaW)) / canvasW) * 100;
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
@@ -2627,7 +2683,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {activeKey === "floor-plans" && (
                   <LayoutEditor
-                    editionLabel={`${activeEdition.year} – ${activeEdition.month.charAt(0).toUpperCase()}${activeEdition.month.slice(1)}`}
                     dayOptions={layoutDayOptions}
                     tables={tables}
                     tableTypes={tableTypes}
