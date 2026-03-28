@@ -549,5 +549,6 @@
   "admin_edition_type": "Type d'édition",
   "admin_edition_external_contact": "Contact externe",
   "admin_event_registration_required": "Inscription requise",
-  "admin_export_csv": "Exporter CSV"
+  "admin_export_csv": "Exporter CSV",
+  "admin_created_at": "Créé le"
 }

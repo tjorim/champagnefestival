@@ -549,5 +549,6 @@
   "admin_edition_type": "Editietype",
   "admin_edition_external_contact": "Extern contact",
   "admin_event_registration_required": "Registratie vereist",
-  "admin_export_csv": "CSV exporteren"
+  "admin_export_csv": "CSV exporteren",
+  "admin_created_at": "Aangemaakt"
 }

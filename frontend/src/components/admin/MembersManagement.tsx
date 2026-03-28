@@ -232,7 +232,7 @@ export default function MembersManagement({
           <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
             <span className="fw-semibold">{m.admin_members_tab()}</span>
             <div className="d-flex gap-2">
-              <Button size="sm" variant="outline-secondary" onClick={handleExportCsv} title={m.admin_export_csv()} aria-label={m.admin_export_csv()}>
+              <Button size="sm" variant="outline-secondary" onClick={handleExportCsv}>
                 <i className="bi bi-download me-1" aria-hidden="true" />
                 {m.admin_export_csv()}
               </Button>

@@ -397,7 +397,7 @@ export default function RegistrationList({
       [m.admin_status_label()]: reg.status,
       [m.admin_payment_label()]: reg.paymentStatus,
       [m.admin_check_in_title()]: reg.checkedIn ? "yes" : "no",
-      "Created": reg.createdAt,
+      [m.admin_created_at()]: reg.createdAt,
     }));
     exportToCsv("registrations.csv", rows);
   }, [table]);
@@ -425,7 +425,7 @@ export default function RegistrationList({
               </span>
             </div>
             <div className="d-flex gap-2">
-              <Button variant="outline-secondary" size="sm" onClick={handleExportCsv} title={m.admin_export_csv()} aria-label={m.admin_export_csv()}>
+              <Button variant="outline-secondary" size="sm" onClick={handleExportCsv}>
                 <i className="bi bi-download me-1" aria-hidden="true" />
                 {m.admin_export_csv()}
               </Button>
