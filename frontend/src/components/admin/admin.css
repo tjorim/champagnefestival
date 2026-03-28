@@ -7,7 +7,8 @@
    =================================================================== */
 
 /* ---- Brand tokens (mirrored from index.css :root) ---- */
-#admin {
+#admin,
+.admin-dialog {
   --adm-primary: #5a7ff0;
   --adm-secondary: #9a5df6;
   --adm-primary-rgb: 90, 127, 240;

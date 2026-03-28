@@ -1818,6 +1818,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         console.error("Failed to update registration status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_registration());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1850,6 +1851,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         console.error("Failed to update payment status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_payment());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],

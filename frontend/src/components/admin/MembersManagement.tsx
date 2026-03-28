@@ -237,7 +237,7 @@ export default function MembersManagement({
       [m.registration_phone()]: member.phone,
       [m.admin_people_club_name_label()]: member.clubName,
       [m.registration_notes()]: member.notes,
-      [m.admin_people_active_label()]: member.active ? "yes" : "no",
+      [m.admin_people_active_label()]: member.active ? m.admin_value_yes() : m.admin_value_no(),
     }));
     exportToCsv("members.csv", rows);
   }, [table]);
@@ -250,7 +250,7 @@ export default function MembersManagement({
             <span className="fw-semibold">{m.admin_members_tab()}</span>
             <div className="d-flex gap-2">
               <ColumnVisibilityDropdown table={table} tableId="members" />
-              <Button size="sm" variant="outline-secondary" onClick={handleExportCsv}>
+              <Button size="sm" variant="outline-secondary" onClick={handleExportCsv} disabled={table.getRowModel().rows.length === 0}>
                 <i className="bi bi-download me-1" aria-hidden="true" />
                 {m.admin_export_csv()}
               </Button>

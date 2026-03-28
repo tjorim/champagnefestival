@@ -211,6 +211,9 @@ async def _validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) ->
     invalid = [eid for eid in exhibitor_ids if eid not in exhibitor_map]
     if invalid:
         raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
+    vendor_ids = [eid for eid in exhibitor_ids if exhibitor_map[eid]["type"] == "vendor"]
+    if vendor_ids:
+        raise HTTPException(status_code=400, detail=f"Vendor-type exhibitors may not be linked to editions: {vendor_ids}")
 
 
 async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[dict]:
