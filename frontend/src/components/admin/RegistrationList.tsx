@@ -277,9 +277,12 @@ export default function RegistrationList({
                   />
                 )}
                 <Badge bg={isStandalone ? "info" : "warning"} text="dark">
-                  {isStandalone
-                    ? m.admin_filter_edition_standalone()
-                    : m.admin_edition_type_festival()}
+                  {(() => {
+                    const et = reg.event?.edition?.editionType;
+                    if (et === "bourse") return m.admin_edition_type_bourse();
+                    if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
+                    return m.admin_edition_type_festival();
+                  })()}
                 </Badge>
               </div>
               <div className="text-secondary small">{reg.person.email}</div>
