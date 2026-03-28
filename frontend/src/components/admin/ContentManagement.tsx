@@ -295,14 +295,17 @@ export function ContentSection({
       queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
         prev.map((item) => (succeededIds.has(item.id) ? { ...item, active: false } : item)),
       );
+      snapshot
+        .filter((item) => succeededIds.has(item.id))
+        .forEach((item) => onItemSaved?.({ ...item, active: false }));
     }
     const failedCount = results.filter((r) => r.status === "rejected").length;
     if (failedCount > 0) {
-      setActionError(`${failedCount} of ${snapshot.length} items could not be archived.`);
+      setActionError(m.admin_bulk_content_archive_error({ failed: failedCount, total: snapshot.length }));
     }
     setBulkArchiveInProgress(false);
     setBulkArchiveOpen(false);
-  }, [activeItems, queryClient, sectionKey, updateItemActiveMutation]);
+  }, [activeItems, onItemSaved, queryClient, sectionKey, updateItemActiveMutation]);
 
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
     return (

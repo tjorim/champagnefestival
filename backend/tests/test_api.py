@@ -733,6 +733,45 @@ async def test_filter_by_event(client):
     assert r.json()[0]["event_id"] == friday.json()["event_id"]
 
 
+@pytest.mark.anyio
+async def test_registrations_support_limit_and_page(client):
+    event = await _create_event(client, edition_id="edition-registration-pagination")
+    for index in range(3):
+        created = await _post_registration(
+            client,
+            path="/api/registrations",
+            event=event,
+            email=f"page{index}@example.com",
+            phone=f"+3249900001{index}",
+            name=f"Page User {index}",
+        )
+        assert created.status_code == 201
+
+    first_page = await client.get("/api/registrations", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/registrations", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) == 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/registrations", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = all_response.json()
+    # Filter to only the IDs created in this test to avoid interference from other tests
+    created_ids = first_page_ids | second_page_ids
+    all_test_results = [r for r in all_results if r["id"] in created_ids]
+    assert all_test_results[:2] == first_page_results
+    assert all_test_results[2:3] == second_page_results
+
+
 # ---------------------------------------------------------------------------
 # Visitor self-lookup (public token-based flow)
 # ---------------------------------------------------------------------------
@@ -1114,6 +1153,41 @@ async def test_exhibitor_invalid_contact_person(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_exhibitors_support_limit_and_page(client):
+    created_ids: set[int] = set()
+    for name in ("Alpha", "Bravo", "Charlie"):
+        response = await client.post(
+            "/api/exhibitors",
+            json={"name": name, "type": "producer"},
+            headers=ADMIN_HEADERS,
+        )
+        assert response.status_code == 201
+        created_ids.add(response.json()["id"])
+
+    first_page = await client.get("/api/exhibitors", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/exhibitors", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) == 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+    assert first_page_ids.union(second_page_ids) == created_ids
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/exhibitors", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
 
 
 # ---------------------------------------------------------------------------
@@ -1948,6 +2022,46 @@ async def test_volunteer_crud_and_constraints(client):
     assert "volunteer" not in r.json()["roles"]
 
 
+@pytest.mark.anyio
+async def test_volunteers_support_limit_and_page(client):
+    created_ids: set[str] = set()
+    for i, name in enumerate(("Vol Alpha", "Vol Bravo", "Vol Charlie")):
+        r = await client.post(
+            "/api/volunteers",
+            json={
+                "name": name,
+                "national_register_number": f"9101011234{i}",
+                "eid_document_number": f"BEPAG00{i}",
+                "active": True,
+                "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": None}],
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+        created_ids.add(r.json()["id"])
+
+    first_page = await client.get("/api/volunteers", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/volunteers", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) >= 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/volunteers", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
+
+
 # ---------------------------------------------------------------------------
 # People (admin)
 # ---------------------------------------------------------------------------
@@ -2242,6 +2356,40 @@ async def test_parse_phone_invalid_inputs(client, bad_phone):
     assert r.status_code == 422, r.json()
 
 
+@pytest.mark.anyio
+async def test_people_support_limit_and_page(client):
+    created_ids: set[str] = set()
+    for i, name in enumerate(("People Alpha", "People Bravo", "People Charlie")):
+        r = await client.post(
+            "/api/people",
+            json={"name": name, "email": f"people{i}@example.com"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+        created_ids.add(r.json()["id"])
+
+    first_page = await client.get("/api/people", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/people", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) >= 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/people", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
+
+
 # ---------------------------------------------------------------------------
 # People merge endpoint
 # ---------------------------------------------------------------------------
@@ -2491,3 +2639,38 @@ async def test_members_crud(client):
 
     r = await client.delete(f"/api/members/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
+
+
+@pytest.mark.anyio
+async def test_members_support_limit_and_page(client):
+    created_ids: set[str] = set()
+    for i, name in enumerate(("Member Alpha", "Member Bravo", "Member Charlie")):
+        r = await client.post(
+            "/api/members",
+            json={"name": name, "email": f"member{i}@example.com"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+        created_ids.add(r.json()["id"])
+
+    first_page = await client.get("/api/members", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/members", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) >= 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/members", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
+

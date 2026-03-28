@@ -128,7 +128,7 @@ async def copy_layout(
 
     tables_outside: list[Table] = []
     if body.copy_tables:
-        if all_areas:
+        if body.copy_areas and all_areas:
             tables_outside = [
                 table for table in source_tables if not _table_in_any_area(table, all_areas, table_types, source_room)
             ]
@@ -291,8 +291,8 @@ def _table_in_any_area(
     getTableSizePx), so the result matches what the user sees in the editor.
     """
     # Effective canvas dimensions (pixels) — match getCanvasSizePx
-    canvas_w = max(_MIN_CANVAS_WIDTH_PX, round(room.width_m * _PX_PER_M))
-    canvas_h = max(_MIN_CANVAS_HEIGHT_PX, round(room.length_m * _PX_PER_M))
+    canvas_w = max(_MIN_CANVAS_WIDTH_PX, room.width_m * _PX_PER_M)
+    canvas_h = max(_MIN_CANVAS_HEIGHT_PX, room.length_m * _PX_PER_M)
 
     # Effective table size (pixels) — match getTableSizePx
     table_type = table_types.get(table.table_type_id)

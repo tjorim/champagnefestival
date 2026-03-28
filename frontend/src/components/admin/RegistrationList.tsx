@@ -38,8 +38,8 @@ interface RegistrationListProps {
   exhibitors: AllocationRef[];
   filter: "all" | RegistrationStatus;
   onFilterChange: (filter: "all" | RegistrationStatus) => void;
-  onUpdateStatus: (id: string, status: RegistrationStatus) => Promise<void> | void;
-  onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => Promise<void> | void;
+  onUpdateStatus: (id: string, status: RegistrationStatus) => Promise<void>;
+  onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => Promise<void>;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onViewDetail: (registration: Registration) => void;
   onAddRegistration: (registration: Registration) => void;
@@ -181,8 +181,6 @@ export default function RegistrationList({
       }),
     [registrations, filter, filterPersonId, editionFilter],
   );
-  // Keep ref in sync after memo (safe: layout effect runs after render, before paint)
-  preFilteredRef.current = preFiltered;
 
   const handleAssignTable = useCallback(
     (registrationId: string, tableId: string) => {
@@ -234,7 +232,7 @@ export default function RegistrationList({
                   setSelectedIds((prev) => new Set<string>([...prev, ...allIds]));
                 }
               }}
-              aria-label="Select all visible registrations"
+              aria-label={m.admin_select_all()}
               className="m-0"
             />
           );
@@ -464,6 +462,8 @@ export default function RegistrationList({
       columnVisibility: state.columnVisibility,
     }),
   );
+  // Keep ref in sync with currently visible rows (respects text-search filter applied by TanStack)
+  preFilteredRef.current = table.getRowModel().rows.map((r) => r.original);
 
   const handleExportCsv = useCallback(() => {
     const rows = table.getRowModel().rows.map(({ original: reg }) => ({
@@ -474,7 +474,7 @@ export default function RegistrationList({
       [m.admin_guests_count()]: reg.guestCount,
       [m.admin_status_label()]: reg.status,
       [m.admin_payment_label()]: reg.paymentStatus,
-      [m.admin_check_in_title()]: reg.checkedIn ? "yes" : "no",
+      [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
       [m.admin_created_at()]: reg.createdAt,
     }));
     exportToCsv("registrations.csv", rows);
@@ -498,7 +498,7 @@ export default function RegistrationList({
     setBulkInProgress(false);
     setBulkAction(null);
     if (failedCount > 0) {
-      setBulkError(`${failedCount} of ${ids.length} operations failed.`);
+      setBulkError(m.admin_bulk_operations_failed({ failed: failedCount, total: ids.length }));
     } else {
       setSelectedIds(new Set());
     }

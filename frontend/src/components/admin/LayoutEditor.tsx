@@ -94,13 +94,6 @@ const SENSORS = [
     activationConstraints: [new PointerActivationConstraints.Distance({ value: 6 })],
   }),
 ];
-function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
-  const { width, height } = getTableSizePx(table, tableTypes);
-  return {
-    w: width,
-    l: height,
-  };
-}
 
 interface DayOption {
   date: string;
@@ -211,7 +204,7 @@ function DraggableTable({
     disabled: !isInteractive,
   });
 
-  const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
+  const { width: TABLE_W, height: TABLE_L } = getTableSizePx(table, tableTypes);
   const type = tableTypes.find((t) => t.id === table.tableTypeId);
   const shape = type?.shape ?? "rectangle";
 
@@ -427,7 +420,7 @@ function RoomCanvas({
       } else {
         const table = roomTables.find((t) => t.id === activeId);
         if (!table) return;
-        const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
+        const { width: TABLE_W, height: TABLE_L } = getTableSizePx(table, tableTypes);
         const leftPx = (table.x / 100) * canvasW + dx;
         const topPx = (table.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);

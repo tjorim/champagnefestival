@@ -14,9 +14,12 @@ export function exportToCsv(
   const firstRow = rows[0]!;
   const headers = Object.keys(firstRow);
 
-  const escape = (value: string | number | boolean | null | undefined): string =>
-    `"${String(value ?? "").replace(/"/g, '""')}"`;
-
+  const escape = (value: string | number | boolean | null | undefined): string => {
+    const str = String(value ?? "");
+    // Prefix formula-injection characters so spreadsheet apps treat the value as text.
+    const sanitized = /^[=+\-@\t\r\n]/.test(str) ? `'${str}` : str;
+    return `"${sanitized.replace(/"/g, '""')}"`;
+  };
   const lines = [
     headers.map(escape).join(","),
     ...rows.map((row) => headers.map((h) => escape(row[h])).join(",")),

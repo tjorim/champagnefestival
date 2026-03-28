@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_admin
 from app.config import settings
 from app.database import get_db
+from app.dependencies import Pagination, apply_pagination
 from app.email import send_guest_access_email
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken
 from app.ratelimit import check_rate_limit
@@ -142,11 +143,12 @@ async def list_registrations(
     event_id: str | None = Query(default=None, description="Filter by event ID"),
     table_id: str | None = Query(default=None, description="Filter by table ID"),
     edition_type: str | None = Query(default=None, description="Filter by the event edition type"),
+    pagination: Pagination = Depends(),
 ) -> list[dict]:
     stmt = (
         select(Registration)
         .options(selectinload(Registration.event).selectinload(Event.edition))
-        .order_by(Registration.created_at.desc())
+        .order_by(Registration.created_at.desc(), Registration.id.desc())
     )
 
     if q:
@@ -167,6 +169,8 @@ async def list_registrations(
         stmt = stmt.where(Registration.table_id == table_id)
     if edition_type:
         stmt = stmt.join(Registration.event).join(Event.edition).where(Edition.edition_type == edition_type)
+
+    stmt = apply_pagination(stmt, pagination)
 
     rows = (await db.execute(stmt)).scalars().all()
     await _attach_people_and_events(db, list(rows))
