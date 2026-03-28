@@ -550,5 +550,15 @@
   "admin_edition_external_contact": "External contact",
   "admin_event_registration_required": "Registration required",
   "admin_export_csv": "Export CSV",
-  "admin_created_at": "Created"
+  "admin_created_at": "Created",
+  "admin_columns": "Columns",
+  "admin_content_used_in_editions": "Used in editions",
+  "admin_bulk_selected": "{count} selected",
+  "admin_bulk_confirm": "Confirm selected",
+  "admin_bulk_cancel": "Cancel selected",
+  "admin_bulk_mark_paid": "Mark paid",
+  "admin_bulk_clear": "Clear selection",
+  "admin_bulk_confirm_action": "Apply to {count} registrations?",
+  "admin_bulk_content_archive_all": "Archive all {type}",
+  "admin_bulk_content_archive_confirm": "Archive all {count} {type}?"
 }

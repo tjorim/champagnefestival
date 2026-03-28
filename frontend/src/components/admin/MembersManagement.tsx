@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { type FilterFn, type SortingState } from "@tanstack/react-table";
+import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -17,6 +17,10 @@ import {
 } from "@/hooks/useAdminTable";
 import { exportToCsv } from "@/utils/csvExport";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
+import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+
+const COL_VIS_KEY = "admin-col-vis-members";
 
 interface MembersManagementProps {
   members: Person[];
@@ -68,6 +72,9 @@ export default function MembersManagement({
   const [q, setQ] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
+    () => loadColVis(COL_VIS_KEY),
+  );
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
@@ -204,13 +211,23 @@ export default function MembersManagement({
     {
       data: preFiltered,
       columns,
-      state: { sorting, globalFilter: q },
+      state: { sorting, globalFilter: q, columnVisibility },
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
+      onColumnVisibilityChange: (updater) => {
+        const next =
+          typeof updater === "function" ? updater(columnVisibility) : updater;
+        setColumnVisibility(next);
+        saveColVis(COL_VIS_KEY, next);
+      },
       globalFilterFn: membersGlobalFilter,
     },
-    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      columnVisibility: state.columnVisibility,
+    }),
   );
 
   const handleExportCsv = useCallback(() => {
@@ -232,6 +249,7 @@ export default function MembersManagement({
           <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
             <span className="fw-semibold">{m.admin_members_tab()}</span>
             <div className="d-flex gap-2">
+              <ColumnVisibilityDropdown table={table} tableId="members" />
               <Button size="sm" variant="outline-secondary" onClick={handleExportCsv}>
                 <i className="bi bi-download me-1" aria-hidden="true" />
                 {m.admin_export_csv()}

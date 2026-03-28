@@ -10,7 +10,10 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
+import Modal from "react-bootstrap/Modal";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Spinner from "react-bootstrap/Spinner";
+import Tooltip from "react-bootstrap/Tooltip";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import { m } from "@/paraglide/messages";
@@ -83,7 +86,7 @@ interface ContentSectionProps {
   onItemDeleted?: (id: number) => void;
 }
 
-function ContentSection({
+export function ContentSection({
   sectionKey,
   title,
   authHeaders,
@@ -98,6 +101,8 @@ function ContentSection({
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<"all" | "producer" | "sponsor" | "vendor">("all");
   const [q, setQ] = useState("");
+  const [bulkArchiveOpen, setBulkArchiveOpen] = useState(false);
+  const [bulkArchiveInProgress, setBulkArchiveInProgress] = useState(false);
 
   const itemsQuery = useQuery({
     queryKey: contentSectionQueryKey(sectionKey),
@@ -105,6 +110,28 @@ function ContentSection({
     staleTime: 60 * 1000,
     retry: false,
   });
+
+  const editionsQuery = useQuery({
+    queryKey: contentEditionsQueryKey,
+    queryFn: () => fetchEditions(authHeaders),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  // Map item id → array of edition labels that reference it (as producer or sponsor)
+  const editionsByItemId = useMemo((): Map<number, string[]> => {
+    const editions = editionsQuery.data ?? [];
+    const map = new Map<number, string[]>();
+    for (const edition of editions) {
+      const label = `${edition.year} – ${edition.month}`;
+      for (const item of [...(edition.producers ?? []), ...(edition.sponsors ?? [])]) {
+        const existing = map.get(item.id);
+        if (existing) existing.push(label);
+        else map.set(item.id, [label]);
+      }
+    }
+    return map;
+  }, [editionsQuery.data]);
 
   const saveItemMutation = useMutation({
     mutationFn: (draft: ItemDraft) => saveContentSectionItem(sectionKey, draft, authHeaders),
@@ -251,6 +278,32 @@ function ContentSection({
     [deleteItemMutation, onItemDeleted, queryClient, sectionKey],
   );
 
+  const handleBulkArchive = useCallback(async () => {
+    setBulkArchiveInProgress(true);
+    const snapshot = [...activeItems];
+    const results = await Promise.allSettled(
+      snapshot.map((item) =>
+        updateItemActiveMutation.mutateAsync({ id: item.id, active: false }),
+      ),
+    );
+    const succeededIds = new Set(
+      snapshot
+        .filter((_, i) => results[i]?.status === "fulfilled")
+        .map((item) => item.id),
+    );
+    if (succeededIds.size > 0) {
+      queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
+        prev.map((item) => (succeededIds.has(item.id) ? { ...item, active: false } : item)),
+      );
+    }
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    if (failedCount > 0) {
+      setActionError(`${failedCount} of ${snapshot.length} items could not be archived.`);
+    }
+    setBulkArchiveInProgress(false);
+    setBulkArchiveOpen(false);
+  }, [activeItems, queryClient, sectionKey, updateItemActiveMutation]);
+
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
     return (
       <ListGroup.Item
@@ -280,9 +333,32 @@ function ContentSection({
               )}
             </span>
           )}
-          <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
-            {item.name}
-          </span>
+          {editionsByItemId.has(item.id) ? (
+            <OverlayTrigger
+              placement="top"
+              overlay={
+                <Tooltip id={`editions-tooltip-${item.id}`}>
+                  {m.admin_content_used_in_editions()}:{" "}
+                  {editionsByItemId.get(item.id)!.join(", ")}
+                </Tooltip>
+              }
+            >
+              <span
+                className={clsx(
+                  "text-truncate",
+                  isArchived ? "text-secondary" : "text-light",
+                  "text-decoration-underline",
+                )}
+                style={{ textDecorationStyle: "dotted", cursor: "help" }}
+              >
+                {item.name}
+              </span>
+            </OverlayTrigger>
+          ) : (
+            <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
+              {item.name}
+            </span>
+          )}
           <Badge
             bg={typeBadgeVariant(item.type)}
             className="flex-shrink-0"
@@ -400,6 +476,17 @@ function ContentSection({
           className="bg-dark text-light border-secondary"
           style={{ maxWidth: 260 }}
         />
+        {typeFilter !== "all" && activeItems.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline-warning"
+            onClick={() => setBulkArchiveOpen(true)}
+            title={m.admin_bulk_content_archive_all({ type: typeFilter })}
+          >
+            <i className="bi bi-archive me-1" aria-hidden="true" />
+            {m.admin_bulk_content_archive_all({ type: typeFilter })}
+          </Button>
+        )}
       </div>
 
       {itemsQuery.isError && (
@@ -455,6 +542,36 @@ function ContentSection({
         onSave={handleModalSave}
         onHide={() => setModalOpen(false)}
       />
+
+      {/* Bulk archive confirmation */}
+      <Modal
+        show={bulkArchiveOpen}
+        onHide={() => setBulkArchiveOpen(false)}
+        centered
+        dialogClassName="admin-dialog"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{m.admin_content_archive()}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {m.admin_bulk_content_archive_confirm({ count: activeItems.length, type: typeFilter })}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setBulkArchiveOpen(false)}
+            disabled={bulkArchiveInProgress}
+          >
+            {m.admin_action_cancel()}
+          </Button>
+          <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
+            {bulkArchiveInProgress && (
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+            )}
+            {m.admin_content_archive()}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
@@ -465,7 +582,7 @@ interface EditionsSectionProps {
   onEditionMutated?: () => void;
 }
 
-function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSectionProps) {
+export function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSectionProps) {
   const queryClient = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editionTypeFilter, setEditionTypeFilter] = useState<EditionType | "all">("all");

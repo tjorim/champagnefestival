@@ -6,7 +6,7 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
-import Select, { type GroupBase, type MultiValue, type StylesConfig } from "react-select";
+import Select, { type GroupBase, type MultiValue } from "react-select";
 import { m } from "@/paraglide/messages";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { ItemDraft } from "./itemTypes";
@@ -30,50 +30,6 @@ interface ItemOption {
   isArchived: boolean;
 }
 
-type ItemSelectStyles = StylesConfig<ItemOption, true, GroupBase<ItemOption>>;
-
-const darkSelectStyles: ItemSelectStyles = {
-  control: (base) => ({
-    ...base,
-    backgroundColor: "#212529",
-    borderColor: "#6c757d",
-    color: "#f8f9fa",
-    minHeight: "34px",
-  }),
-  menu: (base) => ({
-    ...base,
-    backgroundColor: "#212529",
-    border: "1px solid #6c757d",
-    zIndex: 9999,
-  }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isFocused ? "#343a40" : "#212529",
-    color: state.data.isArchived ? "#6c757d" : "#f8f9fa",
-    cursor: "pointer",
-  }),
-  multiValue: (base, state) => ({
-    ...base,
-    backgroundColor: state.data.isArchived ? "#343a40" : "#495057",
-  }),
-  multiValueLabel: (base, state) => ({
-    ...base,
-    color: state.data.isArchived ? "#adb5bd" : "#f8f9fa",
-    fontSize: "0.8rem",
-  }),
-  multiValueRemove: (base) => ({
-    ...base,
-    color: "#adb5bd",
-    ":hover": { backgroundColor: "#dc3545", color: "white" },
-  }),
-  input: (base) => ({ ...base, color: "#f8f9fa" }),
-  placeholder: (base) => ({ ...base, color: "#6c757d" }),
-  indicatorSeparator: (base) => ({ ...base, backgroundColor: "#6c757d" }),
-  dropdownIndicator: (base) => ({ ...base, color: "#6c757d" }),
-  clearIndicator: (base) => ({ ...base, color: "#6c757d" }),
-  groupHeading: (base) => ({ ...base, color: "#adb5bd", fontSize: "0.7rem" }),
-  noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
-};
 
 const editionModalExhibitorsQueryKey = queryKeys.admin.editionModalExhibitors;
 
@@ -560,12 +516,18 @@ export default function EditionModal({
                     <Select<ItemOption, true>
                       isMulti
                       closeMenuOnSelect={false}
-                      styles={darkSelectStyles}
                       options={exhibitorGroups}
                       value={field.state.value}
                       onChange={(options) => field.handleChange(options)}
                       classNamePrefix="rs"
                       placeholder={m.admin_edition_exhibitors()}
+                      classNames={{
+                        option: (state) => (state.data.isArchived ? "rs__option--archived" : ""),
+                        multiValue: (state) =>
+                          state.data.isArchived ? "rs__multi-value--archived" : "",
+                        multiValueLabel: (state) =>
+                          state.data.isArchived ? "rs__multi-value__label--archived" : "",
+                      }}
                     />
                   )}
                 </form.Field>

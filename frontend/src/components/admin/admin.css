@@ -624,3 +624,101 @@
   font-size: 0.65rem;
   opacity: 0.5;
 }
+
+/* ---- react-select dark theme (.admin-dialog scope) ---- */
+.admin-dialog .rs__control {
+  background-color: var(--adm-surface-2) !important;
+  border-color: var(--adm-border) !important;
+  min-height: 34px;
+}
+
+.admin-dialog .rs__control:hover {
+  border-color: var(--adm-border-focus) !important;
+}
+
+.admin-dialog .rs__control--is-focused {
+  border-color: var(--adm-primary) !important;
+  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.2) !important;
+}
+
+.admin-dialog .rs__menu {
+  background-color: var(--adm-surface-2) !important;
+  border: 1px solid var(--adm-border) !important;
+  z-index: 9999;
+}
+
+.admin-dialog .rs__option {
+  background-color: var(--adm-surface-2) !important;
+  color: var(--adm-text) !important;
+  cursor: pointer;
+}
+
+.admin-dialog .rs__option--is-focused {
+  background-color: var(--adm-surface) !important;
+}
+
+.admin-dialog .rs__option--is-selected {
+  background-color: rgba(var(--adm-primary-rgb), 0.2) !important;
+}
+
+.admin-dialog .rs__option--archived {
+  color: var(--adm-text-dim) !important;
+}
+
+.admin-dialog .rs__multi-value {
+  background-color: #495057 !important;
+}
+
+.admin-dialog .rs__multi-value--archived {
+  background-color: var(--adm-surface) !important;
+}
+
+.admin-dialog .rs__multi-value__label {
+  color: var(--adm-text) !important;
+  font-size: 0.8rem;
+}
+
+.admin-dialog .rs__multi-value__label--archived {
+  color: var(--adm-text-muted) !important;
+}
+
+.admin-dialog .rs__multi-value__remove {
+  color: var(--adm-text-muted) !important;
+}
+
+.admin-dialog .rs__multi-value__remove:hover {
+  background-color: var(--adm-danger) !important;
+  color: #fff !important;
+}
+
+.admin-dialog .rs__input-container,
+.admin-dialog .rs__input {
+  color: var(--adm-text) !important;
+}
+
+.admin-dialog .rs__placeholder {
+  color: var(--adm-text-dim) !important;
+}
+
+.admin-dialog .rs__indicator-separator {
+  background-color: var(--adm-text-dim) !important;
+}
+
+.admin-dialog .rs__dropdown-indicator,
+.admin-dialog .rs__clear-indicator {
+  color: var(--adm-text-dim) !important;
+}
+
+.admin-dialog .rs__dropdown-indicator:hover,
+.admin-dialog .rs__clear-indicator:hover {
+  color: var(--adm-text-muted) !important;
+}
+
+.admin-dialog .rs__group-heading {
+  color: var(--adm-text-muted) !important;
+  font-size: 0.7rem;
+}
+
+.admin-dialog .rs__menu-notice--no-options {
+  color: var(--adm-text-muted) !important;
+}

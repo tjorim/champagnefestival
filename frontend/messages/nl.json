@@ -550,5 +550,15 @@
   "admin_edition_external_contact": "Extern contact",
   "admin_event_registration_required": "Registratie vereist",
   "admin_export_csv": "CSV exporteren",
-  "admin_created_at": "Aangemaakt"
+  "admin_created_at": "Aangemaakt",
+  "admin_columns": "Kolommen",
+  "admin_content_used_in_editions": "Gebruikt in edities",
+  "admin_bulk_selected": "{count} geselecteerd",
+  "admin_bulk_confirm": "Geselecteerde bevestigen",
+  "admin_bulk_cancel": "Geselecteerde annuleren",
+  "admin_bulk_mark_paid": "Markeer als betaald",
+  "admin_bulk_clear": "Selectie wissen",
+  "admin_bulk_confirm_action": "Toepassen op {count} registraties?",
+  "admin_bulk_content_archive_all": "Alle {type} archiveren",
+  "admin_bulk_content_archive_confirm": "Alle {count} {type} archiveren?"
 }

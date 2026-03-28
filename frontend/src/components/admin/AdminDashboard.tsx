@@ -14,7 +14,7 @@ import RegistrationDetail from "./RegistrationDetail";
 import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
-import ContentManagement from "./ContentManagement";
+import { ContentSection, EditionsSection } from "./ContentManagement";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
@@ -316,6 +316,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
+  const navRef = useRef<HTMLElement>(null);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const autoAuthRan = useRef(false);
   const [loginError, setLoginError] = useState("");
@@ -330,6 +332,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(["programme"]));
   const [venueTab, setVenueTab] = useState<"venues" | "table-types">("venues");
   const [peopleTab, setPeopleTab] = useState<"directory" | "members" | "volunteers">("directory");
+  const [contentTab, setContentTab] = useState<"exhibitors" | "editions">("exhibitors");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleGroup = useCallback((group: string) => {
@@ -1716,6 +1719,39 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleLogout,
   ]);
 
+  const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
+    if (!navRef.current) return;
+    const buttons = Array.from(
+      navRef.current.querySelectorAll<HTMLButtonElement>("button.admin-nav-item, button.admin-nav-group-header"),
+    );
+    const focused = document.activeElement;
+    const idx = buttons.indexOf(focused as HTMLButtonElement);
+    if (idx === -1) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      buttons[(idx + 1) % buttons.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      buttons[(idx - 1 + buttons.length) % buttons.length]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      buttons[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      buttons[buttons.length - 1]?.focus();
+    }
+  }, []);
+
+  // Close mobile sidebar on Escape key
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
   // Auto-authenticate on mount if a token was previously stored in sessionStorage
   useEffect(() => {
     if (autoAuthRan.current || !storedTokenRef.current || isAuthenticated) return;
@@ -2357,7 +2393,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             </div>
 
             {/* Navigation */}
-            <nav className="admin-nav" aria-label={m.admin_title()}>
+            <nav className="admin-nav" aria-label={m.admin_title()} ref={navRef} onKeyDown={handleNavKeyDown}>
               {/* Registrations */}
               <button
                 className={clsx("admin-nav-item", activeKey === "registrations" && "is-active")}
@@ -2521,19 +2557,73 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   />
                 )}
                 {activeKey === "content" && (
-                  <ContentManagement
-                    authHeaders={authHeaders}
-                    venues={venues}
-                    onExhibitorSaved={handleExhibitorSaved}
-                    onExhibitorDeleted={handleExhibitorDeleted}
-                    onEditionMutated={() => {
-                      void loadData();
-                      void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
-                      void queryClient.invalidateQueries({
-                        queryKey: queryKeys.admin.activeEditionEvents,
-                      });
-                    }}
-                  />
+                  <>
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_content_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {contentTab === "exhibitors"
+                          ? m.admin_content_exhibitors_section()
+                          : m.admin_content_editions_section()}
+                      </span>
+                    </nav>
+                    <div className="d-flex gap-2 mb-3">
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          contentTab === "exhibitors" && "is-active",
+                        )}
+                        onClick={() => setContentTab("exhibitors")}
+                      >
+                        <i className="bi bi-shop me-1" aria-hidden="true" />
+                        {m.admin_content_exhibitors_section()}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          contentTab === "editions" && "is-active",
+                        )}
+                        onClick={() => setContentTab("editions")}
+                      >
+                        <i className="bi bi-calendar3 me-1" aria-hidden="true" />
+                        {m.admin_content_editions_section()}
+                      </button>
+                    </div>
+                    {contentTab === "exhibitors" && (
+                      <Card bg="dark" text="white" border="secondary" className="mb-3">
+                        <Card.Body>
+                          <ContentSection
+                            sectionKey="exhibitors"
+                            title={m.admin_content_exhibitors_section()}
+                            authHeaders={authHeaders}
+                            onItemSaved={handleExhibitorSaved}
+                            onItemDeleted={handleExhibitorDeleted}
+                          />
+                        </Card.Body>
+                      </Card>
+                    )}
+                    {contentTab === "editions" && (
+                      <Card bg="dark" text="white" border="secondary" className="mb-3">
+                        <Card.Body>
+                          <EditionsSection
+                            authHeaders={authHeaders}
+                            venues={venues}
+                            onEditionMutated={() => {
+                              void loadData();
+                              void queryClient.invalidateQueries({
+                                queryKey: activeEditionQueryKey,
+                              });
+                              void queryClient.invalidateQueries({
+                                queryKey: queryKeys.admin.activeEditionEvents,
+                              });
+                            }}
+                          />
+                        </Card.Body>
+                      </Card>
+                    )}
+                  </>
                 )}
                 {activeKey === "floor-plans" && (
                   <LayoutEditor
