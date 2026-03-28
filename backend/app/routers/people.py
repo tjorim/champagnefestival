@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import require_admin
 from app.database import get_db
+from app.dependencies import Pagination, apply_pagination
 from app.models import Event, Exhibitor, Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import make_id, person_to_dict, registration_to_list_dict, roles_contains
@@ -140,8 +141,7 @@ async def list_people(
     q: str | None = Query(default=None),
     role: str | None = Query(default=None, description="Filter by role (case-insensitive)"),
     active: bool | None = Query(default=None),
-    page: int = Query(default=1, ge=1, description="1-based page number used with limit"),
-    limit: int | None = Query(default=None, ge=1, le=1000),
+    pagination: Pagination = Depends(),
 ) -> list[dict]:
     stmt = select(Person)
 
@@ -169,8 +169,7 @@ async def list_people(
         )
 
     stmt = stmt.order_by(Person.created_at.desc())
-    if limit is not None:
-        stmt = stmt.offset((page - 1) * limit).limit(limit)
+    stmt = apply_pagination(stmt, pagination)
 
     result = await db.execute(stmt)
     rows = result.scalars().all()
