@@ -1,14 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -19,6 +10,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 
 interface MembersManagementProps {
@@ -32,6 +28,8 @@ interface MembersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
+const columnHelper = createAppColumnHelper<Person>();
+
 function truncateText(value: string, limit = 80): string {
   if (value.length <= limit) {
     return value;
@@ -39,7 +37,11 @@ function truncateText(value: string, limit = 80): string {
   return `${value.slice(0, limit - 1)}…`;
 }
 
-const membersGlobalFilter: FilterFn<Person> = (row, _columnId, filterValue: string) => {
+const membersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   const phoneQ = s.replace(/[\s\-().+]/g, "");
   return (
@@ -108,12 +110,11 @@ export default function MembersManagement({
     }
   };
 
-  const columns = useMemo<ColumnDef<Person>[]>(
-    () => [
-      {
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
         id: "name",
         header: m.registration_name(),
-        accessorFn: (row) => row.name,
         cell: ({ row }) => {
           const member = row.original;
           return (
@@ -127,24 +128,20 @@ export default function MembersManagement({
             </div>
           );
         },
-      },
-      {
-        accessorKey: "email",
+      }),
+      columnHelper.accessor("email", {
         header: m.registration_email(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      },
-      {
-        accessorKey: "phone",
+      }),
+      columnHelper.accessor("phone", {
         header: m.registration_phone(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      },
-      {
-        accessorKey: "clubName",
+      }),
+      columnHelper.accessor("clubName", {
         header: m.admin_people_club_name_label(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      },
-      {
-        accessorKey: "notes",
+      }),
+      columnHelper.accessor("notes", {
         header: m.registration_notes(),
         enableSorting: false,
         cell: ({ row }) => {
@@ -156,14 +153,13 @@ export default function MembersManagement({
             </span>
           );
         },
-      },
-      {
+      }),
+      columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
         id: "registrations",
         header: m.admin_registrations_tab(),
-        accessorFn: (row) => registrationCountByPersonId[row.id] ?? 0,
         cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
-      },
-      {
+      }),
+      columnHelper.display({
         id: "actions",
         header: m.admin_actions_label(),
         enableSorting: false,
@@ -198,23 +194,23 @@ export default function MembersManagement({
             </div>
           );
         },
-      },
-    ],
+      }),
+    ]),
     [registrationCountByPersonId, setEditingMember, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useReactTable({
-    data: preFiltered,
-    columns,
-    state: { sorting, globalFilter: q },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQ,
-    globalFilterFn: membersGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const table = useAppTable(
+    {
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: membersGlobalFilter,
+    },
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+  );
 
   return (
     <>
@@ -339,7 +335,7 @@ export default function MembersManagement({
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            <table.FlexRender header={header} />
                             {canSort && (
                               <i
                                 className={`bi ms-1 small ${
@@ -363,7 +359,7 @@ export default function MembersManagement({
                     <tr key={row.id}>
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <table.FlexRender cell={cell} />
                         </td>
                       ))}
                     </tr>

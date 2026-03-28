@@ -1,14 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -23,9 +14,20 @@ import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 
-const peopleGlobalFilter: FilterFn<Person> = (row, _columnId, filterValue: string) => {
+const columnHelper = createAppColumnHelper<Person>();
+
+const peopleGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   const phoneQ = s.replace(/[\s\-().+]/g, "");
   return (
@@ -185,12 +187,11 @@ export default function PeopleManagement({
   const loadingPersonRegistrations = personRegistrationsQuery.isPending;
   const personRegistrationsError = personRegistrationsQuery.isError;
 
-  const columns = useMemo<ColumnDef<Person>[]>(
-    () => [
-      {
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
         id: "name",
         header: m.registration_name(),
-        accessorFn: (row) => row.name,
         cell: ({ row }) => {
           const person = row.original;
           const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
@@ -213,20 +214,18 @@ export default function PeopleManagement({
             </>
           );
         },
-      },
-      {
-        accessorKey: "email",
+      }),
+      columnHelper.accessor("email", {
         header: m.registration_email(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
         meta: { tdClassName: "d-none d-md-table-cell" },
-      },
-      {
-        accessorKey: "phone",
+      }),
+      columnHelper.accessor("phone", {
         header: m.registration_phone(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
         meta: { tdClassName: "d-none d-lg-table-cell" },
-      },
-      {
+      }),
+      columnHelper.display({
         id: "roles",
         header: m.admin_people_roles_label(),
         enableSorting: false,
@@ -240,14 +239,13 @@ export default function PeopleManagement({
           </div>
         ),
         meta: { tdClassName: "d-none d-lg-table-cell" },
-      },
-      {
+      }),
+      columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
         id: "registrations",
         header: m.admin_registrations_tab(),
-        accessorFn: (row) => registrationCountByPersonId[row.id] ?? 0,
         cell: ({ row, getValue }) => {
           const person = row.original;
-          const resCount = getValue() as number;
+          const resCount = getValue();
           return (
             <>
               <Badge
@@ -271,8 +269,8 @@ export default function PeopleManagement({
             </>
           );
         },
-      },
-      {
+      }),
+      columnHelper.display({
         id: "actions",
         header: m.admin_actions_label(),
         enableSorting: false,
@@ -323,8 +321,8 @@ export default function PeopleManagement({
             </div>
           );
         },
-      },
-    ],
+      }),
+    ]),
     [
       duplicateEmails,
       emailGroups,
@@ -338,18 +336,18 @@ export default function PeopleManagement({
     ],
   );
 
-  const table = useReactTable({
-    data: preFiltered,
-    columns,
-    state: { sorting, globalFilter: q },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQ,
-    globalFilterFn: peopleGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const table = useAppTable(
+    {
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: peopleGlobalFilter,
+    },
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+  );
 
   // Emails from the currently visible (filtered + searched) rows for the copy button
   const filteredEmails = table
@@ -482,7 +480,7 @@ export default function PeopleManagement({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <table.FlexRender header={header} />
                           {header.column.getCanSort() && (
                             <i
                               className={`bi ms-1 small ${
@@ -505,7 +503,7 @@ export default function PeopleManagement({
                     <tr key={row.id}>
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <table.FlexRender cell={cell} />
                         </td>
                       ))}
                     </tr>
