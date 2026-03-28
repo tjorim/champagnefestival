@@ -757,10 +757,9 @@ export default function LayoutEditor({
     : [];
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
-  const activeLayoutDateLabel = getDayLabel(
-    activeLayout?.date ?? null,
-    dayOptions,
-    activeLayout?.label ?? "",
+  const activeLayoutDateLabel = useMemo(
+    () => getDayLabel(activeLayout?.date ?? null, dayOptions, activeLayout?.label ?? ""),
+    [activeLayout?.date, activeLayout?.label, dayOptions],
   );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
