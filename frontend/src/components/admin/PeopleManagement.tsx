@@ -18,7 +18,7 @@ import {
   useAppTable,
   createAppColumnHelper,
   type AdminTableFeatures,
-} from "@/hooks/useAdminTable";
+} from "@/types/tanstack-table";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 
 const columnHelper = createAppColumnHelper<Person>();

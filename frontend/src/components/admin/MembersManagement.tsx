@@ -14,7 +14,7 @@ import {
   useAppTable,
   createAppColumnHelper,
   type AdminTableFeatures,
-} from "@/hooks/useAdminTable";
+} from "@/types/tanstack-table";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 
 interface MembersManagementProps {

@@ -14,7 +14,7 @@ import {
   useAppTable,
   createAppColumnHelper,
   type AdminTableFeatures,
-} from "@/hooks/useAdminTable";
+} from "@/types/tanstack-table";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
 interface VolunteersManagementProps {
