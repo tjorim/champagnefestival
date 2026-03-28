@@ -1420,7 +1420,7 @@ export default function LayoutEditor({
             </Form.Select>
           </Form.Group>
           <Form.Group controlId="layout-copy-from">
-            <Form.Label>Copy from existing layout (optional)</Form.Label>
+            <Form.Label>{m.admin_layout_copy_from_label()}</Form.Label>
             <Form.Select
               value={newLayout.copyFromLayoutId}
               onChange={(e) =>
@@ -1428,7 +1428,7 @@ export default function LayoutEditor({
               }
               className="bg-dark text-light border-secondary"
             >
-              <option value="">Start with an empty layout</option>
+              <option value="">{m.admin_layout_copy_from_empty()}</option>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
                   {getDayLabel(layout.date, dayOptions, layout.label)}
@@ -1447,7 +1447,7 @@ export default function LayoutEditor({
                   setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
                 }
                 disabled={newLayout.copyAreas}
-                label="Copy tables"
+                label={m.admin_layout_copy_tables()}
               />
               <Form.Check
                 id="layout-copy-areas"
@@ -1461,11 +1461,11 @@ export default function LayoutEditor({
                     copyTables: e.currentTarget.checked ? true : p.copyTables,
                   }))
                 }
-                label="Copy areas and exhibitor assignments"
+                label={m.admin_layout_copy_areas()}
               />
               {newLayout.copyAreas && (
                 <div className="text-secondary small">
-                  Tables inside copied areas are included automatically.
+                  {m.admin_layout_copy_areas_hint()}
                 </div>
               )}
             </div>
