@@ -110,6 +110,8 @@ async def list_members(
     db: AsyncSession = Depends(get_db),
     q: str | None = Query(default=None),
     active: bool | None = Query(default=None),
+    page: int = Query(default=1, ge=1, description="1-based page number used with limit"),
+    limit: int | None = Query(default=None, ge=1, le=1000),
 ) -> list[dict]:
     stmt = select(Person).where(roles_contains("member"))
 
@@ -130,7 +132,11 @@ async def list_members(
             )
         )
 
-    result = await db.execute(stmt.order_by(Person.created_at.desc()))
+    stmt = stmt.order_by(Person.created_at.desc())
+    if limit is not None:
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+
+    result = await db.execute(stmt)
     rows = result.scalars().all()
     return [person_to_dict(p) for p in rows]
 

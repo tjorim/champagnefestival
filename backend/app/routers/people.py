@@ -140,6 +140,8 @@ async def list_people(
     q: str | None = Query(default=None),
     role: str | None = Query(default=None, description="Filter by role (case-insensitive)"),
     active: bool | None = Query(default=None),
+    page: int = Query(default=1, ge=1, description="1-based page number used with limit"),
+    limit: int | None = Query(default=None, ge=1, le=1000),
 ) -> list[dict]:
     stmt = select(Person)
 
@@ -166,7 +168,11 @@ async def list_people(
             )
         )
 
-    result = await db.execute(stmt.order_by(Person.created_at.desc()))
+    stmt = stmt.order_by(Person.created_at.desc())
+    if limit is not None:
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+
+    result = await db.execute(stmt)
     rows = result.scalars().all()
     return [person_to_dict(p) for p in rows]
 

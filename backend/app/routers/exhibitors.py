@@ -30,11 +30,15 @@ async def _load_contacts_by_ids(db: AsyncSession, ids: list[str]) -> dict[str, P
 @router.get("", response_model=list[ExhibitorOut], dependencies=[Depends(require_admin)])
 async def list_exhibitors(
     exhibitor_type: str | None = Query(default=None, alias="type"),
+    page: int = Query(default=1, ge=1, description="1-based page number used with limit"),
+    limit: int | None = Query(default=None, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     stmt = select(Exhibitor).order_by(Exhibitor.id)
     if exhibitor_type is not None:
         stmt = stmt.where(Exhibitor.type == exhibitor_type)
+    if limit is not None:
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
     result = await db.execute(stmt)
     exhibitors = result.scalars().all()
     person_ids = [e.contact_person_id for e in exhibitors if e.contact_person_id]

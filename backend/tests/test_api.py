@@ -733,6 +733,33 @@ async def test_filter_by_event(client):
     assert r.json()[0]["event_id"] == friday.json()["event_id"]
 
 
+@pytest.mark.anyio
+async def test_registrations_support_limit_and_page(client):
+    event = await _create_event(client, edition_id="edition-registration-pagination")
+    for index in range(3):
+        created = await _post_registration(
+            client,
+            path="/api/registrations",
+            event=event,
+            email=f"page{index}@example.com",
+            phone=f"+3249900001{index}",
+            name=f"Page User {index}",
+        )
+        assert created.status_code == 201
+
+    first_page = await client.get("/api/registrations", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    assert len(first_page.json()) == 2
+
+    second_page = await client.get("/api/registrations", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    assert len(second_page.json()) == 1
+
+    first_page_ids = {row["id"] for row in first_page.json()}
+    second_page_ids = {row["id"] for row in second_page.json()}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+
 # ---------------------------------------------------------------------------
 # Visitor self-lookup (public token-based flow)
 # ---------------------------------------------------------------------------
@@ -1114,6 +1141,25 @@ async def test_exhibitor_invalid_contact_person(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_exhibitors_support_limit_and_page(client):
+    for name in ("Alpha", "Bravo", "Charlie"):
+        response = await client.post(
+            "/api/exhibitors",
+            json={"name": name, "type": "producer"},
+            headers=ADMIN_HEADERS,
+        )
+        assert response.status_code == 201
+
+    first_page = await client.get("/api/exhibitors", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    assert [row["name"] for row in first_page.json()] == ["Alpha", "Bravo"]
+
+    second_page = await client.get("/api/exhibitors", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    assert [row["name"] for row in second_page.json()] == ["Charlie"]
 
 
 # ---------------------------------------------------------------------------
