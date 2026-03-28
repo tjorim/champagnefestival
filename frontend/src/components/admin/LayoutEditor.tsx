@@ -107,6 +107,15 @@ interface DayOption {
   label: string;
 }
 
+function getInitialNewLayoutState(dayOptions: DayOption[]) {
+  return {
+    date: dayOptions[0]?.date ?? "",
+    copyFromLayoutId: "",
+    copyTables: true,
+    copyAreas: true,
+  };
+}
+
 function getDayLabel(date: string | null, dayOptions: DayOption[], fallbackLabel = ""): string {
   if (!date) return fallbackLabel;
   return dayOptions.find((day) => day.date === date)?.label ?? date;
@@ -579,12 +588,7 @@ export default function LayoutEditor({
 
   // Add Layout modal
   const [showAddLayout, setShowAddLayout] = useState(false);
-  const [newLayout, setNewLayout] = useState({
-    date: dayOptions[0]?.date ?? "",
-    copyFromLayoutId: "",
-    copyTables: true,
-    copyAreas: true,
-  });
+  const [newLayout, setNewLayout] = useState(() => getInitialNewLayoutState(dayOptions));
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
   const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
 
@@ -603,12 +607,7 @@ export default function LayoutEditor({
           areas: newLayout.copyAreas,
         },
       );
-      setNewLayout({
-        date: dayOptions[0]?.date ?? "",
-        copyFromLayoutId: "",
-        copyTables: true,
-        copyAreas: true,
-      });
+      setNewLayout(getInitialNewLayoutState(dayOptions));
       setShowAddLayout(false);
     } catch (err) {
       console.error("Failed to add layout", err);
@@ -939,12 +938,7 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                    setNewLayout({
-                      date: dayOptions[0]?.date ?? "",
-                      copyFromLayoutId: "",
-                      copyTables: true,
-                      copyAreas: true,
-                    });
+                    setNewLayout(getInitialNewLayoutState(dayOptions));
                     setShowAddLayout(true);
                   }}
                       title={m.admin_add_layout()}
