@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { seedEditions, seedEvents } from "../data/editions";
+import { editions, events, resetEditionStore } from "../data/editionStore";
 import { seedExhibitors } from "../data/exhibitors";
 import { seedPeople } from "../data/people";
 import { sharedStore, resetSharedStore } from "../data/registrations";
@@ -18,8 +18,6 @@ const DEV_TOKEN = "dev-token";
 /** Mutable in-memory stores — reset on page reload. */
 let people: Record<string, unknown>[] = structuredClone(seedPeople);
 let exhibitors: Record<string, unknown>[] = structuredClone(seedExhibitors);
-let editions: Record<string, unknown>[] = structuredClone(seedEditions);
-let events: Record<string, unknown>[] = structuredClone(seedEvents);
 let venues: Record<string, unknown>[] = structuredClone(seedVenues);
 let rooms: Record<string, unknown>[] = structuredClone(seedRooms);
 let tableTypes: Record<string, unknown>[] = structuredClone(seedTableTypes);
@@ -831,10 +829,9 @@ export const adminHandlers = [
 /** Reset all admin mutable state (useful for tests). */
 export function resetAdminStore(): void {
   resetSharedStore();
+  resetEditionStore();
   people = structuredClone(seedPeople);
   exhibitors = structuredClone(seedExhibitors);
-  editions = structuredClone(seedEditions);
-  events = structuredClone(seedEvents);
   venues = structuredClone(seedVenues);
   rooms = structuredClone(seedRooms);
   tableTypes = structuredClone(seedTableTypes);

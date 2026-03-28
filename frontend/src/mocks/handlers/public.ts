@@ -1,19 +1,19 @@
 import { http, HttpResponse } from "msw";
-import { activeEdition, seedEditions, seedEvents } from "../data/editions";
+import { editions, events } from "../data/editionStore";
 import { sharedStore, resetSharedStore } from "../data/registrations";
 
 export const publicHandlers = [
   /** GET /api/editions/active — returns the active edition. */
   http.get("/api/editions/active", () => {
-    return HttpResponse.json(activeEdition);
+    return HttpResponse.json(editions.find((e) => e.active) ?? editions[0] ?? null);
   }),
 
   /** GET /api/editions — returns all editions (also used by admin with include_inactive). */
   http.get("/api/editions", ({ request }) => {
     const url = new URL(request.url);
     const includeInactive = url.searchParams.get("include_inactive") === "true";
-    const editions = includeInactive ? seedEditions : seedEditions.filter((e) => e.active);
-    return HttpResponse.json(editions);
+    const result = includeInactive ? editions : editions.filter((e) => e.active);
+    return HttpResponse.json(result);
   }),
 
   /** GET /api/events — supports ?registration_required and ?edition_id filters. */
@@ -22,14 +22,14 @@ export const publicHandlers = [
     const registrationRequired = url.searchParams.get("registration_required");
     const editionId = url.searchParams.get("edition_id");
 
-    let events = [...seedEvents];
+    let result = [...events];
     if (registrationRequired === "true") {
-      events = events.filter((e) => e.registration_required);
+      result = result.filter((e) => e.registration_required);
     }
     if (editionId) {
-      events = events.filter((e) => e.edition_id === editionId);
+      result = result.filter((e) => e.edition_id === editionId);
     }
-    return HttpResponse.json(events);
+    return HttpResponse.json(result);
   }),
 
   /** POST /api/registrations — public registration submission. */
@@ -52,7 +52,7 @@ export const publicHandlers = [
         phone: String(body.phone ?? ""),
       },
       event_id: String(body.event_id ?? ""),
-      event: seedEvents.find((e) => e.id === body.event_id) ?? null,
+      event: events.find((e) => e.id === body.event_id) ?? null,
       guest_count: Number(body.guest_count ?? 1),
       pre_orders: Array.isArray(body.pre_orders) ? body.pre_orders : [],
       notes: String(body.notes ?? ""),
