@@ -1,14 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -19,6 +10,11 @@ import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 
 interface AllocationRef {
@@ -92,7 +88,13 @@ function isStandaloneRegistration(registration: Registration) {
   return registration.event.edition.editionType !== "festival";
 }
 
-const registrationGlobalFilter: FilterFn<Registration> = (row, _columnId, filterValue: string) => {
+const columnHelper = createAppColumnHelper<Registration>();
+
+const registrationGlobalFilter: FilterFn<AdminTableFeatures, Registration> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   return (
     row.original.person.name.toLowerCase().includes(s) ||
@@ -127,9 +129,7 @@ export default function RegistrationList({
 
   const allContactPersonIds = useMemo(
     () =>
-      new Set(
-        exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null),
-      ),
+      new Set(exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null)),
     [exhibitors],
   );
 
@@ -190,12 +190,11 @@ export default function RegistrationList({
     [registrations],
   );
 
-  const columns = useMemo<ColumnDef<Registration>[]>(
-    () => [
-      {
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.person.name, {
         id: "name",
         header: m.registration_name(),
-        accessorFn: (row) => row.person.name,
         cell: ({ row }) => {
           const reg = row.original;
           const isLinked = allContactPersonIds.has(reg.person.id);
@@ -228,40 +227,34 @@ export default function RegistrationList({
             </>
           );
         },
-      },
-      {
+      }),
+      columnHelper.accessor((row) => row.event?.title ?? row.eventId, {
         id: "event",
         header: m.admin_event_label(),
-        accessorFn: (row) => row.event?.title ?? row.eventId,
         cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
         meta: { tdClassName: "d-none d-md-table-cell" },
-      },
-      {
-        accessorKey: "guestCount",
+      }),
+      columnHelper.accessor("guestCount", {
         header: m.admin_guests_count(),
-      },
-      {
-        accessorKey: "status",
+      }),
+      columnHelper.accessor("status", {
         header: m.admin_status_label(),
         cell: ({ getValue }) => (
-          <Badge bg={statusBadgeVariant(getValue() as RegistrationStatus)}>
-            {statusLabel(getValue() as RegistrationStatus)}
+          <Badge bg={statusBadgeVariant(getValue())}>
+            {statusLabel(getValue())}
           </Badge>
         ),
-      },
-      {
-        accessorKey: "paymentStatus",
+      }),
+      columnHelper.accessor("paymentStatus", {
         header: m.admin_payment_label(),
         cell: ({ getValue }) => (
-          <Badge bg={paymentBadgeVariant(getValue() as PaymentStatus)}>
-            {paymentLabel(getValue() as PaymentStatus)}
+          <Badge bg={paymentBadgeVariant(getValue())}>
+            {paymentLabel(getValue())}
           </Badge>
         ),
         meta: { tdClassName: "d-none d-lg-table-cell" },
-      },
-      {
-        id: "checkedIn",
-        accessorKey: "checkedIn",
+      }),
+      columnHelper.accessor("checkedIn", {
         header: m.admin_check_in_title(),
         cell: ({ row }) => {
           const reg = row.original;
@@ -285,8 +278,8 @@ export default function RegistrationList({
           );
         },
         meta: { tdClassName: "d-none d-xl-table-cell" },
-      },
-      {
+      }),
+      columnHelper.display({
         id: "table",
         header: m.admin_tables_tab(),
         enableSorting: false,
@@ -313,15 +306,14 @@ export default function RegistrationList({
           );
         },
         meta: { tdClassName: "d-none d-lg-table-cell" },
-      },
-      {
+      }),
+      columnHelper.display({
         id: "actions",
         header: m.admin_actions_label(),
         enableSorting: false,
         cell: ({ row }) => {
           const reg = row.original;
-          const hasMoreActions =
-            reg.status !== "cancelled" || reg.paymentStatus !== "paid";
+          const hasMoreActions = reg.status !== "cancelled" || reg.paymentStatus !== "paid";
           return (
             <div className="d-flex flex-wrap gap-1">
               <Button
@@ -350,6 +342,7 @@ export default function RegistrationList({
                     size="sm"
                     variant="outline-secondary"
                     id={`reg-more-${reg.id}`}
+                    aria-label={m.admin_more_actions_for({ name: reg.person.name })}
                   >
                     <i className="bi bi-three-dots" aria-hidden="true" />
                   </Dropdown.Toggle>
@@ -375,23 +368,23 @@ export default function RegistrationList({
             </div>
           );
         },
-      },
-    ],
+      }),
+    ]),
     [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
   );
 
-  const table = useReactTable({
-    data: preFiltered,
-    columns,
-    state: { sorting, globalFilter: q },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQ,
-    globalFilterFn: registrationGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const table = useAppTable(
+    {
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: registrationGlobalFilter,
+    },
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+  );
 
   return (
     <>
@@ -500,18 +493,42 @@ export default function RegistrationList({
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
+                      {headerGroup.headers.map((header) => {
+                          const canSort = header.column.getCanSort();
+                          const sorted = header.column.getIsSorted();
+                          return (
                         <th
                           key={header.id}
                           className={header.column.columnDef.meta?.tdClassName}
                           onClick={header.column.getToggleSortingHandler()}
+                          onKeyDown={
+                            canSort
+                              ? (e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    header.column.getToggleSortingHandler()?.(e);
+                                  }
+                                }
+                              : undefined
+                          }
+                          role={canSort ? "button" : undefined}
+                          tabIndex={canSort ? 0 : undefined}
+                          aria-sort={
+                            canSort
+                              ? sorted === "asc"
+                                ? "ascending"
+                                : sorted === "desc"
+                                  ? "descending"
+                                  : "none"
+                              : undefined
+                          }
                           style={{
-                            cursor: header.column.getCanSort() ? "pointer" : "default",
+                            cursor: canSort ? "pointer" : "default",
                             userSelect: "none",
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <table.FlexRender header={header} />
                           {header.column.getCanSort() && (
                             <i
                               className={`bi ms-1 small ${
@@ -525,7 +542,8 @@ export default function RegistrationList({
                             />
                           )}
                         </th>
-                      ))}
+                          );
+                        })}
                     </tr>
                   ))}
                 </thead>
@@ -534,7 +552,7 @@ export default function RegistrationList({
                     <tr key={row.id}>
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <table.FlexRender cell={cell} />
                         </td>
                       ))}
                     </tr>

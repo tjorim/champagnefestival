@@ -1,14 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -19,6 +10,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
 interface VolunteersManagementProps {
@@ -31,13 +27,19 @@ interface VolunteersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
+const columnHelper = createAppColumnHelper<Person>();
+
 function formatPeriod(period: Person["helpPeriods"][number]): string {
   return period.lastHelpDay
     ? `${period.firstHelpDay} → ${period.lastHelpDay}`
     : `${period.firstHelpDay} →`;
 }
 
-const volunteersGlobalFilter: FilterFn<Person> = (row, _columnId, filterValue: string) => {
+const volunteersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
   const s = filterValue.toLowerCase();
   return (
     row.original.name.toLowerCase().includes(s) ||
@@ -77,9 +79,7 @@ export default function VolunteersManagement({
     () =>
       activeFilter === "all"
         ? volunteers
-        : volunteers.filter((v) =>
-            activeFilter === "active" ? v.active : !v.active,
-          ),
+        : volunteers.filter((v) => (activeFilter === "active" ? v.active : !v.active)),
     [volunteers, activeFilter],
   );
 
@@ -108,12 +108,11 @@ export default function VolunteersManagement({
     }
   };
 
-  const columns = useMemo<ColumnDef<Person>[]>(
-    () => [
-      {
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
         id: "name",
         header: m.registration_name(),
-        accessorFn: (row) => row.name,
         cell: ({ row }) => {
           const volunteer = row.original;
           return (
@@ -127,25 +126,22 @@ export default function VolunteersManagement({
             </div>
           );
         },
-      },
-      {
-        accessorKey: "address",
+      }),
+      columnHelper.accessor("address", {
         header: m.admin_people_address_label(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-      },
-      {
-        accessorKey: "nationalRegisterNumber",
+      }),
+      columnHelper.accessor("nationalRegisterNumber", {
         header: m.admin_people_national_register_number_label(),
         enableSorting: false,
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-      },
-      {
-        accessorKey: "eidDocumentNumber",
+      }),
+      columnHelper.accessor("eidDocumentNumber", {
         header: m.admin_people_eid_document_number_label(),
         enableSorting: false,
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-      },
-      {
+      }),
+      columnHelper.display({
         id: "helpPeriods",
         header: m.admin_volunteers_help_periods_label(),
         enableSorting: false,
@@ -162,8 +158,8 @@ export default function VolunteersManagement({
             )}
           </div>
         ),
-      },
-      {
+      }),
+      columnHelper.display({
         id: "actions",
         header: m.admin_actions_label(),
         enableSorting: false,
@@ -198,23 +194,23 @@ export default function VolunteersManagement({
             </div>
           );
         },
-      },
-    ],
+      }),
+    ]),
     [setEditingVolunteer, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useReactTable({
-    data: preFiltered,
-    columns,
-    state: { sorting, globalFilter: q },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQ,
-    globalFilterFn: volunteersGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const table = useAppTable(
+    {
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: volunteersGlobalFilter,
+    },
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+  );
 
   return (
     <>
@@ -306,32 +302,57 @@ export default function VolunteersManagement({
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className={header.column.columnDef.meta?.tdClassName}
-                          onClick={header.column.getToggleSortingHandler()}
-                          style={{
-                            cursor: header.column.getCanSort() ? "pointer" : "default",
-                            userSelect: "none",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getCanSort() && (
-                            <i
-                              className={`bi ms-1 small ${
-                                header.column.getIsSorted() === "asc"
-                                  ? "bi-arrow-up"
-                                  : header.column.getIsSorted() === "desc"
-                                    ? "bi-arrow-down"
-                                    : "bi-arrow-down-up opacity-25"
-                              }`}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </th>
-                      ))}
+                      {headerGroup.headers.map((header) => {
+                          const canSort = header.column.getCanSort();
+                          const sorted = header.column.getIsSorted();
+                          return (
+                            <th
+                              key={header.id}
+                              className={header.column.columnDef.meta?.tdClassName}
+                              onClick={header.column.getToggleSortingHandler()}
+                              onKeyDown={
+                                canSort
+                                  ? (e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        header.column.getToggleSortingHandler()?.(e);
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              role={canSort ? "button" : undefined}
+                              tabIndex={canSort ? 0 : undefined}
+                              aria-sort={
+                                canSort
+                                  ? sorted === "asc"
+                                    ? "ascending"
+                                    : sorted === "desc"
+                                      ? "descending"
+                                      : "none"
+                                  : undefined
+                              }
+                              style={{
+                                cursor: canSort ? "pointer" : "default",
+                                userSelect: "none",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <table.FlexRender header={header} />
+                              {canSort && (
+                                <i
+                                  className={`bi ms-1 small ${
+                                    sorted === "asc"
+                                      ? "bi-arrow-up"
+                                      : sorted === "desc"
+                                        ? "bi-arrow-down"
+                                        : "bi-arrow-down-up opacity-25"
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </th>
+                          );
+                        })}
                     </tr>
                   ))}
                 </thead>
@@ -340,7 +361,7 @@ export default function VolunteersManagement({
                     <tr key={row.id}>
                       {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <table.FlexRender cell={cell} />
                         </td>
                       ))}
                     </tr>

@@ -22,7 +22,7 @@
     "@tanstack/react-form": "^1.28.5",
     "@tanstack/react-query": "^5.95.2",
     "@tanstack/react-router": "^1.168.3",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "9.0.0-alpha.19",
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
     "clsx": "^2.1.1",
@@ -41,6 +41,7 @@
     "@inlang/paraglide-js": "^2.15.1",
     "@inlang/plugin-m-function-matcher": "^2.2.4",
     "@inlang/plugin-message-format": "^4.4.0",
+    "@tanstack/table-core": "9.0.0-alpha.16",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -51,6 +52,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/ui": "^4.1.2",
     "happy-dom": "^20.8.9",
+    "msw": "^2.12.14",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
     "typescript": "^6.0.2",
@@ -60,5 +62,10 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.32.1",
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
 }

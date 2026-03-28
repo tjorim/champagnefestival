@@ -8,29 +8,29 @@
 
 /* ---- Brand tokens (mirrored from index.css :root) ---- */
 #admin {
-  --adm-primary:      #5a7ff0;
-  --adm-secondary:    #9a5df6;
-  --adm-primary-rgb:  90, 127, 240;
+  --adm-primary: #5a7ff0;
+  --adm-secondary: #9a5df6;
+  --adm-primary-rgb: 90, 127, 240;
   --adm-secondary-rgb: 154, 93, 246;
-  --adm-gradient:     linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
+  --adm-gradient: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
 
-  --adm-bg:           #121212;
-  --adm-surface:      #1e1e1e;
-  --adm-surface-2:    #252525;
-  --adm-border:       rgba(255, 255, 255, 0.10);
-  --adm-border-focus: rgba(90, 127, 240, 0.50);
+  --adm-bg: #121212;
+  --adm-surface: #1e1e1e;
+  --adm-surface-2: #252525;
+  --adm-border: rgba(255, 255, 255, 0.1);
+  --adm-border-focus: rgba(90, 127, 240, 0.5);
 
-  --adm-text:         #f0f0f0;
-  --adm-text-muted:   #c5c5c5;
-  --adm-text-dim:     #6e6e6e;
+  --adm-text: #f0f0f0;
+  --adm-text-muted: #c5c5c5;
+  --adm-text-dim: #6e6e6e;
 
-  --adm-success:      #4caf82;
-  --adm-danger:       #e05a5a;
+  --adm-success: #4caf82;
+  --adm-danger: #e05a5a;
 
-  --adm-radius:       6px;
-  --adm-radius-lg:    10px;
-  --adm-t:            180ms;
-  --adm-ease:         cubic-bezier(0.4, 0, 0.2, 1);
+  --adm-radius: 6px;
+  --adm-radius-lg: 10px;
+  --adm-t: 180ms;
+  --adm-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ---- Page title — matches .gradient-text from the public site ---- */
@@ -59,8 +59,9 @@
 
 #admin .card.border-warning {
   border-color: rgba(var(--adm-primary-rgb), 0.35) !important;
-  box-shadow: 0 0 0 1px rgba(var(--adm-primary-rgb), 0.15),
-              0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  box-shadow:
+    0 0 0 1px rgba(var(--adm-primary-rgb), 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.35) !important;
 }
 
 #admin .card-header {
@@ -87,7 +88,7 @@
 #admin .form-select:focus {
   background-color: var(--adm-surface-2) !important;
   border-color: var(--adm-primary) !important;
-  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.20) !important;
+  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.2) !important;
   color: var(--adm-text) !important;
 }
 
@@ -155,8 +156,9 @@
   border-color: transparent !important;
   border-bottom: 2px solid transparent !important;
   white-space: nowrap;
-  transition: color var(--adm-t) var(--adm-ease),
-              border-color var(--adm-t) var(--adm-ease) !important;
+  transition:
+    color var(--adm-t) var(--adm-ease),
+    border-color var(--adm-t) var(--adm-ease) !important;
 }
 
 #admin .nav-tabs .nav-link:hover {
@@ -178,8 +180,14 @@
 }
 
 @keyframes adm-tab-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---- Badges — swap warning yellow for brand blue ---- */
@@ -187,7 +195,7 @@
 #admin .badge.bg-warning.text-dark {
   background: rgba(var(--adm-primary-rgb), 0.18) !important;
   color: var(--adm-primary) !important;
-  border: 1px solid rgba(var(--adm-primary-rgb), 0.30) !important;
+  border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
   /* reset text-dark override */
   --bs-badge-color: var(--adm-primary) !important;
 }
@@ -209,7 +217,9 @@
 
 /* ---- Spinning refresh icon ---- */
 @keyframes adm-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 #admin .spin {
@@ -255,12 +265,17 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
   z-index: 10;
 }
 
-.admin-sidebar::-webkit-scrollbar { width: 4px; }
-.admin-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.admin-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.admin-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
 
 /* Brand / title area */
 .admin-sidebar-brand {
@@ -304,7 +319,9 @@
   scrollbar-width: none;
 }
 
-.admin-nav::-webkit-scrollbar { display: none; }
+.admin-nav::-webkit-scrollbar {
+  display: none;
+}
 
 /* Shared reset for nav buttons */
 .admin-nav-item,
@@ -318,7 +335,9 @@
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 /* Direct nav items (Registrations) */
@@ -344,7 +363,7 @@
 }
 
 .admin-nav-item.is-active {
-  background: rgba(90, 127, 240, 0.10);
+  background: rgba(90, 127, 240, 0.1);
   color: #5a7ff0;
   border-left-color: #5a7ff0;
   font-weight: 500;
@@ -470,8 +489,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  transition: background 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition:
+    background 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .admin-mobile-toggle:hover {
@@ -522,11 +543,11 @@
 
 .admin-dialog .modal-content {
   background: var(--bs-body-bg, #1e1e1e) !important;
-  border-color: rgba(255, 255, 255, 0.10) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .admin-dialog .modal-header {
-  border-bottom-color: rgba(255, 255, 255, 0.10) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .admin-dialog .modal-title {
@@ -537,13 +558,13 @@
 }
 
 .admin-dialog .modal-footer {
-  border-top-color: rgba(255, 255, 255, 0.10) !important;
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .admin-dialog .form-control,
 .admin-dialog .form-select {
   background-color: #252525 !important;
-  border-color: rgba(255, 255, 255, 0.10) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
   color: #f0f0f0 !important;
 }
 
@@ -551,7 +572,7 @@
 .admin-dialog .form-select:focus {
   background-color: #252525 !important;
   border-color: #5a7ff0 !important;
-  box-shadow: 0 0 0 3px rgba(90, 127, 240, 0.20) !important;
+  box-shadow: 0 0 0 3px rgba(90, 127, 240, 0.2) !important;
 }
 
 .admin-dialog .form-control::placeholder {
@@ -577,5 +598,5 @@
 .admin-dialog .badge.bg-warning.text-dark {
   background: rgba(90, 127, 240, 0.18) !important;
   color: #5a7ff0 !important;
-  border: 1px solid rgba(90, 127, 240, 0.30) !important;
+  border: 1px solid rgba(90, 127, 240, 0.3) !important;
 }

@@ -327,9 +327,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   // Sidebar navigation state
   const [activeKey, setActiveKey] = useState("registrations");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(["programme"]),
-  );
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(["programme"]));
   const [venueTab, setVenueTab] = useState<"venues" | "table-types">("venues");
   const [peopleTab, setPeopleTab] = useState<"directory" | "members" | "volunteers">("directory");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -2363,7 +2361,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               {/* Registrations */}
               <button
                 className={clsx("admin-nav-item", activeKey === "registrations" && "is-active")}
-                onClick={() => { setActiveKey("registrations"); setSidebarOpen(false); }}
+                onClick={() => {
+                  setActiveKey("registrations");
+                  setSidebarOpen(false);
+                }}
               >
                 <i className="bi bi-calendar-check" aria-hidden="true" />
                 <span>{m.admin_registrations_tab()}</span>
@@ -2396,17 +2397,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <div className="admin-nav-sub">
                     <button
                       className={clsx("admin-nav-item", activeKey === "content" && "is-active")}
-                      onClick={() => { setActiveKey("content"); setSidebarOpen(false); }}
+                      onClick={() => {
+                        setActiveKey("content");
+                        setSidebarOpen(false);
+                      }}
                     >
                       <i className="bi bi-images" aria-hidden="true" />
                       <span>{m.admin_content_tab()}</span>
                     </button>
                     <button
-                      className={clsx(
-                        "admin-nav-item",
-                        activeKey === "floor-plans" && "is-active",
-                      )}
-                      onClick={() => { setActiveKey("floor-plans"); setSidebarOpen(false); }}
+                      className={clsx("admin-nav-item", activeKey === "floor-plans" && "is-active")}
+                      onClick={() => {
+                        setActiveKey("floor-plans");
+                        setSidebarOpen(false);
+                      }}
                     >
                       <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
                       <span>{m.admin_tables_tab()}</span>
@@ -2418,7 +2422,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               {/* Venue */}
               <button
                 className={clsx("admin-nav-item", activeKey === "venue" && "is-active")}
-                onClick={() => { setActiveKey("venue"); setSidebarOpen(false); }}
+                onClick={() => {
+                  setActiveKey("venue");
+                  setSidebarOpen(false);
+                }}
               >
                 <i className="bi bi-geo-alt" aria-hidden="true" />
                 <span>{m.admin_venues_tab()}</span>
@@ -2427,13 +2434,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               {/* People group */}
               <button
                 className={clsx("admin-nav-item", activeKey === "people" && "is-active")}
-                onClick={() => { setActiveKey("people"); setSidebarOpen(false); }}
+                onClick={() => {
+                  setActiveKey("people");
+                  setSidebarOpen(false);
+                }}
               >
                 <i className="bi bi-people" aria-hidden="true" />
                 <span>{m.admin_people_tab()}</span>
-                {people.length > 0 && (
-                  <span className="admin-nav-count">{people.length}</span>
-                )}
+                {people.length > 0 && <span className="admin-nav-count">{people.length}</span>}
               </button>
             </nav>
 
@@ -2559,7 +2567,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <>
                     <div className="d-flex gap-2 mb-3">
                       <button
-                        className={clsx("admin-nav-item", "admin-sub-tab", venueTab === "venues" && "is-active")}
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          venueTab === "venues" && "is-active",
+                        )}
                         onClick={() => setVenueTab("venues")}
                       >
                         <i className="bi bi-building me-1" aria-hidden="true" />

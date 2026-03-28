@@ -122,7 +122,7 @@ function ContentSection({
     retry: false,
   });
 
-  const items = itemsQuery.data ?? [];
+  const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
 
   const { activeItems, archivedItems, totalActive, totalArchived } = useMemo(() => {
     const s = q.toLowerCase();
@@ -421,11 +421,7 @@ function ContentSection({
       {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
         <div className="text-center py-4 text-secondary">
           <p className="mb-2 small">{m.admin_content_no_results()}</p>
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={handleClearFilters}
-          >
+          <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
             {m.admin_content_clear_filters()}
           </Button>
         </div>
