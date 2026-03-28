@@ -2063,6 +2063,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       if (!copyFromLayoutId) return;
       const shouldCopyTables = copyOptions?.tables ?? true;
       const shouldCopyAreas = copyOptions?.areas ?? true;
+      const effectiveCopyTables = shouldCopyTables || shouldCopyAreas;
 
       const sourceTables = (queryClient.getQueryData<FloorTable[]>(tablesQueryKey) ?? []).filter(
         (table) => table.layoutId === copyFromLayoutId,
@@ -2071,7 +2072,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         (area) => area.layoutId === copyFromLayoutId,
       );
 
-      if (shouldCopyTables) {
+      if (effectiveCopyTables) {
         for (const source of sourceTables) {
           const createdTable = await createTableMutation.mutateAsync({
             name: source.name,

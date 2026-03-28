@@ -1457,6 +1457,7 @@ export default function LayoutEditor({
                 onChange={(e) =>
                   setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
                 }
+                disabled={newLayout.copyAreas}
                 label="Copy tables"
               />
               <Form.Check
@@ -1465,10 +1466,19 @@ export default function LayoutEditor({
                 className="small"
                 checked={newLayout.copyAreas}
                 onChange={(e) =>
-                  setNewLayout((p) => ({ ...p, copyAreas: e.currentTarget.checked }))
+                  setNewLayout((p) => ({
+                    ...p,
+                    copyAreas: e.currentTarget.checked,
+                    copyTables: e.currentTarget.checked ? true : p.copyTables,
+                  }))
                 }
                 label="Copy areas and exhibitor assignments"
               />
+              {newLayout.copyAreas && (
+                <div className="text-secondary small">
+                  Tables inside copied areas are included automatically.
+                </div>
+              )}
             </div>
           )}
         </Modal.Body>
