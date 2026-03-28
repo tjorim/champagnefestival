@@ -82,9 +82,3 @@ export const seedPeople = [
     updated_at: "2024-02-15T11:00:00Z",
   },
 ];
-
-/** People that are also members (role includes "member"). */
-export const seedMembers = seedPeople.filter((p) => p.roles.includes("member"));
-
-/** People that are also volunteers (role includes "volunteer"). */
-export const seedVolunteers = seedPeople.filter((p) => p.roles.includes("volunteer"));

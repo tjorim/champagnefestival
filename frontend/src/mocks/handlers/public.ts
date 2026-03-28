@@ -41,11 +41,12 @@ export const publicHandlers = [
       return HttpResponse.json(null, { status: 400 });
     }
 
+    const ts = Date.now();
     const newReg = {
-      id: `reg-${Date.now()}`,
-      person_id: `person-new-${Date.now()}`,
+      id: `reg-${ts}`,
+      person_id: `person-new-${ts}`,
       person: {
-        id: `person-new-${Date.now()}`,
+        id: `person-new-${ts}`,
         name: String(body.name ?? ""),
         email: String(body.email ?? ""),
         phone: String(body.phone ?? ""),

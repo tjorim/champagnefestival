@@ -196,6 +196,11 @@ export const adminHandlers = [
     if (authError) return authError;
     const canonical = people.find((p) => p.id === params.id);
     if (!canonical) return HttpResponse.json(null, { status: 404 });
+    sharedStore.registrations = sharedStore.registrations.map((r) =>
+      r.person_id === params.duplicateId
+        ? { ...r, person_id: String(canonical.id) }
+        : r,
+    );
     people = people.filter((p) => p.id !== params.duplicateId);
     return HttpResponse.json(canonical);
   }),
