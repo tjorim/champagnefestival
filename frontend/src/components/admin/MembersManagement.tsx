@@ -1,18 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  flexRender,
-  useTable,
-  tableFeatures,
-  globalFilteringFeature,
-  rowSortingFeature,
-  createFilteredRowModel,
-  createSortedRowModel,
-  filterFns,
-  sortFns,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -23,6 +10,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 
 interface MembersManagementProps {
@@ -36,10 +28,7 @@ interface MembersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
-const _features = tableFeatures({
-  globalFilteringFeature,
-  rowSortingFeature,
-});
+const columnHelper = createAppColumnHelper<Person>();
 
 function truncateText(value: string, limit = 80): string {
   if (value.length <= limit) {
@@ -48,7 +37,7 @@ function truncateText(value: string, limit = 80): string {
   return `${value.slice(0, limit - 1)}…`;
 }
 
-const membersGlobalFilter: FilterFn<typeof _features, Person> = (
+const membersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
   row,
   _columnId,
   filterValue: string,
@@ -121,12 +110,11 @@ export default function MembersManagement({
     }
   };
 
-  const columns = useMemo<ColumnDef<typeof _features, Person>[]>(
-    () => [
-      {
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
         id: "name",
         header: m.registration_name(),
-        accessorFn: (row) => row.name,
         cell: ({ row }) => {
           const member = row.original;
           return (
@@ -140,24 +128,20 @@ export default function MembersManagement({
             </div>
           );
         },
-      },
-      {
-        accessorKey: "email",
+      }),
+      columnHelper.accessor("email", {
         header: m.registration_email(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      },
-      {
-        accessorKey: "phone",
+      }),
+      columnHelper.accessor("phone", {
         header: m.registration_phone(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      },
-      {
-        accessorKey: "clubName",
+      }),
+      columnHelper.accessor("clubName", {
         header: m.admin_people_club_name_label(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      },
-      {
-        accessorKey: "notes",
+      }),
+      columnHelper.accessor("notes", {
         header: m.registration_notes(),
         enableSorting: false,
         cell: ({ row }) => {
@@ -169,14 +153,13 @@ export default function MembersManagement({
             </span>
           );
         },
-      },
-      {
+      }),
+      columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
         id: "registrations",
         header: m.admin_registrations_tab(),
-        accessorFn: (row) => registrationCountByPersonId[row.id] ?? 0,
         cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
-      },
-      {
+      }),
+      columnHelper.display({
         id: "actions",
         header: m.admin_actions_label(),
         enableSorting: false,
@@ -211,18 +194,13 @@ export default function MembersManagement({
             </div>
           );
         },
-      },
-    ],
+      }),
+    ]),
     [registrationCountByPersonId, setEditingMember, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useTable(
+  const table = useAppTable(
     {
-      _features,
-      _rowModels: {
-        filteredRowModel: createFilteredRowModel(filterFns),
-        sortedRowModel: createSortedRowModel(sortFns),
-      },
       data: preFiltered,
       columns,
       state: { sorting, globalFilter: q },
@@ -231,7 +209,7 @@ export default function MembersManagement({
       onGlobalFilterChange: setQ,
       globalFilterFn: membersGlobalFilter,
     },
-    (state) => state,
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
   );
 
   return (
@@ -357,7 +335,7 @@ export default function MembersManagement({
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            <table.FlexRender header={header} />
                             {canSort && (
                               <i
                                 className={`bi ms-1 small ${
@@ -381,7 +359,7 @@ export default function MembersManagement({
                     <tr key={row.id}>
                       {row.getAllCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <table.FlexRender cell={cell} />
                         </td>
                       ))}
                     </tr>

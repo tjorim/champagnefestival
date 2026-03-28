@@ -1,18 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  flexRender,
-  useTable,
-  tableFeatures,
-  globalFilteringFeature,
-  rowSortingFeature,
-  createFilteredRowModel,
-  createSortedRowModel,
-  filterFns,
-  sortFns,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -23,6 +10,11 @@ import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 
 interface AllocationRef {
@@ -96,12 +88,9 @@ function isStandaloneRegistration(registration: Registration) {
   return registration.event.edition.editionType !== "festival";
 }
 
-const _features = tableFeatures({
-  globalFilteringFeature,
-  rowSortingFeature,
-});
+const columnHelper = createAppColumnHelper<Registration>();
 
-const registrationGlobalFilter: FilterFn<typeof _features, Registration> = (
+const registrationGlobalFilter: FilterFn<AdminTableFeatures, Registration> = (
   row,
   _columnId,
   filterValue: string,
@@ -201,12 +190,11 @@ export default function RegistrationList({
     [registrations],
   );
 
-  const columns = useMemo<ColumnDef<typeof _features, Registration>[]>(
-    () => [
-      {
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.person.name, {
         id: "name",
         header: m.registration_name(),
-        accessorFn: (row) => row.person.name,
         cell: ({ row }) => {
           const reg = row.original;
           const isLinked = allContactPersonIds.has(reg.person.id);
@@ -239,40 +227,34 @@ export default function RegistrationList({
             </>
           );
         },
-      },
-      {
+      }),
+      columnHelper.accessor((row) => row.event?.title ?? row.eventId, {
         id: "event",
         header: m.admin_event_label(),
-        accessorFn: (row) => row.event?.title ?? row.eventId,
         cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
         meta: { tdClassName: "d-none d-md-table-cell" },
-      },
-      {
-        accessorKey: "guestCount",
+      }),
+      columnHelper.accessor("guestCount", {
         header: m.admin_guests_count(),
-      },
-      {
-        accessorKey: "status",
+      }),
+      columnHelper.accessor("status", {
         header: m.admin_status_label(),
         cell: ({ getValue }) => (
-          <Badge bg={statusBadgeVariant(getValue() as RegistrationStatus)}>
-            {statusLabel(getValue() as RegistrationStatus)}
+          <Badge bg={statusBadgeVariant(getValue())}>
+            {statusLabel(getValue())}
           </Badge>
         ),
-      },
-      {
-        accessorKey: "paymentStatus",
+      }),
+      columnHelper.accessor("paymentStatus", {
         header: m.admin_payment_label(),
         cell: ({ getValue }) => (
-          <Badge bg={paymentBadgeVariant(getValue() as PaymentStatus)}>
-            {paymentLabel(getValue() as PaymentStatus)}
+          <Badge bg={paymentBadgeVariant(getValue())}>
+            {paymentLabel(getValue())}
           </Badge>
         ),
         meta: { tdClassName: "d-none d-lg-table-cell" },
-      },
-      {
-        id: "checkedIn",
-        accessorKey: "checkedIn",
+      }),
+      columnHelper.accessor("checkedIn", {
         header: m.admin_check_in_title(),
         cell: ({ row }) => {
           const reg = row.original;
@@ -296,8 +278,8 @@ export default function RegistrationList({
           );
         },
         meta: { tdClassName: "d-none d-xl-table-cell" },
-      },
-      {
+      }),
+      columnHelper.display({
         id: "table",
         header: m.admin_tables_tab(),
         enableSorting: false,
@@ -324,8 +306,8 @@ export default function RegistrationList({
           );
         },
         meta: { tdClassName: "d-none d-lg-table-cell" },
-      },
-      {
+      }),
+      columnHelper.display({
         id: "actions",
         header: m.admin_actions_label(),
         enableSorting: false,
@@ -381,18 +363,13 @@ export default function RegistrationList({
             </div>
           );
         },
-      },
-    ],
+      }),
+    ]),
     [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
   );
 
-  const table = useTable(
+  const table = useAppTable(
     {
-      _features,
-      _rowModels: {
-        filteredRowModel: createFilteredRowModel(filterFns),
-        sortedRowModel: createSortedRowModel(sortFns),
-      },
       data: preFiltered,
       columns,
       state: { sorting, globalFilter: q },
@@ -401,7 +378,7 @@ export default function RegistrationList({
       onGlobalFilterChange: setQ,
       globalFilterFn: registrationGlobalFilter,
     },
-    (state) => state,
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
   );
 
   return (
@@ -522,7 +499,7 @@ export default function RegistrationList({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <table.FlexRender header={header} />
                           {header.column.getCanSort() && (
                             <i
                               className={`bi ms-1 small ${
@@ -545,7 +522,7 @@ export default function RegistrationList({
                     <tr key={row.id}>
                       {row.getAllCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <table.FlexRender cell={cell} />
                         </td>
                       ))}
                     </tr>

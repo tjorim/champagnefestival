@@ -1,18 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  flexRender,
-  useTable,
-  tableFeatures,
-  globalFilteringFeature,
-  rowSortingFeature,
-  createFilteredRowModel,
-  createSortedRowModel,
-  filterFns,
-  sortFns,
-  type ColumnDef,
-  type FilterFn,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -23,6 +10,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
 interface VolunteersManagementProps {
@@ -35,10 +27,7 @@ interface VolunteersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
-const _features = tableFeatures({
-  globalFilteringFeature,
-  rowSortingFeature,
-});
+const columnHelper = createAppColumnHelper<Person>();
 
 function formatPeriod(period: Person["helpPeriods"][number]): string {
   return period.lastHelpDay
@@ -46,7 +35,7 @@ function formatPeriod(period: Person["helpPeriods"][number]): string {
     : `${period.firstHelpDay} →`;
 }
 
-const volunteersGlobalFilter: FilterFn<typeof _features, Person> = (
+const volunteersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
   row,
   _columnId,
   filterValue: string,
@@ -119,12 +108,11 @@ export default function VolunteersManagement({
     }
   };
 
-  const columns = useMemo<ColumnDef<typeof _features, Person>[]>(
-    () => [
-      {
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
         id: "name",
         header: m.registration_name(),
-        accessorFn: (row) => row.name,
         cell: ({ row }) => {
           const volunteer = row.original;
           return (
@@ -138,25 +126,22 @@ export default function VolunteersManagement({
             </div>
           );
         },
-      },
-      {
-        accessorKey: "address",
+      }),
+      columnHelper.accessor("address", {
         header: m.admin_people_address_label(),
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-      },
-      {
-        accessorKey: "nationalRegisterNumber",
+      }),
+      columnHelper.accessor("nationalRegisterNumber", {
         header: m.admin_people_national_register_number_label(),
         enableSorting: false,
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-      },
-      {
-        accessorKey: "eidDocumentNumber",
+      }),
+      columnHelper.accessor("eidDocumentNumber", {
         header: m.admin_people_eid_document_number_label(),
         enableSorting: false,
         cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-      },
-      {
+      }),
+      columnHelper.display({
         id: "helpPeriods",
         header: m.admin_volunteers_help_periods_label(),
         enableSorting: false,
@@ -173,8 +158,8 @@ export default function VolunteersManagement({
             )}
           </div>
         ),
-      },
-      {
+      }),
+      columnHelper.display({
         id: "actions",
         header: m.admin_actions_label(),
         enableSorting: false,
@@ -209,18 +194,13 @@ export default function VolunteersManagement({
             </div>
           );
         },
-      },
-    ],
+      }),
+    ]),
     [setEditingVolunteer, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useTable(
+  const table = useAppTable(
     {
-      _features,
-      _rowModels: {
-        filteredRowModel: createFilteredRowModel(filterFns),
-        sortedRowModel: createSortedRowModel(sortFns),
-      },
       data: preFiltered,
       columns,
       state: { sorting, globalFilter: q },
@@ -229,7 +209,7 @@ export default function VolunteersManagement({
       onGlobalFilterChange: setQ,
       globalFilterFn: volunteersGlobalFilter,
     },
-    (state) => state,
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
   );
 
   return (
@@ -333,7 +313,7 @@ export default function VolunteersManagement({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <table.FlexRender header={header} />
                           {header.column.getCanSort() && (
                             <i
                               className={`bi ms-1 small ${
@@ -356,7 +336,7 @@ export default function VolunteersManagement({
                     <tr key={row.id}>
                       {row.getAllCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          <table.FlexRender cell={cell} />
                         </td>
                       ))}
                     </tr>
