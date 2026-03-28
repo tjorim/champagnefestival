@@ -520,7 +520,6 @@ export default function PeopleManagement({
                               }
                               style={{
                                 cursor: canSort ? "pointer" : "default",
-                                userSelect: "none",
                                 whiteSpace: "nowrap",
                               }}
                             >

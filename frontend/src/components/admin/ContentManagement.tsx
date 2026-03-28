@@ -194,6 +194,13 @@ export function ContentSection({
     };
   }, [items, typeFilter, q]);
 
+  const typeLabels: Record<"all" | "producer" | "sponsor" | "vendor", string> = {
+    all: m.admin_filter_all(),
+    producer: m.admin_item_producer(),
+    sponsor: m.admin_item_sponsor(),
+    vendor: m.admin_item_vendor(),
+  };
+
   function openAdd() {
     setModalItem(null);
     setModalOpen(true);
@@ -464,13 +471,7 @@ export function ContentSection({
               variant={typeFilter === type ? "primary" : "outline-secondary"}
               onClick={() => setTypeFilter(type)}
             >
-              {type === "all"
-                ? m.admin_filter_all()
-                : type === "producer"
-                  ? m.admin_item_producer()
-                  : type === "sponsor"
-                    ? m.admin_item_sponsor()
-                    : m.admin_item_vendor()}
+              {typeLabels[type]}
             </Button>
           ))}
         </ButtonGroup>
@@ -488,24 +489,10 @@ export function ContentSection({
             size="sm"
             variant="outline-warning"
             onClick={() => setBulkArchiveOpen(true)}
-            title={m.admin_bulk_content_archive_all({
-              type:
-                typeFilter === "producer"
-                  ? m.admin_item_producer()
-                  : typeFilter === "sponsor"
-                    ? m.admin_item_sponsor()
-                    : m.admin_item_vendor(),
-            })}
+            title={m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
           >
             <i className="bi bi-archive me-1" aria-hidden="true" />
-            {m.admin_bulk_content_archive_all({
-              type:
-                typeFilter === "producer"
-                  ? m.admin_item_producer()
-                  : typeFilter === "sponsor"
-                    ? m.admin_item_sponsor()
-                    : m.admin_item_vendor(),
-            })}
+            {m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
           </Button>
         )}
       </div>

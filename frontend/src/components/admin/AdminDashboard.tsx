@@ -2363,6 +2363,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     return Object.fromEntries((peopleQuery.data ?? []).map((p) => [p.id, counts[p.id] ?? 0]));
   }, [peopleQuery.data, registrationsQuery.data]);
 
+  const emailDuplicates = useMemo(() => {
+    if (!detailRegistration) return [];
+    const personEmail = detailRegistration.person.email.toLowerCase();
+    return people
+      .filter(
+        (p) =>
+          p.id !== detailRegistration.personId &&
+          p.email &&
+          p.email.toLowerCase() === personEmail,
+      )
+      .map((p) => ({ id: p.id, name: p.name }));
+  }, [people, detailRegistration]);
+
   if (!visible) return null;
 
   return (
@@ -2875,17 +2888,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         <RegistrationDetail
           registration={detailRegistration}
           baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
-          emailDuplicates={(() => {
-            const personEmail = detailRegistration.person.email.toLowerCase();
-            return people
-              .filter(
-                (p) =>
-                  p.id !== detailRegistration.personId &&
-                  p.email &&
-                  p.email.toLowerCase() === personEmail,
-              )
-              .map((p) => ({ id: p.id, name: p.name }));
-          })()}
+          emailDuplicates={emailDuplicates}
           onClose={() => setDetailRegistration(null)}
           onToggleDelivered={handleToggleDelivered}
           onCheckIn={handleCheckIn}

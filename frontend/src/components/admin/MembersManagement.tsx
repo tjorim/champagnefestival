@@ -368,7 +368,6 @@ export default function MembersManagement({
                             }
                             style={{
                               cursor: canSort ? "pointer" : "default",
-                              userSelect: "none",
                               whiteSpace: "nowrap",
                             }}
                           >

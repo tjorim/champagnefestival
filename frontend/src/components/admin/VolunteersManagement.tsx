@@ -333,7 +333,6 @@ export default function VolunteersManagement({
                               }
                               style={{
                                 cursor: canSort ? "pointer" : "default",
-                                userSelect: "none",
                                 whiteSpace: "nowrap",
                               }}
                             >

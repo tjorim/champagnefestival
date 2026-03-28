@@ -691,7 +691,6 @@ export default function RegistrationList({
                           }
                           style={{
                             cursor: canSort ? "pointer" : "default",
-                            userSelect: "none",
                             whiteSpace: "nowrap",
                           }}
                         >
