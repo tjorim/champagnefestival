@@ -2047,7 +2047,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, date: string, label?: string, copyFromLayoutId?: string | null) => {
+    async (
+      roomId: string,
+      date: string,
+      label?: string,
+      copyFromLayoutId?: string | null,
+      copyOptions?: { tables: boolean; areas: boolean },
+    ) => {
       const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
       const createdLayout = apiLayoutToLayout(d);
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
@@ -2055,6 +2061,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       );
 
       if (!copyFromLayoutId) return;
+      const shouldCopyTables = copyOptions?.tables ?? true;
+      const shouldCopyAreas = copyOptions?.areas ?? true;
 
       const sourceTables = (queryClient.getQueryData<FloorTable[]>(tablesQueryKey) ?? []).filter(
         (table) => table.layoutId === copyFromLayoutId,
@@ -2063,36 +2071,40 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         (area) => area.layoutId === copyFromLayoutId,
       );
 
-      for (const source of sourceTables) {
-        const createdTable = await createTableMutation.mutateAsync({
-          name: source.name,
-          capacity: source.capacity,
-          layoutId: createdLayout.id,
-          tableTypeId: source.tableTypeId,
-          x: source.x,
-          y: source.y,
-          rotation: source.rotation,
-        });
-        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-          prev ? [...prev, apiTableToTable(createdTable)] : [apiTableToTable(createdTable)],
-        );
+      if (shouldCopyTables) {
+        for (const source of sourceTables) {
+          const createdTable = await createTableMutation.mutateAsync({
+            name: source.name,
+            capacity: source.capacity,
+            layoutId: createdLayout.id,
+            tableTypeId: source.tableTypeId,
+            x: source.x,
+            y: source.y,
+            rotation: source.rotation,
+          });
+          queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
+            prev ? [...prev, apiTableToTable(createdTable)] : [apiTableToTable(createdTable)],
+          );
+        }
       }
 
-      for (const source of sourceAreas) {
-        const createdArea = await createAreaMutation.mutateAsync({
-          label: source.label,
-          icon: source.icon,
-          layoutId: createdLayout.id,
-          widthM: source.widthM,
-          lengthM: source.lengthM,
-          exhibitorId: source.exhibitorId ?? undefined,
-          x: source.x,
-          y: source.y,
-          rotation: source.rotation,
-        });
-        queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-          prev ? [...prev, apiAreaToArea(createdArea)] : [apiAreaToArea(createdArea)],
-        );
+      if (shouldCopyAreas) {
+        for (const source of sourceAreas) {
+          const createdArea = await createAreaMutation.mutateAsync({
+            label: source.label,
+            icon: source.icon,
+            layoutId: createdLayout.id,
+            widthM: source.widthM,
+            lengthM: source.lengthM,
+            exhibitorId: source.exhibitorId ?? undefined,
+            x: source.x,
+            y: source.y,
+            rotation: source.rotation,
+          });
+          queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
+            prev ? [...prev, apiAreaToArea(createdArea)] : [apiAreaToArea(createdArea)],
+          );
+        }
       }
     },
     [

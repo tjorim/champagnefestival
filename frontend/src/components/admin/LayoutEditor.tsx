@@ -143,6 +143,10 @@ interface LayoutEditorProps {
     date: string,
     label?: string,
     copyFromLayoutId?: string | null,
+    copyOptions?: {
+      tables: boolean;
+      areas: boolean;
+    },
   ) => Promise<void>;
   onDeleteLayout: (layoutId: string) => Promise<void>;
   onAddArea: (
@@ -583,6 +587,8 @@ export default function LayoutEditor({
   const [newLayout, setNewLayout] = useState({
     date: dayOptions[0]?.date ?? "",
     copyFromLayoutId: "",
+    copyTables: true,
+    copyAreas: true,
   });
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
   const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
@@ -597,8 +603,17 @@ export default function LayoutEditor({
         newLayout.date,
         undefined,
         newLayout.copyFromLayoutId || undefined,
+        {
+          tables: newLayout.copyTables,
+          areas: newLayout.copyAreas,
+        },
       );
-      setNewLayout({ date: dayOptions[0]?.date ?? "", copyFromLayoutId: "" });
+      setNewLayout({
+        date: dayOptions[0]?.date ?? "",
+        copyFromLayoutId: "",
+        copyTables: true,
+        copyAreas: true,
+      });
       setShowAddLayout(false);
     } catch (err) {
       console.error("Failed to add layout", err);
@@ -611,7 +626,7 @@ export default function LayoutEditor({
     setNewLayout((current) =>
       dayOptions.some((day) => day.date === current.date)
         ? current
-        : { date: dayOptions[0]!.date, copyFromLayoutId: current.copyFromLayoutId },
+        : { ...current, date: dayOptions[0]!.date },
     );
   }, [dayOptions]);
 
@@ -929,7 +944,12 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                    setNewLayout({ date: dayOptions[0]?.date ?? "", copyFromLayoutId: "" });
+                    setNewLayout({
+                      date: dayOptions[0]?.date ?? "",
+                      copyFromLayoutId: "",
+                      copyTables: true,
+                      copyAreas: true,
+                    });
                     setShowAddLayout(true);
                   }}
                       title={m.admin_add_layout()}
@@ -1427,6 +1447,30 @@ export default function LayoutEditor({
               ))}
             </Form.Select>
           </Form.Group>
+          {newLayout.copyFromLayoutId && (
+            <div className="mt-3 d-flex flex-column gap-2">
+              <Form.Check
+                id="layout-copy-tables"
+                type="checkbox"
+                className="small"
+                checked={newLayout.copyTables}
+                onChange={(e) =>
+                  setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
+                }
+                label="Copy tables"
+              />
+              <Form.Check
+                id="layout-copy-areas"
+                type="checkbox"
+                className="small"
+                checked={newLayout.copyAreas}
+                onChange={(e) =>
+                  setNewLayout((p) => ({ ...p, copyAreas: e.currentTarget.checked }))
+                }
+                label="Copy areas and exhibitor assignments"
+              />
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="secondary" onClick={() => setShowAddLayout(false)}>
