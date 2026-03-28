@@ -246,6 +246,8 @@
   "admin_content_archive": "Archiveren",
   "admin_content_restore": "Herstellen",
   "admin_content_archived_section": "Gearchiveerd",
+  "admin_content_no_results": "Geen items komen overeen met de huidige filters.",
+  "admin_content_clear_filters": "Filters wissen",
   "admin_error_add_room": "Ruimte toevoegen mislukt.",
   "admin_error_delete_room": "Ruimte verwijderen mislukt.",
   "admin_rooms_tab": "Ruimtes",

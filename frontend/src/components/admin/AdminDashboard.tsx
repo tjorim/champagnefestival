@@ -2559,8 +2559,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <>
                     <div className="d-flex gap-2 mb-3">
                       <button
-                        className={clsx("admin-nav-item", venueTab === "venues" && "is-active")}
-                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
+                        className={clsx("admin-nav-item", "admin-sub-tab", venueTab === "venues" && "is-active")}
                         onClick={() => setVenueTab("venues")}
                       >
                         <i className="bi bi-building me-1" aria-hidden="true" />
@@ -2569,9 +2568,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       <button
                         className={clsx(
                           "admin-nav-item",
+                          "admin-sub-tab",
                           venueTab === "table-types" && "is-active",
                         )}
-                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
                         onClick={() => setVenueTab("table-types")}
                       >
                         <i className="bi bi-grid me-1" aria-hidden="true" />
@@ -2611,9 +2610,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       <button
                         className={clsx(
                           "admin-nav-item",
+                          "admin-sub-tab",
                           peopleTab === "directory" && "is-active",
                         )}
-                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
                         onClick={() => setPeopleTab("directory")}
                       >
                         <i className="bi bi-person me-1" aria-hidden="true" />
@@ -2625,9 +2624,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       <button
                         className={clsx(
                           "admin-nav-item",
+                          "admin-sub-tab",
                           peopleTab === "members" && "is-active",
                         )}
-                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
                         onClick={() => setPeopleTab("members")}
                       >
                         <i className="bi bi-person-badge me-1" aria-hidden="true" />
@@ -2639,9 +2638,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       <button
                         className={clsx(
                           "admin-nav-item",
+                          "admin-sub-tab",
                           peopleTab === "volunteers" && "is-active",
                         )}
-                        style={{ borderRadius: "var(--adm-radius)", padding: "0.3rem 0.75rem" }}
                         onClick={() => setPeopleTab("volunteers")}
                       >
                         <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />

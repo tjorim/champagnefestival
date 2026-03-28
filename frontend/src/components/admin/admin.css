@@ -174,10 +174,10 @@
 
 /* ---- Tab content fade-in ---- */
 #admin .tab-pane.show.active {
-  animation: admTabIn 220ms var(--adm-ease) both;
+  animation: adm-tab-in 220ms var(--adm-ease) both;
 }
 
-@keyframes admTabIn {
+@keyframes adm-tab-in {
   from { opacity: 0; transform: translateY(5px); }
   to   { opacity: 1; transform: translateY(0); }
 }
@@ -208,13 +208,13 @@
 }
 
 /* ---- Spinning refresh icon ---- */
-@keyframes admSpin {
+@keyframes adm-spin {
   to { transform: rotate(360deg); }
 }
 
 #admin .spin {
   display: inline-block;
-  animation: admSpin 700ms linear infinite;
+  animation: adm-spin 700ms linear infinite;
 }
 
 /* ---- Reduced motion ---- */
@@ -354,6 +354,12 @@
   opacity: 1;
 }
 
+/* Sub-tab buttons (Venue/People content pane) */
+.admin-sub-tab {
+  border-radius: var(--adm-radius);
+  padding: 0.3rem 0.75rem;
+}
+
 /* Count badges in the nav */
 .admin-nav-count {
   margin-left: auto;
@@ -444,7 +450,7 @@
 
 /* Fade-in when switching sections */
 .admin-content-pane {
-  animation: admTabIn 200ms ease both;
+  animation: adm-tab-in 200ms ease both;
 }
 
 /* ---- Mobile toggle button ---- */

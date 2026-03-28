@@ -88,17 +88,20 @@ export default function PeopleManagement({
   );
 
   // Group people by email to surface duplicates
-  const emailGroups = new Map<string, Person[]>();
-  for (const p of people) {
-    if (!p.email) continue;
-    const key = p.email.toLowerCase();
-    const group = emailGroups.get(key) ?? [];
-    group.push(p);
-    emailGroups.set(key, group);
-  }
-  const duplicateEmails = new Set(
-    [...emailGroups.entries()].filter(([, g]) => g.length > 1).map(([email]) => email),
-  );
+  const { emailGroups, duplicateEmails } = useMemo(() => {
+    const groups = new Map<string, Person[]>();
+    for (const p of people) {
+      if (!p.email) continue;
+      const key = p.email.toLowerCase();
+      const group = groups.get(key) ?? [];
+      group.push(p);
+      groups.set(key, group);
+    }
+    const dupes = new Set(
+      [...groups.entries()].filter(([, g]) => g.length > 1).map(([email]) => email),
+    );
+    return { emailGroups: groups, duplicateEmails: dupes };
+  }, [people]);
 
   // Collect all unique roles across all people for the filter dropdown
   const allRoles = [...new Set(people.flatMap((p) => p.roles))].sort();
@@ -129,14 +132,14 @@ export default function PeopleManagement({
     }
   };
 
-  const openMerge = (a: Person, b: Person) => {
+  const openMerge = useCallback((a: Person, b: Person) => {
     // Default: keep the one with more registrations as canonical
     const aCount = registrationCountByPersonId[a.id] ?? 0;
     const bCount = registrationCountByPersonId[b.id] ?? 0;
     setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
     setMergeError("");
     setMergeSuccess(false);
-  };
+  }, [registrationCountByPersonId]);
 
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;

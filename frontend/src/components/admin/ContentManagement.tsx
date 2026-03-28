@@ -173,6 +173,11 @@ function ContentSection({
     setModalOpen(true);
   }
 
+  function handleClearFilters() {
+    setTypeFilter("all");
+    setQ("");
+  }
+
   const handleModalSave = useCallback(
     async (draft: ItemDraft) => {
       setActionError(null);
@@ -413,6 +418,18 @@ function ContentSection({
         </Alert>
       )}
       <ListGroup variant="flush">{activeItems.map((item) => renderItemRow(item, false))}</ListGroup>
+      {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
+        <div className="text-center py-4 text-secondary">
+          <p className="mb-2 small">{m.admin_content_no_results()}</p>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={handleClearFilters}
+          >
+            {m.admin_content_clear_filters()}
+          </Button>
+        </div>
+      )}
       {archivedItems.length > 0 && (
         <div className="mt-2">
           <Button
