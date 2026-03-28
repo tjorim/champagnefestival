@@ -129,6 +129,48 @@ function apiAreaToArea(d: Record<string, unknown>): FloorArea {
   };
 }
 
+const LAYOUT_PX_PER_M = 28;
+const LAYOUT_MIN_CANVAS_PX = 280;
+
+function getTableSizePx(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
+  const type = tableTypes.find((t) => t.id === table.tableTypeId);
+  return {
+    w: Math.max(32, Math.round((type?.widthM ?? 1) * LAYOUT_PX_PER_M)),
+    l: Math.max(32, Math.round((type?.lengthM ?? 1) * LAYOUT_PX_PER_M)),
+  };
+}
+
+function isTableInsideArea(
+  area: FloorArea,
+  table: FloorTable,
+  tableTypes: TableType[],
+  room: Room,
+): boolean {
+  const canvasW = Math.max(LAYOUT_MIN_CANVAS_PX, room.widthM * LAYOUT_PX_PER_M);
+  const canvasH = Math.max(180, room.lengthM * LAYOUT_PX_PER_M);
+
+  const areaLeft = (area.x / 100) * canvasW;
+  const areaTop = (area.y / 100) * canvasH;
+  const areaW = Math.max(40, Math.round(area.widthM * LAYOUT_PX_PER_M));
+  const areaH = Math.max(24, Math.round(area.lengthM * LAYOUT_PX_PER_M));
+  const areaCenterX = areaLeft + areaW / 2;
+  const areaCenterY = areaTop + areaH / 2;
+
+  const rad = -((area.rotation ?? 0) * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
+  const { w, l } = getTableSizePx(table, tableTypes);
+  const tableCenterX = (table.x / 100) * canvasW + w / 2;
+  const tableCenterY = (table.y / 100) * canvasH + l / 2;
+  const dx = tableCenterX - areaCenterX;
+  const dy = tableCenterY - areaCenterY;
+  const lx = cos * dx - sin * dy;
+  const ly = sin * dx + cos * dy;
+
+  return Math.abs(lx) <= areaW / 2 && Math.abs(ly) <= areaH / 2;
+}
+
 function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): Person {
   const roles = new Set(existing?.roles ?? volunteer.roles);
   roles.add("volunteer");
@@ -2063,7 +2105,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       if (!copyFromLayoutId) return;
       const shouldCopyTables = copyOptions?.tables ?? true;
       const shouldCopyAreas = copyOptions?.areas ?? true;
-      const effectiveCopyTables = shouldCopyTables || shouldCopyAreas;
+      const allLayouts = queryClient.getQueryData<Layout[]>(layoutsQueryKey) ?? [];
+      const sourceLayout = allLayouts.find((layout) => layout.id === copyFromLayoutId);
+      const allRooms = queryClient.getQueryData<Room[]>(roomsQueryKey) ?? [];
+      const sourceRoom = sourceLayout ? allRooms.find((room) => room.id === sourceLayout.roomId) : undefined;
+      const tableTypesSnapshot = queryClient.getQueryData<TableType[]>(tableTypesQueryKey) ?? [];
 
       const sourceTables = (queryClient.getQueryData<FloorTable[]>(tablesQueryKey) ?? []).filter(
         (table) => table.layoutId === copyFromLayoutId,
@@ -2071,22 +2117,35 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       const sourceAreas = (queryClient.getQueryData<FloorArea[]>(areasQueryKey) ?? []).filter(
         (area) => area.layoutId === copyFromLayoutId,
       );
+      const sourceExhibitorAreas = sourceAreas.filter((area) => area.exhibitorId !== null);
 
-      if (effectiveCopyTables) {
-        for (const source of sourceTables) {
-          const createdTable = await createTableMutation.mutateAsync({
-            name: source.name,
-            capacity: source.capacity,
-            layoutId: createdLayout.id,
-            tableTypeId: source.tableTypeId,
-            x: source.x,
-            y: source.y,
-            rotation: source.rotation,
-          });
-          queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-            prev ? [...prev, apiTableToTable(createdTable)] : [apiTableToTable(createdTable)],
-          );
-        }
+      let tablesToCopy: FloorTable[] = [];
+      if (shouldCopyAreas) {
+        const areasForMembership = sourceExhibitorAreas.length > 0 ? sourceExhibitorAreas : sourceAreas;
+        tablesToCopy = sourceRoom
+          ? sourceTables.filter((table) =>
+              areasForMembership.some((area) =>
+                isTableInsideArea(area, table, tableTypesSnapshot, sourceRoom),
+              ),
+            )
+          : sourceTables;
+      } else if (shouldCopyTables) {
+        tablesToCopy = sourceTables;
+      }
+
+      for (const source of tablesToCopy) {
+        const createdTable = await createTableMutation.mutateAsync({
+          name: source.name,
+          capacity: source.capacity,
+          layoutId: createdLayout.id,
+          tableTypeId: source.tableTypeId,
+          x: source.x,
+          y: source.y,
+          rotation: source.rotation,
+        });
+        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
+          prev ? [...prev, apiTableToTable(createdTable)] : [apiTableToTable(createdTable)],
+        );
       }
 
       if (shouldCopyAreas) {
@@ -2115,6 +2174,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       createTableMutation,
       layoutsQueryKey,
       queryClient,
+      roomsQueryKey,
+      tableTypesQueryKey,
       tablesQueryKey,
     ],
   );
