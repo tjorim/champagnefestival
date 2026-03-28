@@ -90,16 +90,16 @@ running. Log in to the Admin Dashboard with token **`dev-token`**.
 The mock layer ships with a March 2026 festival edition and realistic seed data across all
 resources:
 
-| Resource | Count | Notes |
-| --- | --- | --- |
-| Edition | 1 active + 1 inactive | `march-2026` (active), `march-2025` |
-| Events | 5 | Grand Opening, Tasting Day 1 & 2, Gala Dinner, Closing |
-| People | 5 | Alice, Bernard, Claire, David, Eva |
-| Registrations | 3 | Mix of Pending / Confirmed, Paid / Unpaid, checked-in |
-| Exhibitors | 5 | 3 producers, 1 sponsor, 1 vendor |
-| Venue / Rooms | 1 venue, 2 halls | Brussels Expo — Hall 5 & Hall 6 |
-| Tables | 3 | T1 (6-seat), T2 (8-seat), T3 (4-seat) |
-| Layouts / Areas | 2 layouts, 3 areas | Positioned in Hall 5 |
+| Resource        | Count                 | Notes                                                  |
+| --------------- | --------------------- | ------------------------------------------------------ |
+| Edition         | 1 active + 1 inactive | `march-2026` (active), `march-2025`                    |
+| Events          | 5                     | Grand Opening, Tasting Day 1 & 2, Gala Dinner, Closing |
+| People          | 5                     | Alice, Bernard, Claire, David, Eva                     |
+| Registrations   | 3                     | Mix of Pending / Confirmed, Paid / Unpaid, checked-in  |
+| Exhibitors      | 5                     | 3 producers, 1 sponsor, 1 vendor                       |
+| Venue / Rooms   | 1 venue, 2 halls      | Brussels Expo — Hall 5 & Hall 6                        |
+| Tables          | 3                     | T1 (6-seat), T2 (8-seat), T3 (4-seat)                  |
+| Layouts / Areas | 2 layouts, 3 areas    | Positioned in Hall 5                                   |
 
 ### Structure
 

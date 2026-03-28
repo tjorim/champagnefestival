@@ -82,8 +82,7 @@ export default function PeopleManagement({
 
   // Pre-filter by role; text search is handled by TanStack global filter
   const preFiltered = useMemo(
-    () =>
-      roleFilter === "all" ? people : people.filter((p) => p.roles.includes(roleFilter)),
+    () => (roleFilter === "all" ? people : people.filter((p) => p.roles.includes(roleFilter))),
     [people, roleFilter],
   );
 
@@ -132,14 +131,17 @@ export default function PeopleManagement({
     }
   };
 
-  const openMerge = useCallback((a: Person, b: Person) => {
-    // Default: keep the one with more registrations as canonical
-    const aCount = registrationCountByPersonId[a.id] ?? 0;
-    const bCount = registrationCountByPersonId[b.id] ?? 0;
-    setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
-    setMergeError("");
-    setMergeSuccess(false);
-  }, [registrationCountByPersonId]);
+  const openMerge = useCallback(
+    (a: Person, b: Person) => {
+      // Default: keep the one with more registrations as canonical
+      const aCount = registrationCountByPersonId[a.id] ?? 0;
+      const bCount = registrationCountByPersonId[b.id] ?? 0;
+      setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
+      setMergeError("");
+      setMergeSuccess(false);
+    },
+    [registrationCountByPersonId],
+  );
 
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;

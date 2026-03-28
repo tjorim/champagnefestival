@@ -77,9 +77,7 @@ export default function VolunteersManagement({
     () =>
       activeFilter === "all"
         ? volunteers
-        : volunteers.filter((v) =>
-            activeFilter === "active" ? v.active : !v.active,
-          ),
+        : volunteers.filter((v) => (activeFilter === "active" ? v.active : !v.active)),
     [volunteers, activeFilter],
   );
 

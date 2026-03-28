@@ -127,9 +127,7 @@ export default function RegistrationList({
 
   const allContactPersonIds = useMemo(
     () =>
-      new Set(
-        exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null),
-      ),
+      new Set(exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null)),
     [exhibitors],
   );
 
@@ -320,8 +318,7 @@ export default function RegistrationList({
         enableSorting: false,
         cell: ({ row }) => {
           const reg = row.original;
-          const hasMoreActions =
-            reg.status !== "cancelled" || reg.paymentStatus !== "paid";
+          const hasMoreActions = reg.status !== "cancelled" || reg.paymentStatus !== "paid";
           return (
             <div className="d-flex flex-wrap gap-1">
               <Button
@@ -346,11 +343,7 @@ export default function RegistrationList({
               )}
               {hasMoreActions && (
                 <Dropdown>
-                  <Dropdown.Toggle
-                    size="sm"
-                    variant="outline-secondary"
-                    id={`reg-more-${reg.id}`}
-                  >
+                  <Dropdown.Toggle size="sm" variant="outline-secondary" id={`reg-more-${reg.id}`}>
                     <i className="bi bi-three-dots" aria-hidden="true" />
                   </Dropdown.Toggle>
                   <Dropdown.Menu variant="dark">

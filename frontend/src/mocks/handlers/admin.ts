@@ -76,7 +76,11 @@ export const adminHandlers = [
     const idx = sharedStore.registrations.findIndex((r) => r.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
-    sharedStore.registrations[idx] = { ...sharedStore.registrations[idx]!, ...body, updated_at: now() };
+    sharedStore.registrations[idx] = {
+      ...sharedStore.registrations[idx]!,
+      ...body,
+      updated_at: now(),
+    };
     return HttpResponse.json(sharedStore.registrations[idx]);
   }),
 
@@ -102,7 +106,12 @@ export const adminHandlers = [
       id: uid(),
       person_id: String(body.person_id ?? ""),
       person: person
-        ? { id: String(person.id ?? ""), name: String(person.name ?? ""), email: String(person.email ?? ""), phone: String(person.phone ?? "") }
+        ? {
+            id: String(person.id ?? ""),
+            name: String(person.name ?? ""),
+            email: String(person.email ?? ""),
+            phone: String(person.phone ?? ""),
+          }
         : { id: "", name: "", email: "", phone: "" },
       event_id: String(body.event_id ?? ""),
       event: event ?? null,
@@ -140,8 +149,12 @@ export const adminHandlers = [
       const lq = q.toLowerCase();
       result = result.filter(
         (p) =>
-          String(p.name ?? "").toLowerCase().includes(lq) ||
-          String(p.email ?? "").toLowerCase().includes(lq) ||
+          String(p.name ?? "")
+            .toLowerCase()
+            .includes(lq) ||
+          String(p.email ?? "")
+            .toLowerCase()
+            .includes(lq) ||
           String(p.phone ?? "").includes(lq),
       );
     }
@@ -197,9 +210,7 @@ export const adminHandlers = [
     const canonical = people.find((p) => p.id === params.id);
     if (!canonical) return HttpResponse.json(null, { status: 404 });
     sharedStore.registrations = sharedStore.registrations.map((r) =>
-      r.person_id === params.duplicateId
-        ? { ...r, person_id: String(canonical.id) }
-        : r,
+      r.person_id === params.duplicateId ? { ...r, person_id: String(canonical.id) } : r,
     );
     people = people.filter((p) => p.id !== params.duplicateId);
     return HttpResponse.json(canonical);

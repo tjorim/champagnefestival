@@ -55,7 +55,14 @@ export default function RegistrationDetail({
   const simpleRsvp = isSimpleRsvp(registration);
 
   return (
-    <Modal show onHide={onClose} size="lg" centered aria-labelledby="res-detail-modal-title" dialogClassName="admin-dialog">
+    <Modal
+      show
+      onHide={onClose}
+      size="lg"
+      centered
+      aria-labelledby="res-detail-modal-title"
+      dialogClassName="admin-dialog"
+    >
       <Modal.Header closeButton className="bg-dark text-light border-secondary">
         <Modal.Title id="res-detail-modal-title">
           <i className="bi bi-person-fill me-2" aria-hidden="true" />

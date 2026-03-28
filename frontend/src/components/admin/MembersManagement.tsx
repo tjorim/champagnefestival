@@ -45,7 +45,8 @@ const membersGlobalFilter: FilterFn<Person> = (row, _columnId, filterValue: stri
   return (
     row.original.name.toLowerCase().includes(s) ||
     (row.original.email?.toLowerCase() ?? "").includes(s) ||
-    (phoneQ.length > 0 && (row.original.phone?.replace(/[\s\-().+]/g, "") ?? "").includes(phoneQ)) ||
+    (phoneQ.length > 0 &&
+      (row.original.phone?.replace(/[\s\-().+]/g, "") ?? "").includes(phoneQ)) ||
     (row.original.address?.toLowerCase() ?? "").includes(s) ||
     (row.original.clubName?.toLowerCase() ?? "").includes(s) ||
     (row.original.notes?.toLowerCase() ?? "").includes(s)
@@ -78,9 +79,7 @@ export default function MembersManagement({
     () =>
       activeFilter === "all"
         ? members
-        : members.filter((m) =>
-            activeFilter === "active" ? m.active : !m.active,
-          ),
+        : members.filter((m) => (activeFilter === "active" ? m.active : !m.active)),
     [members, activeFilter],
   );
 
@@ -132,23 +131,17 @@ export default function MembersManagement({
       {
         accessorKey: "email",
         header: m.registration_email(),
-        cell: ({ getValue }) => (
-          <span className="small">{String(getValue() ?? "") || "—"}</span>
-        ),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
       },
       {
         accessorKey: "phone",
         header: m.registration_phone(),
-        cell: ({ getValue }) => (
-          <span className="small">{String(getValue() ?? "") || "—"}</span>
-        ),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
       },
       {
         accessorKey: "clubName",
         header: m.admin_people_club_name_label(),
-        cell: ({ getValue }) => (
-          <span className="small">{String(getValue() ?? "") || "—"}</span>
-        ),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
       },
       {
         accessorKey: "notes",
@@ -168,9 +161,7 @@ export default function MembersManagement({
         id: "registrations",
         header: m.admin_registrations_tab(),
         accessorFn: (row) => registrationCountByPersonId[row.id] ?? 0,
-        cell: ({ getValue }) => (
-          <span className="small">{String(getValue())}</span>
-        ),
+        cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
       },
       {
         id: "actions",
