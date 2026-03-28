@@ -401,6 +401,188 @@ async def test_layout_rejects_duplicate_room_day(client):
     assert r.json()["detail"] == "A layout already exists for this room and day."
 
 
+@pytest.mark.anyio
+async def test_copy_layout_basic(client):
+    """Copying a layout to a new day creates a new layout entry."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    source_id = r.json()["id"]
+
+    r = await client.post(
+        f"/api/layouts/{source_id}/copy",
+        json={"room_id": room_id, "day_id": 2},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["room_id"] == room_id
+    assert data["day_id"] == 2
+    assert data["id"] != source_id
+
+
+@pytest.mark.anyio
+async def test_copy_layout_404_source(client):
+    """Copying a nonexistent source layout returns 404."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/layouts/nonexistent-id/copy",
+        json={"room_id": room_id, "day_id": 1},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_copy_layout_409_duplicate(client):
+    """Copying to a day that already has a layout for the same room returns 409."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    source_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 2}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+
+    r = await client.post(
+        f"/api/layouts/{source_id}/copy",
+        json={"room_id": room_id, "day_id": 2},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 409
+    assert r.json()["detail"] == "A layout already exists for this room and day."
+
+
+@pytest.mark.anyio
+async def test_copy_layout_copies_tables(client):
+    """copy_tables=True copies tables that are outside areas to the new layout."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    source_id = r.json()["id"]
+    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    tt_id = r.json()["id"]
+
+    # Add a table to the source layout (no area, so it is an "outside" table)
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "capacity": 4, "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        f"/api/layouts/{source_id}/copy",
+        json={"room_id": room_id, "day_id": 2, "copy_tables": True, "copy_areas": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    new_layout_id = r.json()["id"]
+
+    r = await client.get("/api/tables", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    tables_in_new = [t for t in r.json() if t["layout_id"] == new_layout_id]
+    assert len(tables_in_new) == 1
+    assert tables_in_new[0]["name"] == "T1"
+
+
+@pytest.mark.anyio
+async def test_copy_layout_copies_areas(client):
+    """copy_areas=True copies areas (and tables inside them) to the new layout."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    source_id = r.json()["id"]
+    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    tt_id = r.json()["id"]
+
+    # Add an area covering the top-left of the room
+    r = await client.post(
+        "/api/areas",
+        json={
+            "layout_id": source_id,
+            "label": "Zone A",
+            "icon": "bi-star",
+            "width_m": 10.0,
+            "length_m": 10.0,
+            "x": 0.0,
+            "y": 0.0,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    # Add a table inside that area (x=10%, y=10% of a 25m×18m room = 2.5m, 1.8m — inside the 10m×10m area)
+    r = await client.post(
+        "/api/tables",
+        json={"name": "InArea", "capacity": 4, "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        f"/api/layouts/{source_id}/copy",
+        json={"room_id": room_id, "day_id": 2, "copy_tables": False, "copy_areas": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    new_layout_id = r.json()["id"]
+
+    # Both the area and the table inside it should be copied
+    r = await client.get("/api/areas", params={"layout_id": new_layout_id}, headers=ADMIN_HEADERS)
+    assert len(r.json()) == 1
+    assert r.json()[0]["label"] == "Zone A"
+
+    r = await client.get("/api/tables", headers=ADMIN_HEADERS)
+    tables_in_new = [t for t in r.json() if t["layout_id"] == new_layout_id]
+    assert len(tables_in_new) == 1
+    assert tables_in_new[0]["name"] == "InArea"
+
+
+@pytest.mark.anyio
+async def test_copy_layout_no_tables_when_flags_false(client):
+    """When both copy_tables and copy_areas are False, no tables are copied."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    source_id = r.json()["id"]
+    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    tt_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "capacity": 4, "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        f"/api/layouts/{source_id}/copy",
+        json={"room_id": room_id, "day_id": 2, "copy_tables": False, "copy_areas": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    new_layout_id = r.json()["id"]
+
+    r = await client.get("/api/tables", headers=ADMIN_HEADERS)
+    tables_in_new = [t for t in r.json() if t["layout_id"] == new_layout_id]
+    assert tables_in_new == []
+
+
 # ---------------------------------------------------------------------------
 # Tables
 # ---------------------------------------------------------------------------
@@ -549,6 +731,45 @@ async def test_filter_by_event(client):
     r = await client.get("/api/registrations", params={"event_id": friday.json()["event_id"]}, headers=ADMIN_HEADERS)
     assert len(r.json()) == 1
     assert r.json()[0]["event_id"] == friday.json()["event_id"]
+
+
+@pytest.mark.anyio
+async def test_registrations_support_limit_and_page(client):
+    event = await _create_event(client, edition_id="edition-registration-pagination")
+    for index in range(3):
+        created = await _post_registration(
+            client,
+            path="/api/registrations",
+            event=event,
+            email=f"page{index}@example.com",
+            phone=f"+3249900001{index}",
+            name=f"Page User {index}",
+        )
+        assert created.status_code == 201
+
+    first_page = await client.get("/api/registrations", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/registrations", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) == 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/registrations", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = all_response.json()
+    # Filter to only the IDs created in this test to avoid interference from other tests
+    created_ids = first_page_ids | second_page_ids
+    all_test_results = [r for r in all_results if r["id"] in created_ids]
+    assert all_test_results[:2] == first_page_results
+    assert all_test_results[2:3] == second_page_results
 
 
 # ---------------------------------------------------------------------------
@@ -932,6 +1153,41 @@ async def test_exhibitor_invalid_contact_person(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_exhibitors_support_limit_and_page(client):
+    created_ids: set[int] = set()
+    for name in ("Alpha", "Bravo", "Charlie"):
+        response = await client.post(
+            "/api/exhibitors",
+            json={"name": name, "type": "producer"},
+            headers=ADMIN_HEADERS,
+        )
+        assert response.status_code == 201
+        created_ids.add(response.json()["id"])
+
+    first_page = await client.get("/api/exhibitors", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/exhibitors", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) == 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+    assert first_page_ids.union(second_page_ids) == created_ids
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/exhibitors", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
 
 
 # ---------------------------------------------------------------------------
@@ -1766,6 +2022,46 @@ async def test_volunteer_crud_and_constraints(client):
     assert "volunteer" not in r.json()["roles"]
 
 
+@pytest.mark.anyio
+async def test_volunteers_support_limit_and_page(client):
+    created_ids: set[str] = set()
+    for i, name in enumerate(("Vol Alpha", "Vol Bravo", "Vol Charlie")):
+        r = await client.post(
+            "/api/volunteers",
+            json={
+                "name": name,
+                "national_register_number": f"9101011234{i}",
+                "eid_document_number": f"BEPAG00{i}",
+                "active": True,
+                "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": None}],
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+        created_ids.add(r.json()["id"])
+
+    first_page = await client.get("/api/volunteers", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/volunteers", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) >= 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/volunteers", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
+
+
 # ---------------------------------------------------------------------------
 # People (admin)
 # ---------------------------------------------------------------------------
@@ -2060,6 +2356,40 @@ async def test_parse_phone_invalid_inputs(client, bad_phone):
     assert r.status_code == 422, r.json()
 
 
+@pytest.mark.anyio
+async def test_people_support_limit_and_page(client):
+    created_ids: set[str] = set()
+    for i, name in enumerate(("People Alpha", "People Bravo", "People Charlie")):
+        r = await client.post(
+            "/api/people",
+            json={"name": name, "email": f"people{i}@example.com"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+        created_ids.add(r.json()["id"])
+
+    first_page = await client.get("/api/people", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/people", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) >= 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/people", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
+
+
 # ---------------------------------------------------------------------------
 # People merge endpoint
 # ---------------------------------------------------------------------------
@@ -2309,3 +2639,38 @@ async def test_members_crud(client):
 
     r = await client.delete(f"/api/members/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
+
+
+@pytest.mark.anyio
+async def test_members_support_limit_and_page(client):
+    created_ids: set[str] = set()
+    for i, name in enumerate(("Member Alpha", "Member Bravo", "Member Charlie")):
+        r = await client.post(
+            "/api/members",
+            json={"name": name, "email": f"member{i}@example.com"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+        created_ids.add(r.json()["id"])
+
+    first_page = await client.get("/api/members", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    assert first_page.status_code == 200
+    first_page_results = first_page.json()
+    assert len(first_page_results) == 2
+
+    second_page = await client.get("/api/members", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
+    assert second_page.status_code == 200
+    second_page_results = second_page.json()
+    assert len(second_page_results) >= 1
+
+    first_page_ids = {row["id"] for row in first_page_results}
+    second_page_ids = {row["id"] for row in second_page_results}
+    assert first_page_ids.isdisjoint(second_page_ids)
+
+    # Ordering must be consistent with the unpaginated endpoint
+    all_response = await client.get("/api/members", headers=ADMIN_HEADERS)
+    assert all_response.status_code == 200
+    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    assert all_results[:2] == first_page_results
+    assert all_results[2:3] == second_page_results
+

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
+from app.dependencies import Pagination, apply_pagination
 from app.models import Person
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import make_id, person_to_dict, roles_contains
@@ -110,6 +111,7 @@ async def list_members(
     db: AsyncSession = Depends(get_db),
     q: str | None = Query(default=None),
     active: bool | None = Query(default=None),
+    pagination: Pagination = Depends(),
 ) -> list[dict]:
     stmt = select(Person).where(roles_contains("member"))
 
@@ -130,7 +132,10 @@ async def list_members(
             )
         )
 
-    result = await db.execute(stmt.order_by(Person.created_at.desc()))
+    stmt = stmt.order_by(Person.created_at.desc(), Person.id.desc())
+    stmt = apply_pagination(stmt, pagination)
+
+    result = await db.execute(stmt)
     rows = result.scalars().all()
     return [person_to_dict(p) for p in rows]
 

@@ -1,11 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
-import { type FilterFn, type SortingState } from "@tanstack/react-table";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
+import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
+import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
@@ -15,7 +17,12 @@ import {
   createAppColumnHelper,
   type AdminTableFeatures,
 } from "@/hooks/useAdminTable";
+import { exportToCsv } from "@/utils/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
+import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+
+const COL_VIS_KEY = "admin-col-vis-registrations";
 
 interface AllocationRef {
   id: number;
@@ -31,8 +38,8 @@ interface RegistrationListProps {
   exhibitors: AllocationRef[];
   filter: "all" | RegistrationStatus;
   onFilterChange: (filter: "all" | RegistrationStatus) => void;
-  onUpdateStatus: (id: string, status: RegistrationStatus) => void;
-  onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => void;
+  onUpdateStatus: (id: string, status: RegistrationStatus) => Promise<void>;
+  onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => Promise<void>;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onViewDetail: (registration: Registration) => void;
   onAddRegistration: (registration: Registration) => void;
@@ -121,6 +128,18 @@ export default function RegistrationList({
   const [editionFilter, setEditionFilter] = useState<EditionFilter>("all");
   const [q, setQ] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
+    () => loadColVis(COL_VIS_KEY),
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"confirm" | "cancel" | "paid" | null>(null);
+  const [bulkInProgress, setBulkInProgress] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  // Refs so column header/cell can read latest selection state without being in deps
+  const selectedIdsRef = useRef<Set<string>>(selectedIds);
+  selectedIdsRef.current = selectedIds;
+  const preFilteredRef = useRef<Registration[]>([]);
 
   const registrationPersonIds = useMemo(
     () => new Set(registrations.map((r) => r.personId)),
@@ -192,6 +211,51 @@ export default function RegistrationList({
 
   const columns = useMemo(
     () => columnHelper.columns([
+      columnHelper.display({
+        id: "select",
+        header: () => {
+          const allIds = preFilteredRef.current.map((r) => r.id);
+          const allSelected =
+            allIds.length > 0 && allIds.every((id) => selectedIdsRef.current.has(id));
+          return (
+            <Form.Check
+              type="checkbox"
+              checked={allSelected}
+              onChange={() => {
+                if (allSelected) {
+                  setSelectedIds((prev) => {
+                    const next = new Set<string>(prev);
+                    allIds.forEach((id) => next.delete(id));
+                    return next;
+                  });
+                } else {
+                  setSelectedIds((prev) => new Set<string>([...prev, ...allIds]));
+                }
+              }}
+              aria-label={m.admin_select_all()}
+              className="m-0"
+            />
+          );
+        },
+        cell: ({ row }) => (
+          <Form.Check
+            type="checkbox"
+            checked={selectedIds.has(row.id)}
+            onChange={() => {
+              setSelectedIds((prev) => {
+                const next = new Set<string>(prev);
+                if (next.has(row.id)) next.delete(row.id);
+                else next.add(row.id);
+                return next;
+              });
+            }}
+            aria-label={`Select registration for ${row.original.person.name}`}
+            className="m-0"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+        meta: { tdClassName: "align-middle" },
+      }),
       columnHelper.accessor((row) => row.person.name, {
         id: "name",
         header: m.registration_name(),
@@ -211,9 +275,12 @@ export default function RegistrationList({
                   />
                 )}
                 <Badge bg={isStandalone ? "info" : "warning"} text="dark">
-                  {isStandalone
-                    ? m.admin_filter_edition_standalone()
-                    : m.admin_edition_type_festival()}
+                  {(() => {
+                    const et = reg.event?.edition?.editionType;
+                    if (et === "bourse") return m.admin_edition_type_bourse();
+                    if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
+                    return m.admin_edition_type_festival();
+                  })()}
                 </Badge>
               </div>
               <div className="text-secondary small">{reg.person.email}</div>
@@ -370,21 +437,72 @@ export default function RegistrationList({
         },
       }),
     ]),
-    [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
+    [allContactPersonIds, selectedIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
   );
 
   const table = useAppTable(
     {
       data: preFiltered,
       columns,
-      state: { sorting, globalFilter: q },
+      state: { sorting, globalFilter: q, columnVisibility },
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
+      onColumnVisibilityChange: (updater) => {
+        const next =
+          typeof updater === "function" ? updater(columnVisibility) : updater;
+        setColumnVisibility(next);
+        saveColVis(COL_VIS_KEY, next);
+      },
       globalFilterFn: registrationGlobalFilter,
     },
-    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      columnVisibility: state.columnVisibility,
+    }),
   );
+  // Keep ref in sync with currently visible rows (respects text-search filter applied by TanStack)
+  preFilteredRef.current = table.getRowModel().rows.map((r) => r.original);
+
+  const handleExportCsv = useCallback(() => {
+    const rows = table.getRowModel().rows.map(({ original: reg }) => ({
+      [m.registration_name()]: reg.person.name,
+      [m.registration_email()]: reg.person.email,
+      [m.registration_phone()]: reg.person.phone,
+      [m.admin_event_label()]: reg.event?.title ?? reg.eventId,
+      [m.admin_guests_count()]: reg.guestCount,
+      [m.admin_status_label()]: reg.status,
+      [m.admin_payment_label()]: reg.paymentStatus,
+      [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
+      [m.admin_created_at()]: reg.createdAt,
+    }));
+    exportToCsv("registrations.csv", rows);
+  }, [table]);
+
+
+  const executeBulkAction = useCallback(async () => {
+    if (!bulkAction || selectedIds.size === 0) return;
+    setBulkInProgress(true);
+    setBulkError(null);
+    const ids = [...selectedIds];
+    const results = await Promise.allSettled(
+      ids.map((id) => {
+        if (bulkAction === "confirm") return Promise.resolve(onUpdateStatus(id, "confirmed"));
+        if (bulkAction === "cancel") return Promise.resolve(onUpdateStatus(id, "cancelled"));
+        if (bulkAction === "paid") return Promise.resolve(onUpdatePayment(id, "paid"));
+        return Promise.resolve();
+      }),
+    );
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    setBulkInProgress(false);
+    setBulkAction(null);
+    if (failedCount > 0) {
+      setBulkError(m.admin_bulk_operations_failed({ failed: failedCount, total: ids.length }));
+    } else {
+      setSelectedIds(new Set());
+    }
+  }, [bulkAction, onUpdatePayment, onUpdateStatus, selectedIds]);
 
   return (
     <>
@@ -408,10 +526,17 @@ export default function RegistrationList({
                 </span>
               </span>
             </div>
-            <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
-              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              {m.admin_add_registration()}
-            </Button>
+            <div className="d-flex gap-2">
+              <ColumnVisibilityDropdown table={table} tableId="registrations" />
+              <Button variant="outline-secondary" size="sm" onClick={handleExportCsv}>
+                <i className="bi bi-download me-1" aria-hidden="true" />
+                {m.admin_export_csv()}
+              </Button>
+              <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
+                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                {m.admin_add_registration()}
+              </Button>
+            </div>
           </div>
           {/* Row 2: filters + search */}
           <div className="d-flex flex-wrap gap-2 align-items-center">
@@ -482,6 +607,48 @@ export default function RegistrationList({
               style={{ maxWidth: 220 }}
             />
           </div>
+          {bulkError && (
+            <Alert variant="danger" className="py-1 mt-2 mb-0" dismissible onClose={() => setBulkError(null)}>
+              {bulkError}
+            </Alert>
+          )}
+          {/* Bulk action bar */}
+          {selectedIds.size > 0 && (
+            <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary flex-wrap">
+              <span className="text-secondary small">
+                {m.admin_bulk_selected({ count: selectedIds.size })}
+              </span>
+              <Button
+                size="sm"
+                variant="outline-success"
+                onClick={() => setBulkAction("confirm")}
+              >
+                {m.admin_bulk_confirm()}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-danger"
+                onClick={() => setBulkAction("cancel")}
+              >
+                {m.admin_bulk_cancel()}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-info"
+                onClick={() => setBulkAction("paid")}
+              >
+                {m.admin_bulk_mark_paid()}
+              </Button>
+              <Button
+                size="sm"
+                variant="link"
+                className="text-secondary ms-auto p-0"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                {m.admin_bulk_clear()}
+              </Button>
+            </div>
+          )}
         </Card.Header>
 
         <Card.Body className="p-0">
@@ -573,6 +740,40 @@ export default function RegistrationList({
         }}
         onHide={() => setShowCreateModal(false)}
       />
+
+      {/* Bulk action confirmation */}
+      <Modal
+        show={bulkAction !== null}
+        onHide={() => setBulkAction(null)}
+        centered
+        dialogClassName="admin-dialog"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {bulkAction === "confirm" && m.admin_bulk_confirm()}
+            {bulkAction === "cancel" && m.admin_bulk_cancel()}
+            {bulkAction === "paid" && m.admin_bulk_mark_paid()}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {m.admin_bulk_confirm_action({ count: selectedIds.size })}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setBulkAction(null)} disabled={bulkInProgress}>
+            {m.admin_action_cancel()}
+          </Button>
+          <Button
+            variant={bulkAction === "cancel" ? "danger" : "primary"}
+            onClick={executeBulkAction}
+            disabled={bulkInProgress}
+          >
+            {bulkInProgress && (
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+            )}
+            {m.admin_action_confirm()}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }

@@ -22,9 +22,11 @@ import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
-
-// How many CSS pixels represent one metre on the canvas
-const PX_PER_M = 28;
+import {
+  getAreaSizePx,
+  getCanvasSizePx,
+  getTableSizePx,
+} from "@/utils/layoutUtils";
 
 /**
  * Returns the tables whose centre point falls within the area's bounding rectangle,
@@ -41,8 +43,7 @@ function getTablesInArea(
   const areaLeft = (area.x / 100) * canvasW;
   const areaTop = (area.y / 100) * canvasH;
   // Match DraggableArea's rendered dimensions (Math.round + minimums)
-  const areaW = Math.max(40, Math.round(area.widthM * PX_PER_M));
-  const areaH = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+  const { width: areaW, height: areaH } = getAreaSizePx(area.widthM, area.lengthM);
 
   // Centre of the (unrotated) area bounding box
   const acx = areaLeft + areaW / 2;
@@ -54,7 +55,7 @@ function getTablesInArea(
   const sin = Math.sin(rad);
 
   return tables.filter((t) => {
-    const { w, l } = getTableSize(t, tableTypes);
+    const { width: w, height: l } = getTableSizePx(t, tableTypes);
     const cx = (t.x / 100) * canvasW + w / 2;
     const cy = (t.y / 100) * canvasH + l / 2;
 
@@ -87,26 +88,25 @@ function getAreaIcons(): { value: string; label: string }[] {
     { value: "bi-bar-chart-line", label: m.admin_layout_area_icon_exhibition() },
   ];
 }
-// Minimum canvas width so small rooms are still usable
-const MIN_CANVAS_PX = 280;
-
 // Sensor configuration — module-level so the descriptor is stable across renders.
 const SENSORS = [
   PointerSensor.configure({
     activationConstraints: [new PointerActivationConstraints.Distance({ value: 6 })],
   }),
 ];
-function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
-  const type = tableTypes.find((t) => t.id === table.tableTypeId);
-  return {
-    w: Math.max(32, Math.round((type?.widthM ?? 1) * PX_PER_M)),
-    l: Math.max(32, Math.round((type?.lengthM ?? 1) * PX_PER_M)),
-  };
-}
 
 interface DayOption {
   date: string;
   label: string;
+}
+
+function getInitialNewLayoutState(dayOptions: DayOption[]) {
+  return {
+    date: dayOptions[0]?.date ?? "",
+    copyFromLayoutId: "",
+    copyTables: true,
+    copyAreas: true,
+  };
 }
 
 function getDayLabel(date: string | null, dayOptions: DayOption[], fallbackLabel = ""): string {
@@ -121,7 +121,6 @@ interface ItemRef {
 }
 
 interface LayoutEditorProps {
-  editionLabel?: string;
   dayOptions: DayOption[];
   tables: FloorTable[];
   tableTypes: TableType[];
@@ -139,7 +138,16 @@ interface LayoutEditorProps {
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
-  onAddLayout: (roomId: string, date: string, label?: string) => Promise<void>;
+  onAddLayout: (
+    roomId: string,
+    date: string,
+    label?: string,
+    copyFromLayoutId?: string | null,
+    copyOptions?: {
+      tables: boolean;
+      areas: boolean;
+    },
+  ) => Promise<void>;
   onDeleteLayout: (layoutId: string) => Promise<void>;
   onAddArea: (
     label: string,
@@ -196,7 +204,7 @@ function DraggableTable({
     disabled: !isInteractive,
   });
 
-  const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
+  const { width: TABLE_W, height: TABLE_L } = getTableSizePx(table, tableTypes);
   const type = tableTypes.find((t) => t.id === table.tableTypeId);
   const shape = type?.shape ?? "rectangle";
 
@@ -288,8 +296,7 @@ function DraggableArea({
     disabled: !isInteractive,
   });
 
-  const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
-  const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+  const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.widthM, area.lengthM);
 
   const leftPx = (area.x / 100) * canvasW;
   const topPx = (area.y / 100) * canvasH;
@@ -381,8 +388,7 @@ function RoomCanvas({
   onMoveTable,
   onMoveArea,
 }: RoomCanvasProps) {
-  const canvasW = Math.max(MIN_CANVAS_PX, room.widthM * PX_PER_M);
-  const canvasH = Math.max(180, room.lengthM * PX_PER_M);
+  const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -405,8 +411,7 @@ function RoomCanvas({
       if (activeId.startsWith("area_")) {
         const area = roomAreas.find((a) => a.id === activeId);
         if (!area) return;
-        const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
-        const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+        const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.widthM, area.lengthM);
         const leftPx = (area.x / 100) * canvasW + dx;
         const topPx = (area.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - AREA_W);
@@ -415,7 +420,7 @@ function RoomCanvas({
       } else {
         const table = roomTables.find((t) => t.id === activeId);
         if (!table) return;
-        const { w: TABLE_W, l: TABLE_L } = getTableSize(table, tableTypes);
+        const { width: TABLE_W, height: TABLE_L } = getTableSizePx(table, tableTypes);
         const leftPx = (table.x / 100) * canvasW + dx;
         const topPx = (table.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - TABLE_W);
@@ -525,7 +530,6 @@ function RoomCanvas({
 // ---------------------------------------------------------------------------
 
 export default function LayoutEditor({
-  editionLabel,
   dayOptions,
   tables,
   tableTypes,
@@ -577,7 +581,7 @@ export default function LayoutEditor({
 
   // Add Layout modal
   const [showAddLayout, setShowAddLayout] = useState(false);
-  const [newLayout, setNewLayout] = useState({ date: dayOptions[0]?.date ?? "" });
+  const [newLayout, setNewLayout] = useState(() => getInitialNewLayoutState(dayOptions));
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
   const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
 
@@ -586,8 +590,17 @@ export default function LayoutEditor({
     setAddLayoutError(null);
     try {
       if (!newLayout.date) return;
-      await onAddLayout(activeRoomId, newLayout.date);
-      setNewLayout({ date: dayOptions[0]?.date ?? "" });
+      await onAddLayout(
+        activeRoomId,
+        newLayout.date,
+        undefined,
+        newLayout.copyFromLayoutId || undefined,
+        {
+          tables: newLayout.copyTables,
+          areas: newLayout.copyAreas,
+        },
+      );
+      setNewLayout(getInitialNewLayoutState(dayOptions));
       setShowAddLayout(false);
     } catch (err) {
       console.error("Failed to add layout", err);
@@ -598,7 +611,9 @@ export default function LayoutEditor({
   useEffect(() => {
     if (dayOptions.length === 0) return;
     setNewLayout((current) =>
-      dayOptions.some((day) => day.date === current.date) ? current : { date: dayOptions[0]!.date },
+      dayOptions.some((day) => day.date === current.date)
+        ? current
+        : { ...current, date: dayOptions[0]!.date },
     );
   }, [dayOptions]);
 
@@ -729,6 +744,10 @@ export default function LayoutEditor({
     : [];
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
+  const activeLayoutDateLabel = useMemo(
+    () => getDayLabel(activeLayout?.date ?? null, dayOptions, activeLayout?.label ?? ""),
+    [activeLayout?.date, activeLayout?.label, dayOptions],
+  );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
     .filter((l) => l.roomId === activeRoomId)
@@ -738,8 +757,9 @@ export default function LayoutEditor({
 
   const selectedAreaData = canvasAreas.find((a) => a.id === selectedArea);
 
-  const areaCanvasW = activeRoom ? Math.max(MIN_CANVAS_PX, activeRoom.widthM * PX_PER_M) : 0;
-  const areaCanvasH = activeRoom ? Math.max(180, activeRoom.lengthM * PX_PER_M) : 0;
+  const areaCanvas = activeRoom ? getCanvasSizePx(activeRoom.widthM, activeRoom.lengthM) : null;
+  const areaCanvasW = areaCanvas?.width ?? 0;
+  const areaCanvasH = areaCanvas?.height ?? 0;
   const tablesInSelectedArea = selectedAreaData
     ? getTablesInArea(selectedAreaData, canvasTables, tableTypes, areaCanvasW, areaCanvasH)
     : [];
@@ -757,10 +777,10 @@ export default function LayoutEditor({
       {/* Tab bar: one tab per room */}
       <Card bg="dark" text="white" border="secondary" className="mb-3">
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          {editionLabel && (
+          {activeLayoutDateLabel && (
             <span className="text-secondary small d-none d-md-inline">
               <i className="bi bi-calendar3 me-1" aria-hidden="true" />
-              {editionLabel}
+              {activeLayoutDateLabel}
             </span>
           )}
           <Nav
@@ -911,9 +931,9 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                        setNewLayout({ date: dayOptions[0]?.date ?? "" });
-                        setShowAddLayout(true);
-                      }}
+                    setNewLayout(getInitialNewLayoutState(dayOptions));
+                    setShowAddLayout(true);
+                  }}
                       title={m.admin_add_layout()}
                     >
                       <i className="bi bi-plus-lg me-1" aria-hidden="true" />
@@ -1392,6 +1412,55 @@ export default function LayoutEditor({
               ))}
             </Form.Select>
           </Form.Group>
+          <Form.Group controlId="layout-copy-from">
+            <Form.Label>{m.admin_layout_copy_from_label()}</Form.Label>
+            <Form.Select
+              value={newLayout.copyFromLayoutId}
+              onChange={(e) =>
+                setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))
+              }
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="">{m.admin_layout_copy_from_empty()}</option>
+              {roomLayouts.map((layout) => (
+                <option key={layout.id} value={layout.id}>
+                  {getDayLabel(layout.date, dayOptions, layout.label)}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+          {newLayout.copyFromLayoutId && (
+            <div className="mt-3 d-flex flex-column gap-2">
+              <Form.Check
+                id="layout-copy-tables"
+                type="checkbox"
+                className="small"
+                checked={newLayout.copyTables}
+                onChange={(e) =>
+                  setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
+                }
+                label={m.admin_layout_copy_tables()}
+              />
+              <Form.Check
+                id="layout-copy-areas"
+                type="checkbox"
+                className="small"
+                checked={newLayout.copyAreas}
+                onChange={(e) =>
+                  setNewLayout((p) => ({
+                    ...p,
+                    copyAreas: e.currentTarget.checked,
+                  }))
+                }
+                label={m.admin_layout_copy_areas()}
+              />
+              {newLayout.copyAreas && (
+                <div className="text-secondary small">
+                  {m.admin_layout_copy_areas_hint()}
+                </div>
+              )}
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="secondary" onClick={() => setShowAddLayout(false)}>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { type FilterFn, type SortingState } from "@tanstack/react-table";
+import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -20,6 +20,10 @@ import {
   type AdminTableFeatures,
 } from "@/hooks/useAdminTable";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
+import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+
+const COL_VIS_KEY = "admin-col-vis-people";
 
 const columnHelper = createAppColumnHelper<Person>();
 
@@ -67,6 +71,9 @@ export default function PeopleManagement({
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
+    () => loadColVis(COL_VIS_KEY),
+  );
   const [mergeState, setMergeState] = useState<MergeState | null>(null);
   const [merging, setMerging] = useState(false);
   const [mergeError, setMergeError] = useState("");
@@ -340,13 +347,23 @@ export default function PeopleManagement({
     {
       data: preFiltered,
       columns,
-      state: { sorting, globalFilter: q },
+      state: { sorting, globalFilter: q, columnVisibility },
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
+      onColumnVisibilityChange: (updater) => {
+        const next =
+          typeof updater === "function" ? updater(columnVisibility) : updater;
+        setColumnVisibility(next);
+        saveColVis(COL_VIS_KEY, next);
+      },
       globalFilterFn: peopleGlobalFilter,
     },
-    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      columnVisibility: state.columnVisibility,
+    }),
   );
 
   // Emails from the currently visible (filtered + searched) rows for the copy button
@@ -361,17 +378,20 @@ export default function PeopleManagement({
         <Card.Header className="pb-2">
           <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
             <span className="fw-semibold">{m.admin_people_tab()}</span>
-            <Button
-              size="sm"
-              variant="outline-primary"
-              onClick={() => {
-                setEditingPerson(null);
-                setShowForm(true);
-              }}
-            >
-              <i className="bi bi-person-plus me-1" aria-hidden="true" />
-              {m.admin_people_add_person()}
-            </Button>
+            <div className="d-flex gap-2">
+              <ColumnVisibilityDropdown table={table} tableId="people" />
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => {
+                  setEditingPerson(null);
+                  setShowForm(true);
+                }}
+              >
+                <i className="bi bi-person-plus me-1" aria-hidden="true" />
+                {m.admin_people_add_person()}
+              </Button>
+            </div>
           </div>
           <div className="d-flex flex-wrap gap-2 align-items-center">
             <Form.Select

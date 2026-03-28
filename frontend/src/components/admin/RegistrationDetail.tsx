@@ -167,9 +167,12 @@ export default function RegistrationDetail({
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.registration_edition_type_label()}</span>
             <span>
-              {simpleRsvp
-                ? m.registration_edition_type_standalone()
-                : m.registration_edition_type_festival()}
+              {(() => {
+                const et = registration.event?.edition?.editionType;
+                if (et === "bourse") return m.admin_edition_type_bourse();
+                if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
+                return m.admin_edition_type_festival();
+              })()}
             </span>
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">

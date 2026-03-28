@@ -191,6 +191,11 @@ export default function EditionCard({
             {edition.sponsors!.length} {m.admin_edition_sponsors()}
           </Badge>
         )}
+        {(edition.vendors?.length ?? 0) > 0 && (
+          <Badge bg="secondary">
+            {edition.vendors!.length} {m.admin_edition_vendors()}
+          </Badge>
+        )}
         {eventsQuery.isFetching && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
           <span className="text-danger small">

@@ -102,7 +102,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
   return (
-    <Modal show={show} onHide={onHide} centered data-bs-theme="dark" dialogClassName="admin-dialog">
+    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           <i className="bi bi-person-badge me-2" aria-hidden="true" />

@@ -54,6 +54,7 @@ export interface SeedEdition {
   events: SeedEvent[];
   producers: { id: number; name: string; image: string; website: string; type: string }[];
   sponsors: { id: number; name: string; image: string; website: string; type: string }[];
+  vendors: { id: number; name: string; image: string; website: string; type: string }[];
   active: boolean;
   created_at: string;
   updated_at: string;

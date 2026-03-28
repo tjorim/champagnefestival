@@ -14,7 +14,7 @@ import RegistrationDetail from "./RegistrationDetail";
 import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
-import ContentManagement from "./ContentManagement";
+import { ContentSection, EditionsSection } from "./ContentManagement";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
@@ -39,6 +39,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -316,6 +317,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
+  const navRef = useRef<HTMLElement>(null);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const autoAuthRan = useRef(false);
   const [loginError, setLoginError] = useState("");
@@ -330,6 +333,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(["programme"]));
   const [venueTab, setVenueTab] = useState<"venues" | "table-types">("venues");
   const [peopleTab, setPeopleTab] = useState<"directory" | "members" | "volunteers">("directory");
+  const [contentTab, setContentTab] = useState<"exhibitors" | "editions">("exhibitors");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleGroup = useCallback((group: string) => {
@@ -735,11 +739,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       capacity,
       layoutId,
       tableTypeId,
+      x,
+      y,
+      rotation,
     }: {
       name: string;
       capacity: number;
       layoutId: string;
       tableTypeId: string;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/tables",
@@ -749,8 +759,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({
             name,
             capacity,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             layout_id: layoutId,
             table_type_id: tableTypeId,
           }),
@@ -1054,6 +1065,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM,
       lengthM,
       exhibitorId,
+      x,
+      y,
+      rotation,
     }: {
       label: string;
       icon: string;
@@ -1061,6 +1075,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM: number;
       lengthM: number;
       exhibitorId?: number;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/areas",
@@ -1073,8 +1090,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             layout_id: layoutId,
             width_m: widthM,
             length_m: lengthM,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             exhibitor_id: exhibitorId ?? null,
           }),
         },
@@ -1716,6 +1734,39 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleLogout,
   ]);
 
+  const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
+    if (!navRef.current) return;
+    const buttons = Array.from(
+      navRef.current.querySelectorAll<HTMLButtonElement>("button.admin-nav-item, button.admin-nav-group-header"),
+    );
+    const focused = document.activeElement;
+    const idx = buttons.indexOf(focused as HTMLButtonElement);
+    if (idx === -1) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      buttons[(idx + 1) % buttons.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      buttons[(idx - 1 + buttons.length) % buttons.length]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      buttons[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      buttons[buttons.length - 1]?.focus();
+    }
+  }, []);
+
+  // Close mobile sidebar on Escape key
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
   // Auto-authenticate on mount if a token was previously stored in sessionStorage
   useEffect(() => {
     if (autoAuthRan.current || !storedTokenRef.current || isAuthenticated) return;
@@ -1767,6 +1818,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         console.error("Failed to update registration status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_registration());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1799,6 +1851,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       } catch (err) {
         console.error("Failed to update payment status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_payment());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1997,13 +2050,58 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, date: string, label?: string) => {
+    async (
+      roomId: string,
+      date: string,
+      label?: string,
+      copyFromLayoutId?: string | null,
+      copyOptions?: { tables: boolean; areas: boolean },
+    ) => {
+      if (copyFromLayoutId) {
+        const shouldCopyTables = copyOptions?.tables ?? true;
+        const shouldCopyAreas = copyOptions?.areas ?? true;
+        const copied = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+          `/api/layouts/${copyFromLayoutId}/copy`,
+          {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              edition_id: activeEdition.id,
+              room_id: roomId,
+              date,
+              ...(label?.trim() ? { label: label.trim() } : {}),
+              copy_tables: shouldCopyTables,
+              copy_areas: shouldCopyAreas,
+            }),
+          },
+          m.admin_error_add_layout(),
+        );
+        const createdLayout = apiLayoutToLayout(copied);
+        queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
+          prev ? [...prev, createdLayout] : [createdLayout],
+        );
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: layoutsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
+          queryClient.invalidateQueries({ queryKey: areasQueryKey }),
+        ]);
+        return;
+      }
+
       const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? [...prev, apiLayoutToLayout(d)] : [apiLayoutToLayout(d)],
       );
     },
-    [createLayoutMutation, layoutsQueryKey, queryClient],
+    [
+      activeEdition.id,
+      areasQueryKey,
+      authHeaders,
+      createLayoutMutation,
+      layoutsQueryKey,
+      queryClient,
+      tablesQueryKey,
+    ],
   );
 
   const handleDeleteLayout = useCallback(
@@ -2103,8 +2201,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
-      // Must match LayoutEditor/RoomCanvas constants
-      const PX_PER_M = 28;
       const area = (areasQuery.data ?? []).find((a) => a.id === areaId);
       const layout = (layoutsQuery.data ?? []).find((l) => l.id === area?.layoutId);
       const room = (roomsQuery.data ?? []).find((r) => r.id === layout?.roomId);
@@ -2113,10 +2209,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       let x = area?.x ?? 0;
       let y = area?.y ?? 0;
       if (area && room) {
-        const canvasW = Math.max(280, room.widthM * PX_PER_M);
-        const canvasH = Math.max(180, room.lengthM * PX_PER_M);
-        const areaW = Math.max(40, Math.round(widthM * PX_PER_M));
-        const areaH = Math.max(24, Math.round(lengthM * PX_PER_M));
+        const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
+        const { width: areaW, height: areaH } = getAreaSizePx(widthM, lengthM);
         x = (Math.max(0, Math.min((area.x / 100) * canvasW, canvasW - areaW)) / canvasW) * 100;
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
@@ -2357,7 +2451,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             </div>
 
             {/* Navigation */}
-            <nav className="admin-nav" aria-label={m.admin_title()}>
+            <nav className="admin-nav" aria-label={m.admin_title()} ref={navRef} onKeyDown={handleNavKeyDown}>
               {/* Registrations */}
               <button
                 className={clsx("admin-nav-item", activeKey === "registrations" && "is-active")}
@@ -2521,23 +2615,76 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   />
                 )}
                 {activeKey === "content" && (
-                  <ContentManagement
-                    authHeaders={authHeaders}
-                    venues={venues}
-                    onExhibitorSaved={handleExhibitorSaved}
-                    onExhibitorDeleted={handleExhibitorDeleted}
-                    onEditionMutated={() => {
-                      void loadData();
-                      void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
-                      void queryClient.invalidateQueries({
-                        queryKey: queryKeys.admin.activeEditionEvents,
-                      });
-                    }}
-                  />
+                  <>
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_content_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {contentTab === "exhibitors"
+                          ? m.admin_content_exhibitors_section()
+                          : m.admin_content_editions_section()}
+                      </span>
+                    </nav>
+                    <div className="d-flex gap-2 mb-3">
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          contentTab === "exhibitors" && "is-active",
+                        )}
+                        onClick={() => setContentTab("exhibitors")}
+                      >
+                        <i className="bi bi-shop me-1" aria-hidden="true" />
+                        {m.admin_content_exhibitors_section()}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          contentTab === "editions" && "is-active",
+                        )}
+                        onClick={() => setContentTab("editions")}
+                      >
+                        <i className="bi bi-calendar3 me-1" aria-hidden="true" />
+                        {m.admin_content_editions_section()}
+                      </button>
+                    </div>
+                    {contentTab === "exhibitors" && (
+                      <Card bg="dark" text="white" border="secondary" className="mb-3">
+                        <Card.Body>
+                          <ContentSection
+                            sectionKey="exhibitors"
+                            title={m.admin_content_exhibitors_section()}
+                            authHeaders={authHeaders}
+                            onItemSaved={handleExhibitorSaved}
+                            onItemDeleted={handleExhibitorDeleted}
+                          />
+                        </Card.Body>
+                      </Card>
+                    )}
+                    {contentTab === "editions" && (
+                      <Card bg="dark" text="white" border="secondary" className="mb-3">
+                        <Card.Body>
+                          <EditionsSection
+                            authHeaders={authHeaders}
+                            venues={venues}
+                            onEditionMutated={() => {
+                              void loadData();
+                              void queryClient.invalidateQueries({
+                                queryKey: activeEditionQueryKey,
+                              });
+                              void queryClient.invalidateQueries({
+                                queryKey: queryKeys.admin.activeEditionEvents,
+                              });
+                            }}
+                          />
+                        </Card.Body>
+                      </Card>
+                    )}
+                  </>
                 )}
                 {activeKey === "floor-plans" && (
                   <LayoutEditor
-                    editionLabel={`${activeEdition.year} – ${activeEdition.month.charAt(0).toUpperCase()}${activeEdition.month.slice(1)}`}
                     dayOptions={layoutDayOptions}
                     tables={tables}
                     tableTypes={tableTypes}
@@ -2565,6 +2712,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {activeKey === "venue" && (
                   <>
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_venues_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {venueTab === "venues" ? m.admin_venues_rooms_tab() : m.admin_table_types_tab()}
+                      </span>
+                    </nav>
                     <div className="d-flex gap-2 mb-3">
                       <button
                         className={clsx(
@@ -2617,6 +2771,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {activeKey === "people" && (
                   <>
+                    {/* Breadcrumb trail */}
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_people_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {peopleTab === "directory"
+                          ? m.admin_directory_tab()
+                          : peopleTab === "members"
+                            ? m.admin_members_tab()
+                            : m.admin_volunteers_tab()}
+                      </span>
+                    </nav>
                     {/* People sub-tab bar */}
                     <div className="d-flex gap-2 mb-3">
                       <button

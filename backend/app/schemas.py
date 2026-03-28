@@ -477,6 +477,11 @@ class LayoutCreate(BaseModel):
         return self
 
 
+class LayoutCopyCreate(LayoutCreate):
+    copy_tables: bool = True
+    copy_areas: bool = True
+
+
 class LayoutOut(BaseModel):
     id: str
     edition_id: str | None
@@ -760,6 +765,7 @@ class EditionOut(BaseModel):
     events: list[EventOut]
     producers: list[EditionItemOut]
     sponsors: list[EditionItemOut]
+    vendors: list[EditionItemOut]
     active: bool
     created_at: datetime
     updated_at: datetime

@@ -123,7 +123,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const loadingPersons = personOptionsQuery.isFetching;
 
   return (
-    <Modal show={show} onHide={onHide} centered data-bs-theme="dark" dialogClassName="admin-dialog">
+    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}

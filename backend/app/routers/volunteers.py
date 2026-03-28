@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
+from app.dependencies import Pagination, apply_pagination
 from app.models import Person, VolunteerPeriod
 from app.schemas import (
     VolunteerCreate,
@@ -145,6 +146,7 @@ async def list_volunteers(
     db: AsyncSession = Depends(get_db),
     q: str | None = Query(default=None, description="Search by name, address, NISS, or eID doc number"),
     active: bool | None = Query(default=None),
+    pagination: Pagination = Depends(),
 ) -> list[dict]:
     stmt = select(Person).where(roles_contains("volunteer"))
 
@@ -163,7 +165,10 @@ async def list_volunteers(
             )
         )
 
-    rows = (await db.execute(stmt.order_by(Person.created_at.desc()))).scalars().all()
+    stmt = stmt.order_by(Person.created_at.desc(), Person.id.desc())
+    stmt = apply_pagination(stmt, pagination)
+
+    rows = (await db.execute(stmt)).scalars().all()
     periods_map = await _load_periods_map(db, [row.id for row in rows])
     return [_to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]
 
