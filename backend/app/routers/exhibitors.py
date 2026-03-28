@@ -34,7 +34,7 @@ async def list_exhibitors(
     db: AsyncSession = Depends(get_db),
     pagination: Pagination = Depends(),
 ) -> list[dict]:
-    stmt = select(Exhibitor).order_by(Exhibitor.created_at.desc())
+    stmt = select(Exhibitor).order_by(Exhibitor.id)
     if exhibitor_type is not None:
         stmt = stmt.where(Exhibitor.type == exhibitor_type)
     stmt = apply_pagination(stmt, pagination)

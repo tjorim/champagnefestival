@@ -148,7 +148,7 @@ async def list_registrations(
     stmt = (
         select(Registration)
         .options(selectinload(Registration.event).selectinload(Event.edition))
-        .order_by(Registration.created_at.desc())
+        .order_by(Registration.created_at.desc(), Registration.id.desc())
     )
 
     if q:

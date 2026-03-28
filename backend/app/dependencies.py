@@ -2,7 +2,7 @@
 
 from typing import Any, TypeVar, cast
 
-from fastapi import Query
+from fastapi import HTTPException, Query, status
 from sqlalchemy.sql import Select
 
 SelectT = TypeVar("SelectT", bound=Select[Any])
@@ -16,6 +16,11 @@ class Pagination:
         page: int = Query(1, ge=1, description="1-based page number used with limit"),
         limit: int | None = Query(None, ge=1, le=1000),
     ) -> None:
+        if limit is None and page != 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="page parameter requires limit to be set",
+            )
         self.page = page
         self.limit = limit
 

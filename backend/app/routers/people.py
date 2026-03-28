@@ -168,7 +168,7 @@ async def list_people(
             )
         )
 
-    stmt = stmt.order_by(Person.created_at.desc())
+    stmt = stmt.order_by(Person.created_at.desc(), Person.id.desc())
     stmt = apply_pagination(stmt, pagination)
 
     result = await db.execute(stmt)

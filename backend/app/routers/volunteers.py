@@ -165,7 +165,7 @@ async def list_volunteers(
             )
         )
 
-    stmt = stmt.order_by(Person.created_at.desc())
+    stmt = stmt.order_by(Person.created_at.desc(), Person.id.desc())
     stmt = apply_pagination(stmt, pagination)
 
     rows = (await db.execute(stmt)).scalars().all()
