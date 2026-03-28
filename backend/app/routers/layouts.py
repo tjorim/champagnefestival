@@ -14,6 +14,15 @@ from app.models import Area, Edition, Layout, Room, Table, TableType
 from app.schemas import LayoutCopyCreate, LayoutCreate, LayoutOut
 from app.utils import layout_to_dict, make_id
 
+# Mirror the rendering constants from frontend/src/utils/layoutUtils.ts so that
+# the backend containment check matches the frontend's hit-testing exactly.
+_PX_PER_M: int = 28
+_MIN_CANVAS_WIDTH_PX: int = 280
+_MIN_CANVAS_HEIGHT_PX: int = 180
+_MIN_AREA_WIDTH_PX: int = 40
+_MIN_AREA_HEIGHT_PX: int = 24
+_MIN_TABLE_SIZE_PX: int = 32
+
 router = APIRouter(
     prefix="/api/layouts",
     tags=["layouts"],
@@ -114,18 +123,14 @@ async def copy_layout(
     tables_inside: list[Table] = []
     if body.copy_areas and all_areas:
         tables_inside = [
-            table
-            for table in source_tables
-            if _table_in_any_area(table, all_areas, table_types, source_room)
+            table for table in source_tables if _table_in_any_area(table, all_areas, table_types, source_room)
         ]
 
     tables_outside: list[Table] = []
     if body.copy_tables:
         if all_areas:
             tables_outside = [
-                table
-                for table in source_tables
-                if not _table_in_any_area(table, all_areas, table_types, source_room)
+                table for table in source_tables if not _table_in_any_area(table, all_areas, table_types, source_room)
             ]
         else:
             tables_outside = list(source_tables)
@@ -279,27 +284,46 @@ def _table_in_any_area(
     table_types: dict[str, TableType],
     room: Room,
 ) -> bool:
+    """Return True if the table's centre falls inside any of the given areas.
+
+    All geometry is computed in pixel space using the same rounding and minimum
+    rendered dimensions as the frontend (layoutUtils.ts / getAreaSizePx /
+    getTableSizePx), so the result matches what the user sees in the editor.
+    """
+    # Effective canvas dimensions (pixels) — match getCanvasSizePx
+    canvas_w = max(_MIN_CANVAS_WIDTH_PX, round(room.width_m * _PX_PER_M))
+    canvas_h = max(_MIN_CANVAS_HEIGHT_PX, round(room.length_m * _PX_PER_M))
+
+    # Effective table size (pixels) — match getTableSizePx
     table_type = table_types.get(table.table_type_id)
-    table_width = table_type.width_m if table_type else 1.0
-    table_length = table_type.length_m if table_type else 1.0
-    table_center_x = room.width_m * (table.x / 100.0) + table_width / 2.0
-    table_center_y = room.length_m * (table.y / 100.0) + table_length / 2.0
+    table_w_px = max(_MIN_TABLE_SIZE_PX, round((table_type.width_m if table_type else 1.0) * _PX_PER_M))
+    table_h_px = max(_MIN_TABLE_SIZE_PX, round((table_type.length_m if table_type else 1.0) * _PX_PER_M))
+
+    # Table centre in canvas pixels
+    table_cx = (table.x / 100.0) * canvas_w + table_w_px / 2.0
+    table_cy = (table.y / 100.0) * canvas_h + table_h_px / 2.0
 
     for area in areas:
-        area_left = room.width_m * (area.x / 100.0)
-        area_top = room.length_m * (area.y / 100.0)
-        area_center_x = area_left + area.width_m / 2.0
-        area_center_y = area_top + area.length_m / 2.0
+        # Effective area size (pixels) — match getAreaSizePx
+        area_w_px = max(_MIN_AREA_WIDTH_PX, round(area.width_m * _PX_PER_M))
+        area_h_px = max(_MIN_AREA_HEIGHT_PX, round(area.length_m * _PX_PER_M))
 
+        # Area centre in canvas pixels
+        area_left = (area.x / 100.0) * canvas_w
+        area_top = (area.y / 100.0) * canvas_h
+        area_cx = area_left + area_w_px / 2.0
+        area_cy = area_top + area_h_px / 2.0
+
+        # Rotate table centre into area-local space (negate rotation to invert)
         radians = -((area.rotation or 0) * math.pi / 180.0)
         cos_v = math.cos(radians)
         sin_v = math.sin(radians)
 
-        dx = table_center_x - area_center_x
-        dy = table_center_y - area_center_y
+        dx = table_cx - area_cx
+        dy = table_cy - area_cy
         lx = cos_v * dx - sin_v * dy
         ly = sin_v * dx + cos_v * dy
 
-        if abs(lx) <= area.width_m / 2.0 and abs(ly) <= area.length_m / 2.0:
+        if abs(lx) <= area_w_px / 2.0 and abs(ly) <= area_h_px / 2.0:
             return True
     return False
