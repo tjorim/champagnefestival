@@ -1,17 +1,18 @@
 import { useState, useCallback, useMemo } from "react";
 import {
   flexRender,
+  useTable,
+  tableFeatures,
+  globalFilteringFeature,
+  rowSortingFeature,
+  createFilteredRowModel,
+  createSortedRowModel,
+  filterFns,
+  sortFns,
+  type ColumnDef,
   type FilterFn,
   type SortingState,
-  type StockFeatures,
 } from "@tanstack/react-table";
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useLegacyTable,
-  type LegacyColumnDef as ColumnDef,
-} from "@tanstack/react-table/legacy";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -28,7 +29,12 @@ import { queryKeys } from "@/utils/queryKeys";
 import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 
-const peopleGlobalFilter: FilterFn<StockFeatures, Person> = (
+const _features = tableFeatures({
+  globalFilteringFeature,
+  rowSortingFeature,
+});
+
+const peopleGlobalFilter: FilterFn<typeof _features, Person> = (
   row,
   _columnId,
   filterValue: string,
@@ -192,7 +198,7 @@ export default function PeopleManagement({
   const loadingPersonRegistrations = personRegistrationsQuery.isPending;
   const personRegistrationsError = personRegistrationsQuery.isError;
 
-  const columns = useMemo<ColumnDef<Person>[]>(
+  const columns = useMemo<ColumnDef<typeof _features, Person>[]>(
     () => [
       {
         id: "name",
@@ -345,18 +351,23 @@ export default function PeopleManagement({
     ],
   );
 
-  const table = useLegacyTable({
-    data: preFiltered,
-    columns,
-    state: { sorting, globalFilter: q },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQ,
-    globalFilterFn: peopleGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const table = useTable(
+    {
+      _features,
+      _rowModels: {
+        filteredRowModel: createFilteredRowModel(filterFns),
+        sortedRowModel: createSortedRowModel(sortFns),
+      },
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: peopleGlobalFilter,
+    },
+    (state) => state,
+  );
 
   // Emails from the currently visible (filtered + searched) rows for the copy button
   const filteredEmails = table
@@ -510,7 +521,7 @@ export default function PeopleManagement({
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
                     <tr key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
+                      {row.getAllCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>

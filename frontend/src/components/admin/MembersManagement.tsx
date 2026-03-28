@@ -1,17 +1,18 @@
 import { useState, useMemo } from "react";
 import {
   flexRender,
+  useTable,
+  tableFeatures,
+  globalFilteringFeature,
+  rowSortingFeature,
+  createFilteredRowModel,
+  createSortedRowModel,
+  filterFns,
+  sortFns,
+  type ColumnDef,
   type FilterFn,
   type SortingState,
-  type StockFeatures,
 } from "@tanstack/react-table";
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useLegacyTable,
-  type LegacyColumnDef as ColumnDef,
-} from "@tanstack/react-table/legacy";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -35,6 +36,11 @@ interface MembersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
+const _features = tableFeatures({
+  globalFilteringFeature,
+  rowSortingFeature,
+});
+
 function truncateText(value: string, limit = 80): string {
   if (value.length <= limit) {
     return value;
@@ -42,7 +48,7 @@ function truncateText(value: string, limit = 80): string {
   return `${value.slice(0, limit - 1)}…`;
 }
 
-const membersGlobalFilter: FilterFn<StockFeatures, Person> = (
+const membersGlobalFilter: FilterFn<typeof _features, Person> = (
   row,
   _columnId,
   filterValue: string,
@@ -115,7 +121,7 @@ export default function MembersManagement({
     }
   };
 
-  const columns = useMemo<ColumnDef<Person>[]>(
+  const columns = useMemo<ColumnDef<typeof _features, Person>[]>(
     () => [
       {
         id: "name",
@@ -210,18 +216,23 @@ export default function MembersManagement({
     [registrationCountByPersonId, setEditingMember, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useLegacyTable({
-    data: preFiltered,
-    columns,
-    state: { sorting, globalFilter: q },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQ,
-    globalFilterFn: membersGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const table = useTable(
+    {
+      _features,
+      _rowModels: {
+        filteredRowModel: createFilteredRowModel(filterFns),
+        sortedRowModel: createSortedRowModel(sortFns),
+      },
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: membersGlobalFilter,
+    },
+    (state) => state,
+  );
 
   return (
     <>
@@ -368,7 +379,7 @@ export default function MembersManagement({
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
                     <tr key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
+                      {row.getAllCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>

@@ -1,17 +1,18 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   flexRender,
+  useTable,
+  tableFeatures,
+  globalFilteringFeature,
+  rowSortingFeature,
+  createFilteredRowModel,
+  createSortedRowModel,
+  filterFns,
+  sortFns,
+  type ColumnDef,
   type FilterFn,
   type SortingState,
-  type StockFeatures,
 } from "@tanstack/react-table";
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useLegacyTable,
-  type LegacyColumnDef as ColumnDef,
-} from "@tanstack/react-table/legacy";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -95,7 +96,12 @@ function isStandaloneRegistration(registration: Registration) {
   return registration.event.edition.editionType !== "festival";
 }
 
-const registrationGlobalFilter: FilterFn<StockFeatures, Registration> = (
+const _features = tableFeatures({
+  globalFilteringFeature,
+  rowSortingFeature,
+});
+
+const registrationGlobalFilter: FilterFn<typeof _features, Registration> = (
   row,
   _columnId,
   filterValue: string,
@@ -195,7 +201,7 @@ export default function RegistrationList({
     [registrations],
   );
 
-  const columns = useMemo<ColumnDef<Registration>[]>(
+  const columns = useMemo<ColumnDef<typeof _features, Registration>[]>(
     () => [
       {
         id: "name",
@@ -380,18 +386,23 @@ export default function RegistrationList({
     [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
   );
 
-  const table = useLegacyTable({
-    data: preFiltered,
-    columns,
-    state: { sorting, globalFilter: q },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setQ,
-    globalFilterFn: registrationGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const table = useTable(
+    {
+      _features,
+      _rowModels: {
+        filteredRowModel: createFilteredRowModel(filterFns),
+        sortedRowModel: createSortedRowModel(sortFns),
+      },
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: registrationGlobalFilter,
+    },
+    (state) => state,
+  );
 
   return (
     <>
@@ -532,7 +543,7 @@ export default function RegistrationList({
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
                     <tr key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
+                      {row.getAllCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
