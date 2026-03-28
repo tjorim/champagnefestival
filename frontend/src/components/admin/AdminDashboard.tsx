@@ -129,48 +129,6 @@ function apiAreaToArea(d: Record<string, unknown>): FloorArea {
   };
 }
 
-const LAYOUT_PX_PER_M = 28;
-const LAYOUT_MIN_CANVAS_PX = 280;
-
-function getTableSizePx(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
-  const type = tableTypes.find((t) => t.id === table.tableTypeId);
-  return {
-    w: Math.max(32, Math.round((type?.widthM ?? 1) * LAYOUT_PX_PER_M)),
-    l: Math.max(32, Math.round((type?.lengthM ?? 1) * LAYOUT_PX_PER_M)),
-  };
-}
-
-function isTableInsideArea(
-  area: FloorArea,
-  table: FloorTable,
-  tableTypes: TableType[],
-  room: Room,
-): boolean {
-  const canvasW = Math.max(LAYOUT_MIN_CANVAS_PX, room.widthM * LAYOUT_PX_PER_M);
-  const canvasH = Math.max(180, room.lengthM * LAYOUT_PX_PER_M);
-
-  const areaLeft = (area.x / 100) * canvasW;
-  const areaTop = (area.y / 100) * canvasH;
-  const areaW = Math.max(40, Math.round(area.widthM * LAYOUT_PX_PER_M));
-  const areaH = Math.max(24, Math.round(area.lengthM * LAYOUT_PX_PER_M));
-  const areaCenterX = areaLeft + areaW / 2;
-  const areaCenterY = areaTop + areaH / 2;
-
-  const rad = -((area.rotation ?? 0) * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-
-  const { w, l } = getTableSizePx(table, tableTypes);
-  const tableCenterX = (table.x / 100) * canvasW + w / 2;
-  const tableCenterY = (table.y / 100) * canvasH + l / 2;
-  const dx = tableCenterX - areaCenterX;
-  const dy = tableCenterY - areaCenterY;
-  const lx = cos * dx - sin * dy;
-  const ly = sin * dx + cos * dy;
-
-  return Math.abs(lx) <= areaW / 2 && Math.abs(ly) <= areaH / 2;
-}
-
 function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): Person {
   const roles = new Set(existing?.roles ?? volunteer.roles);
   roles.add("volunteer");
@@ -2096,102 +2054,50 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       copyFromLayoutId?: string | null,
       copyOptions?: { tables: boolean; areas: boolean },
     ) => {
-      const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
-      const createdLayout = apiLayoutToLayout(d);
-      queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-        prev ? [...prev, createdLayout] : [createdLayout],
-      );
-
-      if (!copyFromLayoutId) return;
-      const shouldCopyTables = copyOptions?.tables ?? true;
-      const shouldCopyAreas = copyOptions?.areas ?? true;
-      const allLayouts = queryClient.getQueryData<Layout[]>(layoutsQueryKey) ?? [];
-      const sourceLayout = allLayouts.find((layout) => layout.id === copyFromLayoutId);
-      const allRooms = queryClient.getQueryData<Room[]>(roomsQueryKey) ?? [];
-      const sourceRoom = sourceLayout ? allRooms.find((room) => room.id === sourceLayout.roomId) : undefined;
-      const tableTypesSnapshot = queryClient.getQueryData<TableType[]>(tableTypesQueryKey) ?? [];
-
-      const sourceTables = (queryClient.getQueryData<FloorTable[]>(tablesQueryKey) ?? []).filter(
-        (table) => table.layoutId === copyFromLayoutId,
-      );
-      const sourceAreas = (queryClient.getQueryData<FloorArea[]>(areasQueryKey) ?? []).filter(
-        (area) => area.layoutId === copyFromLayoutId,
-      );
-      const sourceExhibitorAreas = sourceAreas.filter((area) => area.exhibitorId !== null);
-
-      let tablesToCopy: FloorTable[] = [];
-      if (shouldCopyAreas) {
-        const areasForMembership = sourceExhibitorAreas.length > 0 ? sourceExhibitorAreas : sourceAreas;
-        tablesToCopy = sourceRoom
-          ? sourceTables.filter((table) =>
-              areasForMembership.some((area) =>
-                isTableInsideArea(area, table, tableTypesSnapshot, sourceRoom),
-              ),
-            )
-          : sourceTables;
-      } else if (shouldCopyTables) {
-        tablesToCopy = sourceTables;
-      }
-
-      const createdTables =
-        tablesToCopy.length > 0
-          ? await Promise.all(
-              tablesToCopy.map((source) =>
-                createTableMutation.mutateAsync({
-                  name: source.name,
-                  capacity: source.capacity,
-                  layoutId: createdLayout.id,
-                  tableTypeId: source.tableTypeId,
-                  x: source.x,
-                  y: source.y,
-                  rotation: source.rotation,
-                }),
-              ),
-            )
-          : [];
-      if (createdTables.length > 0) {
-        const mappedTables = createdTables.map(apiTableToTable);
-        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-          prev ? [...prev, ...mappedTables] : mappedTables,
+      if (copyFromLayoutId) {
+        const shouldCopyTables = copyOptions?.tables ?? true;
+        const shouldCopyAreas = copyOptions?.areas ?? true;
+        const copied = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+          `/api/layouts/${copyFromLayoutId}/copy`,
+          {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              edition_id: activeEdition.id,
+              room_id: roomId,
+              date,
+              ...(label?.trim() ? { label: label.trim() } : {}),
+              copy_tables: shouldCopyTables,
+              copy_areas: shouldCopyAreas,
+              tables_in_exhibitor_areas_only: shouldCopyAreas,
+            }),
+          },
+          m.admin_error_add_layout(),
         );
+        const createdLayout = apiLayoutToLayout(copied);
+        queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
+          prev ? [...prev, createdLayout] : [createdLayout],
+        );
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: layoutsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
+          queryClient.invalidateQueries({ queryKey: areasQueryKey }),
+        ]);
+        return;
       }
 
-      if (shouldCopyAreas) {
-        const createdAreas =
-          sourceAreas.length > 0
-            ? await Promise.all(
-                sourceAreas.map((source) =>
-                  createAreaMutation.mutateAsync({
-                    label: source.label,
-                    icon: source.icon,
-                    layoutId: createdLayout.id,
-                    widthM: source.widthM,
-                    lengthM: source.lengthM,
-                    exhibitorId: source.exhibitorId ?? undefined,
-                    x: source.x,
-                    y: source.y,
-                    rotation: source.rotation,
-                  }),
-                ),
-              )
-            : [];
-        if (createdAreas.length > 0) {
-          const mappedAreas = createdAreas.map(apiAreaToArea);
-          queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-            prev ? [...prev, ...mappedAreas] : mappedAreas,
-          );
-        }
-      }
+      const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
+      queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
+        prev ? [...prev, apiLayoutToLayout(d)] : [apiLayoutToLayout(d)],
+      );
     },
     [
+      activeEdition.id,
       areasQueryKey,
-      createAreaMutation,
+      authHeaders,
       createLayoutMutation,
-      createTableMutation,
       layoutsQueryKey,
       queryClient,
-      roomsQueryKey,
-      tableTypesQueryKey,
       tablesQueryKey,
     ],
   );
