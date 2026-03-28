@@ -121,7 +121,6 @@ interface ItemRef {
 }
 
 interface LayoutEditorProps {
-  editionLabel?: string;
   dayOptions: DayOption[];
   tables: FloorTable[];
   tableTypes: TableType[];
@@ -525,7 +524,6 @@ function RoomCanvas({
 // ---------------------------------------------------------------------------
 
 export default function LayoutEditor({
-  editionLabel,
   dayOptions,
   tables,
   tableTypes,
@@ -729,6 +727,11 @@ export default function LayoutEditor({
     : [];
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
+  const activeLayoutDateLabel = getDayLabel(
+    activeLayout?.date ?? null,
+    dayOptions,
+    activeLayout?.label ?? "",
+  );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
     .filter((l) => l.roomId === activeRoomId)
@@ -757,10 +760,10 @@ export default function LayoutEditor({
       {/* Tab bar: one tab per room */}
       <Card bg="dark" text="white" border="secondary" className="mb-3">
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          {editionLabel && (
+          {activeLayoutDateLabel && (
             <span className="text-secondary small d-none d-md-inline">
               <i className="bi bi-calendar3 me-1" aria-hidden="true" />
-              {editionLabel}
+              {activeLayoutDateLabel}
             </span>
           )}
           <Nav

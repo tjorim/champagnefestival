@@ -2627,7 +2627,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {activeKey === "floor-plans" && (
                   <LayoutEditor
-                    editionLabel={`${activeEdition.year} – ${activeEdition.month.charAt(0).toUpperCase()}${activeEdition.month.slice(1)}`}
                     dayOptions={layoutDayOptions}
                     tables={tables}
                     tableTypes={tableTypes}
