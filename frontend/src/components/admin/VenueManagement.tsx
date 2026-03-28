@@ -6,7 +6,7 @@
  */
 
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -16,6 +16,7 @@ import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Room, Venue } from "@/types/admin";
+import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface VenueManagementProps {
   venues: Venue[];
@@ -53,6 +54,8 @@ function contrastColor(hex: string): string {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? "#000" : "#fff";
 }
 const emptyRoomForm = { name: "", widthM: 20, lengthM: 15, color: "#ffc107" };
+
+const columnHelper = createAppColumnHelper<Venue>();
 
 export default function VenueManagement({
   venues,
@@ -184,6 +187,173 @@ export default function VenueManagement({
     [onRestoreRoom],
   );
 
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor("name", {
+          header: m.admin_venue_name_label(),
+          enableSorting: false,
+          meta: { tdClassName: "fw-semibold" },
+          cell: ({ row }) => {
+            const isArchived = !row.original.active;
+            return (
+              <>
+                {row.original.name}
+                {isArchived && (
+                  <Badge bg="secondary" className="ms-2 fs-2xs">
+                    {m.admin_venue_archived_badge()}
+                  </Badge>
+                )}
+              </>
+            );
+          },
+        }),
+        columnHelper.accessor("address", {
+          header: m.admin_venue_address_label(),
+          enableSorting: false,
+          meta: { tdClassName: "text-secondary" },
+          cell: ({ getValue }) => getValue() || "—",
+        }),
+        columnHelper.accessor("city", {
+          header: m.admin_venue_city_label(),
+          enableSorting: false,
+          meta: { tdClassName: "text-secondary" },
+          cell: ({ getValue }) => getValue() || "—",
+        }),
+        columnHelper.accessor("postalCode", {
+          header: m.admin_venue_postal_code_label(),
+          enableSorting: false,
+          meta: { tdClassName: "text-secondary" },
+          cell: ({ getValue }) => getValue() || "—",
+        }),
+        columnHelper.accessor("country", {
+          header: m.admin_venue_country_label(),
+          enableSorting: false,
+          meta: { tdClassName: "text-secondary" },
+          cell: ({ getValue }) => getValue() || "—",
+        }),
+        columnHelper.display({
+          id: "rooms",
+          header: m.admin_room_name_label(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const venue = row.original;
+            if (venue.active === false) return null;
+            const venueRooms = rooms.filter((r) => r.venueId === venue.id);
+            return (
+              <div className="d-flex flex-wrap gap-1 align-items-center">
+                {venueRooms.map((room) => (
+                  <Badge
+                    key={room.id}
+                    style={{
+                      background: room.active ? room.color : undefined,
+                      fontSize: "0.75rem",
+                      opacity: room.active ? 1 : 0.5,
+                    }}
+                    bg={room.active ? undefined : "secondary"}
+                    className="d-inline-flex align-items-center gap-1"
+                  >
+                    <span
+                      style={{
+                        color: room.active ? contrastColor(room.color) : undefined,
+                      }}
+                    >
+                      {room.name}
+                    </span>
+                    {room.active ? (
+                      <button
+                        type="button"
+                        className={clsx(
+                          "btn-close fs-5xs",
+                          contrastColor(room.color) === "#fff" && "btn-close-white",
+                        )}
+                        onClick={() => handleArchiveRoom(room.id)}
+                        aria-label={m.admin_content_archive()}
+                        title={m.admin_content_archive()}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
+                        onClick={() => handleRestoreRoom(room.id)}
+                        aria-label={m.admin_content_restore()}
+                        title={m.admin_content_restore()}
+                      >
+                        <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                      </button>
+                    )}
+                  </Badge>
+                ))}
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  className="py-0 px-1 fs-2xs"
+                  onClick={() => openAddRoom(venue.id)}
+                >
+                  <i className="bi bi-plus-lg" aria-hidden="true" />
+                  {m.admin_room_add()}
+                </Button>
+              </div>
+            );
+          },
+        }),
+        columnHelper.display({
+          id: "actions",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const venue = row.original;
+            const isArchived = !venue.active;
+            return (
+              <div className="d-flex gap-1 justify-content-end">
+                {isArchived ? (
+                  <>
+                    <Button
+                      variant="outline-success"
+                      size="sm"
+                      onClick={() => handleRestoreVenue(venue.id)}
+                      aria-label={m.admin_content_restore()}
+                      title={m.admin_content_restore()}
+                    >
+                      <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={() => handleDeleteVenue(venue.id)}
+                      aria-label={m.admin_delete()}
+                      title={m.admin_delete()}
+                    >
+                      <i className="bi bi-trash" aria-hidden="true" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={() => handleArchiveVenue(venue.id)}
+                    aria-label={m.admin_content_archive()}
+                    title={m.admin_content_archive()}
+                  >
+                    <i className="bi bi-archive" aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
+            );
+          },
+        }),
+      ]),
+    [rooms, openAddRoom, handleArchiveRoom, handleRestoreRoom, handleArchiveVenue, handleRestoreVenue, handleDeleteVenue],
+  );
+
+  const table = useAppTable(
+    {
+      data: venues,
+      columns,
+      getRowId: (row) => row.id,
+    },
+    () => ({}),
+  );
+
   return (
     <Card bg="dark" text="white" border="secondary">
       <Card.Header className="d-flex align-items-center justify-content-between">
@@ -222,130 +392,26 @@ export default function VenueManagement({
         ) : (
           <Table variant="dark" hover responsive className="mb-0 small">
             <thead>
-              <tr>
-                <th>{m.admin_venue_name_label()}</th>
-                <th>{m.admin_venue_address_label()}</th>
-                <th>{m.admin_venue_city_label()}</th>
-                <th>{m.admin_venue_postal_code_label()}</th>
-                <th>{m.admin_venue_country_label()}</th>
-                <th>{m.admin_room_name_label()}</th>
-                <th />
-              </tr>
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id}>
+                  {hg.headers.map((header) => (
+                    <th key={header.id} className={header.column.columnDef.meta?.tdClassName}>
+                      <table.FlexRender header={header} />
+                    </th>
+                  ))}
+                </tr>
+              ))}
             </thead>
             <tbody>
-              {venues.map((venue) => {
-                const venueRooms = rooms.filter((r) => r.venueId === venue.id);
-                const isArchived = !venue.active;
-                return (
-                  <tr key={venue.id} className={clsx(isArchived && "opacity-50")}>
-                    <td className="fw-semibold">
-                      {venue.name}
-                      {isArchived && (
-                        <Badge bg="secondary" className="ms-2 fs-2xs">
-                          {m.admin_venue_archived_badge()}
-                        </Badge>
-                      )}
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className={clsx(!row.original.active && "opacity-50")}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                      <table.FlexRender cell={cell} />
                     </td>
-                    <td className="text-secondary">{venue.address || "—"}</td>
-                    <td className="text-secondary">{venue.city || "—"}</td>
-                    <td className="text-secondary">{venue.postalCode || "—"}</td>
-                    <td className="text-secondary">{venue.country || "—"}</td>
-                    <td>
-                      {!isArchived && (
-                        <div className="d-flex flex-wrap gap-1 align-items-center">
-                          {venueRooms.map((room) => (
-                            <Badge
-                              key={room.id}
-                              style={{
-                                background: room.active ? room.color : undefined,
-                                fontSize: "0.75rem",
-                                opacity: room.active ? 1 : 0.5,
-                              }}
-                              bg={room.active ? undefined : "secondary"}
-                              className="d-inline-flex align-items-center gap-1"
-                            >
-                              <span
-                                style={{
-                                  color: room.active ? contrastColor(room.color) : undefined,
-                                }}
-                              >
-                                {room.name}
-                              </span>
-                              {room.active ? (
-                                <button
-                                  type="button"
-                                  className={clsx(
-                                    "btn-close fs-5xs",
-                                    contrastColor(room.color) === "#fff" && "btn-close-white",
-                                  )}
-                                  onClick={() => handleArchiveRoom(room.id)}
-                                  aria-label={m.admin_content_archive()}
-                                  title={m.admin_content_archive()}
-                                />
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
-                                  onClick={() => handleRestoreRoom(room.id)}
-                                  aria-label={m.admin_content_restore()}
-                                  title={m.admin_content_restore()}
-                                >
-                                  <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                                </button>
-                              )}
-                            </Badge>
-                          ))}
-                          <Button
-                            variant="outline-secondary"
-                            size="sm"
-                            className="py-0 px-1 fs-2xs"
-                            onClick={() => openAddRoom(venue.id)}
-                          >
-                            <i className="bi bi-plus-lg" aria-hidden="true" />
-                            {m.admin_room_add()}
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-end">
-                      <div className="d-flex gap-1 justify-content-end">
-                        {isArchived ? (
-                          <>
-                            <Button
-                              variant="outline-success"
-                              size="sm"
-                              onClick={() => handleRestoreVenue(venue.id)}
-                              aria-label={m.admin_content_restore()}
-                              title={m.admin_content_restore()}
-                            >
-                              <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                            </Button>
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={() => handleDeleteVenue(venue.id)}
-                              aria-label={m.admin_delete()}
-                              title={m.admin_delete()}
-                            >
-                              <i className="bi bi-trash" aria-hidden="true" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            variant="outline-secondary"
-                            size="sm"
-                            onClick={() => handleArchiveVenue(venue.id)}
-                            aria-label={m.admin_content_archive()}
-                            title={m.admin_content_archive()}
-                          >
-                            <i className="bi bi-archive" aria-hidden="true" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                  ))}
+                </tr>
+              ))}
             </tbody>
           </Table>
         )}

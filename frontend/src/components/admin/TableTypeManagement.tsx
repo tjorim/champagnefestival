@@ -6,7 +6,7 @@
  */
 
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -16,6 +16,7 @@ import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { TableType } from "@/types/admin";
+import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface TableTypeManagementProps {
   tableTypes: TableType[];
@@ -34,6 +35,8 @@ const emptyForm = {
   maxCapacity: 4,
   active: true,
 };
+
+const columnHelper = createAppColumnHelper<TableType>();
 
 export default function TableTypeManagement({
   tableTypes,
@@ -123,6 +126,125 @@ export default function TableTypeManagement({
     [onRestore],
   );
 
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor("name", {
+          header: m.admin_table_name(),
+          enableSorting: false,
+          meta: { tdClassName: "fw-semibold" },
+          cell: ({ row }) => (
+            <>
+              {row.original.name}
+              {!row.original.active && (
+                <Badge bg="secondary" className="ms-2 fs-2xs">
+                  {m.admin_venue_archived_badge()}
+                </Badge>
+              )}
+            </>
+          ),
+        }),
+        columnHelper.accessor("shape", {
+          header: m.admin_table_shape_label(),
+          enableSorting: false,
+          cell: ({ getValue }) => (
+            <Badge bg="secondary">
+              {getValue() === "round"
+                ? m.admin_table_shape_round()
+                : m.admin_table_shape_rectangle()}
+            </Badge>
+          ),
+        }),
+        columnHelper.accessor("widthM", {
+          header: m.admin_table_width_label(),
+          enableSorting: false,
+          cell: ({ getValue }) => `${getValue()} m`,
+        }),
+        columnHelper.accessor("lengthM", {
+          header: m.admin_table_length_label(),
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.original.shape === "round" ? "—" : `${row.original.lengthM} m`,
+        }),
+        columnHelper.accessor("heightType", {
+          header: m.admin_table_height_type_label(),
+          enableSorting: false,
+          cell: ({ getValue }) => {
+            const ht = getValue();
+            return (
+              <Badge
+                bg={ht === "high" ? "info" : "dark"}
+                text={ht === "high" ? "dark" : "secondary"}
+                className="border border-secondary"
+              >
+                {ht === "high"
+                  ? m.admin_table_height_type_high()
+                  : m.admin_table_height_type_low()}
+              </Badge>
+            );
+          },
+        }),
+        columnHelper.accessor("maxCapacity", {
+          header: m.admin_table_type_max_capacity(),
+          enableSorting: false,
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: m.admin_actions_label(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const tt = row.original;
+            return (
+              <div className="d-flex gap-1">
+                {tt.active && (
+                  <Button
+                    size="sm"
+                    variant="outline-secondary"
+                    onClick={() => openEdit(tt)}
+                    aria-label={m.admin_edit()}
+                    title={m.admin_edit()}
+                  >
+                    <i className="bi bi-pencil" aria-hidden="true" />
+                  </Button>
+                )}
+                {tt.active ? (
+                  <Button
+                    size="sm"
+                    variant="outline-secondary"
+                    onClick={() => handleArchive(tt.id)}
+                    aria-label={m.admin_content_archive()}
+                    title={m.admin_content_archive()}
+                  >
+                    <i className="bi bi-archive" aria-hidden="true" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline-success"
+                    onClick={() => handleRestore(tt.id)}
+                    aria-label={m.admin_content_restore()}
+                    title={m.admin_content_restore()}
+                  >
+                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                  </Button>
+                )}
+              </div>
+            );
+          },
+        }),
+      ]),
+    [openEdit, handleArchive, handleRestore],
+  );
+
+  const table = useAppTable(
+    {
+      data: tableTypes,
+      columns,
+      getRowId: (row) => row.id,
+    },
+    () => ({}),
+  );
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
@@ -145,84 +267,24 @@ export default function TableTypeManagement({
             <div className="table-responsive">
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <thead>
-                  <tr>
-                    <th>{m.admin_table_name()}</th>
-                    <th>{m.admin_table_shape_label()}</th>
-                    <th>{m.admin_table_width_label()}</th>
-                    <th>{m.admin_table_length_label()}</th>
-                    <th>{m.admin_table_height_type_label()}</th>
-                    <th>{m.admin_table_type_max_capacity()}</th>
-                    <th>{m.admin_actions_label()}</th>
-                  </tr>
+                  {table.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id}>
+                      {hg.headers.map((header) => (
+                        <th key={header.id} className={header.column.columnDef.meta?.tdClassName}>
+                          <table.FlexRender header={header} />
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
                 </thead>
                 <tbody>
-                  {tableTypes.map((tt) => (
-                    <tr key={tt.id} className={clsx(!tt.active && "opacity-50")}>
-                      <td className="fw-semibold">
-                        {tt.name}
-                        {!tt.active && (
-                          <Badge bg="secondary" className="ms-2 fs-2xs">
-                            {m.admin_venue_archived_badge()}
-                          </Badge>
-                        )}
-                      </td>
-                      <td>
-                        <Badge bg="secondary">
-                          {tt.shape === "round"
-                            ? m.admin_table_shape_round()
-                            : m.admin_table_shape_rectangle()}
-                        </Badge>
-                      </td>
-                      <td>{tt.widthM} m</td>
-                      <td>{tt.shape === "round" ? "—" : `${tt.lengthM} m`}</td>
-                      <td>
-                        <Badge
-                          bg={tt.heightType === "high" ? "info" : "dark"}
-                          text={tt.heightType === "high" ? "dark" : "secondary"}
-                          className="border border-secondary"
-                        >
-                          {tt.heightType === "high"
-                            ? m.admin_table_height_type_high()
-                            : m.admin_table_height_type_low()}
-                        </Badge>
-                      </td>
-                      <td>{tt.maxCapacity}</td>
-                      <td>
-                        <div className="d-flex gap-1">
-                          {tt.active && (
-                            <Button
-                              size="sm"
-                              variant="outline-secondary"
-                              onClick={() => openEdit(tt)}
-                              aria-label={m.admin_edit()}
-                              title={m.admin_edit()}
-                            >
-                              <i className="bi bi-pencil" aria-hidden="true" />
-                            </Button>
-                          )}
-                          {tt.active ? (
-                            <Button
-                              size="sm"
-                              variant="outline-secondary"
-                              onClick={() => handleArchive(tt.id)}
-                              aria-label={m.admin_content_archive()}
-                              title={m.admin_content_archive()}
-                            >
-                              <i className="bi bi-archive" aria-hidden="true" />
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline-success"
-                              onClick={() => handleRestore(tt.id)}
-                              aria-label={m.admin_content_restore()}
-                              title={m.admin_content_restore()}
-                            >
-                              <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className={clsx(!row.original.active && "opacity-50")}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                          <table.FlexRender cell={cell} />
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>

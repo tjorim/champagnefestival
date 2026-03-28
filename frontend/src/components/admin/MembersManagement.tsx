@@ -357,7 +357,7 @@ export default function MembersManagement({
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
                     <tr key={row.id}>
-                      {row.getAllCells().map((cell) => (
+                      {row.getVisibleCells().map((cell) => (
                         <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
                           <table.FlexRender cell={cell} />
                         </td>
