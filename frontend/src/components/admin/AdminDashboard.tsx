@@ -738,11 +738,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       capacity,
       layoutId,
       tableTypeId,
+      x,
+      y,
+      rotation,
     }: {
       name: string;
       capacity: number;
       layoutId: string;
       tableTypeId: string;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/tables",
@@ -752,8 +758,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({
             name,
             capacity,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             layout_id: layoutId,
             table_type_id: tableTypeId,
           }),
@@ -1057,6 +1064,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM,
       lengthM,
       exhibitorId,
+      x,
+      y,
+      rotation,
     }: {
       label: string;
       icon: string;
@@ -1064,6 +1074,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM: number;
       lengthM: number;
       exhibitorId?: number;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/areas",
@@ -1076,8 +1089,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             layout_id: layoutId,
             width_m: widthM,
             length_m: lengthM,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             exhibitor_id: exhibitorId ?? null,
           }),
         },
@@ -2033,13 +2047,63 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, date: string, label?: string) => {
+    async (roomId: string, date: string, label?: string, copyFromLayoutId?: string | null) => {
       const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
+      const createdLayout = apiLayoutToLayout(d);
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-        prev ? [...prev, apiLayoutToLayout(d)] : [apiLayoutToLayout(d)],
+        prev ? [...prev, createdLayout] : [createdLayout],
       );
+
+      if (!copyFromLayoutId) return;
+
+      const sourceTables = (queryClient.getQueryData<FloorTable[]>(tablesQueryKey) ?? []).filter(
+        (table) => table.layoutId === copyFromLayoutId,
+      );
+      const sourceAreas = (queryClient.getQueryData<FloorArea[]>(areasQueryKey) ?? []).filter(
+        (area) => area.layoutId === copyFromLayoutId,
+      );
+
+      for (const source of sourceTables) {
+        const createdTable = await createTableMutation.mutateAsync({
+          name: source.name,
+          capacity: source.capacity,
+          layoutId: createdLayout.id,
+          tableTypeId: source.tableTypeId,
+          x: source.x,
+          y: source.y,
+          rotation: source.rotation,
+        });
+        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
+          prev ? [...prev, apiTableToTable(createdTable)] : [apiTableToTable(createdTable)],
+        );
+      }
+
+      for (const source of sourceAreas) {
+        const createdArea = await createAreaMutation.mutateAsync({
+          label: source.label,
+          icon: source.icon,
+          layoutId: createdLayout.id,
+          widthM: source.widthM,
+          lengthM: source.lengthM,
+          exhibitorId: source.exhibitorId ?? undefined,
+          x: source.x,
+          y: source.y,
+          rotation: source.rotation,
+        });
+        queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
+          prev ? [...prev, apiAreaToArea(createdArea)] : [apiAreaToArea(createdArea)],
+        );
+      }
     },
-    [createLayoutMutation, layoutsQueryKey, queryClient],
+    [
+      areasQueryKey,
+      createAreaMutation,
+      createLayoutMutation,
+      createTableMutation,
+      layoutsQueryKey,
+      queryClient,
+      tablesQueryKey,
+    ],
   );
 
   const handleDeleteLayout = useCallback(

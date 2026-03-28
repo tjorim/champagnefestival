@@ -138,7 +138,12 @@ interface LayoutEditorProps {
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
-  onAddLayout: (roomId: string, date: string, label?: string) => Promise<void>;
+  onAddLayout: (
+    roomId: string,
+    date: string,
+    label?: string,
+    copyFromLayoutId?: string | null,
+  ) => Promise<void>;
   onDeleteLayout: (layoutId: string) => Promise<void>;
   onAddArea: (
     label: string,
@@ -575,7 +580,10 @@ export default function LayoutEditor({
 
   // Add Layout modal
   const [showAddLayout, setShowAddLayout] = useState(false);
-  const [newLayout, setNewLayout] = useState({ date: dayOptions[0]?.date ?? "" });
+  const [newLayout, setNewLayout] = useState({
+    date: dayOptions[0]?.date ?? "",
+    copyFromLayoutId: "",
+  });
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
   const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
 
@@ -584,8 +592,13 @@ export default function LayoutEditor({
     setAddLayoutError(null);
     try {
       if (!newLayout.date) return;
-      await onAddLayout(activeRoomId, newLayout.date);
-      setNewLayout({ date: dayOptions[0]?.date ?? "" });
+      await onAddLayout(
+        activeRoomId,
+        newLayout.date,
+        undefined,
+        newLayout.copyFromLayoutId || undefined,
+      );
+      setNewLayout({ date: dayOptions[0]?.date ?? "", copyFromLayoutId: "" });
       setShowAddLayout(false);
     } catch (err) {
       console.error("Failed to add layout", err);
@@ -596,7 +609,9 @@ export default function LayoutEditor({
   useEffect(() => {
     if (dayOptions.length === 0) return;
     setNewLayout((current) =>
-      dayOptions.some((day) => day.date === current.date) ? current : { date: dayOptions[0]!.date },
+      dayOptions.some((day) => day.date === current.date)
+        ? current
+        : { date: dayOptions[0]!.date, copyFromLayoutId: current.copyFromLayoutId },
     );
   }, [dayOptions]);
 
@@ -914,9 +929,9 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                        setNewLayout({ date: dayOptions[0]?.date ?? "" });
-                        setShowAddLayout(true);
-                      }}
+                    setNewLayout({ date: dayOptions[0]?.date ?? "", copyFromLayoutId: "" });
+                    setShowAddLayout(true);
+                  }}
                       title={m.admin_add_layout()}
                     >
                       <i className="bi bi-plus-lg me-1" aria-hidden="true" />
@@ -1391,6 +1406,23 @@ export default function LayoutEditor({
               {dayOptions.map((day) => (
                 <option key={day.date} value={day.date}>
                   {day.label}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+          <Form.Group controlId="layout-copy-from">
+            <Form.Label>Copy from existing layout (optional)</Form.Label>
+            <Form.Select
+              value={newLayout.copyFromLayoutId}
+              onChange={(e) =>
+                setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))
+              }
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="">Start with an empty layout</option>
+              {roomLayouts.map((layout) => (
+                <option key={layout.id} value={layout.id}>
+                  {getDayLabel(layout.date, dayOptions, layout.label)}
                 </option>
               ))}
             </Form.Select>
