@@ -165,20 +165,23 @@ export default function EditionModal({
   useEffect(() => {
     if (allExhibitors.length === 0 || hydratedRef.current) return;
     const ids = new Set(
-      [...(initial?.producers ?? []), ...(initial?.sponsors ?? []), ...(initial?.vendors ?? [])].map((e) => e.id),
+      [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
     );
-    const { active: act, archived: arch } = toOptions(allExhibitors);
+    const { active: act, archived: arch } = toOptions(programmableExhibitors);
     form.setFieldValue(
       "selectedExhibitors",
       [...act, ...arch].filter((o) => ids.has(o.value)),
     );
     hydratedRef.current = true;
-  }, [allExhibitors, initial, form]);
+  }, [allExhibitors, programmableExhibitors, initial, form]);
 
   const isEdit = !!initial;
   const editionType = useStore(form.store, (s) => s.values.editionType as EditionType);
   const isFestival = editionType === "festival";
-  const programmableExhibitors = allExhibitors;
+  const programmableExhibitors = useMemo(
+    () => allExhibitors.filter((exhibitor) => exhibitor.type !== "vendor"),
+    [allExhibitors],
+  );
   const exhibitorGroups = useMemo(() => {
     const { active: act, archived: arch } = toOptions(programmableExhibitors);
     const groups: GroupBase<ItemOption>[] = [];

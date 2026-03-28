@@ -1439,7 +1439,6 @@ export default function LayoutEditor({
                 onChange={(e) =>
                   setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
                 }
-                disabled={newLayout.copyAreas}
                 label={m.admin_layout_copy_tables()}
               />
               <Form.Check
@@ -1451,7 +1450,6 @@ export default function LayoutEditor({
                   setNewLayout((p) => ({
                     ...p,
                     copyAreas: e.currentTarget.checked,
-                    copyTables: e.currentTarget.checked ? true : p.copyTables,
                   }))
                 }
                 label={m.admin_layout_copy_areas()}

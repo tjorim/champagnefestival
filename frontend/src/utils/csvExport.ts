@@ -34,7 +34,10 @@ export function exportToCsv(
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
+  document.body.appendChild(anchor);
   anchor.click();
+  document.body.removeChild(anchor);
 
-  URL.revokeObjectURL(url);
+  // Defer revocation so the browser has time to start the download.
+  requestAnimationFrame(() => URL.revokeObjectURL(url));
 }

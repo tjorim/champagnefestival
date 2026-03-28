@@ -118,13 +118,17 @@ export function ContentSection({
     retry: false,
   });
 
-  // Map item id → array of edition labels that reference it (as producer or sponsor)
+  // Map item id → array of edition labels that reference it (as producer, sponsor, or vendor)
   const editionsByItemId = useMemo((): Map<number, string[]> => {
     const editions = editionsQuery.data ?? [];
     const map = new Map<number, string[]>();
     for (const edition of editions) {
       const label = `${edition.year} – ${edition.month}`;
-      for (const item of [...(edition.producers ?? []), ...(edition.sponsors ?? [])]) {
+      for (const item of [
+        ...(edition.producers ?? []),
+        ...(edition.sponsors ?? []),
+        ...(edition.vendors ?? []),
+      ]) {
         const existing = map.get(item.id);
         if (existing) existing.push(label);
         else map.set(item.id, [label]);
@@ -484,10 +488,24 @@ export function ContentSection({
             size="sm"
             variant="outline-warning"
             onClick={() => setBulkArchiveOpen(true)}
-            title={m.admin_bulk_content_archive_all({ type: typeFilter })}
+            title={m.admin_bulk_content_archive_all({
+              type:
+                typeFilter === "producer"
+                  ? m.admin_item_producer()
+                  : typeFilter === "sponsor"
+                    ? m.admin_item_sponsor()
+                    : m.admin_item_vendor(),
+            })}
           >
             <i className="bi bi-archive me-1" aria-hidden="true" />
-            {m.admin_bulk_content_archive_all({ type: typeFilter })}
+            {m.admin_bulk_content_archive_all({
+              type:
+                typeFilter === "producer"
+                  ? m.admin_item_producer()
+                  : typeFilter === "sponsor"
+                    ? m.admin_item_sponsor()
+                    : m.admin_item_vendor(),
+            })}
           </Button>
         )}
       </div>
@@ -557,7 +575,15 @@ export function ContentSection({
           <Modal.Title>{m.admin_content_archive()}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {m.admin_bulk_content_archive_confirm({ count: activeItems.length, type: typeFilter })}
+          {m.admin_bulk_content_archive_confirm({
+            count: activeItems.length,
+            type:
+              typeFilter === "producer"
+                ? m.admin_item_producer()
+                : typeFilter === "sponsor"
+                  ? m.admin_item_sponsor()
+                  : m.admin_item_vendor(),
+          })}
         </Modal.Body>
         <Modal.Footer>
           <Button

@@ -30,6 +30,18 @@ router = APIRouter(
 )
 
 
+def _js_round(x: float) -> int:
+    """Round a non-negative float the same way JS Math.round does.
+
+    Python's built-in round() uses banker's rounding (round half to even),
+    whereas JS Math.round always rounds 0.5 up (towards +∞).  For the
+    positive pixel values we deal with here the difference is:
+      Python: round(0.5) == 0   JS: Math.round(0.5) == 1
+    Using math.floor(x + 0.5) reproduces the JS behaviour for x >= 0.
+    """
+    return math.floor(x + 0.5)
+
+
 # ---------------------------------------------------------------------------
 # Create layout
 # ---------------------------------------------------------------------------
@@ -296,8 +308,8 @@ def _table_in_any_area(
 
     # Effective table size (pixels) — match getTableSizePx
     table_type = table_types.get(table.table_type_id)
-    table_w_px = max(_MIN_TABLE_SIZE_PX, round((table_type.width_m if table_type else 1.0) * _PX_PER_M))
-    table_h_px = max(_MIN_TABLE_SIZE_PX, round((table_type.length_m if table_type else 1.0) * _PX_PER_M))
+    table_w_px = max(_MIN_TABLE_SIZE_PX, _js_round((table_type.width_m if table_type else 1.0) * _PX_PER_M))
+    table_h_px = max(_MIN_TABLE_SIZE_PX, _js_round((table_type.length_m if table_type else 1.0) * _PX_PER_M))
 
     # Table centre in canvas pixels
     table_cx = (table.x / 100.0) * canvas_w + table_w_px / 2.0
@@ -305,8 +317,8 @@ def _table_in_any_area(
 
     for area in areas:
         # Effective area size (pixels) — match getAreaSizePx
-        area_w_px = max(_MIN_AREA_WIDTH_PX, round(area.width_m * _PX_PER_M))
-        area_h_px = max(_MIN_AREA_HEIGHT_PX, round(area.length_m * _PX_PER_M))
+        area_w_px = max(_MIN_AREA_WIDTH_PX, _js_round(area.width_m * _PX_PER_M))
+        area_h_px = max(_MIN_AREA_HEIGHT_PX, _js_round(area.length_m * _PX_PER_M))
 
         # Area centre in canvas pixels
         area_left = (area.x / 100.0) * canvas_w
