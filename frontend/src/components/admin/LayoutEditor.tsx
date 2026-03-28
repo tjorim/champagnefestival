@@ -22,9 +22,11 @@ import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
-
-// How many CSS pixels represent one metre on the canvas
-const PX_PER_M = 28;
+import {
+  getAreaSizePx,
+  getCanvasSizePx,
+  getTableSizePx,
+} from "@/utils/layoutUtils";
 
 /**
  * Returns the tables whose centre point falls within the area's bounding rectangle,
@@ -41,8 +43,7 @@ function getTablesInArea(
   const areaLeft = (area.x / 100) * canvasW;
   const areaTop = (area.y / 100) * canvasH;
   // Match DraggableArea's rendered dimensions (Math.round + minimums)
-  const areaW = Math.max(40, Math.round(area.widthM * PX_PER_M));
-  const areaH = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+  const { width: areaW, height: areaH } = getAreaSizePx(area.widthM, area.lengthM);
 
   // Centre of the (unrotated) area bounding box
   const acx = areaLeft + areaW / 2;
@@ -54,7 +55,7 @@ function getTablesInArea(
   const sin = Math.sin(rad);
 
   return tables.filter((t) => {
-    const { w, l } = getTableSize(t, tableTypes);
+    const { width: w, height: l } = getTableSizePx(t, tableTypes);
     const cx = (t.x / 100) * canvasW + w / 2;
     const cy = (t.y / 100) * canvasH + l / 2;
 
@@ -87,9 +88,6 @@ function getAreaIcons(): { value: string; label: string }[] {
     { value: "bi-bar-chart-line", label: m.admin_layout_area_icon_exhibition() },
   ];
 }
-// Minimum canvas width so small rooms are still usable
-const MIN_CANVAS_PX = 280;
-
 // Sensor configuration — module-level so the descriptor is stable across renders.
 const SENSORS = [
   PointerSensor.configure({
@@ -97,10 +95,10 @@ const SENSORS = [
   }),
 ];
 function getTableSize(table: FloorTable, tableTypes: TableType[]): { w: number; l: number } {
-  const type = tableTypes.find((t) => t.id === table.tableTypeId);
+  const { width, height } = getTableSizePx(table, tableTypes);
   return {
-    w: Math.max(32, Math.round((type?.widthM ?? 1) * PX_PER_M)),
-    l: Math.max(32, Math.round((type?.lengthM ?? 1) * PX_PER_M)),
+    w: width,
+    l: height,
   };
 }
 
@@ -296,8 +294,7 @@ function DraggableArea({
     disabled: !isInteractive,
   });
 
-  const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
-  const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+  const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.widthM, area.lengthM);
 
   const leftPx = (area.x / 100) * canvasW;
   const topPx = (area.y / 100) * canvasH;
@@ -389,8 +386,7 @@ function RoomCanvas({
   onMoveTable,
   onMoveArea,
 }: RoomCanvasProps) {
-  const canvasW = Math.max(MIN_CANVAS_PX, room.widthM * PX_PER_M);
-  const canvasH = Math.max(180, room.lengthM * PX_PER_M);
+  const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -413,8 +409,7 @@ function RoomCanvas({
       if (activeId.startsWith("area_")) {
         const area = roomAreas.find((a) => a.id === activeId);
         if (!area) return;
-        const AREA_W = Math.max(40, Math.round(area.widthM * PX_PER_M));
-        const AREA_H = Math.max(24, Math.round(area.lengthM * PX_PER_M));
+        const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.widthM, area.lengthM);
         const leftPx = (area.x / 100) * canvasW + dx;
         const topPx = (area.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - AREA_W);
@@ -770,8 +765,9 @@ export default function LayoutEditor({
 
   const selectedAreaData = canvasAreas.find((a) => a.id === selectedArea);
 
-  const areaCanvasW = activeRoom ? Math.max(MIN_CANVAS_PX, activeRoom.widthM * PX_PER_M) : 0;
-  const areaCanvasH = activeRoom ? Math.max(180, activeRoom.lengthM * PX_PER_M) : 0;
+  const areaCanvas = activeRoom ? getCanvasSizePx(activeRoom.widthM, activeRoom.lengthM) : null;
+  const areaCanvasW = areaCanvas?.width ?? 0;
+  const areaCanvasH = areaCanvas?.height ?? 0;
   const tablesInSelectedArea = selectedAreaData
     ? getTablesInArea(selectedAreaData, canvasTables, tableTypes, areaCanvasW, areaCanvasH)
     : [];

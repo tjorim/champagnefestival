@@ -39,6 +39,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -2199,8 +2200,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
-      // Must match LayoutEditor/RoomCanvas constants
-      const PX_PER_M = 28;
       const area = (areasQuery.data ?? []).find((a) => a.id === areaId);
       const layout = (layoutsQuery.data ?? []).find((l) => l.id === area?.layoutId);
       const room = (roomsQuery.data ?? []).find((r) => r.id === layout?.roomId);
@@ -2209,10 +2208,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       let x = area?.x ?? 0;
       let y = area?.y ?? 0;
       if (area && room) {
-        const canvasW = Math.max(280, room.widthM * PX_PER_M);
-        const canvasH = Math.max(180, room.lengthM * PX_PER_M);
-        const areaW = Math.max(40, Math.round(widthM * PX_PER_M));
-        const areaH = Math.max(24, Math.round(lengthM * PX_PER_M));
+        const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
+        const { width: areaW, height: areaH } = getAreaSizePx(widthM, lengthM);
         x = (Math.max(0, Math.min((area.x / 100) * canvasW, canvasW - areaW)) / canvasW) * 100;
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
