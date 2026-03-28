@@ -1,9 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { activeEdition, seedEditions, seedEvents } from "../data/editions";
-import { seedRegistrations } from "../data/registrations";
-
-/** Mutable in-memory store for registrations (public submissions). */
-let registrations: Record<string, unknown>[] = structuredClone(seedRegistrations);
+import { sharedStore, resetSharedStore } from "../data/registrations";
 
 export const publicHandlers = [
   /** GET /api/editions/active — returns the active edition. */
@@ -69,7 +66,7 @@ export const publicHandlers = [
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    registrations.push(newReg);
+    sharedStore.registrations.push(newReg);
     return HttpResponse.json(newReg, { status: 201 });
   }),
 
@@ -99,7 +96,7 @@ export const publicHandlers = [
       return HttpResponse.json(null, { status: 401 });
     }
 
-    const myRegs = registrations.map((r) => ({
+    const myRegs = sharedStore.registrations.map((r) => ({
       id: r.id,
       event_title: (r.event as Record<string, unknown> | null | undefined)?.title ?? "",
       guest_count: r.guest_count,
@@ -121,7 +118,7 @@ export const publicHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const token = String(body.token ?? "");
 
-    const reg = registrations.find((r) => r.id === id);
+    const reg = sharedStore.registrations.find((r) => r.id === id);
     if (!reg) {
       return HttpResponse.json(null, { status: 404 });
     }
@@ -154,10 +151,11 @@ export const publicHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const token = String(body.token ?? "");
 
-    const reg = registrations.find((r) => r.id === id);
-    if (!reg) {
+    const idx = sharedStore.registrations.findIndex((r) => r.id === id);
+    if (idx === -1) {
       return HttpResponse.json(null, { status: 404 });
     }
+    const reg = sharedStore.registrations[idx]!;
 
     if (token !== String(reg.check_in_token ?? "")) {
       return HttpResponse.json(null, { status: 401 });
@@ -165,29 +163,33 @@ export const publicHandlers = [
 
     const alreadyCheckedIn = Boolean(reg.checked_in);
     if (!alreadyCheckedIn) {
-      reg.checked_in = true;
-      reg.checked_in_at = new Date().toISOString();
-      reg.strap_issued = body.issue_strap === true;
-      reg.updated_at = new Date().toISOString();
+      sharedStore.registrations[idx] = {
+        ...reg,
+        checked_in: true,
+        checked_in_at: new Date().toISOString(),
+        strap_issued: body.issue_strap === true,
+        updated_at: new Date().toISOString(),
+      };
     }
 
-    const regPerson2 = reg.person as Record<string, unknown>;
-    const regEvent2 = reg.event as Record<string, unknown> | null | undefined;
+    const updatedReg = sharedStore.registrations[idx]!;
+    const regPerson2 = updatedReg.person as Record<string, unknown>;
+    const regEvent2 = updatedReg.event as Record<string, unknown> | null | undefined;
     return HttpResponse.json({
       already_checked_in: alreadyCheckedIn,
       registration: {
-        id: reg.id,
+        id: updatedReg.id,
         name: regPerson2?.name ?? "",
-        event_id: reg.event_id,
+        event_id: updatedReg.event_id,
         event_title: regEvent2?.title ?? "",
-        guest_count: reg.guest_count,
-        pre_orders: reg.pre_orders,
-        notes: reg.notes,
-        accessibility_note: reg.accessibility_note,
-        status: reg.status,
-        checked_in: reg.checked_in,
-        checked_in_at: reg.checked_in_at,
-        strap_issued: reg.strap_issued,
+        guest_count: updatedReg.guest_count,
+        pre_orders: updatedReg.pre_orders,
+        notes: updatedReg.notes,
+        accessibility_note: updatedReg.accessibility_note,
+        status: updatedReg.status,
+        checked_in: updatedReg.checked_in,
+        checked_in_at: updatedReg.checked_in_at,
+        strap_issued: updatedReg.strap_issued,
       },
     });
   }),
@@ -195,5 +197,5 @@ export const publicHandlers = [
 
 /** Reset public mutable state (useful for tests). */
 export function resetPublicStore(): void {
-  registrations = structuredClone(seedRegistrations);
+  resetSharedStore();
 }

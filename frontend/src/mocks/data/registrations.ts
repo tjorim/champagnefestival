@@ -140,3 +140,12 @@ export const seedRegistrations = [
     updated_at: "2026-02-01T16:00:00Z",
   },
 ];
+
+/** Shared mutable store — used by both public and admin handlers. */
+export const sharedStore = {
+  registrations: structuredClone(seedRegistrations) as Record<string, unknown>[],
+};
+
+export function resetSharedStore(): void {
+  sharedStore.registrations = structuredClone(seedRegistrations);
+}

@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw";
 import { seedEditions, seedEvents } from "../data/editions";
 import { seedExhibitors } from "../data/exhibitors";
-import { seedPeople, seedMembers, seedVolunteers } from "../data/people";
-import { seedRegistrations } from "../data/registrations";
+import { seedPeople } from "../data/people";
+import { sharedStore, resetSharedStore } from "../data/registrations";
 import {
   seedAreas,
   seedLayouts,
@@ -16,10 +16,7 @@ import {
 const DEV_TOKEN = "dev-token";
 
 /** Mutable in-memory stores — reset on page reload. */
-let registrations: Record<string, unknown>[] = structuredClone(seedRegistrations);
 let people: Record<string, unknown>[] = structuredClone(seedPeople);
-let members: Record<string, unknown>[] = structuredClone(seedMembers);
-let volunteers: Record<string, unknown>[] = structuredClone(seedVolunteers);
 let exhibitors: Record<string, unknown>[] = structuredClone(seedExhibitors);
 let editions: Record<string, unknown>[] = structuredClone(seedEditions);
 let events: Record<string, unknown>[] = structuredClone(seedEvents);
@@ -59,7 +56,7 @@ export const adminHandlers = [
   http.get("/api/registrations", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(registrations);
+    return HttpResponse.json(sharedStore.registrations);
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -68,7 +65,7 @@ export const adminHandlers = [
   http.get("/api/registrations/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const reg = registrations.find((r) => r.id === params.id);
+    const reg = sharedStore.registrations.find((r) => r.id === params.id);
     if (!reg) return HttpResponse.json(null, { status: 404 });
     return HttpResponse.json(reg);
   }),
@@ -76,20 +73,20 @@ export const adminHandlers = [
   http.put("/api/registrations/:id", async ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const idx = registrations.findIndex((r) => r.id === params.id);
+    const idx = sharedStore.registrations.findIndex((r) => r.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
-    registrations[idx] = { ...registrations[idx]!, ...body, updated_at: now() };
-    return HttpResponse.json(registrations[idx]);
+    sharedStore.registrations[idx] = { ...sharedStore.registrations[idx]!, ...body, updated_at: now() };
+    return HttpResponse.json(sharedStore.registrations[idx]);
   }),
 
   http.delete("/api/registrations/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const idx = registrations.findIndex((r) => r.id === params.id);
+    const idx = sharedStore.registrations.findIndex((r) => r.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    registrations.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    sharedStore.registrations.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -123,7 +120,7 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    registrations.push(newReg);
+    sharedStore.registrations.push(newReg);
     return HttpResponse.json(newReg, { status: 201 });
   }),
 
@@ -191,7 +188,7 @@ export const adminHandlers = [
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     people.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   http.post("/api/people/:id/merge/:duplicateId", ({ request, params }) => {
@@ -206,7 +203,7 @@ export const adminHandlers = [
   http.get("/api/people/:id/registrations", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const personRegs = registrations
+    const personRegs = sharedStore.registrations
       .filter((r) => r.person_id === params.id)
       .map((r) => ({
         id: r.id,
@@ -221,12 +218,12 @@ export const adminHandlers = [
   }),
 
   // ──────────────────────────────────────────────────────────────
-  // Members
+  // Members — derived from the people store (role: "member")
   // ──────────────────────────────────────────────────────────────
   http.get("/api/members", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(members);
+    return HttpResponse.json(people.filter((p) => (p.roles as string[]).includes("member")));
   }),
 
   http.post("/api/members", async ({ request }) => {
@@ -249,36 +246,36 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    members.push(newMember);
+    people.push(newMember);
     return HttpResponse.json(newMember, { status: 201 });
   }),
 
   http.put("/api/members/:id", async ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const idx = members.findIndex((m) => m.id === params.id);
+    const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
-    members[idx] = { ...members[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(members[idx]);
+    people[idx] = { ...people[idx]!, ...body, id: String(params.id), updated_at: now() };
+    return HttpResponse.json(people[idx]);
   }),
 
   http.delete("/api/members/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const idx = members.findIndex((m) => m.id === params.id);
+    const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    members.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    people.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
-  // Volunteers
+  // Volunteers — derived from the people store (role: "volunteer")
   // ──────────────────────────────────────────────────────────────
   http.get("/api/volunteers", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(volunteers);
+    return HttpResponse.json(people.filter((p) => (p.roles as string[]).includes("volunteer")));
   }),
 
   http.post("/api/volunteers", async ({ request }) => {
@@ -301,27 +298,27 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    volunteers.push(newVol);
+    people.push(newVol);
     return HttpResponse.json(newVol, { status: 201 });
   }),
 
   http.put("/api/volunteers/:id", async ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const idx = volunteers.findIndex((v) => v.id === params.id);
+    const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
-    volunteers[idx] = { ...volunteers[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(volunteers[idx]);
+    people[idx] = { ...people[idx]!, ...body, id: String(params.id), updated_at: now() };
+    return HttpResponse.json(people[idx]);
   }),
 
   http.delete("/api/volunteers/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const idx = volunteers.findIndex((v) => v.id === params.id);
+    const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    volunteers.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    people.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -331,6 +328,15 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     return HttpResponse.json(exhibitors);
+  }),
+
+  http.get("/api/exhibitors/:id", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const id = Number(params.id);
+    const exhibitor = exhibitors.find((e) => e.id === id);
+    if (!exhibitor) return HttpResponse.json(null, { status: 404 });
+    return HttpResponse.json(exhibitor);
   }),
 
   http.post("/api/exhibitors", async ({ request }) => {
@@ -372,12 +378,20 @@ export const adminHandlers = [
     const idx = exhibitors.findIndex((e) => e.id === id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     exhibitors.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
   // Editions (admin)
   // ──────────────────────────────────────────────────────────────
+  http.get("/api/editions/:id", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const edition = editions.find((e) => e.id === params.id);
+    if (!edition) return HttpResponse.json(null, { status: 404 });
+    return HttpResponse.json(edition);
+  }),
+
   http.post("/api/editions", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
@@ -419,12 +433,20 @@ export const adminHandlers = [
     const idx = editions.findIndex((e) => e.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     editions.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
   // Events (admin)
   // ──────────────────────────────────────────────────────────────
+  http.get("/api/events/:id", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const event = events.find((e) => e.id === params.id);
+    if (!event) return HttpResponse.json(null, { status: 404 });
+    return HttpResponse.json(event);
+  }),
+
   http.post("/api/events", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
@@ -477,7 +499,7 @@ export const adminHandlers = [
     const idx = events.findIndex((e) => e.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     events.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -526,7 +548,7 @@ export const adminHandlers = [
     const idx = venues.findIndex((v) => v.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     venues.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -567,6 +589,15 @@ export const adminHandlers = [
     return HttpResponse.json(rooms[idx]);
   }),
 
+  http.delete("/api/rooms/:id", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const idx = rooms.findIndex((r) => r.id === params.id);
+    if (idx === -1) return HttpResponse.json(null, { status: 404 });
+    rooms.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // ──────────────────────────────────────────────────────────────
   // Table Types
   // ──────────────────────────────────────────────────────────────
@@ -604,6 +635,15 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     tableTypes[idx] = { ...tableTypes[idx]!, ...body, id: String(params.id), updated_at: now() };
     return HttpResponse.json(tableTypes[idx]);
+  }),
+
+  http.delete("/api/table-types/:id", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const idx = tableTypes.findIndex((t) => t.id === params.id);
+    if (idx === -1) return HttpResponse.json(null, { status: 404 });
+    tableTypes.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -662,7 +702,7 @@ export const adminHandlers = [
     const idx = tables.findIndex((t) => t.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     tables.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -692,13 +732,23 @@ export const adminHandlers = [
     return HttpResponse.json(newLayout, { status: 201 });
   }),
 
+  http.put("/api/layouts/:id", async ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const idx = layouts.findIndex((l) => l.id === params.id);
+    if (idx === -1) return HttpResponse.json(null, { status: 404 });
+    const body = (await request.json()) as Record<string, unknown>;
+    layouts[idx] = { ...layouts[idx]!, ...body, id: String(params.id), updated_at: now() };
+    return HttpResponse.json(layouts[idx]);
+  }),
+
   http.delete("/api/layouts/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = layouts.findIndex((l) => l.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     layouts.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -758,16 +808,14 @@ export const adminHandlers = [
     const idx = areas.findIndex((a) => a.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     areas.splice(idx, 1);
-    return HttpResponse.json(null, { status: 204 });
+    return new HttpResponse(null, { status: 204 });
   }),
 ];
 
 /** Reset all admin mutable state (useful for tests). */
 export function resetAdminStore(): void {
-  registrations = structuredClone(seedRegistrations);
+  resetSharedStore();
   people = structuredClone(seedPeople);
-  members = structuredClone(seedMembers);
-  volunteers = structuredClone(seedVolunteers);
   exhibitors = structuredClone(seedExhibitors);
   editions = structuredClone(seedEditions);
   events = structuredClone(seedEvents);

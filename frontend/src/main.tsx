@@ -492,7 +492,7 @@ async function enableMocking(): Promise<void> {
   }
 }
 
-enableMocking().then(() => {
+function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -500,4 +500,11 @@ enableMocking().then(() => {
       </QueryClientProvider>
     </React.StrictMode>,
   );
-});
+}
+
+enableMocking()
+  .then(renderApp)
+  .catch((err: unknown) => {
+    console.error("[MSW] Service Worker failed to start, rendering without mocks:", err);
+    renderApp();
+  });
