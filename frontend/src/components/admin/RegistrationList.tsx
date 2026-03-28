@@ -14,7 +14,7 @@ import {
   useAppTable,
   createAppColumnHelper,
   type AdminTableFeatures,
-} from "@/types/tanstack-table";
+} from "@/hooks/useAdminTable";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 
 interface AllocationRef {
