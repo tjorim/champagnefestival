@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -11,7 +13,12 @@ from app.database import Base, get_db
 from app.main import app
 from tests.helpers import ADMIN_TOKEN
 
-TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+TEST_DATABASE_URL = os.environ.get(
+    "TEST_DATABASE_URL",
+    # Default matches the local docker-compose.yml postgres service.
+    # Override via TEST_DATABASE_URL env var in CI or custom environments.
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +34,7 @@ def reset_rate_limiter(monkeypatch):
 
 @pytest.fixture()
 async def db_session():
-    engine = create_async_engine(TEST_DB_URL)
+    engine = create_async_engine(TEST_DATABASE_URL)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, expire_on_commit=False)
