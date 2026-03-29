@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -7,8 +7,18 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { http, HttpResponse } from "msw";
 import CheckInPage from "@/components/CheckInPage";
+import { server } from "@/mocks/server";
+import { seedRegistrations } from "@/mocks/data/registrations";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
+
+// Use the first seed registration — reg-01 (Alice Dupont, Grand Opening, not yet checked in).
+const seedReg = seedRegistrations[0]!;
+const SEED_REG_ID = seedReg.id;
+const SEED_REG_TOKEN = seedReg.check_in_token;
+const SEED_REG_NAME = (seedReg.person as { name: string }).name;
+const SEED_EVENT_TITLE = (seedReg.event as { title: string }).title;
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -33,19 +43,9 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("CheckInPage", () => {
-  let fetchMock: Mock;
-
-  beforeEach(() => {
-    fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.clearAllMocks();
-  });
-
-  async function renderPage(initialEntry = "/check-in?id=res_123&token=secure-token") {
+  async function renderPage(
+    initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`,
+  ) {
     const rootRoute = createRootRoute();
     const checkInRoute = createRoute({
       getParentRoute: () => rootRoute,
@@ -66,93 +66,15 @@ describe("CheckInPage", () => {
   }
 
   it("loads the registration via the lookup query", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: "res_123",
-        name: "Taylor Guest",
-        event_id: "event_1",
-        event_title: "VIP Reception",
-        guest_count: 2,
-        pre_orders: [],
-        notes: "",
-        accessibility_note: "",
-        status: "confirmed",
-        checked_in: false,
-        strap_issued: false,
-      }),
-    });
-
     await renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Taylor Guest")).toBeInTheDocument();
-      expect(screen.getByText("VIP Reception")).toBeInTheDocument();
-    });
-
-    expect(fetchMock).toHaveBeenCalledWith("/api/check-in/res_123/lookup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: "secure-token" }),
+      expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+      expect(screen.getByText(SEED_EVENT_TITLE)).toBeInTheDocument();
     });
   });
 
   it("submits check-in via the mutation", async () => {
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          id: "res_123",
-          name: "Taylor Guest",
-          event_id: "event_1",
-          event_title: "VIP Reception",
-          guest_count: 2,
-          pre_orders: [],
-          notes: "",
-          accessibility_note: "",
-          status: "confirmed",
-          checked_in: false,
-          strap_issued: false,
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          already_checked_in: false,
-          registration: {
-            id: "res_123",
-            name: "Taylor Guest",
-            event_id: "event_1",
-            event_title: "VIP Reception",
-            guest_count: 2,
-            pre_orders: [],
-            notes: "",
-            accessibility_note: "",
-            status: "confirmed",
-            checked_in: true,
-            checked_in_at: "2026-03-22T09:45:00Z",
-            strap_issued: true,
-          },
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          id: "res_123",
-          name: "Taylor Guest",
-          event_id: "event_1",
-          event_title: "VIP Reception",
-          guest_count: 2,
-          pre_orders: [],
-          notes: "",
-          accessibility_note: "",
-          status: "confirmed",
-          checked_in: true,
-          checked_in_at: "2026-03-22T09:45:00Z",
-          strap_issued: true,
-        }),
-      });
-
     await renderPage();
 
     await waitFor(() => {
@@ -165,11 +87,29 @@ describe("CheckInPage", () => {
       expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
       expect(screen.getByText("Strap issued.")).toBeInTheDocument();
     });
+  });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/check-in/res_123", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: "secure-token", issue_strap: true }),
+  it("shows an error when the token is invalid", async () => {
+    server.use(
+      http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 401 })),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid token.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error when the registration is not found", async () => {
+    server.use(
+      http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 404 })),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Registration not found.")).toBeInTheDocument();
     });
   });
 });

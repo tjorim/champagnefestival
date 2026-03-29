@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { describe, it, expect } from "vitest";
+import { http, HttpResponse } from "msw";
 import RegistrationModal from "@/components/RegistrationModal";
+import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -55,18 +57,6 @@ const vipEvent = {
 };
 
 describe("RegistrationModal component", () => {
-  let fetchMock: Mock;
-
-  beforeEach(() => {
-    fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.clearAllMocks();
-  });
-
   function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
     const wrapper = createTestQueryClientWrapper();
 
@@ -102,11 +92,9 @@ describe("RegistrationModal component", () => {
   });
 
   it("submits form successfully and shows success message", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, id: "res_123" }),
-    });
-
+    // The default MSW POST /api/registrations handler accepts the submission,
+    // stores the new registration, and returns 201 with the created object.
+    // The component only checks response.ok, so no handler override is needed.
     renderModal();
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
@@ -133,11 +121,11 @@ describe("RegistrationModal component", () => {
   });
 
   it("shows error message on submission failure (server error)", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => ({ error: "Internal server error" }),
-    });
+    server.use(
+      http.post("/api/registrations", () =>
+        HttpResponse.json({ error: "Internal server error" }, { status: 500 }),
+      ),
+    );
 
     renderModal();
 
@@ -155,7 +143,7 @@ describe("RegistrationModal component", () => {
   });
 
   it("shows network error message on network error", async () => {
-    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    server.use(http.post("/api/registrations", () => HttpResponse.error()));
 
     renderModal();
 

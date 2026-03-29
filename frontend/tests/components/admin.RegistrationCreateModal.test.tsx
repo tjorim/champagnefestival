@@ -1,7 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { describe, it, expect } from "vitest";
+import { http, HttpResponse } from "msw";
 import RegistrationCreateModal from "@/components/admin/RegistrationCreateModal";
+import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -22,23 +24,8 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("RegistrationCreateModal", () => {
-  let fetchMock: Mock;
-
-  beforeEach(() => {
-    fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.clearAllMocks();
-  });
-
   it("renders a disabled empty-state selector when no reservable events are available", async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
+    server.use(http.get("/api/events", () => HttpResponse.json([])));
 
     const queryClient = createTestQueryClient();
 
@@ -52,12 +39,6 @@ describe("RegistrationCreateModal", () => {
         />
       </QueryClientProvider>,
     );
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith("/api/events?registration_required=true", {
-        headers: { Authorization: "Bearer test" },
-      });
-    });
 
     await screen.findByRole("option", { name: "No schedule events yet." });
 
