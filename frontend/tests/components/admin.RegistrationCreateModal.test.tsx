@@ -25,7 +25,13 @@ vi.mock("@/paraglide/messages", () => ({
 
 describe("RegistrationCreateModal", () => {
   it("renders a disabled empty-state selector when no reservable events are available", async () => {
-    server.use(http.get("/api/events", () => HttpResponse.json([])));
+    server.use(
+      http.get("/api/events", ({ request }) => {
+        expect(new URL(request.url).searchParams.get("registration_required")).toBe("true");
+        expect(request.headers.get("Authorization")).toBe("Bearer test");
+        return HttpResponse.json([]);
+      }),
+    );
 
     const queryClient = createTestQueryClient();
 

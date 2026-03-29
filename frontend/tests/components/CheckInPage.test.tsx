@@ -17,8 +17,8 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 const seedReg = seedRegistrations[0]!;
 const SEED_REG_ID = seedReg.id;
 const SEED_REG_TOKEN = seedReg.check_in_token;
-const SEED_REG_NAME = (seedReg.person as { name: string }).name;
-const SEED_EVENT_TITLE = (seedReg.event as { title: string }).title;
+const SEED_REG_NAME = seedReg.person.name;
+const SEED_EVENT_TITLE = seedReg.event.title;
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
