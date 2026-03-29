@@ -26,4 +26,3 @@ def test_settings_reject_excessive_guest_access_token_ttl():
         match=(f"GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to {GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}\\."),
     ):
         Settings(guest_access_token_ttl_minutes=GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES + 1)
-

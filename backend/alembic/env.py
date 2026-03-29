@@ -21,13 +21,6 @@ target_metadata = Base.metadata
 # Allow DATABASE_URL env var to override alembic.ini
 database_url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
 
-# Alembic uses sync by default; we adapt to async here.
-# The URL stored in alembic.ini is the *sync* SQLite URL; swap to async driver.
-if database_url and database_url.startswith("sqlite:///") and "aiosqlite" not in database_url:
-    async_url = database_url.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
-else:
-    async_url = database_url
-
 
 def run_migrations_offline() -> None:
     context.configure(
@@ -35,7 +28,6 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -45,16 +37,15 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_migrations_online() -> None:
-    if not async_url:
+    if not database_url:
         raise RuntimeError("No DATABASE_URL configured for async migrations.")
-    connectable = create_async_engine(async_url)
+    connectable = create_async_engine(database_url)
     async with connectable.connect() as conn:
         await conn.run_sync(do_run_migrations)
     await connectable.dispose()
