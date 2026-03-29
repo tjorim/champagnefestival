@@ -17,7 +17,6 @@ TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 @pytest.fixture(autouse=True)
 def set_admin_token(monkeypatch):
     monkeypatch.setattr("app.config.settings.admin_token", ADMIN_TOKEN)
-    monkeypatch.setattr("app.auth.settings.admin_token", ADMIN_TOKEN)
 
 
 @pytest.fixture(autouse=True)

@@ -24,7 +24,8 @@ async def test_list_requires_auth(client):
 
 @pytest.mark.anyio
 async def test_list_and_detail(client):
-    await _post_registration(client, path="/api/registrations")
+    r = await _post_registration(client, path="/api/registrations")
+    assert r.status_code == 201
 
     r = await client.get("/api/registrations", headers=ADMIN_HEADERS)
     assert r.status_code == 200

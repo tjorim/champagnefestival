@@ -133,6 +133,7 @@ async def test_honeypot_rejected(client):
     body = _registration_body(event, honeypot="bot-value")
     r = await client.post("/api/registrations", json=body)
     assert r.status_code == 400
+    assert r.json()["detail"] == "Submission rejected."
 
 
 @pytest.mark.anyio
@@ -144,3 +145,4 @@ async def test_spam_invalid_timestamp(client):
         json=_registration_body(event, form_start_time="1234567890"),
     )
     assert r.status_code == 400
+    assert r.json()["detail"] == "Submission rejected."

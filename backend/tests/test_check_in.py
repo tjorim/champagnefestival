@@ -10,10 +10,12 @@ from tests.helpers import ADMIN_HEADERS, _post_registration
 @pytest.mark.anyio
 async def test_check_in_flow(client):
     r = await _post_registration(client)
+    assert r.status_code == 201
     res_id = r.json()["id"]
 
     # Get the token from admin detail
     r = await client.get(f"/api/registrations/{res_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
     token = r.json()["check_in_token"]
 
     # Verify token via POST lookup (token in body, not query string)

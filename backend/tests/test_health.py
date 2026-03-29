@@ -16,7 +16,7 @@ async def test_health(client):
 
 
 def test_settings_reject_nonpositive_guest_access_token_ttl():
-    with pytest.raises(ValidationError, match="GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0."):
+    with pytest.raises(ValidationError, match=r"GUEST_ACCESS_TOKEN_TTL_MINUTES must be greater than 0\."):
         Settings(guest_access_token_ttl_minutes=0)
 
 

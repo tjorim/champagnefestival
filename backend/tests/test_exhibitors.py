@@ -49,6 +49,7 @@ async def test_exhibitor_crud(client):
 
     # Filter by type
     r = await client.get("/api/exhibitors", params={"type": "producer"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
     assert len(r.json()) == 1
     assert r.json()[0]["name"] == "Maison Bollinger"
 
@@ -66,6 +67,7 @@ async def test_exhibitor_crud(client):
     assert r.status_code == 204
 
     r = await client.get("/api/exhibitors", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
     assert len(r.json()) == 1
 
 
@@ -77,6 +79,7 @@ async def test_exhibitor_with_contact_person(client):
         json={"name": "Alice Contact", "email": "alice@example.com"},
         headers=ADMIN_HEADERS,
     )
+    assert r.status_code == 201
     person_id = r.json()["id"]
 
     r = await client.post(

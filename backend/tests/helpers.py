@@ -117,8 +117,11 @@ async def _post_registration(
 async def _create_layout_prerequisites(client):
     """Helper: create venue → room → layout; return layout_id."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, f"venue creation failed: {r.text}"
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, f"room creation failed: {r.text}"
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, f"layout creation failed: {r.text}"
     return r.json()["id"]
