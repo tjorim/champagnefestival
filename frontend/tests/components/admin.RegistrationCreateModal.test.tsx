@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import RegistrationCreateModal from "@/components/admin/RegistrationCreateModal";
 import { server } from "@/mocks/server";
