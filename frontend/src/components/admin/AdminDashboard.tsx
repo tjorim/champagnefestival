@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import clsx from "clsx";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Container from "react-bootstrap/Container";
-import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
@@ -19,6 +15,8 @@ import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";
+import AdminSidebar from "./AdminSidebar";
+import AdminLoginForm from "./AdminLoginForm";
 import type { MemberFormData } from "./MemberFormModal";
 import type { PersonFormData } from "./PersonFormModal";
 import type { VolunteerFormData } from "./VolunteerFormModal";
@@ -32,284 +30,42 @@ import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
+import { useAdminQueries } from "@/hooks/useAdminQueries";
 import {
-  fetchArrayOrThrow,
   fetchJsonOrThrowWithUnauthorized,
   fetchStatus,
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
+import { devError } from "@/utils/devLog";
+import {
+  apiVenueToVenue,
+  apiLayoutToLayout,
+  apiTableTypeToTableType,
+  apiRoomToRoom,
+  apiTableToTable,
+  apiAreaToArea,
+  mergeVolunteerPerson,
+  replacePersonById,
+  replaceVolunteerById,
+  syncMembersWithPerson,
+} from "@/utils/adminApiMappers";
+import {
+  fetchRegistrations,
+  fetchTables,
+  fetchVenues,
+  fetchRooms,
+  fetchTableTypes,
+  fetchLayouts,
+  fetchExhibitors,
+  fetchAreas,
+  fetchPeople,
+  fetchMembers,
+} from "@/utils/adminFetch";
 
 interface AdminDashboardProps {
   visible: boolean;
-}
-
-/** Map FastAPI snake_case venue response to frontend camelCase Venue type */
-function apiVenueToVenue(d: Record<string, unknown>): Venue {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    address: (d.address ?? "") as string,
-    city: (d.city ?? "") as string,
-    postalCode: (d.postal_code ?? "") as string,
-    country: (d.country ?? "") as string,
-    lat: (d.lat ?? 0) as number,
-    lng: (d.lng ?? 0) as number,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-/** Map FastAPI snake_case layout response to frontend camelCase Layout type */
-function apiLayoutToLayout(d: Record<string, unknown>): Layout {
-  return {
-    id: d.id as string,
-    editionId: (d.edition_id as string | null) ?? null,
-    roomId: d.room_id as string,
-    date: (d.date as string | null) ?? null,
-    label: (d.label ?? "") as string,
-    createdAt: d.created_at as string,
-  };
-}
-
-/** Map FastAPI snake_case table type response to frontend camelCase TableType type */
-function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    shape: (d.shape ?? "rectangle") as "rectangle" | "round",
-    widthM: (d.width_m ?? 1.8) as number,
-    lengthM: (d.length_m ?? 0.7) as number,
-    heightType: (d.height_type ?? "low") as "low" | "high",
-    maxCapacity: (d.max_capacity ?? 4) as number,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-/** Map FastAPI snake_case room response to frontend camelCase Room type */
-function apiRoomToRoom(d: Record<string, unknown>): Room {
-  return {
-    id: d.id as string,
-    venueId: d.venue_id as string,
-    name: d.name as string,
-    widthM: d.width_m as number,
-    lengthM: d.length_m as number,
-    color: d.color as string,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-/** Map FastAPI snake_case table response to frontend camelCase Table type */
-function apiTableToTable(d: Record<string, unknown>): FloorTable {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    capacity: d.capacity as number,
-    x: d.x as number,
-    y: d.y as number,
-    tableTypeId: d.table_type_id as string,
-    rotation: (d.rotation ?? 0) as number,
-    layoutId: d.layout_id as string,
-    registrationIds: (d.registration_ids as string[]) ?? [],
-  };
-}
-
-/** Map FastAPI snake_case area response to frontend camelCase FloorArea type */
-function apiAreaToArea(d: Record<string, unknown>): FloorArea {
-  return {
-    id: d.id as string,
-    layoutId: d.layout_id as string,
-    icon: (d.icon ?? "bi-shop") as string,
-    exhibitorId: (d.exhibitor_id as number | null) ?? null,
-    label: (d.label ?? "") as string,
-    x: (d.x ?? 50) as number,
-    y: (d.y ?? 50) as number,
-    rotation: (d.rotation ?? 0) as number,
-    widthM: (d.width_m ?? 1.5) as number,
-    lengthM: (d.length_m ?? 1.0) as number,
-  };
-}
-
-function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): Person {
-  const roles = new Set(existing?.roles ?? volunteer.roles);
-  roles.add("volunteer");
-  return {
-    ...(existing ?? volunteer),
-    ...volunteer,
-    email: existing?.email ?? volunteer.email,
-    phone: existing?.phone ?? volunteer.phone,
-    visitsPerMonth: existing?.visitsPerMonth ?? volunteer.visitsPerMonth,
-    clubName: existing?.clubName ?? volunteer.clubName,
-    notes: existing?.notes ?? volunteer.notes,
-    roles: [...roles],
-    helpPeriods: volunteer.helpPeriods,
-  };
-}
-
-function mergePeopleWithVolunteers(people: Person[], volunteers: Person[]): Person[] {
-  const volunteerById = new Map(volunteers.map((volunteer) => [volunteer.id, volunteer]));
-  const mergedPeople = people.map((person) => {
-    const volunteer = volunteerById.get(person.id);
-    return volunteer ? mergeVolunteerPerson(person, volunteer) : person;
-  });
-
-  const knownIds = new Set(mergedPeople.map((person) => person.id));
-  const volunteerOnly = volunteers
-    .filter((volunteer) => !knownIds.has(volunteer.id))
-    .map((volunteer) => mergeVolunteerPerson(undefined, volunteer));
-
-  return [...mergedPeople, ...volunteerOnly];
-}
-
-function mergePersonUpdate(existing: Person | undefined, updated: Person): Person {
-  if (!existing) {
-    return updated;
-  }
-
-  if (!updated.roles.includes("volunteer")) {
-    return updated;
-  }
-
-  return {
-    ...updated,
-    helpPeriods: existing.helpPeriods,
-  };
-}
-
-function replacePersonById(people: Person[], updated: Person): Person[] {
-  return people.map((person) =>
-    person.id === updated.id ? mergePersonUpdate(person, updated) : person,
-  );
-}
-
-function replaceVolunteerById(people: Person[], updatedVolunteer: Person): Person[] {
-  return people.map((person) =>
-    person.id === updatedVolunteer.id ? mergeVolunteerPerson(person, updatedVolunteer) : person,
-  );
-}
-
-function syncMembersWithPerson(members: Person[], person: Person): Person[] {
-  if (!person.roles.includes("member")) {
-    return members.filter((member) => member.id !== person.id);
-  }
-
-  const hasMember = members.some((member) => member.id === person.id);
-  if (!hasMember) {
-    return [person, ...members];
-  }
-
-  return members.map((member) => (member.id === person.id ? person : member));
-}
-
-async function fetchRegistrations(
-  authHeaders: () => Record<string, string>,
-): Promise<Registration[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/registrations",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiToRegistration) : [];
-}
-
-async function fetchTables(authHeaders: () => Record<string, string>): Promise<FloorTable[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/tables",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiTableToTable) : [];
-}
-
-async function fetchVenues(authHeaders: () => Record<string, string>): Promise<Venue[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/venues",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiVenueToVenue) : [];
-}
-
-async function fetchRooms(authHeaders: () => Record<string, string>): Promise<Room[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/rooms",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiRoomToRoom) : [];
-}
-
-async function fetchTableTypes(authHeaders: () => Record<string, string>): Promise<TableType[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/table-types",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiTableTypeToTableType) : [];
-}
-
-async function fetchLayouts(authHeaders: () => Record<string, string>): Promise<Layout[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/layouts",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiLayoutToLayout) : [];
-}
-
-async function fetchExhibitors(
-  authHeaders: () => Record<string, string>,
-): Promise<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/exhibitors",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload)
-    ? payload.map((exhibitor: Record<string, unknown>) => ({
-        id: Number(exhibitor.id),
-        name: String(exhibitor.name ?? ""),
-        active: exhibitor.active !== false,
-        contactPersonId:
-          typeof exhibitor.contact_person_id === "string" ? exhibitor.contact_person_id : null,
-      }))
-    : [];
-}
-
-async function fetchAreas(authHeaders: () => Record<string, string>): Promise<FloorArea[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/areas",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiAreaToArea) : [];
-}
-
-async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const [peoplePayload, volunteers] = await Promise.all([
-    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-      "/api/people",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-    ),
-    fetchArrayOrThrow(
-      "/api/volunteers",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-      apiToPerson,
-    ),
-  ]);
-  const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
-  return mergePeopleWithVolunteers(nextPeople, volunteers);
-}
-
-async function fetchMembers(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  return fetchArrayOrThrow(
-    "/api/members",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-    apiToPerson,
-  );
 }
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
@@ -353,88 +109,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [],
   );
 
-  // Per-resource query keys (recomputed on each render; storedTokenRef.current is stable
-  // between renders but updated before the state change that triggers re-render on login/logout)
-  const registrationsQueryKey = queryKeys.admin.registrations(storedTokenRef.current);
-  const tablesQueryKey = queryKeys.admin.tables(storedTokenRef.current);
-  const venuesQueryKey = queryKeys.admin.venues(storedTokenRef.current);
-  const roomsQueryKey = queryKeys.admin.rooms(storedTokenRef.current);
-  const tableTypesQueryKey = queryKeys.admin.tableTypes(storedTokenRef.current);
-  const layoutsQueryKey = queryKeys.admin.layouts(storedTokenRef.current);
-  const exhibitorsQueryKey = queryKeys.admin.exhibitors(storedTokenRef.current);
-  const areasQueryKey = queryKeys.admin.areas(storedTokenRef.current);
-  const peopleQueryKey = queryKeys.admin.people(storedTokenRef.current);
-  const membersQueryKey = queryKeys.admin.members(storedTokenRef.current);
-
-  const adminQueryOptions = {
-    enabled: visible && isAuthenticated,
-    staleTime: 60 * 1000,
-    retry: false as const,
-  };
-
-  const registrationsQuery = useQuery({
-    queryKey: registrationsQueryKey,
-    queryFn: () => fetchRegistrations(authHeaders),
-    ...adminQueryOptions,
-  });
-  const tablesQuery = useQuery({
-    queryKey: tablesQueryKey,
-    queryFn: () => fetchTables(authHeaders),
-    ...adminQueryOptions,
-  });
-  const venuesQuery = useQuery({
-    queryKey: venuesQueryKey,
-    queryFn: () => fetchVenues(authHeaders),
-    ...adminQueryOptions,
-  });
-  const roomsQuery = useQuery({
-    queryKey: roomsQueryKey,
-    queryFn: () => fetchRooms(authHeaders),
-    ...adminQueryOptions,
-  });
-  const tableTypesQuery = useQuery({
-    queryKey: tableTypesQueryKey,
-    queryFn: () => fetchTableTypes(authHeaders),
-    ...adminQueryOptions,
-  });
-  const layoutsQuery = useQuery({
-    queryKey: layoutsQueryKey,
-    queryFn: () => fetchLayouts(authHeaders),
-    ...adminQueryOptions,
-  });
-  const exhibitorsQuery = useQuery({
-    queryKey: exhibitorsQueryKey,
-    queryFn: () => fetchExhibitors(authHeaders),
-    ...adminQueryOptions,
-  });
-  const areasQuery = useQuery({
-    queryKey: areasQueryKey,
-    queryFn: () => fetchAreas(authHeaders),
-    ...adminQueryOptions,
-  });
-  const peopleQuery = useQuery({
-    queryKey: peopleQueryKey,
-    queryFn: () => fetchPeople(authHeaders),
-    ...adminQueryOptions,
-  });
-  const membersQuery = useQuery({
-    queryKey: membersQueryKey,
-    queryFn: () => fetchMembers(authHeaders),
-    ...adminQueryOptions,
-  });
-
-  const registrations = registrationsQuery.data ?? [];
-  const tables = tablesQuery.data ?? [];
-  const venues = venuesQuery.data ?? [];
-  const rooms = roomsQuery.data ?? [];
-  const tableTypes = tableTypesQuery.data ?? [];
-  const layouts = layoutsQuery.data ?? [];
-  const exhibitors = exhibitorsQuery.data ?? [];
-  const areas = areasQuery.data ?? [];
-  const people = peopleQuery.data ?? [];
-  const members = membersQuery.data ?? [];
-
-  const allQueries = [
+  const {
     registrationsQuery,
     tablesQuery,
     venuesQuery,
@@ -445,50 +120,32 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     areasQuery,
     peopleQuery,
     membersQuery,
-  ];
-  const isAnyPending = allQueries.some((q) => q.isPending);
-  const isAnyFetching = allQueries.some((q) => q.isFetching);
-
-  const layoutDayOptions = useMemo(() => {
-    const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-
-    return uniqueDates.map((date) => ({
-      date,
-      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      }),
-    }));
-  }, [activeEdition.events]);
+    isAnyPending,
+    isAnyFetching,
+    registrationsQueryKey,
+    tablesQueryKey,
+    venuesQueryKey,
+    roomsQueryKey,
+    tableTypesQueryKey,
+    layoutsQueryKey,
+    exhibitorsQueryKey,
+    areasQueryKey,
+    peopleQueryKey,
+    membersQueryKey,
+    layoutDayOptions,
+    loadData: loadDataBase,
+  } = useAdminQueries({
+    visible,
+    isAuthenticated,
+    authHeaders,
+    storedToken: storedTokenRef.current,
+    activeEdition,
+  });
 
   const loadData = useCallback(async () => {
     setError("");
-    const adminResourcesToRefetch = new Set([
-      "registrations",
-      "tables",
-      "venues",
-      "rooms",
-      "table-types",
-      "layouts",
-      "exhibitors",
-      "areas",
-      "people",
-      "members",
-    ]);
-    await queryClient.refetchQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey as unknown[];
-        return (
-          queryKey[0] === "admin" &&
-          typeof queryKey[1] === "string" &&
-          adminResourcesToRefetch.has(queryKey[1])
-        );
-      },
-    });
-  }, [queryClient]);
+    await loadDataBase();
+  }, [loadDataBase]);
 
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
@@ -844,7 +501,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
-        "Failed to persist table position.",
+        m.admin_error_persist_table_position(),
       ),
     onMutate: ({ tableId, x, y }) => {
       const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
@@ -855,7 +512,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-      console.error("Failed to persist table position");
+      devError("Failed to persist table position");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
@@ -873,7 +530,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
-        "Failed to persist table rotation.",
+        m.admin_error_persist_table_rotation(),
       ),
     onMutate: ({ tableId, rotation }) => {
       const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
@@ -884,7 +541,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-      console.error("Failed to persist table rotation");
+      devError("Failed to persist table rotation");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
@@ -1125,7 +782,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area label");
+      devError("Failed to persist area label");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1158,7 +815,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area resize");
+      devError("Failed to persist area resize");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1197,7 +854,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
-        "Failed to persist area position.",
+        m.admin_error_persist_area_position(),
       ),
     onMutate: ({ areaId, x, y }) => {
       const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
@@ -1208,7 +865,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area position");
+      devError("Failed to persist area position");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1226,7 +883,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
-        "Failed to persist area rotation.",
+        m.admin_error_persist_area_rotation(),
       ),
     onMutate: ({ areaId, rotation }) => {
       const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
@@ -1237,7 +894,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area rotation");
+      devError("Failed to persist area rotation");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1332,7 +989,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         return "invalid";
       } catch (err) {
         // Network errors or fetch failures are transient
-        console.error("Token validation network error:", err);
+        devError("Token validation network error:", err);
         return "transientError";
       }
     },
@@ -1360,7 +1017,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           setLoginError(m.admin_error_server_transient());
         }
       } catch (err) {
-        console.error("Login request failed", err);
+        devError("Login request failed", err);
         setLoginError(m.admin_login_error());
       } finally {
         setIsLoggingIn(false);
@@ -1714,7 +1371,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
     const firstError = errors.find((e) => e !== null);
     if (firstError) {
-      console.error("Failed to load dashboard data", firstError);
+      devError("Failed to load dashboard data", firstError);
       setError(m.admin_error_load_data());
     } else {
       // All queries succeeded or are still loading — clear any previous error.
@@ -1782,13 +1439,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           setLoginError(m.admin_login_error());
         } else {
           // transientError: keep the token, log the error
-          console.error("Auto-authentication failed due to transient error");
+          devError("Auto-authentication failed due to transient error");
           setLoginError(m.admin_error_server_transient_refresh());
         }
       })
       .catch((err) => {
         // Unexpected error in the effect itself
-        console.error("Auto-authentication exception:", err);
+        devError("Auto-authentication exception:", err);
         setLoginError(m.admin_error_auto_auth_failed());
       });
   }, [isAuthenticated, validateToken]);
@@ -1816,7 +1473,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : prev,
         );
       } catch (err) {
-        console.error("Failed to update registration status", err);
+        devError("Failed to update registration status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_registration());
         throw err;
       }
@@ -1849,7 +1506,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : prev,
         );
       } catch (err) {
-        console.error("Failed to update payment status", err);
+        devError("Failed to update payment status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_payment());
         throw err;
       }
@@ -1900,7 +1557,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : prev,
         );
       } catch (err) {
-        console.error("Failed to assign table", err);
+        devError("Failed to assign table", err);
         setError(err instanceof Error ? err.message : m.admin_error_assign_table());
       }
     },
@@ -2270,7 +1927,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration(apiToRegistration(data));
       } catch (err) {
-        console.error("Failed to fetch registration detail, falling back to list data", err);
+        devError("Failed to fetch registration detail, falling back to list data", err);
         setDetailRegistration(res);
       }
     },
@@ -2301,7 +1958,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
-        console.error("Failed to update bottle delivery status", err);
+        devError("Failed to update bottle delivery status", err);
         setError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
       }
     },
@@ -2323,7 +1980,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
-        console.error("Failed to check in guest", err);
+        devError("Failed to check in guest", err);
         setError(err instanceof Error ? err.message : m.admin_error_check_in());
       }
     },
@@ -2345,7 +2002,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
-        console.error("Failed to issue strap", err);
+        devError("Failed to issue strap", err);
         setError(err instanceof Error ? err.message : m.admin_error_issue_strap());
       }
     },
@@ -2455,146 +2112,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             />
           )}
 
-          {/* Sidebar */}
-          <aside className={clsx("admin-sidebar", sidebarOpen && "admin-sidebar-open")}>
-            {/* Brand */}
-            <div className="admin-sidebar-brand">
-              <i className="bi bi-shield-lock" aria-hidden="true" />
-              <h2 id="admin-title">{m.admin_title()}</h2>
-            </div>
-
-            {/* Navigation */}
-            <nav className="admin-nav" aria-label={m.admin_title()} ref={navRef} onKeyDown={handleNavKeyDown}>
-              {/* Registrations */}
-              <button
-                className={clsx("admin-nav-item", activeKey === "registrations" && "is-active")}
-                onClick={() => {
-                  setActiveKey("registrations");
-                  setSidebarOpen(false);
-                }}
-              >
-                <i className="bi bi-calendar-check" aria-hidden="true" />
-                <span>{m.admin_registrations_tab()}</span>
-                {registrations.length > 0 && (
-                  <span className="admin-nav-count">{registrations.length}</span>
-                )}
-              </button>
-
-              {/* Programme group */}
-              <div className="admin-nav-group">
-                <button
-                  className={clsx(
-                    "admin-nav-group-header",
-                    ["content", "floor-plans"].includes(activeKey) && "has-active",
-                  )}
-                  onClick={() => toggleGroup("programme")}
-                  aria-expanded={expandedGroups.has("programme")}
-                >
-                  <i className="bi bi-collection" aria-hidden="true" />
-                  <span>{m.admin_programme_group()}</span>
-                  <i
-                    className={clsx(
-                      "bi admin-nav-chevron",
-                      expandedGroups.has("programme") ? "bi-chevron-up" : "bi-chevron-down",
-                    )}
-                    aria-hidden="true"
-                  />
-                </button>
-                {expandedGroups.has("programme") && (
-                  <div className="admin-nav-sub">
-                    <button
-                      className={clsx("admin-nav-item", activeKey === "content" && "is-active")}
-                      onClick={() => {
-                        setActiveKey("content");
-                        setSidebarOpen(false);
-                      }}
-                    >
-                      <i className="bi bi-images" aria-hidden="true" />
-                      <span>{m.admin_content_tab()}</span>
-                    </button>
-                    <button
-                      className={clsx("admin-nav-item", activeKey === "floor-plans" && "is-active")}
-                      onClick={() => {
-                        setActiveKey("floor-plans");
-                        setSidebarOpen(false);
-                      }}
-                    >
-                      <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
-                      <span>{m.admin_tables_tab()}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Venue */}
-              <button
-                className={clsx("admin-nav-item", activeKey === "venue" && "is-active")}
-                onClick={() => {
-                  setActiveKey("venue");
-                  setSidebarOpen(false);
-                }}
-              >
-                <i className="bi bi-geo-alt" aria-hidden="true" />
-                <span>{m.admin_venues_tab()}</span>
-              </button>
-
-              {/* People group */}
-              <button
-                className={clsx("admin-nav-item", activeKey === "people" && "is-active")}
-                onClick={() => {
-                  setActiveKey("people");
-                  setSidebarOpen(false);
-                }}
-              >
-                <i className="bi bi-people" aria-hidden="true" />
-                <span>{m.admin_people_tab()}</span>
-                {people.length > 0 && <span className="admin-nav-count">{people.length}</span>}
-              </button>
-            </nav>
-
-            {/* Footer: status + actions */}
-            <div className="admin-sidebar-footer">
-              <div className="admin-auth-status">
-                <i className="bi bi-check-circle-fill" aria-hidden="true" />
-                <span>{m.admin_authenticated()}</span>
-              </div>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={loadData}
-                  disabled={isAnyFetching}
-                  title={m.admin_refresh()}
-                  aria-label={m.admin_refresh()}
-                >
-                  <i
-                    className={clsx("bi bi-arrow-clockwise", isAnyFetching && "spin")}
-                    aria-hidden="true"
-                  />
-                </Button>
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={handleLogout}
-                  title={m.admin_logout()}
-                  aria-label={m.admin_logout()}
-                >
-                  <i className="bi bi-box-arrow-right" aria-hidden="true" />
-                </Button>
-              </div>
-            </div>
-          </aside>
-
-          {/* Mobile toggle */}
-          <button
-            className="admin-mobile-toggle"
-            onClick={() => setSidebarOpen((s) => !s)}
-            aria-label={m.admin_toggle_navigation()}
-            aria-expanded={sidebarOpen}
-            aria-controls="admin-content"
-          >
-            <i className={clsx("bi", sidebarOpen ? "bi-x-lg" : "bi-list")} aria-hidden="true" />
-          </button>
+          <AdminSidebar
+            activeKey={activeKey}
+            setActiveKey={setActiveKey}
+            expandedGroups={expandedGroups}
+            toggleGroup={toggleGroup}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            navRef={navRef}
+            handleNavKeyDown={handleNavKeyDown}
+            registrationCount={registrations.length}
+            peopleCount={people.length}
+            isAnyFetching={isAnyFetching}
+            onLoadData={loadData}
+            onLogout={handleLogout}
+          />
 
           {/* Main content */}
           <div className="admin-main" id="admin-content">
@@ -2898,7 +2430,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               await handleMergePeople(canonicalId, duplicateId);
               setDetailRegistration(null);
             } catch (err) {
-              console.error("Failed to merge people", err);
+              devError("Failed to merge people", err);
               setError(err instanceof Error ? err.message : m.admin_people_merge_error());
             }
           }}

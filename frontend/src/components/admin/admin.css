@@ -6,11 +6,11 @@
    bleeding into the public-facing pages.
    =================================================================== */
 
-/* ---- Brand tokens (mirrored from index.css :root) ---- */
+/* ---- Brand tokens (derived from index.css :root variables) ---- */
 #admin,
 .admin-dialog {
-  --adm-primary: #5a7ff0;
-  --adm-secondary: #9a5df6;
+  --adm-primary: var(--primary-color, #5a7ff0);
+  --adm-secondary: var(--secondary-color, #9a5df6);
   --adm-primary-rgb: 90, 127, 240;
   --adm-secondary-rgb: 154, 93, 246;
   --adm-gradient: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
@@ -54,20 +54,20 @@
 
 /* ---- Cards ---- */
 #admin .card {
-  background: var(--adm-surface) !important;
-  border-color: var(--adm-border) !important;
+  background: var(--adm-surface);
+  border-color: var(--adm-border);
 }
 
 #admin .card.border-warning {
-  border-color: rgba(var(--adm-primary-rgb), 0.35) !important;
+  border-color: rgba(var(--adm-primary-rgb), 0.35) !important; /* overrides Bootstrap .border-warning utility */
   box-shadow:
     0 0 0 1px rgba(var(--adm-primary-rgb), 0.15),
-    0 8px 24px rgba(0, 0, 0, 0.35) !important;
+    0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 #admin .card-header {
-  background: var(--adm-surface-2) !important;
-  border-bottom-color: var(--adm-border) !important;
+  background: var(--adm-surface-2);
+  border-bottom-color: var(--adm-border);
 }
 
 #admin .card-header .card-title {
@@ -290,7 +290,7 @@
 
 .admin-sidebar-brand i {
   font-size: 1rem;
-  background: linear-gradient(135deg, #5a7ff0, #9a5df6);
+  background: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -543,46 +543,46 @@
    ================================================================ */
 
 .admin-dialog .modal-content {
-  background: var(--bs-body-bg, #1e1e1e) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: var(--adm-surface);
+  border-color: var(--adm-border);
 }
 
 .admin-dialog .modal-header {
-  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  border-bottom-color: var(--adm-border);
 }
 
 .admin-dialog .modal-title {
-  background: linear-gradient(135deg, #5a7ff0, #9a5df6);
+  background: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .admin-dialog .modal-footer {
-  border-top-color: rgba(255, 255, 255, 0.1) !important;
+  border-top-color: var(--adm-border);
 }
 
 .admin-dialog .form-control,
 .admin-dialog .form-select {
-  background-color: #252525 !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #f0f0f0 !important;
+  background-color: var(--adm-surface-2) !important;
+  border-color: var(--adm-border) !important;
+  color: var(--adm-text) !important;
 }
 
 .admin-dialog .form-control:focus,
 .admin-dialog .form-select:focus {
-  background-color: #252525 !important;
-  border-color: #5a7ff0 !important;
-  box-shadow: 0 0 0 3px rgba(90, 127, 240, 0.2) !important;
+  background-color: var(--adm-surface-2) !important;
+  border-color: var(--adm-primary) !important;
+  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.2) !important;
 }
 
 .admin-dialog .form-control::placeholder {
-  color: #6e6e6e !important;
+  color: var(--adm-text-dim) !important;
 }
 
 .admin-dialog .btn-warning {
-  background: linear-gradient(135deg, #5a7ff0, #9a5df6) !important;
-  border-color: #5a7ff0 !important;
+  background: var(--adm-gradient) !important;
+  border-color: var(--adm-primary) !important;
   color: #fff !important;
   font-weight: 600 !important;
 }
@@ -592,14 +592,14 @@
 }
 
 .admin-dialog .text-warning {
-  color: #5a7ff0 !important;
+  color: var(--adm-primary) !important;
 }
 
 .admin-dialog .badge.bg-warning,
 .admin-dialog .badge.bg-warning.text-dark {
-  background: rgba(90, 127, 240, 0.18) !important;
-  color: #5a7ff0 !important;
-  border: 1px solid rgba(90, 127, 240, 0.3) !important;
+  background: rgba(var(--adm-primary-rgb), 0.18) !important;
+  color: var(--adm-primary) !important;
+  border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
 }
 
 /* ---- Breadcrumb / active-trail indicator ---- */

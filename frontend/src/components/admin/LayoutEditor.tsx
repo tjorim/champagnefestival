@@ -27,6 +27,7 @@ import {
   getCanvasSizePx,
   getTableSizePx,
 } from "@/utils/layoutUtils";
+import { devError } from "@/utils/devLog";
 
 /**
  * Returns the tables whose centre point falls within the area's bounding rectangle,
@@ -603,7 +604,7 @@ export default function LayoutEditor({
       setNewLayout(getInitialNewLayoutState(dayOptions));
       setShowAddLayout(false);
     } catch (err) {
-      console.error("Failed to add layout", err);
+      devError("Failed to add layout", err);
       setAddLayoutError(err instanceof Error ? err.message : m.admin_error_add_layout());
     }
   }, [activeRoomId, dayOptions, newLayout, onAddLayout]);
@@ -629,7 +630,7 @@ export default function LayoutEditor({
           setSelectedArea(null);
         }
       } catch (err) {
-        console.error("Failed to delete layout", err);
+        devError("Failed to delete layout", err);
         setDeleteLayoutError(err instanceof Error ? err.message : m.admin_error_delete_layout());
       }
     },
@@ -676,7 +677,7 @@ export default function LayoutEditor({
       setNewTable({ name: "", capacity: 4, tableTypeId: "" });
       setShowAddTable(false);
     } catch (err) {
-      console.error("Failed to add table", err);
+      devError("Failed to add table", err);
       setAddTableError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
   }, [newTable, onAddTable, activeLayoutId]);
@@ -688,7 +689,7 @@ export default function LayoutEditor({
         await onDeleteTable(tableId);
         setSelectedTable(null);
       } catch (err) {
-        console.error("Failed to delete table", err);
+        devError("Failed to delete table", err);
         setDeleteTableError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
@@ -718,7 +719,7 @@ export default function LayoutEditor({
       });
       setShowAddArea(false);
     } catch (err) {
-      console.error("Failed to add area", err);
+      devError("Failed to add area", err);
       setAddAreaError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
   }, [newArea, onAddArea, activeLayoutId]);
@@ -730,7 +731,7 @@ export default function LayoutEditor({
         await onDeleteArea(areaId);
         setSelectedArea(null);
       } catch (err) {
-        console.error("Failed to delete area", err);
+        devError("Failed to delete area", err);
         setDeleteAreaError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },

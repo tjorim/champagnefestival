@@ -130,7 +130,7 @@ export function ContentSection({
         ...(edition.vendors ?? []),
       ]) {
         const existing = map.get(item.id);
-        if (existing) existing.push(label);
+        if (existing) map.set(item.id, [...existing, label]);
         else map.set(item.id, [label]);
       }
     }

@@ -8,6 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import { devError } from "@/utils/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { Person } from "@/types/person";
 
@@ -56,7 +57,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         });
         onHide();
       } catch (err) {
-        console.error("Member save error:", err);
+        devError("Member save error:", err);
         const backendMessage =
           err &&
           typeof err === "object" &&

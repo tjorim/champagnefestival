@@ -209,8 +209,9 @@ export default function RegistrationList({
     [registrations],
   );
 
-  const columns = useMemo(
-    () => columnHelper.columns([
+  // Isolated memo so that selectedIds changes only rebuild the select column, not all columns
+  const selectColumn = useMemo(
+    () =>
       columnHelper.display({
         id: "select",
         header: () => {
@@ -256,6 +257,11 @@ export default function RegistrationList({
         ),
         meta: { tdClassName: "align-middle" },
       }),
+    [selectedIds],
+  );
+
+  const dataColumns = useMemo(
+    () => columnHelper.columns([
       columnHelper.accessor((row) => row.person.name, {
         id: "name",
         header: m.registration_name(),
@@ -437,7 +443,12 @@ export default function RegistrationList({
         },
       }),
     ]),
-    [allContactPersonIds, selectedIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
+    [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
+  );
+
+  const columns = useMemo(
+    () => columnHelper.columns([selectColumn, ...dataColumns]),
+    [selectColumn, dataColumns],
   );
 
   const table = useAppTable(
@@ -462,8 +473,14 @@ export default function RegistrationList({
       columnVisibility: state.columnVisibility,
     }),
   );
-  // Keep ref in sync with currently visible rows (respects text-search filter applied by TanStack)
-  preFilteredRef.current = table.getRowModel().rows.map((r) => r.original);
+  // Keep ref in sync with currently visible rows (respects text-search filter applied by TanStack).
+  // Memoized so the .map() only runs when preFiltered, sorting, or query change.
+  const visibleRegistrations = useMemo(
+    () => table.getRowModel().rows.map((r) => r.original),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [preFiltered, sorting, q],
+  );
+  preFilteredRef.current = visibleRegistrations;
 
   const handleExportCsv = useCallback(() => {
     const rows = table.getRowModel().rows.map(({ original: reg }) => ({
