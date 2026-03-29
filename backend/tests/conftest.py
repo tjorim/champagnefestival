@@ -9,9 +9,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 import app.ratelimit as ratelimit_module
 from app.database import Base, get_db
 from app.main import app
+from tests.helpers import ADMIN_TOKEN
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
-ADMIN_TOKEN = "test-admin-token"
 
 
 @pytest.fixture(autouse=True)

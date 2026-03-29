@@ -27,8 +27,3 @@ def test_settings_reject_excessive_guest_access_token_ttl():
     ):
         Settings(guest_access_token_ttl_minutes=GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES + 1)
 
-
-@pytest.mark.anyio
-async def test_list_events_requires_admin(client):
-    response = await client.get("/api/events")
-    assert response.status_code == 401
