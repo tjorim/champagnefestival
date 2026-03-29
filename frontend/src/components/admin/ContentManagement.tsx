@@ -10,8 +10,12 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
+import Modal from "react-bootstrap/Modal";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Spinner from "react-bootstrap/Spinner";
+import Tooltip from "react-bootstrap/Tooltip";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
+import Form from "react-bootstrap/Form";
 import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
@@ -82,7 +86,7 @@ interface ContentSectionProps {
   onItemDeleted?: (id: number) => void;
 }
 
-function ContentSection({
+export function ContentSection({
   sectionKey,
   title,
   authHeaders,
@@ -95,6 +99,10 @@ function ContentSection({
   const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<"all" | "producer" | "sponsor" | "vendor">("all");
+  const [q, setQ] = useState("");
+  const [bulkArchiveOpen, setBulkArchiveOpen] = useState(false);
+  const [bulkArchiveInProgress, setBulkArchiveInProgress] = useState(false);
 
   const itemsQuery = useQuery({
     queryKey: contentSectionQueryKey(sectionKey),
@@ -102,6 +110,32 @@ function ContentSection({
     staleTime: 60 * 1000,
     retry: false,
   });
+
+  const editionsQuery = useQuery({
+    queryKey: contentEditionsQueryKey,
+    queryFn: () => fetchEditions(authHeaders),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  // Map item id → array of edition labels that reference it (as producer, sponsor, or vendor)
+  const editionsByItemId = useMemo((): Map<number, string[]> => {
+    const editions = editionsQuery.data ?? [];
+    const map = new Map<number, string[]>();
+    for (const edition of editions) {
+      const label = `${edition.year} – ${edition.month}`;
+      for (const item of [
+        ...(edition.producers ?? []),
+        ...(edition.sponsors ?? []),
+        ...(edition.vendors ?? []),
+      ]) {
+        const existing = map.get(item.id);
+        if (existing) map.set(item.id, [...existing, label]);
+        else map.set(item.id, [label]);
+      }
+    }
+    return map;
+  }, [editionsQuery.data]);
 
   const saveItemMutation = useMutation({
     mutationFn: (draft: ItemDraft) => saveContentSectionItem(sectionKey, draft, authHeaders),
@@ -119,9 +153,53 @@ function ContentSection({
     retry: false,
   });
 
-  const items = itemsQuery.data ?? [];
-  const activeItems = items.filter((item) => item.active !== false);
-  const archivedItems = items.filter((item) => item.active === false);
+  const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
+
+  const { activeItems, archivedItems, totalActive, totalArchived } = useMemo(() => {
+    const s = q.toLowerCase();
+    const matches = (item: ItemDraft): boolean => {
+      const itemType = item.type ?? "vendor";
+      if (typeFilter !== "all" && itemType !== typeFilter) return false;
+      if (s) {
+        return (
+          item.name.toLowerCase().includes(s) ||
+          (item.contactPerson?.name ?? "").toLowerCase().includes(s)
+        );
+      }
+      return true;
+    };
+    const activeItems: ItemDraft[] = [];
+    const archivedItems: ItemDraft[] = [];
+    let totalActive = 0;
+    let totalArchived = 0;
+    for (const item of items) {
+      const isActive = item.active !== false;
+      if (isActive) {
+        totalActive += 1;
+        if (matches(item)) {
+          activeItems.push(item);
+        }
+      } else {
+        totalArchived += 1;
+        if (matches(item)) {
+          archivedItems.push(item);
+        }
+      }
+    }
+    return {
+      activeItems,
+      archivedItems,
+      totalActive,
+      totalArchived,
+    };
+  }, [items, typeFilter, q]);
+
+  const typeLabels: Record<"all" | "producer" | "sponsor" | "vendor", string> = {
+    all: m.admin_filter_all(),
+    producer: m.admin_item_producer(),
+    sponsor: m.admin_item_sponsor(),
+    vendor: m.admin_item_vendor(),
+  };
 
   function openAdd() {
     setModalItem(null);
@@ -131,6 +209,11 @@ function ContentSection({
   function openEdit(item: ItemDraft) {
     setModalItem(item);
     setModalOpen(true);
+  }
+
+  function handleClearFilters() {
+    setTypeFilter("all");
+    setQ("");
   }
 
   const handleModalSave = useCallback(
@@ -206,6 +289,35 @@ function ContentSection({
     [deleteItemMutation, onItemDeleted, queryClient, sectionKey],
   );
 
+  const handleBulkArchive = useCallback(async () => {
+    setBulkArchiveInProgress(true);
+    const snapshot = [...activeItems];
+    const results = await Promise.allSettled(
+      snapshot.map((item) =>
+        updateItemActiveMutation.mutateAsync({ id: item.id, active: false }),
+      ),
+    );
+    const succeededIds = new Set(
+      snapshot
+        .filter((_, i) => results[i]?.status === "fulfilled")
+        .map((item) => item.id),
+    );
+    if (succeededIds.size > 0) {
+      queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
+        prev.map((item) => (succeededIds.has(item.id) ? { ...item, active: false } : item)),
+      );
+      snapshot
+        .filter((item) => succeededIds.has(item.id))
+        .forEach((item) => onItemSaved?.({ ...item, active: false }));
+    }
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    if (failedCount > 0) {
+      setActionError(m.admin_bulk_content_archive_error({ failed: failedCount, total: snapshot.length }));
+    }
+    setBulkArchiveInProgress(false);
+    setBulkArchiveOpen(false);
+  }, [activeItems, onItemSaved, queryClient, sectionKey, updateItemActiveMutation]);
+
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
     return (
       <ListGroup.Item
@@ -235,9 +347,32 @@ function ContentSection({
               )}
             </span>
           )}
-          <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
-            {item.name}
-          </span>
+          {editionsByItemId.has(item.id) ? (
+            <OverlayTrigger
+              placement="top"
+              overlay={
+                <Tooltip id={`editions-tooltip-${item.id}`}>
+                  {m.admin_content_used_in_editions()}:{" "}
+                  {editionsByItemId.get(item.id)!.join(", ")}
+                </Tooltip>
+              }
+            >
+              <span
+                className={clsx(
+                  "text-truncate",
+                  isArchived ? "text-secondary" : "text-light",
+                  "text-decoration-underline",
+                )}
+                style={{ textDecorationStyle: "dotted", cursor: "help" }}
+              >
+                {item.name}
+              </span>
+            </OverlayTrigger>
+          ) : (
+            <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
+              {item.name}
+            </span>
+          )}
           <Badge
             bg={typeBadgeVariant(item.type)}
             className="flex-shrink-0"
@@ -303,7 +438,7 @@ function ContentSection({
   if (itemsQuery.isPending) {
     return (
       <div className="text-center py-3">
-        <Spinner animation="border" size="sm" variant="warning" />
+        <Spinner animation="border" size="sm" variant="primary" />
         <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
       </div>
     );
@@ -311,22 +446,55 @@ function ContentSection({
 
   return (
     <div className="mb-4">
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h6 className="mb-0 text-warning">
+      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <h6 className="mb-0 text-primary">
           {title}
           <Badge bg="secondary" className="ms-2">
-            {activeItems.length}
+            {totalActive}
           </Badge>
-          {archivedItems.length > 0 && (
+          {totalArchived > 0 && (
             <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">
-              {archivedItems.length} {m.admin_content_archived_section()}
+              {totalArchived} {m.admin_content_archived_section()}
             </Badge>
           )}
         </h6>
-        <Button variant="outline-secondary" size="sm" onClick={openAdd}>
+        <Button variant="outline-primary" size="sm" onClick={openAdd}>
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           {m.admin_content_add_item()}
         </Button>
+      </div>
+      <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+        <ButtonGroup size="sm">
+          {(["all", "producer", "sponsor", "vendor"] as const).map((type) => (
+            <Button
+              key={type}
+              variant={typeFilter === type ? "primary" : "outline-secondary"}
+              onClick={() => setTypeFilter(type)}
+            >
+              {typeLabels[type]}
+            </Button>
+          ))}
+        </ButtonGroup>
+        <Form.Control
+          size="sm"
+          type="search"
+          placeholder={m.admin_content_search_placeholder()}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="bg-dark text-light border-secondary"
+          style={{ maxWidth: 260 }}
+        />
+        {typeFilter !== "all" && activeItems.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline-warning"
+            onClick={() => setBulkArchiveOpen(true)}
+            title={m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
+          >
+            <i className="bi bi-archive me-1" aria-hidden="true" />
+            {m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
+          </Button>
+        )}
       </div>
 
       {itemsQuery.isError && (
@@ -345,6 +513,14 @@ function ContentSection({
         </Alert>
       )}
       <ListGroup variant="flush">{activeItems.map((item) => renderItemRow(item, false))}</ListGroup>
+      {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
+        <div className="text-center py-4 text-secondary">
+          <p className="mb-2 small">{m.admin_content_no_results()}</p>
+          <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
+            {m.admin_content_clear_filters()}
+          </Button>
+        </div>
+      )}
       {archivedItems.length > 0 && (
         <div className="mt-2">
           <Button
@@ -374,6 +550,44 @@ function ContentSection({
         onSave={handleModalSave}
         onHide={() => setModalOpen(false)}
       />
+
+      {/* Bulk archive confirmation */}
+      <Modal
+        show={bulkArchiveOpen}
+        onHide={() => setBulkArchiveOpen(false)}
+        centered
+        dialogClassName="admin-dialog"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{m.admin_content_archive()}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {m.admin_bulk_content_archive_confirm({
+            count: activeItems.length,
+            type:
+              typeFilter === "producer"
+                ? m.admin_item_producer()
+                : typeFilter === "sponsor"
+                  ? m.admin_item_sponsor()
+                  : m.admin_item_vendor(),
+          })}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setBulkArchiveOpen(false)}
+            disabled={bulkArchiveInProgress}
+          >
+            {m.admin_action_cancel()}
+          </Button>
+          <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
+            {bulkArchiveInProgress && (
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+            )}
+            {m.admin_content_archive()}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }
@@ -384,7 +598,7 @@ interface EditionsSectionProps {
   onEditionMutated?: () => void;
 }
 
-function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSectionProps) {
+export function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSectionProps) {
   const queryClient = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editionTypeFilter, setEditionTypeFilter] = useState<EditionType | "all">("all");
@@ -455,12 +669,12 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
     <div className="mb-4">
       <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
         <div>
-          <h6 className="mb-1 text-warning">{m.admin_content_editions_section()}</h6>
+          <h6 className="mb-1 text-primary">{m.admin_content_editions_section()}</h6>
           <ButtonGroup size="sm">
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
               <Button
                 key={type}
-                variant={editionTypeFilter === type ? "warning" : "outline-secondary"}
+                variant={editionTypeFilter === type ? "primary" : "outline-secondary"}
                 onClick={() => setEditionTypeFilter(type)}
               >
                 {editionTypeLabel(type)}
@@ -468,7 +682,7 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
             ))}
           </ButtonGroup>
         </div>
-        <Button size="sm" variant="outline-secondary" onClick={() => setAddModalOpen(true)}>
+        <Button size="sm" variant="outline-primary" onClick={() => setAddModalOpen(true)}>
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           {m.admin_content_edition_add()}
         </Button>
@@ -476,7 +690,7 @@ function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSect
 
       {editionsQuery.isPending && (
         <div className="text-center py-3">
-          <Spinner animation="border" size="sm" variant="warning" />
+          <Spinner animation="border" size="sm" variant="primary" />
           <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
         </div>
       )}

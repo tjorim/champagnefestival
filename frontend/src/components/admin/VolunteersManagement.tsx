@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -9,6 +10,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
 interface VolunteersManagementProps {
@@ -21,11 +27,33 @@ interface VolunteersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
+const columnHelper = createAppColumnHelper<Person>();
+
 function formatPeriod(period: Person["helpPeriods"][number]): string {
   return period.lastHelpDay
     ? `${period.firstHelpDay} → ${period.lastHelpDay}`
     : `${period.firstHelpDay} →`;
 }
+
+const volunteersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
+  const s = filterValue.toLowerCase();
+  return (
+    row.original.name.toLowerCase().includes(s) ||
+    row.original.address.toLowerCase().includes(s) ||
+    (row.original.nationalRegisterNumber ?? "").toLowerCase().includes(s) ||
+    (row.original.eidDocumentNumber ?? "").toLowerCase().includes(s) ||
+    row.original.helpPeriods.some(
+      (period) =>
+        period.firstHelpDay.toLowerCase().includes(s) ||
+        (period.lastHelpDay ?? "").toLowerCase().includes(s),
+    )
+  );
+};
+volunteersGlobalFilter.autoRemove = (val: unknown) => !val || String(val) === "";
 
 export default function VolunteersManagement({
   volunteers,
@@ -36,6 +64,7 @@ export default function VolunteersManagement({
 }: VolunteersManagementProps) {
   const [q, setQ] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
@@ -45,27 +74,14 @@ export default function VolunteersManagement({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  const filtered =
-    q.trim() || activeFilter !== "all"
-      ? volunteers.filter((volunteer) => {
-          const s = q.trim().toLowerCase();
-          const matchesQ =
-            !s ||
-            volunteer.name.toLowerCase().includes(s) ||
-            volunteer.address.toLowerCase().includes(s) ||
-            (volunteer.nationalRegisterNumber ?? "").toLowerCase().includes(s) ||
-            (volunteer.eidDocumentNumber ?? "").toLowerCase().includes(s) ||
-            volunteer.helpPeriods.some(
-              (period) =>
-                period.firstHelpDay.toLowerCase().includes(s) ||
-                (period.lastHelpDay ?? "").toLowerCase().includes(s),
-            );
-          const matchesActive =
-            activeFilter === "all" ||
-            (activeFilter === "active" ? volunteer.active : !volunteer.active);
-          return matchesQ && matchesActive;
-        })
-      : volunteers;
+  // Pre-filter by active status; text search handled by TanStack
+  const preFiltered = useMemo(
+    () =>
+      activeFilter === "all"
+        ? volunteers
+        : volunteers.filter((v) => (activeFilter === "active" ? v.active : !v.active)),
+    [volunteers, activeFilter],
+  );
 
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;
@@ -92,11 +108,128 @@ export default function VolunteersManagement({
     }
   };
 
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
+        id: "name",
+        header: m.registration_name(),
+        cell: ({ row }) => {
+          const volunteer = row.original;
+          return (
+            <div className="fw-semibold d-flex align-items-center gap-1">
+              {volunteer.name}
+              {!volunteer.active && (
+                <Badge bg="secondary" className="ms-1">
+                  {m.admin_people_inactive_badge_label()}
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      }),
+      columnHelper.accessor("address", {
+        header: m.admin_people_address_label(),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
+      }),
+      columnHelper.accessor("nationalRegisterNumber", {
+        header: m.admin_people_national_register_number_label(),
+        enableSorting: false,
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
+      }),
+      columnHelper.accessor("eidDocumentNumber", {
+        header: m.admin_people_eid_document_number_label(),
+        enableSorting: false,
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
+      }),
+      columnHelper.display({
+        id: "helpPeriods",
+        header: m.admin_volunteers_help_periods_label(),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="d-flex flex-column gap-1 small">
+            {row.original.helpPeriods.length > 0 ? (
+              row.original.helpPeriods.map((period) => (
+                <span key={period.id} className="text-secondary">
+                  {formatPeriod(period)}
+                </span>
+              ))
+            ) : (
+              <span className="text-secondary">{m.admin_volunteers_no_help_periods()}</span>
+            )}
+          </div>
+        ),
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: m.admin_actions_label(),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const volunteer = row.original;
+          return (
+            <div className="d-flex flex-wrap gap-1">
+              <Button
+                size="sm"
+                variant="outline-light"
+                onClick={() => {
+                  setEditingVolunteer(volunteer);
+                  setShowForm(true);
+                }}
+                title={m.admin_volunteers_edit_title()}
+                aria-label={m.admin_volunteers_edit_title()}
+              >
+                <i className="bi bi-pencil" aria-hidden="true" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-danger"
+                onClick={() => {
+                  setDeletingId(volunteer.id);
+                  setDeleteError("");
+                }}
+                title={m.admin_volunteers_delete_title()}
+                aria-label={m.admin_volunteers_delete_title()}
+              >
+                <i className="bi bi-trash" aria-hidden="true" />
+              </Button>
+            </div>
+          );
+        },
+      }),
+    ]),
+    [setEditingVolunteer, setShowForm, setDeletingId, setDeleteError],
+  );
+
+  const table = useAppTable(
+    {
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      globalFilterFn: volunteersGlobalFilter,
+    },
+    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+  );
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <span className="fw-semibold">{m.admin_volunteers_tab()}</span>
+        <Card.Header className="pb-2">
+          <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+            <span className="fw-semibold">{m.admin_volunteers_tab()}</span>
+            <Button
+              size="sm"
+              variant="outline-primary"
+              onClick={() => {
+                setEditingVolunteer(null);
+                setShowForm(true);
+              }}
+            >
+              <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
+              {m.admin_volunteers_add()}
+            </Button>
+          </div>
           <div className="d-flex flex-wrap gap-2 align-items-center">
             <Form.Select
               size="sm"
@@ -119,17 +252,6 @@ export default function VolunteersManagement({
               className="bg-dark text-light border-secondary"
               style={{ maxWidth: 280 }}
             />
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={() => {
-                setEditingVolunteer(null);
-                setShowForm(true);
-              }}
-            >
-              <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
-              {m.admin_volunteers_add()}
-            </Button>
           </div>
         </Card.Header>
 
@@ -167,9 +289,9 @@ export default function VolunteersManagement({
 
           {isLoading ? (
             <div className="text-center py-4">
-              <Spinner animation="border" variant="warning" size="sm" />
+              <Spinner animation="border" variant="primary" size="sm" />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : table.getRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">
               {m.admin_volunteers_no_results()}
             </p>
@@ -178,74 +300,69 @@ export default function VolunteersManagement({
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <caption className="visually-hidden">{m.admin_volunteers_table_caption()}</caption>
                 <thead>
-                  <tr>
-                    <th>{m.registration_name()}</th>
-                    <th>{m.admin_people_address_label()}</th>
-                    <th>{m.admin_people_national_register_number_label()}</th>
-                    <th>{m.admin_people_eid_document_number_label()}</th>
-                    <th>{m.admin_volunteers_help_periods_label()}</th>
-                    <th>{m.admin_actions_label()}</th>
-                  </tr>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                          const canSort = header.column.getCanSort();
+                          const sorted = header.column.getIsSorted();
+                          return (
+                            <th
+                              key={header.id}
+                              className={header.column.columnDef.meta?.tdClassName}
+                              onClick={header.column.getToggleSortingHandler()}
+                              onKeyDown={
+                                canSort
+                                  ? (e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        header.column.getToggleSortingHandler()?.(e);
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              role={canSort ? "button" : undefined}
+                              tabIndex={canSort ? 0 : undefined}
+                              aria-sort={
+                                canSort
+                                  ? sorted === "asc"
+                                    ? "ascending"
+                                    : sorted === "desc"
+                                      ? "descending"
+                                      : "none"
+                                  : undefined
+                              }
+                              style={{
+                                cursor: canSort ? "pointer" : "default",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <table.FlexRender header={header} />
+                              {canSort && (
+                                <i
+                                  className={`bi ms-1 small ${
+                                    sorted === "asc"
+                                      ? "bi-arrow-up"
+                                      : sorted === "desc"
+                                        ? "bi-arrow-down"
+                                        : "bi-arrow-down-up opacity-25"
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </th>
+                          );
+                        })}
+                    </tr>
+                  ))}
                 </thead>
                 <tbody>
-                  {filtered.map((volunteer) => (
-                    <tr key={volunteer.id}>
-                      <td>
-                        <div className="fw-semibold d-flex align-items-center gap-1">
-                          {volunteer.name}
-                          {!volunteer.active && (
-                            <Badge bg="secondary" className="ms-1">
-                              {m.admin_people_inactive_badge_label()}
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="small">{volunteer.address}</td>
-                      <td className="small">{volunteer.nationalRegisterNumber}</td>
-                      <td className="small">{volunteer.eidDocumentNumber}</td>
-                      <td className="small">
-                        <div className="d-flex flex-column gap-1">
-                          {volunteer.helpPeriods.length > 0 ? (
-                            volunteer.helpPeriods.map((period) => (
-                              <span key={period.id} className="text-secondary">
-                                {formatPeriod(period)}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-secondary">
-                              {m.admin_volunteers_no_help_periods()}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="d-flex flex-wrap gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline-light"
-                            onClick={() => {
-                              setEditingVolunteer(volunteer);
-                              setShowForm(true);
-                            }}
-                            title={m.admin_volunteers_edit_title()}
-                            aria-label={m.admin_volunteers_edit_title()}
-                          >
-                            <i className="bi bi-pencil" aria-hidden="true" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline-danger"
-                            onClick={() => {
-                              setDeletingId(volunteer.id);
-                              setDeleteError("");
-                            }}
-                            title={m.admin_volunteers_delete_title()}
-                            aria-label={m.admin_volunteers_delete_title()}
-                          >
-                            <i className="bi bi-trash" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      </td>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                          <table.FlexRender cell={cell} />
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>

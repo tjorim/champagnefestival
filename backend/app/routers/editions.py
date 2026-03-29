@@ -211,11 +211,10 @@ async def _validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) ->
     invalid = [eid for eid in exhibitor_ids if eid not in exhibitor_map]
     if invalid:
         raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
-    vendors = [eid for eid in exhibitor_ids if exhibitor_map[eid]["type"] == "vendor"]
-    if vendors:
+    vendor_ids = [eid for eid in exhibitor_ids if exhibitor_map[eid]["type"] == "vendor"]
+    if vendor_ids:
         raise HTTPException(
-            status_code=400,
-            detail=(f"Only producers and sponsors may be linked to editions. Rejected vendor IDs: {vendors}"),
+            status_code=400, detail=f"Vendor-type exhibitors may not be linked to editions: {vendor_ids}"
         )
 
 
@@ -234,7 +233,7 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
                 edition.venue_id,
             )
             continue
-        producers, sponsors = _resolve_exhibitors(edition, exhibitor_map)
+        producers, sponsors, vendors = _resolve_exhibitors(edition, exhibitor_map)
         payloads.append(
             edition_to_dict(
                 edition,
@@ -249,6 +248,7 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
                 ],
                 producers=producers,
                 sponsors=sponsors,
+                vendors=vendors,
             )
         )
     return payloads
@@ -261,9 +261,10 @@ async def _edition_payload(db: AsyncSession, edition: Edition) -> dict:
     return payloads[0]
 
 
-def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tuple[list[dict], list[dict]]:
+def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tuple[list[dict], list[dict], list[dict]]:
     producers: list[dict] = []
     sponsors: list[dict] = []
+    vendors: list[dict] = []
     for exhibitor_id in edition.exhibitors:
         item = exhibitor_map.get(exhibitor_id)
         if item is None:
@@ -272,7 +273,9 @@ def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tup
             producers.append(item)
         elif item["type"] == "sponsor":
             sponsors.append(item)
-    return producers, sponsors
+        elif item["type"] == "vendor":
+            vendors.append(item)
+    return producers, sponsors, vendors
 
 
 def _edition_dates(edition: Edition) -> list[date]:

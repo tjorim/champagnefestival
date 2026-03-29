@@ -483,10 +483,28 @@ if (!rootElement) {
   console.error("Root element not found");
   throw new Error("Root element not found");
 }
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </React.StrictMode>,
-);
+
+async function enableMocking(): Promise<void> {
+  if (import.meta.env.DEV && import.meta.env.VITE_MSW === "true") {
+    const { worker } = await import("./mocks/browser");
+    await worker.start({ onUnhandledRequest: "warn" });
+    console.info("[MSW] Mock Service Worker active — using mock API (token: dev-token)");
+  }
+}
+
+function renderApp(): void {
+  ReactDOM.createRoot(rootElement!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </React.StrictMode>,
+  );
+}
+
+enableMocking()
+  .then(renderApp)
+  .catch((err: unknown) => {
+    console.error("[MSW] Service Worker failed to start, rendering without mocks:", err);
+    renderApp();
+  });

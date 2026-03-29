@@ -24,6 +24,7 @@ export interface Edition {
   events: Event[];
   producers?: { id: number; name: string; image: string; website: string }[];
   sponsors?: { id: number; name: string; image: string; website: string }[];
+  vendors?: { id: number; name: string; image: string; website: string }[];
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -93,6 +94,16 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
             name: String(s.name ?? ""),
             image: String(s.image ?? ""),
             website: String(s.website ?? ""),
+          }))
+      : [],
+    vendors: Array.isArray(data.vendors)
+      ? data.vendors
+          .filter((v): v is Record<string, unknown> => typeof v === "object" && v !== null)
+          .map((v) => ({
+            id: Number(v.id ?? 0),
+            name: String(v.name ?? ""),
+            image: String(v.image ?? ""),
+            website: String(v.website ?? ""),
           }))
       : [],
     active: data.active !== false,

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -9,7 +10,17 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
+import { exportToCsv } from "@/utils/csvExport";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
+import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+
+const COL_VIS_KEY = "admin-col-vis-members";
 
 interface MembersManagementProps {
   members: Person[];
@@ -22,12 +33,33 @@ interface MembersManagementProps {
 
 type ActiveFilter = "all" | "active" | "inactive";
 
+const columnHelper = createAppColumnHelper<Person>();
+
 function truncateText(value: string, limit = 80): string {
   if (value.length <= limit) {
     return value;
   }
   return `${value.slice(0, limit - 1)}…`;
 }
+
+const membersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
+  const s = filterValue.toLowerCase();
+  const phoneQ = s.replace(/[\s\-().+]/g, "");
+  return (
+    row.original.name.toLowerCase().includes(s) ||
+    (row.original.email?.toLowerCase() ?? "").includes(s) ||
+    (phoneQ.length > 0 &&
+      (row.original.phone?.replace(/[\s\-().+]/g, "") ?? "").includes(phoneQ)) ||
+    (row.original.address?.toLowerCase() ?? "").includes(s) ||
+    (row.original.clubName?.toLowerCase() ?? "").includes(s) ||
+    (row.original.notes?.toLowerCase() ?? "").includes(s)
+  );
+};
+membersGlobalFilter.autoRemove = (val: unknown) => !val || String(val) === "";
 
 export default function MembersManagement({
   members,
@@ -39,6 +71,10 @@ export default function MembersManagement({
 }: MembersManagementProps) {
   const [q, setQ] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
+    () => loadColVis(COL_VIS_KEY),
+  );
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
@@ -48,24 +84,14 @@ export default function MembersManagement({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  const filtered =
-    q.trim() || activeFilter !== "all"
-      ? members.filter((member) => {
-          const s = q.trim().toLowerCase();
-          const phoneQ = s.replace(/[\s\-().+]/g, "");
-          const matchesQ =
-            !s ||
-            member.name.toLowerCase().includes(s) ||
-            member.email.toLowerCase().includes(s) ||
-            (phoneQ.length > 0 && member.phone.replace(/[\s\-().+]/g, "").includes(phoneQ)) ||
-            member.address.toLowerCase().includes(s) ||
-            member.clubName.toLowerCase().includes(s) ||
-            member.notes.toLowerCase().includes(s);
-          const matchesActive =
-            activeFilter === "all" || (activeFilter === "active" ? member.active : !member.active);
-          return matchesQ && matchesActive;
-        })
-      : members;
+  // Pre-filter by active status; text search handled by TanStack
+  const preFiltered = useMemo(
+    () =>
+      activeFilter === "all"
+        ? members
+        : members.filter((m) => (activeFilter === "active" ? m.active : !m.active)),
+    [members, activeFilter],
+  );
 
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;
@@ -92,11 +118,155 @@ export default function MembersManagement({
     }
   };
 
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
+        id: "name",
+        header: m.registration_name(),
+        cell: ({ row }) => {
+          const member = row.original;
+          return (
+            <div className="fw-semibold d-flex align-items-center gap-1">
+              {member.name}
+              {!member.active && (
+                <Badge bg="secondary" className="ms-1">
+                  {m.admin_people_inactive_badge_label()}
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      }),
+      columnHelper.accessor("email", {
+        header: m.registration_email(),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+      }),
+      columnHelper.accessor("phone", {
+        header: m.registration_phone(),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+      }),
+      columnHelper.accessor("clubName", {
+        header: m.admin_people_club_name_label(),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+      }),
+      columnHelper.accessor("notes", {
+        header: m.registration_notes(),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const notes = row.original.notes;
+          const preview = truncateText(notes);
+          return (
+            <span className="small text-secondary" title={notes || undefined}>
+              {preview || "—"}
+            </span>
+          );
+        },
+      }),
+      columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
+        id: "registrations",
+        header: m.admin_registrations_tab(),
+        cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: m.admin_actions_label(),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const member = row.original;
+          return (
+            <div className="d-flex flex-wrap gap-1">
+              <Button
+                size="sm"
+                variant="outline-light"
+                onClick={() => {
+                  setEditingMember(member);
+                  setShowForm(true);
+                }}
+                title={m.admin_members_edit_title()}
+                aria-label={m.admin_members_edit_title()}
+              >
+                <i className="bi bi-pencil" aria-hidden="true" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-danger"
+                onClick={() => {
+                  setDeletingId(member.id);
+                  setDeleteError("");
+                }}
+                title={m.admin_members_delete_title()}
+                aria-label={m.admin_members_delete_title()}
+              >
+                <i className="bi bi-trash" aria-hidden="true" />
+              </Button>
+            </div>
+          );
+        },
+      }),
+    ]),
+    [registrationCountByPersonId, setEditingMember, setShowForm, setDeletingId, setDeleteError],
+  );
+
+  const table = useAppTable(
+    {
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q, columnVisibility },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      onColumnVisibilityChange: (updater) => {
+        const next =
+          typeof updater === "function" ? updater(columnVisibility) : updater;
+        setColumnVisibility(next);
+        saveColVis(COL_VIS_KEY, next);
+      },
+      globalFilterFn: membersGlobalFilter,
+    },
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      columnVisibility: state.columnVisibility,
+    }),
+  );
+
+  const handleExportCsv = useCallback(() => {
+    const rows = table.getRowModel().rows.map(({ original: member }) => ({
+      [m.registration_name()]: member.name,
+      [m.registration_email()]: member.email,
+      [m.registration_phone()]: member.phone,
+      [m.admin_people_club_name_label()]: member.clubName,
+      [m.registration_notes()]: member.notes,
+      [m.admin_people_active_label()]: member.active ? m.admin_value_yes() : m.admin_value_no(),
+    }));
+    exportToCsv("members.csv", rows);
+  }, [table]);
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <span className="fw-semibold">{m.admin_members_tab()}</span>
+        <Card.Header className="pb-2">
+          <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+            <span className="fw-semibold">{m.admin_members_tab()}</span>
+            <div className="d-flex gap-2">
+              <ColumnVisibilityDropdown table={table} tableId="members" />
+              <Button size="sm" variant="outline-secondary" onClick={handleExportCsv} disabled={table.getRowModel().rows.length === 0}>
+                <i className="bi bi-download me-1" aria-hidden="true" />
+                {m.admin_export_csv()}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => {
+                  setEditingMember(null);
+                  setShowForm(true);
+                }}
+              >
+                <i className="bi bi-person-badge me-1" aria-hidden="true" />
+                {m.admin_members_add()}
+              </Button>
+            </div>
+          </div>
           <div className="d-flex flex-wrap gap-2 align-items-center">
             <Form.Select
               size="sm"
@@ -119,17 +289,6 @@ export default function MembersManagement({
               className="bg-dark text-light border-secondary"
               style={{ maxWidth: 280 }}
             />
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={() => {
-                setEditingMember(null);
-                setShowForm(true);
-              }}
-            >
-              <i className="bi bi-person-badge me-1" aria-hidden="true" />
-              {m.admin_members_add()}
-            </Button>
           </div>
         </Card.Header>
 
@@ -167,78 +326,80 @@ export default function MembersManagement({
 
           {isLoading ? (
             <div className="text-center py-4">
-              <Spinner animation="border" variant="warning" size="sm" />
+              <Spinner animation="border" variant="primary" size="sm" />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : table.getRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_members_no_results()}</p>
           ) : (
             <div className="table-responsive">
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <caption className="visually-hidden">{m.admin_members_table_caption()}</caption>
                 <thead>
-                  <tr>
-                    <th>{m.registration_name()}</th>
-                    <th>{m.registration_email()}</th>
-                    <th>{m.registration_phone()}</th>
-                    <th>{m.admin_people_club_name_label()}</th>
-                    <th>{m.registration_notes()}</th>
-                    <th>{m.admin_registrations_tab()}</th>
-                    <th>{m.admin_actions_label()}</th>
-                  </tr>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                        const canSort = header.column.getCanSort();
+                        const sorted = header.column.getIsSorted();
+                        return (
+                          <th
+                            key={header.id}
+                            className={header.column.columnDef.meta?.tdClassName}
+                            onClick={header.column.getToggleSortingHandler()}
+                            onKeyDown={
+                              canSort
+                                ? (e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      header.column.getToggleSortingHandler()?.(e);
+                                    }
+                                  }
+                                : undefined
+                            }
+                            role={canSort ? "button" : undefined}
+                            tabIndex={canSort ? 0 : undefined}
+                            aria-sort={
+                              canSort
+                                ? sorted === "asc"
+                                  ? "ascending"
+                                  : sorted === "desc"
+                                    ? "descending"
+                                    : "none"
+                                : undefined
+                            }
+                            style={{
+                              cursor: canSort ? "pointer" : "default",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            <table.FlexRender header={header} />
+                            {canSort && (
+                              <i
+                                className={`bi ms-1 small ${
+                                  sorted === "asc"
+                                    ? "bi-arrow-up"
+                                    : sorted === "desc"
+                                      ? "bi-arrow-down"
+                                      : "bi-arrow-down-up opacity-25"
+                                }`}
+                                aria-hidden="true"
+                              />
+                            )}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  ))}
                 </thead>
                 <tbody>
-                  {filtered.map((member) => {
-                    const notesPreview = truncateText(member.notes);
-                    return (
-                      <tr key={member.id}>
-                        <td>
-                          <div className="fw-semibold d-flex align-items-center gap-1">
-                            {member.name}
-                            {!member.active && (
-                              <Badge bg="secondary" className="ms-1">
-                                {m.admin_people_inactive_badge_label()}
-                              </Badge>
-                            )}
-                          </div>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                          <table.FlexRender cell={cell} />
                         </td>
-                        <td className="small">{member.email || "—"}</td>
-                        <td className="small">{member.phone || "—"}</td>
-                        <td className="small">{member.clubName || "—"}</td>
-                        <td className="small text-secondary" title={member.notes || undefined}>
-                          {notesPreview || "—"}
-                        </td>
-                        <td className="small">{registrationCountByPersonId[member.id] ?? 0}</td>
-                        <td>
-                          <div className="d-flex flex-wrap gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline-light"
-                              onClick={() => {
-                                setEditingMember(member);
-                                setShowForm(true);
-                              }}
-                              title={m.admin_members_edit_title()}
-                              aria-label={m.admin_members_edit_title()}
-                            >
-                              <i className="bi bi-pencil" aria-hidden="true" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline-danger"
-                              onClick={() => {
-                                setDeletingId(member.id);
-                                setDeleteError("");
-                              }}
-                              title={m.admin_members_delete_title()}
-                              aria-label={m.admin_members_delete_title()}
-                            >
-                              <i className="bi bi-trash" aria-hidden="true" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </Table>
             </div>
