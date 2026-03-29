@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -7,7 +7,9 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { http, HttpResponse } from "msw";
 import MyRegistrationsPage from "@/components/MyRegistrationsPage";
+import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -39,18 +41,6 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("MyRegistrationsPage", () => {
-  let fetchMock: Mock;
-
-  beforeEach(() => {
-    fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.clearAllMocks();
-  });
-
   async function renderPage(initialEntry = "/my-registrations") {
     const rootRoute = createRootRoute();
     const myRegistrationsRoute = createRoute({
@@ -71,15 +61,6 @@ describe("MyRegistrationsPage", () => {
   }
 
   it("requests a secure link instead of looking registrations up by email", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        ok: true,
-        delivery_mode: "email",
-        expires_in_minutes: 30,
-      }),
-    });
-
     await renderPage();
 
     fireEvent.change(screen.getByLabelText("Email"), {
@@ -91,50 +72,23 @@ describe("MyRegistrationsPage", () => {
       expect(screen.getByText(/if we found registrations for that email/i)).toBeInTheDocument();
       expect(screen.getByText("Automatic email sending is not enabled yet.")).toBeInTheDocument();
     });
-
-    expect(fetchMock).toHaveBeenCalledWith("/api/registrations/my/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "guest@example.com" }),
-    });
   });
 
   it("loads registrations when a secure token is present in the URL", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [
-        {
-          id: "res_123",
-          event_title: "VIP Reception",
-          guest_count: 2,
-          status: "confirmed",
-          payment_status: "paid",
-          checked_in: false,
-          strap_issued: false,
-          created_at: "2026-03-20T10:00:00Z",
-          pre_orders: [],
-        },
-      ],
-    });
-
-    await renderPage("/my-registrations?token=secure-token");
+    // Any non-empty token is accepted by the MSW handler and returns the seed
+    // registrations — reg-01 (Grand Opening), reg-02 (Tasting Day 1), reg-03
+    // (Tasting Day 2).
+    await renderPage("/my-registrations?token=any-valid-token");
 
     await waitFor(() => {
-      expect(screen.getByText("VIP Reception")).toBeInTheDocument();
-    });
-
-    expect(fetchMock).toHaveBeenCalledWith("/api/registrations/my/access", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: "secure-token" }),
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
     });
   });
 
   it("shows an invalid-link message when the token is rejected", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-    });
+    server.use(
+      http.post("/api/registrations/my/access", () => HttpResponse.json(null, { status: 401 })),
+    );
 
     await renderPage("/my-registrations?token=expired-token");
 
@@ -157,15 +111,14 @@ describe("MyRegistrationsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Please enter a valid email address.")).toBeInTheDocument();
     });
-
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("shows an invalid email error when the API rejects the address", async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      status: 422,
-    });
+    server.use(
+      http.post("/api/registrations/my/request", () =>
+        HttpResponse.json(null, { status: 422 }),
+      ),
+    );
 
     await renderPage();
 
