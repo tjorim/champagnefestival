@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Edition } from "@/components/admin/editionTypes";
+import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import { queryKeys } from "@/utils/queryKeys";
 import {
   fetchRegistrations,
@@ -20,7 +20,7 @@ interface UseAdminQueriesOptions {
   isAuthenticated: boolean;
   authHeaders: () => Record<string, string>;
   storedToken: string;
-  activeEdition: Edition & { events: Array<{ date: string }> };
+  activeEdition: ActiveEdition;
 }
 
 export function useAdminQueries({
