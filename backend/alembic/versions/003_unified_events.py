@@ -82,17 +82,14 @@ def upgrade() -> None:
     existing_tables = inspector.get_table_names()
 
     edition_cols = {col["name"] for col in inspector.get_columns("editions")}
-    with op.batch_alter_table("editions") as batch_op:
-        if "edition_type" not in edition_cols:
-            batch_op.add_column(
-                sa.Column("edition_type", sa.String(length=20), nullable=False, server_default="festival")
-            )
-        if "external_partner" not in edition_cols:
-            batch_op.add_column(sa.Column("external_partner", sa.String(length=200), nullable=True))
-        if "external_contact_name" not in edition_cols:
-            batch_op.add_column(sa.Column("external_contact_name", sa.String(length=200), nullable=True))
-        if "external_contact_email" not in edition_cols:
-            batch_op.add_column(sa.Column("external_contact_email", sa.String(length=200), nullable=True))
+    if "edition_type" not in edition_cols:
+        op.add_column("editions", sa.Column("edition_type", sa.String(length=20), nullable=False, server_default="festival"))
+    if "external_partner" not in edition_cols:
+        op.add_column("editions", sa.Column("external_partner", sa.String(length=200), nullable=True))
+    if "external_contact_name" not in edition_cols:
+        op.add_column("editions", sa.Column("external_contact_name", sa.String(length=200), nullable=True))
+    if "external_contact_email" not in edition_cols:
+        op.add_column("editions", sa.Column("external_contact_email", sa.String(length=200), nullable=True))
 
     if "events" not in existing_tables:
         op.create_table(
@@ -209,17 +206,17 @@ def upgrade() -> None:
     )
 
     registration_cols = {col["name"] for col in inspect(bind).get_columns("registrations")}
-    with op.batch_alter_table("registrations") as batch_op:
-        if "event_title" in registration_cols:
-            batch_op.drop_column("event_title")
-        batch_op.alter_column("event_id", existing_type=sa.String(length=100), type_=sa.String(length=64))
-        batch_op.create_foreign_key(
-            "fk_registrations_event_id_events",
-            "events",
-            ["event_id"],
-            ["id"],
-            ondelete="RESTRICT",
-        )
+    if "event_title" in registration_cols:
+        op.drop_column("registrations", "event_title")
+    op.alter_column("registrations", "event_id", existing_type=sa.String(length=100), type_=sa.String(length=64))
+    op.create_foreign_key(
+        "fk_registrations_event_id_events",
+        "registrations",
+        "events",
+        ["event_id"],
+        ["id"],
+        ondelete="RESTRICT",
+    )
 
     op.create_index("ix_events_edition_id", "events", ["edition_id"])
     op.create_index("ix_events_date", "events", ["date"])
@@ -230,15 +227,14 @@ def upgrade() -> None:
     op.create_index("ix_registrations_table_id", "registrations", ["table_id"])
 
     edition_cols = {col["name"] for col in inspect(bind).get_columns("editions")}
-    with op.batch_alter_table("editions") as batch_op:
-        if "schedule" in edition_cols:
-            batch_op.drop_column("schedule")
-        if "friday" in edition_cols:
-            batch_op.drop_column("friday")
-        if "saturday" in edition_cols:
-            batch_op.drop_column("saturday")
-        if "sunday" in edition_cols:
-            batch_op.drop_column("sunday")
+    if "schedule" in edition_cols:
+        op.drop_column("editions", "schedule")
+    if "friday" in edition_cols:
+        op.drop_column("editions", "friday")
+    if "saturday" in edition_cols:
+        op.drop_column("editions", "saturday")
+    if "sunday" in edition_cols:
+        op.drop_column("editions", "sunday")
 
 
 def downgrade() -> None:
@@ -246,15 +242,14 @@ def downgrade() -> None:
     inspector = inspect(bind)
 
     edition_cols = {col["name"] for col in inspector.get_columns("editions")}
-    with op.batch_alter_table("editions") as batch_op:
-        if "schedule" not in edition_cols:
-            batch_op.add_column(sa.Column("schedule", sa.JSON(), nullable=False, server_default=sa.text("'[]'")))
-        if "friday" not in edition_cols:
-            batch_op.add_column(sa.Column("friday", sa.Date(), nullable=True))
-        if "saturday" not in edition_cols:
-            batch_op.add_column(sa.Column("saturday", sa.Date(), nullable=True))
-        if "sunday" not in edition_cols:
-            batch_op.add_column(sa.Column("sunday", sa.Date(), nullable=True))
+    if "schedule" not in edition_cols:
+        op.add_column("editions", sa.Column("schedule", sa.JSON(), nullable=False, server_default=sa.text("'[]'")))
+    if "friday" not in edition_cols:
+        op.add_column("editions", sa.Column("friday", sa.Date(), nullable=True))
+    if "saturday" not in edition_cols:
+        op.add_column("editions", sa.Column("saturday", sa.Date(), nullable=True))
+    if "sunday" not in edition_cols:
+        op.add_column("editions", sa.Column("sunday", sa.Date(), nullable=True))
 
     events = bind.execute(
         sa.text(
@@ -320,11 +315,10 @@ def downgrade() -> None:
             op.drop_index(name, table_name="registrations")
 
     registration_cols = {col["name"] for col in inspect(bind).get_columns("registrations")}
-    with op.batch_alter_table("registrations") as batch_op:
-        if "event_title" not in registration_cols:
-            batch_op.add_column(sa.Column("event_title", sa.String(length=200), nullable=False, server_default=""))
-        batch_op.drop_constraint("fk_registrations_event_id_events", type_="foreignkey")
-        batch_op.alter_column("event_id", existing_type=sa.String(length=64), type_=sa.String(length=100))
+    if "event_title" not in registration_cols:
+        op.add_column("registrations", sa.Column("event_title", sa.String(length=200), nullable=False, server_default=""))
+    op.drop_constraint("fk_registrations_event_id_events", "registrations", type_="foreignkey")
+    op.alter_column("registrations", "event_id", existing_type=sa.String(length=64), type_=sa.String(length=100))
 
     bind.execute(
         sa.text(
@@ -346,12 +340,11 @@ def downgrade() -> None:
         op.rename_table("registrations", "reservations")
 
     edition_cols = {col["name"] for col in inspect(bind).get_columns("editions")}
-    with op.batch_alter_table("editions") as batch_op:
-        if "edition_type" in edition_cols:
-            batch_op.drop_column("edition_type")
-        if "external_partner" in edition_cols:
-            batch_op.drop_column("external_partner")
-        if "external_contact_name" in edition_cols:
-            batch_op.drop_column("external_contact_name")
-        if "external_contact_email" in edition_cols:
-            batch_op.drop_column("external_contact_email")
+    if "edition_type" in edition_cols:
+        op.drop_column("editions", "edition_type")
+    if "external_partner" in edition_cols:
+        op.drop_column("editions", "external_partner")
+    if "external_contact_name" in edition_cols:
+        op.drop_column("editions", "external_contact_name")
+    if "external_contact_email" in edition_cols:
+        op.drop_column("editions", "external_contact_email")

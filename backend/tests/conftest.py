@@ -6,6 +6,7 @@ import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import app.ratelimit as ratelimit_module
@@ -32,17 +33,27 @@ def reset_rate_limiter(monkeypatch):
     monkeypatch.setattr(ratelimit_module, "_rate_limit_buckets", {})
 
 
-@pytest.fixture()
-async def db_session():
-    engine = create_async_engine(TEST_DATABASE_URL)
-    async with engine.begin() as conn:
+@pytest.fixture(scope="session")
+async def engine():
+    """Session-scoped engine: create schema once, drop after all tests."""
+    _engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    async with _engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+    yield _engine
+    async with _engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await _engine.dispose()
+
+
+@pytest.fixture()
+async def db_session(engine):
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as session:
         yield session
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(table.delete())
 
 
 @pytest.fixture()

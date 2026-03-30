@@ -59,11 +59,10 @@ def upgrade() -> None:
         op.create_index("ix_volunteer_periods_first_help_day", "volunteer_periods", ["first_help_day"])
 
     people_cols = [c["name"] for c in inspect(bind).get_columns("people")]
-    with op.batch_alter_table("people") as batch_op:
-        if "first_help_day" in people_cols:
-            batch_op.drop_column("first_help_day")
-        if "last_help_day" in people_cols:
-            batch_op.drop_column("last_help_day")
+    if "first_help_day" in people_cols:
+        op.drop_column("people", "first_help_day")
+    if "last_help_day" in people_cols:
+        op.drop_column("people", "last_help_day")
 
     if "reservation_access_tokens" not in existing_tables:
         op.create_table(
@@ -95,9 +94,8 @@ def downgrade() -> None:
     op.drop_index("ix_reservation_access_tokens_email", table_name="reservation_access_tokens")
     op.drop_table("reservation_access_tokens")
 
-    with op.batch_alter_table("people") as batch_op:
-        batch_op.add_column(sa.Column("first_help_day", sa.Date(), nullable=True))
-        batch_op.add_column(sa.Column("last_help_day", sa.Date(), nullable=True))
+    op.add_column("people", sa.Column("first_help_day", sa.Date(), nullable=True))
+    op.add_column("people", sa.Column("last_help_day", sa.Date(), nullable=True))
 
     op.drop_index("ix_volunteer_periods_first_help_day", table_name="volunteer_periods")
     op.drop_index("ix_volunteer_periods_volunteer_id", table_name="volunteer_periods")
