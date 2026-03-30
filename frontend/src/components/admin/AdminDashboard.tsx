@@ -51,18 +51,7 @@ import {
   replaceVolunteerById,
   syncMembersWithPerson,
 } from "@/utils/adminApiMappers";
-import {
-  fetchRegistrations,
-  fetchTables,
-  fetchVenues,
-  fetchRooms,
-  fetchTableTypes,
-  fetchLayouts,
-  fetchExhibitors,
-  fetchAreas,
-  fetchPeople,
-  fetchMembers,
-} from "@/utils/adminFetch";
+import Card from "react-bootstrap/Card";
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -146,6 +135,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setError("");
     await loadDataBase();
   }, [loadDataBase]);
+
+  const registrations = registrationsQuery.data ?? [];
+  const tables = tablesQuery.data ?? [];
+  const venues = venuesQuery.data ?? [];
+  const rooms = roomsQuery.data ?? [];
+  const tableTypes = tableTypesQuery.data ?? [];
+  const layouts = layoutsQuery.data ?? [];
+  const exhibitors = exhibitorsQuery.data ?? [];
+  const areas = areasQuery.data ?? [];
+  const people = peopleQuery.data ?? [];
+  const members = membersQuery.data ?? [];
 
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
@@ -2043,63 +2043,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     >
       {!isAuthenticated ? (
         /* ---- Login ---- */
-        <Container>
-          <h2 id="admin-title" className="text-center mb-4 text-warning">
-            <i className="bi bi-shield-lock me-2" aria-hidden="true" />
-            {m.admin_title()}
-          </h2>
-          <div className="row justify-content-center">
-            <div className="col-12 col-sm-8 col-md-6 col-lg-4">
-              <Card bg="dark" text="white" border="warning">
-                <Card.Header className="border-warning">
-                  <Card.Title className="mb-0">{m.admin_login_title()}</Card.Title>
-                </Card.Header>
-                <Card.Body>
-                  <Form onSubmit={handleLogin}>
-                    <Form.Group className="mb-3" controlId="admin-token">
-                      <Form.Label>{m.admin_token_label()}</Form.Label>
-                      <Form.Control
-                        type="password"
-                        value={token}
-                        onChange={(e) => {
-                          setToken(e.target.value);
-                          setLoginError("");
-                        }}
-                        placeholder={m.admin_token_placeholder()}
-                        className="bg-dark text-light border-secondary"
-                        autoComplete="current-password"
-                        required
-                      />
-                    </Form.Group>
-                    {loginError && (
-                      <Alert variant="danger" className="py-2">
-                        {loginError}
-                      </Alert>
-                    )}
-                    <Button
-                      type="submit"
-                      variant="warning"
-                      className="w-100"
-                      disabled={isLoggingIn || !token.trim()}
-                    >
-                      {isLoggingIn ? (
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        m.admin_login_button()
-                      )}
-                    </Button>
-                  </Form>
-                </Card.Body>
-              </Card>
-            </div>
-          </div>
-        </Container>
+        <AdminLoginForm
+          token={token}
+          onTokenChange={(value) => {
+            setToken(value);
+            setLoginError("");
+          }}
+          loginError={loginError}
+          isLoggingIn={isLoggingIn}
+          onSubmit={handleLogin}
+        />
       ) : (
         /* ---- Authenticated: sidebar layout ---- */
         <div className="admin-layout">

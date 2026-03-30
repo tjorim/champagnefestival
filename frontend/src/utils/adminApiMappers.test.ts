@@ -1,12 +1,6 @@
 /**
- * Tests for the admin API mapper functions defined in AdminDashboard.tsx.
- *
- * The mapper functions (apiVenueToVenue, apiTableToTable, apiAreaToArea, etc.) are
- * private to AdminDashboard.tsx and are not exported. This file tests the same
- * mapping contract by replicating the mappers locally, ensuring the expected
- * snake_case → camelCase field transformation and default-value behaviour are
- * correct. If/when the mappers are extracted to a dedicated module they can be
- * imported and the local copies below removed.
+ * Tests for adminApiMappers.ts — snake_case → camelCase field mappers and
+ * person-merge helpers used by the admin dashboard.
  */
 
 import type {
@@ -17,92 +11,48 @@ import type {
   TableType,
   Venue,
 } from "../types/admin";
+import type { Person } from "../types/person";
 
 import { describe, expect, it } from "vitest";
+import {
+  apiVenueToVenue,
+  apiLayoutToLayout,
+  apiTableTypeToTableType,
+  apiRoomToRoom,
+  apiTableToTable,
+  apiAreaToArea,
+  mergeVolunteerPerson,
+  mergePeopleWithVolunteers,
+  mergePersonUpdate,
+  replacePersonById,
+  replaceVolunteerById,
+  syncMembersWithPerson,
+} from "./adminApiMappers";
 
-// ─── Local copies of the private mapper functions ────────────────────────────
-// Keep in sync with AdminDashboard.tsx until the mappers are extracted.
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function apiVenueToVenue(d: Record<string, unknown>): Venue {
+function makePerson(overrides: Partial<Person> = {}): Person {
   return {
-    id: d.id as string,
-    name: d.name as string,
-    address: (d.address ?? "") as string,
-    city: (d.city ?? "") as string,
-    postalCode: (d.postal_code ?? "") as string,
-    country: (d.country ?? "") as string,
-    lat: (d.lat ?? 0) as number,
-    lng: (d.lng ?? 0) as number,
-    active: (d.active ?? true) as boolean,
+    id: "p1",
+    name: "Alice",
+    email: "alice@example.com",
+    phone: "0470000000",
+    address: "Kursaal 1",
+    roles: [],
+    nationalRegisterNumber: null,
+    eidDocumentNumber: null,
+    visitsPerMonth: null,
+    clubName: "",
+    notes: "",
+    active: true,
+    helpPeriods: [],
+    createdAt: "2025-01-01T00:00:00Z",
+    updatedAt: "2025-01-01T00:00:00Z",
+    ...overrides,
   };
 }
 
-function apiLayoutToLayout(d: Record<string, unknown>): Layout {
-  return {
-    id: d.id as string,
-    editionId: (d.edition_id as string | null) ?? null,
-    roomId: d.room_id as string,
-    date: (d.date as string | null) ?? null,
-    label: (d.label ?? "") as string,
-    createdAt: d.created_at as string,
-  };
-}
-
-function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    shape: (d.shape ?? "rectangle") as "rectangle" | "round",
-    widthM: (d.width_m ?? 1.8) as number,
-    lengthM: (d.length_m ?? 0.7) as number,
-    heightType: (d.height_type ?? "low") as "low" | "high",
-    maxCapacity: (d.max_capacity ?? 4) as number,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-function apiRoomToRoom(d: Record<string, unknown>): Room {
-  return {
-    id: d.id as string,
-    venueId: d.venue_id as string,
-    name: d.name as string,
-    widthM: d.width_m as number,
-    lengthM: d.length_m as number,
-    color: d.color as string,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-function apiTableToTable(d: Record<string, unknown>): FloorTable {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    capacity: d.capacity as number,
-    x: d.x as number,
-    y: d.y as number,
-    tableTypeId: d.table_type_id as string,
-    rotation: (d.rotation ?? 0) as number,
-    layoutId: d.layout_id as string,
-    registrationIds: (d.registration_ids as string[]) ?? [],
-  };
-}
-
-function apiAreaToArea(d: Record<string, unknown>): FloorArea {
-  return {
-    id: d.id as string,
-    layoutId: d.layout_id as string,
-    icon: (d.icon ?? "bi-shop") as string,
-    exhibitorId: (d.exhibitor_id as number | null) ?? null,
-    label: (d.label ?? "") as string,
-    x: (d.x ?? 50) as number,
-    y: (d.y ?? 50) as number,
-    rotation: (d.rotation ?? 0) as number,
-    widthM: (d.width_m ?? 1.5) as number,
-    lengthM: (d.length_m ?? 1.0) as number,
-  };
-}
-
-// ─── Tests ───────────────────────────────────────────────────────────────────
+// ─── apiVenueToVenue ──────────────────────────────────────────────────────────
 
 describe("apiVenueToVenue", () => {
   const minimal = {
@@ -178,6 +128,8 @@ describe("apiVenueToVenue", () => {
   });
 });
 
+// ─── apiTableToTable ──────────────────────────────────────────────────────────
+
 describe("apiTableToTable", () => {
   const minimal = {
     id: "t1",
@@ -240,6 +192,8 @@ describe("apiTableToTable", () => {
     expect(result.y).toBe(75.25);
   });
 });
+
+// ─── apiAreaToArea ────────────────────────────────────────────────────────────
 
 describe("apiAreaToArea", () => {
   const minimal = {
@@ -332,6 +286,8 @@ describe("apiAreaToArea", () => {
   });
 });
 
+// ─── apiLayoutToLayout ────────────────────────────────────────────────────────
+
 describe("apiLayoutToLayout", () => {
   const minimal = {
     id: "ly1",
@@ -391,6 +347,8 @@ describe("apiLayoutToLayout", () => {
     expect(apiLayoutToLayout({ ...minimal, edition_id: "ed1" }).editionId).toBe("ed1");
   });
 });
+
+// ─── apiTableTypeToTableType ──────────────────────────────────────────────────
 
 describe("apiTableTypeToTableType", () => {
   const minimal = {
@@ -471,6 +429,8 @@ describe("apiTableTypeToTableType", () => {
   });
 });
 
+// ─── apiRoomToRoom ────────────────────────────────────────────────────────────
+
 describe("apiRoomToRoom", () => {
   const minimal = {
     id: "r1",
@@ -520,5 +480,189 @@ describe("apiRoomToRoom", () => {
 
   it("preserves color value", () => {
     expect(apiRoomToRoom({ ...minimal, color: "#00ff00" }).color).toBe("#00ff00");
+  });
+});
+
+// ─── mergeVolunteerPerson ─────────────────────────────────────────────────────
+
+describe("mergeVolunteerPerson", () => {
+  const helpPeriods = [{ id: 1, firstHelpDay: "2025-06-01", lastHelpDay: "2025-06-02" }];
+
+  it("always includes 'volunteer' in roles", () => {
+    const result = mergeVolunteerPerson(undefined, makePerson({ roles: ["member"] }));
+    expect(result.roles).toContain("volunteer");
+  });
+
+  it("merges roles from existing and volunteer", () => {
+    const existing = makePerson({ roles: ["member"] });
+    const volunteer = makePerson({ roles: ["volunteer"] });
+    const result = mergeVolunteerPerson(existing, volunteer);
+    expect(result.roles).toContain("member");
+    expect(result.roles).toContain("volunteer");
+  });
+
+  it("uses volunteer helpPeriods over existing helpPeriods", () => {
+    const existing = makePerson({ helpPeriods: [] });
+    const volunteer = makePerson({ helpPeriods });
+    expect(mergeVolunteerPerson(existing, volunteer).helpPeriods).toEqual(helpPeriods);
+  });
+
+  it("prefers existing email when volunteer email is empty", () => {
+    const existing = makePerson({ email: "alice@example.com" });
+    const volunteer = makePerson({ email: "" });
+    expect(mergeVolunteerPerson(existing, volunteer).email).toBe("alice@example.com");
+  });
+
+  it("uses volunteer email when existing is absent (undefined existing)", () => {
+    const volunteer = makePerson({ email: "vol@example.com" });
+    expect(mergeVolunteerPerson(undefined, volunteer).email).toBe("vol@example.com");
+  });
+
+  it("returns a new object (immutability)", () => {
+    const existing = makePerson();
+    const volunteer = makePerson();
+    const result = mergeVolunteerPerson(existing, volunteer);
+    expect(result).not.toBe(existing);
+    expect(result).not.toBe(volunteer);
+  });
+});
+
+// ─── mergePeopleWithVolunteers ────────────────────────────────────────────────
+
+describe("mergePeopleWithVolunteers", () => {
+  it("returns only people when volunteers list is empty", () => {
+    const people = [makePerson({ id: "p1" }), makePerson({ id: "p2" })];
+    expect(mergePeopleWithVolunteers(people, [])).toEqual(people);
+  });
+
+  it("returns only volunteers when people list is empty", () => {
+    const volunteers = [makePerson({ id: "v1", roles: ["volunteer"] })];
+    const result = mergePeopleWithVolunteers([], volunteers);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe("v1");
+  });
+
+  it("merges a volunteer record into the matching person", () => {
+    const person = makePerson({ id: "p1", roles: [] });
+    const volunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    const result = mergePeopleWithVolunteers([person], [volunteer]);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.roles).toContain("volunteer");
+  });
+
+  it("appends volunteer-only records after the merged people list", () => {
+    const person = makePerson({ id: "p1" });
+    const volunteerOnly = makePerson({ id: "v99", roles: ["volunteer"] });
+    const result = mergePeopleWithVolunteers([person], [volunteerOnly]);
+    expect(result).toHaveLength(2);
+    expect(result[1]?.id).toBe("v99");
+  });
+
+  it("does not duplicate when the same person appears in both lists", () => {
+    const person = makePerson({ id: "p1" });
+    const volunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    expect(mergePeopleWithVolunteers([person], [volunteer])).toHaveLength(1);
+  });
+});
+
+// ─── mergePersonUpdate ────────────────────────────────────────────────────────
+
+describe("mergePersonUpdate", () => {
+  it("returns updated when existing is undefined", () => {
+    const updated = makePerson({ id: "p1" });
+    expect(mergePersonUpdate(undefined, updated)).toBe(updated);
+  });
+
+  it("returns updated directly when updated has no volunteer role", () => {
+    const existing = makePerson({ helpPeriods: [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null }] });
+    const updated = makePerson({ roles: ["member"] });
+    expect(mergePersonUpdate(existing, updated)).toBe(updated);
+  });
+
+  it("preserves existing helpPeriods when updated has volunteer role", () => {
+    const helpPeriods = [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null }];
+    const existing = makePerson({ helpPeriods });
+    const updated = makePerson({ roles: ["volunteer"], helpPeriods: [] });
+    const result = mergePersonUpdate(existing, updated);
+    expect(result.helpPeriods).toEqual(helpPeriods);
+  });
+});
+
+// ─── replacePersonById ────────────────────────────────────────────────────────
+
+describe("replacePersonById", () => {
+  it("replaces the person with matching id", () => {
+    const p1 = makePerson({ id: "p1", name: "Alice" });
+    const p2 = makePerson({ id: "p2", name: "Bob" });
+    const updated = makePerson({ id: "p1", name: "Alice Updated" });
+    const result = replacePersonById([p1, p2], updated);
+    expect(result[0]?.name).toBe("Alice Updated");
+    expect(result[1]?.name).toBe("Bob");
+  });
+
+  it("returns original people when no id matches", () => {
+    const p1 = makePerson({ id: "p1" });
+    const updated = makePerson({ id: "p99" });
+    const result = replacePersonById([p1], updated);
+    expect(result[0]).toBe(p1);
+  });
+
+  it("returns a new array (immutability)", () => {
+    const people = [makePerson({ id: "p1" })];
+    const result = replacePersonById(people, makePerson({ id: "p1" }));
+    expect(result).not.toBe(people);
+  });
+});
+
+// ─── replaceVolunteerById ─────────────────────────────────────────────────────
+
+describe("replaceVolunteerById", () => {
+  it("merges the volunteer into the matching person", () => {
+    const person = makePerson({ id: "p1", roles: ["member"] });
+    const updatedVolunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    const result = replaceVolunteerById([person], updatedVolunteer);
+    expect(result[0]?.roles).toContain("volunteer");
+    expect(result[0]?.roles).toContain("member");
+  });
+
+  it("does not modify non-matching entries", () => {
+    const p1 = makePerson({ id: "p1" });
+    const p2 = makePerson({ id: "p2" });
+    const updatedVolunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    const result = replaceVolunteerById([p1, p2], updatedVolunteer);
+    expect(result[1]).toBe(p2);
+  });
+});
+
+// ─── syncMembersWithPerson ────────────────────────────────────────────────────
+
+describe("syncMembersWithPerson", () => {
+  it("removes the person from members when updated person has no member role", () => {
+    const member = makePerson({ id: "p1", roles: ["member"] });
+    const updated = makePerson({ id: "p1", roles: [] });
+    const result = syncMembersWithPerson([member], updated);
+    expect(result).toHaveLength(0);
+  });
+
+  it("prepends person when they are a new member not yet in the list", () => {
+    const existing = makePerson({ id: "p2", roles: ["member"] });
+    const newMember = makePerson({ id: "p1", roles: ["member"] });
+    const result = syncMembersWithPerson([existing], newMember);
+    expect(result).toHaveLength(2);
+    expect(result[0]?.id).toBe("p1");
+  });
+
+  it("updates the existing member record in place when already present", () => {
+    const member = makePerson({ id: "p1", name: "Old Name", roles: ["member"] });
+    const updated = makePerson({ id: "p1", name: "New Name", roles: ["member"] });
+    const result = syncMembersWithPerson([member], updated);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.name).toBe("New Name");
+  });
+
+  it("returns a new array (immutability)", () => {
+    const members = [makePerson({ id: "p1", roles: ["member"] })];
+    const updated = makePerson({ id: "p1", roles: ["member"] });
+    expect(syncMembersWithPerson(members, updated)).not.toBe(members);
   });
 });

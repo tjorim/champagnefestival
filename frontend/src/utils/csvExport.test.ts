@@ -12,9 +12,11 @@ function capturedCsvContent(): string {
   return parts.join("");
 }
 
+// exportToCsv removes the anchor immediately after clicking it, so we capture
+// it via the appendChild spy set up in beforeEach.
+let _lastAnchorEl: HTMLAnchorElement | null = null;
 function capturedFilename(): string {
-  const anchor = document.body.querySelector("a[download]");
-  return anchor?.getAttribute("download") ?? "";
+  return _lastAnchorEl?.download ?? "";
 }
 
 describe("exportToCsv", () => {
@@ -24,9 +26,22 @@ describe("exportToCsv", () => {
   let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
 
   beforeEach(() => {
+    _lastAnchorEl = null;
+    // Capture the anchor element before exportToCsv removes it from the DOM.
+    // Node.prototype.appendChild is the real implementation we delegate to.
+    const realAppendChild = Node.prototype.appendChild.bind(document.body);
+    vi.spyOn(document.body, "appendChild").mockImplementation((node) => {
+      if (node instanceof HTMLAnchorElement) _lastAnchorEl = node;
+      return realAppendChild(node);
+    });
+
     // Mock Blob so we can inspect what CSV string was built
     originalBlob = globalThis.Blob;
-    const BlobMock = vi.fn().mockImplementation((parts: BlobPart[], options: BlobPropertyBag) => {
+    // Use a regular function (not arrow) so it can be invoked with `new`
+    const BlobMock = vi.fn().mockImplementation(function (
+      parts: BlobPart[],
+      options: BlobPropertyBag,
+    ) {
       return { parts, options, size: 0, type: options?.type ?? "" };
     });
     globalThis.Blob = BlobMock as unknown as typeof Blob;
@@ -272,7 +287,7 @@ describe("exportToCsv", () => {
     it("creates a Blob with the correct MIME type", () => {
       exportToCsv("out.csv", [{ x: "1" }]);
       const blobCalls = (globalThis.Blob as unknown as ReturnType<typeof vi.fn>).mock.calls;
-      const lastOptions = blobCalls[blobCalls.length - 1][1] as BlobPropertyBag;
+      const lastOptions = blobCalls[blobCalls.length - 1]![1] as BlobPropertyBag;
       expect(lastOptions.type).toBe("text/csv;charset=utf-8;");
     });
   });
