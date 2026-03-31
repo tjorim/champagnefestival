@@ -4,6 +4,8 @@
 
 - `frontend/` contains the web app
 - `backend/` contains the FastAPI service
+- Production hosting for `champagnefestival.tjor.im` is handled by the separate infra stack in `/opt/apps/infra`
+- Frontend builds write to `frontend/dist`; in production, Caddy serves this content from `/srv/champagnefestival`
 
 ## Commands
 
