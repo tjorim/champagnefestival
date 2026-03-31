@@ -123,8 +123,7 @@ class Settings(BaseSettings):
         """Refuse to start in production without a SuperTokens connection URI."""
         if self.environment == "production" and not self.supertokens_connection_uri:
             raise ValueError(
-                "SUPERTOKENS_CONNECTION_URI must be set in production; "
-                "refusing to start without SuperTokens auth."
+                "SUPERTOKENS_CONNECTION_URI must be set in production; refusing to start without SuperTokens auth."
             )
         return self
 

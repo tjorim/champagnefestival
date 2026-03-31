@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
+from supertokens_python import get_all_cors_headers
 from supertokens_python.framework.fastapi import get_middleware
 
 from app.config import settings
@@ -86,12 +87,14 @@ if not _cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {_cors_origins}")
 
+_supertokens_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
+
 app.add_middleware(
     CORSMiddleware,  # ty: ignore[invalid-argument-type]
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "rid", "fdi-version", "anti-csrf"],
+    allow_headers=["Content-Type", "Accept"] + _supertokens_headers,
     expose_headers=["front-token", "id-refresh-token"],
 )
 
