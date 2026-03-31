@@ -36,6 +36,12 @@ class Settings(BaseSettings):
       postgresql+asyncpg://user:password@host:5432/champagne
     """
 
+    database_pool_size: int = 5
+    """Number of persistent connections in the pool."""
+
+    database_pool_max_overflow: int = 10
+    """Extra connections allowed beyond pool size."""
+
     # --- CORS ---
     cors_origins: str = ""
     """Allowed CORS origins as a comma-separated string.
@@ -72,6 +78,19 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate database_url is a PostgreSQL connection string."""
+        if not v or not v.strip():
+            raise ValueError("DATABASE_URL cannot be empty")
+        if not v.startswith("postgresql"):
+            raise ValueError(
+                "DATABASE_URL must be a PostgreSQL connection string "
+                "(expected prefix: postgresql+asyncpg://...)"
+            )
+        return v
 
     @field_validator("environment")
     @classmethod

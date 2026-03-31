@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 engine = create_async_engine(
     settings.database_url,
+    pool_size=settings.database_pool_size,
+    max_overflow=settings.database_pool_max_overflow,
     # echo=True,  # uncomment for SQL query logging during development
 )
 
