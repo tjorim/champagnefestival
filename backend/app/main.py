@@ -87,14 +87,14 @@ if not _cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {_cors_origins}")
 
-_supertokens_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
+_supertokens_cors_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
 
 app.add_middleware(
     CORSMiddleware,  # ty: ignore[invalid-argument-type]
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept"] + _supertokens_headers,
+    allow_headers=["Content-Type", "Accept"] + _supertokens_cors_headers,
     expose_headers=["front-token", "id-refresh-token"],
 )
 
