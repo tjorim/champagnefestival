@@ -17,8 +17,8 @@ from tests.helpers import (
 
 
 @pytest.mark.anyio
-async def test_list_requires_auth(client):
-    r = await client.get("/api/registrations")
+async def test_list_requires_auth(unauth_client):
+    r = await unauth_client.get("/api/registrations")
     assert r.status_code == 401
 
 
@@ -226,8 +226,8 @@ async def test_admin_create_reservation(client):
 
 
 @pytest.mark.anyio
-async def test_admin_create_reservation_requires_auth(client):
-    r = await client.post(
+async def test_admin_create_reservation_requires_auth(unauth_client):
+    r = await unauth_client.post(
         "/api/registrations/admin",
         json={"person_id": "x", "event_id": "e", "event_title": "t", "guest_count": 1},
     )

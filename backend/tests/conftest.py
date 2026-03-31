@@ -10,9 +10,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 import app.ratelimit as ratelimit_module
+from app.auth import require_admin
 from app.database import Base, get_db
 from app.main import app
-from tests.helpers import ADMIN_TOKEN
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -22,11 +22,6 @@ TEST_DATABASE_URL = os.environ.get(
     # Override via TEST_DATABASE_URL env var in CI or custom environments.
     "postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne",
 )
-
-
-@pytest.fixture(autouse=True)
-def set_admin_token(monkeypatch):
-    monkeypatch.setattr("app.config.settings.admin_token", ADMIN_TOKEN)
 
 
 @pytest.fixture(autouse=True)
@@ -88,6 +83,32 @@ async def client(db_session):
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[require_admin] = lambda: None
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+async def unauth_client(db_session):
+    """Client that simulates unauthenticated requests.
+
+    ``require_admin`` is overridden with a function that always raises 401,
+    mimicking what SuperTokens ``verify_session`` does for unauthenticated
+    callers.  Use this fixture in tests that verify endpoints reject
+    unauthenticated access.
+    """
+    from fastapi import HTTPException
+
+    async def override_get_db():
+        yield db_session
+
+    def reject() -> None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[require_admin] = reject
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c

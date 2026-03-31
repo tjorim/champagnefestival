@@ -1,27 +1,24 @@
-"""Admin bearer-token authentication dependency."""
+"""Admin session authentication dependency (SuperTokens)."""
 
-import secrets
-
-from fastapi import HTTPException, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-from app.config import settings
-
-_bearer = HTTPBearer(auto_error=False)
+from fastapi import Depends, HTTPException, status
+from supertokens_python.recipe.session import SessionContainer
+from supertokens_python.recipe.session.framework.fastapi import verify_session
 
 
-def require_admin(
-    credentials: HTTPAuthorizationCredentials | None = Security(_bearer),
+async def require_admin(
+    session: SessionContainer = Depends(verify_session()),
 ) -> None:
-    """FastAPI dependency — raises 401 if the admin token is missing or wrong."""
-    if not settings.admin_token:
+    """FastAPI dependency — raises 401 if the request has no valid SuperTokens session.
+
+    All admin routers use this dependency to gate access.  A valid session is
+    created when the user signs in via the ``/auth/signin`` endpoint provided
+    by the SuperTokens middleware.
+
+    Future enhancement: add a role check for ``admin`` using the UserRoles
+    recipe (``UserRoleClaim``) once role provisioning is in place.
+    """
+    if session is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Admin access is not configured on this server.",
-        )
-    if credentials is None or not secrets.compare_digest(credentials.credentials, settings.admin_token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing admin token.",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Authentication required.",
         )

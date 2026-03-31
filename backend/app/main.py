@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
+from supertokens_python.framework.fastapi import get_middleware
 
 from app.config import settings
 from app.database import create_tables
@@ -29,6 +30,7 @@ from app.routers import (
     venues,
     volunteers,
 )
+from app.supertokens_config import init_supertokens
 
 # Configure logging before any other module uses a logger.
 logging.basicConfig(
@@ -36,6 +38,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Initialise SuperTokens before the app handles any requests.
+init_supertokens()
 
 
 @asynccontextmanager
@@ -86,8 +91,14 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "rid", "fdi-version", "anti-csrf"],
+    expose_headers=["front-token", "id-refresh-token"],
 )
+
+# SuperTokens middleware handles /auth/* routes and session management.
+# Only added when SuperTokens is configured (has a connection URI).
+if settings.supertokens_connection_uri:
+    app.add_middleware(get_middleware())
 
 
 @app.exception_handler(IntegrityError)

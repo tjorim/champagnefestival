@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-ADMIN_TOKEN = "test-admin-token"
-ADMIN_HEADERS = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+# Auth headers sent with admin requests.  In tests the ``require_admin``
+# dependency is overridden (see conftest.py), so these headers are not
+# validated — they are kept for readability so test requests clearly signal
+# "this is an admin call".
+ADMIN_HEADERS: dict[str, str] = {}
 
 VENUE_PAYLOAD = {"name": "Test Venue"}
 

@@ -12,8 +12,8 @@ from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
 
 
 @pytest.mark.anyio
-async def test_people_require_auth(client):
-    r = await client.get("/api/people")
+async def test_people_require_auth(unauth_client):
+    r = await unauth_client.get("/api/people")
     assert r.status_code == 401
 
 
@@ -340,8 +340,8 @@ async def test_people_support_limit_and_page(client):
 
 
 @pytest.mark.anyio
-async def test_merge_people_requires_auth(client):
-    r = await client.post("/api/people/per_x/merge/per_y")
+async def test_merge_people_requires_auth(unauth_client):
+    r = await unauth_client.post("/api/people/per_x/merge/per_y")
     assert r.status_code == 401
 
 
@@ -544,8 +544,8 @@ async def test_merge_people_fills_blank_fields(client):
 
 
 @pytest.mark.anyio
-async def test_members_require_auth(client):
-    r = await client.get("/api/members")
+async def test_members_require_auth(unauth_client):
+    r = await unauth_client.get("/api/members")
     assert r.status_code == 401
 
 

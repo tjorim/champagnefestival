@@ -8,8 +8,8 @@ from tests.helpers import ADMIN_HEADERS, _create_layout_prerequisites
 
 
 @pytest.mark.anyio
-async def test_areas_require_admin(client):
-    r = await client.get("/api/areas")
+async def test_areas_require_admin(unauth_client):
+    r = await unauth_client.get("/api/areas")
     assert r.status_code == 401
 
 

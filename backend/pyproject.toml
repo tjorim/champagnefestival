@@ -19,6 +19,7 @@ dependencies = [
   "phonenumbers>=9.0.26",
   "asyncpg>=0.30",
   "psycopg[binary]>=3.0",
+  "supertokens-python>=0.31",
 ]
 
 [dependency-groups]
