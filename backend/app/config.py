@@ -128,10 +128,13 @@ class Settings(BaseSettings):
 
     @staticmethod
     def _mask_db_credentials(url: str) -> str:
-        """Return url with the userinfo portion replaced by ****."""
-        import re
+        """Return url with the password hidden."""
+        try:
+            from sqlalchemy.engine.url import make_url
 
-        return re.sub(r"(://)[^@/]+@", r"\1****@", url)
+            return make_url(url).render_as_string(hide_password=True)
+        except Exception:
+            return "<unparseable>"
 
     def log_configuration(self) -> None:
         """Log all configuration at startup, masking sensitive values."""
