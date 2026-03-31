@@ -126,13 +126,20 @@ class Settings(BaseSettings):
 
         return [origin.strip() for origin in cors_env.split(",") if origin.strip()]
 
+    @staticmethod
+    def _mask_db_credentials(url: str) -> str:
+        """Return url with the userinfo portion replaced by ****."""
+        import re
+
+        return re.sub(r"(://)[^@/]+@", r"\1****@", url)
+
     def log_configuration(self) -> None:
         """Log all configuration at startup, masking sensitive values."""
         logger.info("=" * 60)
         logger.info("Champagne Festival Backend Configuration")
         logger.info("=" * 60)
         logger.info(f"Environment:   {self.environment}")
-        logger.info(f"Database URL:  {self.database_url}")
+        logger.info(f"Database URL:  {self._mask_db_credentials(self.database_url)}")
 
         cors_origins = self.get_cors_origins_list()
         if not cors_origins:

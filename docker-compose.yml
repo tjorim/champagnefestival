@@ -27,7 +27,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Bind-mount host sources so --reload picks up edits without rebuilding.
+    # A named volume at /app/.venv keeps the container virtualenv intact.
+    volumes:
+      - ./backend:/app
+      - backend_venv:/app/.venv
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:
+  backend_venv:

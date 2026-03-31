@@ -58,6 +58,11 @@ jobs:
       - name: Typecheck (ty)
         run: uv run ty check .
 
+      - name: Migrate (alembic upgrade head)
+        run: uv run alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
+
       - name: Test
         run: uv run pytest
         env:
