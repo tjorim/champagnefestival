@@ -29,7 +29,7 @@ def init_supertokens() -> None:
             app_name="Champagne Festival",
             api_domain=settings.api_domain,
             website_domain=settings.website_domain,
-            api_base_path="/auth",
+            api_base_path=settings.api_base_path,
             website_base_path="/auth",
         ),
         supertokens_config=SupertokensConfig(

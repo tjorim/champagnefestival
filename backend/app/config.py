@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     website_domain: str = "http://localhost:5173"
     """Public URL where the frontend is reachable (used by SuperTokens for cookies)."""
 
+    api_base_path: str = "/auth"
+    """Base path for SuperTokens API routes (e.g. /auth/signin, /auth/signout)."""
+
     # --- Database ---
     database_url: str = "postgresql+asyncpg://localhost/champagne"
     """SQLAlchemy async database URL.
