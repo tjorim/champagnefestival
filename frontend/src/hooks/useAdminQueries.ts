@@ -19,7 +19,6 @@ interface UseAdminQueriesOptions {
   visible: boolean;
   isAuthenticated: boolean;
   authHeaders: () => Record<string, string>;
-  storedToken: string;
   activeEdition: ActiveEdition;
 }
 
@@ -27,22 +26,21 @@ export function useAdminQueries({
   visible,
   isAuthenticated,
   authHeaders,
-  storedToken,
   activeEdition,
 }: UseAdminQueriesOptions) {
   const queryClient = useQueryClient();
 
-  // Per-resource query keys, scoped to the stored token so cache is cleared on logout
-  const registrationsQueryKey = queryKeys.admin.registrations(storedToken);
-  const tablesQueryKey = queryKeys.admin.tables(storedToken);
-  const venuesQueryKey = queryKeys.admin.venues(storedToken);
-  const roomsQueryKey = queryKeys.admin.rooms(storedToken);
-  const tableTypesQueryKey = queryKeys.admin.tableTypes(storedToken);
-  const layoutsQueryKey = queryKeys.admin.layouts(storedToken);
-  const exhibitorsQueryKey = queryKeys.admin.exhibitors(storedToken);
-  const areasQueryKey = queryKeys.admin.areas(storedToken);
-  const peopleQueryKey = queryKeys.admin.people(storedToken);
-  const membersQueryKey = queryKeys.admin.members(storedToken);
+  // Per-resource query keys (no longer scoped to a token; SuperTokens manages sessions)
+  const registrationsQueryKey = queryKeys.admin.registrations;
+  const tablesQueryKey = queryKeys.admin.tables;
+  const venuesQueryKey = queryKeys.admin.venues;
+  const roomsQueryKey = queryKeys.admin.rooms;
+  const tableTypesQueryKey = queryKeys.admin.tableTypes;
+  const layoutsQueryKey = queryKeys.admin.layouts;
+  const exhibitorsQueryKey = queryKeys.admin.exhibitors;
+  const areasQueryKey = queryKeys.admin.areas;
+  const peopleQueryKey = queryKeys.admin.people;
+  const membersQueryKey = queryKeys.admin.members;
 
   const adminQueryOptions = {
     enabled: visible && isAuthenticated,

@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
+import Session from "supertokens-auth-react/recipe/session";
 import { m } from "@/paraglide/messages";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
@@ -33,7 +34,6 @@ import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEditio
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import {
   fetchJsonOrThrowWithUnauthorized,
-  fetchStatus,
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
@@ -60,14 +60,10 @@ interface AdminDashboardProps {
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const { edition: activeEdition } = useActiveEdition();
   const queryClient = useQueryClient();
-  const [token, setToken] = useState("");
-  const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
+  const sessionContext = Session.useSessionContext();
   const navRef = useRef<HTMLElement>(null);
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const autoAuthRan = useRef(false);
-  const [loginError, setLoginError] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const isAuthenticated = !sessionContext.loading && sessionContext.doesSessionExist;
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   /** Full registration (with checkInToken) shown in the detail modal */
@@ -93,7 +89,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const authHeaders = useCallback(
     () => ({
       "Content-Type": "application/json",
-      Authorization: `Bearer ${storedTokenRef.current}`,
     }),
     [],
   );
@@ -127,7 +122,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     visible,
     isAuthenticated,
     authHeaders,
-    storedToken: storedTokenRef.current,
     activeEdition,
   });
 
@@ -964,79 +958,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
-  const validateToken = useCallback(
-    async (tokenToValidate: string): Promise<"valid" | "invalid" | "transientError"> => {
-      try {
-        const status = await fetchStatus("/api/registrations", {
-          headers: { Authorization: `Bearer ${tokenToValidate}` },
-        });
-
-        if (status >= 200 && status < 300) {
-          return "valid";
-        }
-
-        // Auth failures: 401 Unauthorized, 403 Forbidden
-        if (status === 401 || status === 403) {
-          return "invalid";
-        }
-
-        // Server errors (5xx) are transient
-        if (status >= 500) {
-          return "transientError";
-        }
-
-        // Other client errors (4xx) treat as invalid
-        return "invalid";
-      } catch (err) {
-        // Network errors or fetch failures are transient
-        devError("Token validation network error:", err);
-        return "transientError";
-      }
-    },
-    [],
-  );
-
-  const handleLogin = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!token.trim()) return;
-      setIsLoggingIn(true);
-      setLoginError("");
-
-      try {
-        const result = await validateToken(token);
-        if (result === "valid") {
-          sessionStorage.setItem("adminToken", token);
-          storedTokenRef.current = token;
-          // loadData() will be triggered by the useEffect watching isAuthenticated
-          setIsAuthenticated(true);
-        } else if (result === "invalid") {
-          setLoginError(m.admin_login_error());
-        } else {
-          // transientError
-          setLoginError(m.admin_error_server_transient());
-        }
-      } catch (err) {
-        devError("Login request failed", err);
-        setLoginError(m.admin_login_error());
-      } finally {
-        setIsLoggingIn(false);
-      }
-    },
-    [token, validateToken],
-  );
-
-  const handleLogout = useCallback(() => {
-    sessionStorage.removeItem("adminToken");
-    storedTokenRef.current = "";
+  const handleLogout = useCallback(async () => {
+    await Session.signOut();
     queryClient.removeQueries({
       predicate: (query) => {
         const key = query.queryKey[0];
         return key === "admin";
       },
     });
-    setIsAuthenticated(false);
-    setToken("");
     setDetailRegistration(null);
   }, [queryClient]);
 
@@ -1364,8 +1293,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       (e) => e instanceof Error && e.message === "unauthorized",
     );
     if (unauthorizedError) {
-      handleLogout();
-      setLoginError(m.admin_login_error());
+      void handleLogout();
       return;
     }
 
@@ -1423,32 +1351,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [sidebarOpen]);
-
-  // Auto-authenticate on mount if a token was previously stored in sessionStorage
-  useEffect(() => {
-    if (autoAuthRan.current || !storedTokenRef.current || isAuthenticated) return;
-    autoAuthRan.current = true;
-    validateToken(storedTokenRef.current)
-      .then((result) => {
-        if (result === "valid") {
-          setIsAuthenticated(true);
-        } else if (result === "invalid") {
-          // Only clear stored token on auth failures
-          sessionStorage.removeItem("adminToken");
-          storedTokenRef.current = "";
-          setLoginError(m.admin_login_error());
-        } else {
-          // transientError: keep the token, log the error
-          devError("Auto-authentication failed due to transient error");
-          setLoginError(m.admin_error_server_transient_refresh());
-        }
-      })
-      .catch((err) => {
-        // Unexpected error in the effect itself
-        devError("Auto-authentication exception:", err);
-        setLoginError(m.admin_error_auto_auth_failed());
-      });
-  }, [isAuthenticated, validateToken]);
 
   const handleUpdateStatus = useCallback(
     async (id: string, status: RegistrationStatus) => {
@@ -2042,17 +1944,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       className={isAuthenticated ? "admin-authenticated" : "py-5"}
     >
       {!isAuthenticated ? (
-        /* ---- Login ---- */
-        <AdminLoginForm
-          token={token}
-          onTokenChange={(value) => {
-            setToken(value);
-            setLoginError("");
-          }}
-          loginError={loginError}
-          isLoggingIn={isLoggingIn}
-          onSubmit={handleLogin}
-        />
+        /* ---- Login (SuperTokens pre-built UI) ---- */
+        <AdminLoginForm onSessionAlreadyExists={loadData} />
       ) : (
         /* ---- Authenticated: sidebar layout ---- */
         <div className="admin-layout">

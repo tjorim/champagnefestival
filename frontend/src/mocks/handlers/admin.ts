@@ -12,9 +12,6 @@ import {
   seedVenues,
 } from "../data/venue";
 
-/** The fixed development token accepted by all admin endpoints. */
-const DEV_TOKEN = "dev-token";
-
 /** Mutable in-memory stores — reset on page reload. */
 let people: Record<string, unknown>[] = structuredClone(seedPeople);
 let exhibitors: Record<string, unknown>[] = structuredClone(seedExhibitors);
@@ -25,17 +22,11 @@ let tables: Record<string, unknown>[] = structuredClone(seedTables);
 let layouts: Record<string, unknown>[] = structuredClone(seedLayouts);
 let areas: Record<string, unknown>[] = structuredClone(seedAreas);
 
-function getAuth(request: Request): string | null {
-  const auth = request.headers.get("Authorization") ?? "";
-  const match = /^Bearer (.+)$/.exec(auth);
-  return match ? (match[1] ?? null) : null;
-}
-
-function requireAuth(request: Request): HttpResponse<null> | null {
-  const token = getAuth(request);
-  if (token !== DEV_TOKEN) {
-    return HttpResponse.json(null, { status: 401 });
-  }
+/**
+ * In production, authentication is handled by SuperTokens session cookies.
+ * This mock accepts any request (simulating a valid SuperTokens session).
+ */
+function requireAuth(_request: Request): HttpResponse<null> | null {
   return null;
 }
 
