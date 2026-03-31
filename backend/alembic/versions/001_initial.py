@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "001"
@@ -26,7 +27,7 @@ def upgrade() -> None:
         sa.Column("email", sa.String(200), nullable=False, server_default=""),
         sa.Column("phone", sa.String(50), nullable=False, server_default=""),
         sa.Column("address", sa.String(300), nullable=False, server_default=""),
-        sa.Column("roles", sa.JSON(), nullable=False, server_default="[]"),
+        sa.Column("roles", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("national_register_number", sa.String(20), unique=True, nullable=True),
         sa.Column("eid_document_number", sa.String(50), unique=True, nullable=True),
         sa.Column("visits_per_month", sa.Integer(), nullable=True),
@@ -75,7 +76,7 @@ def upgrade() -> None:
         sa.Column("external_partner", sa.String(200), nullable=True),
         sa.Column("external_contact_name", sa.String(200), nullable=True),
         sa.Column("external_contact_email", sa.String(200), nullable=True),
-        sa.Column("exhibitors", sa.JSON(), nullable=False, server_default="[]"),
+        sa.Column("exhibitors", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
@@ -150,7 +151,7 @@ def upgrade() -> None:
         sa.Column("table_type_id", sa.String(64), sa.ForeignKey("table_types.id", ondelete="RESTRICT"), nullable=False),
         sa.Column("rotation", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("layout_id", sa.String(64), sa.ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("reservation_ids", sa.JSON(), nullable=False, server_default="[]"),
+        sa.Column("reservation_ids", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
@@ -160,7 +161,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(64), primary_key=True),
         sa.Column("event_id", sa.String(64), sa.ForeignKey("events.id", ondelete="RESTRICT"), nullable=False),
         sa.Column("guest_count", sa.Integer(), nullable=False),
-        sa.Column("pre_orders", sa.JSON(), nullable=False, server_default="[]"),
+        sa.Column("pre_orders", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
         sa.Column("notes", sa.Text(), nullable=False, server_default=""),
         sa.Column("accessibility_note", sa.Text(), nullable=False, server_default=""),
         sa.Column("person_id", sa.String(64), sa.ForeignKey("people.id", ondelete="RESTRICT"), nullable=False),
