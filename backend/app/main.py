@@ -39,7 +39,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialise SuperTokens before the app handles any requests.
+# Initialize SuperTokens before the app handles any requests.
 init_supertokens()
 
 

@@ -20,7 +20,7 @@ def init_supertokens() -> None:
     if not settings.supertokens_connection_uri:
         logger.warning(
             "SUPERTOKENS_CONNECTION_URI is not set — "
-            "SuperTokens will not be initialised and admin endpoints will return 401."
+            "SuperTokens will not be initialized and admin endpoints will return 401."
         )
         return
 
@@ -43,4 +43,4 @@ def init_supertokens() -> None:
             userroles.init(),
         ],
     )
-    logger.info("✓ SuperTokens initialised (emailpassword + session + userroles)")
+    logger.info("✓ SuperTokens initialized (emailpassword + session + userroles)")
