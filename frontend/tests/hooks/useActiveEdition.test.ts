@@ -1,7 +1,9 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { http, HttpResponse } from "msw";
 
 import { useActiveEdition } from "@/hooks/useActiveEdition";
+import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 const toNormalizedLocalDate = (date: Date) => {
@@ -52,22 +54,11 @@ const apiEdition = {
 };
 
 describe("useActiveEdition", () => {
-  beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => apiEdition,
-      } as Response),
-    );
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
-
   it("uses the API as the source of truth for edition, venue, dates, and events", async () => {
+    server.use(
+      http.get("/api/editions/active", () => HttpResponse.json(apiEdition)),
+    );
+
     const wrapper = createTestQueryClientWrapper();
     const { result } = renderHook(() => useActiveEdition(), { wrapper });
 
@@ -98,11 +89,9 @@ describe("useActiveEdition", () => {
   });
 
   it("deduplicates dates when the API omits dates and multiple events share one day", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
+    server.use(
+      http.get("/api/editions/active", () =>
+        HttpResponse.json({
           ...apiEdition,
           dates: null,
           events: [
@@ -121,7 +110,7 @@ describe("useActiveEdition", () => {
             apiEdition.events[1],
           ],
         }),
-      } as Response),
+      ),
     );
 
     const wrapper = createTestQueryClientWrapper();
@@ -135,13 +124,10 @@ describe("useActiveEdition", () => {
     ]);
     expect(result.current.edition.events).toHaveLength(3);
   });
+
   it("keeps the fallback edition when the active-edition query fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-      } as Response),
+    server.use(
+      http.get("/api/editions/active", () => HttpResponse.json(null, { status: 404 })),
     );
 
     const wrapper = createTestQueryClientWrapper();

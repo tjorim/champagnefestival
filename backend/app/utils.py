@@ -28,7 +28,7 @@ def roles_contains(role: str) -> Any:
     """Return a SQLAlchemy filter expression that matches Person.roles JSON arrays
     containing *role* as an exact element (case-insensitive).
 
-    Casts the JSON column to Text so the LIKE works on both SQLite and PostgreSQL.
+    Casts the JSON column to Text so the LIKE works on PostgreSQL.
     We match the quoted token so that a role like "member" never accidentally
     matches "non-member".
     """
@@ -281,6 +281,7 @@ def edition_to_dict(
     events: list[dict] | None = None,
     producers: list[dict] | None = None,
     sponsors: list[dict] | None = None,
+    vendors: list[dict] | None = None,
 ) -> dict:
     return {
         "id": e.id,
@@ -295,6 +296,7 @@ def edition_to_dict(
         "events": events if events is not None else [],
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],
+        "vendors": vendors if vendors is not None else [],
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,

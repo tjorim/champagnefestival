@@ -9,7 +9,7 @@ champagnefestival/
 ├── frontend/      # React + Vite SPA (TypeScript, pnpm)  → see frontend/README.md
 ├── backend/       # FastAPI REST API (Python, uv)         → see backend/README.md
 ├── DEPLOYMENT.md  # VPS + Caddy deployment guide
-└── CLAUDE.md      # AI coding agent guidelines
+└── AGENTS.md      # Repo-specific contributor guidance
 ```
 
 ## Prerequisites

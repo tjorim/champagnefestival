@@ -1,5 +1,5 @@
 """
-Champagne Festival backend — FastAPI + SQLite.
+Champagne Festival backend — FastAPI + PostgreSQL.
 
 Package marker.
 """

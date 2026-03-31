@@ -1,24 +1,22 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Container from "react-bootstrap/Container";
-import Card from "react-bootstrap/Card";
-import Form from "react-bootstrap/Form";
-import Button from "react-bootstrap/Button";
+import clsx from "clsx";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Tab from "react-bootstrap/Tab";
-import Nav from "react-bootstrap/Nav";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
 import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
-import ContentManagement from "./ContentManagement";
+import { ContentSection, EditionsSection } from "./ContentManagement";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";
+import AdminSidebar from "./AdminSidebar";
+import AdminLoginForm from "./AdminLoginForm";
 import type { MemberFormData } from "./MemberFormModal";
 import type { PersonFormData } from "./PersonFormModal";
 import type { VolunteerFormData } from "./VolunteerFormModal";
@@ -32,283 +30,31 @@ import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
+import { useAdminQueries } from "@/hooks/useAdminQueries";
 import {
-  fetchArrayOrThrow,
   fetchJsonOrThrowWithUnauthorized,
   fetchStatus,
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
+import { devError } from "@/utils/devLog";
+import {
+  apiVenueToVenue,
+  apiLayoutToLayout,
+  apiTableTypeToTableType,
+  apiRoomToRoom,
+  apiTableToTable,
+  apiAreaToArea,
+  mergeVolunteerPerson,
+  replacePersonById,
+  replaceVolunteerById,
+  syncMembersWithPerson,
+} from "@/utils/adminApiMappers";
+import Card from "react-bootstrap/Card";
 
 interface AdminDashboardProps {
   visible: boolean;
-}
-
-/** Map FastAPI snake_case venue response to frontend camelCase Venue type */
-function apiVenueToVenue(d: Record<string, unknown>): Venue {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    address: (d.address ?? "") as string,
-    city: (d.city ?? "") as string,
-    postalCode: (d.postal_code ?? "") as string,
-    country: (d.country ?? "") as string,
-    lat: (d.lat ?? 0) as number,
-    lng: (d.lng ?? 0) as number,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-/** Map FastAPI snake_case layout response to frontend camelCase Layout type */
-function apiLayoutToLayout(d: Record<string, unknown>): Layout {
-  return {
-    id: d.id as string,
-    editionId: (d.edition_id as string | null) ?? null,
-    roomId: d.room_id as string,
-    date: (d.date as string | null) ?? null,
-    label: (d.label ?? "") as string,
-    createdAt: d.created_at as string,
-  };
-}
-
-/** Map FastAPI snake_case table type response to frontend camelCase TableType type */
-function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    shape: (d.shape ?? "rectangle") as "rectangle" | "round",
-    widthM: (d.width_m ?? 1.8) as number,
-    lengthM: (d.length_m ?? 0.7) as number,
-    heightType: (d.height_type ?? "low") as "low" | "high",
-    maxCapacity: (d.max_capacity ?? 4) as number,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-/** Map FastAPI snake_case room response to frontend camelCase Room type */
-function apiRoomToRoom(d: Record<string, unknown>): Room {
-  return {
-    id: d.id as string,
-    venueId: d.venue_id as string,
-    name: d.name as string,
-    widthM: d.width_m as number,
-    lengthM: d.length_m as number,
-    color: d.color as string,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-/** Map FastAPI snake_case table response to frontend camelCase Table type */
-function apiTableToTable(d: Record<string, unknown>): FloorTable {
-  return {
-    id: d.id as string,
-    name: d.name as string,
-    capacity: d.capacity as number,
-    x: d.x as number,
-    y: d.y as number,
-    tableTypeId: d.table_type_id as string,
-    rotation: (d.rotation ?? 0) as number,
-    layoutId: d.layout_id as string,
-    registrationIds: (d.registration_ids as string[]) ?? [],
-  };
-}
-
-/** Map FastAPI snake_case area response to frontend camelCase FloorArea type */
-function apiAreaToArea(d: Record<string, unknown>): FloorArea {
-  return {
-    id: d.id as string,
-    layoutId: d.layout_id as string,
-    icon: (d.icon ?? "bi-shop") as string,
-    exhibitorId: (d.exhibitor_id as number | null) ?? null,
-    label: (d.label ?? "") as string,
-    x: (d.x ?? 50) as number,
-    y: (d.y ?? 50) as number,
-    rotation: (d.rotation ?? 0) as number,
-    widthM: (d.width_m ?? 1.5) as number,
-    lengthM: (d.length_m ?? 1.0) as number,
-  };
-}
-
-function mergeVolunteerPerson(existing: Person | undefined, volunteer: Person): Person {
-  const roles = new Set(existing?.roles ?? volunteer.roles);
-  roles.add("volunteer");
-  return {
-    ...(existing ?? volunteer),
-    ...volunteer,
-    email: existing?.email ?? volunteer.email,
-    phone: existing?.phone ?? volunteer.phone,
-    visitsPerMonth: existing?.visitsPerMonth ?? volunteer.visitsPerMonth,
-    clubName: existing?.clubName ?? volunteer.clubName,
-    notes: existing?.notes ?? volunteer.notes,
-    roles: [...roles],
-    helpPeriods: volunteer.helpPeriods,
-  };
-}
-
-function mergePeopleWithVolunteers(people: Person[], volunteers: Person[]): Person[] {
-  const volunteerById = new Map(volunteers.map((volunteer) => [volunteer.id, volunteer]));
-  const mergedPeople = people.map((person) => {
-    const volunteer = volunteerById.get(person.id);
-    return volunteer ? mergeVolunteerPerson(person, volunteer) : person;
-  });
-
-  const knownIds = new Set(mergedPeople.map((person) => person.id));
-  const volunteerOnly = volunteers
-    .filter((volunteer) => !knownIds.has(volunteer.id))
-    .map((volunteer) => mergeVolunteerPerson(undefined, volunteer));
-
-  return [...mergedPeople, ...volunteerOnly];
-}
-
-function mergePersonUpdate(existing: Person | undefined, updated: Person): Person {
-  if (!existing) {
-    return updated;
-  }
-
-  if (!updated.roles.includes("volunteer")) {
-    return updated;
-  }
-
-  return {
-    ...updated,
-    helpPeriods: existing.helpPeriods,
-  };
-}
-
-function replacePersonById(people: Person[], updated: Person): Person[] {
-  return people.map((person) =>
-    person.id === updated.id ? mergePersonUpdate(person, updated) : person,
-  );
-}
-
-function replaceVolunteerById(people: Person[], updatedVolunteer: Person): Person[] {
-  return people.map((person) =>
-    person.id === updatedVolunteer.id ? mergeVolunteerPerson(person, updatedVolunteer) : person,
-  );
-}
-
-function syncMembersWithPerson(members: Person[], person: Person): Person[] {
-  if (!person.roles.includes("member")) {
-    return members.filter((member) => member.id !== person.id);
-  }
-
-  const hasMember = members.some((member) => member.id === person.id);
-  if (!hasMember) {
-    return [person, ...members];
-  }
-
-  return members.map((member) => (member.id === person.id ? person : member));
-}
-
-async function fetchRegistrations(
-  authHeaders: () => Record<string, string>,
-): Promise<Registration[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/registrations",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiToRegistration) : [];
-}
-
-async function fetchTables(authHeaders: () => Record<string, string>): Promise<FloorTable[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/tables",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiTableToTable) : [];
-}
-
-async function fetchVenues(authHeaders: () => Record<string, string>): Promise<Venue[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/venues",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiVenueToVenue) : [];
-}
-
-async function fetchRooms(authHeaders: () => Record<string, string>): Promise<Room[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/rooms",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiRoomToRoom) : [];
-}
-
-async function fetchTableTypes(authHeaders: () => Record<string, string>): Promise<TableType[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/table-types",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiTableTypeToTableType) : [];
-}
-
-async function fetchLayouts(authHeaders: () => Record<string, string>): Promise<Layout[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/layouts",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiLayoutToLayout) : [];
-}
-
-async function fetchExhibitors(
-  authHeaders: () => Record<string, string>,
-): Promise<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/exhibitors",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload)
-    ? payload.map((exhibitor: Record<string, unknown>) => ({
-        id: Number(exhibitor.id),
-        name: String(exhibitor.name ?? ""),
-        active: exhibitor.active !== false,
-        contactPersonId:
-          typeof exhibitor.contact_person_id === "string" ? exhibitor.contact_person_id : null,
-      }))
-    : [];
-}
-
-async function fetchAreas(authHeaders: () => Record<string, string>): Promise<FloorArea[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/areas",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiAreaToArea) : [];
-}
-
-async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const [peoplePayload, volunteers] = await Promise.all([
-    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-      "/api/people",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-    ),
-    fetchArrayOrThrow(
-      "/api/volunteers",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-      apiToPerson,
-    ),
-  ]);
-  const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
-  return mergePeopleWithVolunteers(nextPeople, volunteers);
-}
-
-async function fetchMembers(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  return fetchArrayOrThrow(
-    "/api/members",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-    apiToPerson,
-  );
 }
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
@@ -316,6 +62,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const storedTokenRef = useRef(sessionStorage.getItem("adminToken") ?? "");
+  const navRef = useRef<HTMLElement>(null);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const autoAuthRan = useRef(false);
   const [loginError, setLoginError] = useState("");
@@ -325,6 +73,23 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   /** Full registration (with checkInToken) shown in the detail modal */
   const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
 
+  // Sidebar navigation state
+  const [activeKey, setActiveKey] = useState("registrations");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(["programme"]));
+  const [venueTab, setVenueTab] = useState<"venues" | "table-types">("venues");
+  const [peopleTab, setPeopleTab] = useState<"directory" | "members" | "volunteers">("directory");
+  const [contentTab, setContentTab] = useState<"exhibitors" | "editions">("exhibitors");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleGroup = useCallback((group: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  }, []);
+
   const authHeaders = useCallback(
     () => ({
       "Content-Type": "application/json",
@@ -333,75 +98,43 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [],
   );
 
-  // Per-resource query keys (recomputed on each render; storedTokenRef.current is stable
-  // between renders but updated before the state change that triggers re-render on login/logout)
-  const registrationsQueryKey = queryKeys.admin.registrations(storedTokenRef.current);
-  const tablesQueryKey = queryKeys.admin.tables(storedTokenRef.current);
-  const venuesQueryKey = queryKeys.admin.venues(storedTokenRef.current);
-  const roomsQueryKey = queryKeys.admin.rooms(storedTokenRef.current);
-  const tableTypesQueryKey = queryKeys.admin.tableTypes(storedTokenRef.current);
-  const layoutsQueryKey = queryKeys.admin.layouts(storedTokenRef.current);
-  const exhibitorsQueryKey = queryKeys.admin.exhibitors(storedTokenRef.current);
-  const areasQueryKey = queryKeys.admin.areas(storedTokenRef.current);
-  const peopleQueryKey = queryKeys.admin.people(storedTokenRef.current);
-  const membersQueryKey = queryKeys.admin.members(storedTokenRef.current);
+  const {
+    registrationsQuery,
+    tablesQuery,
+    venuesQuery,
+    roomsQuery,
+    tableTypesQuery,
+    layoutsQuery,
+    exhibitorsQuery,
+    areasQuery,
+    peopleQuery,
+    membersQuery,
+    isAnyPending,
+    isAnyFetching,
+    registrationsQueryKey,
+    tablesQueryKey,
+    venuesQueryKey,
+    roomsQueryKey,
+    tableTypesQueryKey,
+    layoutsQueryKey,
+    exhibitorsQueryKey,
+    areasQueryKey,
+    peopleQueryKey,
+    membersQueryKey,
+    layoutDayOptions,
+    loadData: loadDataBase,
+  } = useAdminQueries({
+    visible,
+    isAuthenticated,
+    authHeaders,
+    storedToken: storedTokenRef.current,
+    activeEdition,
+  });
 
-  const adminQueryOptions = {
-    enabled: visible && isAuthenticated,
-    staleTime: 60 * 1000,
-    retry: false as const,
-  };
-
-  const registrationsQuery = useQuery({
-    queryKey: registrationsQueryKey,
-    queryFn: () => fetchRegistrations(authHeaders),
-    ...adminQueryOptions,
-  });
-  const tablesQuery = useQuery({
-    queryKey: tablesQueryKey,
-    queryFn: () => fetchTables(authHeaders),
-    ...adminQueryOptions,
-  });
-  const venuesQuery = useQuery({
-    queryKey: venuesQueryKey,
-    queryFn: () => fetchVenues(authHeaders),
-    ...adminQueryOptions,
-  });
-  const roomsQuery = useQuery({
-    queryKey: roomsQueryKey,
-    queryFn: () => fetchRooms(authHeaders),
-    ...adminQueryOptions,
-  });
-  const tableTypesQuery = useQuery({
-    queryKey: tableTypesQueryKey,
-    queryFn: () => fetchTableTypes(authHeaders),
-    ...adminQueryOptions,
-  });
-  const layoutsQuery = useQuery({
-    queryKey: layoutsQueryKey,
-    queryFn: () => fetchLayouts(authHeaders),
-    ...adminQueryOptions,
-  });
-  const exhibitorsQuery = useQuery({
-    queryKey: exhibitorsQueryKey,
-    queryFn: () => fetchExhibitors(authHeaders),
-    ...adminQueryOptions,
-  });
-  const areasQuery = useQuery({
-    queryKey: areasQueryKey,
-    queryFn: () => fetchAreas(authHeaders),
-    ...adminQueryOptions,
-  });
-  const peopleQuery = useQuery({
-    queryKey: peopleQueryKey,
-    queryFn: () => fetchPeople(authHeaders),
-    ...adminQueryOptions,
-  });
-  const membersQuery = useQuery({
-    queryKey: membersQueryKey,
-    queryFn: () => fetchMembers(authHeaders),
-    ...adminQueryOptions,
-  });
+  const loadData = useCallback(async () => {
+    setError("");
+    await loadDataBase();
+  }, [loadDataBase]);
 
   const registrations = registrationsQuery.data ?? [];
   const tables = tablesQuery.data ?? [];
@@ -413,62 +146,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const areas = areasQuery.data ?? [];
   const people = peopleQuery.data ?? [];
   const members = membersQuery.data ?? [];
-
-  const allQueries = [
-    registrationsQuery,
-    tablesQuery,
-    venuesQuery,
-    roomsQuery,
-    tableTypesQuery,
-    layoutsQuery,
-    exhibitorsQuery,
-    areasQuery,
-    peopleQuery,
-    membersQuery,
-  ];
-  const isAnyPending = allQueries.some((q) => q.isPending);
-  const isAnyFetching = allQueries.some((q) => q.isFetching);
-
-  const layoutDayOptions = useMemo(() => {
-    const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-
-    return uniqueDates.map((date) => ({
-      date,
-      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      }),
-    }));
-  }, [activeEdition.events]);
-
-  const loadData = useCallback(async () => {
-    setError("");
-    const adminResourcesToRefetch = new Set([
-      "registrations",
-      "tables",
-      "venues",
-      "rooms",
-      "table-types",
-      "layouts",
-      "exhibitors",
-      "areas",
-      "people",
-      "members",
-    ]);
-    await queryClient.refetchQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey as unknown[];
-        return (
-          queryKey[0] === "admin" &&
-          typeof queryKey[1] === "string" &&
-          adminResourcesToRefetch.has(queryKey[1])
-        );
-      },
-    });
-  }, [queryClient]);
 
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
@@ -719,11 +396,17 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       capacity,
       layoutId,
       tableTypeId,
+      x,
+      y,
+      rotation,
     }: {
       name: string;
       capacity: number;
       layoutId: string;
       tableTypeId: string;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/tables",
@@ -733,8 +416,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           body: JSON.stringify({
             name,
             capacity,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             layout_id: layoutId,
             table_type_id: tableTypeId,
           }),
@@ -817,7 +501,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
-        "Failed to persist table position.",
+        m.admin_error_persist_table_position(),
       ),
     onMutate: ({ tableId, x, y }) => {
       const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
@@ -828,7 +512,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-      console.error("Failed to persist table position");
+      devError("Failed to persist table position");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
@@ -846,7 +530,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/tables/${tableId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
-        "Failed to persist table rotation.",
+        m.admin_error_persist_table_rotation(),
       ),
     onMutate: ({ tableId, rotation }) => {
       const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
@@ -857,7 +541,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-      console.error("Failed to persist table rotation");
+      devError("Failed to persist table rotation");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
@@ -1038,6 +722,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM,
       lengthM,
       exhibitorId,
+      x,
+      y,
+      rotation,
     }: {
       label: string;
       icon: string;
@@ -1045,6 +732,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       widthM: number;
       lengthM: number;
       exhibitorId?: number;
+      x?: number;
+      y?: number;
+      rotation?: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/areas",
@@ -1057,8 +747,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             layout_id: layoutId,
             width_m: widthM,
             length_m: lengthM,
-            x: 10,
-            y: 10,
+            x: x ?? 10,
+            y: y ?? 10,
+            rotation: rotation ?? 0,
             exhibitor_id: exhibitorId ?? null,
           }),
         },
@@ -1091,7 +782,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area label");
+      devError("Failed to persist area label");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1124,7 +815,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area resize");
+      devError("Failed to persist area resize");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1163,7 +854,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
-        "Failed to persist area position.",
+        m.admin_error_persist_area_position(),
       ),
     onMutate: ({ areaId, x, y }) => {
       const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
@@ -1174,7 +865,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area position");
+      devError("Failed to persist area position");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1192,7 +883,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
-        "Failed to persist area rotation.",
+        m.admin_error_persist_area_rotation(),
       ),
     onMutate: ({ areaId, rotation }) => {
       const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
@@ -1203,7 +894,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     onError: (_err, _vars, context) => {
       if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      console.error("Failed to persist area rotation");
+      devError("Failed to persist area rotation");
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: areasQueryKey });
@@ -1298,7 +989,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         return "invalid";
       } catch (err) {
         // Network errors or fetch failures are transient
-        console.error("Token validation network error:", err);
+        devError("Token validation network error:", err);
         return "transientError";
       }
     },
@@ -1326,7 +1017,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           setLoginError(m.admin_error_server_transient());
         }
       } catch (err) {
-        console.error("Login request failed", err);
+        devError("Login request failed", err);
         setLoginError(m.admin_login_error());
       } finally {
         setIsLoggingIn(false);
@@ -1680,7 +1371,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
     const firstError = errors.find((e) => e !== null);
     if (firstError) {
-      console.error("Failed to load dashboard data", firstError);
+      devError("Failed to load dashboard data", firstError);
       setError(m.admin_error_load_data());
     } else {
       // All queries succeeded or are still loading — clear any previous error.
@@ -1700,6 +1391,39 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleLogout,
   ]);
 
+  const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
+    if (!navRef.current) return;
+    const buttons = Array.from(
+      navRef.current.querySelectorAll<HTMLButtonElement>("button.admin-nav-item, button.admin-nav-group-header"),
+    );
+    const focused = document.activeElement;
+    const idx = buttons.indexOf(focused as HTMLButtonElement);
+    if (idx === -1) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      buttons[(idx + 1) % buttons.length]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      buttons[(idx - 1 + buttons.length) % buttons.length]?.focus();
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      buttons[0]?.focus();
+    } else if (e.key === "End") {
+      e.preventDefault();
+      buttons[buttons.length - 1]?.focus();
+    }
+  }, []);
+
+  // Close mobile sidebar on Escape key
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
+
   // Auto-authenticate on mount if a token was previously stored in sessionStorage
   useEffect(() => {
     if (autoAuthRan.current || !storedTokenRef.current || isAuthenticated) return;
@@ -1715,13 +1439,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           setLoginError(m.admin_login_error());
         } else {
           // transientError: keep the token, log the error
-          console.error("Auto-authentication failed due to transient error");
+          devError("Auto-authentication failed due to transient error");
           setLoginError(m.admin_error_server_transient_refresh());
         }
       })
       .catch((err) => {
         // Unexpected error in the effect itself
-        console.error("Auto-authentication exception:", err);
+        devError("Auto-authentication exception:", err);
         setLoginError(m.admin_error_auto_auth_failed());
       });
   }, [isAuthenticated, validateToken]);
@@ -1749,8 +1473,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : prev,
         );
       } catch (err) {
-        console.error("Failed to update registration status", err);
+        devError("Failed to update registration status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_registration());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1781,8 +1506,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : prev,
         );
       } catch (err) {
-        console.error("Failed to update payment status", err);
+        devError("Failed to update payment status", err);
         setError(err instanceof Error ? err.message : m.admin_error_update_payment());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1831,7 +1557,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             : prev,
         );
       } catch (err) {
-        console.error("Failed to assign table", err);
+        devError("Failed to assign table", err);
         setError(err instanceof Error ? err.message : m.admin_error_assign_table());
       }
     },
@@ -1981,13 +1707,58 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
 
   const handleAddLayout = useCallback(
-    async (roomId: string, date: string, label?: string) => {
+    async (
+      roomId: string,
+      date: string,
+      label?: string,
+      copyFromLayoutId?: string | null,
+      copyOptions?: { tables: boolean; areas: boolean },
+    ) => {
+      if (copyFromLayoutId) {
+        const shouldCopyTables = copyOptions?.tables ?? true;
+        const shouldCopyAreas = copyOptions?.areas ?? true;
+        const copied = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+          `/api/layouts/${copyFromLayoutId}/copy`,
+          {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              edition_id: activeEdition.id,
+              room_id: roomId,
+              date,
+              ...(label?.trim() ? { label: label.trim() } : {}),
+              copy_tables: shouldCopyTables,
+              copy_areas: shouldCopyAreas,
+            }),
+          },
+          m.admin_error_add_layout(),
+        );
+        const createdLayout = apiLayoutToLayout(copied);
+        queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
+          prev ? [...prev, createdLayout] : [createdLayout],
+        );
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: layoutsQueryKey }),
+          queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
+          queryClient.invalidateQueries({ queryKey: areasQueryKey }),
+        ]);
+        return;
+      }
+
       const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? [...prev, apiLayoutToLayout(d)] : [apiLayoutToLayout(d)],
       );
     },
-    [createLayoutMutation, layoutsQueryKey, queryClient],
+    [
+      activeEdition.id,
+      areasQueryKey,
+      authHeaders,
+      createLayoutMutation,
+      layoutsQueryKey,
+      queryClient,
+      tablesQueryKey,
+    ],
   );
 
   const handleDeleteLayout = useCallback(
@@ -2087,8 +1858,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
-      // Must match LayoutEditor/RoomCanvas constants
-      const PX_PER_M = 28;
       const area = (areasQuery.data ?? []).find((a) => a.id === areaId);
       const layout = (layoutsQuery.data ?? []).find((l) => l.id === area?.layoutId);
       const room = (roomsQuery.data ?? []).find((r) => r.id === layout?.roomId);
@@ -2097,10 +1866,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       let x = area?.x ?? 0;
       let y = area?.y ?? 0;
       if (area && room) {
-        const canvasW = Math.max(280, room.widthM * PX_PER_M);
-        const canvasH = Math.max(180, room.lengthM * PX_PER_M);
-        const areaW = Math.max(40, Math.round(widthM * PX_PER_M));
-        const areaH = Math.max(24, Math.round(lengthM * PX_PER_M));
+        const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
+        const { width: areaW, height: areaH } = getAreaSizePx(widthM, lengthM);
         x = (Math.max(0, Math.min((area.x / 100) * canvasW, canvasW - areaW)) / canvasW) * 100;
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
@@ -2160,7 +1927,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration(apiToRegistration(data));
       } catch (err) {
-        console.error("Failed to fetch registration detail, falling back to list data", err);
+        devError("Failed to fetch registration detail, falling back to list data", err);
         setDetailRegistration(res);
       }
     },
@@ -2191,7 +1958,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
-        console.error("Failed to update bottle delivery status", err);
+        devError("Failed to update bottle delivery status", err);
         setError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
       }
     },
@@ -2213,7 +1980,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
-        console.error("Failed to check in guest", err);
+        devError("Failed to check in guest", err);
         setError(err instanceof Error ? err.message : m.admin_error_check_in());
       }
     },
@@ -2235,7 +2002,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
-        console.error("Failed to issue strap", err);
+        devError("Failed to issue strap", err);
         setError(err instanceof Error ? err.message : m.admin_error_issue_strap());
       }
     },
@@ -2253,312 +2020,375 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     return Object.fromEntries((peopleQuery.data ?? []).map((p) => [p.id, counts[p.id] ?? 0]));
   }, [peopleQuery.data, registrationsQuery.data]);
 
+  const emailDuplicates = useMemo(() => {
+    if (!detailRegistration) return [];
+    const personEmail = detailRegistration.person.email.toLowerCase();
+    return people
+      .filter(
+        (p) =>
+          p.id !== detailRegistration.personId &&
+          p.email &&
+          p.email.toLowerCase() === personEmail,
+      )
+      .map((p) => ({ id: p.id, name: p.name }));
+  }, [people, detailRegistration]);
+
   if (!visible) return null;
 
   return (
-    <section id="admin" aria-labelledby="admin-title" className="py-5">
-      <Container>
-        <h2 id="admin-title" className="text-center mb-4 text-warning">
-          <i className="bi bi-shield-lock me-2" aria-hidden="true" />
-          {m.admin_title()}
-        </h2>
+    <section
+      id="admin"
+      aria-labelledby="admin-title"
+      className={isAuthenticated ? "admin-authenticated" : "py-5"}
+    >
+      {!isAuthenticated ? (
+        /* ---- Login ---- */
+        <AdminLoginForm
+          token={token}
+          onTokenChange={(value) => {
+            setToken(value);
+            setLoginError("");
+          }}
+          loginError={loginError}
+          isLoggingIn={isLoggingIn}
+          onSubmit={handleLogin}
+        />
+      ) : (
+        /* ---- Authenticated: sidebar layout ---- */
+        <div className="admin-layout">
+          {/* Mobile overlay */}
+          {sidebarOpen && (
+            <div
+              className="admin-sidebar-overlay"
+              onClick={() => setSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
 
-        {!isAuthenticated ? (
-          <div className="row justify-content-center">
-            <div className="col-12 col-sm-8 col-md-6 col-lg-4">
-              <Card bg="dark" text="white" border="warning">
-                <Card.Header className="border-warning">
-                  <Card.Title className="mb-0">{m.admin_login_title()}</Card.Title>
-                </Card.Header>
-                <Card.Body>
-                  <Form onSubmit={handleLogin}>
-                    <Form.Group className="mb-3" controlId="admin-token">
-                      <Form.Label>{m.admin_token_label()}</Form.Label>
-                      <Form.Control
-                        type="password"
-                        value={token}
-                        onChange={(e) => {
-                          setToken(e.target.value);
-                          setLoginError("");
-                        }}
-                        placeholder={m.admin_token_placeholder()}
-                        className="bg-dark text-light border-secondary"
-                        autoComplete="current-password"
-                        required
-                      />
-                    </Form.Group>
-                    {loginError && (
-                      <Alert variant="danger" className="py-2">
-                        {loginError}
-                      </Alert>
-                    )}
-                    <Button
-                      type="submit"
-                      variant="warning"
-                      className="w-100"
-                      disabled={isLoggingIn || !token.trim()}
-                    >
-                      {isLoggingIn ? (
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        m.admin_login_button()
-                      )}
-                    </Button>
-                  </Form>
-                </Card.Body>
-              </Card>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-              <span className="text-secondary">
-                <i className="bi bi-check-circle-fill text-success me-2" aria-hidden="true" />
-                {m.admin_authenticated()}
-              </span>
-              <div className="d-flex gap-2">
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={loadData}
-                  disabled={isAnyFetching}
-                >
-                  <i className="bi bi-arrow-clockwise me-1" aria-hidden="true" />
-                  {m.admin_refresh()}
-                </Button>
-                <Button variant="outline-danger" size="sm" onClick={handleLogout}>
-                  <i className="bi bi-box-arrow-right me-1" aria-hidden="true" />
-                  {m.admin_logout()}
-                </Button>
-              </div>
-            </div>
+          <AdminSidebar
+            activeKey={activeKey}
+            setActiveKey={setActiveKey}
+            expandedGroups={expandedGroups}
+            toggleGroup={toggleGroup}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            navRef={navRef}
+            handleNavKeyDown={handleNavKeyDown}
+            registrationCount={registrations.length}
+            peopleCount={people.length}
+            isAnyFetching={isAnyFetching}
+            onLoadData={loadData}
+            onLogout={handleLogout}
+          />
 
+          {/* Main content */}
+          <div className="admin-main" id="admin-content">
             {error && (
-              <Alert variant="danger" className="mb-3" dismissible onClose={() => setError("")}>
+              <Alert variant="danger" className="mb-4" dismissible onClose={() => setError("")}>
                 {error}
               </Alert>
             )}
 
             {isAnyPending ? (
               <div className="text-center py-5">
-                <Spinner animation="border" variant="warning" role="status">
+                <Spinner animation="border" variant="primary" role="status">
                   <span className="visually-hidden">{m.admin_loading()}</span>
                 </Spinner>
               </div>
             ) : (
-              <Tab.Container defaultActiveKey="registrations">
-                <Nav variant="tabs" className="mb-3">
-                  <Nav.Item>
-                    <Nav.Link eventKey="registrations" className="text-light">
-                      <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                      {m.admin_registrations_tab()}
-                      <span className="badge bg-warning text-dark ms-2">
-                        {registrations.length}
+              <div className="admin-content-pane" key={activeKey}>
+                {activeKey === "registrations" && (
+                  <RegistrationList
+                    registrations={registrations}
+                    tables={tables}
+                    exhibitors={exhibitors}
+                    filter={filter}
+                    onFilterChange={setFilter}
+                    onUpdateStatus={handleUpdateStatus}
+                    onUpdatePayment={handleUpdatePayment}
+                    onAssignTable={handleAssignTable}
+                    onViewDetail={handleViewDetail}
+                    onAddRegistration={handleAddRegistration}
+                    authHeaders={authHeaders}
+                  />
+                )}
+                {activeKey === "content" && (
+                  <>
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_content_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {contentTab === "exhibitors"
+                          ? m.admin_content_exhibitors_section()
+                          : m.admin_content_editions_section()}
                       </span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="tables" className="text-light">
-                      <i className="bi bi-grid-3x3-gap me-2" aria-hidden="true" />
-                      {m.admin_tables_tab()}
-                      <span className="badge bg-secondary ms-2">{tables.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="venues" className="text-light">
-                      <i className="bi bi-geo-alt me-2" aria-hidden="true" />
-                      {m.admin_venues_tab()}
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="table-types" className="text-light">
-                      <i className="bi bi-grid me-2" aria-hidden="true" />
-                      {m.admin_table_types_tab()}
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="content" className="text-light">
-                      <i className="bi bi-images me-2" aria-hidden="true" />
-                      {m.admin_content_tab()}
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="people" className="text-light">
-                      <i className="bi bi-people me-2" aria-hidden="true" />
-                      {m.admin_people_tab()}
-                      <span className="badge bg-secondary ms-2">{people.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="members" className="text-light">
-                      <i className="bi bi-person-badge me-2" aria-hidden="true" />
-                      {m.admin_members_tab()}
-                      <span className="badge bg-secondary ms-2">{members.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                  <Nav.Item>
-                    <Nav.Link eventKey="volunteers" className="text-light">
-                      <i className="bi bi-hand-thumbs-up me-2" aria-hidden="true" />
-                      {m.admin_volunteers_tab()}
-                      <span className="badge bg-secondary ms-2">{volunteers.length}</span>
-                    </Nav.Link>
-                  </Nav.Item>
-                </Nav>
-                <Tab.Content>
-                  <Tab.Pane eventKey="registrations">
-                    <RegistrationList
-                      registrations={registrations}
-                      tables={tables}
-                      exhibitors={exhibitors}
-                      filter={filter}
-                      onFilterChange={setFilter}
-                      onUpdateStatus={handleUpdateStatus}
-                      onUpdatePayment={handleUpdatePayment}
-                      onAssignTable={handleAssignTable}
-                      onViewDetail={handleViewDetail}
-                      onAddRegistration={handleAddRegistration}
-                      authHeaders={authHeaders}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="tables">
-                    <LayoutEditor
-                      dayOptions={layoutDayOptions}
-                      tables={tables}
-                      tableTypes={tableTypes}
-                      layouts={layouts}
-                      registrations={registrations}
-                      rooms={rooms}
-                      exhibitors={exhibitors}
-                      areas={areas}
-                      onAddTable={handleAddTable}
-                      onMoveTable={handleMoveTable}
-                      onDeleteTable={handleDeleteTable}
-                      onRotateTable={handleRotateTable}
-                      onAddLayout={handleAddLayout}
-                      onDeleteLayout={handleDeleteLayout}
-                      onAddArea={handleAddArea}
-                      onMoveArea={handleMoveArea}
-                      onDeleteArea={handleDeleteArea}
-                      onRotateArea={handleRotateArea}
-                      onAssignAreaToItem={handleAssignAreaToItem}
-                      onUpdateAreaLabel={handleUpdateAreaLabel}
-                      onChangeTableType={handleChangeTableType}
-                      onUpdateTable={handleUpdateTable}
-                      onResizeArea={handleResizeArea}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="venues">
-                    <VenueManagement
-                      venues={venues}
-                      rooms={rooms}
-                      onAdd={handleAddVenue}
-                      onArchive={handleArchiveVenue}
-                      onRestore={handleRestoreVenue}
-                      onDelete={handleDeleteVenue}
-                      onAddRoom={handleAddRoom}
-                      onArchiveRoom={handleArchiveRoom}
-                      onRestoreRoom={handleRestoreRoom}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="table-types">
-                    <TableTypeManagement
-                      tableTypes={tableTypes}
-                      onAdd={handleAddTableType}
-                      onUpdate={handleUpdateTableType}
-                      onArchive={handleArchiveTableType}
-                      onRestore={handleRestoreTableType}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="content">
-                    <ContentManagement
-                      authHeaders={authHeaders}
-                      venues={venues}
-                      onExhibitorSaved={handleExhibitorSaved}
-                      onExhibitorDeleted={handleExhibitorDeleted}
-                      onEditionMutated={() => {
-                        void loadData();
-                        void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
-                        void queryClient.invalidateQueries({
-                          queryKey: queryKeys.admin.activeEditionEvents,
-                        });
-                      }}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="people">
-                    <PeopleManagement
-                      people={people}
-                      registrationCountByPersonId={registrationCountByPersonId}
-                      isLoading={isAnyFetching}
-                      authHeaders={authHeaders}
-                      onMerge={handleMergePeople}
-                      onCreate={handleCreatePerson}
-                      onUpdate={handleUpdatePerson}
-                      onDelete={handleDeletePerson}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="members">
-                    <MembersManagement
-                      members={members}
-                      registrationCountByPersonId={registrationCountByPersonId}
-                      isLoading={isAnyFetching}
-                      onCreate={handleCreateMember}
-                      onUpdate={handleUpdateMember}
-                      onDelete={handleDeleteMember}
-                    />
-                  </Tab.Pane>
-                  <Tab.Pane eventKey="volunteers">
-                    <VolunteersManagement
-                      volunteers={volunteers}
-                      isLoading={isAnyFetching}
-                      onCreate={handleCreateVolunteer}
-                      onUpdate={handleUpdateVolunteer}
-                      onDelete={handleDeleteVolunteer}
-                    />
-                  </Tab.Pane>
-                </Tab.Content>
-              </Tab.Container>
+                    </nav>
+                    <div className="d-flex gap-2 mb-3">
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          contentTab === "exhibitors" && "is-active",
+                        )}
+                        onClick={() => setContentTab("exhibitors")}
+                      >
+                        <i className="bi bi-shop me-1" aria-hidden="true" />
+                        {m.admin_content_exhibitors_section()}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          contentTab === "editions" && "is-active",
+                        )}
+                        onClick={() => setContentTab("editions")}
+                      >
+                        <i className="bi bi-calendar3 me-1" aria-hidden="true" />
+                        {m.admin_content_editions_section()}
+                      </button>
+                    </div>
+                    {contentTab === "exhibitors" && (
+                      <Card bg="dark" text="white" border="secondary" className="mb-3">
+                        <Card.Body>
+                          <ContentSection
+                            sectionKey="exhibitors"
+                            title={m.admin_content_exhibitors_section()}
+                            authHeaders={authHeaders}
+                            onItemSaved={handleExhibitorSaved}
+                            onItemDeleted={handleExhibitorDeleted}
+                          />
+                        </Card.Body>
+                      </Card>
+                    )}
+                    {contentTab === "editions" && (
+                      <Card bg="dark" text="white" border="secondary" className="mb-3">
+                        <Card.Body>
+                          <EditionsSection
+                            authHeaders={authHeaders}
+                            venues={venues}
+                            onEditionMutated={() => {
+                              void loadData();
+                              void queryClient.invalidateQueries({
+                                queryKey: activeEditionQueryKey,
+                              });
+                              void queryClient.invalidateQueries({
+                                queryKey: queryKeys.admin.activeEditionEvents,
+                              });
+                            }}
+                          />
+                        </Card.Body>
+                      </Card>
+                    )}
+                  </>
+                )}
+                {activeKey === "floor-plans" && (
+                  <LayoutEditor
+                    dayOptions={layoutDayOptions}
+                    tables={tables}
+                    tableTypes={tableTypes}
+                    layouts={layouts}
+                    registrations={registrations}
+                    rooms={rooms}
+                    exhibitors={exhibitors}
+                    areas={areas}
+                    onAddTable={handleAddTable}
+                    onMoveTable={handleMoveTable}
+                    onDeleteTable={handleDeleteTable}
+                    onRotateTable={handleRotateTable}
+                    onAddLayout={handleAddLayout}
+                    onDeleteLayout={handleDeleteLayout}
+                    onAddArea={handleAddArea}
+                    onMoveArea={handleMoveArea}
+                    onDeleteArea={handleDeleteArea}
+                    onRotateArea={handleRotateArea}
+                    onAssignAreaToItem={handleAssignAreaToItem}
+                    onUpdateAreaLabel={handleUpdateAreaLabel}
+                    onChangeTableType={handleChangeTableType}
+                    onUpdateTable={handleUpdateTable}
+                    onResizeArea={handleResizeArea}
+                  />
+                )}
+                {activeKey === "venue" && (
+                  <>
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_venues_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {venueTab === "venues" ? m.admin_venues_rooms_tab() : m.admin_table_types_tab()}
+                      </span>
+                    </nav>
+                    <div className="d-flex gap-2 mb-3">
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          venueTab === "venues" && "is-active",
+                        )}
+                        onClick={() => setVenueTab("venues")}
+                      >
+                        <i className="bi bi-building me-1" aria-hidden="true" />
+                        {m.admin_venues_rooms_tab()}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          venueTab === "table-types" && "is-active",
+                        )}
+                        onClick={() => setVenueTab("table-types")}
+                      >
+                        <i className="bi bi-grid me-1" aria-hidden="true" />
+                        {m.admin_table_types_tab()}
+                      </button>
+                    </div>
+                    {venueTab === "venues" && (
+                      <VenueManagement
+                        key="venues"
+                        venues={venues}
+                        rooms={rooms}
+                        onAdd={handleAddVenue}
+                        onArchive={handleArchiveVenue}
+                        onRestore={handleRestoreVenue}
+                        onDelete={handleDeleteVenue}
+                        onAddRoom={handleAddRoom}
+                        onArchiveRoom={handleArchiveRoom}
+                        onRestoreRoom={handleRestoreRoom}
+                      />
+                    )}
+                    {venueTab === "table-types" && (
+                      <TableTypeManagement
+                        key="table-types"
+                        tableTypes={tableTypes}
+                        onAdd={handleAddTableType}
+                        onUpdate={handleUpdateTableType}
+                        onArchive={handleArchiveTableType}
+                        onRestore={handleRestoreTableType}
+                      />
+                    )}
+                  </>
+                )}
+                {activeKey === "people" && (
+                  <>
+                    {/* Breadcrumb trail */}
+                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
+                      <span className="admin-breadcrumb-item">{m.admin_people_tab()}</span>
+                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
+                      <span className="admin-breadcrumb-item is-active">
+                        {peopleTab === "directory"
+                          ? m.admin_directory_tab()
+                          : peopleTab === "members"
+                            ? m.admin_members_tab()
+                            : m.admin_volunteers_tab()}
+                      </span>
+                    </nav>
+                    {/* People sub-tab bar */}
+                    <div className="d-flex gap-2 mb-3">
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          peopleTab === "directory" && "is-active",
+                        )}
+                        onClick={() => setPeopleTab("directory")}
+                      >
+                        <i className="bi bi-person me-1" aria-hidden="true" />
+                        {m.admin_directory_tab()}
+                        {people.length > 0 && (
+                          <span className="admin-nav-count ms-1">{people.length}</span>
+                        )}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          peopleTab === "members" && "is-active",
+                        )}
+                        onClick={() => setPeopleTab("members")}
+                      >
+                        <i className="bi bi-person-badge me-1" aria-hidden="true" />
+                        {m.admin_members_tab()}
+                        {members.length > 0 && (
+                          <span className="admin-nav-count ms-1">{members.length}</span>
+                        )}
+                      </button>
+                      <button
+                        className={clsx(
+                          "admin-nav-item",
+                          "admin-sub-tab",
+                          peopleTab === "volunteers" && "is-active",
+                        )}
+                        onClick={() => setPeopleTab("volunteers")}
+                      >
+                        <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
+                        {m.admin_volunteers_tab()}
+                        {volunteers.length > 0 && (
+                          <span className="admin-nav-count ms-1">{volunteers.length}</span>
+                        )}
+                      </button>
+                    </div>
+                    {peopleTab === "directory" && (
+                      <PeopleManagement
+                        key="directory"
+                        people={people}
+                        registrationCountByPersonId={registrationCountByPersonId}
+                        isLoading={isAnyFetching}
+                        authHeaders={authHeaders}
+                        onMerge={handleMergePeople}
+                        onCreate={handleCreatePerson}
+                        onUpdate={handleUpdatePerson}
+                        onDelete={handleDeletePerson}
+                      />
+                    )}
+                    {peopleTab === "members" && (
+                      <MembersManagement
+                        key="members"
+                        members={members}
+                        registrationCountByPersonId={registrationCountByPersonId}
+                        isLoading={isAnyFetching}
+                        onCreate={handleCreateMember}
+                        onUpdate={handleUpdateMember}
+                        onDelete={handleDeleteMember}
+                      />
+                    )}
+                    {peopleTab === "volunteers" && (
+                      <VolunteersManagement
+                        key="volunteers"
+                        volunteers={volunteers}
+                        isLoading={isAnyFetching}
+                        onCreate={handleCreateVolunteer}
+                        onUpdate={handleUpdateVolunteer}
+                        onDelete={handleDeleteVolunteer}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
             )}
-          </>
-        )}
+          </div>
+        </div>
+      )}
 
-        {/* Registration detail modal (with QR code + bottle delivery) */}
-        {detailRegistration && (
-          <RegistrationDetail
-            registration={detailRegistration}
-            baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
-            emailDuplicates={(() => {
-              const personEmail = detailRegistration.person.email.toLowerCase();
-              return people
-                .filter(
-                  (p) =>
-                    p.id !== detailRegistration.personId &&
-                    p.email &&
-                    p.email.toLowerCase() === personEmail,
-                )
-                .map((p) => ({ id: p.id, name: p.name }));
-            })()}
-            onClose={() => setDetailRegistration(null)}
-            onToggleDelivered={handleToggleDelivered}
-            onCheckIn={handleCheckIn}
-            onIssueStrap={handleIssueStrap}
-            onMergeDuplicate={async (canonicalId, duplicateId) => {
-              try {
-                await handleMergePeople(canonicalId, duplicateId);
-                setDetailRegistration(null);
-              } catch (err) {
-                console.error("Failed to merge people", err);
-                setError(err instanceof Error ? err.message : m.admin_people_merge_error());
-              }
-            }}
-          />
-        )}
-      </Container>
+      {/* Registration detail modal */}
+      {detailRegistration && (
+        <RegistrationDetail
+          registration={detailRegistration}
+          baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
+          emailDuplicates={emailDuplicates}
+          onClose={() => setDetailRegistration(null)}
+          onToggleDelivered={handleToggleDelivered}
+          onCheckIn={handleCheckIn}
+          onIssueStrap={handleIssueStrap}
+          onMergeDuplicate={async (canonicalId, duplicateId) => {
+            try {
+              await handleMergePeople(canonicalId, duplicateId);
+              setDetailRegistration(null);
+            } catch (err) {
+              devError("Failed to merge people", err);
+              setError(err instanceof Error ? err.message : m.admin_people_merge_error());
+            }
+          }}
+        />
+      )}
     </section>
   );
 }

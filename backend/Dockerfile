@@ -16,21 +16,12 @@ COPY . .
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Data directory — mount a named volume here on the VPS to persist the DB.
-RUN mkdir -p /var/data/champagne
-
 # Run as non-root user for security hardening.
-# chown must happen BEFORE the VOLUME declaration so initial volume content
-# inherits the correct ownership when Docker initialises a new named volume.
 RUN groupadd --gid 1000 appgroup \
     && useradd --uid 1000 --gid appgroup --shell /bin/bash --no-create-home appuser \
-    && chown -R appuser:appgroup /app /var/data/champagne
-
-VOLUME ["/var/data/champagne"]
+    && chown -R appuser:appgroup /app
 
 USER appuser
-
-ENV DATABASE_URL=sqlite+aiosqlite:////var/data/champagne/champagne.db
 
 EXPOSE 8000
 

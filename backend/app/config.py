@@ -29,12 +29,18 @@ class Settings(BaseSettings):
     If empty, all admin endpoints will be inaccessible (returns 401)."""
 
     # --- Database ---
-    database_url: str = "sqlite+aiosqlite:///./champagne.db"
+    database_url: str = "postgresql+asyncpg://localhost/champagne"
     """SQLAlchemy async database URL.
-    Defaults to a local SQLite file.  Change the path to an absolute path
-    on the VPS so the data survives deployments, e.g.:
-      sqlite+aiosqlite:////var/data/champagne/champagne.db
+    Defaults to a local PostgreSQL database named 'champagne'.
+    Set via DATABASE_URL environment variable, e.g.:
+      postgresql+asyncpg://user:password@host:5432/champagne
     """
+
+    database_pool_size: int = 5
+    """Number of persistent connections in the pool."""
+
+    database_pool_max_overflow: int = 10
+    """Extra connections allowed beyond pool size."""
 
     # --- CORS ---
     cors_origins: str = ""
@@ -72,6 +78,16 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate database_url uses the postgresql+asyncpg async driver."""
+        if not v or not v.strip():
+            raise ValueError("DATABASE_URL cannot be empty")
+        if not v.startswith("postgresql+asyncpg://"):
+            raise ValueError("DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://...")
+        return v
 
     @field_validator("environment")
     @classmethod
@@ -126,13 +142,23 @@ class Settings(BaseSettings):
 
         return [origin.strip() for origin in cors_env.split(",") if origin.strip()]
 
+    @staticmethod
+    def _mask_db_credentials(url: str) -> str:
+        """Return url with the password hidden."""
+        try:
+            from sqlalchemy.engine.url import make_url
+
+            return make_url(url).render_as_string(hide_password=True)
+        except Exception:
+            return "<unparseable>"
+
     def log_configuration(self) -> None:
         """Log all configuration at startup, masking sensitive values."""
         logger.info("=" * 60)
         logger.info("Champagne Festival Backend Configuration")
         logger.info("=" * 60)
         logger.info(f"Environment:   {self.environment}")
-        logger.info(f"Database URL:  {self.database_url}")
+        logger.info(f"Database URL:  {self._mask_db_credentials(self.database_url)}")
 
         cors_origins = self.get_cors_origins_list()
         if not cors_origins:

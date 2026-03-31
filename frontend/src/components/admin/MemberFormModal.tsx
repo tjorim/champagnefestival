@@ -8,6 +8,7 @@ import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import { devError } from "@/utils/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { Person } from "@/types/person";
 
@@ -56,7 +57,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         });
         onHide();
       } catch (err) {
-        console.error("Member save error:", err);
+        devError("Member save error:", err);
         const backendMessage =
           err &&
           typeof err === "object" &&
@@ -102,7 +103,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
   return (
-    <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
+    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           <i className="bi bi-person-badge me-2" aria-hidden="true" />

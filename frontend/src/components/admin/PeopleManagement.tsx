@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -13,7 +14,33 @@ import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
+import {
+  useAppTable,
+  createAppColumnHelper,
+  type AdminTableFeatures,
+} from "@/hooks/useAdminTable";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
+import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+
+const COL_VIS_KEY = "admin-col-vis-people";
+
+const columnHelper = createAppColumnHelper<Person>();
+
+const peopleGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
+  row,
+  _columnId,
+  filterValue: string,
+) => {
+  const s = filterValue.toLowerCase();
+  const phoneQ = s.replace(/[\s\-().+]/g, "");
+  return (
+    row.original.name.toLowerCase().includes(s) ||
+    row.original.email.toLowerCase().includes(s) ||
+    (phoneQ.length > 0 && row.original.phone.replace(/[\s\-().+]/g, "").includes(phoneQ))
+  );
+};
+peopleGlobalFilter.autoRemove = (val: unknown) => !val || String(val) === "";
 
 interface PeopleManagementProps {
   people: Person[];
@@ -43,6 +70,10 @@ export default function PeopleManagement({
 }: PeopleManagementProps) {
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
+    () => loadColVis(COL_VIS_KEY),
+  );
   const [mergeState, setMergeState] = useState<MergeState | null>(null);
   const [merging, setMerging] = useState(false);
   const [mergeError, setMergeError] = useState("");
@@ -58,39 +89,30 @@ export default function PeopleManagement({
   const [copySuccess, setCopySuccess] = useState(false);
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
 
-  const filtered =
-    q.trim() || roleFilter !== "all"
-      ? people.filter((p) => {
-          const s = q.trim().toLowerCase();
-          const phoneQ = s.replace(/[\s\-().+]/g, "");
-          const matchesQ =
-            !s ||
-            p.name.toLowerCase().includes(s) ||
-            p.email.toLowerCase().includes(s) ||
-            (phoneQ.length > 0 && p.phone.replace(/[\s\-().+]/g, "").includes(phoneQ));
-          const matchesRole = roleFilter === "all" || p.roles.includes(roleFilter);
-          return matchesQ && matchesRole;
-        })
-      : people;
+  // Pre-filter by role; text search is handled by TanStack global filter
+  const preFiltered = useMemo(
+    () => (roleFilter === "all" ? people : people.filter((p) => p.roles.includes(roleFilter))),
+    [people, roleFilter],
+  );
 
   // Group people by email to surface duplicates
-  const emailGroups = new Map<string, Person[]>();
-  for (const p of people) {
-    if (!p.email) continue;
-    const key = p.email.toLowerCase();
-    const group = emailGroups.get(key) ?? [];
-    group.push(p);
-    emailGroups.set(key, group);
-  }
-  const duplicateEmails = new Set(
-    [...emailGroups.entries()].filter(([, g]) => g.length > 1).map(([email]) => email),
-  );
+  const { emailGroups, duplicateEmails } = useMemo(() => {
+    const groups = new Map<string, Person[]>();
+    for (const p of people) {
+      if (!p.email) continue;
+      const key = p.email.toLowerCase();
+      const group = groups.get(key) ?? [];
+      group.push(p);
+      groups.set(key, group);
+    }
+    const dupes = new Set(
+      [...groups.entries()].filter(([, g]) => g.length > 1).map(([email]) => email),
+    );
+    return { emailGroups: groups, duplicateEmails: dupes };
+  }, [people]);
 
   // Collect all unique roles across all people for the filter dropdown
   const allRoles = [...new Set(people.flatMap((p) => p.roles))].sort();
-
-  // Collect emails for the currently filtered set (for copy button)
-  const filteredEmails = filtered.map((p) => p.email).filter(Boolean);
 
   const handleCopyEmails = async () => {
     if (filteredEmails.length === 0) return;
@@ -118,14 +140,17 @@ export default function PeopleManagement({
     }
   };
 
-  const openMerge = (a: Person, b: Person) => {
-    // Default: keep the one with more registrations as canonical
-    const aCount = registrationCountByPersonId[a.id] ?? 0;
-    const bCount = registrationCountByPersonId[b.id] ?? 0;
-    setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
-    setMergeError("");
-    setMergeSuccess(false);
-  };
+  const openMerge = useCallback(
+    (a: Person, b: Person) => {
+      // Default: keep the one with more registrations as canonical
+      const aCount = registrationCountByPersonId[a.id] ?? 0;
+      const bCount = registrationCountByPersonId[b.id] ?? 0;
+      setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
+      setMergeError("");
+      setMergeSuccess(false);
+    },
+    [registrationCountByPersonId],
+  );
 
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;
@@ -169,11 +194,205 @@ export default function PeopleManagement({
   const loadingPersonRegistrations = personRegistrationsQuery.isPending;
   const personRegistrationsError = personRegistrationsQuery.isError;
 
+  const columns = useMemo(
+    () => columnHelper.columns([
+      columnHelper.accessor((row) => row.name, {
+        id: "name",
+        header: m.registration_name(),
+        cell: ({ row }) => {
+          const person = row.original;
+          const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
+          return (
+            <>
+              <div className="fw-semibold d-flex align-items-center gap-1">
+                {person.name}
+                {!person.active && (
+                  <Badge bg="secondary" className="ms-1">
+                    {m.admin_people_inactive_badge_label()}
+                  </Badge>
+                )}
+              </div>
+              {isDuplicate && (
+                <div className="text-warning small">
+                  <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+                  {m.admin_people_duplicates_same_email()}
+                </div>
+              )}
+            </>
+          );
+        },
+      }),
+      columnHelper.accessor("email", {
+        header: m.registration_email(),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
+        meta: { tdClassName: "d-none d-md-table-cell" },
+      }),
+      columnHelper.accessor("phone", {
+        header: m.registration_phone(),
+        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
+        meta: { tdClassName: "d-none d-lg-table-cell" },
+      }),
+      columnHelper.display({
+        id: "roles",
+        header: m.admin_people_roles_label(),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="d-flex flex-wrap gap-1">
+            {row.original.roles.map((role) => (
+              <Badge key={role} bg="secondary" className="text-capitalize">
+                {role}
+              </Badge>
+            ))}
+          </div>
+        ),
+        meta: { tdClassName: "d-none d-lg-table-cell" },
+      }),
+      columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
+        id: "registrations",
+        header: m.admin_registrations_tab(),
+        cell: ({ row, getValue }) => {
+          const person = row.original;
+          const resCount = getValue();
+          return (
+            <>
+              <Badge
+                bg={resCount > 0 ? "warning" : "secondary"}
+                text={resCount > 0 ? "dark" : undefined}
+              >
+                {resCount}
+              </Badge>
+              {resCount > 0 && (
+                <Button
+                  size="sm"
+                  variant="link"
+                  className="text-secondary p-0 ms-1"
+                  onClick={() => setViewRegistrationsPerson(person)}
+                  title={m.admin_people_view_registrations()}
+                  aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
+                >
+                  <i className="bi bi-eye" aria-hidden="true" />
+                </Button>
+              )}
+            </>
+          );
+        },
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: m.admin_actions_label(),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const person = row.original;
+          const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
+          const duplicates = isDuplicate
+            ? (emailGroups.get(person.email.toLowerCase()) ?? []).filter((p) => p.id !== person.id)
+            : [];
+          return (
+            <div className="d-flex flex-wrap gap-1">
+              <Button
+                size="sm"
+                variant="outline-light"
+                onClick={() => {
+                  setEditingPerson(person);
+                  setShowForm(true);
+                }}
+                title={m.admin_people_edit_title()}
+                aria-label={m.admin_people_edit_title()}
+              >
+                <i className="bi bi-pencil" aria-hidden="true" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-danger"
+                onClick={() => {
+                  setDeletingId(person.id);
+                  setDeleteError("");
+                }}
+                title={m.admin_people_delete_title()}
+                aria-label={m.admin_people_delete_title()}
+              >
+                <i className="bi bi-trash" aria-hidden="true" />
+              </Button>
+              {duplicates.map((dup) => (
+                <Button
+                  key={dup.id}
+                  size="sm"
+                  variant="outline-warning"
+                  onClick={() => openMerge(person, dup)}
+                  title={`${m.admin_people_merge_title()}: ${dup.name}`}
+                >
+                  <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                  {m.admin_people_merge_title()}
+                </Button>
+              ))}
+            </div>
+          );
+        },
+      }),
+    ]),
+    [
+      duplicateEmails,
+      emailGroups,
+      registrationCountByPersonId,
+      setEditingPerson,
+      setShowForm,
+      setDeletingId,
+      setDeleteError,
+      setViewRegistrationsPerson,
+      openMerge,
+    ],
+  );
+
+  const table = useAppTable(
+    {
+      data: preFiltered,
+      columns,
+      state: { sorting, globalFilter: q, columnVisibility },
+      getRowId: (row) => row.id,
+      onSortingChange: setSorting,
+      onGlobalFilterChange: setQ,
+      onColumnVisibilityChange: (updater) => {
+        const next =
+          typeof updater === "function" ? updater(columnVisibility) : updater;
+        setColumnVisibility(next);
+        saveColVis(COL_VIS_KEY, next);
+      },
+      globalFilterFn: peopleGlobalFilter,
+    },
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      columnVisibility: state.columnVisibility,
+    }),
+  );
+
+  // Emails from the currently visible (filtered + searched) rows for the copy button
+  const filteredEmails = table
+    .getFilteredRowModel()
+    .rows.map((row) => row.original.email)
+    .filter(Boolean);
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <span className="fw-semibold">{m.admin_people_tab()}</span>
+        <Card.Header className="pb-2">
+          <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+            <span className="fw-semibold">{m.admin_people_tab()}</span>
+            <div className="d-flex gap-2">
+              <ColumnVisibilityDropdown table={table} tableId="people" />
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => {
+                  setEditingPerson(null);
+                  setShowForm(true);
+                }}
+              >
+                <i className="bi bi-person-plus me-1" aria-hidden="true" />
+                {m.admin_people_add_person()}
+              </Button>
+            </div>
+          </div>
           <div className="d-flex flex-wrap gap-2 align-items-center">
             <Form.Select
               size="sm"
@@ -213,17 +432,6 @@ export default function PeopleManagement({
               className="bg-dark text-light border-secondary"
               style={{ maxWidth: 240 }}
             />
-            <Button
-              size="sm"
-              variant="warning"
-              onClick={() => {
-                setEditingPerson(null);
-                setShowForm(true);
-              }}
-            >
-              <i className="bi bi-person-plus me-1" aria-hidden="true" />
-              {m.admin_people_add_person()}
-            </Button>
           </div>
         </Card.Header>
 
@@ -271,129 +479,79 @@ export default function PeopleManagement({
 
           {isLoading ? (
             <div className="text-center py-4">
-              <Spinner animation="border" variant="warning" size="sm" />
+              <Spinner animation="border" variant="primary" size="sm" />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : table.getRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_people_no_results()}</p>
           ) : (
             <div className="table-responsive">
               <Table variant="dark" hover striped className="mb-0" size="sm">
                 <thead>
-                  <tr>
-                    <th>{m.registration_name()}</th>
-                    <th className="d-none d-md-table-cell">{m.registration_email()}</th>
-                    <th className="d-none d-lg-table-cell">{m.registration_phone()}</th>
-                    <th className="d-none d-lg-table-cell">{m.admin_people_roles_label()}</th>
-                    <th>{m.admin_registrations_tab()}</th>
-                    <th>{m.admin_actions_label()}</th>
-                  </tr>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                          const canSort = header.column.getCanSort();
+                          const sorted = header.column.getIsSorted();
+                          return (
+                            <th
+                              key={header.id}
+                              className={header.column.columnDef.meta?.tdClassName}
+                              onClick={header.column.getToggleSortingHandler()}
+                              onKeyDown={
+                                canSort
+                                  ? (e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        header.column.getToggleSortingHandler()?.(e);
+                                      }
+                                    }
+                                  : undefined
+                              }
+                              role={canSort ? "button" : undefined}
+                              tabIndex={canSort ? 0 : undefined}
+                              aria-sort={
+                                canSort
+                                  ? sorted === "asc"
+                                    ? "ascending"
+                                    : sorted === "desc"
+                                      ? "descending"
+                                      : "none"
+                                  : undefined
+                              }
+                              style={{
+                                cursor: canSort ? "pointer" : "default",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <table.FlexRender header={header} />
+                              {canSort && (
+                                <i
+                                  className={`bi ms-1 small ${
+                                    sorted === "asc"
+                                      ? "bi-arrow-up"
+                                      : sorted === "desc"
+                                        ? "bi-arrow-down"
+                                        : "bi-arrow-down-up opacity-25"
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </th>
+                          );
+                        })}
+                    </tr>
+                  ))}
                 </thead>
                 <tbody>
-                  {filtered.map((person) => {
-                    const isDuplicate =
-                      person.email && duplicateEmails.has(person.email.toLowerCase());
-                    const duplicates = isDuplicate
-                      ? (emailGroups.get(person.email.toLowerCase()) ?? []).filter(
-                          (p) => p.id !== person.id,
-                        )
-                      : [];
-                    const resCount = registrationCountByPersonId[person.id] ?? 0;
-
-                    return (
-                      <tr key={person.id}>
-                        <td>
-                          <div className="fw-semibold d-flex align-items-center gap-1">
-                            {person.name}
-                            {!person.active && (
-                              <Badge bg="secondary" className="ms-1">
-                                {m.admin_people_inactive_badge_label()}
-                              </Badge>
-                            )}
-                          </div>
-                          {isDuplicate && (
-                            <div className="text-warning small">
-                              <i
-                                className="bi bi-exclamation-triangle-fill me-1"
-                                aria-hidden="true"
-                              />
-                              {m.admin_people_duplicates_same_email()}
-                            </div>
-                          )}
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                          <table.FlexRender cell={cell} />
                         </td>
-                        <td className="d-none d-md-table-cell small">{person.email}</td>
-                        <td className="d-none d-lg-table-cell small">{person.phone}</td>
-                        <td className="d-none d-lg-table-cell">
-                          <div className="d-flex flex-wrap gap-1">
-                            {person.roles.map((role) => (
-                              <Badge key={role} bg="secondary" className="text-capitalize">
-                                {role}
-                              </Badge>
-                            ))}
-                          </div>
-                        </td>
-                        <td>
-                          <Badge
-                            bg={resCount > 0 ? "warning" : "secondary"}
-                            text={resCount > 0 ? "dark" : undefined}
-                          >
-                            {resCount}
-                          </Badge>
-                          {resCount > 0 && (
-                            <Button
-                              size="sm"
-                              variant="link"
-                              className="text-secondary p-0 ms-1"
-                              onClick={() => setViewRegistrationsPerson(person)}
-                              title={m.admin_people_view_registrations()}
-                              aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
-                            >
-                              <i className="bi bi-eye" aria-hidden="true" />
-                            </Button>
-                          )}
-                        </td>
-                        <td>
-                          <div className="d-flex flex-wrap gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline-light"
-                              onClick={() => {
-                                setEditingPerson(person);
-                                setShowForm(true);
-                              }}
-                              title={m.admin_people_edit_title()}
-                              aria-label={m.admin_people_edit_title()}
-                            >
-                              <i className="bi bi-pencil" aria-hidden="true" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline-danger"
-                              onClick={() => {
-                                setDeletingId(person.id);
-                                setDeleteError("");
-                              }}
-                              title={m.admin_people_delete_title()}
-                              aria-label={m.admin_people_delete_title()}
-                            >
-                              <i className="bi bi-trash" aria-hidden="true" />
-                            </Button>
-                            {duplicates.map((dup) => (
-                              <Button
-                                key={dup.id}
-                                size="sm"
-                                variant="outline-warning"
-                                onClick={() => openMerge(person, dup)}
-                                title={`${m.admin_people_merge_title()}: ${dup.name}`}
-                              >
-                                <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
-                                {m.admin_people_merge_title()}
-                              </Button>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </Table>
             </div>
