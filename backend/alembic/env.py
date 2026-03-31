@@ -1,11 +1,10 @@
-"""Alembic environment — async SQLAlchemy."""
+"""Alembic environment — sync psycopg3 for migrations, asyncpg for the app."""
 
-import asyncio
 import os
 from logging.config import fileConfig
 
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
 
@@ -18,24 +17,18 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Allow DATABASE_URL env var to override alembic.ini
+# Allow DATABASE_URL env var to override alembic.ini.
+# Strip the async driver prefix so psycopg3 (sync) is used for migrations.
 database_url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
-
-# Alembic uses sync by default; we adapt to async here.
-# The URL stored in alembic.ini is the *sync* SQLite URL; swap to async driver.
-if database_url and database_url.startswith("sqlite:///") and "aiosqlite" not in database_url:
-    async_url = database_url.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
-else:
-    async_url = database_url
+sync_url = database_url.replace("+asyncpg", "+psycopg") if database_url else None
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=database_url,
+        url=sync_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -45,22 +38,21 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
-async def run_migrations_online() -> None:
-    if not async_url:
-        raise RuntimeError("No DATABASE_URL configured for async migrations.")
-    connectable = create_async_engine(async_url)
-    async with connectable.connect() as conn:
-        await conn.run_sync(do_run_migrations)
-    await connectable.dispose()
+def run_migrations_online() -> None:
+    if not sync_url:
+        raise RuntimeError("No DATABASE_URL configured for migrations.")
+    connectable = create_engine(sync_url)
+    with connectable.connect() as conn:
+        do_run_migrations(conn)
+    connectable.dispose()
 
 
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_migrations_online())
+    run_migrations_online()

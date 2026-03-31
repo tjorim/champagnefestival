@@ -1,8 +1,7 @@
 # Champagne Festival — Backend
 
-FastAPI + SQLite backend for the VIP reservation and check-in system.
-Designed to run as a single process (no external services) on a shared VPS
-alongside the [worktime](https://github.com/tjorim/worktime) backend.
+FastAPI + PostgreSQL backend for the VIP reservation and check-in system.
+Designed to run on a shared VPS alongside the [worktime](https://github.com/tjorim/worktime) backend.
 
 ---
 
@@ -50,11 +49,9 @@ Static frontend (Vite build / CDN / VPS)
         │
    ┌────▼────────────────────────────┐
    │  FastAPI (uvicorn / Docker)     │
-   │  SQLite (single .db file)       │
+   │  PostgreSQL (asyncpg)           │
    └─────────────────────────────────┘
 ```
-
-Single process, single file database — zero extra services required.
 
 ---
 
@@ -63,14 +60,17 @@ Single process, single file database — zero extra services required.
 ```bash
 cd backend
 
-# 1. Install dependencies (creates .venv automatically)
+# 1. Start PostgreSQL (from repo root)
+docker compose up db -d
+
+# 2. Install dependencies (creates .venv automatically)
 uv sync
 
-# 2. Configure environment
+# 3. Configure environment
 cp .env.example .env
-# Edit .env — at minimum set ADMIN_TOKEN
+# Edit .env — at minimum set ADMIN_TOKEN and DATABASE_URL
 
-# 3. Run database migrations
+# 4. Run database migrations
 uv run alembic upgrade head
 
 # Note: only SQLAlchemy model/table changes require a new Alembic revision.
@@ -120,7 +120,6 @@ docker build -t champagne-backend .
 # Run migrations first (before the API container starts serving traffic).
 # Use a one-off container so the API is not exposed until the schema is ready.
 docker run --rm \
-  -v champagne-data:/var/data/champagne \
   --env-file /etc/champagne/.env \
   champagne-backend \
   alembic upgrade head
@@ -130,7 +129,6 @@ docker run -d \
   --name champagne-backend \
   --restart unless-stopped \
   -p 127.0.0.1:8000:8000 \
-  -v champagne-data:/var/data/champagne \
   --env-file /etc/champagne/.env \
   champagne-backend
 ```
@@ -185,7 +183,7 @@ location /api/ {
 | ------------------ | -------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
 | `ADMIN_TOKEN`      | **yes**  | —                                                      | Bearer token for admin endpoints (required in production)            |
 | `ENVIRONMENT`      | no       | `development`                                          | `development` or `production` — gates startup safety checks          |
-| `DATABASE_URL`     | no       | `sqlite+aiosqlite:////var/data/champagne/champagne.db` | Async SQLAlchemy URL                                                 |
+| `DATABASE_URL`     | no       | `postgresql+asyncpg://localhost/champagne`             | Async SQLAlchemy URL                                                 |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `MIN_FORM_SECONDS` | no       | `3`                                                    | Anti-spam: min seconds to fill the form                              |
 | `GUEST_ACCESS_TOKEN_TTL_MINUTES` | no | `30` | TTL in minutes for short-lived guest access tokens used by `/api/reservations/my/request` and `/api/reservations/my/access` |

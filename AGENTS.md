@@ -27,6 +27,11 @@ uv run pytest
 uv run alembic upgrade head
 ```
 
+> **Prerequisites:** Backend development and tests require a running PostgreSQL instance.
+> Start one with `docker compose up db -d` from the repo root (uses `docker-compose.yml`).
+> Tests default to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`;
+> override via the `TEST_DATABASE_URL` environment variable.
+
 ## Source Of Truth
 
 - `frontend/src/config/navigation.ts` for site navigation
