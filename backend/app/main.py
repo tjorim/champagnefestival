@@ -89,6 +89,14 @@ else:
 
 _supertokens_cors_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
 
+# SuperTokens middleware handles /auth/* routes and session management.
+# Added first so it is innermost in the stack.
+# Only added when SuperTokens is configured (has a connection URI).
+if settings.supertokens_connection_uri:
+    app.add_middleware(get_middleware())
+
+# CORSMiddleware is added after SuperTokens so it runs outermost, ensuring
+# CORS headers are present on /auth/* responses that SuperTokens handles directly.
 app.add_middleware(
     CORSMiddleware,  # ty: ignore[invalid-argument-type]
     allow_origins=_cors_origins,
@@ -97,11 +105,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "Accept"] + _supertokens_cors_headers,
     expose_headers=["front-token", "id-refresh-token"],
 )
-
-# SuperTokens middleware handles /auth/* routes and session management.
-# Only added when SuperTokens is configured (has a connection URI).
-if settings.supertokens_connection_uri:
-    app.add_middleware(get_middleware())
 
 
 @app.exception_handler(IntegrityError)

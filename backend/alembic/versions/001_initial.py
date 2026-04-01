@@ -23,6 +23,7 @@ def upgrade() -> None:
     op.create_table(
         "people",
         sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("supertokens_user_id", sa.String(64), unique=True, nullable=True),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("email", sa.String(200), nullable=False, server_default=""),
         sa.Column("phone", sa.String(50), nullable=False, server_default=""),

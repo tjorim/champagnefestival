@@ -89,6 +89,16 @@ class Settings(BaseSettings):
     # Validators
     # ------------------------------------------------------------------
 
+    @field_validator("api_base_path")
+    @classmethod
+    def validate_api_base_path(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("API_BASE_PATH cannot be empty")
+        if not v.startswith("/"):
+            raise ValueError(f"API_BASE_PATH must start with '/', got: {v!r}")
+        return v
+
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
@@ -120,11 +130,16 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_supertokens(self) -> "Settings":
-        """Refuse to start in production without a SuperTokens connection URI."""
-        if self.environment == "production" and not self.supertokens_connection_uri:
-            raise ValueError(
-                "SUPERTOKENS_CONNECTION_URI must be set in production; refusing to start without SuperTokens auth."
-            )
+        """Refuse to start in production without a SuperTokens connection URI or API key."""
+        if self.environment == "production":
+            if not self.supertokens_connection_uri:
+                raise ValueError(
+                    "SUPERTOKENS_CONNECTION_URI must be set in production; refusing to start without SuperTokens auth."
+                )
+            if not self.supertokens_api_key:
+                raise ValueError(
+                    "SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core."
+                )
         return self
 
     # ------------------------------------------------------------------
