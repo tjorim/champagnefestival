@@ -1,27 +1,37 @@
-"""Admin bearer-token authentication dependency."""
+"""Admin session authentication dependency (SuperTokens)."""
 
-import secrets
-
-from fastapi import HTTPException, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import HTTPException, Request
 
 from app.config import settings
 
-_bearer = HTTPBearer(auto_error=False)
 
+async def require_admin(request: Request) -> None:
+    """FastAPI dependency — rejects requests without a valid admin session.
 
-def require_admin(
-    credentials: HTTPAuthorizationCredentials | None = Security(_bearer),
-) -> None:
-    """FastAPI dependency — raises 401 if the admin token is missing or wrong."""
-    if not settings.admin_token:
+    When SuperTokens is not configured (``SUPERTOKENS_CONNECTION_URI`` unset),
+    deterministically returns 401 instead of relying on library behavior.
+
+    When configured, raises 401 if the request has no valid SuperTokens session,
+    or 403 if the session does not contain the ``admin`` role (checked via
+    ``UserRoleClaim``).
+
+    All admin routers use this dependency to gate access.  A valid session is
+    created when the user signs in via the ``/auth/signin`` endpoint provided
+    by the SuperTokens middleware.  The ``admin`` role must be assigned to the
+    user via the SuperTokens UserRoles recipe.
+    """
+    if not settings.supertokens_connection_uri:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Admin access is not configured on this server.",
+            status_code=401,
+            detail="Authentication is not configured",
         )
-    if credentials is None or not secrets.compare_digest(credentials.credentials, settings.admin_token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing admin token.",
-            headers={"WWW-Authenticate": "Bearer"},
+
+    from supertokens_python.recipe.session.framework.fastapi import verify_session
+    from supertokens_python.recipe.userroles import UserRoleClaim
+
+    verifier = verify_session(
+        override_global_claim_validators=lambda global_validators, session, user_context: (
+            global_validators + [UserRoleClaim.validators.includes("admin")]
         )
+    )
+    await verifier(request)

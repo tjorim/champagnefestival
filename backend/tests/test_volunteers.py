@@ -8,8 +8,8 @@ from tests.helpers import ADMIN_HEADERS
 
 
 @pytest.mark.anyio
-async def test_volunteers_require_auth(client):
-    r = await client.get("/api/volunteers")
+async def test_volunteers_require_auth(unauth_client):
+    r = await unauth_client.get("/api/volunteers")
     assert r.status_code == 401
 
 

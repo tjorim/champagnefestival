@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
+from supertokens_python import get_all_cors_headers
+from supertokens_python.framework.fastapi import get_middleware
 
 from app.config import settings
 from app.database import create_tables
@@ -29,6 +31,7 @@ from app.routers import (
     venues,
     volunteers,
 )
+from app.supertokens_config import init_supertokens
 
 # Configure logging before any other module uses a logger.
 logging.basicConfig(
@@ -36,6 +39,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Initialize SuperTokens before the app handles any requests.
+init_supertokens()
 
 
 @asynccontextmanager
@@ -81,12 +87,23 @@ if not _cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {_cors_origins}")
 
+_supertokens_cors_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
+
+# SuperTokens middleware handles /auth/* routes and session management.
+# Added first so it is innermost in the stack.
+# Only added when SuperTokens is configured (has a connection URI).
+if settings.supertokens_connection_uri:
+    app.add_middleware(get_middleware())
+
+# CORSMiddleware is added after SuperTokens so it runs outermost, ensuring
+# CORS headers are present on /auth/* responses that SuperTokens handles directly.
 app.add_middleware(
     CORSMiddleware,  # ty: ignore[invalid-argument-type]
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_headers=["Content-Type", "Accept", "Authorization"] + _supertokens_cors_headers,
+    expose_headers=["front-token"],
 )
 
 

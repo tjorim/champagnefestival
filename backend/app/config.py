@@ -7,7 +7,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ADMIN_TOKEN = ""
 GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES = 60
 
 
@@ -22,11 +21,27 @@ class Settings(BaseSettings):
     environment: str = "development"
     """Deployment environment. Must be 'development' or 'production'."""
 
-    # --- Required ---
-    admin_token: str = DEFAULT_ADMIN_TOKEN
-    """Bearer token that gates all admin-only endpoints.
-    Set to a long random string in production.
-    If empty, all admin endpoints will be inaccessible (returns 401)."""
+    # --- SuperTokens ---
+    supertokens_connection_uri: str = ""
+    """Connection URI for the SuperTokens core service.
+    Required in production. Example: https://auth.example.com"""
+
+    supertokens_api_key: str = ""
+    """API key for SuperTokens core.
+    Optional in development, but must be set in production (see validate_production_supertokens).
+    """
+
+    api_domain: str = "http://localhost:8000"
+    """Public URL where this API is reachable (used by SuperTokens for cookies)."""
+
+    website_domain: str = "http://localhost:5173"
+    """Public URL where the frontend is reachable (used by SuperTokens for cookies)."""
+
+    api_base_path: str = "/auth"
+    """Base path for SuperTokens API routes (e.g. /auth/signin, /auth/signout)."""
+
+    website_base_path: str = "/admin"
+    """Base path for SuperTokens frontend routes on the website domain."""
 
     # --- Database ---
     database_url: str = "postgresql+asyncpg://localhost/champagne"
@@ -79,6 +94,16 @@ class Settings(BaseSettings):
     # Validators
     # ------------------------------------------------------------------
 
+    @field_validator("api_base_path", "website_base_path")
+    @classmethod
+    def validate_base_path(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Base path cannot be empty")
+        if not v.startswith("/"):
+            raise ValueError(f"Base path must start with '/', got: {v!r}")
+        return v
+
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
@@ -109,10 +134,15 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def validate_production_admin_token(self) -> "Settings":
-        """Refuse to start in production with an empty admin token."""
-        if self.environment == "production" and self.admin_token == DEFAULT_ADMIN_TOKEN:
-            raise ValueError("ADMIN_TOKEN must be set in production; refusing to start with an empty token.")
+    def validate_production_supertokens(self) -> "Settings":
+        """Refuse to start in production without a SuperTokens connection URI or API key."""
+        if self.environment == "production":
+            if not self.supertokens_connection_uri:
+                raise ValueError(
+                    "SUPERTOKENS_CONNECTION_URI must be set in production; refusing to start without SuperTokens auth."
+                )
+            if not self.supertokens_api_key:
+                raise ValueError("SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core.")
         return self
 
     # ------------------------------------------------------------------
@@ -166,7 +196,9 @@ class Settings(BaseSettings):
         else:
             logger.info(f"CORS Origins:  {', '.join(cors_origins)}")
 
-        logger.info(f"Admin Token:   {'set' if self.admin_token else 'NOT SET — admin endpoints will return 401'}")
+        logger.info(
+            f"SuperTokens:   {'configured' if self.supertokens_connection_uri else 'NOT CONFIGURED — admin endpoints will return 401'}"
+        )
         logger.info("=" * 60)
 
 

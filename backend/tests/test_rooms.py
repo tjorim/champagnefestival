@@ -44,8 +44,8 @@ async def test_room_crud(client):
 
 
 @pytest.mark.anyio
-async def test_room_requires_admin(client):
-    r = await client.post("/api/rooms", json=ROOM_PAYLOAD)
+async def test_room_requires_admin(unauth_client):
+    r = await unauth_client.post("/api/rooms", json=ROOM_PAYLOAD)
     assert r.status_code == 401
 
 

@@ -8,8 +8,8 @@ from tests.helpers import ADMIN_HEADERS
 
 
 @pytest.mark.anyio
-async def test_exhibitors_require_admin(client):
-    r = await client.get("/api/exhibitors")
+async def test_exhibitors_require_admin(unauth_client):
+    r = await unauth_client.get("/api/exhibitors")
     assert r.status_code == 401
 
 
