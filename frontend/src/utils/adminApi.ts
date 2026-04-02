@@ -38,7 +38,7 @@ export async function fetchArrayOrThrow<T>(
   mapper: (item: Record<string, unknown>) => T,
 ): Promise<T[]> {
   const response = await requestApi(url, options);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     throw new Error("unauthorized");
   }
   if (!response.ok) {
@@ -57,7 +57,7 @@ export async function fetchJsonOrThrowWithUnauthorized<T>(
   fallbackMessage: string,
 ): Promise<T> {
   const response = await requestApi(url, options);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     throw new Error("unauthorized");
   }
   if (!response.ok) {
@@ -73,7 +73,7 @@ export async function fetchVoidOrThrowWithUnauthorized(
   fallbackMessage: string,
 ): Promise<void> {
   const response = await requestApi(url, options);
-  if (response.status === 401) {
+  if (response.status === 401 || response.status === 403) {
     throw new Error("unauthorized");
   }
   if (!response.ok) {
