@@ -14,6 +14,12 @@ async def test_areas_require_admin(unauth_client):
 
 
 @pytest.mark.anyio
+async def test_areas_require_admin_role(forbidden_client):
+    r = await forbidden_client.get("/api/areas")
+    assert r.status_code == 403
+
+
+@pytest.mark.anyio
 async def test_area_crud(client):
     layout_id = await _create_layout_prerequisites(client)
 

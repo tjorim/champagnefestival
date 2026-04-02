@@ -30,7 +30,7 @@ def init_supertokens() -> None:
             api_domain=settings.api_domain,
             website_domain=settings.website_domain,
             api_base_path=settings.api_base_path,
-            website_base_path="/auth",
+            website_base_path=settings.website_base_path,
         ),
         supertokens_config=SupertokensConfig(
             connection_uri=settings.supertokens_connection_uri,
@@ -43,4 +43,4 @@ def init_supertokens() -> None:
             userroles.init(),
         ],
     )
-    logger.info("✓ SuperTokens initialized (emailpassword + session + userroles)")
+    logger.info("SuperTokens initialized (emailpassword + session + userroles)")

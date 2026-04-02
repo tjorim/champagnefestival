@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     api_base_path: str = "/auth"
     """Base path for SuperTokens API routes (e.g. /auth/signin, /auth/signout)."""
 
+    website_base_path: str = "/auth"
+    """Base path for SuperTokens frontend routes on the website domain."""
+
     # --- Database ---
     database_url: str = "postgresql+asyncpg://localhost/champagne"
     """SQLAlchemy async database URL.
@@ -89,14 +92,14 @@ class Settings(BaseSettings):
     # Validators
     # ------------------------------------------------------------------
 
-    @field_validator("api_base_path")
+    @field_validator("api_base_path", "website_base_path")
     @classmethod
-    def validate_api_base_path(cls, v: str) -> str:
+    def validate_base_path(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError("API_BASE_PATH cannot be empty")
+            raise ValueError("Base path cannot be empty")
         if not v.startswith("/"):
-            raise ValueError(f"API_BASE_PATH must start with '/', got: {v!r}")
+            raise ValueError(f"Base path must start with '/', got: {v!r}")
         return v
 
     @field_validator("database_url")

@@ -113,3 +113,28 @@ async def unauth_client(db_session):
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+async def forbidden_client(db_session):
+    """Client that simulates a session without the admin role.
+
+    ``require_admin`` is overridden with a function that always raises 403,
+    mimicking what SuperTokens ``verify_session`` does when the session exists
+    but lacks the ``admin`` role (``UserRoleClaim`` check fails).  Use this
+    fixture in tests that verify endpoints reject non-admin sessions.
+    """
+    from fastapi import HTTPException
+
+    async def override_get_db():
+        yield db_session
+
+    def reject() -> None:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[require_admin] = reject
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
