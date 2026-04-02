@@ -6,7 +6,7 @@ export function initSuperTokens(): void {
   SuperTokens.init({
     appInfo: {
       appName: "Champagne Festival",
-      apiDomain: "https://champagnefestival.tjor.im",
+      apiDomain: import.meta.env.VITE_API_DOMAIN ?? "https://champagnefestival.tjor.im",
       websiteDomain: window.location.origin,
       apiBasePath: "/auth",
       websiteBasePath: "/admin/auth",

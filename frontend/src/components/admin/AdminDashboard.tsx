@@ -1293,7 +1293,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       (e) => e instanceof Error && e.message === "unauthorized",
     );
     if (unauthorizedError) {
-      void handleLogout();
+      handleLogout().catch((err) => devError("Logout failed", err));
       return;
     }
 
@@ -1937,6 +1937,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   if (!visible) return null;
 
+  if (sessionContext.loading) {
+    return (
+      <div className="py-5 text-center">
+        <Spinner animation="border" variant="warning" role="status">
+          <span className="visually-hidden">{m.admin_loading()}</span>
+        </Spinner>
+      </div>
+    );
+  }
+
   return (
     <section
       id="admin"
@@ -1945,7 +1955,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     >
       {!isAuthenticated ? (
         /* ---- Login (SuperTokens pre-built UI) ---- */
-        <AdminLoginForm onSessionAlreadyExists={loadData} />
+        <AdminLoginForm />
       ) : (
         /* ---- Authenticated: sidebar layout ---- */
         <div className="admin-layout">

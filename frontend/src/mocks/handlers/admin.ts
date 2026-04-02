@@ -23,8 +23,13 @@ let layouts: Record<string, unknown>[] = structuredClone(seedLayouts);
 let areas: Record<string, unknown>[] = structuredClone(seedAreas);
 
 /**
- * In production, authentication is handled by SuperTokens session cookies.
- * This mock accepts any request (simulating a valid SuperTokens session).
+ * In production, authentication is handled by SuperTokens session cookies set
+ * by the SuperTokens backend. The SDK intercepts fetch calls and attaches the
+ * session cookie automatically, so there is no Authorization header to validate
+ * here. This mock simulates a valid session by always returning null (no error).
+ *
+ * Trade-off: tests cannot verify that protected endpoints reject unauthenticated
+ * requests — that behaviour is covered by the real backend's integration tests.
  */
 function requireAuth(_request: Request): HttpResponse<null> | null {
   return null;

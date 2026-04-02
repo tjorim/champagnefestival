@@ -3,11 +3,7 @@ import { AuthPage } from "supertokens-auth-react/ui";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
 import { m } from "@/paraglide/messages";
 
-interface AdminLoginFormProps {
-  onSessionAlreadyExists: () => void;
-}
-
-export default function AdminLoginForm({ onSessionAlreadyExists }: AdminLoginFormProps) {
+export default function AdminLoginForm() {
   return (
     <Container>
       <h2 id="admin-title" className="text-center mb-4 text-warning">
@@ -19,7 +15,6 @@ export default function AdminLoginForm({ onSessionAlreadyExists }: AdminLoginFor
           <AuthPage
             preBuiltUIList={[EmailPasswordPreBuiltUI]}
             redirectOnSessionExists={false}
-            onSessionAlreadyExists={onSessionAlreadyExists}
           />
         </div>
       </div>
