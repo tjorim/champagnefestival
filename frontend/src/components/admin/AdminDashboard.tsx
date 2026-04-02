@@ -64,7 +64,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const isAuthenticated = !sessionContext.loading && sessionContext.doesSessionExist;
-  const isSessionLoading = sessionContext.loading;
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   /** Full registration (with checkInToken) shown in the detail modal */
@@ -87,7 +86,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     });
   }, []);
 
-  const authHeaders = useCallback((): Record<string, string> => ({}), []);
+  const authHeaders = useCallback(
+    (): Record<string, string> => ({
+      "Content-Type": "application/json",
+    }),
+    [],
+  );
 
   const {
     registrationsQuery,
@@ -1954,14 +1958,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       aria-labelledby="admin-title"
       className={isAuthenticated ? "admin-authenticated" : "py-5"}
     >
-      {isSessionLoading ? (
-        /* ---- Session check in progress ---- */
-        <div className="d-flex justify-content-center py-5">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
-        </div>
-      ) : !isAuthenticated ? (
+      {!isAuthenticated ? (
         /* ---- Login (SuperTokens pre-built UI) ---- */
         <AdminLoginForm />
       ) : (

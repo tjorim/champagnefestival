@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     api_base_path: str = "/auth"
     """Base path for SuperTokens API routes (e.g. /auth/signin, /auth/signout)."""
 
-    website_base_path: str = "/auth"
+    website_base_path: str = "/admin"
     """Base path for SuperTokens frontend routes on the website domain."""
 
     # --- Database ---
