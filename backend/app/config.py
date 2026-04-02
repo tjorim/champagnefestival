@@ -142,9 +142,7 @@ class Settings(BaseSettings):
                     "SUPERTOKENS_CONNECTION_URI must be set in production; refusing to start without SuperTokens auth."
                 )
             if not self.supertokens_api_key:
-                raise ValueError(
-                    "SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core."
-                )
+                raise ValueError("SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core.")
         return self
 
     # ------------------------------------------------------------------
