@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom";
+import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { resetAdminStore } from "@/mocks/handlers/admin";
@@ -9,10 +10,10 @@ vi.mock("supertokens-auth-react", () => ({
   __esModule: true,
   default: {
     init: vi.fn(),
-    SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => children,
+    SuperTokensWrapper: ({ children }: { children: ReactNode }) => children,
   },
   init: vi.fn(),
-  SuperTokensWrapper: ({ children }: { children: React.ReactNode }) => children,
+  SuperTokensWrapper: ({ children }: { children: ReactNode }) => children,
 }));
 
 vi.mock("supertokens-auth-react/recipe/session", () => ({
@@ -21,11 +22,11 @@ vi.mock("supertokens-auth-react/recipe/session", () => ({
     init: vi.fn(),
     useSessionContext: vi.fn().mockReturnValue({ loading: false, doesSessionExist: true }),
     signOut: vi.fn().mockResolvedValue(undefined),
-    SessionAuth: ({ children }: { children: React.ReactNode }) => children,
+    SessionAuth: ({ children }: { children: ReactNode }) => children,
   },
   useSessionContext: vi.fn().mockReturnValue({ loading: false, doesSessionExist: true }),
   signOut: vi.fn().mockResolvedValue(undefined),
-  SessionAuth: ({ children }: { children: React.ReactNode }) => children,
+  SessionAuth: ({ children }: { children: ReactNode }) => children,
 }));
 
 vi.mock("supertokens-auth-react/recipe/emailpassword", () => ({

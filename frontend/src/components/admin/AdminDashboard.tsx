@@ -64,6 +64,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const isAuthenticated = !sessionContext.loading && sessionContext.doesSessionExist;
+  const isSessionLoading = sessionContext.loading;
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   /** Full registration (with checkInToken) shown in the detail modal */
@@ -86,12 +87,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     });
   }, []);
 
-  const authHeaders = useCallback(
-    () => ({
-      "Content-Type": "application/json",
-    }),
-    [],
-  );
+  const authHeaders = useCallback(() => ({}) as Record<string, string>, []);
 
   const {
     registrationsQuery,
@@ -959,14 +955,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   });
 
   const handleLogout = useCallback(async () => {
-    await Session.signOut();
-    queryClient.removeQueries({
-      predicate: (query) => {
-        const key = query.queryKey[0];
-        return key === "admin";
-      },
-    });
-    setDetailRegistration(null);
+    try {
+      await Session.signOut();
+    } catch {
+      // Sign-out may fail (network error, etc.); always clean up local state.
+    } finally {
+      queryClient.removeQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return key === "admin";
+        },
+      });
+      setDetailRegistration(null);
+    }
   }, [queryClient]);
 
   const handleMergePeople = useCallback(
@@ -1953,7 +1954,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       aria-labelledby="admin-title"
       className={isAuthenticated ? "admin-authenticated" : "py-5"}
     >
-      {!isAuthenticated ? (
+      {isSessionLoading ? (
+        /* ---- Session check in progress ---- */
+        <div className="d-flex justify-content-center py-5">
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
+      ) : !isAuthenticated ? (
         /* ---- Login (SuperTokens pre-built UI) ---- */
         <AdminLoginForm />
       ) : (
