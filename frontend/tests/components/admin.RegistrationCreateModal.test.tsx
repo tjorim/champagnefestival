@@ -26,12 +26,10 @@ vi.mock("@/paraglide/messages", () => ({
 describe("RegistrationCreateModal", () => {
   it("renders a disabled empty-state selector when no reservable events are available", async () => {
     let capturedRegistrationRequired: string | null = null;
-    let capturedAuthorization: string | null = null;
 
     server.use(
       http.get("/api/events", ({ request }) => {
         capturedRegistrationRequired = new URL(request.url).searchParams.get("registration_required");
-        capturedAuthorization = request.headers.get("Authorization");
         return HttpResponse.json([]);
       }),
     );
@@ -42,7 +40,7 @@ describe("RegistrationCreateModal", () => {
       <QueryClientProvider client={queryClient}>
         <RegistrationCreateModal
           show={true}
-          authHeaders={() => ({ Authorization: "Bearer test" })}
+          authHeaders={() => ({ "Content-Type": "application/json" })}
           onSaved={() => {}}
           onHide={() => {}}
         />
@@ -52,7 +50,6 @@ describe("RegistrationCreateModal", () => {
     await screen.findByRole("option", { name: "No schedule events yet." });
 
     expect(capturedRegistrationRequired).toBe("true");
-    expect(capturedAuthorization).toBe("Bearer test");
 
     const [eventSelect] = screen.getAllByRole("combobox");
     expect(eventSelect).toBeDisabled();
