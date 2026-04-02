@@ -87,7 +87,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     });
   }, []);
 
-  const authHeaders = useCallback(() => ({}) as Record<string, string>, []);
+  const authHeaders = useCallback((): Record<string, string> => ({}), []);
 
   const {
     registrationsQuery,
