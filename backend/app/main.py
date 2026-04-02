@@ -102,7 +102,7 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept"] + _supertokens_cors_headers,
+    allow_headers=["Content-Type", "Accept", "Authorization"] + _supertokens_cors_headers,
     expose_headers=["front-token"],
 )
 

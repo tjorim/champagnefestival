@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     Required in production. Example: https://auth.example.com"""
 
     supertokens_api_key: str = ""
-    """Optional API key to secure the connection to the SuperTokens core."""
+    """API key for SuperTokens core.
+    Optional in development, but must be set in production (see validate_production_supertokens).
+    """
 
     api_domain: str = "http://localhost:8000"
     """Public URL where this API is reachable (used by SuperTokens for cookies)."""
