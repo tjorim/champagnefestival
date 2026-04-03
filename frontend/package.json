@@ -20,7 +20,7 @@
     "@dnd-kit/dom": "^0.3.2",
     "@dnd-kit/react": "^0.3.2",
     "@tanstack/react-form": "^1.28.6",
-    "@tanstack/react-query": "^5.96.1",
+    "@tanstack/react-query": "^5.96.2",
     "@tanstack/react-router": "^1.168.10",
     "@tanstack/react-table": "9.0.0-alpha.20",
     "bootstrap": "^5.3.7",
