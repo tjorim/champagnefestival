@@ -473,6 +473,7 @@ async def _ensure_public_registration_allowed(
             )
         )
     ).scalar_one()
+    assert locked_event.max_capacity is not None  # already guarded at top of function
     if reserved_guest_count + requested_guest_count > locked_event.max_capacity:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
