@@ -98,7 +98,7 @@ if settings.supertokens_connection_uri:
 # CORSMiddleware is added after SuperTokens so it runs outermost, ensuring
 # CORS headers are present on /auth/* responses that SuperTokens handles directly.
 app.add_middleware(
-    CORSMiddleware,  # ty: ignore[invalid-argument-type]
+    CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
