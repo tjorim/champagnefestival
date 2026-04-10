@@ -52,14 +52,14 @@
     "@types/react": "^19.1.11",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/ui": "^4.1.2",
+    "@vitest/ui": "^4.1.4",
     "happy-dom": "^20.8.9",
     "msw": "^2.12.14",
     "oxfmt": "^0.44.0",
     "oxlint": "^1.59.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.4"
   },
   "engines": {
     "node": ">=24.0.0"
