@@ -183,10 +183,10 @@ location /api/ {
 | ------------------ | -------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
 | `ENVIRONMENT`      | no       | `development`                                          | `development` or `production` — gates startup safety checks          |
 | `DATABASE_URL`     | no       | `postgresql+asyncpg://localhost/champagne`             | Async SQLAlchemy URL                                                 |
-| `SUPERTOKENS_CONNECTION_URI` | no | `""` | SuperTokens core URL; required in production |
-| `SUPERTOKENS_API_KEY` | no | `""` | Shared secret for SuperTokens core and dashboard; required in production |
-| `API_DOMAIN` | no | `http://localhost:8000` | Public backend origin used by SuperTokens |
-| `WEBSITE_DOMAIN` | no | `http://localhost:5173` | Public frontend origin used by SuperTokens |
+| `SUPERTOKENS_CONNECTION_URI` | yes in production | `""` | SuperTokens core URL |
+| `SUPERTOKENS_API_KEY` | yes in production | `""` | Shared secret for SuperTokens core and dashboard |
+| `API_DOMAIN` | yes in production | `http://localhost:8000` | Public backend origin used by SuperTokens; must be set to the real public API origin in production |
+| `WEBSITE_DOMAIN` | yes in production | `http://localhost:5173` | Public frontend origin used by SuperTokens; must be set to the real public website origin in production |
 | `API_BASE_PATH` | no | `/auth` | SuperTokens API path on the backend |
 | `WEBSITE_BASE_PATH` | no | `/admin` | SuperTokens frontend auth path on the website |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
