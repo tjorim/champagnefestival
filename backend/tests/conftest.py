@@ -18,7 +18,8 @@ TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
     # Default targets a *separate* test database (test_champagne) so the dev
     # database (champagne, provisioned by docker-compose) is never touched.
-    # Create it once with: psql -U postgres -c "CREATE DATABASE test_champagne;"
+    # Create it once with:
+    #   psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test_champagne;"
     # Override via TEST_DATABASE_URL env var in CI or custom environments.
     "postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne",
 )

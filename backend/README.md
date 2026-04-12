@@ -84,6 +84,9 @@ uv run uvicorn app.main:app --reload
 
 The interactive API docs are available at <http://localhost:8000/docs>.
 
+On Linux, the backend container relies on Docker's `host-gateway` support so
+`host.docker.internal` resolves correctly for `SUPERTOKENS_CONNECTION_URI`.
+
 ---
 
 ## Development tools
@@ -106,6 +109,15 @@ uv run ty check .
 # Run tests
 uv run pytest
 ```
+
+Tests use a separate database by default:
+
+```bash
+psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test_champagne;"
+```
+
+They connect to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`
+unless `TEST_DATABASE_URL` overrides it.
 
 ---
 
@@ -209,9 +221,13 @@ See `.env.example` for a template.
 
 ### Authentication
 
-- `/admin` uses SuperTokens email/password auth on the website domain.
-- Admin API endpoints require a valid SuperTokens session containing the `admin` role.
-- The backend also serves the SuperTokens dashboard at `/auth/dashboard`.
+- `WEBSITE_BASE_PATH` is the website auth UI path on the website domain.
+  With the current defaults, that is `/admin`.
+- `API_BASE_PATH` is the SuperTokens backend auth/session path.
+  With the current defaults, those routes live under `/auth/*`, and the dashboard
+  is served at `${API_BASE_PATH}/dashboard` (currently `/auth/dashboard`).
+- Admin API endpoints still live under `/api/*` and require a valid SuperTokens
+  session containing the `admin` role.
 - Public endpoints (reservation creation, check-in) do not require admin auth.
 
 ### Endpoints
