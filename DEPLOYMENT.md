@@ -64,6 +64,10 @@ docker compose run --rm champagnefestival-api alembic upgrade head
 
 ## Admin access
 
-- `/admin` uses SuperTokens email/password sign-in on the website domain.
-- Backend admin API routes require a valid session with the SuperTokens `admin` role.
-- The backend also serves the SuperTokens dashboard at `/auth/dashboard`.
+- `WEBSITE_BASE_PATH` controls the website sign-in path on the website domain.
+  With the current defaults, that path is `/admin`.
+- `API_BASE_PATH` controls the SuperTokens backend auth/session routes.
+  With the current defaults, those routes live under `/auth/*`, and the dashboard
+  is served at `${API_BASE_PATH}/dashboard` (currently `/auth/dashboard`).
+- Backend admin API routes still live under `/api/*` and require a valid
+  SuperTokens session with the `admin` role.
