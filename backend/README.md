@@ -68,7 +68,7 @@ uv sync
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env — at minimum set ADMIN_TOKEN and DATABASE_URL
+# Edit .env — at minimum set DATABASE_URL and the SuperTokens settings
 
 # 4. Run database migrations
 uv run alembic upgrade head
@@ -181,9 +181,14 @@ location /api/ {
 
 | Variable           | Required | Default                                                | Description                                                          |
 | ------------------ | -------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
-| `ADMIN_TOKEN`      | **yes**  | —                                                      | Bearer token for admin endpoints (required in production)            |
 | `ENVIRONMENT`      | no       | `development`                                          | `development` or `production` — gates startup safety checks          |
 | `DATABASE_URL`     | no       | `postgresql+asyncpg://localhost/champagne`             | Async SQLAlchemy URL                                                 |
+| `SUPERTOKENS_CONNECTION_URI` | no | `""` | SuperTokens core URL; required in production |
+| `SUPERTOKENS_API_KEY` | no | `""` | Shared secret for SuperTokens core and dashboard; required in production |
+| `API_DOMAIN` | no | `http://localhost:8000` | Public backend origin used by SuperTokens |
+| `WEBSITE_DOMAIN` | no | `http://localhost:5173` | Public frontend origin used by SuperTokens |
+| `API_BASE_PATH` | no | `/auth` | SuperTokens API path on the backend |
+| `WEBSITE_BASE_PATH` | no | `/admin` | SuperTokens frontend auth path on the website |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `MIN_FORM_SECONDS` | no       | `3`                                                    | Anti-spam: min seconds to fill the form                              |
 | `GUEST_ACCESS_TOKEN_TTL_MINUTES` | no | `30` | TTL in minutes for short-lived guest access tokens used by `/api/reservations/my/request` and `/api/reservations/my/access` |
@@ -204,8 +209,10 @@ See `.env.example` for a template.
 
 ### Authentication
 
-Admin endpoints require an `Authorization: Bearer <ADMIN_TOKEN>` header.
-Public endpoints (reservation creation, check-in) do not require a token.
+- `/admin` uses SuperTokens email/password auth on the website domain.
+- Admin API endpoints require a valid SuperTokens session containing the `admin` role.
+- The shared SuperTokens operator dashboard is exposed separately by the infra stack on `auth.tjor.im`, not by this backend.
+- Public endpoints (reservation creation, check-in) do not require admin auth.
 
 ### Endpoints
 

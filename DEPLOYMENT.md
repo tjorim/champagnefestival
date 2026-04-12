@@ -39,8 +39,11 @@ Key variables:
 | Variable | Description |
 |---|---|
 | `ENVIRONMENT` | Set to `production` |
-| `ADMIN_TOKEN` | Long random string for admin bearer auth |
-| `DATABASE_URL` | e.g. `sqlite+aiosqlite:////var/data/champagne/champagne.db` |
+| `DATABASE_URL` | e.g. `postgresql+asyncpg://user:password@postgres:5432/champagnefestival` |
+| `SUPERTOKENS_CONNECTION_URI` | e.g. `http://supertokens:3567` |
+| `SUPERTOKENS_API_KEY` | Shared secret between backend SDK and SuperTokens core |
+| `API_DOMAIN` | Public backend origin, e.g. `https://champagnefestival.tjor.im` |
+| `WEBSITE_DOMAIN` | Public frontend origin, e.g. `https://champagnefestival.tjor.im` |
 | `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `SMTP_*` | Optional — reservation confirmation emails |
 
@@ -58,3 +61,9 @@ docker compose run --rm champagnefestival-api alembic upgrade head
 > docker compose build champagnefestival-api
 > docker compose run --rm champagnefestival-api alembic upgrade head
 > ```
+
+## Admin access
+
+- `/admin` uses SuperTokens email/password sign-in on the website domain.
+- Backend admin API routes require a valid session with the SuperTokens `admin` role.
+- The shared SuperTokens operator dashboard is exposed separately by the infra stack on `auth.tjor.im`, not by this app.

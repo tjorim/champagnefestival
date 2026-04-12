@@ -24,7 +24,10 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/champagne
       ENVIRONMENT: development
-      ADMIN_TOKEN: changeme
+      SUPERTOKENS_CONNECTION_URI: http://host.docker.internal:3567
+      SUPERTOKENS_API_KEY: changeme
+      API_DOMAIN: http://localhost:8000
+      WEBSITE_DOMAIN: http://localhost:5173
       CORS_ORIGINS: http://localhost:5173
     depends_on:
       db:

@@ -25,7 +25,7 @@ champagnefestival/
 ```bash
 # Backend (Terminal 1)
 cd backend
-cp .env.example .env          # configure — at minimum set ADMIN_TOKEN
+cp .env.example .env          # configure DATABASE_URL + SuperTokens settings
 uv sync                       # install dependencies
 uv run alembic upgrade head   # run database migrations
 uv run uvicorn app.main:app --reload
