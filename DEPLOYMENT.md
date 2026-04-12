@@ -66,4 +66,4 @@ docker compose run --rm champagnefestival-api alembic upgrade head
 
 - `/admin` uses SuperTokens email/password sign-in on the website domain.
 - Backend admin API routes require a valid session with the SuperTokens `admin` role.
-- The shared SuperTokens operator dashboard is exposed separately by the infra stack on `auth.tjor.im`, not by this app.
+- The backend also serves the SuperTokens dashboard at `/auth/dashboard`.

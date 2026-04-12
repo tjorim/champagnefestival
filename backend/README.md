@@ -211,7 +211,7 @@ See `.env.example` for a template.
 
 - `/admin` uses SuperTokens email/password auth on the website domain.
 - Admin API endpoints require a valid SuperTokens session containing the `admin` role.
-- The shared SuperTokens operator dashboard is exposed separately by the infra stack on `auth.tjor.im`, not by this backend.
+- The backend also serves the SuperTokens dashboard at `/auth/dashboard`.
 - Public endpoints (reservation creation, check-in) do not require admin auth.
 
 ### Endpoints
