@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     website_domain: str = "http://localhost:5173"
     """Public URL where the frontend is reachable (used by SuperTokens for cookies)."""
 
-    api_base_path: str = "/auth"
-    """Base path for SuperTokens API routes (e.g. /auth/signin, /auth/signout)."""
+    api_base_path: str = "/api/auth"
+    """Base path for SuperTokens API routes (e.g. /api/auth/signin, /api/auth/signout)."""
 
     website_base_path: str = "/admin"
     """Base path for SuperTokens frontend routes on the website domain."""
