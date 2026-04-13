@@ -14,7 +14,7 @@ def test_init_supertokens_registers_dashboard_recipe(monkeypatch) -> None:
     monkeypatch.setattr(st_config.settings, "supertokens_api_key", "champagnefestival-api-key")
     monkeypatch.setattr(st_config.settings, "api_domain", "https://champagnefestival.tjor.im")
     monkeypatch.setattr(st_config.settings, "website_domain", "https://champagnefestival.tjor.im")
-    monkeypatch.setattr(st_config.settings, "api_base_path", "/auth")
+    monkeypatch.setattr(st_config.settings, "api_base_path", "/api/auth")
     monkeypatch.setattr(st_config.settings, "website_base_path", "/admin")
 
     def fake_init(**kwargs):

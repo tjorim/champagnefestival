@@ -199,7 +199,7 @@ location /api/ {
 | `SUPERTOKENS_API_KEY` | yes in production | `""` | Shared secret for SuperTokens core and dashboard |
 | `API_DOMAIN` | yes in production | `http://localhost:8000` | Public backend origin used by SuperTokens; must be set to the real public API origin in production |
 | `WEBSITE_DOMAIN` | yes in production | `http://localhost:5173` | Public frontend origin used by SuperTokens; must be set to the real public website origin in production |
-| `API_BASE_PATH` | no | `/auth` | SuperTokens API path on the backend |
+| `API_BASE_PATH` | no | `/api/auth` | SuperTokens API path on the backend |
 | `WEBSITE_BASE_PATH` | no | `/admin` | SuperTokens frontend auth path on the website |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `MIN_FORM_SECONDS` | no       | `3`                                                    | Anti-spam: min seconds to fill the form                              |
@@ -224,8 +224,8 @@ See `.env.example` for a template.
 - `WEBSITE_BASE_PATH` is the website auth UI path on the website domain.
   With the current defaults, that is `/admin`.
 - `API_BASE_PATH` is the SuperTokens backend auth/session path.
-  With the current defaults, those routes live under `/auth/*`, and the dashboard
-  is served at `${API_BASE_PATH}/dashboard` (currently `/auth/dashboard`).
+  With the current defaults, those routes live under `/api/auth/*`, and the dashboard
+  is served at `${API_BASE_PATH}/dashboard` (currently `/api/auth/dashboard`).
 - Admin API endpoints still live under `/api/*` and require a valid SuperTokens
   session containing the `admin` role.
 - Public endpoints (reservation creation, check-in) do not require admin auth.
