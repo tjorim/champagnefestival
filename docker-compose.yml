@@ -21,10 +21,16 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    # Ensure host.docker.internal resolves on Linux too (requires host-gateway support).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/champagne
       ENVIRONMENT: development
-      ADMIN_TOKEN: changeme
+      SUPERTOKENS_CONNECTION_URI: http://host.docker.internal:3567
+      SUPERTOKENS_API_KEY: changeme
+      API_DOMAIN: http://localhost:8000
+      WEBSITE_DOMAIN: http://localhost:5173
       CORS_ORIGINS: http://localhost:5173
     depends_on:
       db:

@@ -3,7 +3,7 @@
 import logging
 
 from supertokens_python import InputAppInfo, SupertokensConfig, init
-from supertokens_python.recipe import emailpassword, session, userroles
+from supertokens_python.recipe import dashboard, emailpassword, session, userroles
 
 from app.config import settings
 
@@ -41,6 +41,7 @@ def init_supertokens() -> None:
             emailpassword.init(),
             session.init(),
             userroles.init(),
+            dashboard.init(api_key=settings.supertokens_api_key or None),
         ],
     )
-    logger.info("SuperTokens initialized (emailpassword + session + userroles)")
+    logger.info("SuperTokens initialized (emailpassword + session + userroles + dashboard)")
