@@ -30,6 +30,10 @@ packages = ["app"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+addopts = "-p no:anyio"
+markers = ["anyio: marks tests as anyio-compatible (no-op under asyncio_mode=auto)"]
 testpaths = ["tests"]
 
 [tool.ruff]
