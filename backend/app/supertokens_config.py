@@ -37,6 +37,7 @@ def init_supertokens() -> None:
             api_key=settings.supertokens_api_key or None,
         ),
         framework="fastapi",
+        mode="asgi",
         recipe_list=[
             emailpassword.init(),
             session.init(),
