@@ -1,2 +1,3 @@
 allowBuilds:
+  browser-tabs-lock: true
   msw: true
