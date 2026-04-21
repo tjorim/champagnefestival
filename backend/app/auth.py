@@ -16,7 +16,7 @@ async def require_admin(request: Request) -> None:
     ``UserRoleClaim``).
 
     All admin routers use this dependency to gate access.  A valid session is
-    created when the user signs in via the ``/auth/signin`` endpoint provided
+    created when the user signs in via the ``{API_BASE_PATH}/signin`` endpoint provided
     by the SuperTokens middleware.  The ``admin`` role must be assigned to the
     user via the SuperTokens UserRoles recipe.
     """

@@ -23,13 +23,17 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.24", "httpx>=0.28", "anyio>=4", "ruff>=0.15.11", "ty>=0.0.31"]
+dev = ["pytest>=8", "pytest-asyncio>=0.26.0", "httpx>=0.28", "anyio>=4", "ruff>=0.15.11", "ty>=0.0.31"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+addopts = "-p no:anyio"
+markers = ["anyio: marks tests as anyio-compatible (no-op under asyncio_mode=auto)"]
 testpaths = ["tests"]
 
 [tool.ruff]

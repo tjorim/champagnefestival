@@ -11,7 +11,7 @@ export function initSuperTokens(): void {
       appName: "Champagne Festival",
       apiDomain,
       websiteDomain: window.location.origin,
-      apiBasePath: "/auth",
+      apiBasePath: "/api/auth",
       websiteBasePath: "/admin",
     },
     recipeList: [EmailPassword.init(), Session.init()],

@@ -68,7 +68,7 @@ uv sync
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env — at minimum set ADMIN_TOKEN and DATABASE_URL
+# Edit .env — at minimum set DATABASE_URL and the SuperTokens settings
 
 # 4. Run database migrations
 uv run alembic upgrade head
@@ -83,6 +83,9 @@ uv run uvicorn app.main:app --reload
 ```
 
 The interactive API docs are available at <http://localhost:8000/docs>.
+
+On Linux, the backend container relies on Docker's `host-gateway` support so
+`host.docker.internal` resolves correctly for `SUPERTOKENS_CONNECTION_URI`.
 
 ---
 
@@ -106,6 +109,15 @@ uv run ty check .
 # Run tests
 uv run pytest
 ```
+
+Tests use a separate database by default:
+
+```bash
+psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test_champagne;"
+```
+
+They connect to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`
+unless `TEST_DATABASE_URL` overrides it.
 
 ---
 
@@ -181,9 +193,14 @@ location /api/ {
 
 | Variable           | Required | Default                                                | Description                                                          |
 | ------------------ | -------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
-| `ADMIN_TOKEN`      | **yes**  | —                                                      | Bearer token for admin endpoints (required in production)            |
 | `ENVIRONMENT`      | no       | `development`                                          | `development` or `production` — gates startup safety checks          |
 | `DATABASE_URL`     | no       | `postgresql+asyncpg://localhost/champagne`             | Async SQLAlchemy URL                                                 |
+| `SUPERTOKENS_CONNECTION_URI` | yes in production | `""` | SuperTokens core URL |
+| `SUPERTOKENS_API_KEY` | yes in production | `""` | Shared secret for SuperTokens core and dashboard |
+| `API_DOMAIN` | yes in production | `http://localhost:8000` | Public backend origin used by SuperTokens; must be set to the real public API origin in production |
+| `WEBSITE_DOMAIN` | yes in production | `http://localhost:5173` | Public frontend origin used by SuperTokens; must be set to the real public website origin in production |
+| `API_BASE_PATH` | no | `/api/auth` | SuperTokens API path on the backend |
+| `WEBSITE_BASE_PATH` | no | `/admin` | SuperTokens frontend auth path on the website |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `MIN_FORM_SECONDS` | no       | `3`                                                    | Anti-spam: min seconds to fill the form                              |
 | `GUEST_ACCESS_TOKEN_TTL_MINUTES` | no | `30` | TTL in minutes for short-lived guest access tokens used by `/api/reservations/my/request` and `/api/reservations/my/access` |
@@ -204,8 +221,14 @@ See `.env.example` for a template.
 
 ### Authentication
 
-Admin endpoints require an `Authorization: Bearer <ADMIN_TOKEN>` header.
-Public endpoints (reservation creation, check-in) do not require a token.
+- `WEBSITE_BASE_PATH` is the website auth UI path on the website domain.
+  With the current defaults, that is `/admin`.
+- `API_BASE_PATH` is the SuperTokens backend auth/session path.
+  With the current defaults, those routes live under `/api/auth/*`, and the dashboard
+  is served at `${API_BASE_PATH}/dashboard` (currently `/api/auth/dashboard`).
+- Admin API endpoints still live under `/api/*` and require a valid SuperTokens
+  session containing the `admin` role.
+- Public endpoints (reservation creation, check-in) do not require admin auth.
 
 ### Endpoints
 
