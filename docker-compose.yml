@@ -28,7 +28,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/champagne
       ENVIRONMENT: development
       SUPERTOKENS_CONNECTION_URI: http://host.docker.internal:3567
-      SUPERTOKENS_API_KEY: changeme
+      SUPERTOKENS_API_KEY: changeme  # Must match the api_key set in your local SuperTokens core config
       API_DOMAIN: http://localhost:8000
       WEBSITE_DOMAIN: http://localhost:5173
       CORS_ORIGINS: http://localhost:5173

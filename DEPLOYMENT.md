@@ -44,8 +44,13 @@ Key variables:
 | `SUPERTOKENS_API_KEY` | Shared secret between backend SDK and SuperTokens core |
 | `API_DOMAIN` | Public backend origin, e.g. `https://champagnefestival.tjor.im` |
 | `WEBSITE_DOMAIN` | Public frontend origin, e.g. `https://champagnefestival.tjor.im` |
+| `API_BASE_PATH` | SuperTokens API path, default `/api/auth` |
+| `WEBSITE_BASE_PATH` | SuperTokens frontend auth path, default `/admin` |
 | `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `SMTP_*` | Optional — reservation confirmation emails |
+
+> **Note:** In `production` mode the server validates these at startup and **refuses to start**
+> if `SUPERTOKENS_CONNECTION_URI` or `SUPERTOKENS_API_KEY` is missing.
 
 ## Database migrations
 

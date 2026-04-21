@@ -34,6 +34,10 @@ def test_init_supertokens_registers_dashboard_recipe(monkeypatch) -> None:
     st_config.init_supertokens()
 
     assert recorded["framework"] == "fastapi"
+    assert recorded["app_info"].api_domain == "https://champagnefestival.tjor.im"
+    assert recorded["app_info"].website_domain == "https://champagnefestival.tjor.im"
+    assert recorded["app_info"].api_base_path == "/api/auth"
+    assert recorded["app_info"].website_base_path == "/admin"
     assert recorded["dashboard_api_key"] == "champagnefestival-api-key"
     assert recorded["recipe_list"] == [
         emailpassword_recipe,

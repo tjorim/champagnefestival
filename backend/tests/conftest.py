@@ -25,6 +25,12 @@ TEST_DATABASE_URL = os.environ.get(
 )
 
 
+@pytest.fixture(scope="session")
+def anyio_backend():
+    # Session scope matches the session-scoped `engine` fixture below.
+    return "asyncio"
+
+
 @pytest.fixture(autouse=True)
 def reset_rate_limiter(monkeypatch):
     """Reset the in-memory rate limiter before every test for isolation."""
