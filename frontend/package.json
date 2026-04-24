@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.16.0",
-    "@inlang/plugin-m-function-matcher": "^2.2.4",
+    "@inlang/plugin-m-function-matcher": "^2.2.5",
     "@inlang/plugin-message-format": "^4.4.0",
     "@tanstack/table-core": "9.0.0-alpha.23",
     "@testing-library/jest-dom": "^6.6.3",
