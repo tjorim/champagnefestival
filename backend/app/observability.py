@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -9,6 +10,8 @@ from threading import Lock
 
 from fastapi import Request
 from starlette.responses import Response as StarletteResponse
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -100,6 +103,7 @@ async def request_metrics_middleware(request: Request, call_next):
         response = await call_next(request)
         status_code = response.status_code
     except Exception:
+        logger.exception("Unhandled error in request middleware: %s %s", request.method, request.url.path)
         response = StarletteResponse("Internal Server Error", status_code=500)
 
     latency_ms = (time.perf_counter() - started) * 1000
