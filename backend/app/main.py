@@ -7,13 +7,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from supertokens_python import get_all_cors_headers
 from supertokens_python.framework.fastapi import get_middleware
 
 from app.config import settings
 from app.database import create_tables
+from app.observability import request_metrics_middleware
 from app.routers import (
     areas,
     check_in,
@@ -21,6 +21,7 @@ from app.routers import (
     editions,
     events,
     exhibitors,
+    health,
     layouts,
     members,
     people,
@@ -89,6 +90,9 @@ else:
 
 _supertokens_cors_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
 
+# request_metrics_middleware is added outermost so it captures all requests.
+app.middleware("http")(request_metrics_middleware)
+
 # SuperTokens middleware handles {api_base_path}/* routes and session management.
 # Added first so it is innermost in the stack.
 # Only added when SuperTokens is configured (has a connection URI).
@@ -131,13 +135,4 @@ app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(volunteers.router)
 app.include_router(areas.router)
-
-
-class HealthResponse(BaseModel):
-    status: str
-
-
-@app.get("/health", tags=["meta"], response_model=HealthResponse)
-async def health() -> HealthResponse:
-    """Simple health-check endpoint used by the reverse proxy / systemd watchdog."""
-    return HealthResponse(status="ok")
+app.include_router(health.router)

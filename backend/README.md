@@ -266,7 +266,10 @@ See `.env.example` for a template.
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |
 | `GET`    | `/api/people/{id}/reservations` | admin          | List grouped reservation history for that person                           |
-| `GET`    | `/health`                       | public         | Health check                                                               |
+| `GET`    | `/api/health/liveness`          | public         | Fast alive check — no DB hit (for load-balancer liveness probes)           |
+| `GET`    | `/api/health/readiness`         | public         | DB connectivity check with 2 s timeout (for load-balancer readiness probes)|
+| `GET`    | `/api/health`                   | public         | Summary with links to liveness and readiness endpoints                     |
+| `GET`    | `/api/metrics`                  | `X-Metrics-Secret` header | Uptime, request rate, error rate, p50/p99 latency          |
 
 ---
 

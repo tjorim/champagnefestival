@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     Wildcard '*' is only permitted outside production.
     """
 
+    # --- Metrics ---
+    metrics_secret: str = ""
+    """Shared secret required in the ``X-Metrics-Secret`` header to access ``GET /api/metrics``.
+    Leave empty to disable the metrics endpoint entirely."""
+
     # --- Anti-spam ---
     min_form_seconds: int = 3
     """Minimum seconds between form load and submission (bot protection)."""
