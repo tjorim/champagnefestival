@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -63,8 +64,8 @@ class InMemoryRequestMetrics:
             if samples:
                 n = len(samples)
                 # Nearest-rank percentile method
-                p50_idx = max(0, int(n * 0.50) - 1) if n >= 2 else 0
-                p99_idx = max(0, int(n * 0.99) - 1) if n >= 100 else n - 1
+                p50_idx = max(0, math.ceil(n * 0.50) - 1) if n >= 2 else 0
+                p99_idx = max(0, math.ceil(n * 0.99) - 1) if n >= 100 else n - 1
                 latency_p50_ms = samples[p50_idx]
                 latency_p99_ms = samples[p99_idx]
             else:

@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
+from starlette.middleware.base import BaseHTTPMiddleware
 from supertokens_python import get_all_cors_headers
 from supertokens_python.framework.fastapi import get_middleware
 
@@ -90,17 +91,11 @@ else:
 
 _supertokens_cors_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
 
-# request_metrics_middleware is added outermost so it captures all requests.
-app.middleware("http")(request_metrics_middleware)
-
-# SuperTokens middleware handles {api_base_path}/* routes and session management.
-# Added first so it is innermost in the stack.
-# Only added when SuperTokens is configured (has a connection URI).
+# SuperTokens middleware is innermost; only added when SuperTokens is configured.
 if settings.supertokens_connection_uri:
     app.add_middleware(get_middleware())
 
-# CORSMiddleware is added after SuperTokens so it runs outermost, ensuring
-# CORS headers are present on {api_base_path}/* responses that SuperTokens handles directly.
+# CORSMiddleware wraps SuperTokens so CORS headers are present on SuperTokens-handled responses.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -109,6 +104,10 @@ app.add_middleware(
     allow_headers=["Content-Type", "Accept", "Authorization"] + _supertokens_cors_headers,
     expose_headers=["front-token"],
 )
+
+# Metrics middleware is registered last so it is outermost and captures every request,
+# including those short-circuited by CORS or SuperTokens.
+app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware)
 
 
 @app.exception_handler(IntegrityError)

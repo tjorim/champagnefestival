@@ -8,7 +8,6 @@ from pydantic import ValidationError
 from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.observability import InMemoryRequestMetrics
 
-
 # ---------------------------------------------------------------------------
 # Health endpoints
 # ---------------------------------------------------------------------------
