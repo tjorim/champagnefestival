@@ -17,7 +17,7 @@
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations"
   },
   "dependencies": {
-    "@dnd-kit/dom": "^0.3.2",
+    "@dnd-kit/dom": "^0.4.0",
     "@dnd-kit/react": "^0.4.0",
     "@tanstack/react-form": "^1.29.1",
     "@tanstack/react-query": "^5.100.8",
