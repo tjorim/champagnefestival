@@ -22,7 +22,7 @@
     "@tanstack/react-form": "^1.29.0",
     "@tanstack/react-query": "^5.96.2",
     "@tanstack/react-router": "^1.169.1",
-    "@tanstack/react-table": "9.0.0-alpha.23",
+    "@tanstack/react-table": "9.0.0-alpha.41",
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
     "clsx": "^2.1.1",
