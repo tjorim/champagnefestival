@@ -37,7 +37,7 @@
     "react-select": "^5.10.2",
     "supertokens-auth-react": "^0.51.2",
     "supertokens-web-js": "^0.16.0",
-    "swiper": "^12.1.3"
+    "swiper": "^12.1.4"
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.18.0",
