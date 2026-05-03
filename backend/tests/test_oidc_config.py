@@ -5,6 +5,21 @@ import pytest
 from app import oidc_config as oc
 
 
+def test_get_jwks_uri_requires_issuer_without_override(monkeypatch) -> None:
+    monkeypatch.setattr(oc.settings, "oidc_jwks_uri", "")
+    monkeypatch.setattr(oc.settings, "oidc_issuer_url", "")
+
+    with pytest.raises(oc.OIDCTokenError, match="OIDC_ISSUER_URL is not configured"):
+        oc._get_jwks_uri()
+
+
+def test_get_jwks_uri_uses_override_without_issuer(monkeypatch) -> None:
+    monkeypatch.setattr(oc.settings, "oidc_jwks_uri", "https://auth.example.test/jwks.json")
+    monkeypatch.setattr(oc.settings, "oidc_issuer_url", "")
+
+    assert oc._get_jwks_uri() == "https://auth.example.test/jwks.json"
+
+
 @pytest.mark.asyncio
 async def test_decode_token_expired(monkeypatch) -> None:
     from jose.exceptions import ExpiredSignatureError

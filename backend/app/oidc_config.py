@@ -35,6 +35,8 @@ _jwks_cache: dict[str, Any] | None = None
 def _get_jwks_uri() -> str:
     if settings.oidc_jwks_uri:
         return settings.oidc_jwks_uri
+    if not settings.oidc_issuer_url:
+        raise OIDCTokenError("OIDC_ISSUER_URL is not configured")
     base = settings.oidc_issuer_url.rstrip("/")
     return f"{base}/.well-known/jwks.json"
 

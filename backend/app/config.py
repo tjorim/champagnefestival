@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     admin_usernames: str = ""
     """Comma-separated list of usernames allowed to access admin endpoints.
-    Matched against the preferred_username (or email local part) claim in the JWT.
+    Case-insensitively matched against the preferred_username claim in the JWT.
     Required in production."""
 
     # --- Database ---
