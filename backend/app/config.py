@@ -15,33 +15,30 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # --- Environment ---
     environment: str = "development"
     """Deployment environment. Must be 'development' or 'production'."""
 
-    # --- SuperTokens ---
-    supertokens_connection_uri: str = ""
-    """Connection URI for the SuperTokens core service.
-    Required in production. Example: https://auth.example.com"""
+    # --- OIDC ---
+    oidc_issuer_url: str = ""
+    """OIDC provider base URL. Required in production. Example: https://auth.example.com/application/o/champagnefestival"""
 
-    supertokens_api_key: str = ""
-    """API key for SuperTokens core.
-    Optional in development, but must be set in production (see validate_production_supertokens).
-    """
+    oidc_audience: str = ""
+    """Expected audience claim in the JWT. Optional."""
 
-    api_domain: str = "http://localhost:8000"
-    """Public URL where this API is reachable (used by SuperTokens for cookies)."""
+    oidc_jwks_uri: str = ""
+    """JWKS endpoint override. Defaults to {oidc_issuer_url}/.well-known/jwks.json when empty."""
 
-    website_domain: str = "http://localhost:5173"
-    """Public URL where the frontend is reachable (used by SuperTokens for cookies)."""
+    oidc_algorithms: str = "RS256"
+    """Comma-separated list of accepted JWT signing algorithms."""
 
-    api_base_path: str = "/api/auth"
-    """Base path for SuperTokens API routes (e.g. /api/auth/signin, /api/auth/signout)."""
-
-    website_base_path: str = "/admin"
-    """Base path for SuperTokens frontend routes on the website domain."""
+    admin_usernames: str = ""
+    """Comma-separated list of usernames allowed to access admin endpoints.
+    Case-insensitively matched against the preferred_username claim in the JWT.
+    Required in production."""
 
     # --- Database ---
     database_url: str = "postgresql+asyncpg://localhost/champagne"
@@ -99,16 +96,6 @@ class Settings(BaseSettings):
     # Validators
     # ------------------------------------------------------------------
 
-    @field_validator("api_base_path", "website_base_path")
-    @classmethod
-    def validate_base_path(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("Base path cannot be empty")
-        if not v.startswith("/"):
-            raise ValueError(f"Base path must start with '/', got: {v!r}")
-        return v
-
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
@@ -139,15 +126,13 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def validate_production_supertokens(self) -> "Settings":
-        """Refuse to start in production without a SuperTokens connection URI or API key."""
+    def validate_production_oidc(self) -> "Settings":
+        """Refuse to start in production without OIDC issuer URL and admin usernames."""
         if self.environment == "production":
-            if not self.supertokens_connection_uri:
-                raise ValueError(
-                    "SUPERTOKENS_CONNECTION_URI must be set in production; refusing to start without SuperTokens auth."
-                )
-            if not self.supertokens_api_key:
-                raise ValueError("SUPERTOKENS_API_KEY must be set in production to secure the SuperTokens core.")
+            if not self.oidc_issuer_url:
+                raise ValueError("OIDC_ISSUER_URL must be set in production.")
+            if not self.admin_usernames:
+                raise ValueError("ADMIN_USERNAMES must be set in production.")
         return self
 
     # ------------------------------------------------------------------
@@ -202,7 +187,7 @@ class Settings(BaseSettings):
             logger.info(f"CORS Origins:  {', '.join(cors_origins)}")
 
         logger.info(
-            f"SuperTokens:   {'configured' if self.supertokens_connection_uri else 'NOT CONFIGURED — admin endpoints will return 401'}"
+            f"OIDC:          {'configured' if self.oidc_issuer_url else 'NOT CONFIGURED — admin endpoints will return 401'}"
         )
         logger.info("=" * 60)
 

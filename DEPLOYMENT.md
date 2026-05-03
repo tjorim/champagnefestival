@@ -40,17 +40,16 @@ Key variables:
 |---|---|
 | `ENVIRONMENT` | Set to `production` |
 | `DATABASE_URL` | e.g. `postgresql+asyncpg://user:password@postgres:5432/champagnefestival` |
-| `SUPERTOKENS_CONNECTION_URI` | e.g. `http://supertokens:3567` |
-| `SUPERTOKENS_API_KEY` | Shared secret between backend SDK and SuperTokens core |
-| `API_DOMAIN` | Public backend origin, e.g. `https://champagnefestival.tjor.im` |
-| `WEBSITE_DOMAIN` | Public frontend origin, e.g. `https://champagnefestival.tjor.im` |
-| `API_BASE_PATH` | SuperTokens API path, default `/api/auth` |
-| `WEBSITE_BASE_PATH` | SuperTokens frontend auth path, default `/admin` |
+| `OIDC_ISSUER_URL` | OIDC provider base URL, e.g. `https://auth.example.com/application/o/champagnefestival` |
+| `OIDC_AUDIENCE` | Expected audience claim in the JWT (optional) |
+| `OIDC_JWKS_URI` | JWKS endpoint override (defaults to `{OIDC_ISSUER_URL}/.well-known/jwks.json`) |
+| `OIDC_ALGORITHMS` | Accepted JWT algorithms, default `RS256` |
+| `ADMIN_USERNAMES` | Comma-separated `preferred_username` values allowed as admins |
 | `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `SMTP_*` | Optional — reservation confirmation emails |
 
 > **Note:** In `production` mode the server validates these at startup and **refuses to start**
-> if `SUPERTOKENS_CONNECTION_URI` or `SUPERTOKENS_API_KEY` is missing.
+> if `OIDC_ISSUER_URL` or `ADMIN_USERNAMES` is missing.
 
 ## Database migrations
 
@@ -69,10 +68,9 @@ docker compose run --rm champagnefestival-api alembic upgrade head
 
 ## Admin access
 
-- `WEBSITE_BASE_PATH` controls the website sign-in path on the website domain.
-  With the current defaults, that path is `/admin`.
-- `API_BASE_PATH` controls the SuperTokens backend auth/session routes.
-  With the current defaults, those routes live under `/api/auth/*`, and the dashboard
-  is served at `${API_BASE_PATH}/dashboard` (currently `/api/auth/dashboard`).
-- Backend admin API routes still live under `/api/*` and require a valid
-  SuperTokens session with the `admin` role.
+- The admin UI is at `/admin`. Clicking **Login** redirects to the configured OIDC provider.
+  After successful authentication, the provider redirects back to `/admin`.
+- Backend admin API routes live under `/api/*` and require a valid Bearer JWT with a
+  `preferred_username` (or email local part) present in `ADMIN_USERNAMES`.
+- Frontend env vars: `VITE_OIDC_AUTHORITY`, `VITE_OIDC_CLIENT_ID`, `VITE_OIDC_REDIRECT_URI`
+  (defaults to `{origin}/admin`), `VITE_OIDC_SCOPE`.

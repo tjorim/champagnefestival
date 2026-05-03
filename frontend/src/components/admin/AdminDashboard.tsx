@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
-import Session from "supertokens-auth-react/recipe/session";
+import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
@@ -60,10 +60,10 @@ interface AdminDashboardProps {
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const { edition: activeEdition } = useActiveEdition();
   const queryClient = useQueryClient();
-  const sessionContext = Session.useSessionContext();
+  const auth = useAuth();
   const navRef = useRef<HTMLElement>(null);
 
-  const isAuthenticated = !sessionContext.loading && sessionContext.doesSessionExist;
+  const isAuthenticated = auth.isAuthenticated;
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   /** Full registration (with checkInToken) shown in the detail modal */
@@ -89,8 +89,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const authHeaders = useCallback(
     (): Record<string, string> => ({
       "Content-Type": "application/json",
+      ...(auth.getAccessToken() ? { Authorization: `Bearer ${auth.getAccessToken()}` } : {}),
     }),
-    [],
+    [auth],
   );
 
   const {
@@ -958,21 +959,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     retry: false,
   });
 
-  const handleLogout = useCallback(async () => {
-    try {
-      await Session.signOut();
-    } catch {
-      // Sign-out may fail (network error, etc.); always clean up local state.
-    } finally {
-      queryClient.removeQueries({
-        predicate: (query) => {
-          const key = query.queryKey[0];
-          return key === "admin";
-        },
-      });
-      setDetailRegistration(null);
-    }
-  }, [queryClient]);
+  const handleLogout = useCallback(() => {
+    queryClient.removeQueries({
+      predicate: (query) => query.queryKey[0] === "admin",
+    });
+    setDetailRegistration(null);
+    auth.logout();
+  }, [auth, queryClient]);
 
   const handleMergePeople = useCallback(
     async (canonicalId: string, duplicateId: string) => {
@@ -1298,7 +1291,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       (e) => e instanceof Error && e.message === "unauthorized",
     );
     if (unauthorizedError) {
-      handleLogout().catch((err) => devError("Logout failed", err));
+      handleLogout();
       return;
     }
 
@@ -1942,7 +1935,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   if (!visible) return null;
 
-  if (sessionContext.loading) {
+  if (auth.isLoading) {
     return (
       <div className="py-5 text-center">
         <Spinner animation="border" variant="warning" role="status">
@@ -1959,7 +1952,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       className={isAuthenticated ? "admin-authenticated" : "py-5"}
     >
       {!isAuthenticated ? (
-        /* ---- Login (SuperTokens pre-built UI) ---- */
+        /* ---- Login (OIDC redirect) ---- */
         <AdminLoginForm />
       ) : (
         /* ---- Authenticated: sidebar layout ---- */

@@ -4,49 +4,32 @@ import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { resetAdminStore } from "@/mocks/handlers/admin";
 
-// Mock SuperTokens before anything imports it.
-// Tests control auth state via these mocks rather than a real SuperTokens backend.
-vi.mock("supertokens-auth-react", () => ({
-  __esModule: true,
-  default: {
-    init: vi.fn(),
-    SuperTokensWrapper: ({ children }: { children: ReactNode }) => children,
-  },
-  init: vi.fn(),
-  SuperTokensWrapper: ({ children }: { children: ReactNode }) => children,
+// Mock react-oidc-context before anything imports it.
+// Tests control auth state via these mocks rather than a real OIDC provider.
+vi.mock("react-oidc-context", () => ({
+  useAuth: vi.fn().mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    user: {
+      access_token: "mock-access-token",
+      profile: { sub: "mock-sub", preferred_username: "mock-user" },
+    },
+    signinRedirect: vi.fn().mockResolvedValue(undefined),
+    signoutRedirect: vi.fn().mockResolvedValue(undefined),
+  }),
+  AuthProvider: ({ children }: { children: ReactNode }) => children,
+  hasAuthParams: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock("supertokens-auth-react/recipe/session", () => ({
-  __esModule: true,
-  default: {
-    init: vi.fn(),
-    useSessionContext: vi.fn().mockReturnValue({ loading: false, doesSessionExist: true }),
-    signOut: vi.fn().mockResolvedValue(undefined),
-    SessionAuth: ({ children }: { children: ReactNode }) => children,
-  },
-  useSessionContext: vi.fn().mockReturnValue({ loading: false, doesSessionExist: true }),
-  signOut: vi.fn().mockResolvedValue(undefined),
-  SessionAuth: ({ children }: { children: ReactNode }) => children,
-}));
-
-vi.mock("supertokens-auth-react/recipe/emailpassword", () => ({
-  __esModule: true,
-  default: { init: vi.fn() },
-  init: vi.fn(),
-}));
-
-vi.mock("supertokens-auth-react/ui", () => ({
-  __esModule: true,
-  AuthPage: () => null,
-}));
-
-vi.mock("supertokens-auth-react/recipe/emailpassword/prebuiltui", () => ({
-  __esModule: true,
-  EmailPasswordPreBuiltUI: {},
-}));
-
-vi.mock("@/config/supertokens", () => ({
-  initSuperTokens: vi.fn(),
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: vi.fn().mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+    login: vi.fn(),
+    logout: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: ReactNode }) => children,
 }));
 
 // Start the MSW Node server before all tests so the same handlers and seed

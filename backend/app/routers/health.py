@@ -3,6 +3,7 @@
 import hmac
 import logging
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,9 +38,9 @@ async def readiness_check(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    """DB connectivity check with statement timeout protection.
+    """DB + OIDC connectivity check.
 
-    Returns 200 when the database is reachable, 503 otherwise.
+    Returns 200 when both the database and OIDC JWKS endpoint are reachable, 503 otherwise.
     Suitable for load-balancer readiness probes.
     """
     try:
@@ -49,6 +50,18 @@ async def readiness_check(
         logger.exception("Readiness check failed: database connectivity error")
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "not_ready"}
+
+    if settings.oidc_issuer_url:
+        jwks_uri = settings.oidc_jwks_uri or f"{settings.oidc_issuer_url.rstrip('/')}/.well-known/jwks.json"
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                oidc_response = await client.get(jwks_uri)
+            oidc_response.raise_for_status()
+        except Exception:
+            logger.exception("Readiness check failed: OIDC JWKS endpoint unreachable (%s)", jwks_uri)
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            return {"status": "not_ready"}
+
     return {"status": "ready"}
 
 
