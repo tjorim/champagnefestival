@@ -8,7 +8,7 @@ import {
   Link,
   RouterProvider,
 } from "@tanstack/react-router";
-import { AuthProvider } from "react-oidc-context";
+import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -16,6 +16,7 @@ import "leaflet/dist/leaflet.css";
 import Spinner from "react-bootstrap/Spinner";
 
 import { oidcConfig } from "./config/oidc";
+import { AuthProvider } from "./contexts/AuthContext";
 
 import Footer from "./components/Footer";
 import Header from "./components/Header";
@@ -498,11 +499,13 @@ async function enableMocking(): Promise<void> {
 function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
-      <AuthProvider {...oidcConfig}>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </AuthProvider>
+      <OidcAuthProvider {...oidcConfig}>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </AuthProvider>
+      </OidcAuthProvider>
     </React.StrictMode>,
   );
 }

@@ -21,6 +21,17 @@ vi.mock("react-oidc-context", () => ({
   hasAuthParams: vi.fn().mockReturnValue(false),
 }));
 
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: vi.fn().mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+    login: vi.fn(),
+    logout: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: ReactNode }) => children,
+}));
+
 // Start the MSW Node server before all tests so the same handlers and seed
 // data used by the browser dev worker are also used in Vitest.
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));

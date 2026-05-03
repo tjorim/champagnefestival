@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
-import { useAuth } from "react-oidc-context";
+import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
@@ -89,9 +89,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const authHeaders = useCallback(
     (): Record<string, string> => ({
       "Content-Type": "application/json",
-      ...(auth.user?.access_token ? { Authorization: `Bearer ${auth.user.access_token}` } : {}),
+      ...(auth.getAccessToken() ? { Authorization: `Bearer ${auth.getAccessToken()}` } : {}),
     }),
-    [auth.user],
+    [auth],
   );
 
   const {
@@ -964,7 +964,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       predicate: (query) => query.queryKey[0] === "admin",
     });
     setDetailRegistration(null);
-    void auth.signoutRedirect();
+    auth.logout();
   }, [auth, queryClient]);
 
   const handleMergePeople = useCallback(

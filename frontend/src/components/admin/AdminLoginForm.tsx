@@ -1,4 +1,4 @@
-import { useAuth } from "react-oidc-context";
+import { useAuth } from "@/contexts/AuthContext";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import { m } from "@/paraglide/messages";
@@ -16,7 +16,7 @@ export default function AdminLoginForm() {
         <div className="col-12 col-sm-8 col-md-6 col-lg-4 text-center">
           <Button
             variant="warning"
-            onClick={() => void auth.signinRedirect({ state: { returnTo: "/admin" } })}
+            onClick={() => auth.login()}
           >
             {m.admin_login_button()}
           </Button>
