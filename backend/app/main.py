@@ -9,8 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from starlette.middleware.base import BaseHTTPMiddleware
-from supertokens_python import get_all_cors_headers
-from supertokens_python.framework.fastapi import get_middleware
 
 from app.config import settings
 from app.database import create_tables
@@ -33,7 +31,6 @@ from app.routers import (
     venues,
     volunteers,
 )
-from app.supertokens_config import init_supertokens
 
 # Configure logging before any other module uses a logger.
 logging.basicConfig(
@@ -41,10 +38,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-# Initialize SuperTokens before the app handles any requests.
-init_supertokens()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -89,20 +82,12 @@ if not _cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {_cors_origins}")
 
-_supertokens_cors_headers = get_all_cors_headers() if settings.supertokens_connection_uri else []
-
-# SuperTokens middleware is innermost; only added when SuperTokens is configured.
-if settings.supertokens_connection_uri:
-    app.add_middleware(get_middleware())
-
-# CORSMiddleware wraps SuperTokens so CORS headers are present on SuperTokens-handled responses.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept", "Authorization"] + _supertokens_cors_headers,
-    expose_headers=["front-token"],
+    allow_headers=["Content-Type", "Accept", "Authorization"],
 )
 
 # Metrics middleware is registered last so it is outermost and captures every request,

@@ -35,8 +35,8 @@
     "react-error-boundary": "^6.1.1",
     "react-leaflet": "^5.0.0",
     "react-select": "^5.10.2",
-    "supertokens-auth-react": "^0.51.2",
-    "supertokens-web-js": "^0.16.0",
+    "oidc-client-ts": "^3.1.0",
+    "react-oidc-context": "^3.2.0",
     "swiper": "^12.1.4"
   },
   "devDependencies": {

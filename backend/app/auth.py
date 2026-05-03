@@ -1,37 +1,46 @@
-"""Admin session authentication dependency (SuperTokens)."""
+"""Admin authentication dependency (OIDC Bearer JWT)."""
 
-from fastapi import HTTPException, Request
+from __future__ import annotations
+
+import logging
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import settings
+from app.oidc_config import OIDCTokenError, decode_token
+
+logger = logging.getLogger(__name__)
+
+_bearer_scheme = HTTPBearer(auto_error=True)
+_ADMIN_USERNAMES: frozenset[str] = frozenset(u.strip() for u in settings.admin_usernames.split(",") if u.strip())
 
 
-async def require_admin(request: Request) -> None:
-    """FastAPI dependency — rejects requests without a valid admin session.
+async def require_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+) -> None:
+    """FastAPI dependency — rejects requests without a valid admin Bearer JWT.
 
-    When SuperTokens is not configured (``SUPERTOKENS_CONNECTION_URI`` unset),
-    deterministically returns 401 instead of relying on library behavior.
-
-    When configured, raises 401 if the request has no valid SuperTokens session,
-    or 403 if the session does not contain the ``admin`` role (checked via
-    ``UserRoleClaim``).
-
-    All admin routers use this dependency to gate access.  A valid session is
-    created when the user signs in via the ``{API_BASE_PATH}/signin`` endpoint provided
-    by the SuperTokens middleware.  The ``admin`` role must be assigned to the
-    user via the SuperTokens UserRoles recipe.
+    Validates the OIDC access token and checks that the username (preferred_username
+    or email-local-part claim) is in the ADMIN_USERNAMES allowlist.
     """
-    if not settings.supertokens_connection_uri:
+    token = credentials.credentials
+    try:
+        claims = await decode_token(token)
+    except OIDCTokenError as exc:
         raise HTTPException(
-            status_code=401,
-            detail="Authentication is not configured",
-        )
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
 
-    from supertokens_python.recipe.session.framework.fastapi import verify_session
-    from supertokens_python.recipe.userroles import UserRoleClaim
+    username = (claims.get("preferred_username") or "").strip()
+    if not username:
+        email = (claims.get("email") or "").strip()
+        username = email.split("@")[0] if email else ""
 
-    verifier = verify_session(
-        override_global_claim_validators=lambda global_validators, session, user_context: (
-            global_validators + [UserRoleClaim.validators.includes("admin")]
+    if not username or username not in _ADMIN_USERNAMES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden",
         )
-    )
-    await verifier(request)

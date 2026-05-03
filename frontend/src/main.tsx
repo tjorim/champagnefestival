@@ -8,14 +8,14 @@ import {
   Link,
   RouterProvider,
 } from "@tanstack/react-router";
-import SuperTokens from "supertokens-auth-react";
+import { AuthProvider } from "react-oidc-context";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "leaflet/dist/leaflet.css";
 import Spinner from "react-bootstrap/Spinner";
 
-import { initSuperTokens } from "./config/supertokens";
+import { oidcConfig } from "./config/oidc";
 
 import Footer from "./components/Footer";
 import Header from "./components/Header";
@@ -480,9 +480,6 @@ declare module "@tanstack/react-router" {
   }
 }
 
-// Initialize SuperTokens before rendering
-initSuperTokens();
-
 // Render the App
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -501,11 +498,11 @@ async function enableMocking(): Promise<void> {
 function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
-      <SuperTokens.SuperTokensWrapper>
+      <AuthProvider {...oidcConfig}>
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={router} />
         </QueryClientProvider>
-      </SuperTokens.SuperTokensWrapper>
+      </AuthProvider>
     </React.StrictMode>,
   );
 }

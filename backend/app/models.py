@@ -295,7 +295,7 @@ class Person(Base):
     __tablename__ = "people"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    supertokens_user_id: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
+    oidc_subject: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), default="")
     phone: Mapped[str] = mapped_column(String(50), default="")
