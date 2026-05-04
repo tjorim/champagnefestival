@@ -137,3 +137,8 @@ def test_settings_reject_excessive_guest_access_token_ttl():
         match=(f"GUEST_ACCESS_TOKEN_TTL_MINUTES must be less than or equal to {GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES}\\."),
     ):
         Settings(guest_access_token_ttl_minutes=GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES + 1)
+
+
+def test_settings_reject_production_without_qr_secret():
+    with pytest.raises(ValidationError, match=r"QR_SIGNING_SECRET must be set in production\."):
+        Settings(environment="production", oidc_issuer_url="https://auth.example.com", qr_signing_secret="")
