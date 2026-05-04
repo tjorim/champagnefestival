@@ -34,7 +34,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [oidcAuth.user]);
 
   const login = useCallback(() => {
-    oidcAuth.signinRedirect({ state: { returnTo: window.location.pathname } }).catch((error: unknown) => {
+    oidcAuth.signinRedirect({ state: { returnTo: "/admin" } }).catch((error: unknown) => {
       devError("signinRedirect failed:", error);
     });
   }, [oidcAuth]);
