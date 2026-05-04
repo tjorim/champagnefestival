@@ -1,4 +1,4 @@
-"""Create initial schema.
+"""Initial schema.
 
 Revision ID: 001
 Revises:
