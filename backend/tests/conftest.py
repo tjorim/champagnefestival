@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 import app.ratelimit as ratelimit_module
-from app.auth import require_admin
+from app.auth import get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
 
@@ -23,6 +23,11 @@ TEST_DATABASE_URL = os.environ.get(
     # Override via TEST_DATABASE_URL env var in CI or custom environments.
     "postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne",
 )
+
+# Fake claims injected by the `volunteer_client` and `me_client` fixtures.
+VOLUNTEER_CLAIMS = {"sub": "vol-sub", "realm_access": {"roles": ["volunteer"]}}
+VISITOR_CLAIMS = {"sub": "visitor-sub", "realm_access": {"roles": ["visitor"]}}
+ADMIN_HEADERS = {"Authorization": "Bearer admin-token"}
 
 
 @pytest.fixture(autouse=True)
@@ -85,6 +90,7 @@ async def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[require_admin] = lambda: None
+    app.dependency_overrides[require_volunteer] = lambda: None
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
@@ -135,6 +141,48 @@ async def forbidden_client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[require_admin] = reject
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+async def volunteer_client(db_session):
+    """Client that simulates a volunteer (has the ``volunteer`` role).
+
+    Both ``require_volunteer`` and ``require_admin`` are overridden so that
+    volunteer-accessible endpoints pass while admin-only endpoints still raise 403.
+    """
+    from fastapi import HTTPException
+
+    async def override_get_db():
+        yield db_session
+
+    def reject_admin() -> None:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[require_volunteer] = lambda: None
+    app.dependency_overrides[require_admin] = reject_admin
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+async def me_client(db_session):
+    """Client that simulates an authenticated visitor for ``/api/me/*`` endpoints.
+
+    ``get_current_claims`` is overridden to return a fixed set of claims so that
+    tests can exercise the self-service endpoints without a real OIDC provider.
+    """
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_claims] = lambda: VISITOR_CLAIMS
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c

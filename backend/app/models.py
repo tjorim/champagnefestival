@@ -24,6 +24,21 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+class User(Base):
+    """An authenticated portal user, auto-provisioned on first OIDC login."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    oidc_subject: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    """OIDC ``sub`` claim — stable identifier from the identity provider."""
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    registrations: Mapped[list[Registration]] = relationship(back_populates="user")
+
+
 class Registration(Base):
     __tablename__ = "registrations"
 
@@ -39,6 +54,10 @@ class Registration(Base):
     table_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
     )
+    user_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    """FK to the portal User who owns this booking (filled when a visitor claims it)."""
 
     status: Mapped[str] = mapped_column(String(20), default="pending")
     """pending | confirmed | cancelled"""
@@ -55,6 +74,7 @@ class Registration(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     event: Mapped[Event] = relationship(back_populates="registrations")
+    user: Mapped[User | None] = relationship(back_populates="registrations")
 
 
 class ReservationAccessToken(Base):

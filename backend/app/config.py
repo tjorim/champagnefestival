@@ -81,6 +81,13 @@ class Settings(BaseSettings):
     Leaving these empty disables e-mail sending (currently always disabled).
     """
 
+    # --- QR token signing ---
+    qr_signing_secret: str = ""
+    """HMAC secret for signing visitor QR tokens (``GET /api/me/qr``).
+    Defaults to an insecure placeholder in development; should be a long random
+    string in production (e.g. generated with ``openssl rand -hex 32``).
+    """
+
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
     recaptcha_secret: str = ""
     """Google reCAPTCHA v2/v3 secret key.
