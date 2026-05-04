@@ -13,7 +13,6 @@ from app.oidc_config import OIDCTokenError, decode_token
 logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
-_bearer_scheme_optional = HTTPBearer(auto_error=False)
 
 
 async def _decode_or_401(credentials: HTTPAuthorizationCredentials) -> dict[str, Any]:
