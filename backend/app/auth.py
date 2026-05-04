@@ -7,15 +7,11 @@ import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.config import settings
 from app.oidc_config import OIDCTokenError, decode_token
 
 logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
-_ADMIN_USERNAMES: frozenset[str] = frozenset(
-    u.strip().lower() for u in settings.admin_usernames.split(",") if u.strip()
-)
 
 
 async def require_admin(
@@ -23,8 +19,8 @@ async def require_admin(
 ) -> None:
     """FastAPI dependency — rejects requests without a valid admin Bearer JWT.
 
-    Validates the OIDC access token and checks that the preferred_username claim
-    is in the ADMIN_USERNAMES allowlist.
+    Validates the OIDC access token and checks that the token contains the
+    ``admin`` realm role in the ``realm_access.roles`` claim.
     """
     token = credentials.credentials
     try:
@@ -36,9 +32,9 @@ async def require_admin(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    username = (claims.get("preferred_username") or "").strip()
+    roles = claims.get("realm_access", {}).get("roles", [])
 
-    if not username or username.lower() not in _ADMIN_USERNAMES:
+    if "admin" not in roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden",

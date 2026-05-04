@@ -12,23 +12,34 @@ def _credentials() -> HTTPAuthorizationCredentials:
 
 
 @pytest.mark.asyncio
-async def test_require_admin_accepts_preferred_username_case_insensitive(monkeypatch) -> None:
-    async def fake_decode_token(_token: str) -> dict[str, str]:
-        return {"preferred_username": "Admin"}
+async def test_require_admin_accepts_admin_role(monkeypatch) -> None:
+    async def fake_decode_token(_token: str) -> dict:
+        return {"realm_access": {"roles": ["admin", "user"]}}
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
-    monkeypatch.setattr(auth, "_ADMIN_USERNAMES", frozenset({"admin"}))
 
     await auth.require_admin(_credentials())
 
 
 @pytest.mark.asyncio
-async def test_require_admin_rejects_email_local_part_fallback(monkeypatch) -> None:
-    async def fake_decode_token(_token: str) -> dict[str, str]:
-        return {"email": "admin@example.com"}
+async def test_require_admin_rejects_missing_admin_role(monkeypatch) -> None:
+    async def fake_decode_token(_token: str) -> dict:
+        return {"realm_access": {"roles": ["user"]}}
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
-    monkeypatch.setattr(auth, "_ADMIN_USERNAMES", frozenset({"admin"}))
+
+    with pytest.raises(HTTPException) as exc_info:
+        await auth.require_admin(_credentials())
+
+    assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_require_admin_rejects_missing_realm_access(monkeypatch) -> None:
+    async def fake_decode_token(_token: str) -> dict:
+        return {"preferred_username": "admin"}
+
+    monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
         await auth.require_admin(_credentials())
