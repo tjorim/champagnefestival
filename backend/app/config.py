@@ -35,11 +35,6 @@ class Settings(BaseSettings):
     oidc_algorithms: str = "RS256"
     """Comma-separated list of accepted JWT signing algorithms."""
 
-    admin_usernames: str = ""
-    """Comma-separated list of usernames allowed to access admin endpoints.
-    Case-insensitively matched against the preferred_username claim in the JWT.
-    Required in production."""
-
     # --- Database ---
     database_url: str = "postgresql+asyncpg://localhost/champagne"
     """SQLAlchemy async database URL.
@@ -127,12 +122,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_oidc(self) -> "Settings":
-        """Refuse to start in production without OIDC issuer URL and admin usernames."""
-        if self.environment == "production":
-            if not self.oidc_issuer_url:
-                raise ValueError("OIDC_ISSUER_URL must be set in production.")
-            if not self.admin_usernames:
-                raise ValueError("ADMIN_USERNAMES must be set in production.")
+        """Refuse to start in production without OIDC issuer URL."""
+        if self.environment == "production" and not self.oidc_issuer_url:
+            raise ValueError("OIDC_ISSUER_URL must be set in production.")
         return self
 
     # ------------------------------------------------------------------
