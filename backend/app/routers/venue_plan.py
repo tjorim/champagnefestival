@@ -11,7 +11,8 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import require_volunteer
 from app.database import get_db
-from app.models import Area, Edition, Layout, Room, Table
+from app.models import Edition, Layout
+from app.schemas import VenuePlanOut
 
 router = APIRouter(
     prefix="/api/venue-plan",
@@ -20,11 +21,11 @@ router = APIRouter(
 )
 
 
-@router.get("/{edition_id}")
+@router.get("/{edition_id}", response_model=VenuePlanOut)
 async def get_venue_plan(
     edition_id: str,
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> VenuePlanOut:
     """Return the complete floor layout for an edition (rooms, tables, areas).
 
     Accessible by volunteers and admins.  Returns a read-only snapshot — no
@@ -42,28 +43,19 @@ async def get_venue_plan(
 
     # Load all layouts for the edition together with rooms, tables, and areas.
     layouts_result = await db.execute(
-        select(Layout).where(Layout.edition_id == edition_id).order_by(Layout.day_id)
+        select(Layout)
+        .options(
+            selectinload(Layout.room),
+            selectinload(Layout.tables),
+            selectinload(Layout.areas),
+        )
+        .where(Layout.edition_id == edition_id)
+        .order_by(Layout.day_id)
     )
     layouts = list(layouts_result.scalars().all())
 
     if not layouts:
-        return {"edition_id": edition_id, "layouts": []}
-
-    layout_ids = [lay.id for lay in layouts]
-    room_ids = list({lay.room_id for lay in layouts})
-
-    rooms_result = await db.execute(select(Room).where(Room.id.in_(room_ids)))
-    rooms_by_id: dict[str, Room] = {r.id: r for r in rooms_result.scalars().all()}
-
-    tables_result = await db.execute(select(Table).where(Table.layout_id.in_(layout_ids)))
-    tables_by_layout: dict[str, list[Table]] = {}
-    for table in tables_result.scalars().all():
-        tables_by_layout.setdefault(table.layout_id, []).append(table)
-
-    areas_result = await db.execute(select(Area).where(Area.layout_id.in_(layout_ids)))
-    areas_by_layout: dict[str, list[Area]] = {}
-    for area in areas_result.scalars().all():
-        areas_by_layout.setdefault(area.layout_id, []).append(area)
+        return VenuePlanOut(edition_id=edition_id, layouts=[])
 
     payload_layouts = []
     for lay in layouts:
@@ -71,7 +63,7 @@ async def get_venue_plan(
         if 1 <= lay.day_id <= len(unique_dates):
             layout_date = unique_dates[lay.day_id - 1]
 
-        room = rooms_by_id.get(lay.room_id)
+        room = lay.room
         room_payload = (
             {
                 "id": room.id,
@@ -95,7 +87,7 @@ async def get_venue_plan(
                 "table_type_id": t.table_type_id,
                 "registration_ids": t.reservation_ids,
             }
-            for t in tables_by_layout.get(lay.id, [])
+            for t in lay.tables
         ]
 
         areas_payload = [
@@ -110,7 +102,7 @@ async def get_venue_plan(
                 "length_m": a.length_m,
                 "exhibitor_id": a.exhibitor_id,
             }
-            for a in areas_by_layout.get(lay.id, [])
+            for a in lay.areas
         ]
 
         payload_layouts.append(
@@ -125,4 +117,4 @@ async def get_venue_plan(
             }
         )
 
-    return {"edition_id": edition_id, "layouts": payload_layouts}
+    return VenuePlanOut(edition_id=edition_id, layouts=payload_layouts)

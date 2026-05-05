@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import jwt
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import get_current_claims
 from app.config import settings
 from app.database import get_db
-from app.models import Event, Person, Registration, User
+from app.models import Event, Registration, User
+from app.schemas import MyQrOut, MyRegistrationOut, PaymentStatus, RegistrationStatus
 from app.utils import make_id
 
 router = APIRouter(prefix="/api/me", tags=["me"])
@@ -35,16 +37,23 @@ async def _get_or_create_user(db: AsyncSession, oidc_subject: str) -> User:
     if user is None:
         user = User(id=make_id("usr"), oidc_subject=oidc_subject)
         db.add(user)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            result = await db.execute(select(User).where(User.oidc_subject == oidc_subject))
+            user = result.scalar_one_or_none()
+            if user is None:
+                raise
         await db.refresh(user)
     return user
 
 
-@router.get("/registrations")
+@router.get("/registrations", response_model=list[MyRegistrationOut])
 async def list_my_registrations(
     claims: dict[str, Any] = Depends(get_current_claims),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[MyRegistrationOut]:
     """Return all registrations that have been claimed by the authenticated user.
 
     Auto-provisions a portal ``User`` record on first call if one does not yet
@@ -59,6 +68,7 @@ async def list_my_registrations(
     result = await db.execute(
         select(Registration)
         .options(
+            selectinload(Registration.person),
             selectinload(Registration.event).selectinload(Event.edition),
         )
         .where(Registration.user_id == user.id)
@@ -66,40 +76,33 @@ async def list_my_registrations(
     )
     registrations = result.scalars().all()
 
-    person_ids = list({r.person_id for r in registrations})
-    persons_by_id: dict[str, Person] = {}
-    if person_ids:
-        persons_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
-        persons_by_id = {p.id: p for p in persons_result.scalars().all()}
-
-    payload = []
+    payload: list[MyRegistrationOut] = []
     for reg in registrations:
-        person = persons_by_id.get(reg.person_id)
         event = reg.event
         payload.append(
-            {
-                "id": reg.id,
-                "event_id": reg.event_id,
-                "event_title": event.title if event else "",
-                "event_date": event.date if event else None,
-                "edition_id": event.edition_id if event else None,
-                "guest_count": reg.guest_count,
-                "status": reg.status,
-                "payment_status": reg.payment_status,
-                "checked_in": reg.checked_in,
-                "checked_in_at": reg.checked_in_at,
-                "person_name": person.name if person else "",
-                "created_at": reg.created_at,
-            }
+            MyRegistrationOut(
+                id=reg.id,
+                event_id=reg.event_id,
+                event_title=event.title if event else "",
+                event_date=event.date if event else None,
+                edition_id=event.edition_id if event else None,
+                guest_count=reg.guest_count,
+                status=cast(RegistrationStatus, reg.status),
+                payment_status=cast(PaymentStatus, reg.payment_status),
+                checked_in=reg.checked_in,
+                checked_in_at=reg.checked_in_at,
+                person_name=reg.person.name if reg.person else "",
+                created_at=reg.created_at,
+            )
         )
     return payload
 
 
-@router.get("/qr")
+@router.get("/qr", response_model=MyQrOut)
 async def get_my_qr(
     claims: dict[str, Any] = Depends(get_current_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> MyQrOut:
     """Return a short-lived signed QR token for VIP entry.
 
     The token is a compact JWT signed with HMAC-SHA256.  The check-in tablet
@@ -123,4 +126,4 @@ async def get_my_qr(
 
     token = jwt.encode(token_payload, _qr_secret(), algorithm=_QR_ALGORITHM)
 
-    return {"token": token, "expires_at": expires_at}
+    return MyQrOut(token=token, expires_at=expires_at)

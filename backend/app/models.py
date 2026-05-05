@@ -74,6 +74,7 @@ class Registration(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     event: Mapped[Event] = relationship(back_populates="registrations")
+    person: Mapped[Person] = relationship(back_populates="registrations")
     user: Mapped[User | None] = relationship(back_populates="registrations")
 
 
@@ -183,6 +184,10 @@ class Layout(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    room: Mapped[Room] = relationship()
+    tables: Mapped[list[Table]] = relationship(order_by="Table.created_at")
+    areas: Mapped[list[Area]] = relationship(order_by="Area.created_at")
 
 
 class TableType(Base):
@@ -330,6 +335,8 @@ class Person(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    registrations: Mapped[list[Registration]] = relationship(back_populates="person")
 
 
 class VolunteerPeriod(Base):
