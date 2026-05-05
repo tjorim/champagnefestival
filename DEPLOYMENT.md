@@ -44,12 +44,11 @@ Key variables:
 | `OIDC_AUDIENCE` | Expected audience claim in the JWT (optional) |
 | `OIDC_JWKS_URI` | JWKS endpoint override (defaults to `{OIDC_ISSUER_URL}/.well-known/jwks.json`) |
 | `OIDC_ALGORITHMS` | Accepted JWT algorithms, default `RS256` |
-| `ADMIN_USERNAMES` | Comma-separated `preferred_username` values allowed as admins |
 | `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `SMTP_*` | Optional — reservation confirmation emails |
 
 > **Note:** In `production` mode the server validates these at startup and **refuses to start**
-> if `OIDC_ISSUER_URL` or `ADMIN_USERNAMES` is missing.
+> if `OIDC_ISSUER_URL` is missing.
 
 ## Database migrations
 
@@ -70,7 +69,7 @@ docker compose run --rm champagnefestival-api alembic upgrade head
 
 - The admin UI is at `/admin`. Clicking **Login** redirects to the configured OIDC provider.
   After successful authentication, the provider redirects back to `/admin`.
-- Backend admin API routes live under `/api/*` and require a valid Bearer JWT with a
-  `preferred_username` (or email local part) present in `ADMIN_USERNAMES`.
+- Backend admin API routes live under `/api/*` and require a valid Bearer JWT containing the
+  `admin` realm role in the `realm_access.roles` claim (set via Keycloak realm role assignment).
 - Frontend env vars: `VITE_OIDC_AUTHORITY`, `VITE_OIDC_CLIENT_ID`, `VITE_OIDC_REDIRECT_URI`
   (defaults to `{origin}/admin`), `VITE_OIDC_SCOPE`.
