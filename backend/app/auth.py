@@ -28,6 +28,19 @@ async def _decode_or_401(credentials: HTTPAuthorizationCredentials) -> dict[str,
         ) from exc
 
 
+def _extract_roles(claims: dict[str, Any]) -> list[str]:
+    """Extract the ``realm_access.roles`` list from token claims defensively.
+
+    Returns an empty list if ``realm_access`` is absent, ``None``, not a dict,
+    or its ``roles`` value is not a list.
+    """
+    realm_access = claims.get("realm_access")
+    if not isinstance(realm_access, dict):
+        return []
+    roles = realm_access.get("roles", [])
+    return roles if isinstance(roles, list) else []
+
+
 async def require_admin(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> None:
@@ -37,7 +50,7 @@ async def require_admin(
     ``admin`` realm role in the ``realm_access.roles`` claim.
     """
     claims = await _decode_or_401(credentials)
-    roles = claims.get("realm_access", {}).get("roles", [])
+    roles = _extract_roles(claims)
 
     if "admin" not in roles:
         raise HTTPException(
@@ -55,7 +68,7 @@ async def require_volunteer(
     one of ``volunteer`` or ``admin`` in the ``realm_access.roles`` claim.
     """
     claims = await _decode_or_401(credentials)
-    roles = claims.get("realm_access", {}).get("roles", [])
+    roles = _extract_roles(claims)
 
     if not ({"volunteer", "admin"} & set(roles)):
         raise HTTPException(
