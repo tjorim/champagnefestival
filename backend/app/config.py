@@ -81,6 +81,13 @@ class Settings(BaseSettings):
     Leaving these empty disables e-mail sending (currently always disabled).
     """
 
+    # --- QR token signing ---
+    qr_signing_secret: str = ""
+    """HMAC secret for signing visitor QR tokens (``GET /api/me/qr``).
+    Defaults to an insecure placeholder in development; should be a long random
+    string in production (e.g. generated with ``openssl rand -hex 32``).
+    """
+
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
     recaptcha_secret: str = ""
     """Google reCAPTCHA v2/v3 secret key.
@@ -122,9 +129,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_oidc(self) -> "Settings":
-        """Refuse to start in production without OIDC issuer URL."""
-        if self.environment == "production" and not self.oidc_issuer_url:
-            raise ValueError("OIDC_ISSUER_URL must be set in production.")
+        """Refuse to start in production without OIDC issuer URL and QR signing secret."""
+        if self.environment == "production":
+            if not self.oidc_issuer_url:
+                raise ValueError("OIDC_ISSUER_URL must be set in production.")
+            if not self.qr_signing_secret:
+                raise ValueError("QR_SIGNING_SECRET must be set in production.")
         return self
 
     # ------------------------------------------------------------------

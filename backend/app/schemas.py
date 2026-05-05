@@ -244,6 +244,28 @@ class RegistrationGuestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MyRegistrationOut(BaseModel):
+    """Registration item returned from the authenticated visitor self-service API."""
+
+    id: str
+    event_id: str
+    event_title: str
+    event_date: dt_date | None
+    edition_id: str | None
+    guest_count: int
+    status: RegistrationStatus
+    payment_status: PaymentStatus
+    checked_in: bool
+    checked_in_at: datetime | None
+    person_name: str
+    created_at: datetime
+
+
+class MyQrOut(BaseModel):
+    token: str
+    expires_at: datetime
+
+
 class RegistrationLookupRequest(BaseModel):
     email: EmailStr
 
@@ -627,6 +649,52 @@ class AreaOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class VenuePlanRoomOut(BaseModel):
+    id: str
+    name: str
+    width_m: float
+    length_m: float
+    color: str
+
+
+class VenuePlanTableOut(BaseModel):
+    id: str
+    name: str
+    capacity: int
+    x: float
+    y: float
+    rotation: int
+    table_type_id: str
+    registration_ids: list[str]
+
+
+class VenuePlanAreaOut(BaseModel):
+    id: str
+    label: str
+    icon: str
+    x: float
+    y: float
+    rotation: int
+    width_m: float
+    length_m: float
+    exhibitor_id: int | None
+
+
+class VenuePlanLayoutOut(BaseModel):
+    id: str
+    day_id: int
+    date: dt_date | None
+    label: str
+    room: VenuePlanRoomOut | None
+    tables: list[VenuePlanTableOut]
+    areas: list[VenuePlanAreaOut]
+
+
+class VenuePlanOut(BaseModel):
+    edition_id: str
+    layouts: list[VenuePlanLayoutOut]
 
 
 # ---------------------------------------------------------------------------

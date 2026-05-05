@@ -22,12 +22,14 @@ from app.routers import (
     exhibitors,
     health,
     layouts,
+    me,
     members,
     people,
     registrations,
     rooms,
     table_types,
     tables,
+    venue_plan,
     venues,
     volunteers,
 )
@@ -120,4 +122,6 @@ app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(volunteers.router)
 app.include_router(areas.router)
+app.include_router(venue_plan.router)
+app.include_router(me.router)
 app.include_router(health.router)

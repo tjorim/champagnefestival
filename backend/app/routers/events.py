@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin
+from app.auth import require_admin, require_volunteer
 from app.database import get_db
 from app.models import Edition, Event
 from app.schemas import EventCreate, EventOut, EventUpdate
@@ -18,7 +18,7 @@ from app.utils import event_to_summary_dict, make_id
 router = APIRouter(prefix="/api/events", tags=["events"])
 
 
-@router.get("", response_model=list[EventOut], dependencies=[Depends(require_admin)])
+@router.get("", response_model=list[EventOut], dependencies=[Depends(require_volunteer)])
 async def list_events(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None),
