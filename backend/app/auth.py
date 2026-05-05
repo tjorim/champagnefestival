@@ -32,9 +32,10 @@ async def require_admin(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    roles = claims.get("realm_access", {}).get("roles", [])
+    realm_access = claims.get("realm_access")
+    roles = realm_access.get("roles", []) if isinstance(realm_access, dict) else []
 
-    if "admin" not in roles:
+    if not isinstance(roles, list) or "admin" not in roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden",
