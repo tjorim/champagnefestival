@@ -178,6 +178,7 @@ async def me_client(db_session):
     ``get_current_claims`` is overridden to return a fixed set of claims so that
     tests can exercise the self-service endpoints without a real OIDC provider.
     """
+
     async def override_get_db():
         yield db_session
 

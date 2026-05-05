@@ -32,9 +32,7 @@ async def get_venue_plan(
     writes are performed.
     """
     # Verify the edition exists and load its events so we can resolve dates.
-    result = await db.execute(
-        select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
-    )
+    result = await db.execute(select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id))
     edition = result.scalar_one_or_none()
     if edition is None:
         raise HTTPException(status_code=404, detail="Edition not found.")

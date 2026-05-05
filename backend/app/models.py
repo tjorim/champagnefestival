@@ -54,9 +54,7 @@ class Registration(Base):
     table_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
     )
-    user_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
+    user_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     """FK to the portal User who owns this booking (filled when a visitor claims it)."""
 
     status: Mapped[str] = mapped_column(String(20), default="pending")
