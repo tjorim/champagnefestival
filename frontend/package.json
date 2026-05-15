@@ -54,7 +54,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/ui": "^4.1.6",
     "happy-dom": "^20.9.0",
-    "msw": "^2.14.5",
+    "msw": "^2.14.6",
     "oxfmt": "^0.50.0",
     "oxlint": "^1.65.0",
     "typescript": "^6.0.3",
