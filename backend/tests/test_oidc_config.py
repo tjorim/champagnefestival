@@ -88,3 +88,16 @@ async def test_decode_token_refreshes_jwks_on_missing_key(monkeypatch) -> None:
     result = await oc.decode_token("some.token.here")
     assert result == expected_claims
     assert call_count["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_decode_token_raises_when_key_missing_after_refresh(monkeypatch) -> None:
+    async def fake_get_jwks(*, force_refresh: bool = False) -> dict:
+        return {"keys": []}
+
+    monkeypatch.setattr(oc, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oc.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
+    monkeypatch.setattr(oc, "_find_signing_key", lambda jwks, kid: None)
+
+    with pytest.raises(oc.OIDCTokenError, match="Signing key not found in JWKS"):
+        await oc.decode_token("some.token.here")
