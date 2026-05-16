@@ -68,6 +68,7 @@ class OIDCTokenError(Exception):
 def _find_signing_key(jwks_dict: dict[str, Any], kid: str | None) -> Any | None:
     """Return the JWKS key matching kid, or any key when kid is absent."""
     from jwt import PyJWKSet
+
     jwks_set = PyJWKSet.from_dict(jwks_dict)
     return next(
         (k for k in jwks_set.keys if kid is None or k.key_id == kid),
