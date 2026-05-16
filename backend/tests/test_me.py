@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import cast
 
-import pytest
 import jwt
+import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
