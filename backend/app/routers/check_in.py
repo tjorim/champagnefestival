@@ -43,11 +43,9 @@ async def lookup_check_in(
             detail="Too many requests. Please try again later.",
         )
     r = await _get_by_token_or_401(db, reservation_id, body.token)
-    person_result = await db.execute(select(Person).where(Person.id == r.person_id))
-    r._person = person_result.scalar_one_or_none()
-    event_result = await db.execute(select(Event).where(Event.id == r.event_id))
-    r._event = event_result.scalar_one_or_none()
-    return registration_to_checkin_dict(r)
+    person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
+    event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
+    return registration_to_checkin_dict(r, person, event)
 
 
 # ---------------------------------------------------------------------------
@@ -73,10 +71,8 @@ async def post_check_in(
             detail="Too many requests. Please try again later.",
         )
     r = await _get_by_token_or_401(db, reservation_id, body.token)
-    person_result = await db.execute(select(Person).where(Person.id == r.person_id))
-    r._person = person_result.scalar_one_or_none()
-    event_result = await db.execute(select(Event).where(Event.id == r.event_id))
-    r._event = event_result.scalar_one_or_none()
+    person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
+    event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
 
     already = r.checked_in
     changed = False
@@ -95,7 +91,7 @@ async def post_check_in(
         await db.refresh(r)
 
     return {
-        "registration": registration_to_checkin_dict(r),
+        "registration": registration_to_checkin_dict(r, person, event),
         "already_checked_in": already,
     }
 

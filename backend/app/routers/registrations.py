@@ -91,9 +91,7 @@ async def create_registration(
     await db.commit()
 
     registration = await _get_registration_or_404(db, registration.id)
-    registration._person = person
-    registration._event = event
-    return registration_to_dict(registration)
+    return registration_to_dict(registration, person, event)
 
 
 @router.post(
@@ -124,9 +122,7 @@ async def admin_create_registration(
     await db.commit()
 
     registration = await _get_registration_or_404(db, registration.id)
-    registration._person = person
-    registration._event = event
-    return registration_to_dict(registration)
+    return registration_to_dict(registration, person, event)
 
 
 @router.get(
@@ -173,8 +169,8 @@ async def list_registrations(
     stmt = apply_pagination(stmt, pagination)
 
     rows = (await db.execute(stmt)).scalars().all()
-    await _attach_people_and_events(db, list(rows))
-    return [registration_to_list_dict(row) for row in rows]
+    person_map = await _fetch_person_map(db, list(rows))
+    return [registration_to_list_dict(row, person_map[row.person_id], row.event) for row in rows]
 
 
 @router.post(
@@ -272,7 +268,7 @@ async def access_my_registrations(
     token_row.expires_at = datetime.now(UTC)
     rows = await _load_guest_registrations_by_email(db, email_norm)
     await db.commit()
-    return [registration_to_guest_dict(row) for row in rows]
+    return [registration_to_guest_dict(row, person, event) for row, person, event in rows]
 
 
 @router.get(
@@ -285,8 +281,8 @@ async def get_registration(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     registration = await _get_registration_or_404(db, registration_id)
-    await _attach_people_and_events(db, [registration])
-    return registration_to_dict_with_token(registration)
+    person_map = await _fetch_person_map(db, [registration])
+    return registration_to_dict_with_token(registration, person_map[registration.person_id], registration.event)
 
 
 @router.put(
@@ -331,8 +327,8 @@ async def update_registration(
 
     await db.commit()
     registration = await _get_registration_or_404(db, registration.id)
-    await _attach_people_and_events(db, [registration])
-    return registration_to_dict(registration)
+    person_map = await _fetch_person_map(db, [registration])
+    return registration_to_dict(registration, person_map[registration.person_id], registration.event)
 
 
 @router.delete(
@@ -380,7 +376,7 @@ async def _get_guest_access_token_or_401(
 async def _load_guest_registrations_by_email(
     db: AsyncSession,
     email_norm: str,
-) -> list[Registration]:
+) -> list[tuple[Registration, Person, Event]]:
     persons = (await db.execute(select(Person).where(Person.email == email_norm))).scalars().all()
     if not persons:
         return []
@@ -397,10 +393,7 @@ async def _load_guest_registrations_by_email(
         .scalars()
         .all()
     )
-    for row in rows:
-        row._person = person_map.get(row.person_id)
-        row._event = row.event
-    return list(rows)
+    return [(row, person_map[row.person_id], row.event) for row in rows]
 
 
 async def _get_registration_or_404(db: AsyncSession, registration_id: str) -> Registration:
@@ -481,12 +474,9 @@ async def _ensure_public_registration_allowed(
         )
 
 
-async def _attach_people_and_events(db: AsyncSession, rows: list[Registration]) -> None:
+async def _fetch_person_map(db: AsyncSession, rows: list[Registration]) -> dict[str, Person]:
     if not rows:
-        return
+        return {}
     person_ids = {row.person_id for row in rows}
     people = (await db.execute(select(Person).where(Person.id.in_(person_ids)))).scalars().all()
-    person_map = {person.id: person for person in people}
-    for row in rows:
-        row._person = person_map.get(row.person_id)
-        row._event = row.event
+    return {person.id: person for person in people}

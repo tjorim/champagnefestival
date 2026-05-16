@@ -256,10 +256,7 @@ async def list_person_registrations(
         .order_by(Registration.created_at.desc())
     )
     rows = result.scalars().all()
-    for r in rows:
-        r._person = person
-        r._event = r.event
-    return [registration_to_list_dict(r) for r in rows]
+    return [registration_to_list_dict(r, person, r.event) for r in rows]
 
 
 @router.post("/{person_id}/merge/{duplicate_id}", response_model=PersonOut)

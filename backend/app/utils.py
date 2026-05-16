@@ -68,16 +68,8 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
     return data
 
 
-def registration_to_dict(r: Registration) -> dict:
+def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
     """Serialise a Registration ORM row to a plain dict (no check_in_token)."""
-    person: Person | None = getattr(r, "_person", None)
-    event: Event | None = getattr(r, "_event", None)
-    if person is None:
-        raise ValueError(
-            f"Registration {r.id!r} has no attached _person; caller must set r._person before serialising."
-        )
-    if event is None:
-        raise ValueError(f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising.")
     return {
         "id": r.id,
         "person_id": r.person_id,
@@ -99,12 +91,8 @@ def registration_to_dict(r: Registration) -> dict:
     }
 
 
-def registration_to_checkin_dict(r: Registration) -> dict:
+def registration_to_checkin_dict(r: Registration, person: Person, event: Event) -> dict:
     """Serialise a Registration for the public check-in GET endpoint."""
-    person: Person | None = getattr(r, "_person", None)
-    event: Event | None = getattr(r, "_event", None)
-    if person is None or event is None:
-        raise ValueError(f"Registration {r.id!r} requires attached _person and _event before serialising.")
     return {
         "id": r.id,
         "name": person.name,
@@ -120,28 +108,20 @@ def registration_to_checkin_dict(r: Registration) -> dict:
     }
 
 
-def registration_to_dict_with_token(r: Registration) -> dict:
+def registration_to_dict_with_token(r: Registration, person: Person, event: Event) -> dict:
     """Serialise a Registration ORM row including the sensitive check_in_token."""
-    return {**registration_to_dict(r), "check_in_token": r.check_in_token}
+    return {**registration_to_dict(r, person, event), "check_in_token": r.check_in_token}
 
 
-def registration_to_list_dict(r: Registration) -> dict:
+def registration_to_list_dict(r: Registration, person: Person, event: Event) -> dict:
     """Serialise a Registration for the list endpoint (drops notes)."""
-    d = registration_to_dict(r)
+    d = registration_to_dict(r, person, event)
     d.pop("notes", None)
     return d
 
 
-def registration_to_guest_dict(r: Registration) -> dict:
+def registration_to_guest_dict(r: Registration, person: Person, event: Event) -> dict:
     """Serialise a Registration for the visitor self-lookup endpoint."""
-    person: Person | None = getattr(r, "_person", None)
-    event: Event | None = getattr(r, "_event", None)
-    if person is None:
-        raise ValueError(
-            f"Registration {r.id!r} has no attached _person; caller must set r._person before serialising."
-        )
-    if event is None:
-        raise ValueError(f"Registration {r.id!r} has no attached _event; caller must set r._event before serialising.")
     return {
         "id": r.id,
         "name": person.name,

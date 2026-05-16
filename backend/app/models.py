@@ -75,6 +75,10 @@ class Registration(Base):
     person: Mapped[Person] = relationship(back_populates="registrations")
     user: Mapped[User | None] = relationship(back_populates="registrations")
 
+    # Transient attrs injected by routers before serialization – not persisted
+    _person: Person | None = None
+    _event: Event | None = None
+
 
 class ReservationAccessToken(Base):
     """Short-lived visitor access token for viewing registrations via e-mail link."""
