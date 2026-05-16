@@ -19,6 +19,7 @@ from typing import Any
 import httpx
 import jwt
 from jwt.exceptions import ExpiredSignatureError, PyJWTError
+from jwt.types import Options
 
 from app.config import settings
 
@@ -81,7 +82,7 @@ async def decode_token(token: str) -> dict[str, Any]:
 
     Tries cached JWKS first; on key-not-found, refreshes once to handle key rotation.
     """
-    options: dict[str, Any] = {
+    options: Options = {
         "verify_aud": _OIDC_AUDIENCE is not None,
         "verify_iss": _OIDC_ISSUER is not None,
     }
