@@ -19,7 +19,7 @@ dependencies = [
   "phonenumbers==9.0.30",
   "asyncpg==0.31.0",
   "psycopg[binary]==3.3.4",
-  "python-jose[cryptography]==3.5.0",
+  "PyJWT[crypto]>=2.9",
   "httpx==0.28.1",
 ]
 

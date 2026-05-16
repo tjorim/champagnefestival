@@ -17,8 +17,8 @@ import logging
 from typing import Any
 
 import httpx
-from jose import JWTError, jwt
-from jose.exceptions import ExpiredSignatureError
+import jwt
+from jwt.exceptions import ExpiredSignatureError, PyJWTError
 
 from app.config import settings
 
@@ -65,6 +65,16 @@ class OIDCTokenError(Exception):
     """Raised when a JWT cannot be validated."""
 
 
+def _find_signing_key(jwks_dict: dict[str, Any], kid: str | None) -> Any | None:
+    """Return the JWKS key matching kid, or any key when kid is absent."""
+    from jwt import PyJWKSet
+    jwks_set = PyJWKSet.from_dict(jwks_dict)
+    return next(
+        (k for k in jwks_set.keys if kid is None or k.key_id == kid),
+        None,
+    )
+
+
 async def decode_token(token: str) -> dict[str, Any]:
     """Decode and validate a JWT Bearer token.
 
@@ -77,10 +87,20 @@ async def decode_token(token: str) -> dict[str, Any]:
 
     for attempt in range(2):
         try:
-            jwks = await _get_jwks(force_refresh=(attempt == 1))
+            jwks_dict = await _get_jwks(force_refresh=(attempt == 1))
+            header = jwt.get_unverified_header(token)
+            kid = header.get("kid")
+            signing_key = _find_signing_key(jwks_dict, kid)
+
+            if signing_key is None:
+                if attempt == 0:
+                    logger.info("Signing key not found in cached JWKS — refreshing")
+                    continue
+                raise OIDCTokenError("Signing key not found in JWKS")
+
             return jwt.decode(
                 token,
-                jwks,
+                signing_key.key,
                 algorithms=_OIDC_ALGORITHMS,
                 audience=_OIDC_AUDIENCE,
                 issuer=_OIDC_ISSUER,
@@ -88,10 +108,7 @@ async def decode_token(token: str) -> dict[str, Any]:
             )
         except ExpiredSignatureError as exc:
             raise OIDCTokenError("Token has expired") from exc
-        except JWTError as exc:
-            if attempt == 0 and "Unable to find a signing key" in str(exc):
-                logger.info("Signing key not found in cached JWKS — refreshing")
-                continue
+        except PyJWTError as exc:
             raise OIDCTokenError(f"Token validation failed: {exc}") from exc
 
     raise OIDCTokenError("Token validation failed after JWKS refresh")

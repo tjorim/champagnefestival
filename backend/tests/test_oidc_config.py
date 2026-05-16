@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from app import oidc_config as oc
@@ -22,12 +24,14 @@ def test_get_jwks_uri_uses_override_without_issuer(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_decode_token_expired(monkeypatch) -> None:
-    from jose.exceptions import ExpiredSignatureError
+    from jwt.exceptions import ExpiredSignatureError
 
     async def fake_get_jwks(**_):
         return {"keys": []}
 
     monkeypatch.setattr(oc, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oc.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
+    monkeypatch.setattr(oc, "_find_signing_key", lambda jwks, kid: SimpleNamespace(key=object()))
 
     def fake_decode(*args, **kwargs):
         raise ExpiredSignatureError("Signature has expired")
@@ -40,15 +44,17 @@ async def test_decode_token_expired(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_decode_token_invalid(monkeypatch) -> None:
-    from jose import JWTError
+    from jwt.exceptions import PyJWTError
 
     async def fake_get_jwks(**_):
         return {"keys": []}
 
     monkeypatch.setattr(oc, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oc.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
+    monkeypatch.setattr(oc, "_find_signing_key", lambda jwks, kid: SimpleNamespace(key=object()))
 
     def fake_decode(*args, **kwargs):
-        raise JWTError("bad token")
+        raise PyJWTError("bad token")
 
     monkeypatch.setattr(oc.jwt, "decode", fake_decode)
 
@@ -58,9 +64,8 @@ async def test_decode_token_invalid(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_decode_token_refreshes_jwks_on_missing_key(monkeypatch) -> None:
-    from jose import JWTError
-
     call_count = {"n": 0}
+    find_count = {"n": 0}
     expected_claims = {"sub": "user123", "preferred_username": "alice"}
 
     async def fake_get_jwks(*, force_refresh: bool = False) -> dict:
@@ -68,13 +73,17 @@ async def test_decode_token_refreshes_jwks_on_missing_key(monkeypatch) -> None:
         return {"keys": []}
 
     monkeypatch.setattr(oc, "_get_jwks", fake_get_jwks)
+    monkeypatch.setattr(oc.jwt, "get_unverified_header", lambda t: {"alg": "RS256", "kid": "k1"})
 
-    def fake_decode(*args, **kwargs):
-        if call_count["n"] < 2:
-            raise JWTError("Unable to find a signing key")
-        return expected_claims
+    def fake_find_key(jwks, kid):
+        find_count["n"] += 1
+        if find_count["n"] < 2:
+            return None  # first attempt: key not yet in cache → triggers refresh
+        return SimpleNamespace(key=object())
 
-    monkeypatch.setattr(oc.jwt, "decode", fake_decode)
+    monkeypatch.setattr(oc, "_find_signing_key", fake_find_key)
+
+    monkeypatch.setattr(oc.jwt, "decode", lambda *a, **kw: expected_claims)
 
     result = await oc.decode_token("some.token.here")
     assert result == expected_claims

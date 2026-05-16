@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 
 import pytest
-from jose import jwt
+import jwt
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -103,7 +103,7 @@ async def test_me_qr_token_contains_expected_claims(me_client):
     token = r.json()["token"]
 
     # Decode without verification to inspect claims (secret not available in test)
-    claims = jwt.get_unverified_claims(token)
+    claims = jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256"])
     assert claims["oidc_sub"] == "visitor-sub"
     assert "sub" in claims
     assert "exp" in claims
@@ -117,7 +117,7 @@ async def test_me_qr_token_is_short_lived(me_client):
 
     r = await me_client.get("/api/me/qr")
     token = r.json()["token"]
-    claims = jwt.get_unverified_claims(token)
+    claims = jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256"])
 
     now = datetime.now(UTC).timestamp()
     ttl_seconds = claims["exp"] - now
