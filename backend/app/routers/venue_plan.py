@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_volunteer
 from app.database import get_db
 from app.models import Edition, Layout
-from app.schemas import VenuePlanOut
+from app.schemas import VenuePlanAreaOut, VenuePlanLayoutOut, VenuePlanOut, VenuePlanRoomOut, VenuePlanTableOut
 
 router = APIRouter(
     prefix="/api/venue-plan",
@@ -63,56 +63,56 @@ async def get_venue_plan(
 
         room = lay.room
         room_payload = (
-            {
-                "id": room.id,
-                "name": room.name,
-                "width_m": room.width_m,
-                "length_m": room.length_m,
-                "color": room.color,
-            }
+            VenuePlanRoomOut(
+                id=room.id,
+                name=room.name,
+                width_m=room.width_m,
+                length_m=room.length_m,
+                color=room.color,
+            )
             if room
             else None
         )
 
         tables_payload = [
-            {
-                "id": t.id,
-                "name": t.name,
-                "capacity": t.capacity,
-                "x": t.x,
-                "y": t.y,
-                "rotation": t.rotation,
-                "table_type_id": t.table_type_id,
-                "registration_ids": t.reservation_ids,
-            }
+            VenuePlanTableOut(
+                id=t.id,
+                name=t.name,
+                capacity=t.capacity,
+                x=t.x,
+                y=t.y,
+                rotation=t.rotation,
+                table_type_id=t.table_type_id,
+                registration_ids=t.reservation_ids,
+            )
             for t in lay.tables
         ]
 
         areas_payload = [
-            {
-                "id": a.id,
-                "label": a.label,
-                "icon": a.icon,
-                "x": a.x,
-                "y": a.y,
-                "rotation": a.rotation,
-                "width_m": a.width_m,
-                "length_m": a.length_m,
-                "exhibitor_id": a.exhibitor_id,
-            }
+            VenuePlanAreaOut(
+                id=a.id,
+                label=a.label,
+                icon=a.icon,
+                x=a.x,
+                y=a.y,
+                rotation=a.rotation,
+                width_m=a.width_m,
+                length_m=a.length_m,
+                exhibitor_id=a.exhibitor_id,
+            )
             for a in lay.areas
         ]
 
         payload_layouts.append(
-            {
-                "id": lay.id,
-                "day_id": lay.day_id,
-                "date": layout_date,
-                "label": lay.label,
-                "room": room_payload,
-                "tables": tables_payload,
-                "areas": areas_payload,
-            }
+            VenuePlanLayoutOut(
+                id=lay.id,
+                day_id=lay.day_id,
+                date=layout_date,
+                label=lay.label,
+                room=room_payload,
+                tables=tables_payload,
+                areas=areas_payload,
+            )
         )
 
     return VenuePlanOut(edition_id=edition_id, layouts=payload_layouts)
