@@ -73,8 +73,8 @@ importers:
         version: 12.1.4
     devDependencies:
       '@inlang/paraglide-js':
-        specifier: ^2.18.0
-        version: 2.18.0(babel-plugin-macros@3.1.0)(typescript@6.0.3)
+        specifier: ^2.18.1
+        version: 2.18.1(babel-plugin-macros@3.1.0)(typescript@6.0.3)
       '@inlang/plugin-m-function-matcher':
         specifier: ^2.2.6
         version: 2.2.6(babel-plugin-macros@3.1.0)
@@ -267,8 +267,8 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@inlang/paraglide-js@2.18.0':
-    resolution: {integrity: sha512-Acp6htA5W7rS2kL3iMjhSr08eECz696MYsud+FBKrmahzM7PdywPVq9UOr9MaC/aV7AZPElrYcqYZOOlUri5fg==}
+  '@inlang/paraglide-js@2.18.1':
+    resolution: {integrity: sha512-YzIrJ34KbsJwzvVKBzcBEgp4AqmhNYD1EF2pOV+g87L024XTFmcmikI4/NMfb63H9zJ6UeEPTOmEK7Nzu/4E2Q==}
     hasBin: true
     peerDependencies:
       typescript: '>=5'
@@ -2039,7 +2039,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@inlang/paraglide-js@2.18.0(babel-plugin-macros@3.1.0)(typescript@6.0.3)':
+  '@inlang/paraglide-js@2.18.1(babel-plugin-macros@3.1.0)(typescript@6.0.3)':
     dependencies:
       '@inlang/recommend-sherlock': 0.2.1
       '@inlang/sdk': 2.9.3(babel-plugin-macros@3.1.0)
