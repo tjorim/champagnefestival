@@ -21,7 +21,7 @@
     "@dnd-kit/react": "^0.4.0",
     "@tanstack/react-form": "^1.32.0",
     "@tanstack/react-query": "^5.100.10",
-    "@tanstack/react-router": "^1.170.1",
+    "@tanstack/react-router": "^1.170.7",
     "@tanstack/react-table": "9.0.0-alpha.46",
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
