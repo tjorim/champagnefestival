@@ -49,6 +49,11 @@ updates:
           - "leaflet"
           - "react-leaflet"
           - "@types/leaflet"
+      # Group TanStack table packages (must update together or pipelines fail)
+      tanstack-table:
+        patterns:
+          - "@tanstack/react-table"
+          - "@tanstack/table-core"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
