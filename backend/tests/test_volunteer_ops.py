@@ -32,7 +32,7 @@ async def _create_table(client, *, name: str) -> str:
 
 
 @pytest.mark.anyio
-async def test_volunteer_registrations_support_table_lookup_and_hide_pii(client, volunteer_client):
+async def test_volunteer_registrations_support_table_lookup_and_hide_pii(client):
     registration = await _post_registration(client, path="/api/registrations", notes="No sugar")
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
@@ -45,7 +45,7 @@ async def test_volunteer_registrations_support_table_lookup_and_hide_pii(client,
     )
     assert r.status_code == 200
 
-    r = await volunteer_client.get("/api/volunteer/registrations", params={"q": "Table A"})
+    r = await client.get("/api/volunteer/registrations", params={"q": "Table A"})
     assert r.status_code == 200
     rows = r.json()
     assert len(rows) == 1
