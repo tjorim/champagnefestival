@@ -30,6 +30,10 @@ class GuestLookupViewModel(
 
     fun search(query: String, eventId: String?) {
         searchJob?.cancel()
+        if (query.isBlank() && eventId.isNullOrBlank()) {
+            _uiState.value = GuestLookupUiState.Idle
+            return
+        }
         searchJob = viewModelScope.launch {
             delay(300)
             _uiState.value = GuestLookupUiState.Loading

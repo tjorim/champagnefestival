@@ -71,6 +71,7 @@ private fun SettingsContent(
     modifier: Modifier = Modifier,
 ) {
     var apiBaseUrl by remember(settings.apiBaseUrl) { mutableStateOf(settings.apiBaseUrl) }
+    val isUrlInvalid = apiBaseUrl.isNotBlank() && !apiBaseUrl.startsWith("http://") && !apiBaseUrl.startsWith("https://")
 
     Column(
         modifier = modifier
@@ -83,11 +84,20 @@ private fun SettingsContent(
             onValueChange = { apiBaseUrl = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("API base URL") },
+            isError = isUrlInvalid,
+            supportingText = {
+                if (isUrlInvalid) {
+                    Text("URL must start with http:// or https://")
+                }
+            },
         )
         Text("Default API base URL: ${settings.defaultApiBaseUrl}")
         Text("OIDC issuer: ${settings.oidcIssuerUrl}")
         Text("App version: ${settings.versionName}")
-        Button(onClick = { viewModel.saveApiBaseUrl(apiBaseUrl) }) {
+        Button(
+            onClick = { viewModel.saveApiBaseUrl(apiBaseUrl) },
+            enabled = !isUrlInvalid,
+        ) {
             Text("Save base URL")
         }
         Button(onClick = {

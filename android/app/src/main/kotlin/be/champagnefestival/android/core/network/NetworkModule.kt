@@ -3,6 +3,9 @@ package be.champagnefestival.android.core.network
 import be.champagnefestival.android.BuildConfig
 import be.champagnefestival.android.core.storage.SessionDataStore
 import be.champagnefestival.android.data.api.ChampagneApiService
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -21,7 +24,7 @@ class NetworkModule(sessionDataStore: SessionDataStore) {
     private val client = OkHttpClient.Builder()
         .addInterceptor { chain ->
             val originalRequest = chain.request()
-            val overrideBaseUrl = sessionDataStore.apiBaseUrlFlow.value.orEmpty()
+            val overrideBaseUrl = runBlocking { sessionDataStore.apiBaseUrlFlow.filterNotNull().first() }
             val overrideBase = overrideBaseUrl.toHttpUrlOrNull()
             val updatedRequest = if (overrideBase != null) {
                 val updatedUrl = originalRequest.url.newBuilder()

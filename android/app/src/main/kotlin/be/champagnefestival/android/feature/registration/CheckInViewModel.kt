@@ -22,6 +22,8 @@ class CheckInViewModel(private val repository: CheckInRepository) : ViewModel() 
     private val _uiState = MutableStateFlow<CheckInUiState>(CheckInUiState.Loading)
     val uiState: StateFlow<CheckInUiState> = _uiState.asStateFlow()
 
+    private var lastSubmittedId: String? = null
+
     fun loadRegistration(id: String, token: String) {
         _uiState.value = CheckInUiState.Loading
         viewModelScope.launch {
@@ -38,7 +40,11 @@ class CheckInViewModel(private val repository: CheckInRepository) : ViewModel() 
     }
 
     fun submitCheckIn(id: String, token: String) {
+        if (lastSubmittedId == id && _uiState.value is CheckInUiState.CheckInSuccess) {
+            return
+        }
         _uiState.value = CheckInUiState.Loading
+        lastSubmittedId = id
         viewModelScope.launch {
             repository.submitCheckIn(id = id, token = token)
                 .onSuccess { result ->

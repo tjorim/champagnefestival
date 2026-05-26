@@ -38,8 +38,8 @@ class SessionDataStore(context: Context, applicationScope: CoroutineScope) {
     private val _idTokenFlow = MutableStateFlow<String?>(null)
     val idTokenFlow: StateFlow<String?> = _idTokenFlow
 
-    private val _apiBaseUrlFlow = MutableStateFlow(BuildConfig.API_BASE_URL)
-    val apiBaseUrlFlow: StateFlow<String> = _apiBaseUrlFlow
+    private val _apiBaseUrlFlow = MutableStateFlow<String?>(null)
+    val apiBaseUrlFlow: StateFlow<String?> = _apiBaseUrlFlow
 
     init {
         applicationScope.launch {

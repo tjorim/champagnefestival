@@ -26,7 +26,7 @@ class SettingsViewModel(
             sessionDataStore.apiBaseUrlFlow.collect { apiBaseUrl ->
                 _uiState.value = UiState.Success(
                     SettingsUiModel(
-                        apiBaseUrl = apiBaseUrl,
+                        apiBaseUrl = apiBaseUrl ?: BuildConfig.API_BASE_URL,
                         defaultApiBaseUrl = BuildConfig.API_BASE_URL,
                         oidcIssuerUrl = BuildConfig.OIDC_ISSUER_URL,
                         versionName = BuildConfig.VERSION_NAME,
