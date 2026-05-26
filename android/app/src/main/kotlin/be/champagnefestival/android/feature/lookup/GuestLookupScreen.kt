@@ -98,7 +98,7 @@ private fun LookupResults(
 
     val checkedInCount = registrations.count { it.checked_in }
     val undeliveredItems = registrations.sumOf { registration ->
-        registration.pre_orders.count { !it.delivered }
+        registration.pre_orders.filter { !it.delivered }.sumOf { it.quantity }
     }
 
     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
@@ -119,8 +119,10 @@ private fun LookupResults(
                     Text("Table: ${registration.table_name ?: "Unassigned"}")
                     Text("Guests: ${registration.guest_count}")
                     Text(if (registration.checked_in) "Checked in" else "Pending check-in")
-                    val pendingItems = registration.pre_orders.count { !it.delivered }
-                    Text(if (pendingItems == 0) "All items delivered" else "Pending delivery items: $pendingItems")
+                    if (registration.pre_orders.isNotEmpty()) {
+                        val pendingItems = registration.pre_orders.count { !it.delivered }
+                        Text(if (pendingItems == 0) "All items delivered" else "Pending delivery items: $pendingItems")
+                    }
                 }
             }
         }
