@@ -10,6 +10,7 @@ import {
 import { http, HttpResponse } from "msw";
 import MyRegistrationsPage from "@/components/MyRegistrationsPage";
 import { server } from "@/mocks/server";
+import { validateMyRegistrationsSearch } from "@/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -46,9 +47,7 @@ describe("MyRegistrationsPage", () => {
     const myRegistrationsRoute = createRoute({
       getParentRoute: () => rootRoute,
       path: "/my-registrations",
-      validateSearch: (search: Record<string, unknown>) => ({
-        token: typeof search.token === "string" ? search.token : undefined,
-      }),
+      validateSearch: validateMyRegistrationsSearch,
       component: MyRegistrationsPage,
     });
     const routeTree = rootRoute.addChildren([myRegistrationsRoute]);

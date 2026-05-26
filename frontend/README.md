@@ -39,6 +39,7 @@ frontend/
     ├── hooks/         # custom React hooks
     ├── mocks/         # MSW mock handlers and seed data (dev-only)
     ├── paraglide/     # generated i18n message functions (do not edit)
+    ├── router.tsx     # TanStack Router setup + shared route search validators
     ├── types/         # TypeScript type definitions
     └── utils/         # shared utilities (date helpers, …)
 ```
@@ -134,8 +135,27 @@ production builds**.
 ## Navigation
 
 - The main page (`/`) uses hash-based section navigation via `useScrollNavigation`.
-- `/admin` and `/check-in` are React Router v7 (`react-router`) routes.
+- TanStack Router is configured in `src/router.tsx`.
+- Route separation:
+  - Public marketing site: `/`
+  - Admin dashboard: `/admin`
+  - Volunteer check-in: `/check-in`
+  - Guest self-service registrations: `/my-registrations`
+- Route search params:
+  - `/check-in` expects optional `id` + `token` string params
+  - `/my-registrations` expects an optional `token` string param
 - Add navigation items in `src/config/navigation.ts`.
+
+## Query key ownership and invalidation
+
+- All query keys are defined in `src/utils/queryKeys.ts`.
+- Top-level admin resources are owned by `queryKeys.admin.*` and consumed by `useAdminQueries`.
+- `useAdminQueries` centralizes bulk admin refetch behavior via `shouldRefetchAdminResourceQuery`,
+  which only matches the stable top-level admin resources (`registrations`, `tables`, `venues`,
+  `rooms`, `table-types`, `layouts`, `exhibitors`, `areas`, `people`, `members`).
+- Check-in and self-service flows use route-scoped keys:
+  - `queryKeys.checkInRegistration(id, token)`
+  - `queryKeys.myRegistrations(token)`
 
 ## Technologies
 

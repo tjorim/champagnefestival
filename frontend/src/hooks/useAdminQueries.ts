@@ -22,6 +22,27 @@ interface UseAdminQueriesOptions {
   activeEdition: ActiveEdition;
 }
 
+export const ADMIN_RESOURCE_KEYS = [
+  "registrations",
+  "tables",
+  "venues",
+  "rooms",
+  "table-types",
+  "layouts",
+  "exhibitors",
+  "areas",
+  "people",
+  "members",
+] as const;
+
+export function shouldRefetchAdminResourceQuery(queryKey: readonly unknown[]): boolean {
+  return (
+    queryKey[0] === "admin" &&
+    typeof queryKey[1] === "string" &&
+    ADMIN_RESOURCE_KEYS.includes(queryKey[1] as (typeof ADMIN_RESOURCE_KEYS)[number])
+  );
+}
+
 export function useAdminQueries({
   visible,
   isAuthenticated,
@@ -128,27 +149,8 @@ export function useAdminQueries({
   }, [activeEdition.events]);
 
   const loadData = useCallback(async () => {
-    const adminResourcesToRefetch = new Set([
-      "registrations",
-      "tables",
-      "venues",
-      "rooms",
-      "table-types",
-      "layouts",
-      "exhibitors",
-      "areas",
-      "people",
-      "members",
-    ]);
     await queryClient.refetchQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey as unknown[];
-        return (
-          queryKey[0] === "admin" &&
-          typeof queryKey[1] === "string" &&
-          adminResourcesToRefetch.has(queryKey[1])
-        );
-      },
+      predicate: (query) => shouldRefetchAdminResourceQuery(query.queryKey),
     });
   }, [queryClient]);
 

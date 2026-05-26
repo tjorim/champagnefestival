@@ -11,7 +11,8 @@ import { http, HttpResponse } from "msw";
 import CheckInPage from "@/components/CheckInPage";
 import { server } from "@/mocks/server";
 import { seedRegistrations } from "@/mocks/data/registrations";
-import { createTestQueryClientWrapper } from "../utils/queryClient";
+import { validateCheckInSearch } from "@/router";
+import { createTestQueryClientHarness, createTestQueryClientWrapper } from "../utils/queryClient";
 
 // Use the first seed registration — reg-01 (Alice Dupont, Grand Opening, not yet checked in).
 const seedReg = seedRegistrations[0]!;
@@ -50,10 +51,7 @@ describe("CheckInPage", () => {
     const checkInRoute = createRoute({
       getParentRoute: () => rootRoute,
       path: "/check-in",
-      validateSearch: (search: Record<string, unknown>) => ({
-        id: typeof search.id === "string" ? search.id : undefined,
-        token: typeof search.token === "string" ? search.token : undefined,
-      }),
+      validateSearch: validateCheckInSearch,
       component: CheckInPage,
     });
     const routeTree = rootRoute.addChildren([checkInRoute]);
@@ -86,6 +84,38 @@ describe("CheckInPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
       expect(screen.getByText("Strap issued.")).toBeInTheDocument();
+    });
+  });
+
+  it("invalidates the checked-in registration query after submitting", async () => {
+    const rootRoute = createRootRoute();
+    const checkInRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/check-in",
+      validateSearch: validateCheckInSearch,
+      component: CheckInPage,
+    });
+    const routeTree = rootRoute.addChildren([checkInRoute]);
+    const memoryHistory = createMemoryHistory({
+      initialEntries: [`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`],
+    });
+    const router = createRouter({ routeTree, history: memoryHistory });
+    await router.load();
+    const { queryClient, Wrapper } = createTestQueryClientHarness();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    render(<RouterProvider router={router} />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["check-in", SEED_REG_ID, SEED_REG_TOKEN],
+      });
     });
   });
 
