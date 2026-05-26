@@ -28,6 +28,21 @@ describe("MSW operational fixtures", () => {
     expect(reg01?.strap_issued).toBe(true);
   });
 
+  it("can switch back to default scenario to reset operational state", async () => {
+    await setScenario("event-day");
+    await setScenario("default");
+
+    const registrationsResponse = await fetch("/api/registrations", {
+      headers: adminAuthHeaders(),
+    });
+    expect(registrationsResponse.status).toBe(200);
+    const registrations = (await registrationsResponse.json()) as Array<Record<string, unknown>>;
+
+    const reg01 = registrations.find((registration) => registration.id === "reg-01");
+    expect(reg01?.checked_in).toBe(false);
+    expect(reg01?.strap_issued).toBe(false);
+  });
+
   it("exposes partial and completed delivery quantities in deterministic seed data", async () => {
     const registrationsResponse = await fetch("/api/registrations", {
       headers: adminAuthHeaders(),

@@ -34,6 +34,14 @@ type MockScenario = "default" | RegistrationScenario | `auth-${AuthScenario}`;
 
 let activeScenario: MockScenario = "default";
 let forcedAuthScenario: ForcedAuthScenario = "default";
+const availableMockScenarios: MockScenario[] = [
+  "default",
+  "event-day",
+  "auth-signed-out",
+  "auth-forbidden",
+  "auth-expired",
+  "auth-invalid",
+];
 
 function authError(status: number, detail: string): HttpResponse<{ detail: string }> {
   return HttpResponse.json({ detail }, { status });
@@ -75,22 +83,26 @@ function applyMockScenario(scenario: MockScenario): void {
   activeScenario = scenario;
   forcedAuthScenario = "default";
 
-  if (scenario === "default") {
-    resetSharedStore();
-    return;
+  switch (scenario) {
+    case "default":
+      resetSharedStore();
+      return;
+    case "event-day":
+      setRegistrationScenario("event-day");
+      return;
+    case "auth-signed-out":
+      forcedAuthScenario = "signed-out";
+      return;
+    case "auth-forbidden":
+      forcedAuthScenario = "forbidden";
+      return;
+    case "auth-expired":
+      forcedAuthScenario = "expired";
+      return;
+    case "auth-invalid":
+      forcedAuthScenario = "invalid";
+      return;
   }
-
-  if (scenario === "event-day") {
-    setRegistrationScenario("event-day");
-    return;
-  }
-
-  if (scenario.startsWith("auth-")) {
-    forcedAuthScenario = scenario.slice(5) as AuthScenario;
-    return;
-  }
-
-  setRegistrationScenario(scenario as RegistrationScenario);
 }
 
 function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
@@ -101,15 +113,19 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
       typeof registration.table_id === "string" && registration.table_id.length > 0
         ? registration.table_id
         : null;
+    const registrationId =
+      typeof registration.id === "string" && registration.id.length > 0 ? registration.id : null;
     if (!tableId) continue;
-    const tableRegistrations = byTableId.get(tableId) ?? [];
-    tableRegistrations.push(String(registration.id ?? ""));
-    byTableId.set(tableId, tableRegistrations);
+    if (!registrationId) continue;
+    const registrationIds = byTableId.get(tableId) ?? [];
+    registrationIds.push(registrationId);
+    byTableId.set(tableId, registrationIds);
   }
 
   return tables.map((table) => ({
     ...table,
-    registration_ids: byTableId.get(String(table.id ?? "")) ?? [],
+    registration_ids:
+      typeof table.id === "string" && table.id.length > 0 ? byTableId.get(table.id) ?? [] : [],
   }));
 }
 
@@ -125,21 +141,14 @@ export const adminHandlers = [
   http.get("/api/mock/scenario", () => {
     return HttpResponse.json({
       active: activeScenario,
-      available: ["default", "event-day", "auth-signed-out", "auth-forbidden", "auth-expired", "auth-invalid"],
+      available: availableMockScenarios,
     });
   }),
 
   http.post("/api/mock/scenario", async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { scenario?: string };
     const scenario = body.scenario as MockScenario | undefined;
-    const availableScenarios = new Set<MockScenario>([
-      "default",
-      "event-day",
-      "auth-signed-out",
-      "auth-forbidden",
-      "auth-expired",
-      "auth-invalid",
-    ]);
+    const availableScenarios = new Set<MockScenario>(availableMockScenarios);
     if (!scenario || !availableScenarios.has(scenario)) {
       return HttpResponse.json(
         {
