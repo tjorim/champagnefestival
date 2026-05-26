@@ -2,7 +2,12 @@ import { http, HttpResponse } from "msw";
 import { editions, events, resetEditionStore, type SeedEdition, type SeedEvent } from "../data/editionStore";
 import { seedExhibitors } from "../data/exhibitors";
 import { seedPeople } from "../data/people";
-import { sharedStore, resetSharedStore } from "../data/registrations";
+import {
+  type RegistrationScenario,
+  sharedStore,
+  resetSharedStore,
+  setRegistrationScenario,
+} from "../data/registrations";
 import {
   seedAreas,
   seedLayouts,
@@ -22,17 +27,90 @@ let tables: Record<string, unknown>[] = structuredClone(seedTables);
 let layouts: Record<string, unknown>[] = structuredClone(seedLayouts);
 let areas: Record<string, unknown>[] = structuredClone(seedAreas);
 
-/**
- * In production, authentication is handled by SuperTokens session cookies set
- * by the SuperTokens backend. The SDK intercepts fetch calls and attaches the
- * session cookie automatically, so there is no Authorization header to validate
- * here. This mock simulates a valid session by always returning null (no error).
- *
- * Trade-off: tests cannot verify that protected endpoints reject unauthenticated
- * requests — that behaviour is covered by the real backend's integration tests.
- */
-function requireAuth(_request: Request): HttpResponse<null> | null {
+const validAdminTokens = new Set(["dev-token", "mock-access-token"]);
+type AuthScenario = "signed-out" | "forbidden" | "expired" | "invalid";
+type ForcedAuthScenario = "default" | AuthScenario;
+type MockScenario = "default" | RegistrationScenario | `auth-${AuthScenario}`;
+
+let activeScenario: MockScenario = "default";
+let forcedAuthScenario: ForcedAuthScenario = "default";
+
+function authError(status: number, detail: string): HttpResponse<{ detail: string }> {
+  return HttpResponse.json({ detail }, { status });
+}
+
+function parseBearerToken(request: Request): string | null {
+  const header = request.headers.get("authorization");
+  if (!header) return null;
+  const [scheme, token] = header.split(" ");
+  if (!scheme || !token || scheme.toLowerCase() !== "bearer") return null;
+  return token;
+}
+
+function requireAuth(request: Request): HttpResponse<{ detail: string }> | null {
+  if (forcedAuthScenario === "signed-out") {
+    return authError(401, "Not authenticated");
+  }
+  if (forcedAuthScenario === "forbidden") {
+    return authError(403, "Forbidden");
+  }
+  if (forcedAuthScenario === "expired") {
+    return authError(401, "Token expired");
+  }
+  if (forcedAuthScenario === "invalid") {
+    return authError(401, "Invalid token");
+  }
+
+  const token = parseBearerToken(request);
+  if (!token) return authError(401, "Not authenticated");
+  if (token === "forbidden-token") return authError(403, "Forbidden");
+  if (token === "expired-token") return authError(401, "Token expired");
+  if (token === "invalid-token") return authError(401, "Invalid token");
+  if (!validAdminTokens.has(token)) return authError(401, "Invalid token");
+
   return null;
+}
+
+function applyMockScenario(scenario: MockScenario): void {
+  activeScenario = scenario;
+  forcedAuthScenario = "default";
+
+  if (scenario === "default") {
+    resetSharedStore();
+    return;
+  }
+
+  if (scenario === "event-day") {
+    setRegistrationScenario("event-day");
+    return;
+  }
+
+  if (scenario.startsWith("auth-")) {
+    forcedAuthScenario = scenario.slice(5) as AuthScenario;
+    return;
+  }
+
+  setRegistrationScenario(scenario as RegistrationScenario);
+}
+
+function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
+  const byTableId = new Map<string, string[]>();
+
+  for (const registration of sharedStore.registrations) {
+    const tableId =
+      typeof registration.table_id === "string" && registration.table_id.length > 0
+        ? registration.table_id
+        : null;
+    if (!tableId) continue;
+    const tableRegistrations = byTableId.get(tableId) ?? [];
+    tableRegistrations.push(String(registration.id ?? ""));
+    byTableId.set(tableId, tableRegistrations);
+  }
+
+  return tables.map((table) => ({
+    ...table,
+    registration_ids: byTableId.get(String(table.id ?? "")) ?? [],
+  }));
 }
 
 function uid(): string {
@@ -44,6 +122,37 @@ function now(): string {
 }
 
 export const adminHandlers = [
+  http.get("/api/mock/scenario", () => {
+    return HttpResponse.json({
+      active: activeScenario,
+      available: ["default", "event-day", "auth-signed-out", "auth-forbidden", "auth-expired", "auth-invalid"],
+    });
+  }),
+
+  http.post("/api/mock/scenario", async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { scenario?: string };
+    const scenario = body.scenario as MockScenario | undefined;
+    const availableScenarios = new Set<MockScenario>([
+      "default",
+      "event-day",
+      "auth-signed-out",
+      "auth-forbidden",
+      "auth-expired",
+      "auth-invalid",
+    ]);
+    if (!scenario || !availableScenarios.has(scenario)) {
+      return HttpResponse.json(
+        {
+          detail: "Unknown scenario",
+          available: [...availableScenarios],
+        },
+        { status: 400 },
+      );
+    }
+    applyMockScenario(scenario);
+    return HttpResponse.json({ ok: true, active: activeScenario });
+  }),
+
   // ──────────────────────────────────────────────────────────────
   // Auth validation: GET /api/registrations returns 200 or 401
   // ──────────────────────────────────────────────────────────────
@@ -663,7 +772,7 @@ export const adminHandlers = [
   http.get("/api/tables", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(tables);
+    return HttpResponse.json(tablesWithRegistrationAssignments());
   }),
 
   http.post("/api/tables", async ({ request }) => {
@@ -835,4 +944,6 @@ export function resetAdminStore(): void {
   tables = structuredClone(seedTables);
   layouts = structuredClone(seedLayouts);
   areas = structuredClone(seedAreas);
+  activeScenario = "default";
+  forcedAuthScenario = "default";
 }
