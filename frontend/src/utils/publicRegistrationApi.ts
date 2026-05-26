@@ -16,6 +16,8 @@ export interface CheckInData {
     productId: string;
     name: string;
     quantity: number;
+    deliveredQuantity: number;
+    remainingQuantity: number;
     price: number;
     category: OrderItemCategory;
     delivered: boolean;
@@ -61,6 +63,24 @@ function isOrderItemCategory(value: unknown): value is OrderItemCategory {
   return value === "champagne" || value === "food" || value === "other";
 }
 
+function normalizeDeliveredQuantities(item: {
+  quantity: number;
+  delivered: boolean;
+  delivered_quantity?: number | null;
+}): { deliveredQuantity: number; remainingQuantity: number; delivered: boolean } {
+  const quantity = Number.isFinite(item.quantity) ? Math.max(0, item.quantity) : 0;
+  const deliveredQuantityRaw = item.delivered_quantity ?? (item.delivered ? quantity : 0);
+  const deliveredQuantity = Number.isFinite(deliveredQuantityRaw)
+    ? Math.max(0, Math.min(quantity, deliveredQuantityRaw))
+    : 0;
+  const remainingQuantity = quantity - deliveredQuantity;
+  return {
+    deliveredQuantity,
+    remainingQuantity,
+    delivered: remainingQuantity === 0,
+  };
+}
+
 function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
   const rawOrders: unknown[] = data.pre_orders ?? [];
 
@@ -71,12 +91,12 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
     eventTitle: data.event_title ?? "",
     guestCount: data.guest_count ?? 1,
     preOrders: rawOrders.filter(isGuestOrderItemResponse).map((item) => ({
+      ...normalizeDeliveredQuantities(item),
       productId: item.product_id,
       name: item.name,
       quantity: item.quantity,
       price: item.price,
       category: isOrderItemCategory(item.category) ? item.category : "other",
-      delivered: item.delivered,
     })),
     notes: data.notes ?? "",
     accessibilityNote: data.accessibility_note ?? "",
@@ -151,6 +171,8 @@ export interface GuestRegistration {
     productId: string;
     name: string;
     quantity: number;
+    deliveredQuantity: number;
+    remainingQuantity: number;
     price: number;
     category: string;
     delivered: boolean;
@@ -161,6 +183,7 @@ interface GuestOrderItemResponse {
   product_id: string;
   name: string;
   quantity: number;
+  delivered_quantity?: number | null;
   price: number;
   category: string;
   delivered: boolean;
@@ -216,6 +239,7 @@ function isGuestOrderItemResponse(value: unknown): value is GuestOrderItemRespon
     typeof value.product_id === "string" &&
     typeof value.name === "string" &&
     typeof value.quantity === "number" &&
+    (value.delivered_quantity === undefined || value.delivered_quantity === null || typeof value.delivered_quantity === "number") &&
     typeof value.price === "number" &&
     typeof value.category === "string" &&
     typeof value.delivered === "boolean"
@@ -278,12 +302,12 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
     strapIssued: registration.strap_issued,
     createdAt: registration.created_at,
     preOrders: registration.pre_orders.map((item) => ({
+      ...normalizeDeliveredQuantities(item),
       productId: item.product_id,
       name: item.name,
       quantity: item.quantity,
       price: item.price,
       category: item.category,
-      delivered: item.delivered,
     })),
   }));
 }
@@ -345,6 +369,7 @@ export async function submitRegistration(payload: RegistrationFormData): Promise
         product_id: order.productId,
         name: order.name,
         quantity: order.quantity,
+        delivered_quantity: order.deliveredQuantity,
         price: order.price,
         category: order.category,
         delivered: order.delivered,

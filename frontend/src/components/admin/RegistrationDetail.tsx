@@ -40,11 +40,24 @@ export default function RegistrationDetail({
     ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}&token=${encodeURIComponent(registration.checkInToken ?? "")}`
     : "";
 
-  const handleToggleDelivered = useCallback(
-    (productId: string) => {
+  const handleAdjustDeliveredQuantity = useCallback(
+    (productId: string, delta: number) => {
       if (!registration) return;
       const updatedOrders = registration.preOrders.map((item) =>
-        item.productId === productId ? { ...item, delivered: !item.delivered } : item,
+        item.productId === productId
+          ? (() => {
+              const deliveredQuantity = Math.max(
+                0,
+                Math.min(item.quantity, item.deliveredQuantity + delta),
+              );
+              return {
+                ...item,
+                deliveredQuantity,
+                remainingQuantity: item.quantity - deliveredQuantity,
+                delivered: deliveredQuantity === item.quantity,
+              };
+            })()
+          : item,
       );
       onToggleDelivered(registration.id, updatedOrders);
     },
@@ -214,24 +227,32 @@ export default function RegistrationDetail({
                       ×{item.quantity}
                     </Badge>
                   </span>
-                  <Button
-                    size="sm"
-                    variant={item.delivered ? "success" : "outline-secondary"}
-                    onClick={() => handleToggleDelivered(item.productId)}
-                    title={item.delivered ? m.admin_mark_not_delivered() : m.admin_mark_delivered()}
-                  >
-                    {item.delivered ? (
-                      <>
-                        <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
-                        {m.admin_bottle_delivered()}
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-circle me-1" aria-hidden="true" />
-                        {m.admin_bottle_not_delivered()}
-                      </>
-                    )}
-                  </Button>
+                  <div className="d-flex align-items-center gap-2">
+                    <Badge bg={item.delivered ? "success" : "secondary"}>
+                      {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
+                    </Badge>
+                    <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
+                      {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline-secondary"
+                      onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
+                      disabled={item.deliveredQuantity <= 0}
+                      title={m.admin_mark_not_delivered()}
+                    >
+                      <i className="bi bi-dash" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={item.delivered ? "success" : "outline-success"}
+                      onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
+                      disabled={item.deliveredQuantity >= item.quantity}
+                      title={m.admin_mark_delivered()}
+                    >
+                      <i className="bi bi-plus" aria-hidden="true" />
+                    </Button>
+                  </div>
                 </ListGroup.Item>
               ))}
             </ListGroup>
