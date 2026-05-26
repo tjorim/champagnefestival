@@ -79,6 +79,7 @@ private fun RegistrationContent(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(registration.name, style = MaterialTheme.typography.headlineSmall)
                     Text(registration.event_title, style = MaterialTheme.typography.titleMedium)
+                    Text("Table: ${registration.table_name ?: "Unassigned"}")
                     Text("Party size: ${registration.guest_count}")
                     Text("Status: ${registration.status.replaceFirstChar(Char::titlecase)}")
                     Text(if (registration.checked_in) "Checked in" else "Not checked in")
@@ -114,7 +115,7 @@ private fun RegistrationContent(
                         Text(item.name)
                         Text("Quantity: ${item.quantity}")
                         Text("Category: ${item.category}")
-                        Text("Delivered: ${item.delivered_quantity ?: 0}")
+                        Text(if (item.delivered) "Delivery: Delivered" else "Delivery: Not delivered")
                     }
                 }
             }

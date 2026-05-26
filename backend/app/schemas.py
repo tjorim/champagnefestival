@@ -397,6 +397,8 @@ class CheckInGuestOut(BaseModel):
     name: str
     event_id: str
     event_title: str
+    table_id: str | None = None
+    table_name: str | None = None
     guest_count: int
     pre_orders: list[OrderItemOut]
     notes: str

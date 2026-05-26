@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_volunteer
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
-from app.models import Event, Person, Registration
+from app.models import Event, Person, Registration, Table
 from app.schemas import CheckInGuestOut
 from app.utils import registration_to_checkin_dict
 
@@ -33,11 +33,11 @@ router = APIRouter(
 @router.get("/registrations", response_model=list[CheckInGuestOut])
 async def search_registrations(
     db: AsyncSession = Depends(get_db),
-    q: str | None = Query(default=None, description="Search by guest name (partial, case-insensitive)"),
+    q: str | None = Query(default=None, description="Search by guest or table (partial, case-insensitive)"),
     event_id: str | None = Query(default=None, description="Filter to a specific event"),
     pagination: Pagination = Depends(),
 ) -> list[dict]:
-    """Search registrations by guest name for on-site volunteer check-in.
+    """Search registrations by guest or table for on-site volunteer check-in.
 
     Returns a minimal, PII-free view of matching registrations. No email,
     phone, or address fields are exposed. The volunteer can use this endpoint
@@ -47,9 +47,10 @@ async def search_registrations(
     Requires ``volunteer`` or ``admin`` role.
     """
     stmt = (
-        select(Registration)
+        select(Registration, Table.name)
         .join(Person, Registration.person_id == Person.id)
         .join(Event, Registration.event_id == Event.id)
+        .outerjoin(Table, Registration.table_id == Table.id)
         .options(selectinload(Registration.person), selectinload(Registration.event))
         .order_by(Person.name, Registration.created_at)
     )
@@ -65,14 +66,15 @@ async def search_registrations(
             stmt = stmt.where(
                 or_(
                     Person.name.ilike(q_like, escape="\\"),
+                    Table.name.ilike(q_like, escape="\\"),
                 )
             )
 
     stmt = apply_pagination(stmt, pagination)
-    rows = (await db.execute(stmt)).scalars().all()
+    rows = (await db.execute(stmt)).all()
 
     return [
-        registration_to_checkin_dict(r, r.person, r.event)  # type: ignore[arg-type]
-        for r in rows
+        registration_to_checkin_dict(r, r.person, r.event, table_name=table_name)  # type: ignore[arg-type]
+        for r, table_name in rows
         if r.person is not None and r.event is not None
     ]
