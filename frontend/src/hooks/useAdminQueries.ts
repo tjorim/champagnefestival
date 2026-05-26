@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
@@ -83,6 +83,10 @@ export function useAdminQueries({
     [adminQueryOptions.enabled, authHeaders, queryClient],
   );
   const registrationsLiveQuery = useLiveQuery(() => registrationsCollection, [registrationsCollection]);
+  const registrationsCollectionRef = useRef(registrationsCollection);
+  useEffect(() => {
+    registrationsCollectionRef.current = registrationsCollection;
+  }, [registrationsCollection]);
   const registrationsQuery = useMemo(
     () => ({
       data: registrationsLiveQuery.data,
@@ -95,9 +99,9 @@ export function useAdminQueries({
 
   useEffect(() => {
     if (isAuthenticated) return;
-    resetAdminRegistrationsCollection(registrationsCollection);
+    resetAdminRegistrationsCollection(registrationsCollectionRef.current);
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
-  }, [isAuthenticated, queryClient, registrationsCollection, registrationsQueryKey]);
+  }, [isAuthenticated, queryClient, registrationsQueryKey]);
   const tablesQuery = useQuery({
     queryKey: tablesQueryKey,
     queryFn: () => fetchTables(authHeaders),

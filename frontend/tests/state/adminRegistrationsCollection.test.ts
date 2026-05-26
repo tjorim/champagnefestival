@@ -7,6 +7,8 @@ import {
 } from "@/state/adminRegistrationsCollection";
 import { apiToRegistration } from "@/types/registrationMapper";
 
+const TEST_AUTH_HEADERS = { Authorization: "******" };
+
 function createTestCollection() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -17,7 +19,7 @@ function createTestCollection() {
   });
   const collection = createAdminRegistrationsCollection({
     queryClient,
-    authHeaders: () => ({ Authorization: "******" }),
+    authHeaders: () => TEST_AUTH_HEADERS,
     enabled: true,
   });
   return { collection, queryClient };
@@ -42,7 +44,7 @@ describe("admin registrations pilot collection", () => {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "******",
+        ...TEST_AUTH_HEADERS,
       },
       body: JSON.stringify({
         checked_in: true,
@@ -69,7 +71,7 @@ describe("admin registrations pilot collection", () => {
 
     const deletionResponse = await fetch("/api/registrations/reg-03", {
       method: "DELETE",
-      headers: { Authorization: "******" },
+      headers: TEST_AUTH_HEADERS,
     });
     expect(deletionResponse.status).toBe(204);
     collection.utils.writeDelete("reg-03");

@@ -33,7 +33,10 @@ export type AdminRegistrationsCollection = ReturnType<typeof createAdminRegistra
 export function resetAdminRegistrationsCollection(
   collection: AdminRegistrationsCollection,
 ): void {
-  const keys = [...collection.keys()];
-  if (keys.length === 0) return;
-  collection.utils.writeDelete(keys);
+  if (collection.size === 0) return;
+  collection.utils.writeBatch(() => {
+    for (const key of collection.keys()) {
+      collection.utils.writeDelete(key);
+    }
+  });
 }
