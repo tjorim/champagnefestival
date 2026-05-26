@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
 
@@ -60,7 +61,7 @@ fun GuestLookupScreen(
                     viewModel.search(query = query, eventId = eventId)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Search by guest name") },
+                label = { Text("Search by guest name or table") },
                 singleLine = true,
             )
             OutlinedTextField(
@@ -87,12 +88,26 @@ fun GuestLookupScreen(
 
 @Composable
 private fun LookupResults(
-    registrations: List<be.champagnefestival.android.data.model.CheckInGuestOut>,
+    registrations: List<CheckInGuestOut>,
     padding: PaddingValues,
 ) {
     if (registrations.isEmpty()) {
         Text("No registrations matched your search.")
         return
+    }
+
+    val checkedInCount = registrations.count { it.checked_in }
+    val undeliveredItems = registrations.sumOf { registration ->
+        registration.pre_orders.count { !it.delivered }
+    }
+
+    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Event-day summary")
+            Text("Guests in results: ${registrations.size}")
+            Text("Checked in: $checkedInCount")
+            Text("Undelivered items: $undeliveredItems")
+        }
     }
 
     LazyColumn(contentPadding = padding, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -101,8 +116,11 @@ private fun LookupResults(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(registration.name)
                     Text(registration.event_title)
+                    Text("Table: ${registration.table_name ?: registration.table_id ?: "Unassigned"}")
                     Text("Guests: ${registration.guest_count}")
                     Text(if (registration.checked_in) "Checked in" else "Pending check-in")
+                    val pendingItems = registration.pre_orders.count { !it.delivered }
+                    Text(if (pendingItems == 0) "All items delivered" else "Pending delivery items: $pendingItems")
                 }
             }
         }

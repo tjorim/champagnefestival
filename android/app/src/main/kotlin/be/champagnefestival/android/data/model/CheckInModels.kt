@@ -19,6 +19,8 @@ data class CheckInGuestOut(
     val name: String,
     val event_id: String,
     val event_title: String,
+    val table_id: String? = null,
+    val table_name: String? = null,
     val guest_count: Int,
     val pre_orders: List<OrderItem> = emptyList(),
     val notes: String = "",

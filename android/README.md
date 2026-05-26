@@ -76,14 +76,14 @@ The Android app consumes these backend endpoints:
 | `GET`  | `/api/events` | volunteer+ Bearer | Event list |
 | `POST` | `/api/check-in/{id}/lookup` | token-gated | Look up registration by QR token |
 | `POST` | `/api/check-in/{id}` | token-gated | Mark guest checked in |
-| `GET`  | `/api/volunteer/registrations?q=` | volunteer+ Bearer | Guest name search |
+| `GET`  | `/api/volunteer/registrations?q=` | volunteer+ Bearer | Guest/table lookup with order + delivery state |
 
 ## Screens
 
 - **Login** — OIDC sign-in flow
 - **Active Edition** — current/upcoming edition overview with event list
 - **QR Scan** — CameraX live scanner, parses `{registrationId}:{token}` QR payloads
-- **Guest Lookup** — debounced name search against the volunteer API
-- **Registration Detail** — guest info, pre-orders, check-in status, "Check In" action
+- **Guest Lookup** — debounced guest/table search with check-in + delivery summary
+- **Registration Detail** — guest info, table, pre-orders, delivery state, check-in action
 - **Check-in Confirmation** — success / already-checked-in result with guest name
 - **Settings** — API URL override, OIDC info, app version, logout
