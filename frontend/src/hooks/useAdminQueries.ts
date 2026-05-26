@@ -1,9 +1,13 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
+import {
+  createAdminRegistrationsCollection,
+  resetAdminRegistrationsCollection,
+} from "@/state/adminRegistrationsCollection";
 import { queryKeys } from "@/utils/queryKeys";
 import {
-  fetchRegistrations,
   fetchTables,
   fetchVenues,
   fetchRooms,
@@ -69,11 +73,31 @@ export function useAdminQueries({
     retry: false as const,
   };
 
-  const registrationsQuery = useQuery({
-    queryKey: registrationsQueryKey,
-    queryFn: () => fetchRegistrations(authHeaders),
-    ...adminQueryOptions,
-  });
+  const registrationsCollection = useMemo(
+    () =>
+      createAdminRegistrationsCollection({
+        queryClient,
+        authHeaders,
+        enabled: adminQueryOptions.enabled,
+      }),
+    [adminQueryOptions.enabled, authHeaders, queryClient],
+  );
+  const registrationsLiveQuery = useLiveQuery(() => registrationsCollection, [registrationsCollection]);
+  const registrationsQuery = useMemo(
+    () => ({
+      data: registrationsLiveQuery.data,
+      error: registrationsCollection.utils.lastError ?? null,
+      isPending: registrationsLiveQuery.isLoading,
+      isFetching: registrationsCollection.utils.isFetching,
+    }),
+    [registrationsCollection, registrationsLiveQuery.data, registrationsLiveQuery.isLoading],
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    resetAdminRegistrationsCollection(registrationsCollection);
+    void queryClient.removeQueries({ queryKey: registrationsQueryKey });
+  }, [isAuthenticated, queryClient, registrationsCollection, registrationsQueryKey]);
   const tablesQuery = useQuery({
     queryKey: tablesQueryKey,
     queryFn: () => fetchTables(authHeaders),
