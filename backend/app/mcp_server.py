@@ -69,11 +69,7 @@ class ChampagneFestivalMcpBackend:
             return ROLE_PUBLIC
         claims: dict[str, Any] = getattr(token, "claims", {})
         realm_access = claims.get("realm_access")
-        roles: list[str] = (
-            realm_access.get("roles", [])
-            if isinstance(realm_access, dict)
-            else []
-        )
+        roles: list[str] = realm_access.get("roles", []) if isinstance(realm_access, dict) else []
         if not isinstance(roles, list):
             roles = []
         if ROLE_ADMIN in roles:
@@ -89,9 +85,7 @@ class ChampagneFestivalMcpBackend:
         """
         role = self._resolve_role()
         if role == ROLE_PUBLIC:
-            raise PermissionError(
-                "Authentication required: this tool is only available to volunteers and admins."
-            )
+            raise PermissionError("Authentication required: this tool is only available to volunteers and admins.")
         return role
 
     # ------------------------------------------------------------------
@@ -102,11 +96,7 @@ class ChampagneFestivalMcpBackend:
         """Return the current or next upcoming active edition, or ``None``."""
         from sqlalchemy.orm import selectinload
 
-        result = await db.execute(
-            select(Edition)
-            .options(selectinload(Edition.events))
-            .where(Edition.active.is_(True))
-        )
+        result = await db.execute(select(Edition).options(selectinload(Edition.events)).where(Edition.active.is_(True)))
         editions: list[Edition] = list(result.scalars().all())
         if not editions:
             return None
@@ -116,12 +106,14 @@ class ChampagneFestivalMcpBackend:
             return max((ev.date for ev in edition.events), default=None)
 
         upcoming = [
-            e for e in editions if _end_date(e) is not None and _end_date(e) >= today  # type: ignore[operator]
+            e
+            for e in editions
+            if _end_date(e) is not None and _end_date(e) >= today  # type: ignore[operator]
         ]
         if not upcoming:
             return None
         # Return soonest upcoming edition
-        return min(upcoming, key=lambda e: (_end_date(e) or today))
+        return min(upcoming, key=lambda e: _end_date(e) or today)
 
     @staticmethod
     def _edition_dict(edition: Edition) -> dict:
@@ -204,9 +196,7 @@ class ChampagneFestivalMcpBackend:
         }
 
     @staticmethod
-    def _registration_base_dict(
-        reg: Registration, person: Person, *, role: str
-    ) -> dict:
+    def _registration_base_dict(reg: Registration, person: Person, *, role: str) -> dict:
         return {
             "id": reg.id,
             "event_id": reg.event_id,
@@ -255,9 +245,7 @@ class ChampagneFestivalMcpBackend:
         async with self.session_factory() as db:
             if edition_id:
                 result = await db.execute(
-                    select(Edition)
-                    .options(selectinload(Edition.events))
-                    .where(Edition.id == edition_id)
+                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
                 )
                 edition: Edition | None = result.scalar_one_or_none()
                 if edition is None:
@@ -288,9 +276,7 @@ class ChampagneFestivalMcpBackend:
         async with self.session_factory() as db:
             if edition_id:
                 result = await db.execute(
-                    select(Edition)
-                    .options(selectinload(Edition.events))
-                    .where(Edition.id == edition_id)
+                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
                 )
                 edition: Edition | None = result.scalar_one_or_none()
                 if edition is None:
@@ -301,16 +287,12 @@ class ChampagneFestivalMcpBackend:
                     return {"rooms": [], "message": "No active edition found."}
 
             # Load venue
-            venue_result = await db.execute(
-                select(Venue).where(Venue.id == edition.venue_id)
-            )
+            venue_result = await db.execute(select(Venue).where(Venue.id == edition.venue_id))
             venue: Venue | None = venue_result.scalar_one_or_none()
 
             # Load layouts for this edition
             layouts_result = await db.execute(
-                select(Layout)
-                .options(selectinload(Layout.room))
-                .where(Layout.edition_id == edition.id)
+                select(Layout).options(selectinload(Layout.room)).where(Layout.edition_id == edition.id)
             )
             layouts: list[Layout] = list(layouts_result.scalars().all())
 
@@ -409,16 +391,12 @@ class ChampagneFestivalMcpBackend:
         role = self._require_volunteer()
 
         async with self.session_factory() as db:
-            result = await db.execute(
-                select(Registration).where(Registration.id == registration_id)
-            )
+            result = await db.execute(select(Registration).where(Registration.id == registration_id))
             reg: Registration | None = result.scalar_one_or_none()
             if reg is None:
                 return {"registration": None, "message": f"Registration '{registration_id}' not found."}
 
-            person_result = await db.execute(
-                select(Person).where(Person.id == reg.person_id)
-            )
+            person_result = await db.execute(select(Person).where(Person.id == reg.person_id))
             person: Person | None = person_result.scalar_one_or_none()
             if person is None:
                 return {"registration": None, "message": "Person not found for this registration."}
@@ -444,9 +422,7 @@ class ChampagneFestivalMcpBackend:
 
         async with self.session_factory() as db:
             if table_id:
-                tables_result = await db.execute(
-                    select(Table).where(Table.id == table_id)
-                )
+                tables_result = await db.execute(select(Table).where(Table.id == table_id))
                 tables: list[Table] = list(tables_result.scalars().all())
                 if not tables:
                     return {"tables": [], "message": f"Table '{table_id}' not found."}
@@ -456,9 +432,7 @@ class ChampagneFestivalMcpBackend:
                 if edition is None:
                     return {"tables": [], "message": "No active edition found."}
 
-                layouts_result = await db.execute(
-                    select(Layout).where(Layout.edition_id == edition.id)
-                )
+                layouts_result = await db.execute(select(Layout).where(Layout.edition_id == edition.id))
                 layout_ids = [lay.id for lay in layouts_result.scalars().all()]
                 if not layout_ids:
                     return {"tables": [], "edition_id": edition.id}
@@ -473,18 +447,14 @@ class ChampagneFestivalMcpBackend:
 
             # Load registrations for these tables
             table_ids = [t.id for t in tables]
-            regs_result = await db.execute(
-                select(Registration).where(Registration.table_id.in_(table_ids))
-            )
+            regs_result = await db.execute(select(Registration).where(Registration.table_id.in_(table_ids)))
             regs: list[Registration] = list(regs_result.scalars().all())
 
             # Load persons for these registrations
             person_ids = list({reg.person_id for reg in regs})
             persons: dict[str, Person] = {}
             if person_ids:
-                persons_result = await db.execute(
-                    select(Person).where(Person.id.in_(person_ids))
-                )
+                persons_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
                 persons = {p.id: p for p in persons_result.scalars().all()}
 
             # Build table → registrations map
@@ -549,17 +519,13 @@ class ChampagneFestivalMcpBackend:
                 return {"table_id": table_id, "registrations": [], "message": f"Table '{table_id}' not found."}
 
             # Load registrations at this table
-            regs_result = await db.execute(
-                select(Registration).where(Registration.table_id == table_id)
-            )
+            regs_result = await db.execute(select(Registration).where(Registration.table_id == table_id))
             regs: list[Registration] = list(regs_result.scalars().all())
 
             person_ids = list({reg.person_id for reg in regs})
             persons: dict[str, Person] = {}
             if person_ids:
-                persons_result = await db.execute(
-                    select(Person).where(Person.id.in_(person_ids))
-                )
+                persons_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
                 persons = {p.id: p for p in persons_result.scalars().all()}
 
             reg_summaries = []
@@ -607,16 +573,16 @@ class ChampagneFestivalMcpBackend:
         self._require_volunteer()
 
         async with self.session_factory() as db:
-            result = await db.execute(
-                select(Registration).where(Registration.id == registration_id)
-            )
+            result = await db.execute(select(Registration).where(Registration.id == registration_id))
             reg: Registration | None = result.scalar_one_or_none()
             if reg is None:
-                return {"registration_id": registration_id, "orders": [], "message": f"Registration '{registration_id}' not found."}
+                return {
+                    "registration_id": registration_id,
+                    "orders": [],
+                    "message": f"Registration '{registration_id}' not found.",
+                }
 
-            person_result = await db.execute(
-                select(Person).where(Person.id == reg.person_id)
-            )
+            person_result = await db.execute(select(Person).where(Person.id == reg.person_id))
             person: Person | None = person_result.scalar_one_or_none()
 
             orders = [self._order_item_dict(item) for item in (reg.pre_orders or [])]
@@ -660,9 +626,7 @@ class ChampagneFestivalMcpBackend:
         async with self.session_factory() as db:
             if edition_id:
                 edition_result = await db.execute(
-                    select(Edition)
-                    .options(selectinload(Edition.events))
-                    .where(Edition.id == edition_id)
+                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
                 )
                 edition: Edition | None = edition_result.scalar_one_or_none()
                 if edition is None:
@@ -677,9 +641,7 @@ class ChampagneFestivalMcpBackend:
             if not event_ids:
                 return {"edition_id": edition.id, "products": [], "message": "No events found in this edition."}
 
-            regs_result = await db.execute(
-                select(Registration).where(Registration.event_id.in_(event_ids))
-            )
+            regs_result = await db.execute(select(Registration).where(Registration.event_id.in_(event_ids)))
             regs: list[Registration] = list(regs_result.scalars().all())
 
             # Aggregate champagne order items by product
@@ -725,9 +687,7 @@ class ChampagneFestivalMcpBackend:
                 "products": products,
             }
 
-    async def get_undelivered_champagne_by_table(
-        self, edition_id: str | None = None
-    ) -> dict:
+    async def get_undelivered_champagne_by_table(self, edition_id: str | None = None) -> dict:
         """Return tables that have at least one undelivered champagne order.
 
         Requires the ``volunteer`` or ``admin`` role.
@@ -744,9 +704,7 @@ class ChampagneFestivalMcpBackend:
         async with self.session_factory() as db:
             if edition_id:
                 edition_result = await db.execute(
-                    select(Edition)
-                    .options(selectinload(Edition.events))
-                    .where(Edition.id == edition_id)
+                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
                 )
                 edition: Edition | None = edition_result.scalar_one_or_none()
                 if edition is None:
@@ -789,7 +747,9 @@ class ChampagneFestivalMcpBackend:
                         "pending_registrations": [],
                     }
                 pending_table_map[tbl_id]["pending_lines"] += len(pending_items)
-                pending_table_map[tbl_id]["pending_quantity"] += sum(item["remaining_quantity"] for item in pending_items)
+                pending_table_map[tbl_id]["pending_quantity"] += sum(
+                    item["remaining_quantity"] for item in pending_items
+                )
                 pending_table_map[tbl_id]["pending_registrations"].append(reg.id)
 
             if not pending_table_map:
@@ -797,9 +757,7 @@ class ChampagneFestivalMcpBackend:
 
             # Load table names
             table_ids = list(pending_table_map.keys())
-            tables_result = await db.execute(
-                select(Table).where(Table.id.in_(table_ids))
-            )
+            tables_result = await db.execute(select(Table).where(Table.id.in_(table_ids)))
             table_name_map = {t.id: t.name for t in tables_result.scalars().all()}
 
             tables = []
@@ -835,9 +793,7 @@ class ChampagneFestivalMcpBackend:
         async with self.session_factory() as db:
             if edition_id:
                 edition_result = await db.execute(
-                    select(Edition)
-                    .options(selectinload(Edition.events))
-                    .where(Edition.id == edition_id)
+                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
                 )
                 edition: Edition | None = edition_result.scalar_one_or_none()
                 if edition is None:
@@ -858,9 +814,7 @@ class ChampagneFestivalMcpBackend:
                     "straps_issued": 0,
                 }
 
-            regs_result = await db.execute(
-                select(Registration).where(Registration.event_id.in_(event_ids))
-            )
+            regs_result = await db.execute(select(Registration).where(Registration.event_id.in_(event_ids)))
             regs: list[Registration] = list(regs_result.scalars().all())
 
             total = len(regs)

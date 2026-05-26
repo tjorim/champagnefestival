@@ -153,17 +153,21 @@ def _make_registration(
     r.status = status
     r.payment_status = payment_status
     r.accessibility_note = accessibility_note
-    r.pre_orders = pre_orders if pre_orders is not None else [
-        {
-            "product_id": "champ-std",
-            "name": "Standard Champagne",
-            "quantity": 2,
-            "delivered_quantity": 0,
-            "price": 65.0,
-            "category": "champagne",
-            "delivered": False,
-        }
-    ]
+    r.pre_orders = (
+        pre_orders
+        if pre_orders is not None
+        else [
+            {
+                "product_id": "champ-std",
+                "name": "Standard Champagne",
+                "quantity": 2,
+                "delivered_quantity": 0,
+                "price": 65.0,
+                "category": "champagne",
+                "delivered": False,
+            }
+        ]
+    )
     return r
 
 
@@ -648,10 +652,26 @@ class TestGetTableOrderSummary:
     @pytest.mark.anyio
     async def test_returns_order_summary(self):
         table = _make_table()
-        reg = _make_registration(pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 2, "price": 65.0, "category": "champagne", "delivered": False},
-            {"product_id": "food-1", "name": "Cheese Board", "quantity": 1, "price": 15.0, "category": "food", "delivered": True},
-        ])
+        reg = _make_registration(
+            pre_orders=[
+                {
+                    "product_id": "champ-std",
+                    "name": "Standard",
+                    "quantity": 2,
+                    "price": 65.0,
+                    "category": "champagne",
+                    "delivered": False,
+                },
+                {
+                    "product_id": "food-1",
+                    "name": "Cheese Board",
+                    "quantity": 1,
+                    "price": 15.0,
+                    "category": "food",
+                    "delivered": True,
+                },
+            ]
+        )
         person = _make_person()
         db = _make_db_execute([[table], [reg], [person]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
@@ -670,9 +690,18 @@ class TestGetTableOrderSummary:
     @pytest.mark.anyio
     async def test_all_delivered_true_when_all_orders_delivered(self):
         table = _make_table()
-        reg = _make_registration(pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 2, "price": 65.0, "category": "champagne", "delivered": True},
-        ])
+        reg = _make_registration(
+            pre_orders=[
+                {
+                    "product_id": "champ-std",
+                    "name": "Standard",
+                    "quantity": 2,
+                    "price": 65.0,
+                    "category": "champagne",
+                    "delivered": True,
+                },
+            ]
+        )
         person = _make_person()
         db = _make_db_execute([[table], [reg], [person]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
@@ -729,10 +758,26 @@ class TestGetGuestOrderStatus:
 
     @pytest.mark.anyio
     async def test_returns_delivery_state(self):
-        reg = _make_registration(pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 2, "price": 65.0, "category": "champagne", "delivered": False},
-            {"product_id": "champ-prem", "name": "Premium", "quantity": 1, "price": 90.0, "category": "champagne", "delivered": True},
-        ])
+        reg = _make_registration(
+            pre_orders=[
+                {
+                    "product_id": "champ-std",
+                    "name": "Standard",
+                    "quantity": 2,
+                    "price": 65.0,
+                    "category": "champagne",
+                    "delivered": False,
+                },
+                {
+                    "product_id": "champ-prem",
+                    "name": "Premium",
+                    "quantity": 1,
+                    "price": 90.0,
+                    "category": "champagne",
+                    "delivered": True,
+                },
+            ]
+        )
         person = _make_person()
         db = _make_db_execute([[reg], [person]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
@@ -748,9 +793,18 @@ class TestGetGuestOrderStatus:
 
     @pytest.mark.anyio
     async def test_non_champagne_orders_excluded_from_champagne_counts(self):
-        reg = _make_registration(pre_orders=[
-            {"product_id": "food-1", "name": "Cheese Board", "quantity": 1, "price": 15.0, "category": "food", "delivered": False},
-        ])
+        reg = _make_registration(
+            pre_orders=[
+                {
+                    "product_id": "food-1",
+                    "name": "Cheese Board",
+                    "quantity": 1,
+                    "price": 15.0,
+                    "category": "food",
+                    "delivered": False,
+                },
+            ]
+        )
         person = _make_person()
         db = _make_db_execute([[reg], [person]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
@@ -786,12 +840,33 @@ class TestGetChampagneDeliverySummary:
     async def test_aggregates_delivery_by_product(self):
         ev = _make_event(event_date=date(2099, 3, 21))
         edition = _make_edition(events=[ev])
-        reg1 = _make_registration(reg_id="reg-1", pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 2, "price": 65.0, "category": "champagne", "delivered": True},
-        ])
-        reg2 = _make_registration(reg_id="reg-2", pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 3, "delivered_quantity": 1, "price": 65.0, "category": "champagne", "delivered": False},
-        ])
+        reg1 = _make_registration(
+            reg_id="reg-1",
+            pre_orders=[
+                {
+                    "product_id": "champ-std",
+                    "name": "Standard",
+                    "quantity": 2,
+                    "price": 65.0,
+                    "category": "champagne",
+                    "delivered": True,
+                },
+            ],
+        )
+        reg2 = _make_registration(
+            reg_id="reg-2",
+            pre_orders=[
+                {
+                    "product_id": "champ-std",
+                    "name": "Standard",
+                    "quantity": 3,
+                    "delivered_quantity": 1,
+                    "price": 65.0,
+                    "category": "champagne",
+                    "delivered": False,
+                },
+            ],
+        )
         db = _make_db_execute([[edition], [reg1, reg2]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
         token = _make_access_token(["volunteer"])
@@ -813,9 +888,18 @@ class TestGetChampagneDeliverySummary:
     async def test_non_champagne_items_excluded(self):
         ev = _make_event(event_date=date(2099, 3, 21))
         edition = _make_edition(events=[ev])
-        reg = _make_registration(pre_orders=[
-            {"product_id": "food-1", "name": "Cheese", "quantity": 1, "price": 15.0, "category": "food", "delivered": False},
-        ])
+        reg = _make_registration(
+            pre_orders=[
+                {
+                    "product_id": "food-1",
+                    "name": "Cheese",
+                    "quantity": 1,
+                    "price": 15.0,
+                    "category": "food",
+                    "delivered": False,
+                },
+            ]
+        )
         db = _make_db_execute([[edition], [reg]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
         token = _make_access_token(["volunteer"])
@@ -849,9 +933,18 @@ class TestGetUndeliveredChampagneByTable:
     async def test_all_delivered_returns_empty_tables(self):
         ev = _make_event(event_date=date(2099, 3, 21))
         edition = _make_edition(events=[ev])
-        reg = _make_registration(pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 1, "price": 65.0, "category": "champagne", "delivered": True},
-        ])
+        reg = _make_registration(
+            pre_orders=[
+                {
+                    "product_id": "champ-std",
+                    "name": "Standard",
+                    "quantity": 1,
+                    "price": 65.0,
+                    "category": "champagne",
+                    "delivered": True,
+                },
+            ]
+        )
         db = _make_db_execute([[edition], [reg]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
         token = _make_access_token(["volunteer"])
@@ -864,9 +957,19 @@ class TestGetUndeliveredChampagneByTable:
     async def test_returns_tables_with_pending_orders(self):
         ev = _make_event(event_date=date(2099, 3, 21))
         edition = _make_edition(events=[ev])
-        reg = _make_registration(table_id="tbl-1", pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 2, "price": 65.0, "category": "champagne", "delivered": False},
-        ])
+        reg = _make_registration(
+            table_id="tbl-1",
+            pre_orders=[
+                {
+                    "product_id": "champ-std",
+                    "name": "Standard",
+                    "quantity": 2,
+                    "price": 65.0,
+                    "category": "champagne",
+                    "delivered": False,
+                },
+            ],
+        )
         table = _make_table(table_id="tbl-1", name="Table A")
         db = _make_db_execute([[edition], [reg], [table]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))

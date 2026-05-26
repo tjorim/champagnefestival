@@ -49,9 +49,7 @@ def test_order_item_rejects_delivered_quantity_above_ordered_quantity():
 
 
 def test_migration_normalizes_legacy_and_partial_delivery_data():
-    migration_path = (
-        Path(__file__).resolve().parents[1] / "alembic" / "versions" / "003_partial_delivery_quantity.py"
-    )
+    migration_path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "003_partial_delivery_quantity.py"
     spec = importlib.util.spec_from_file_location("alembic_003_partial_delivery_quantity", migration_path)
     assert spec is not None
     assert spec.loader is not None
