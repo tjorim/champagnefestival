@@ -172,13 +172,30 @@ class ChampagneFestivalMcpBackend:
 
     @staticmethod
     def _order_item_dict(item: dict) -> dict:
+        try:
+            quantity = int(item.get("quantity", 0))
+        except (TypeError, ValueError):
+            quantity = 0
+        quantity = max(quantity, 0)
+
+        delivered_flag = bool(item.get("delivered", False))
+        delivered_quantity_raw = item.get("delivered_quantity", quantity if delivered_flag else 0)
+        try:
+            delivered_quantity = int(delivered_quantity_raw)
+        except (TypeError, ValueError):
+            delivered_quantity = 0
+        delivered_quantity = max(0, min(delivered_quantity, quantity))
+        remaining_quantity = quantity - delivered_quantity
+
         return {
             "product_id": item.get("product_id", ""),
             "name": item.get("name", ""),
             "category": item.get("category", ""),
-            "quantity": item.get("quantity", 0),
+            "quantity": quantity,
             "price": item.get("price", 0.0),
-            "delivered": bool(item.get("delivered", False)),
+            "delivered_quantity": delivered_quantity,
+            "remaining_quantity": remaining_quantity,
+            "delivered": remaining_quantity == 0,
         }
 
     @staticmethod
@@ -527,7 +544,7 @@ class ChampagneFestivalMcpBackend:
         """Return the order summary for all registrations at a specific table.
 
         Lists each registration's order items (champagne, food, other) with
-        line-level delivered/not-delivered state.
+        ordered/delivered/remaining quantities per line.
         Requires the ``volunteer`` or ``admin`` role.
 
         Parameters
@@ -562,6 +579,9 @@ class ChampagneFestivalMcpBackend:
             for reg in regs:
                 person = persons.get(reg.person_id)
                 orders = [self._order_item_dict(item) for item in (reg.pre_orders or [])]
+                ordered_quantity_total = sum(o["quantity"] for o in orders)
+                delivered_quantity_total = sum(o["delivered_quantity"] for o in orders)
+                remaining_quantity_total = sum(o["remaining_quantity"] for o in orders)
                 reg_summaries.append(
                     {
                         "registration_id": reg.id,
@@ -571,7 +591,10 @@ class ChampagneFestivalMcpBackend:
                         "checked_in": reg.checked_in,
                         "orders": orders,
                         "order_count": len(orders),
-                        "all_delivered": all(o["delivered"] for o in orders) if orders else True,
+                        "ordered_quantity_total": ordered_quantity_total,
+                        "delivered_quantity_total": delivered_quantity_total,
+                        "remaining_quantity_total": remaining_quantity_total,
+                        "all_delivered": all(o["remaining_quantity"] == 0 for o in orders) if orders else True,
                     }
                 )
 
@@ -585,9 +608,8 @@ class ChampagneFestivalMcpBackend:
     async def get_guest_order_status(self, registration_id: str) -> dict:
         """Return the order status for a specific registration.
 
-        Shows each order line (champagne, food, other) and its current
-        ``delivered`` (boolean) state. Partial delivery counts are not
-        tracked per line — only delivered-or-not is available.
+        Shows each order line (champagne, food, other) with ordered, delivered,
+        and remaining quantities.
         Requires the ``volunteer`` or ``admin`` role.
 
         Parameters
@@ -614,6 +636,9 @@ class ChampagneFestivalMcpBackend:
             champagne_orders = [o for o in orders if o["category"] == "champagne"]
             delivered = [o for o in champagne_orders if o["delivered"]]
             pending = [o for o in champagne_orders if not o["delivered"]]
+            champagne_quantity_ordered = sum(o["quantity"] for o in champagne_orders)
+            champagne_quantity_delivered = sum(o["delivered_quantity"] for o in champagne_orders)
+            champagne_quantity_pending = sum(o["remaining_quantity"] for o in champagne_orders)
 
             return {
                 "registration_id": reg.id,
@@ -624,18 +649,16 @@ class ChampagneFestivalMcpBackend:
                 "champagne_lines_total": len(champagne_orders),
                 "champagne_lines_delivered": len(delivered),
                 "champagne_lines_pending": len(pending),
-                "note": (
-                    "Delivery state is per order line (delivered: true/false). "
-                    "Partial bottle delivery within a line is not tracked."
-                ),
+                "champagne_quantity_ordered": champagne_quantity_ordered,
+                "champagne_quantity_delivered": champagne_quantity_delivered,
+                "champagne_quantity_pending": champagne_quantity_pending,
             }
 
     async def get_champagne_delivery_summary(self, edition_id: str | None = None) -> dict:
         """Return a champagne delivery summary across all registrations for an edition.
 
-        Aggregates delivery state by product. Because delivery is tracked per
-        order line (boolean), this reports delivered_lines and pending_lines,
-        not exact bottle counts.
+        Aggregates delivery state by product and reports exact ordered,
+        delivered, and remaining bottle counts.
         Requires the ``volunteer`` or ``admin`` role.
 
         Parameters
@@ -676,12 +699,15 @@ class ChampagneFestivalMcpBackend:
             product_stats: dict[str, dict] = {}
             for reg in regs:
                 for item in reg.pre_orders or []:
-                    if item.get("category") != "champagne":
+                    normalized_item = self._order_item_dict(item)
+                    if normalized_item["category"] != "champagne":
                         continue
-                    pid = item.get("product_id", "")
-                    name = item.get("name", "")
-                    qty = int(item.get("quantity", 0))
-                    delivered = bool(item.get("delivered", False))
+                    pid = normalized_item["product_id"]
+                    name = normalized_item["name"]
+                    qty = normalized_item["quantity"]
+                    delivered_qty = normalized_item["delivered_quantity"]
+                    remaining_qty = normalized_item["remaining_quantity"]
+                    delivered = remaining_qty == 0
 
                     if pid not in product_stats:
                         product_stats[pid] = {
@@ -690,6 +716,7 @@ class ChampagneFestivalMcpBackend:
                             "ordered_lines": 0,
                             "delivered_lines": 0,
                             "pending_lines": 0,
+                            "partially_delivered_lines": 0,
                             "ordered_quantity": 0,
                             "delivered_quantity": 0,
                             "pending_quantity": 0,
@@ -698,20 +725,17 @@ class ChampagneFestivalMcpBackend:
                     product_stats[pid]["ordered_quantity"] += qty
                     if delivered:
                         product_stats[pid]["delivered_lines"] += 1
-                        product_stats[pid]["delivered_quantity"] += qty
                     else:
                         product_stats[pid]["pending_lines"] += 1
-                        product_stats[pid]["pending_quantity"] += qty
+                        if delivered_qty > 0:
+                            product_stats[pid]["partially_delivered_lines"] += 1
+                    product_stats[pid]["delivered_quantity"] += delivered_qty
+                    product_stats[pid]["pending_quantity"] += remaining_qty
 
             products = sorted(product_stats.values(), key=lambda x: x["product_name"])
             return {
                 "edition_id": edition.id,
                 "products": products,
-                "note": (
-                    "Quantities reflect ordered totals per line. "
-                    "Delivery is tracked as delivered/not-delivered per order line, "
-                    "not as partial bottle counts within a line."
-                ),
             }
 
     async def get_undelivered_champagne_by_table(
@@ -762,11 +786,11 @@ class ChampagneFestivalMcpBackend:
             for reg in regs:
                 if not reg.table_id:
                     continue
-                pending_items = [
-                    item
-                    for item in (reg.pre_orders or [])
-                    if item.get("category") == "champagne" and not item.get("delivered", False)
-                ]
+                pending_items = []
+                for item in reg.pre_orders or []:
+                    normalized_item = self._order_item_dict(item)
+                    if normalized_item["category"] == "champagne" and normalized_item["remaining_quantity"] > 0:
+                        pending_items.append(normalized_item)
                 if not pending_items:
                     continue
                 tbl_id = reg.table_id
@@ -774,9 +798,11 @@ class ChampagneFestivalMcpBackend:
                     pending_table_map[tbl_id] = {
                         "table_id": tbl_id,
                         "pending_lines": 0,
+                        "pending_quantity": 0,
                         "pending_registrations": [],
                     }
                 pending_table_map[tbl_id]["pending_lines"] += len(pending_items)
+                pending_table_map[tbl_id]["pending_quantity"] += sum(item["remaining_quantity"] for item in pending_items)
                 pending_table_map[tbl_id]["pending_registrations"].append(reg.id)
 
             if not pending_table_map:
@@ -796,6 +822,7 @@ class ChampagneFestivalMcpBackend:
                         "table_id": tbl_id,
                         "table_name": table_name_map.get(tbl_id, tbl_id),
                         "pending_lines": data["pending_lines"],
+                        "pending_quantity": data["pending_quantity"],
                         "pending_registration_ids": data["pending_registrations"],
                     }
                 )

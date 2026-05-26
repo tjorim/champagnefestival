@@ -104,6 +104,8 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         productId,
         name: getProductName(product.nameKey),
         quantity,
+        deliveredQuantity: 0,
+        remainingQuantity: quantity,
         price: product.price,
         category: product.category,
         delivered: false,

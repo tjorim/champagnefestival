@@ -26,14 +26,28 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
     eventId: (d.event_id ?? "") as string,
     event: rawEvent ? apiToEvent(rawEvent) : null,
     guestCount: (d.guest_count ?? 1) as number,
-    preOrders: rawOrders.map((item) => ({
-      productId: (item.product_id ?? "") as string,
-      name: (item.name ?? "") as string,
-      quantity: (item.quantity ?? 1) as number,
-      price: (item.price ?? 0) as number,
-      category: (item.category ?? "other") as OrderItemCategory,
-      delivered: (item.delivered ?? false) as boolean,
-    })),
+    preOrders: rawOrders.map((item) => {
+      const quantity = Number(item.quantity ?? 1);
+      const quantitySafe = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
+      const deliveredQuantityRaw =
+        item.delivered_quantity ??
+        ((item.delivered ?? false) ? quantitySafe : 0);
+      const deliveredQuantity = Number(deliveredQuantityRaw);
+      const deliveredQuantitySafe = Number.isFinite(deliveredQuantity)
+        ? Math.max(0, Math.min(quantitySafe, deliveredQuantity))
+        : 0;
+
+      return {
+        productId: (item.product_id ?? "") as string,
+        name: (item.name ?? "") as string,
+        quantity: quantitySafe,
+        deliveredQuantity: deliveredQuantitySafe,
+        remainingQuantity: quantitySafe - deliveredQuantitySafe,
+        price: (item.price ?? 0) as number,
+        category: (item.category ?? "other") as OrderItemCategory,
+        delivered: deliveredQuantitySafe === quantitySafe,
+      };
+    }),
     notes: (d.notes ?? "") as string,
     accessibilityNote: (d.accessibility_note ?? "") as string,
     tableId: (d.table_id as string | undefined) ?? undefined,

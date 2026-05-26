@@ -29,7 +29,20 @@ class OrderItemBase(BaseModel):
     quantity: int = Field(ge=1)
     price: float = Field(ge=0)
     category: OrderItemCategory
+    delivered_quantity: int | None = Field(default=None, ge=0)
     delivered: bool = False
+
+    @model_validator(mode="after")
+    def validate_delivery_quantities(self) -> Self:
+        delivered_quantity = self.delivered_quantity
+        if delivered_quantity is None:
+            delivered_quantity = self.quantity if self.delivered else 0
+        if delivered_quantity > self.quantity:
+            raise ValueError("delivered_quantity cannot exceed quantity.")
+
+        self.delivered_quantity = delivered_quantity
+        self.delivered = delivered_quantity == self.quantity
+        return self
 
 
 class OrderItemOut(OrderItemBase):
