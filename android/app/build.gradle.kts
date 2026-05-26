@@ -54,6 +54,12 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+
+    lint {
+        // Crashes due to IncompatibleClassChangeError in NonNullableMutableLiveDataDetector
+        // against the Kotlin Analysis API version bundled with the current Kotlin plugin.
+        disable += "NullSafeMutableLiveData"
+    }
 }
 
 dependencies {
