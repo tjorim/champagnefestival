@@ -1,5 +1,50 @@
 # Workflow scope and release notes
 
+## Core CI workflows
+
+- `backend-ci.yml`
+  - Trigger scope:
+    - `backend/**`
+    - `.github/workflows/backend-ci.yml`
+  - Runs:
+    - `uv sync --frozen`
+    - `ruff check .`
+    - `ruff format --check .`
+    - `ty check .`
+    - `alembic upgrade head` (test Postgres service)
+    - `pytest`
+
+- `frontend-ci.yml`
+  - Trigger scope:
+    - `frontend/**`
+    - `.github/workflows/frontend-ci.yml`
+  - Runs:
+    - `pnpm install --frozen-lockfile`
+    - `pnpm run typecheck` (includes Paraglide compile)
+    - `pnpm run lint`
+    - `pnpm run test`
+    - `pnpm run build`
+
+- `android.yml`
+  - Trigger scope:
+    - `android/**`
+    - `.github/workflows/android.yml`
+  - Runs:
+    - `./gradlew lintDebug`
+    - `./gradlew testDebugUnitTest`
+    - `./gradlew assembleDebug`
+
+The previous monolithic `ci.yml` has been removed in favor of these path-scoped workflows.
+
+## CodeQL workflows
+
+- `codeql-backend.yml`: scoped to `backend/**`
+- `codeql-frontend.yml`: scoped to `frontend/**`
+- `codeql-actions.yml`: scoped to `.github/workflows/**`
+- `codeql-android.yml`: scoped to `android/**`
+
+Each CodeQL workflow also includes its own workflow file in `paths` so workflow edits self-validate.
+
 ## PR preview (`pr-preview.yml`)
 
 - Trigger scope is intentionally limited to:
@@ -25,13 +70,21 @@
 
 ## Future workflow expectations
 
-- Android CI/release workflows must be path-scoped to `android/**`.
 - Event-day Android APK/manual workflows should stay separate from normal frontend/backend CI.
 - Android release artifacts should skip gracefully when signing secrets are missing.
 - Event-day helper/offline workflows (if added) should trigger only for helper/offline paths.
 - Event-day helper/offline artifacts should include version/build metadata and documented retention.
 - If MCP docs/package workflows are added, scope triggers to MCP-specific code/docs paths only.
 
+## Branch protection checks
+
+Update required status checks on `main` to the new workflow names:
+
+- `Backend CI / Lint, Typecheck, Migrate & Test`
+- `Frontend CI / Typecheck, Lint, Test & Build`
+- `Android CI / Lint, Unit Test & Build` (when Android changes should be required)
+- Relevant CodeQL checks (`CodeQL Backend`, `CodeQL Frontend`, `CodeQL Actions`, `CodeQL Android`)
+
 ## Action pinning
 
-Third-party actions in deployment/preview workflows are pinned to full commit SHAs with inline version comments.
+Third-party actions in CI/deployment/preview workflows are pinned to full commit SHAs with inline version comments.
