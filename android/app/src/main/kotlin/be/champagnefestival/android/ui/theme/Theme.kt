@@ -42,4 +42,3 @@ fun ChampagneFestivalTheme(
     )
 }
 
-private val ColorWhite = androidx.compose.ui.graphics.Color(0xFFFFFFFF)
