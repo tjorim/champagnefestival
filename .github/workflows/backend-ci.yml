@@ -67,7 +67,11 @@ jobs:
         run: uv run ty check .
 
       - name: Migrate (alembic upgrade head)
-        run: DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@localhost:5432/test_champagne uv run alembic upgrade head
+        run: uv run alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:${{ env.POSTGRES_PASSWORD }}@localhost:5432/test_champagne
 
       - name: Test
-        run: TEST_DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@localhost:5432/test_champagne uv run pytest
+        run: uv run pytest
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:${{ env.POSTGRES_PASSWORD }}@localhost:5432/test_champagne
