@@ -31,6 +31,7 @@ from app.routers import (
     tables,
     venue_plan,
     venues,
+    volunteer_ops,
     volunteers,
 )
 
@@ -121,6 +122,7 @@ app.include_router(exhibitors.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(volunteers.router)
+app.include_router(volunteer_ops.router)
 app.include_router(areas.router)
 app.include_router(venue_plan.router)
 app.include_router(me.router)
