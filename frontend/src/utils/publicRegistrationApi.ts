@@ -66,7 +66,7 @@ function isOrderItemCategory(value: unknown): value is OrderItemCategory {
 function normalizeDeliveredQuantities(item: {
   quantity: number;
   delivered: boolean;
-  delivered_quantity?: number;
+  delivered_quantity?: number | null;
 }): { deliveredQuantity: number; remainingQuantity: number; delivered: boolean } {
   const quantity = Number.isFinite(item.quantity) ? Math.max(0, item.quantity) : 0;
   const deliveredQuantityRaw = item.delivered_quantity ?? (item.delivered ? quantity : 0);
@@ -183,7 +183,7 @@ interface GuestOrderItemResponse {
   product_id: string;
   name: string;
   quantity: number;
-  delivered_quantity?: number;
+  delivered_quantity?: number | null;
   price: number;
   category: string;
   delivered: boolean;
@@ -239,7 +239,7 @@ function isGuestOrderItemResponse(value: unknown): value is GuestOrderItemRespon
     typeof value.product_id === "string" &&
     typeof value.name === "string" &&
     typeof value.quantity === "number" &&
-    (value.delivered_quantity === undefined || typeof value.delivered_quantity === "number") &&
+    (value.delivered_quantity === undefined || value.delivered_quantity === null || typeof value.delivered_quantity === "number") &&
     typeof value.price === "number" &&
     typeof value.category === "string" &&
     typeof value.delivered === "boolean"

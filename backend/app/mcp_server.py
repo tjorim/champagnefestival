@@ -171,7 +171,9 @@ class ChampagneFestivalMcpBackend:
         return base
 
     @staticmethod
-    def _order_item_dict(item: dict) -> dict:
+    def _order_item_dict(item: Any) -> dict:
+        if not isinstance(item, dict):
+            item = {}
         try:
             quantity = int(item.get("quantity", 0))
         except (TypeError, ValueError):
