@@ -179,11 +179,14 @@ class ChampagneFestivalMcpBackend:
         quantity = max(quantity, 0)
 
         delivered_flag = bool(item.get("delivered", False))
-        delivered_quantity_raw = item.get("delivered_quantity", quantity if delivered_flag else 0)
-        try:
-            delivered_quantity = int(delivered_quantity_raw)
-        except (TypeError, ValueError):
-            delivered_quantity = 0
+        delivered_quantity_raw = item.get("delivered_quantity")
+        if delivered_quantity_raw is None:
+            delivered_quantity = quantity if delivered_flag else 0
+        else:
+            try:
+                delivered_quantity = int(delivered_quantity_raw)
+            except (TypeError, ValueError):
+                delivered_quantity = 0
         delivered_quantity = max(0, min(delivered_quantity, quantity))
         remaining_quantity = quantity - delivered_quantity
 
@@ -228,28 +231,10 @@ class ChampagneFestivalMcpBackend:
 
         Returns an empty dict when no active or upcoming edition is found.
         """
-        from sqlalchemy.orm import selectinload
-
         async with self.session_factory() as db:
-            result = await db.execute(
-                select(Edition)
-                .options(selectinload(Edition.events))
-                .where(Edition.active.is_(True))
-            )
-            editions: list[Edition] = list(result.scalars().all())
-            if not editions:
-                return {"active_edition": None, "message": "No active editions found."}
-
-            today = datetime.now(UTC).date()
-
-            def _end_date(edition: Edition):
-                return max((ev.date for ev in edition.events), default=None)
-
-            upcoming = [e for e in editions if _end_date(e) is not None and _end_date(e) >= today]  # type: ignore[operator]
-            if not upcoming:
-                return {"active_edition": None, "message": "No upcoming active editions found."}
-
-            edition = min(upcoming, key=lambda e: (_end_date(e) or today))
+            edition = await self._get_active_edition_obj(db)
+            if edition is None:
+                return {"active_edition": None, "message": "No active or upcoming editions found."}
             return {"active_edition": self._edition_dict(edition)}
 
     async def get_event_schedule(self, edition_id: str | None = None) -> dict:
@@ -816,7 +801,7 @@ class ChampagneFestivalMcpBackend:
             table_name_map = {t.id: t.name for t in tables_result.scalars().all()}
 
             tables = []
-            for tbl_id, data in sorted(pending_table_map.items(), key=lambda x: table_name_map.get(x[0], "")):
+            for tbl_id, data in sorted(pending_table_map.items(), key=lambda x: table_name_map.get(x[0]) or ""):
                 tables.append(
                     {
                         "table_id": tbl_id,

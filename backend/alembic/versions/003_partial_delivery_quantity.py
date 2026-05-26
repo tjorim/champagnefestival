@@ -42,6 +42,11 @@ def _normalize_order_item(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _normalize_pre_orders(pre_orders: Any) -> list[dict[str, Any]]:
+    if isinstance(pre_orders, str):
+        try:
+            pre_orders = json.loads(pre_orders)
+        except json.JSONDecodeError:
+            return []
     if not isinstance(pre_orders, list):
         return []
     return [_normalize_order_item(item) for item in pre_orders if isinstance(item, dict)]
@@ -62,7 +67,14 @@ def downgrade() -> None:
     conn = op.get_bind()
     rows = conn.execute(sa.text("SELECT id, pre_orders FROM registrations")).mappings().all()
     for row in rows:
-        pre_orders = row["pre_orders"] if isinstance(row["pre_orders"], list) else []
+        raw_pre_orders = row["pre_orders"]
+        if isinstance(raw_pre_orders, str):
+            try:
+                pre_orders = json.loads(raw_pre_orders)
+            except json.JSONDecodeError:
+                pre_orders = []
+        else:
+            pre_orders = raw_pre_orders if isinstance(raw_pre_orders, list) else []
         downgraded_pre_orders: list[dict[str, Any]] = []
         for item in pre_orders:
             if not isinstance(item, dict):
