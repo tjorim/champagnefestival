@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Event, Person, Registration
+from app.models import Event, Person, Registration, Table
 from app.ratelimit import check_rate_limit
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
 from app.utils import registration_to_checkin_dict
@@ -45,7 +45,12 @@ async def lookup_check_in(
     r = await _get_by_token_or_401(db, reservation_id, body.token)
     person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
     event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
-    return registration_to_checkin_dict(r, person, event)
+    table_name = (
+        (await db.execute(select(Table.name).where(Table.id == r.table_id))).scalar_one_or_none()
+        if r.table_id
+        else None
+    )
+    return registration_to_checkin_dict(r, person, event, table_name=table_name)
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +78,11 @@ async def post_check_in(
     r = await _get_by_token_or_401(db, reservation_id, body.token)
     person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
     event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
+    table_name = (
+        (await db.execute(select(Table.name).where(Table.id == r.table_id))).scalar_one_or_none()
+        if r.table_id
+        else None
+    )
 
     already = r.checked_in
     changed = False
@@ -91,7 +101,7 @@ async def post_check_in(
         await db.refresh(r)
 
     return {
-        "registration": registration_to_checkin_dict(r, person, event),
+        "registration": registration_to_checkin_dict(r, person, event, table_name=table_name),
         "already_checked_in": already,
     }
 

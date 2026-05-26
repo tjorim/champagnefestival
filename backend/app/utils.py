@@ -91,13 +91,20 @@ def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
     }
 
 
-def registration_to_checkin_dict(r: Registration, person: Person, event: Event) -> dict:
+def registration_to_checkin_dict(
+    r: Registration,
+    person: Person,
+    event: Event,
+    table_name: str | None = None,
+) -> dict:
     """Serialise a Registration for the public check-in GET endpoint."""
     return {
         "id": r.id,
         "name": person.name,
         "event_id": r.event_id,
         "event_title": event.title,
+        "table_id": r.table_id,
+        "table_name": table_name,
         "guest_count": r.guest_count,
         "pre_orders": r.pre_orders,
         "notes": r.notes,

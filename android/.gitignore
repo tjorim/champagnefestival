@@ -1,0 +1,35 @@
+# Gradle build output
+.gradle/
+build/
+app/build/
+**/build/
+
+# Local configuration
+local.properties
+*.keystore
+*.jks
+
+# Android Studio project files
+*.iml
+.idea/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/deploymentTargetSelector.xml
+*.hprof
+
+# Captures folder
+captures/
+
+# Proguard output
+**/proguard/
+**/mapping/
+
+# Test results
+**/test-results/
