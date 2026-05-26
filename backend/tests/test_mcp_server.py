@@ -158,6 +158,7 @@ def _make_registration(
             "product_id": "champ-std",
             "name": "Standard Champagne",
             "quantity": 2,
+            "delivered_quantity": 0,
             "price": 65.0,
             "category": "champagne",
             "delivered": False,
@@ -661,6 +662,9 @@ class TestGetTableOrderSummary:
         assert len(result["registrations"]) == 1
         r = result["registrations"][0]
         assert r["order_count"] == 2
+        assert r["ordered_quantity_total"] == 3
+        assert r["delivered_quantity_total"] == 1
+        assert r["remaining_quantity_total"] == 2
         assert r["all_delivered"] is False
 
     @pytest.mark.anyio
@@ -738,7 +742,9 @@ class TestGetGuestOrderStatus:
         assert result["champagne_lines_total"] == 2
         assert result["champagne_lines_delivered"] == 1
         assert result["champagne_lines_pending"] == 1
-        assert "note" in result
+        assert result["champagne_quantity_ordered"] == 3
+        assert result["champagne_quantity_delivered"] == 1
+        assert result["champagne_quantity_pending"] == 2
 
     @pytest.mark.anyio
     async def test_non_champagne_orders_excluded_from_champagne_counts(self):
@@ -784,7 +790,7 @@ class TestGetChampagneDeliverySummary:
             {"product_id": "champ-std", "name": "Standard", "quantity": 2, "price": 65.0, "category": "champagne", "delivered": True},
         ])
         reg2 = _make_registration(reg_id="reg-2", pre_orders=[
-            {"product_id": "champ-std", "name": "Standard", "quantity": 1, "price": 65.0, "category": "champagne", "delivered": False},
+            {"product_id": "champ-std", "name": "Standard", "quantity": 3, "delivered_quantity": 1, "price": 65.0, "category": "champagne", "delivered": False},
         ])
         db = _make_db_execute([[edition], [reg1, reg2]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
@@ -798,10 +804,10 @@ class TestGetChampagneDeliverySummary:
         assert p["ordered_lines"] == 2
         assert p["delivered_lines"] == 1
         assert p["pending_lines"] == 1
-        assert p["ordered_quantity"] == 3
-        assert p["delivered_quantity"] == 2
-        assert p["pending_quantity"] == 1
-        assert "note" in result
+        assert p["partially_delivered_lines"] == 1
+        assert p["ordered_quantity"] == 5
+        assert p["delivered_quantity"] == 3
+        assert p["pending_quantity"] == 2
 
     @pytest.mark.anyio
     async def test_non_champagne_items_excluded(self):
@@ -872,6 +878,7 @@ class TestGetUndeliveredChampagneByTable:
         assert t["table_id"] == "tbl-1"
         assert t["table_name"] == "Table A"
         assert t["pending_lines"] == 1
+        assert t["pending_quantity"] == 2
         assert "reg-1" in t["pending_registration_ids"]
 
 

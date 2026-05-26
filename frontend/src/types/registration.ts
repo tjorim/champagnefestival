@@ -23,6 +23,8 @@ export interface OrderItem {
   productId: string;
   name: string;
   quantity: number;
+  deliveredQuantity: number;
+  remainingQuantity: number;
   price: number;
   category: OrderItemCategory;
   /** Whether back-of-house has physically delivered/brought this item */

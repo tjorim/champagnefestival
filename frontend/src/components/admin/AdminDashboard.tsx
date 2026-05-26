@@ -1845,6 +1845,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 product_id: o.productId,
                 name: o.name,
                 quantity: o.quantity,
+                delivered_quantity: o.deliveredQuantity,
                 price: o.price,
                 category: o.category,
                 delivered: o.delivered,

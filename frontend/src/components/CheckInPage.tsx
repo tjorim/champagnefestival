@@ -194,14 +194,14 @@ export default function CheckInPage() {
                             <span>
                               {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
                             </span>
-                            {item.delivered ? (
-                              <Badge bg="success">
-                                <i className="bi bi-check-lg me-1" aria-hidden="true" />
-                                {m.admin_bottle_delivered()}
+                            <div className="d-flex gap-2">
+                              <Badge bg={item.delivered ? "success" : "secondary"}>
+                                {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                               </Badge>
-                            ) : (
-                              <Badge bg="secondary">{m.admin_bottle_not_delivered()}</Badge>
-                            )}
+                              <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
+                                {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
+                              </Badge>
+                            </div>
                           </ListGroup.Item>
                         ))}
                       </ListGroup>
