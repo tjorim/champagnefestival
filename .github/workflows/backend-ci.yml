@@ -24,6 +24,8 @@ jobs:
   backend:
     name: Lint, Typecheck, Migrate & Test
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: postgres
     defaults:
       run:
         working-directory: backend
@@ -65,11 +67,7 @@ jobs:
         run: uv run ty check .
 
       - name: Migrate (alembic upgrade head)
-        run: uv run alembic upgrade head
-        env:
-          DATABASE_URL: "******localhost:5432/test_champagne"
+        run: DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@localhost:5432/test_champagne uv run alembic upgrade head
 
       - name: Test
-        run: uv run pytest
-        env:
-          TEST_DATABASE_URL: "******localhost:5432/test_champagne"
+        run: TEST_DATABASE_URL=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@localhost:5432/test_champagne uv run pytest

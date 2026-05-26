@@ -5,12 +5,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/**"
-      - ".github/workflows/codeql-actions.yml"
   push:
     branches: [main]
     paths:
       - ".github/workflows/**"
-      - ".github/workflows/codeql-actions.yml"
   workflow_dispatch:
 
 concurrency:
