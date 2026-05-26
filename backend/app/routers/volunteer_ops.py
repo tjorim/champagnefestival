@@ -67,7 +67,6 @@ async def search_registrations(
                 or_(
                     Person.name.ilike(q_like, escape="\\"),
                     Table.name.ilike(q_like, escape="\\"),
-                    Registration.table_id.ilike(q_like, escape="\\"),
                 )
             )
 

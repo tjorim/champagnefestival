@@ -116,7 +116,7 @@ private fun LookupResults(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(registration.name)
                     Text(registration.event_title)
-                    Text("Table: ${registration.table_name ?: registration.table_id ?: "Unassigned"}")
+                    Text("Table: ${registration.table_name ?: "Unassigned"}")
                     Text("Guests: ${registration.guest_count}")
                     Text(if (registration.checked_in) "Checked in" else "Pending check-in")
                     val pendingItems = registration.pre_orders.count { !it.delivered }
