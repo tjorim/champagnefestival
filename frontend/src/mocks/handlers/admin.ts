@@ -50,9 +50,8 @@ function authError(status: number, detail: string): HttpResponse<{ detail: strin
 function parseBearerToken(request: Request): string | null {
   const header = request.headers.get("authorization");
   if (!header) return null;
-  const [scheme, token] = header.split(" ");
-  if (!scheme || !token || scheme.toLowerCase() !== "bearer") return null;
-  return token;
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1] : null;
 }
 
 function requireAuth(request: Request): HttpResponse<{ detail: string }> | null {
@@ -109,24 +108,26 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
   const byTableId = new Map<string, string[]>();
 
   for (const registration of sharedStore.registrations) {
-    const tableId =
-      typeof registration.table_id === "string" && registration.table_id.length > 0
-        ? registration.table_id
-        : null;
-    const registrationId =
-      typeof registration.id === "string" && registration.id.length > 0 ? registration.id : null;
-    if (!tableId) continue;
-    if (!registrationId) continue;
-    const registrationIds = byTableId.get(tableId) ?? [];
-    registrationIds.push(registrationId);
-    byTableId.set(tableId, registrationIds);
+    const tableId = registration.table_id;
+    const registrationId = registration.id;
+    if (
+      typeof tableId === "string" &&
+      tableId.length > 0 &&
+      typeof registrationId === "string" &&
+      registrationId.length > 0
+    ) {
+      const registrationIds = byTableId.get(tableId) ?? [];
+      registrationIds.push(registrationId);
+      byTableId.set(tableId, registrationIds);
+    }
   }
 
-  return tables.map((table) => ({
-    ...table,
-    registration_ids:
-      typeof table.id === "string" && table.id.length > 0 ? byTableId.get(table.id) ?? [] : [],
-  }));
+  return tables.map((table) => {
+    const tableId = table.id;
+    const registrationIds =
+      typeof tableId === "string" && tableId.length > 0 ? byTableId.get(tableId) ?? [] : [];
+    return { ...table, registration_ids: registrationIds };
+  });
 }
 
 function uid(): string {
@@ -146,8 +147,8 @@ export const adminHandlers = [
   }),
 
   http.post("/api/mock/scenario", async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as { scenario?: string };
-    const scenario = body.scenario as MockScenario | undefined;
+    const body = (await request.json().catch(() => ({}))) as { scenario?: string } | null;
+    const scenario = body?.scenario as MockScenario | undefined;
     const availableScenarios = new Set<MockScenario>(availableMockScenarios);
     if (!scenario || !availableScenarios.has(scenario)) {
       return HttpResponse.json(
