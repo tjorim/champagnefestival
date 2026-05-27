@@ -12,6 +12,7 @@ describe("useAdminQueries invalidation rules", () => {
   it("does not refetch non-resource admin keys", () => {
     expect(shouldRefetchAdminResourceQuery(queryKeys.admin.personOptions("ali"))).toBe(false);
     expect(shouldRefetchAdminResourceQuery(queryKeys.admin.editionEvents("ed-01"))).toBe(false);
+    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.peopleRegistrations("person-1"))).toBe(false);
   });
 
   it("does not refetch public keys", () => {
