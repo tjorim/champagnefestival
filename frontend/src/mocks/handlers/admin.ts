@@ -51,7 +51,7 @@ function parseBearerToken(request: Request): string | null {
   const header = request.headers.get("authorization");
   if (!header) return null;
   const match = header.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 function requireAuth(request: Request): HttpResponse<{ detail: string }> | null {
