@@ -1,0 +1,183 @@
+name: Draft Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "release-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  validate-release-metadata:
+    name: Validate tag, versions & changelog
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Validate strict SemVer tag
+        id: semver
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Tag '$TAG' is invalid. Expected strict SemVer format: vX.Y.Z"
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate frontend/package.json version
+        env:
+          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          set -euo pipefail
+          FRONTEND_VERSION="$(node -p "require('./frontend/package.json').version")"
+          if [[ "$FRONTEND_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "frontend/package.json version '$FRONTEND_VERSION' does not match '$EXPECTED_VERSION'"
+            exit 1
+          fi
+
+      - name: Validate backend version metadata
+        env:
+          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          set -euo pipefail
+          BACKEND_PROJECT_VERSION="$(python -c "import tomllib; print(tomllib.load(open('backend/pyproject.toml','rb'))['project']['version'])")"
+          BACKEND_APP_VERSION="$(python -c "import re, pathlib; text = pathlib.Path('backend/app/main.py').read_text(encoding='utf-8'); match = re.search(r'version=\"([^\"]+)\"', text); print(match.group(1) if match else (_ for _ in ()).throw(SystemExit('Could not find FastAPI version in backend/app/main.py')))")"
+          if [[ "$BACKEND_PROJECT_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "backend/pyproject.toml version '$BACKEND_PROJECT_VERSION' does not match '$EXPECTED_VERSION'"
+            exit 1
+          fi
+          if [[ "$BACKEND_APP_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "backend/app/main.py version '$BACKEND_APP_VERSION' does not match '$EXPECTED_VERSION'"
+            exit 1
+          fi
+
+      - name: Validate CHANGELOG entry
+        env:
+          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f CHANGELOG.md ]]; then
+            echo "CHANGELOG.md not found."
+            exit 1
+          fi
+          ESCAPED_VERSION="$(printf '%s' "$EXPECTED_VERSION" | sed 's/\./\\./g')"
+          if ! grep -Eq "^## \[$ESCAPED_VERSION\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md; then
+            echo "CHANGELOG.md must contain an entry header: ## [$EXPECTED_VERSION] - YYYY-MM-DD"
+            exit 1
+          fi
+
+  backend-checks:
+    name: Backend checks
+    runs-on: ubuntu-latest
+    needs: validate-release-metadata
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_champagne
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint (ruff check)
+        run: uv run ruff check .
+
+      - name: Format (ruff format)
+        run: uv run ruff format --check .
+
+      - name: Typecheck (ty)
+        run: uv run ty check .
+
+      - name: Migrate (alembic upgrade head)
+        run: uv run alembic upgrade head
+
+      - name: Test
+        run: uv run pytest
+
+  frontend-checks:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    needs: validate-release-metadata
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ac6db6d3c1f721f886538a378a2d73e85697340a # v6
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version-file: frontend/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (Paraglide + tsc)
+        run: pnpm run typecheck
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+
+  create-draft-release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    needs:
+      - validate-release-metadata
+      - backend-checks
+      - frontend-checks
+    steps:
+      - name: Create draft release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: v${{ needs.validate-release-metadata.outputs.version }}
+          draft: true
+          generate_release_notes: true

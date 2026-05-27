@@ -34,6 +34,17 @@ uv run alembic upgrade head
 > Tests default to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`;
 > override via the `TEST_DATABASE_URL` environment variable.
 
+## Release process
+
+1. Update version metadata to the same `X.Y.Z` value in:
+   - `frontend/package.json`
+   - `backend/pyproject.toml`
+   - `backend/app/main.py`
+2. Add/update `CHANGELOG.md` entry header as `## [X.Y.Z] - YYYY-MM-DD`.
+3. Push tag `vX.Y.Z` to run `.github/workflows/release-draft.yml`.
+4. Wait for backend/frontend checks and metadata validation to pass.
+5. Publish the generated draft release to trigger GitHub Pages deploy (`deploy.yml`).
+
 ## Source Of Truth
 
 - `frontend/src/config/navigation.ts` for site navigation
