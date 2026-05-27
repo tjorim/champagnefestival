@@ -1,22 +1,16 @@
-import { QueryClient } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { seedRegistrations } from "@/mocks/data/registrations";
 import {
   createAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
 import { apiToRegistration } from "@/types/registrationMapper";
+import { createTestQueryClient } from "../utils/queryClient";
 
 const TEST_AUTH_HEADERS = { Authorization: "Bearer ".concat("mock-access-token") };
 
 function createTestCollection() {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  });
+  const queryClient = createTestQueryClient();
   const collection = createAdminRegistrationsCollection({
     queryClient,
     authHeaders: () => TEST_AUTH_HEADERS,
@@ -26,18 +20,30 @@ function createTestCollection() {
 }
 
 describe("admin registrations pilot collection", () => {
+  let lastCollection: ReturnType<typeof createAdminRegistrationsCollection> | null = null;
+  let lastQueryClient: ReturnType<typeof createTestQueryClient> | null = null;
+
+  afterEach(() => {
+    if (lastCollection) resetAdminRegistrationsCollection(lastCollection);
+    if (lastQueryClient) lastQueryClient.clear();
+    lastCollection = null;
+    lastQueryClient = null;
+  });
+
   it("loads registrations from the admin query source", async () => {
     const { collection, queryClient } = createTestCollection();
+    lastCollection = collection;
+    lastQueryClient = queryClient;
     await collection.preload();
 
     expect(collection.size).toBe(seedRegistrations.length);
     expect(collection.get("reg-01")?.tableId).toBe("table-01");
-
-    queryClient.clear();
   });
 
   it("applies mutation updates for check-in, table assignment and cancellation", async () => {
     const { collection, queryClient } = createTestCollection();
+    lastCollection = collection;
+    lastQueryClient = queryClient;
     await collection.preload();
 
     const response = await fetch("/api/registrations/reg-01", {
@@ -61,12 +67,12 @@ describe("admin registrations pilot collection", () => {
     expect(registration?.checkedIn).toBe(true);
     expect(registration?.tableId).toBe("table-03");
     expect(registration?.status).toBe("cancelled");
-
-    queryClient.clear();
   });
 
   it("supports deletion and explicit reset behavior", async () => {
     const { collection, queryClient } = createTestCollection();
+    lastCollection = collection;
+    lastQueryClient = queryClient;
     await collection.preload();
 
     const deletionResponse = await fetch("/api/registrations/reg-03", {
@@ -78,8 +84,7 @@ describe("admin registrations pilot collection", () => {
     expect(collection.has("reg-03")).toBe(false);
 
     resetAdminRegistrationsCollection(collection);
+    lastCollection = null;
     expect(collection.size).toBe(0);
-
-    queryClient.clear();
   });
 });

@@ -88,15 +88,12 @@ export function useAdminQueries({
   useEffect(() => {
     registrationsCollectionRef.current = registrationsCollection;
   }, [registrationsCollection]);
-  const registrationsQuery = useMemo(
-    () => ({
-      data: registrationsLiveQuery.data,
-      error: registrationsCollection.utils.lastError ?? null,
-      isPending: registrationsLiveQuery.isLoading,
-      isFetching: registrationsCollection.utils.isFetching,
-    }),
-    [registrationsCollection, registrationsLiveQuery.data, registrationsLiveQuery.isLoading],
-  );
+  const registrationsQuery = {
+    data: registrationsLiveQuery.data,
+    error: registrationsCollection.utils.lastError ?? null,
+    isPending: registrationsLiveQuery.isLoading,
+    isFetching: registrationsCollection.utils.isFetching,
+  };
 
   useEffect(() => {
     if (isAuthenticated) return;
