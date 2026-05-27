@@ -7,7 +7,7 @@ import {
 } from "@/state/adminRegistrationsCollection";
 import { apiToRegistration } from "@/types/registrationMapper";
 
-const TEST_AUTH_HEADERS = { Authorization: "******" };
+const TEST_AUTH_HEADERS = { Authorization: "Bearer ".concat("mock-access-token") };
 
 function createTestCollection() {
   const queryClient = new QueryClient({

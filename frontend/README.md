@@ -86,6 +86,20 @@ running. Log in to the Admin Dashboard with token **`dev-token`**.
 > In-memory state resets on every page reload — this is intentional. Use the real backend for
 > persistence.
 
+Vitest also uses the same handlers and fixtures through `src/mocks/server.ts`, and each test resets
+mutable mock state with `resetAdminStore()` in `tests/setup.ts`.
+
+### Auth fixture contract
+
+Protected admin endpoints in mock mode support deterministic auth states:
+
+- token `dev-token` → success
+- token `mock-access-token` → success
+- missing token → `401 Not authenticated`
+- token `forbidden-token` → `403 Forbidden`
+- token `expired-token` → `401 Token expired`
+- token `invalid-token` (or any unknown token) → `401 Invalid token`
+
 ### Seed data
 
 The mock layer ships with a March 2026 festival edition and realistic seed data across all
@@ -96,11 +110,53 @@ resources:
 | Edition         | 1 active + 1 inactive | `march-2026` (active), `march-2025`                    |
 | Events          | 5                     | Grand Opening, Tasting Day 1 & 2, Gala Dinner, Closing |
 | People          | 5                     | Alice, Bernard, Claire, David, Eva                     |
-| Registrations   | 3                     | Mix of Pending / Confirmed, Paid / Unpaid, checked-in  |
+| Registrations   | 4                     | Pending / Confirmed, Paid / Partial / Unpaid, Checked-in |
 | Exhibitors      | 5                     | 3 producers, 1 sponsor, 1 vendor                       |
 | Venue / Rooms   | 1 venue, 2 halls      | Brussels Expo — Hall 5 & Hall 6                        |
 | Tables          | 3                     | T1 (6-seat), T2 (8-seat), T3 (4-seat)                  |
-| Layouts / Areas | 2 layouts, 3 areas    | Positioned in Hall 5                                   |
+| Layouts / Areas | 3 layouts, 3 areas    | Hall 5 + Hall 6 layouts                                |
+
+Order and delivery fixtures include:
+
+- table assignments (`registration.table_id` + `table.registration_ids`)
+- partial champagne delivery (`ordered 4`, `delivered 2`)
+- completed champagne delivery (`ordered 2`, `delivered 2`)
+
+### Scenario switching (demo, regression, screenshot workflows)
+
+Mock mode supports runtime scenario switching without manual data edits:
+
+```bash
+curl -s -X POST http://localhost:5173/api/mock/scenario \
+  -H "Content-Type: application/json" \
+  -d '{"scenario":"event-day"}'
+```
+
+Available scenarios:
+
+- `default` (base deterministic fixtures)
+- `event-day` (check-in and payment states shifted for operational walkthroughs)
+- `auth-signed-out`
+- `auth-forbidden`
+- `auth-expired`
+- `auth-invalid`
+
+### Stable routes for AI screenshot agents
+
+Use these routes with `VITE_MSW=true`:
+
+- Public page: `/`
+- Admin dashboard root: `/admin`
+- Check-in success fixture: `/check-in?id=reg-01&token=mock-token-reg-01`
+- Check-in not-found fixture: `/check-in?id=reg-404&token=mock-token-reg-404`
+- Guest registrations: `/my-registrations?token=demo-token`
+
+For venue, seating, order, and delivery screenshots, open `/admin` and use the seeded data:
+
+- Venue/Layout views read `/api/venues`, `/api/rooms`, `/api/layouts`, `/api/tables`, `/api/areas`
+- Seating is visible via `table.registration_ids`
+- Orders and delivery are visible in each registration `pre_orders` entry
+- Switch to `event-day` when you need a “live operations” state snapshot
 
 ### Structure
 

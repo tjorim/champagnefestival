@@ -41,9 +41,10 @@ export const ADMIN_RESOURCE_KEYS = [
 
 export function shouldRefetchAdminResourceQuery(queryKey: readonly unknown[]): boolean {
   return (
+    queryKey.length === 2 &&
     queryKey[0] === "admin" &&
     typeof queryKey[1] === "string" &&
-    ADMIN_RESOURCE_KEYS.includes(queryKey[1] as (typeof ADMIN_RESOURCE_KEYS)[number])
+    (ADMIN_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
   );
 }
 
