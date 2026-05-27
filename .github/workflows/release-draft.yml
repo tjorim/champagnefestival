@@ -51,8 +51,12 @@ jobs:
           EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
         run: |
           set -euo pipefail
-          BACKEND_PROJECT_VERSION="$(python -c "import tomllib; print(tomllib.load(open('backend/pyproject.toml','rb'))['project']['version'])")"
-          BACKEND_APP_VERSION="$(python -c "import re, pathlib; text = pathlib.Path('backend/app/main.py').read_text(encoding='utf-8'); match = re.search(r'version=\"([^\"]+)\"', text); print(match.group(1) if match else (_ for _ in ()).throw(SystemExit('Could not find FastAPI version in backend/app/main.py')))")"
+          BACKEND_PROJECT_VERSION="$(grep -E '^version = "[^"]+"$' backend/pyproject.toml | head -n 1 | cut -d '"' -f 2)"
+          BACKEND_APP_VERSION="$(grep -Eo 'version="[^"]+"' backend/app/main.py | head -n 1 | cut -d '"' -f 2)"
+          if [[ -z "$BACKEND_PROJECT_VERSION" || -z "$BACKEND_APP_VERSION" ]]; then
+            echo "Could not read backend version metadata."
+            exit 1
+          fi
           if [[ "$BACKEND_PROJECT_VERSION" != "$EXPECTED_VERSION" ]]; then
             echo "backend/pyproject.toml version '$BACKEND_PROJECT_VERSION' does not match '$EXPECTED_VERSION'"
             exit 1
