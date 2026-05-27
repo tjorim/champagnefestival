@@ -19,3 +19,12 @@ export function createTestQueryClientWrapper() {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
+
+export function createTestQueryClientHarness() {
+  const queryClient = createTestQueryClient();
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+
+  return { queryClient, Wrapper };
+}

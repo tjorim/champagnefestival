@@ -1,13 +1,7 @@
 import React, { lazy, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Link,
-  RouterProvider,
-} from "@tanstack/react-router";
+import { Link, RouterProvider } from "@tanstack/react-router";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -31,6 +25,7 @@ import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import { endOfDay } from "./utils/dateUtils";
+import { createAppRouter } from "./router";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -428,51 +423,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const rootRoute = createRootRoute({
-  notFoundComponent: App,
-});
-
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  component: App,
-});
-
-const adminRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/admin",
-  component: AdminPage,
-});
-
-const checkInRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/check-in",
-  validateSearch: (search: Record<string, unknown>): { id?: string; token?: string } => ({
-    id: typeof search.id === "string" ? search.id : undefined,
-    token: typeof search.token === "string" ? search.token : undefined,
-  }),
-  component: CheckInRoute,
-});
-
-const myRegistrationsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/my-registrations",
-  validateSearch: (search: Record<string, unknown>): { token?: string } => ({
-    token: typeof search.token === "string" ? search.token : undefined,
-  }),
-  component: MyRegistrationsRoute,
-});
-
-const routeTree = rootRoute.addChildren([
-  indexRoute,
-  adminRoute,
-  checkInRoute,
-  myRegistrationsRoute,
-]);
-
-const router = createRouter({
-  routeTree,
-  basepath: import.meta.env.BASE_URL,
+const router = createAppRouter({
+  App,
+  AdminPage,
+  CheckInRoute,
+  MyRegistrationsRoute,
 });
 
 declare module "@tanstack/react-router" {
