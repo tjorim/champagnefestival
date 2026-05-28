@@ -366,9 +366,7 @@ async def update_registration(
     try:
         _scope = {"registration_id": registration.id, "event_id": _event_id, "edition_id": _edition_id}
         if registration.table_id != _pre_table_id:
-            await live_bus.publish(
-                live_mapping.seating_changed(table_id=registration.table_id, **_scope)
-            )
+            await live_bus.publish(live_mapping.seating_changed(table_id=registration.table_id, **_scope))
         if body.pre_orders is not None and registration.pre_orders != _pre_pre_orders:
             if _sum_delivered(registration.pre_orders) != _pre_delivery_sum:
                 await live_bus.publish(live_mapping.delivery_changed(**_scope))

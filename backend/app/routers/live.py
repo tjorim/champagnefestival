@@ -55,9 +55,7 @@ async def _sse_generator(
                 remaining = heartbeat_interval
 
             try:
-                event: LiveEvent = await asyncio.wait_for(
-                    queue.get(), timeout=remaining
-                )
+                event: LiveEvent = await asyncio.wait_for(queue.get(), timeout=remaining)
             except TimeoutError:
                 yield ": keepalive\n\n"
                 last_sent = loop.time()
