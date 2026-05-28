@@ -20,6 +20,16 @@ champagnefestival/
 | Python 3.13+ + uv | Backend | [uv install](https://docs.astral.sh/uv/getting-started/installation/) |
 | Docker (optional) | Containerised backend | [docs.docker.com](https://docs.docker.com) |
 
+## Releases
+
+- Keep versions aligned across:
+  - `frontend/package.json`
+  - `backend/pyproject.toml`
+  - `backend/app/main.py`
+- Add a matching `CHANGELOG.md` entry header: `## [X.Y.Z] - YYYY-MM-DD`
+- Push tag `vX.Y.Z` to trigger the draft release workflow.
+- Publish the generated draft release to trigger GitHub Pages deployment.
+
 ## Quick start
 
 ```bash

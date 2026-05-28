@@ -62,9 +62,29 @@ Each CodeQL workflow also includes its own workflow file in `paths` so workflow 
   - `pnpm run build`
 - Backend install/build is intentionally excluded from this workflow.
 
+## Draft release workflow (`release-draft.yml`)
+
+- Trigger: push tags matching `v*`.
+- Strict tag format is enforced as SemVer: `vX.Y.Z` only.
+- Before creating a draft release, workflow validates:
+  - Tag version matches `frontend/package.json`.
+  - Tag version matches backend metadata (`backend/pyproject.toml` and `backend/app/main.py`).
+  - `CHANGELOG.md` contains a header entry in the format `## [X.Y.Z] - YYYY-MM-DD`.
+- Quality gates before draft release creation:
+  - Backend: `ruff check`, `ruff format --check`, `ty check`, `alembic upgrade head`, `pytest`
+  - Frontend: `pnpm run typecheck`, `pnpm run lint`, `pnpm run test`, `pnpm run build`
+- Draft release creation is done only after all checks pass.
+- Publishing that draft release continues to trigger `deploy.yml` (`release.published`).
+
 ### Release checklist
 
-- Frontend deploy: confirm release branch/tag and successful frontend quality gates.
+- Create/update changelog entry (`CHANGELOG.md`) with `## [X.Y.Z] - YYYY-MM-DD`.
+- Set matching version metadata in:
+  - `frontend/package.json`
+  - `backend/pyproject.toml`
+  - `backend/app/main.py`
+- Push `vX.Y.Z` tag to trigger draft release checks and draft release creation.
+- Publish the draft release to trigger GitHub Pages deployment.
 - Database migrations: run Alembic migrations separately when backend schema changes are included.
 - Backend health: verify API health and auth flows separately from frontend Pages deployment.
 
