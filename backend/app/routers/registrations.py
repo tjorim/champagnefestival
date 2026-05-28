@@ -323,6 +323,7 @@ async def update_registration(
 
     # Capture pre-state for live-update topic detection.
     _pre_table_id = registration.table_id
+    _pre_pre_orders = list(registration.pre_orders) if registration.pre_orders else []
     _pre_delivery_sum = _sum_delivered(registration.pre_orders)
     _pre_checked_in = registration.checked_in
     _pre_strap_issued = registration.strap_issued
@@ -364,16 +365,16 @@ async def update_registration(
     # Publish live-update events; bus errors must never break write responses.
     try:
         _scope = {"registration_id": registration.id, "event_id": _event_id, "edition_id": _edition_id}
-        if "table_id" in body.model_fields_set and registration.table_id != _pre_table_id:
+        if registration.table_id != _pre_table_id:
             await live_bus.publish(
                 live_mapping.seating_changed(table_id=registration.table_id, **_scope)
             )
-        if body.pre_orders is not None:
+        if body.pre_orders is not None and registration.pre_orders != _pre_pre_orders:
             if _sum_delivered(registration.pre_orders) != _pre_delivery_sum:
                 await live_bus.publish(live_mapping.delivery_changed(**_scope))
             else:
                 await live_bus.publish(live_mapping.order_changed(**_scope))
-        if body.checked_in is not None and registration.checked_in != _pre_checked_in or body.strap_issued is not None and registration.strap_issued != _pre_strap_issued:
+        if registration.checked_in != _pre_checked_in or registration.strap_issued != _pre_strap_issued:
             await live_bus.publish(live_mapping.check_in_changed(**_scope))
         _metadata = {"status", "payment_status", "notes", "accessibility_note", "person_id"}
         if any(f in body.model_fields_set for f in _metadata):
@@ -412,7 +413,9 @@ async def delete_registration(
         logger.warning("live_bus.publish failed for deleted registration %s", _reg_id, exc_info=True)
 
 
-def _sum_delivered(pre_orders: list[dict]) -> int:
+def _sum_delivered(pre_orders: list[dict] | None) -> int:
+    if not pre_orders:
+        return 0
     return sum(int(item.get("delivered_quantity") or 0) for item in pre_orders)
 
 
