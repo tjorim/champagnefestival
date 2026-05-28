@@ -1,14 +1,20 @@
 """Table management endpoints (admin only)."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
+from app.live import live_bus
+from app.live import mapping as live_mapping
 from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableCreate, TableOut, TableUpdate
 from app.utils import make_id, table_to_dict
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/tables",
@@ -48,6 +54,11 @@ async def create_table(
     db.add(t)
     await db.commit()
     await db.refresh(t)
+    edition_id = await _get_layout_edition_id(db, t.layout_id)
+    try:
+        await live_bus.publish(live_mapping.seating_changed(action="created", table_id=t.id, edition_id=edition_id))
+    except Exception:
+        logger.warning("live_bus.publish failed for table %s", t.id, exc_info=True)
     # New tables have no reservations yet
     return table_to_dict(t, [])
 
@@ -126,6 +137,11 @@ async def update_table(
         t.layout_id = body.layout_id
     await db.commit()
     await db.refresh(t)
+    edition_id = await _get_layout_edition_id(db, t.layout_id)
+    try:
+        await live_bus.publish(live_mapping.seating_changed(action="updated", table_id=table_id, edition_id=edition_id))
+    except Exception:
+        logger.warning("live_bus.publish failed for table %s", table_id, exc_info=True)
     res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
     registration_ids = [row[0] for row in res_result.all()]
     return table_to_dict(t, registration_ids)
@@ -139,8 +155,13 @@ async def update_table(
 @router.delete("/{table_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_table(table_id: str, db: AsyncSession = Depends(get_db)) -> None:
     t = await _get_or_404(db, table_id)
+    edition_id = await _get_layout_edition_id(db, t.layout_id)
     await db.delete(t)
     await db.commit()
+    try:
+        await live_bus.publish(live_mapping.seating_changed(action="deleted", table_id=table_id, edition_id=edition_id))
+    except Exception:
+        logger.warning("live_bus.publish failed for deleted table %s", table_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -154,3 +175,8 @@ async def _get_or_404(db: AsyncSession, table_id: str) -> Table:
     if t is None:
         raise HTTPException(status_code=404, detail="Table not found.")
     return t
+
+
+async def _get_layout_edition_id(db: AsyncSession, layout_id: str) -> str | None:
+    result = await db.execute(select(Layout.edition_id).where(Layout.id == layout_id))
+    return result.scalar_one_or_none()

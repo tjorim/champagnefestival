@@ -1,5 +1,6 @@
 """QR-code check-in endpoints (public, token-gated)."""
 
+import logging
 import secrets
 from datetime import UTC, datetime
 
@@ -8,10 +9,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.live import live_bus
+from app.live import mapping as live_mapping
 from app.models import Event, Person, Registration, Table
 from app.ratelimit import check_rate_limit
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
 from app.utils import registration_to_checkin_dict
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 
@@ -99,6 +104,16 @@ async def post_check_in(
     if changed:
         await db.commit()
         await db.refresh(r)
+        try:
+            await live_bus.publish(
+                live_mapping.check_in_changed(
+                    registration_id=r.id,
+                    event_id=r.event_id,
+                    edition_id=event.edition_id,
+                )
+            )
+        except Exception:
+            logger.warning("live_bus.publish failed for check-in %s", r.id, exc_info=True)
 
     return {
         "registration": registration_to_checkin_dict(r, person, event, table_name=table_name),
