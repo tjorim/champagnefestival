@@ -177,6 +177,30 @@ async def test_sse_generator_event_id_filter():
     assert payload["scope"]["registration_id"] == "reg-1"
 
 
+async def test_sse_generator_keepalive_not_starved_by_filtered_events():
+    """Keepalive must be sent even when filtered events arrive continuously.
+
+    Regression test for the heartbeat-starvation bug: if non-matching events
+    keep arriving before the timeout, asyncio.wait_for() keeps returning them
+    and TimeoutError is never raised, so the keepalive is never sent.  The fix
+    tracks elapsed time and adjusts the wait_for timeout on each iteration.
+    """
+    non_matching = seating_changed(edition_id="ed-other", registration_id="reg-flood")
+
+    gen = _sse_generator(edition_id="ed-target", event_id=None, heartbeat_interval=0.05)
+    try:
+        _ready = await gen.__anext__()
+        # Flood with 20 non-matching events — all should be filtered, keepalive
+        # must still arrive within ~heartbeat_interval.
+        for _ in range(20):
+            await live_bus.publish(non_matching)
+        chunk = await gen.__anext__()
+    finally:
+        await gen.aclose()
+
+    assert chunk == ": keepalive\n\n"
+
+
 async def test_sse_generator_cleanup_on_close():
     """Bus must have no subscribers after the generator is closed."""
     initial_count = live_bus.subscriber_count

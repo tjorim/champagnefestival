@@ -18,6 +18,8 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.email import send_guest_access_email
+from app.live import live_bus
+from app.live import mapping as live_mapping
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken
 from app.ratelimit import check_rate_limit
 from app.routers.people import parse_phone
@@ -91,6 +93,17 @@ async def create_registration(
     await db.commit()
 
     registration = await _get_registration_or_404(db, registration.id)
+    try:
+        await live_bus.publish(
+            live_mapping.registration_changed(
+                action="created",
+                registration_id=registration.id,
+                event_id=registration.event_id,
+                edition_id=registration.event.edition_id,
+            )
+        )
+    except Exception:
+        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
     return registration_to_dict(registration, person, event)
 
 
@@ -122,6 +135,17 @@ async def admin_create_registration(
     await db.commit()
 
     registration = await _get_registration_or_404(db, registration.id)
+    try:
+        await live_bus.publish(
+            live_mapping.registration_changed(
+                action="created",
+                registration_id=registration.id,
+                event_id=registration.event_id,
+                edition_id=registration.event.edition_id,
+            )
+        )
+    except Exception:
+        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
     return registration_to_dict(registration, person, event)
 
 
@@ -297,6 +321,15 @@ async def update_registration(
 ) -> dict:
     registration = await _get_registration_or_404(db, registration_id)
 
+    # Capture pre-state for live-update topic detection.
+    _pre_table_id = registration.table_id
+    _pre_pre_orders = list(registration.pre_orders) if registration.pre_orders else []
+    _pre_delivery_sum = _sum_delivered(registration.pre_orders)
+    _pre_checked_in = registration.checked_in
+    _pre_strap_issued = registration.strap_issued
+    _event_id = registration.event_id
+    _edition_id = registration.event.edition_id
+
     if body.status is not None:
         registration.status = body.status
     if body.payment_status is not None:
@@ -328,6 +361,27 @@ async def update_registration(
     await db.commit()
     registration = await _get_registration_or_404(db, registration.id)
     person_map = await _fetch_person_map(db, [registration])
+
+    # Publish live-update events; bus errors must never break write responses.
+    try:
+        _scope = {"registration_id": registration.id, "event_id": _event_id, "edition_id": _edition_id}
+        if registration.table_id != _pre_table_id:
+            await live_bus.publish(
+                live_mapping.seating_changed(table_id=registration.table_id, **_scope)
+            )
+        if body.pre_orders is not None and registration.pre_orders != _pre_pre_orders:
+            if _sum_delivered(registration.pre_orders) != _pre_delivery_sum:
+                await live_bus.publish(live_mapping.delivery_changed(**_scope))
+            else:
+                await live_bus.publish(live_mapping.order_changed(**_scope))
+        if registration.checked_in != _pre_checked_in or registration.strap_issued != _pre_strap_issued:
+            await live_bus.publish(live_mapping.check_in_changed(**_scope))
+        _metadata = {"status", "payment_status", "notes", "accessibility_note", "person_id"}
+        if any(f in body.model_fields_set for f in _metadata):
+            await live_bus.publish(live_mapping.registration_changed(action="updated", **_scope))
+    except Exception:
+        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
+
     return registration_to_dict(registration, person_map[registration.person_id], registration.event)
 
 
@@ -341,8 +395,28 @@ async def delete_registration(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     registration = await _get_registration_or_404(db, registration_id)
+    _reg_id = registration.id
+    _event_id = registration.event_id
+    _edition_id = registration.event.edition_id
     await db.delete(registration)
     await db.commit()
+    try:
+        await live_bus.publish(
+            live_mapping.registration_changed(
+                action="deleted",
+                registration_id=_reg_id,
+                event_id=_event_id,
+                edition_id=_edition_id,
+            )
+        )
+    except Exception:
+        logger.warning("live_bus.publish failed for deleted registration %s", _reg_id, exc_info=True)
+
+
+def _sum_delivered(pre_orders: list[dict] | None) -> int:
+    if not pre_orders:
+        return 0
+    return sum(int(item.get("delivered_quantity") or 0) for item in pre_orders)
 
 
 def _hash_guest_access_token(token: str) -> str:

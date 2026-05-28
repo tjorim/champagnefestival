@@ -42,13 +42,25 @@ async def _sse_generator(
 ) -> AsyncIterator[str]:
     async with live_bus.subscribe() as queue:
         yield 'event: ready\ndata: {"ok":true}\n\n'
+        loop = asyncio.get_running_loop()
+        last_sent = loop.time()
         while True:
+            # Compute how long until the next keepalive is due.  This must be
+            # recalculated on every iteration so that filtering out non-matching
+            # events does not starve the heartbeat timer.
+            remaining = heartbeat_interval - (loop.time() - last_sent)
+            if remaining <= 0:
+                yield ": keepalive\n\n"
+                last_sent = loop.time()
+                remaining = heartbeat_interval
+
             try:
                 event: LiveEvent = await asyncio.wait_for(
-                    queue.get(), timeout=heartbeat_interval
+                    queue.get(), timeout=remaining
                 )
             except TimeoutError:
                 yield ": keepalive\n\n"
+                last_sent = loop.time()
                 continue
 
             # Scope filtering: skip events that don't match the requested scope.
@@ -59,6 +71,7 @@ async def _sse_generator(
                 continue
 
             yield event.to_sse_data()
+            last_sent = loop.time()
 
 
 @router.get("/stream")
