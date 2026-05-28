@@ -53,7 +53,7 @@ describe("parseSSEFrame", () => {
   });
 
   it("handles CRLF-terminated lines without leaving trailing \\r in values", () => {
-    // After CRLF normalisation in _readStream, frames reaching parseSSEFrame
+    // After CRLF normalization in _readStream, frames reaching parseSSEFrame
     // will already have \r\n replaced with \n.  This test verifies the parser
     // itself also tolerates raw CRLF (defensive coverage for direct callers).
     const frame = "event: invalidate\r\ndata: {}";

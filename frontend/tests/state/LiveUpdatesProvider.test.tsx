@@ -1,5 +1,6 @@
 import { act, render, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuth } from "@/contexts/AuthContext";
 import { LiveUpdatesProvider } from "@/state/LiveUpdatesProvider";
 import type { ConnectLiveStreamOptions, LiveEnvelope } from "@/utils/liveStream";
 import { createTestQueryClientHarness } from "../utils/queryClient";
@@ -41,6 +42,16 @@ function makeEnvelope(overrides: Partial<LiveEnvelope> = {}): LiveEnvelope {
 // ---------------------------------------------------------------------------
 
 describe("LiveUpdatesProvider", () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+  });
+
   it("opens the live stream when authenticated", async () => {
     capturedOptions = null;
     const { Wrapper } = createTestQueryClientHarness();
@@ -53,8 +64,7 @@ describe("LiveUpdatesProvider", () => {
 
   it("does not open the stream when not authenticated", async () => {
     capturedOptions = null;
-    const { useAuth } = await import("@/contexts/AuthContext");
-    vi.mocked(useAuth).mockReturnValueOnce({
+    vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
       getAccessToken: vi.fn().mockReturnValue(null),

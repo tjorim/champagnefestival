@@ -91,19 +91,19 @@ export async function connectLiveStream(options: ConnectLiveStreamOptions): Prom
         continue;
       }
 
+      const isReconnect = wasConnected;
       attempt = 0; // Successful connection resets backoff.
       wasConnected = true;
       await _readStream(response.body, signal, onInvalidate);
+      // Blanket invalidate after a successful re-connection to recover missed events.
+      if (isReconnect) {
+        onReconnect?.();
+      }
     } catch {
       if (signal.aborted) return;
     }
 
     if (signal.aborted) return;
-
-    // Stream ended or errored — blanket invalidate to recover any missed events.
-    if (wasConnected) {
-      onReconnect?.();
-    }
 
     await _sleep(BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)]!, signal).catch(
       () => undefined,
