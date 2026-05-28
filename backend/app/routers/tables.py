@@ -2,11 +2,12 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.live import live_bus
 from app.live import mapping as live_mapping
@@ -31,7 +32,9 @@ router = APIRouter(
 @router.post("", response_model=TableOut, status_code=status.HTTP_201_CREATED)
 async def create_table(
     body: TableCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
     if tt.scalar_one_or_none() is None:
@@ -52,6 +55,15 @@ async def create_table(
     )
     t.reservation_ids = []
     db.add(t)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="table_created",
+        resource_type="table",
+        resource_id=t.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"layout_id": t.layout_id, "name": t.name},
+    )
     await db.commit()
     await db.refresh(t)
     edition_id = await _get_layout_edition_id(db, t.layout_id)
@@ -106,7 +118,9 @@ async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> dict:
 async def update_table(
     table_id: str,
     body: TableUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     t = await _get_or_404(db, table_id)
 
@@ -135,6 +149,15 @@ async def update_table(
         if lay.scalar_one_or_none() is None:
             raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
         t.layout_id = body.layout_id
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="table_updated",
+        resource_type="table",
+        resource_id=table_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields": list(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(t)
     edition_id = await _get_layout_edition_id(db, t.layout_id)
@@ -153,9 +176,23 @@ async def update_table(
 
 
 @router.delete("/{table_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_table(table_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_table(
+    table_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     t = await _get_or_404(db, table_id)
     edition_id = await _get_layout_edition_id(db, t.layout_id)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="table_deleted",
+        resource_type="table",
+        resource_id=table_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"layout_id": t.layout_id, "name": t.name},
+    )
     await db.delete(t)
     await db.commit()
     try:

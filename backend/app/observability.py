@@ -8,6 +8,7 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from threading import Lock
+from uuid import uuid4
 
 from fastapi import Request
 from starlette.responses import Response as StarletteResponse
@@ -96,7 +97,10 @@ metrics = InMemoryRequestMetrics()
 
 
 async def request_metrics_middleware(request: Request, call_next):
-    """Starlette-compatible middleware that records per-request metrics."""
+    """Starlette-compatible middleware: request correlation, structured logging, and metrics."""
+    request_id = request.headers.get("X-Request-ID") or str(uuid4())
+    request.state.request_id = request_id
+
     started = time.perf_counter()
     status_code = 500
     response = None
@@ -109,4 +113,15 @@ async def request_metrics_middleware(request: Request, call_next):
 
     latency_ms = (time.perf_counter() - started) * 1000
     metrics.record(status_code=status_code, latency_ms=latency_ms)
+
+    logger.info(
+        "request completed request_id=%s method=%s path=%s status=%d latency_ms=%.2f",
+        request_id,
+        request.method,
+        request.url.path,
+        status_code,
+        latency_ms,
+    )
+
+    response.headers["X-Request-ID"] = request_id
     return response

@@ -53,6 +53,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     settings.log_configuration()
 
+    if settings.sentry_dsn:
+        try:
+            import sentry_sdk  # ty: ignore[unresolved-import]
+
+            sentry_sdk.init(dsn=settings.sentry_dsn, environment=settings.environment)
+            logger.info("✓ Sentry error tracking initialized")
+        except ImportError:
+            logger.warning("SENTRY_DSN configured but sentry-sdk is not installed — install sentry-sdk[fastapi]")
+
     try:
         await create_tables()
         logger.info("✓ Database tables verified / created")

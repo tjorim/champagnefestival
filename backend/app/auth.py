@@ -10,6 +10,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.oidc_config import OIDCTokenError, decode_token
 
+_optional_bearer = HTTPBearer(auto_error=False)
+
 logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
@@ -86,3 +88,20 @@ async def get_current_claims(
     that only require the caller to be authenticated.
     """
     return await _decode_or_401(credentials)
+
+
+async def get_actor_id(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+) -> str:
+    """FastAPI dependency — returns the OIDC ``sub`` for audit trail logging.
+
+    Returns the token subject when a valid Bearer token is present, or
+    ``'anonymous'`` for unauthenticated / token-gated endpoints. Never raises.
+    """
+    if credentials is None:
+        return "anonymous"
+    try:
+        claims = await decode_token(credentials.credentials)
+        return str(claims.get("sub", "unknown"))
+    except OIDCTokenError:
+        return "anonymous"

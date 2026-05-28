@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     """Shared secret required in the ``X-Metrics-Secret`` header to access ``GET /api/metrics``.
     Leave empty to disable the metrics endpoint entirely."""
 
+    # --- Error tracking ---
+    sentry_dsn: str = ""
+    """Sentry DSN for backend error tracking. Leave empty to disable Sentry.
+    Example: https://<key>@<org>.ingest.sentry.io/<project>
+    """
+
     # --- Anti-spam ---
     min_form_seconds: int = 3
     """Minimum seconds between form load and submission (bot protection)."""
