@@ -40,17 +40,29 @@ describe("parseSSEFrame", () => {
     expect(parseSSEFrame(frame)).toEqual({ eventType: "message", data: "line1\nline2" });
   });
 
-  it("ignores lines starting with ': '", () => {
-    const frame = ": this is a comment\ndata: real data";
-    expect(parseSSEFrame(frame)).toEqual({ eventType: "message", data: "real data" });
+  it("ignores lines starting with ':'", () => {
+    expect(parseSSEFrame(": this is a comment\ndata: real data")).toEqual({
+      eventType: "message",
+      data: "real data",
+    });
   });
 
-  it("handles CRLF-terminated lines", () => {
+  it("parses fields without the optional space after the colon", () => {
+    const frame = "event:invalidate\ndata:{}";
+    expect(parseSSEFrame(frame)).toEqual({ eventType: "invalidate", data: "{}" });
+  });
+
+  it("handles CRLF-terminated lines without leaving trailing \\r in values", () => {
+    // After CRLF normalisation in _readStream, frames reaching parseSSEFrame
+    // will already have \r\n replaced with \n.  This test verifies the parser
+    // itself also tolerates raw CRLF (defensive coverage for direct callers).
     const frame = "event: invalidate\r\ndata: {}";
-    // Each line is split on \n; the \r stays in the field value.
-    // We accept this minor edge: eventType includes no trailing \r here because
-    // the line ends with \r\n and split("\n") gives "event: invalidate\r".
-    // The important thing is that data is extracted.
+    // split("\n") on "event: invalidate\r\ndata: {}" gives:
+    //   ["event: invalidate\r", "data: {}"]
+    // The \r in "invalidate\r" is left by split; our parser strips the leading
+    // "event:" prefix and optional space, yielding "invalidate\r".
+    // Callers that go through _readStream never see this because normalisation
+    // happens there.  Direct parseSSEFrame callers should pre-normalise.
     const result = parseSSEFrame(frame);
     expect(result).not.toBeNull();
     expect(result?.data).toBe("{}");

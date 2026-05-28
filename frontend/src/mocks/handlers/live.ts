@@ -13,14 +13,22 @@ let activeController: ReadableStreamDefaultController<Uint8Array> | null = null;
 
 /** Push a synthetic live-update event into the open SSE stream. */
 export function pushLiveEvent(envelope: Partial<LiveEnvelope>): void {
-  activeController?.enqueue(
-    encoder.encode(`event: invalidate\ndata: ${JSON.stringify(envelope)}\n\n`),
-  );
+  try {
+    activeController?.enqueue(
+      encoder.encode(`event: invalidate\ndata: ${JSON.stringify(envelope)}\n\n`),
+    );
+  } catch (err) {
+    console.warn("Failed to push live event (stream might be closed):", err);
+  }
 }
 
 /** Close the active SSE stream (simulates a server disconnect). */
 export function closeLiveStream(): void {
-  activeController?.close();
+  try {
+    activeController?.close();
+  } catch {
+    // Already closed or errored — nothing to do.
+  }
   activeController = null;
 }
 

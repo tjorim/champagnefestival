@@ -49,11 +49,13 @@ export function parseSSEFrame(frame: string): { eventType: string; data: string 
   const dataLines: string[] = [];
 
   for (const line of frame.split("\n")) {
-    if (line.startsWith(": ")) continue; // SSE comment / keepalive
-    if (line.startsWith("event: ")) {
-      eventType = line.slice(7);
-    } else if (line.startsWith("data: ")) {
-      dataLines.push(line.slice(6));
+    if (line.startsWith(":")) continue; // SSE comment / keepalive (space after : is optional)
+    if (line.startsWith("event:")) {
+      const value = line.slice(6);
+      eventType = value.startsWith(" ") ? value.slice(1) : value;
+    } else if (line.startsWith("data:")) {
+      const value = line.slice(5);
+      dataLines.push(value.startsWith(" ") ? value.slice(1) : value);
     }
     // id: and retry: are intentionally ignored.
   }
@@ -125,6 +127,7 @@ async function _readStream(
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
+      buffer = buffer.replace(/\r\n/g, "\n");
 
       let boundary: number;
       while ((boundary = buffer.indexOf("\n\n")) !== -1) {
@@ -152,9 +155,19 @@ function _sleep(ms: number, signal: AbortSignal): Promise<void> {
       reject(new Error("aborted"));
       return;
     }
-    const id = setTimeout(resolve, ms);
-    signal.addEventListener("abort", () => { clearTimeout(id); reject(new Error("aborted")); }, {
-      once: true,
-    });
+
+    let id: ReturnType<typeof setTimeout>;
+
+    const onAbort = () => {
+      clearTimeout(id);
+      reject(new Error("aborted"));
+    };
+
+    id = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
