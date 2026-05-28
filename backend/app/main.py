@@ -22,6 +22,7 @@ from app.routers import (
     exhibitors,
     health,
     layouts,
+    live,
     me,
     members,
     people,
@@ -126,4 +127,5 @@ app.include_router(volunteer_ops.router)
 app.include_router(areas.router)
 app.include_router(venue_plan.router)
 app.include_router(me.router)
+app.include_router(live.router)
 app.include_router(health.router)
