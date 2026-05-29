@@ -75,9 +75,9 @@ async def test_check_in_writes_audit_entry(client, db_session):
     reg_body = await _post_registration(client)
     assert reg_body.status_code == 201, reg_body.text
     reg = reg_body.json()
-    check_in_token = (
-        await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)
-    ).json()["check_in_token"]
+    check_in_token = (await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)).json()[
+        "check_in_token"
+    ]
 
     r = await client.post(
         f"/api/check-in/{reg['id']}",
@@ -99,9 +99,9 @@ async def test_check_in_writes_audit_entry(client, db_session):
 async def test_strap_issued_writes_audit_entry(client, db_session):
     reg_body = await _post_registration(client)
     reg = reg_body.json()
-    check_in_token = (
-        await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)
-    ).json()["check_in_token"]
+    check_in_token = (await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)).json()[
+        "check_in_token"
+    ]
 
     r = await client.post(
         f"/api/check-in/{reg['id']}",
@@ -119,9 +119,9 @@ async def test_strap_issued_writes_audit_entry(client, db_session):
 async def test_duplicate_check_in_does_not_write_second_audit_entry(client, db_session):
     reg_body = await _post_registration(client)
     reg = reg_body.json()
-    check_in_token = (
-        await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)
-    ).json()["check_in_token"]
+    check_in_token = (await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)).json()[
+        "check_in_token"
+    ]
 
     await client.post(
         f"/api/check-in/{reg['id']}",
