@@ -55,7 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     if settings.sentry_dsn:
         try:
-            import sentry_sdk  # type: ignore[import-not-found]
+            import sentry_sdk  # ty: ignore[unresolved-import]
 
             sentry_sdk.init(dsn=settings.sentry_dsn, environment=settings.environment)
             logger.info("✓ Sentry error tracking initialized")

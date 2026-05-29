@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends
 from starlette.responses import StreamingResponse
@@ -39,7 +39,7 @@ async def _sse_generator(
     edition_id: str | None,
     event_id: str | None,
     heartbeat_interval: float,
-) -> AsyncIterator[str]:
+) -> AsyncGenerator[str, None]:
     async with live_bus.subscribe() as queue:
         yield 'event: ready\ndata: {"ok":true}\n\n'
         loop = asyncio.get_running_loop()
