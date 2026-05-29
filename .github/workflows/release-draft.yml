@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "Tag '$TAG' is invalid. Expected strict SemVer format: vX.Y.Z"
+            echo "::error::Tag '$TAG' is invalid. Expected strict SemVer format: vX.Y.Z"
             exit 1
           fi
           VERSION="${TAG#v}"
@@ -42,7 +42,7 @@ jobs:
           set -euo pipefail
           FRONTEND_VERSION="$(node -p "require('./frontend/package.json').version")"
           if [[ "$FRONTEND_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "frontend/package.json version '$FRONTEND_VERSION' does not match '$EXPECTED_VERSION'"
+            echo "::error::frontend/package.json version '$FRONTEND_VERSION' does not match '$EXPECTED_VERSION'"
             exit 1
           fi
 
@@ -54,15 +54,15 @@ jobs:
           BACKEND_PROJECT_VERSION="$(grep -E '^version = "[^"]+"$' backend/pyproject.toml | head -n 1 | cut -d '"' -f 2)"
           BACKEND_APP_VERSION="$(grep -Eo 'version="[^"]+"' backend/app/main.py | head -n 1 | cut -d '"' -f 2)"
           if [[ -z "$BACKEND_PROJECT_VERSION" || -z "$BACKEND_APP_VERSION" ]]; then
-            echo "Could not read backend version metadata."
+            echo "::error::Could not read backend version metadata."
             exit 1
           fi
           if [[ "$BACKEND_PROJECT_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "backend/pyproject.toml version '$BACKEND_PROJECT_VERSION' does not match '$EXPECTED_VERSION'"
+            echo "::error::backend/pyproject.toml version '$BACKEND_PROJECT_VERSION' does not match '$EXPECTED_VERSION'"
             exit 1
           fi
           if [[ "$BACKEND_APP_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "backend/app/main.py version '$BACKEND_APP_VERSION' does not match '$EXPECTED_VERSION'"
+            echo "::error::backend/app/main.py version '$BACKEND_APP_VERSION' does not match '$EXPECTED_VERSION'"
             exit 1
           fi
 
@@ -72,12 +72,12 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! -f CHANGELOG.md ]]; then
-            echo "CHANGELOG.md not found."
+            echo "::error::CHANGELOG.md not found."
             exit 1
           fi
           ESCAPED_VERSION="$(printf '%s' "$EXPECTED_VERSION" | sed 's/\./\\./g')"
           if ! grep -Eq "^## \[$ESCAPED_VERSION\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md; then
-            echo "CHANGELOG.md must contain an entry header: ## [$EXPECTED_VERSION] - YYYY-MM-DD"
+            echo "::error::CHANGELOG.md must contain an entry header: ## [$EXPECTED_VERSION] - YYYY-MM-DD"
             exit 1
           fi
 
