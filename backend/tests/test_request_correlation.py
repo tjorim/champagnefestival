@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 
@@ -53,3 +55,35 @@ async def test_metrics_response_includes_request_id(client, monkeypatch):
     r = await client.get("/api/metrics", headers={"X-Metrics-Secret": "secret"})
     assert r.status_code == 200
     assert "x-request-id" in r.headers
+
+
+@pytest.mark.anyio
+async def test_structured_log_contains_required_fields(client, caplog):
+    with caplog.at_level(logging.INFO, logger="app.observability"):
+        r = await client.get("/api/health/liveness")
+
+    assert r.status_code == 200
+    log_records = [rec for rec in caplog.records if rec.name == "app.observability"]
+    assert log_records, "Expected at least one structured log record from observability middleware"
+
+    msg = log_records[-1].message
+    assert "request_id=" in msg
+    assert "method=GET" in msg
+    assert "path=/api/health/liveness" in msg
+    assert "status=200" in msg
+    assert "latency_ms=" in msg
+    assert "user_id=" in msg
+    assert "auth_type=" in msg
+
+
+@pytest.mark.anyio
+async def test_structured_log_does_not_include_query_params(client, caplog):
+    with caplog.at_level(logging.INFO, logger="app.observability"):
+        r = await client.get("/api/health/liveness?sensitive=secret-token")
+
+    assert r.status_code == 200
+    log_records = [rec for rec in caplog.records if rec.name == "app.observability"]
+    assert log_records
+    msg = log_records[-1].message
+    assert "sensitive" not in msg
+    assert "secret-token" not in msg

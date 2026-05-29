@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.oidc_config import OIDCTokenError, decode_token
@@ -44,6 +44,7 @@ def _extract_roles(claims: dict[str, Any]) -> list[str]:
 
 
 async def require_admin(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> None:
     """FastAPI dependency — rejects requests without a valid admin Bearer JWT.
@@ -60,8 +61,12 @@ async def require_admin(
             detail="Forbidden",
         )
 
+    request.state.user_id = claims.get("sub")
+    request.state.auth_type = "oidc"
+
 
 async def require_volunteer(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> None:
     """FastAPI dependency — accepts tokens with the ``volunteer`` or ``admin`` realm role.
@@ -78,8 +83,12 @@ async def require_volunteer(
             detail="Forbidden",
         )
 
+    request.state.user_id = claims.get("sub")
+    request.state.auth_type = "oidc"
+
 
 async def get_current_claims(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> dict[str, Any]:
     """FastAPI dependency — returns JWT claims for any valid Bearer token.
@@ -87,7 +96,10 @@ async def get_current_claims(
     Does not enforce any role; use this for self-service (``/api/me/*``) endpoints
     that only require the caller to be authenticated.
     """
-    return await _decode_or_401(credentials)
+    claims = await _decode_or_401(credentials)
+    request.state.user_id = claims.get("sub")
+    request.state.auth_type = "oidc"
+    return claims
 
 
 async def get_actor_id(
