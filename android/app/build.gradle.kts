@@ -13,7 +13,8 @@ android {
         applicationId = "be.champagnefestival.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
+        versionCode = 1000000
         versionName = "1.0.0"
 
         manifestPlaceholders["appAuthRedirectScheme"] = "be.champagnefestival.android"
