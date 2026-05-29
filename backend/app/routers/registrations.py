@@ -409,8 +409,8 @@ async def update_registration(
             actor=actor,
             action="registration_status_changed",
             details={
-                "status": body.status,
-                "payment_status": body.payment_status,
+                "status": registration.status,
+                "payment_status": registration.payment_status,
             },
             **_audit_base,
         )
