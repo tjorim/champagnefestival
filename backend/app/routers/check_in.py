@@ -93,7 +93,8 @@ async def post_check_in(
     already = r.checked_in
     changed = False
     strap_newly_issued = False
-    actor = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("X-Forwarded-For")
+    actor = forwarded.split(",")[0].strip() if forwarded else (request.headers.get("X-Real-IP") or (request.client.host if request.client else "unknown"))
     request_id = getattr(request.state, "request_id", None)
 
     if not already:

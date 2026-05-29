@@ -103,5 +103,5 @@ async def get_actor_id(
     try:
         claims = await decode_token(credentials.credentials)
         return str(claims.get("sub", "unknown"))
-    except OIDCTokenError:
+    except Exception:
         return "anonymous"

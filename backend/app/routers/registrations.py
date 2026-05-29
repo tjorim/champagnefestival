@@ -341,6 +341,8 @@ async def update_registration(
     _pre_delivery_sum = _sum_delivered(registration.pre_orders)
     _pre_checked_in = registration.checked_in
     _pre_strap_issued = registration.strap_issued
+    _pre_status = registration.status
+    _pre_payment_status = registration.payment_status
     _event_id = registration.event_id
     _edition_id = registration.event.edition_id
 
@@ -402,8 +404,7 @@ async def update_registration(
             details={"strap_issued": registration.strap_issued},
             **_audit_base,
         )
-    _status_fields = {"status", "payment_status"}
-    if any(f in body.model_fields_set for f in _status_fields):
+    if registration.status != _pre_status or registration.payment_status != _pre_payment_status:
         await write_audit_entry(
             db,
             actor=actor,

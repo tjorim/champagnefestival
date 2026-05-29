@@ -107,8 +107,14 @@ async def request_metrics_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
         status_code = response.status_code
-    except Exception:
+    except Exception as exc:
         logger.exception("Unhandled error in request middleware: %s %s", request.method, request.url.path)
+        try:
+            import sentry_sdk  # ty: ignore[unresolved-import]
+
+            sentry_sdk.capture_exception(exc)
+        except ImportError:
+            pass
         response = StarletteResponse("Internal Server Error", status_code=500)
 
     latency_ms = (time.perf_counter() - started) * 1000
