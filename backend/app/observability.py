@@ -120,13 +120,17 @@ async def request_metrics_middleware(request: Request, call_next):
     latency_ms = (time.perf_counter() - started) * 1000
     metrics.record(status_code=status_code, latency_ms=latency_ms)
 
+    user_id = getattr(request.state, "user_id", None)
+    auth_type = getattr(request.state, "auth_type", None)
     logger.info(
-        "request completed request_id=%s method=%s path=%s status=%d latency_ms=%.2f",
+        "request completed request_id=%s method=%s path=%s status=%d latency_ms=%.2f user_id=%s auth_type=%s",
         request_id,
         request.method,
         request.url.path,
         status_code,
         latency_ms,
+        user_id,
+        auth_type,
     )
 
     response.headers["X-Request-ID"] = request_id
