@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column("resource_type", sa.String(50), nullable=False),
         sa.Column("resource_id", sa.String(64), nullable=False),
         sa.Column("request_id", sa.String(64), nullable=True),
-        sa.Column("details", sa.JSON, nullable=False, server_default="{}"),
+        sa.Column("details", sa.JSON, nullable=False, server_default="'{}'"),
     )
     op.create_index("ix_audit_entries_timestamp", "audit_entries", ["timestamp"])
     op.create_index("ix_audit_entries_actor", "audit_entries", ["actor"])

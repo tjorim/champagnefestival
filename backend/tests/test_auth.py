@@ -13,9 +13,13 @@ def _credentials() -> HTTPAuthorizationCredentials:
     return HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
 
 
+class _MockState:
+    pass
+
+
 def _request() -> MagicMock:
     req = MagicMock()
-    req.state = MagicMock()
+    req.state = _MockState()
     return req
 
 

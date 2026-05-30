@@ -13,6 +13,11 @@ from uuid import uuid4
 from fastapi import Request
 from starlette.responses import Response as StarletteResponse
 
+try:
+    import sentry_sdk  # ty: ignore[unresolved-import]
+except ImportError:
+    sentry_sdk = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -109,12 +114,8 @@ async def request_metrics_middleware(request: Request, call_next):
         status_code = response.status_code
     except Exception as exc:
         logger.exception("Unhandled error in request middleware: %s %s", request.method, request.url.path)
-        try:
-            import sentry_sdk  # ty: ignore[unresolved-import]
-
+        if sentry_sdk is not None:
             sentry_sdk.capture_exception(exc)
-        except ImportError:
-            pass
         response = StarletteResponse("Internal Server Error", status_code=500)
 
     latency_ms = (time.perf_counter() - started) * 1000
