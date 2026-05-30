@@ -16,7 +16,7 @@ cameraX = "1.4.2"
 googleMaterial = "1.12.0"
 coroutines = "1.10.2"
 junit = "4.13.2"
-mockk = "1.14.2"
+mockk = "1.14.11"
 coroutinesTest = "1.10.2"
 turbine = "1.2.0"
 
