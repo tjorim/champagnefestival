@@ -48,10 +48,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
@@ -60,6 +56,12 @@ android {
         // Crashes due to IncompatibleClassChangeError in NonNullableMutableLiveDataDetector
         // against the Kotlin Analysis API version bundled with the current Kotlin plugin.
         disable += "NullSafeMutableLiveData"
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 
