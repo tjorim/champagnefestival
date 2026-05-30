@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
@@ -11,6 +13,16 @@ def _credentials() -> HTTPAuthorizationCredentials:
     return HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
 
 
+class _MockState:
+    pass
+
+
+def _request() -> MagicMock:
+    req = MagicMock()
+    req.state = _MockState()
+    return req
+
+
 @pytest.mark.asyncio
 async def test_require_admin_accepts_admin_role(monkeypatch) -> None:
     async def fake_decode_token(_token: str) -> dict:
@@ -18,7 +30,7 @@ async def test_require_admin_accepts_admin_role(monkeypatch) -> None:
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
-    await auth.require_admin(_credentials())
+    await auth.require_admin(_request(), _credentials())
 
 
 @pytest.mark.asyncio
@@ -29,7 +41,7 @@ async def test_require_admin_rejects_missing_admin_role(monkeypatch) -> None:
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.require_admin(_credentials())
+        await auth.require_admin(_request(), _credentials())
 
     assert exc_info.value.status_code == 403
 
@@ -42,7 +54,7 @@ async def test_require_admin_rejects_missing_realm_access(monkeypatch) -> None:
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.require_admin(_credentials())
+        await auth.require_admin(_request(), _credentials())
 
     assert exc_info.value.status_code == 403
 
@@ -55,7 +67,7 @@ async def test_require_admin_rejects_null_realm_access(monkeypatch) -> None:
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.require_admin(_credentials())
+        await auth.require_admin(_request(), _credentials())
 
     assert exc_info.value.status_code == 403
 
@@ -68,7 +80,7 @@ async def test_require_admin_rejects_non_dict_realm_access(monkeypatch) -> None:
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.require_admin(_credentials())
+        await auth.require_admin(_request(), _credentials())
 
     assert exc_info.value.status_code == 403
 
@@ -81,7 +93,7 @@ async def test_require_admin_rejects_string_roles_claim(monkeypatch) -> None:
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.require_admin(_credentials())
+        await auth.require_admin(_request(), _credentials())
 
     assert exc_info.value.status_code == 403
 
@@ -98,7 +110,7 @@ async def test_require_volunteer_accepts_volunteer_role(monkeypatch) -> None:
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
-    await auth.require_volunteer(_credentials())
+    await auth.require_volunteer(_request(), _credentials())
 
 
 @pytest.mark.asyncio
@@ -108,7 +120,7 @@ async def test_require_volunteer_accepts_admin_role(monkeypatch) -> None:
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
-    await auth.require_volunteer(_credentials())
+    await auth.require_volunteer(_request(), _credentials())
 
 
 @pytest.mark.asyncio
@@ -118,7 +130,7 @@ async def test_require_volunteer_accepts_both_roles(monkeypatch) -> None:
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
-    await auth.require_volunteer(_credentials())
+    await auth.require_volunteer(_request(), _credentials())
 
 
 @pytest.mark.asyncio
@@ -129,7 +141,7 @@ async def test_require_volunteer_rejects_visitor_role(monkeypatch) -> None:
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.require_volunteer(_credentials())
+        await auth.require_volunteer(_request(), _credentials())
 
     assert exc_info.value.status_code == 403
 
@@ -142,7 +154,7 @@ async def test_require_volunteer_rejects_missing_realm_access(monkeypatch) -> No
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.require_volunteer(_credentials())
+        await auth.require_volunteer(_request(), _credentials())
 
     assert exc_info.value.status_code == 403
 
@@ -161,7 +173,7 @@ async def test_get_current_claims_returns_claims(monkeypatch) -> None:
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
-    result = await auth.get_current_claims(_credentials())
+    result = await auth.get_current_claims(_request(), _credentials())
     assert result == claims
 
 
@@ -175,6 +187,6 @@ async def test_get_current_claims_raises_401_on_invalid_token(monkeypatch) -> No
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
     with pytest.raises(HTTPException) as exc_info:
-        await auth.get_current_claims(_credentials())
+        await auth.get_current_claims(_request(), _credentials())
 
     assert exc_info.value.status_code == 401

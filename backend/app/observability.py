@@ -8,9 +8,15 @@ import time
 from collections import deque
 from dataclasses import dataclass
 from threading import Lock
+from uuid import uuid4
 
 from fastapi import Request
 from starlette.responses import Response as StarletteResponse
+
+try:
+    import sentry_sdk  # ty: ignore[unresolved-import]
+except ImportError:
+    sentry_sdk = None
 
 logger = logging.getLogger(__name__)
 
@@ -96,17 +102,37 @@ metrics = InMemoryRequestMetrics()
 
 
 async def request_metrics_middleware(request: Request, call_next):
-    """Starlette-compatible middleware that records per-request metrics."""
+    """Starlette-compatible middleware: request correlation, structured logging, and metrics."""
+    request_id = request.headers.get("X-Request-ID") or str(uuid4())
+    request.state.request_id = request_id
+
     started = time.perf_counter()
     status_code = 500
     response = None
     try:
         response = await call_next(request)
         status_code = response.status_code
-    except Exception:
+    except Exception as exc:
         logger.exception("Unhandled error in request middleware: %s %s", request.method, request.url.path)
+        if sentry_sdk is not None:
+            sentry_sdk.capture_exception(exc)
         response = StarletteResponse("Internal Server Error", status_code=500)
 
     latency_ms = (time.perf_counter() - started) * 1000
     metrics.record(status_code=status_code, latency_ms=latency_ms)
+
+    user_id = getattr(request.state, "user_id", None)
+    auth_type = getattr(request.state, "auth_type", None)
+    logger.info(
+        "request completed request_id=%s method=%s path=%s status=%d latency_ms=%.2f user_id=%s auth_type=%s",
+        request_id,
+        request.method,
+        request.url.path,
+        status_code,
+        latency_ms,
+        user_id,
+        auth_type,
+    )
+
+    response.headers["X-Request-ID"] = request_id
     return response

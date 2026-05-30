@@ -44,6 +44,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+if settings.sentry_dsn:
+    try:
+        import sentry_sdk  # ty: ignore[unresolved-import]
+
+        sentry_sdk.init(dsn=settings.sentry_dsn, environment=settings.environment)
+        logger.info("✓ Sentry error tracking initialized")
+    except ImportError:
+        logger.warning("SENTRY_DSN configured but sentry-sdk is not installed — install sentry-sdk[fastapi]")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
@@ -92,7 +102,8 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept", "Authorization"],
+    allow_headers=["Content-Type", "Accept", "Authorization", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
 
 # Metrics middleware is registered last so it is outermost and captures every request,

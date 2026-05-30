@@ -3,8 +3,10 @@ export async function requestApi(url: string, options: RequestInit): Promise<Res
 }
 
 async function extractErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
+  const requestId = response.headers.get("X-Request-ID");
   const data = await response.json().catch(() => ({}));
-  return (data as { detail?: string }).detail ?? fallbackMessage;
+  const detail = (data as { detail?: string }).detail ?? fallbackMessage;
+  return requestId ? `${detail} [request-id: ${requestId}]` : detail;
 }
 
 export async function fetchJsonOrThrow<T>(

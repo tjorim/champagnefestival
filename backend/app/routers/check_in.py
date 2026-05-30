@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import write_audit_entry
 from app.database import get_db
 from app.live import live_bus
 from app.live import mapping as live_mapping
@@ -91,6 +92,15 @@ async def post_check_in(
 
     already = r.checked_in
     changed = False
+    strap_newly_issued = False
+    actor = request.headers.get("X-Real-IP")
+    if not actor:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded and forwarded.strip():
+            actor = forwarded.split(",")[0].strip()
+        else:
+            actor = request.client.host if request.client else "unknown"
+    request_id = getattr(request.state, "request_id", None)
 
     if not already:
         r.checked_in = True
@@ -99,9 +109,30 @@ async def post_check_in(
 
     if body.issue_strap and not r.strap_issued:
         r.strap_issued = True
+        strap_newly_issued = True
         changed = True
 
     if changed:
+        if not already:
+            await write_audit_entry(
+                db,
+                actor=actor,
+                action="check_in",
+                resource_type="registration",
+                resource_id=r.id,
+                request_id=request_id,
+                details={"event_id": r.event_id},
+            )
+        if strap_newly_issued:
+            await write_audit_entry(
+                db,
+                actor=actor,
+                action="strap_issued",
+                resource_type="registration",
+                resource_id=r.id,
+                request_id=request_id,
+                details={"event_id": r.event_id},
+            )
         await db.commit()
         await db.refresh(r)
         try:

@@ -13,7 +13,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.config import settings
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
@@ -115,7 +116,9 @@ async def create_registration(
 )
 async def admin_create_registration(
     body: RegistrationAdminCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     person = await _get_person_or_404(db, body.person_id)
     event = await _get_event_or_404(db, body.event_id)
@@ -132,6 +135,15 @@ async def admin_create_registration(
     )
     registration.pre_orders = [item.model_dump() for item in body.pre_orders]
     db.add(registration)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="registration_created",
+        resource_type="registration",
+        resource_id=registration.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"event_id": event.id, "person_id": person.id},
+    )
     await db.commit()
 
     registration = await _get_registration_or_404(db, registration.id)
@@ -317,7 +329,9 @@ async def get_registration(
 async def update_registration(
     registration_id: str,
     body: RegistrationUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     registration = await _get_registration_or_404(db, registration_id)
 
@@ -327,6 +341,8 @@ async def update_registration(
     _pre_delivery_sum = _sum_delivered(registration.pre_orders)
     _pre_checked_in = registration.checked_in
     _pre_strap_issued = registration.strap_issued
+    _pre_status = registration.status
+    _pre_payment_status = registration.payment_status
     _event_id = registration.event_id
     _edition_id = registration.event.edition_id
 
@@ -357,6 +373,48 @@ async def update_registration(
         registration.checked_in = body.checked_in
     if body.strap_issued is not None:
         registration.strap_issued = body.strap_issued
+
+    _request_id = getattr(request.state, "request_id", None)
+    _audit_base = {"resource_type": "registration", "resource_id": registration.id, "request_id": _request_id}
+    if "table_id" in body.model_fields_set and body.table_id != _pre_table_id:
+        action = "table_unassigned" if body.table_id is None else "table_assigned"
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action=action,
+            details={"table_id": body.table_id, "previous_table_id": _pre_table_id},
+            **_audit_base,
+        )
+    if body.pre_orders is not None and registration.pre_orders != _pre_pre_orders:
+        action = "delivery_updated" if _sum_delivered(registration.pre_orders) != _pre_delivery_sum else "order_updated"
+        await write_audit_entry(db, actor=actor, action=action, details={}, **_audit_base)
+    if body.checked_in is not None and registration.checked_in != _pre_checked_in:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="check_in",
+            details={"checked_in": registration.checked_in},
+            **_audit_base,
+        )
+    if body.strap_issued is not None and registration.strap_issued != _pre_strap_issued:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="strap_issued",
+            details={"strap_issued": registration.strap_issued},
+            **_audit_base,
+        )
+    if registration.status != _pre_status or registration.payment_status != _pre_payment_status:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="registration_status_changed",
+            details={
+                "status": registration.status,
+                "payment_status": registration.payment_status,
+            },
+            **_audit_base,
+        )
 
     await db.commit()
     registration = await _get_registration_or_404(db, registration.id)
@@ -390,12 +448,23 @@ async def update_registration(
 )
 async def delete_registration(
     registration_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> None:
     registration = await _get_registration_or_404(db, registration_id)
     _reg_id = registration.id
     _event_id = registration.event_id
     _edition_id = registration.event.edition_id
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="registration_deleted",
+        resource_type="registration",
+        resource_id=_reg_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"event_id": _event_id},
+    )
     await db.delete(registration)
     await db.commit()
     try:
