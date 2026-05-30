@@ -35,7 +35,7 @@
     "react": "^19.2.6",
     "react-bootstrap": "^3.0.0-beta.5",
     "react-dom": "^19.2.6",
-    "react-error-boundary": "^6.1.1",
+    "react-error-boundary": "^6.1.2",
     "react-leaflet": "^5.0.0",
     "react-oidc-context": "^3.2.0",
     "react-select": "^5.10.2",
