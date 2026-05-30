@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "be.champagnefestival.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "be.champagnefestival.android"
