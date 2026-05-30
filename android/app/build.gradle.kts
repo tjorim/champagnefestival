@@ -57,6 +57,13 @@ android {
         // against the Kotlin Analysis API version bundled with the current Kotlin plugin.
         disable += "NullSafeMutableLiveData"
     }
+
+    packaging {
+        resources {
+            // OkHttp 5.x and jspecify both ship this OSGI metadata file
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
 }
 
 kotlin {
