@@ -39,7 +39,7 @@
     "react-leaflet": "^5.0.0",
     "react-oidc-context": "^3.2.0",
     "react-select": "^5.10.2",
-    "swiper": "^12.1.4"
+    "swiper": "^12.2.0"
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.18.1",
