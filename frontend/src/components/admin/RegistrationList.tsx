@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -21,6 +22,7 @@ import { exportToCsv } from "@/utils/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+import { fetchRegistrations } from "@/utils/adminFetch";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
 
@@ -127,6 +129,7 @@ export default function RegistrationList({
   const [allocationFilter, setAllocationFilter] = useState("");
   const [editionFilter, setEditionFilter] = useState<EditionFilter>("all");
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
     () => loadColVis(COL_VIS_KEY),
@@ -135,6 +138,18 @@ export default function RegistrationList({
   const [bulkAction, setBulkAction] = useState<"confirm" | "cancel" | "paid" | null>(null);
   const [bulkInProgress, setBulkInProgress] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [q]);
+  const registrationSearchQuery = useQuery({
+    queryKey: ["admin", "registrations", "search", debouncedQ],
+    queryFn: () => fetchRegistrations(authHeaders, debouncedQ),
+    enabled: debouncedQ.length > 0,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+  const displayedRegistrations = debouncedQ ? (registrationSearchQuery.data ?? []) : registrations;
 
   // Refs so column header/cell can read latest selection state without being in deps
   const selectedIdsRef = useRef<Set<string>>(selectedIds);
@@ -171,7 +186,7 @@ export default function RegistrationList({
   // Domain-level pre-filter (edition type, status, allocation) — text search handled by TanStack
   const preFiltered = useMemo(
     () =>
-      registrations.filter((registration) => {
+      displayedRegistrations.filter((registration) => {
         if (filter !== "all" && registration.status !== filter) return false;
         if (filterPersonId && registration.person.id !== filterPersonId) return false;
         const standalone = isStandaloneRegistration(registration);
@@ -179,7 +194,7 @@ export default function RegistrationList({
         if (editionFilter === "standalone" && !standalone) return false;
         return true;
       }),
-    [registrations, filter, filterPersonId, editionFilter],
+    [displayedRegistrations, filter, filterPersonId, editionFilter],
   );
 
   const handleAssignTable = useCallback(
@@ -455,7 +470,7 @@ export default function RegistrationList({
     {
       data: preFiltered,
       columns,
-      state: { sorting, globalFilter: q, columnVisibility },
+      state: { sorting, globalFilter: "", columnVisibility },
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,

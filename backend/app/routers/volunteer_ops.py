@@ -11,16 +11,27 @@ staff).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import or_, select
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import require_volunteer
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination
+from app.dependencies import Pagination
 from app.models import Event, Person, Registration, Table
 from app.schemas import CheckInGuestOut
+from app.services.operational_search import (
+    DEFAULT_RESULT_LIMIT,
+    best_registration_match,
+    bounded_limit,
+    matches_order_filters,
+    normalize_table_reference,
+    person_search_predicate,
+    rank_table_reference,
+)
 from app.utils import registration_to_checkin_dict
 
 router = APIRouter(
@@ -30,11 +41,115 @@ router = APIRouter(
 )
 
 
+async def _resolve_tables(db: AsyncSession, reference: str) -> list[Table]:
+    reference = reference.strip()
+    if not reference:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Provide a table reference.")
+    normalized = normalize_table_reference(reference)
+    escaped = normalized.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+    rows = (
+        (
+            await db.execute(
+                select(Table)
+                .where(or_(Table.id.ilike(f"%{escaped}%", escape="\\"), Table.name.ilike(f"%{escaped}%", escape="\\")))
+                .order_by(Table.name)
+                .limit(250)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    ranked = [
+        (match, table)
+        for table in rows
+        if (match := rank_table_reference(reference, table_id=table.id, table_name=table.name)) is not None
+    ]
+    ranked.sort(key=lambda item: (item[0], item[1].name, item[1].id))
+    return [table for _, table in ranked[:DEFAULT_RESULT_LIMIT]]
+
+
+@router.get("/tables/resolve")
+async def resolve_table_reference(
+    reference: str = Query(min_length=1, description="Visible table number, name, or label"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Resolve a human-facing table reference without fuzzy numeric matching."""
+
+    tables = await _resolve_tables(db, reference)
+    return {
+        "tables": [
+            {"table_id": table.id, "table_name": table.name, "capacity": table.capacity, "layout_id": table.layout_id}
+            for table in tables
+        ],
+        "count": len(tables),
+    }
+
+
+@router.get("/table-orders")
+async def get_table_order_summary(
+    table_id: str | None = Query(default=None),
+    table_reference: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return PII-free registration and order details for a table."""
+
+    if table_id is None and table_reference is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Provide 'table_id' or 'table_reference'.",
+        )
+    table: Table | None = None
+    if table_id is not None:
+        table = (await db.execute(select(Table).where(Table.id == table_id))).scalar_one_or_none()
+    elif table_reference is not None:
+        candidates = await _resolve_tables(db, table_reference)
+        if len(candidates) != 1:
+            return {
+                "table_reference": table_reference,
+                "registrations": [],
+                "candidates": [{"table_id": item.id, "table_name": item.name} for item in candidates],
+                "message": (
+                    "No table matched this reference."
+                    if not candidates
+                    else "Multiple tables matched this reference; choose a table_id."
+                ),
+            }
+        table = candidates[0]
+    if table is None:
+        raise HTTPException(status_code=404, detail="Table not found.")
+
+    rows = (
+        (
+            await db.execute(
+                select(Registration)
+                .where(Registration.table_id == table.id)
+                .options(selectinload(Registration.person), selectinload(Registration.event))
+                .order_by(Registration.created_at)
+                .limit(DEFAULT_RESULT_LIMIT)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {
+        "table_id": table.id,
+        "table_name": table.name,
+        "registrations": [
+            registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table.name)
+            for registration in rows
+            if registration.person is not None and registration.event is not None
+        ],
+        "count": len(rows),
+    }
+
+
 @router.get("/registrations", response_model=list[CheckInGuestOut])
 async def search_registrations(
     db: AsyncSession = Depends(get_db),
     q: str | None = Query(default=None, description="Search by guest or table (partial, case-insensitive)"),
     event_id: str | None = Query(default=None, description="Filter to a specific event"),
+    order_category: str | None = Query(default=None, description="Filter by exact normalized order category"),
+    delivery_state: Literal["pending", "delivered"] | None = Query(default=None, description="Filter matching orders"),
     pagination: Pagination = Depends(),
 ) -> list[dict]:
     """Search registrations by guest or table for on-site volunteer check-in.
@@ -58,23 +173,67 @@ async def search_registrations(
     if event_id is not None:
         stmt = stmt.where(Registration.event_id == event_id)
 
-    if q:
-        q_stripped = q.strip()
-        if q_stripped:
-            q_escaped = q_stripped.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-            q_like = f"%{q_escaped}%"
-            stmt = stmt.where(
-                or_(
-                    Person.name.ilike(q_like, escape="\\"),
-                    Table.name.ilike(q_like, escape="\\"),
-                )
+    q_stripped = q.strip() if q else ""
+    if q_stripped:
+        q_escaped = q_stripped.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        q_like = f"%{q_escaped}%"
+        table_query = normalize_table_reference(q_stripped)
+        table_query_escaped = table_query.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+        table_query_like = f"%{table_query_escaped}%"
+        stmt = stmt.where(
+            or_(
+                person_search_predicate(name=q_stripped, email=q_stripped),
+                Registration.id.ilike(q_like, escape="\\"),
+                Registration.event_id.ilike(q_like, escape="\\"),
+                func.unaccent(Event.title).ilike(func.unaccent(q_like), escape="\\"),
+                Table.id.ilike(table_query_like, escape="\\"),
+                Table.name.ilike(table_query_like, escape="\\"),
+                func.unaccent(cast(Registration.pre_orders, Text)).ilike(func.unaccent(q_like), escape="\\"),
             )
-
-    stmt = apply_pagination(stmt, pagination)
+        )
+    stmt = stmt.limit(250)
     rows = (await db.execute(stmt)).all()
+    ranked_rows = []
+    for registration, table_name in rows:
+        if registration.person is None or registration.event is None:
+            continue
+        if not matches_order_filters(
+            registration.pre_orders,
+            category=order_category,
+            delivery_state=delivery_state,
+        ):
+            continue
+        match = (
+            best_registration_match(
+                q_stripped,
+                person_name=registration.person.name,
+                person_email=registration.person.email,
+                registration_id=registration.id,
+                event_id=registration.event_id,
+                event_title=registration.event.title,
+                table_id=registration.table_id,
+                table_name=table_name,
+                pre_orders=registration.pre_orders,
+            )
+            if q_stripped
+            else None
+        )
+        if q_stripped and match is None:
+            continue
+        ranked_rows.append((match, registration, table_name))
 
+    ranked_rows.sort(
+        key=lambda item: (
+            item[0] is None,
+            item[0].rank if item[0] is not None else 99,
+            item[0].distance if item[0] is not None else 0.0,
+            item[1].person.name,
+            item[1].created_at,
+        )
+    )
+    limit = bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT)
+    offset = (pagination.page - 1) * limit
     return [
-        registration_to_checkin_dict(r, r.person, r.event, table_name=table_name)  # type: ignore[arg-type]
-        for r, table_name in rows
-        if r.person is not None and r.event is not None
+        registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
+        for _, registration, table_name in ranked_rows[offset : offset + limit]
     ]

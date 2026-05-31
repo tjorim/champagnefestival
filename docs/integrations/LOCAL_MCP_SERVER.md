@@ -47,7 +47,8 @@ To run as a specific role (e.g., `volunteer`) in local development, you can set 
 | `find_guest` | volunteer+ | Search guests by name or email |
 | `get_guest_registration` | volunteer+ | Registration details for a specific booking |
 | `get_table_seating` | volunteer+ | Who is seated at which table |
-| `get_table_order_summary` | volunteer+ | All orders for a specific table |
+| `resolve_table_reference` | volunteer+ | Resolve a visible table number, name, or label |
+| `get_table_order_summary` | volunteer+ | All orders for a table ID or visible reference |
 | `get_guest_order_status` | volunteer+ | Order and delivery status for one registration |
 | `get_champagne_delivery_summary` | volunteer+ | Champagne delivery stats across the edition |
 | `get_undelivered_champagne_by_table` | volunteer+ | Tables with pending champagne deliveries |

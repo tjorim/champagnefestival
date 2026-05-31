@@ -8,7 +8,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -35,6 +35,12 @@ from app.schemas import (
     RegistrationOut,
     RegistrationOutWithToken,
     RegistrationUpdate,
+)
+from app.services.operational_search import (
+    DEFAULT_RESULT_LIMIT,
+    bounded_limit,
+    person_search_order_by,
+    person_search_predicate,
 )
 from app.spam import check_form_timing, check_honeypot
 from app.utils import (
@@ -183,16 +189,14 @@ async def list_registrations(
         .order_by(Registration.created_at.desc(), Registration.id.desc())
     )
 
-    if q:
-        q_escaped = q.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        q_like = f"%{q_escaped}%"
-        person_subquery = select(Person.id).where(
-            or_(
-                Person.name.ilike(q_like, escape="\\"),
-                Person.email.ilike(q_like, escape="\\"),
-            )
+    if q and (q_stripped := q.strip()):
+        stmt = stmt.join(Person, Registration.person_id == Person.id)
+        stmt = stmt.where(person_search_predicate(name=q_stripped, email=q_stripped))
+        stmt = stmt.order_by(None).order_by(
+            *person_search_order_by(name=q_stripped, email=q_stripped),
+            Registration.created_at.desc(),
         )
-        stmt = stmt.where(Registration.person_id.in_(person_subquery))
+        stmt = stmt.limit(bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT))
     if status_filter:
         stmt = stmt.where(Registration.status == status_filter)
     if event_id:

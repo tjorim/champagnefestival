@@ -21,11 +21,18 @@ from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.config import settings
 from app.models import Edition, Event, Layout, Person, Registration, Table, Venue
+from app.services.operational_search import (
+    DEFAULT_RESULT_LIMIT,
+    best_person_match,
+    person_search_order_by,
+    person_search_predicate,
+    rank_table_reference,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -407,20 +414,61 @@ class ChampagneFestivalMcpBackend:
             raise ValueError("Provide at least one of 'name' or 'email' to search.")
 
         async with self.session_factory() as db:
-            stmt = select(Person)
-            filters = []
-            if name:
-                filters.append(Person.name.ilike(f"%{name}%"))
-            if email:
-                filters.append(Person.email == email.lower())
-
-            stmt = stmt.where(or_(*filters)).order_by(Person.name).limit(50)
+            stmt = (
+                select(Person)
+                .where(person_search_predicate(name=name, email=email))
+                .order_by(*person_search_order_by(name=name, email=email))
+                .limit(DEFAULT_RESULT_LIMIT + 1)
+            )
             result = await db.execute(stmt)
             persons: list[Person] = list(result.scalars().all())
+            person_ids = [person.id for person in persons[:DEFAULT_RESULT_LIMIT]]
+            registrations_by_person: dict[str, list[Registration]] = {}
+            if person_ids:
+                registrations_result = await db.execute(
+                    select(Registration)
+                    .where(Registration.person_id.in_(person_ids))
+                    .order_by(Registration.created_at.desc())
+                    .limit(250)
+                )
+                for registration in registrations_result.scalars().all():
+                    registrations_by_person.setdefault(registration.person_id, []).append(registration)
+            ranked = [
+                (
+                    best_person_match(
+                        name=name,
+                        email=email,
+                        candidate_name=person.name,
+                        candidate_email=person.email,
+                    ),
+                    person,
+                )
+                for person in persons
+            ]
 
             return {
-                "guests": [self._person_dict(p, role=role) for p in persons],
-                "count": len(persons),
+                "guests": [
+                    {
+                        **self._person_dict(person, role=role),
+                        "match": (
+                            {"field": match.field, "kind": match.kind}
+                            if match is not None
+                            else {"field": "name" if name else "email", "kind": "fuzzy"}
+                        ),
+                        "registrations": [
+                            {
+                                "registration_id": registration.id,
+                                "event_id": registration.event_id,
+                                "table_id": registration.table_id,
+                                "status": registration.status,
+                            }
+                            for registration in registrations_by_person.get(person.id, [])[:DEFAULT_RESULT_LIMIT]
+                        ],
+                    }
+                    for match, person in ranked[:DEFAULT_RESULT_LIMIT]
+                ],
+                "count": min(len(ranked), DEFAULT_RESULT_LIMIT),
+                "has_more": len(persons) > DEFAULT_RESULT_LIMIT,
             }
 
     async def get_guest_registration(self, registration_id: str) -> dict:
@@ -543,7 +591,46 @@ class ChampagneFestivalMcpBackend:
 
             return {"tables": result_tables, "count": len(result_tables)}
 
-    async def get_table_order_summary(self, table_id: str) -> dict:
+    async def resolve_table_reference(self, reference: str) -> dict:
+        """Resolve a visible table number, name, or label to internal table IDs.
+
+        Matching is deterministic: nearby numeric values are never treated as
+        typo suggestions. Requires the ``volunteer`` or ``admin`` role.
+        """
+        self._require_volunteer()
+        reference = reference.strip()
+        if not reference:
+            raise ValueError("Provide a table reference to resolve.")
+
+        async with self.session_factory() as db:
+            tables_result = await db.execute(select(Table).order_by(Table.name).limit(250))
+            ranked = [
+                (match, table)
+                for table in tables_result.scalars().all()
+                if (match := rank_table_reference(reference, table_id=table.id, table_name=table.name)) is not None
+            ]
+            ranked.sort(key=lambda item: (item[0], item[1].name, item[1].id))
+            candidates = [
+                {
+                    "table_id": table.id,
+                    "table_name": table.name,
+                    "layout_id": table.layout_id,
+                    "capacity": table.capacity,
+                    "match": {"kind": match.kind},
+                }
+                for match, table in ranked[:DEFAULT_RESULT_LIMIT]
+            ]
+            return {
+                "tables": candidates,
+                "count": len(candidates),
+                "has_more": len(ranked) > DEFAULT_RESULT_LIMIT,
+            }
+
+    async def get_table_order_summary(
+        self,
+        table_id: str | None = None,
+        table_reference: str | None = None,
+    ) -> dict:
         """Return the order summary for all registrations at a specific table.
 
         Lists each registration's order items (champagne, food, other) with
@@ -553,11 +640,39 @@ class ChampagneFestivalMcpBackend:
         Parameters
         ----------
         table_id:
-            The table ID to query orders for.
+            The internal table ID to query orders for.
+        table_reference:
+            A visible table number, name, or label. Used only when ``table_id``
+            is omitted. Ambiguous references return candidates for selection.
         """
         role = self._require_volunteer()
+        if not table_id and not table_reference:
+            raise ValueError("Provide 'table_id' or 'table_reference'.")
 
         async with self.session_factory() as db:
+            if not table_id and table_reference:
+                tables_result = await db.execute(select(Table).order_by(Table.name).limit(250))
+                candidates = [
+                    table
+                    for table in tables_result.scalars().all()
+                    if rank_table_reference(table_reference, table_id=table.id, table_name=table.name) is not None
+                ]
+                if len(candidates) != 1:
+                    return {
+                        "table_reference": table_reference,
+                        "registrations": [],
+                        "candidates": [
+                            {"table_id": table.id, "table_name": table.name}
+                            for table in candidates[:DEFAULT_RESULT_LIMIT]
+                        ],
+                        "message": (
+                            "No table matched this reference."
+                            if not candidates
+                            else "Multiple tables matched this reference; choose a table_id."
+                        ),
+                    }
+                table_id = candidates[0].id
+            assert table_id is not None
             # Verify table exists
             table_result = await db.execute(select(Table).where(Table.id == table_id))
             table: Table | None = table_result.scalar_one_or_none()
@@ -925,6 +1040,7 @@ def create_mcp_server(
     mcp.tool(backend.find_guest)
     mcp.tool(backend.get_guest_registration)
     mcp.tool(backend.get_table_seating)
+    mcp.tool(backend.resolve_table_reference)
     mcp.tool(backend.get_table_order_summary)
     mcp.tool(backend.get_guest_order_status)
     mcp.tool(backend.get_champagne_delivery_summary)

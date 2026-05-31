@@ -60,7 +60,7 @@ fun GuestLookupScreen(
                     viewModel.search(query = query, eventId = eventId)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Search by guest name or table") },
+                label = { Text("Search guest, email, table, event, or order") },
                 singleLine = true,
             )
             OutlinedTextField(
@@ -76,7 +76,7 @@ fun GuestLookupScreen(
                 singleLine = true,
             )
             when (val state = uiState) {
-                GuestLookupUiState.Idle -> Text("Search for guests by name or filter by event ID.")
+                GuestLookupUiState.Idle -> Text("Search by guest, email, table, event, or order detail.")
                 GuestLookupUiState.Loading -> LoadingContent(modifier = Modifier.weight(1f))
                 is GuestLookupUiState.Error -> ErrorContent(message = state.message, onRetry = { viewModel.search(query, eventId) }, modifier = Modifier.weight(1f))
                 is GuestLookupUiState.Success -> LookupResults(registrations = state.registrations, padding = PaddingValues(vertical = 8.dp))

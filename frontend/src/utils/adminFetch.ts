@@ -19,9 +19,11 @@ import {
 
 export async function fetchRegistrations(
   authHeaders: () => Record<string, string>,
+  query?: string,
 ): Promise<Registration[]> {
+  const suffix = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/registrations",
+    `/api/registrations${suffix}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );

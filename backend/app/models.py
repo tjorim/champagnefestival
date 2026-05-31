@@ -320,6 +320,12 @@ class Person(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), default="")
+    search_name: Mapped[str] = mapped_column(String(200), default="")
+    """Trigger-maintained unaccented lower-case name for operational lookup."""
+    search_name_alt: Mapped[str] = mapped_column(String(200), default="")
+    """Trigger-maintained German-transliteration variant for operational lookup."""
+    search_email: Mapped[str] = mapped_column(String(200), default="")
+    """Trigger-maintained lower-case email for authorized operational lookup."""
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
