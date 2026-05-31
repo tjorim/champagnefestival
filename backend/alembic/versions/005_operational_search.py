@@ -12,7 +12,6 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 
 from alembic import op
-
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
 
 revision: str = "005"
