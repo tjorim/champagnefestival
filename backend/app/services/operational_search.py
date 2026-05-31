@@ -46,8 +46,7 @@ def person_search_predicate(*, name: str | None, email: str | None) -> Any:
     """Build the PostgreSQL-backed authorized person lookup predicate."""
 
     filters = []
-    if name:
-        normalized_name = normalize_text(name)
+    if name and (normalized_name := normalize_text(name)):
         pattern = _contains_pattern(normalized_name)
         filters.extend(
             [
@@ -59,8 +58,7 @@ def person_search_predicate(*, name: str | None, email: str | None) -> Any:
                 func.word_similarity(normalized_name, Person.search_name_alt) >= NAME_FUZZY_THRESHOLD,
             ]
         )
-    if email:
-        normalized_email = normalize_email(email)
+    if email and (normalized_email := normalize_email(email)):
         filters.append(Person.search_email == normalized_email)
         filters.append(Person.search_email.ilike(_contains_pattern(normalized_email), escape="\\"))
         if len(normalized_email) >= EMAIL_FUZZY_MIN_LENGTH:
@@ -76,7 +74,7 @@ def person_search_predicate(*, name: str | None, email: str | None) -> Any:
                 )
             )
     if not filters:
-        raise ValueError("Provide at least one of 'name' or 'email' to search.")
+        return false()
     return or_(*filters)
 
 
@@ -107,7 +105,7 @@ def person_search_order_by(*, name: str | None, email: str | None) -> tuple[Any,
         exact.append(Person.search_email == normalized_email)
         similarities.append(func.similarity(normalized_email, Person.search_email))
     if not similarities:
-        raise ValueError("Provide at least one of 'name' or 'email' to search.")
+        return (Person.name, Person.id)
     email_distance = (
         func.levenshtein_less_equal(normalized_email, Person.search_email, EMAIL_FUZZY_MAX_EDIT_DISTANCE)
         if normalized_email and not normalized_name
