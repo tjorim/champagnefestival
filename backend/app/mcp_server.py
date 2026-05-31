@@ -902,7 +902,7 @@ def build_keycloak_auth() -> Any:
         logger.info("OIDC_ISSUER_URL not configured — MCP server running without auth enforcement.")
         return None
 
-    mcp_base_url = getattr(settings, "mcp_base_url", "")
+    mcp_base_url = settings.mcp_base_url
     if not mcp_base_url:
         logger.info(
             "MCP_BASE_URL not configured — MCP server running without Keycloak auth. "
