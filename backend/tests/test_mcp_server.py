@@ -515,6 +515,15 @@ class TestFindGuest:
             await backend.find_guest()
 
     @pytest.mark.anyio
+    async def test_find_guest_with_whitespace_only_params_raises_validation_error(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with (
+            patch.object(backend, "_require_volunteer", return_value="volunteer"),
+            pytest.raises(ValueError, match="Provide at least one of 'name' or 'email' to search"),
+        ):
+            await backend.find_guest(name="  ", email="  ")
+
+    @pytest.mark.anyio
     async def test_find_guest_returns_results_for_volunteer(self):
         person = _make_person(name="Jean Dupont", email="jean@example.com")
         db = _make_db_execute([[person]])

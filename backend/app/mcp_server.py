@@ -401,6 +401,8 @@ class ChampagneFestivalMcpBackend:
         """
         role = self._require_volunteer()
 
+        name = name.strip() if name else None
+        email = email.strip() if email else None
         if not name and not email:
             raise ValueError("Provide at least one of 'name' or 'email' to search.")
 
@@ -410,7 +412,7 @@ class ChampagneFestivalMcpBackend:
             if name:
                 filters.append(Person.name.ilike(f"%{name}%"))
             if email:
-                filters.append(Person.email == email.lower().strip())
+                filters.append(Person.email == email.lower())
 
             stmt = stmt.where(or_(*filters)).order_by(Person.name).limit(50)
             result = await db.execute(stmt)
