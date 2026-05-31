@@ -256,7 +256,7 @@ def best_registration_match(
         rank_identifier(query, event_id, "event"),
         rank_identifier(query, event_title, "event"),
         (
-            rank_table_reference(query, table_id=table_id, table_name=table_name or "")
+            rank_table_reference(query, table_id=table_id or "", table_name=table_name or "")
             if table_id is not None or table_name
             else None
         ),
