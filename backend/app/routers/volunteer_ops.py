@@ -55,7 +55,6 @@ async def _resolve_tables(db: AsyncSession, reference: str) -> list[Table]:
                 select(Table)
                 .where(or_(Table.id.ilike(f"%{escaped}%", escape="\\"), Table.name.ilike(f"%{escaped}%", escape="\\")))
                 .order_by(Table.name)
-                .limit(250)
             )
         )
         .scalars()
@@ -179,23 +178,39 @@ async def search_registrations(
     if q_stripped:
         q_escaped = q_stripped.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
         q_like = f"%{q_escaped}%"
-        or_conditions = [
-            person_search_predicate(name=q_stripped, email=q_stripped),
-            Registration.id.ilike(q_like, escape="\\"),
-            Registration.event_id.ilike(q_like, escape="\\"),
-            func.unaccent(Event.title).ilike(func.unaccent(q_like), escape="\\"),
-            func.unaccent(cast(Registration.pre_orders, Text)).ilike(func.unaccent(q_like), escape="\\"),
-        ]
         table_query = normalize_table_reference(q_stripped)
-        if table_query:
-            table_query_escaped = table_query.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-            table_query_like = f"%{table_query_escaped}%"
-            or_conditions.extend(
-                [
-                    Table.id.ilike(table_query_like, escape="\\"),
-                    Table.name.ilike(table_query_like, escape="\\"),
-                ]
-            )
+        if q_stripped.isdigit():
+            # Numeric-only queries: skip fuzzy-text predicates; use deterministic matches only.
+            or_conditions: list = [
+                Registration.id.ilike(q_like, escape="\\"),
+                Registration.event_id.ilike(q_like, escape="\\"),
+            ]
+            if table_query:
+                table_query_escaped = table_query.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+                table_query_like = f"%{table_query_escaped}%"
+                or_conditions.extend(
+                    [
+                        Table.id.ilike(table_query_like, escape="\\"),
+                        Table.name.ilike(table_query_like, escape="\\"),
+                    ]
+                )
+        else:
+            or_conditions = [
+                person_search_predicate(name=q_stripped, email=q_stripped),
+                Registration.id.ilike(q_like, escape="\\"),
+                Registration.event_id.ilike(q_like, escape="\\"),
+                func.unaccent(Event.title).ilike(func.unaccent(q_like), escape="\\"),
+                func.unaccent(cast(Registration.pre_orders, Text)).ilike(func.unaccent(q_like), escape="\\"),
+            ]
+            if table_query:
+                table_query_escaped = table_query.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+                table_query_like = f"%{table_query_escaped}%"
+                or_conditions.extend(
+                    [
+                        Table.id.ilike(table_query_like, escape="\\"),
+                        Table.name.ilike(table_query_like, escape="\\"),
+                    ]
+                )
         stmt = stmt.where(or_(*or_conditions))
     stmt = stmt.limit(250)
     rows = (await db.execute(stmt)).all()

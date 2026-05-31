@@ -23,8 +23,8 @@ OPERATIONAL_SEARCH_SCHEMA_STATEMENTS = (
     BEFORE INSERT OR UPDATE OF name, email ON people
     FOR EACH ROW EXECUTE FUNCTION update_person_operational_search_values()
     """,
-    # Fire the BEFORE UPDATE trigger for every existing row to populate the new columns.
-    "UPDATE people SET name = name, email = email",
+    # Fire the BEFORE UPDATE trigger for rows whose derived columns haven't been populated yet.
+    "UPDATE people SET name = name, email = email WHERE search_name = ''",
     "CREATE INDEX IF NOT EXISTS ix_people_search_name_trgm ON people USING gin (search_name gin_trgm_ops)",
     "CREATE INDEX IF NOT EXISTS ix_people_search_name_alt_trgm ON people USING gin (search_name_alt gin_trgm_ops)",
     "CREATE INDEX IF NOT EXISTS ix_people_search_email ON people (search_email)",

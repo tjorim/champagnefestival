@@ -429,10 +429,11 @@ class ChampagneFestivalMcpBackend:
                     select(Registration)
                     .where(Registration.person_id.in_(person_ids))
                     .order_by(Registration.created_at.desc())
-                    .limit(250)
                 )
                 for registration in registrations_result.scalars().all():
-                    registrations_by_person.setdefault(registration.person_id, []).append(registration)
+                    bucket = registrations_by_person.setdefault(registration.person_id, [])
+                    if len(bucket) < DEFAULT_RESULT_LIMIT:
+                        bucket.append(registration)
             ranked = [
                 (
                     best_person_match(
@@ -603,7 +604,7 @@ class ChampagneFestivalMcpBackend:
             raise ValueError("Provide a table reference to resolve.")
 
         async with self.session_factory() as db:
-            tables_result = await db.execute(select(Table).order_by(Table.name).limit(250))
+            tables_result = await db.execute(select(Table).order_by(Table.name))
             ranked = [
                 (match, table)
                 for table in tables_result.scalars().all()
@@ -651,7 +652,7 @@ class ChampagneFestivalMcpBackend:
 
         async with self.session_factory() as db:
             if not table_id and table_reference:
-                tables_result = await db.execute(select(Table).order_by(Table.name).limit(250))
+                tables_result = await db.execute(select(Table).order_by(Table.name))
                 candidates = [
                     table
                     for table in tables_result.scalars().all()

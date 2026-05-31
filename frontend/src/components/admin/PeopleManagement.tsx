@@ -104,13 +104,12 @@ export default function PeopleManagement({
   });
   const displayedPeople = debouncedQ ? (peopleSearchQuery.data ?? []) : people;
 
-  // Pre-filter by role when not searching; backend search bypasses role filter
   const preFiltered = useMemo(
     () =>
-      debouncedQ || roleFilter === "all"
+      roleFilter === "all"
         ? displayedPeople
         : displayedPeople.filter((p) => p.roles.includes(roleFilter)),
-    [displayedPeople, roleFilter, debouncedQ],
+    [displayedPeople, roleFilter],
   );
 
   // Group people by email to surface duplicates
@@ -499,6 +498,8 @@ export default function PeopleManagement({
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
+          ) : peopleSearchQuery.isError ? (
+            <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
           ) : table.getRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_people_no_results()}</p>
           ) : (

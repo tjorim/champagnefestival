@@ -689,6 +689,8 @@ export default function RegistrationList({
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
               {m.admin_search_person_placeholder()}…
             </p>
+          ) : registrationSearchQuery.isError ? (
+            <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
           ) : table.getRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
           ) : (

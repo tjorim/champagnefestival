@@ -103,6 +103,7 @@ def person_search_order_by(*, name: str | None, email: str | None) -> tuple[Any,
         )
     if normalized_email:
         exact.append(Person.search_email == normalized_email)
+        substring.append(Person.search_email.ilike(_contains_pattern(normalized_email), escape="\\"))
         similarities.append(func.similarity(normalized_email, Person.search_email))
     if not similarities:
         return (Person.name, Person.id)
@@ -169,6 +170,8 @@ def _best_ratio(left_variants: set[str], right_variants: set[str]) -> float:
 def rank_name(query: str, candidate: str) -> RankedMatch | None:
     query_variants = name_variants(query)
     candidate_variants = name_variants(candidate)
+    if not any(query_variants) or not any(candidate_variants):
+        return None
     if query_variants & candidate_variants:
         return RankedMatch(0, 0.0, "name", "exact")
     if any(q_var in c_var or c_var in q_var for q_var in query_variants for c_var in candidate_variants):
@@ -189,6 +192,8 @@ def rank_email(query: str, candidate: str) -> RankedMatch | None:
     if normalized_query == normalized_candidate:
         return RankedMatch(0, 0.0, "email", "exact")
     if len(normalized_query) < EMAIL_FUZZY_MIN_LENGTH:
+        return None
+    if abs(len(normalized_query) - len(normalized_candidate)) > EMAIL_FUZZY_MAX_EDIT_DISTANCE:
         return None
     similarity = _ratio(normalized_query, normalized_candidate)
     if similarity >= EMAIL_FUZZY_THRESHOLD:

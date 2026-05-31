@@ -114,12 +114,21 @@ export async function fetchPeopleSearch(
   authHeaders: () => Record<string, string>,
   query: string,
 ): Promise<Person[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    `/api/people?q=${encodeURIComponent(query.trim())}`,
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  return Array.isArray(payload) ? payload.map(apiToPerson) : [];
+  const [peoplePayload, volunteers] = await Promise.all([
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      `/api/people?q=${encodeURIComponent(query.trim())}`,
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchArrayOrThrow(
+      "/api/volunteers",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+      apiToPerson,
+    ),
+  ]);
+  const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
+  return mergePeopleWithVolunteers(nextPeople, volunteers);
 }
 
 export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
