@@ -25,7 +25,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.R
 import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
@@ -60,7 +62,7 @@ fun GuestLookupScreen(
                     viewModel.search(query = query, eventId = eventId)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Search guest, email, table, event, or order") },
+                label = { Text(stringResource(R.string.search_guest_label)) },
                 singleLine = true,
             )
             OutlinedTextField(
@@ -76,7 +78,7 @@ fun GuestLookupScreen(
                 singleLine = true,
             )
             when (val state = uiState) {
-                GuestLookupUiState.Idle -> Text("Search by guest, email, table, event, or order detail.")
+                GuestLookupUiState.Idle -> Text(stringResource(R.string.search_guest_idle_message))
                 GuestLookupUiState.Loading -> LoadingContent(modifier = Modifier.weight(1f))
                 is GuestLookupUiState.Error -> ErrorContent(message = state.message, onRetry = { viewModel.search(query, eventId) }, modifier = Modifier.weight(1f))
                 is GuestLookupUiState.Success -> LookupResults(registrations = state.registrations, padding = PaddingValues(vertical = 8.dp))
