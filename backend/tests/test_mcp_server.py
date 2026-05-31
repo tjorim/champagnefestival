@@ -506,13 +506,13 @@ class TestFindGuest:
             await backend.find_guest(name="Jean")
 
     @pytest.mark.anyio
-    async def test_find_guest_without_params_returns_empty(self):
+    async def test_find_guest_without_params_raises_validation_error(self):
         backend = ChampagneFestivalMcpBackend(MagicMock())
-        token = _make_access_token(["volunteer"])
-        with patch.object(mcp_module, "get_access_token", return_value=token):
-            result = await backend.find_guest()
-        assert result["guests"] == []
-        assert "message" in result
+        with (
+            patch.object(backend, "_require_volunteer", return_value="volunteer"),
+            pytest.raises(ValueError, match="Provide at least one of 'name' or 'email' to search"),
+        ):
+            await backend.find_guest()
 
     @pytest.mark.anyio
     async def test_find_guest_returns_results_for_volunteer(self):

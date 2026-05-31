@@ -402,7 +402,7 @@ class ChampagneFestivalMcpBackend:
         role = self._require_volunteer()
 
         if not name and not email:
-            return {"guests": [], "message": "Provide at least one of 'name' or 'email' to search."}
+            raise ValueError("Provide at least one of 'name' or 'email' to search.")
 
         async with self.session_factory() as db:
             stmt = select(Person)
