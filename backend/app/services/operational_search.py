@@ -143,12 +143,7 @@ def name_variants(value: str) -> set[str]:
     """Return accent-insensitive variants plus common German transliterations."""
 
     folded = value.strip().casefold()
-    german = (
-        folded.replace("ä", "ae")
-        .replace("ö", "oe")
-        .replace("ü", "ue")
-        .replace("ß", "ss")
-    )
+    german = folded.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
     plain = folded.replace("ß", "ss")
     return {normalize_text(plain), normalize_text(german)}
 
@@ -312,7 +307,9 @@ def matches_order_filters(
     return False
 
 
-def best_person_match(*, name: str | None, email: str | None, candidate_name: str, candidate_email: str) -> RankedMatch | None:
+def best_person_match(
+    *, name: str | None, email: str | None, candidate_name: str, candidate_email: str
+) -> RankedMatch | None:
     matches = [
         match
         for match in (
