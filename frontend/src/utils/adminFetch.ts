@@ -110,6 +110,18 @@ export async function fetchAreas(authHeaders: () => Record<string, string>): Pro
 // NOTE: /api/people and /api/volunteers both support optional limit/page pagination,
 // but we intentionally fetch all records here because client-side deduplication
 // (mergePeopleWithVolunteers) requires the full dataset.
+export async function fetchPeopleSearch(
+  authHeaders: () => Record<string, string>,
+  query: string,
+): Promise<Person[]> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+    `/api/people?q=${encodeURIComponent(query.trim())}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+  return Array.isArray(payload) ? payload.map(apiToPerson) : [];
+}
+
 export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
   const [peoplePayload, volunteers] = await Promise.all([
     fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
