@@ -62,6 +62,7 @@ def person_search_predicate(*, name: str | None, email: str | None) -> Any:
     if email:
         normalized_email = normalize_email(email)
         filters.append(Person.search_email == normalized_email)
+        filters.append(Person.search_email.ilike(_contains_pattern(normalized_email), escape="\\"))
         if len(normalized_email) >= EMAIL_FUZZY_MIN_LENGTH:
             filters.append(
                 and_(
@@ -177,6 +178,10 @@ def rank_name(query: str, candidate: str) -> RankedMatch | None:
     similarity = _best_ratio(query_variants, candidate_variants)
     if similarity >= NAME_FUZZY_THRESHOLD:
         return RankedMatch(20, 1.0 - similarity, "name", "fuzzy")
+    candidate_words = {word for c in candidate_variants for word in c.split() if len(word) >= 3}
+    word_similarity = max((_ratio(q, word) for q in query_variants for word in candidate_words), default=0.0)
+    if word_similarity >= NAME_FUZZY_THRESHOLD:
+        return RankedMatch(20, 1.0 - word_similarity, "name", "fuzzy")
     return None
 
 
@@ -200,7 +205,7 @@ def rank_table_reference(query: str, *, table_id: str, table_name: str) -> Ranke
     if normalized_query.isdigit():
         for candidate in (table_id, table_name):
             normalized_candidate = normalize_table_reference(candidate)
-            if normalized_candidate == normalized_query or normalized_candidate.split()[-1:] == [normalized_query]:
+            if normalized_candidate == normalized_query or normalized_query in normalized_candidate.split():
                 return RankedMatch(0, 0.0, "table", "exact")
         return None
     for candidate in (table_id, table_name):
