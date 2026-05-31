@@ -3,6 +3,7 @@
 import logging
 from collections.abc import AsyncGenerator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -11,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
+from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
 
 logger = logging.getLogger(__name__)
 
@@ -41,3 +43,5 @@ async def create_tables() -> None:
     """Create all tables on startup (used when Alembic is not run yet)."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        for statement in OPERATIONAL_SEARCH_SCHEMA_STATEMENTS:
+            await conn.execute(text(statement))

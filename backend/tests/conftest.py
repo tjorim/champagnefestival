@@ -6,6 +6,7 @@ import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -13,6 +14,7 @@ import app.ratelimit as ratelimit_module
 from app.auth import get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
+from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -67,6 +69,8 @@ async def engine():
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+        for statement in OPERATIONAL_SEARCH_SCHEMA_STATEMENTS:
+            await conn.execute(text(statement))
     yield _engine
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

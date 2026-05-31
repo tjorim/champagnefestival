@@ -348,6 +348,7 @@ class TestCreateMcpServer:
             "find_guest",
             "get_guest_registration",
             "get_table_seating",
+            "resolve_table_reference",
             "get_table_order_summary",
             "get_guest_order_status",
             "get_champagne_delivery_summary",
@@ -526,7 +527,8 @@ class TestFindGuest:
     @pytest.mark.anyio
     async def test_find_guest_returns_results_for_volunteer(self):
         person = _make_person(name="Jean Dupont", email="jean@example.com")
-        db = _make_db_execute([[person]])
+        registration = _make_registration()
+        db = _make_db_execute([[person], [registration]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
         token = _make_access_token(["volunteer"])
         with patch.object(mcp_module, "get_access_token", return_value=token):
@@ -536,6 +538,7 @@ class TestFindGuest:
         assert g["name"] == "Jean Dupont"
         assert "email" in g
         assert "phone" in g
+        assert g["registrations"][0]["registration_id"] == "reg-1"
         # Volunteer should NOT see address/notes
         assert "address" not in g
         assert "notes" not in g
@@ -548,7 +551,7 @@ class TestFindGuest:
             address="Rue de la Paix 1",
             notes="VIP",
         )
-        db = _make_db_execute([[person]])
+        db = _make_db_execute([[person], []])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
         token = _make_access_token(["admin"])
         with patch.object(mcp_module, "get_access_token", return_value=token):
@@ -681,8 +684,20 @@ class TestGetTableSeating:
 
 
 # ---------------------------------------------------------------------------
-# get_table_order_summary
+# resolve_table_reference / get_table_order_summary
 # ---------------------------------------------------------------------------
+
+
+class TestResolveTableReference:
+    @pytest.mark.anyio
+    async def test_resolves_visible_table_number_without_fuzzy_numeric_matching(self):
+        tables = [_make_table(table_id="tbl-12", name="table-12"), _make_table(table_id="tbl-21", name="table-21")]
+        db = _make_db_execute([tables])
+        backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
+        token = _make_access_token(["volunteer"])
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            result = await backend.resolve_table_reference("Table 12")
+        assert [table["table_id"] for table in result["tables"]] == ["tbl-12"]
 
 
 class TestGetTableOrderSummary:

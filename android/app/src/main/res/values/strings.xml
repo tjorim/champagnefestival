@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Champagne Festival</string>
+    <string name="search_guest_label">Search guest, email, table, event, or order</string>
+    <string name="search_guest_idle_message">Search by guest, email, table, event, or order detail.</string>
 </resources>

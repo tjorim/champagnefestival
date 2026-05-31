@@ -19,9 +19,11 @@ import {
 
 export async function fetchRegistrations(
   authHeaders: () => Record<string, string>,
+  query?: string,
 ): Promise<Registration[]> {
+  const suffix = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/registrations",
+    `/api/registrations${suffix}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
@@ -108,6 +110,27 @@ export async function fetchAreas(authHeaders: () => Record<string, string>): Pro
 // NOTE: /api/people and /api/volunteers both support optional limit/page pagination,
 // but we intentionally fetch all records here because client-side deduplication
 // (mergePeopleWithVolunteers) requires the full dataset.
+export async function fetchPeopleSearch(
+  authHeaders: () => Record<string, string>,
+  query: string,
+): Promise<Person[]> {
+  const [peoplePayload, volunteers] = await Promise.all([
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+      `/api/people?q=${encodeURIComponent(query.trim())}`,
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+    ),
+    fetchArrayOrThrow(
+      "/api/volunteers",
+      { headers: authHeaders() },
+      m.admin_error_load_data(),
+      apiToPerson,
+    ),
+  ]);
+  const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
+  return mergePeopleWithVolunteers(nextPeople, volunteers);
+}
+
 export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
   const [peoplePayload, volunteers] = await Promise.all([
     fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(

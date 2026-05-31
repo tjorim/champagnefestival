@@ -12,6 +12,12 @@ from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Event, Exhibitor, Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
+from app.services.operational_search import (
+    DEFAULT_RESULT_LIMIT,
+    bounded_limit,
+    person_search_order_by,
+    person_search_predicate,
+)
 from app.utils import make_id, person_to_dict, registration_to_list_dict, roles_contains
 
 router = APIRouter(
@@ -151,13 +157,12 @@ async def list_people(
     if role:
         stmt = stmt.where(roles_contains(role))
 
-    if q:
-        q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+    if q and (q_stripped := q.strip()):
+        q_escaped = q_stripped.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
         q_like = f"%{q_escaped}%"
         stmt = stmt.where(
             or_(
-                Person.name.ilike(q_like, escape="\\"),
-                Person.email.ilike(q_like, escape="\\"),
+                person_search_predicate(name=q_stripped, email=q_stripped),
                 Person.phone.ilike(q_like, escape="\\"),
                 Person.address.ilike(q_like, escape="\\"),
                 Person.national_register_number.ilike(q_like, escape="\\"),
@@ -167,9 +172,12 @@ async def list_people(
                 cast(Person.roles, Text).ilike(q_like, escape="\\"),
             )
         )
-
-    stmt = stmt.order_by(Person.created_at.desc(), Person.id.desc())
-    stmt = apply_pagination(stmt, pagination)
+        limit = bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT)
+        stmt = stmt.order_by(*person_search_order_by(name=q_stripped, email=q_stripped))
+        stmt = stmt.offset((pagination.page - 1) * limit).limit(limit)
+    else:
+        stmt = stmt.order_by(Person.created_at.desc(), Person.id.desc())
+        stmt = apply_pagination(stmt, pagination)
 
     result = await db.execute(stmt)
     rows = result.scalars().all()

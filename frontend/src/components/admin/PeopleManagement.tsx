@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
@@ -14,6 +14,7 @@ import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
+import { fetchPeopleSearch } from "@/utils/adminFetch";
 import {
   useAppTable,
   createAppColumnHelper,
@@ -69,6 +70,7 @@ export default function PeopleManagement({
   onDelete,
 }: PeopleManagementProps) {
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
@@ -89,10 +91,25 @@ export default function PeopleManagement({
   const [copySuccess, setCopySuccess] = useState(false);
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
 
-  // Pre-filter by role; text search is handled by TanStack global filter
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [q]);
+  const peopleSearchQuery = useQuery({
+    queryKey: ["admin", "people", "search", debouncedQ],
+    queryFn: () => fetchPeopleSearch(authHeaders, debouncedQ),
+    enabled: debouncedQ.length > 0,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+  const displayedPeople = debouncedQ ? (peopleSearchQuery.data ?? []) : people;
+
   const preFiltered = useMemo(
-    () => (roleFilter === "all" ? people : people.filter((p) => p.roles.includes(roleFilter))),
-    [people, roleFilter],
+    () =>
+      roleFilter === "all"
+        ? displayedPeople
+        : displayedPeople.filter((p) => p.roles.includes(roleFilter)),
+    [displayedPeople, roleFilter],
   );
 
   // Group people by email to surface duplicates
@@ -347,7 +364,7 @@ export default function PeopleManagement({
     {
       data: preFiltered,
       columns,
-      state: { sorting, globalFilter: q, columnVisibility },
+      state: { sorting, globalFilter: debouncedQ ? "" : q, columnVisibility },
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
@@ -477,10 +494,12 @@ export default function PeopleManagement({
             </Alert>
           )}
 
-          {isLoading ? (
+          {isLoading || peopleSearchQuery.isLoading ? (
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
+          ) : peopleSearchQuery.isError ? (
+            <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
           ) : table.getRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_people_no_results()}</p>
           ) : (
