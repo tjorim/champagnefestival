@@ -41,6 +41,7 @@ To run as a specific role (e.g., `volunteer`) in local development, you can set 
 | Tool | Auth required | Description |
 |------|---------------|-------------|
 | `get_active_edition` | public | Current/next upcoming active festival edition |
+| `list_editions` | public | Past and upcoming festival editions for historical discovery |
 | `get_event_schedule` | public | Event schedule for an edition |
 | `get_venue_plan_summary` | public | Rooms and table counts for a venue |
 | `find_guest` | volunteer+ | Search guests by name or email |
