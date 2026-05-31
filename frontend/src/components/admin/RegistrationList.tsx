@@ -684,7 +684,12 @@ export default function RegistrationList({
         </Card.Header>
 
         <Card.Body className="p-0">
-          {table.getRowModel().rows.length === 0 ? (
+          {registrationSearchQuery.isLoading ? (
+            <p className="text-secondary text-center py-4 mb-0">
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+              {m.admin_search_person_placeholder()}…
+            </p>
+          ) : table.getRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
           ) : (
             <div className="table-responsive">

@@ -196,7 +196,8 @@ async def list_registrations(
             *person_search_order_by(name=q_stripped, email=q_stripped),
             Registration.created_at.desc(),
         )
-        stmt = stmt.limit(bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT))
+        limit = bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT)
+        stmt = stmt.offset((pagination.page - 1) * limit).limit(limit)
     if status_filter:
         stmt = stmt.where(Registration.status == status_filter)
     if event_id:
@@ -206,7 +207,8 @@ async def list_registrations(
     if edition_type:
         stmt = stmt.join(Registration.event).join(Event.edition).where(Edition.edition_type == edition_type)
 
-    stmt = apply_pagination(stmt, pagination)
+    if not (q and q.strip()):
+        stmt = apply_pagination(stmt, pagination)
 
     rows = (await db.execute(stmt)).scalars().all()
     person_map = await _fetch_person_map(db, list(rows))

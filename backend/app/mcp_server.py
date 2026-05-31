@@ -672,7 +672,8 @@ class ChampagneFestivalMcpBackend:
                         ),
                     }
                 table_id = candidates[0].id
-            assert table_id is not None
+            if table_id is None:
+                raise ValueError("table_id could not be resolved.")
             # Verify table exists
             table_result = await db.execute(select(Table).where(Table.id == table_id))
             table: Table | None = table_result.scalar_one_or_none()

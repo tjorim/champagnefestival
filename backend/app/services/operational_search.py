@@ -171,7 +171,7 @@ def rank_name(query: str, candidate: str) -> RankedMatch | None:
     candidate_variants = name_variants(candidate)
     if query_variants & candidate_variants:
         return RankedMatch(0, 0.0, "name", "exact")
-    if any(query in candidate or candidate in query for query in query_variants for candidate in candidate_variants):
+    if any(q_var in c_var or c_var in q_var for q_var in query_variants for c_var in candidate_variants):
         return RankedMatch(10, 0.0, "name", "substring")
     similarity = _best_ratio(query_variants, candidate_variants)
     if similarity >= NAME_FUZZY_THRESHOLD:
