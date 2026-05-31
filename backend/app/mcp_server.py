@@ -130,8 +130,9 @@ class ChampagneFestivalMcpBackend:
         }
 
     @staticmethod
-    def _edition_discovery_dict(edition: Edition) -> dict:
-        dates = sorted({event.date for event in edition.events})
+    def _edition_discovery_dict(edition: Edition, dates: list[date] | None = None) -> dict:
+        if dates is None:
+            dates = sorted({event.date for event in edition.events})
         return {
             "id": edition.id,
             "year": edition.year,
@@ -255,8 +256,10 @@ class ChampagneFestivalMcpBackend:
             result = await db.execute(select(Edition).options(selectinload(Edition.events)))
             editions: list[Edition] = list(result.scalars().all())
 
-        def _sort_key(edition: Edition) -> tuple[date, date, int, str]:
-            dates = sorted({event.date for event in edition.events})
+        editions_with_dates = [(edition, sorted({event.date for event in edition.events})) for edition in editions]
+
+        def _sort_key(item: tuple[Edition, list[date]]) -> tuple[date, date, int, str]:
+            edition, dates = item
             return (
                 dates[0] if dates else date.max,
                 dates[-1] if dates else date.max,
@@ -264,9 +267,9 @@ class ChampagneFestivalMcpBackend:
                 edition.id,
             )
 
-        editions.sort(key=_sort_key)
+        editions_with_dates.sort(key=_sort_key)
         return {
-            "editions": [self._edition_discovery_dict(edition) for edition in editions],
+            "editions": [self._edition_discovery_dict(edition, dates) for edition, dates in editions_with_dates],
             "count": len(editions),
         }
 
