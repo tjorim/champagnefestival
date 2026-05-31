@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any, Literal
 
-from sqlalchemy import and_, case, false, func, or_
+from sqlalchemy import and_, case, false, func, literal, or_
 
 from app.models import Person
 
@@ -110,7 +110,7 @@ def person_search_order_by(*, name: str | None, email: str | None) -> tuple[Any,
     email_distance = (
         func.levenshtein_less_equal(normalized_email, Person.search_email, EMAIL_FUZZY_MAX_EDIT_DISTANCE)
         if normalized_email and not normalized_name
-        else 0
+        else literal(0)
     )
     similarity = similarities[0] if len(similarities) == 1 else func.greatest(*similarities)
     return (
