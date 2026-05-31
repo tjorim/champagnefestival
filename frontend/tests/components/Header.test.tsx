@@ -7,6 +7,7 @@ vi.mock("@/paraglide/messages", () => ({
     festival_name: () => "Champagne Festival",
     language_select: () => "Select language",
     header_logo_alt: () => "Champagne Festival logo",
+    admin_title: () => "Administration",
     nav_schedule: () => "Schedule",
     nav_community_events: () => "Community events",
     nav_faq: () => "FAQ",
@@ -22,6 +23,12 @@ vi.mock("@/paraglide/runtime", () => ({
 
 vi.mock("@/components/LanguageSwitcher", () => ({
   default: () => <div data-testid="language-switcher" />,
+}));
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, ...props }: { to: string } & React.ComponentProps<"a">) => (
+    <a href={to} {...props} />
+  ),
 }));
 
 describe("Header component", () => {
@@ -54,5 +61,12 @@ describe("Header component", () => {
     render(<Header />);
     const brand = screen.getByText("Champagne Festival").closest("a");
     expect(brand).toHaveAttribute("href", "#welcome");
+  });
+
+  it("links to the administration page", () => {
+    render(<Header />);
+    const adminLink = screen.getByRole("link", { name: "Administration" });
+    expect(adminLink).toHaveAttribute("href", "/admin");
+    expect(adminLink.querySelector(".bi-shield-lock")).toBeInTheDocument();
   });
 });
