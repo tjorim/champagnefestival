@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     Example: https://<key>@<org>.ingest.sentry.io/<project>
     """
 
+    # --- MCP server ---
+    mcp_base_url: str = ""
+    """Public base URL of the MCP server (e.g. https://champagnefestival.tjor.im/mcp).
+    When set, mounts the FastMCP server at /mcp and enables Keycloak auth enforcement."""
+
     # --- Anti-spam ---
     min_form_seconds: int = 3
     """Minimum seconds between form load and submission (bot protection)."""

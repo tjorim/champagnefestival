@@ -7,11 +7,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import create_tables
+from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.observability import request_metrics_middleware
 from app.routers import (
     areas,
@@ -43,6 +45,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_mcp = create_mcp_server(auth=build_keycloak_auth()) if settings.mcp_base_url else None
+_mcp_app = _mcp.http_app(path="/") if _mcp is not None else None
+
 
 if settings.sentry_dsn:
     try:
@@ -55,7 +60,7 @@ if settings.sentry_dsn:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("=" * 60)
     logger.info("Champagne Festival API — starting up")
@@ -80,6 +85,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Champagne Festival API shutting down...")
 
 
+lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan
+
 app = FastAPI(
     title="Champagne Festival API",
     version="0.1.0",
@@ -97,14 +104,28 @@ if not _cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {_cors_origins}")
 
-app.add_middleware(
-    CORSMiddleware,
+_cors_kwargs = dict(
     allow_origins=_cors_origins,
     allow_credentials="*" not in _cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Accept", "Authorization", "X-Request-ID"],
     expose_headers=["X-Request-ID"],
 )
+if _mcp_app is not None:
+    class _MCPAwareCORSMiddleware:
+        def __init__(self, app, **kwargs) -> None:
+            self._app = app
+            self._cors = CORSMiddleware(app, **kwargs)
+
+        async def __call__(self, scope, receive, send) -> None:
+            if scope.get("type") == "http" and scope.get("path", "").startswith("/mcp"):
+                await self._app(scope, receive, send)
+            else:
+                await self._cors(scope, receive, send)
+
+    app.add_middleware(_MCPAwareCORSMiddleware, **_cors_kwargs)
+else:
+    app.add_middleware(CORSMiddleware, **_cors_kwargs)
 
 # Metrics middleware is registered last so it is outermost and captures every request,
 # including those short-circuited by CORS or SuperTokens.
@@ -140,3 +161,7 @@ app.include_router(venue_plan.router)
 app.include_router(me.router)
 app.include_router(live.router)
 app.include_router(health.router)
+
+if _mcp_app is not None:
+    app.mount("/mcp", _mcp_app)
+    logger.info("✓ MCP server mounted at /mcp")
