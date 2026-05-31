@@ -342,6 +342,7 @@ class TestCreateMcpServer:
         tool_names = {tool.name for tool in tools}
         expected = {
             "get_active_edition",
+            "list_editions",
             "get_event_schedule",
             "get_venue_plan_summary",
             "find_guest",
@@ -354,6 +355,49 @@ class TestCreateMcpServer:
             "get_check_in_summary",
         }
         assert expected == tool_names
+
+
+# ---------------------------------------------------------------------------
+# list_editions
+# ---------------------------------------------------------------------------
+
+
+class TestListEditions:
+    @pytest.mark.anyio
+    async def test_returns_editions_in_chronological_order(self):
+        past_event = _make_event(event_id="ev-past", event_date=date(2025, 10, 18))
+        upcoming_event = _make_event(event_id="ev-upcoming", event_date=date(2026, 3, 21))
+        past = _make_edition(edition_id="2025-october", year=2025, month="october", active=False, events=[past_event])
+        upcoming = _make_edition(events=[upcoming_event])
+
+        db = _make_db_execute([[upcoming, past]])
+        backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
+        result = await backend.list_editions()
+
+        assert result["count"] == 2
+        assert result["editions"] == [
+            {
+                "id": "2025-october",
+                "year": 2025,
+                "type": "festival",
+                "date_range": {"start": "2025-10-18", "end": "2025-10-18"},
+                "is_active": False,
+            },
+            {
+                "id": "2026-march",
+                "year": 2026,
+                "type": "festival",
+                "date_range": {"start": "2026-03-21", "end": "2026-03-21"},
+                "is_active": True,
+            },
+        ]
+
+    @pytest.mark.anyio
+    async def test_returns_empty_list_when_no_editions_exist(self):
+        db = _make_db_execute([[]])
+        backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
+        result = await backend.list_editions()
+        assert result == {"editions": [], "count": 0}
 
 
 # ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -104,14 +105,15 @@ if not _cors_origins:
 else:
     logger.info(f"CORS middleware configured with origins: {_cors_origins}")
 
-_cors_kwargs = dict(
-    allow_origins=_cors_origins,
-    allow_credentials="*" not in _cors_origins,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept", "Authorization", "X-Request-ID"],
-    expose_headers=["X-Request-ID"],
-)
+_cors_kwargs: dict[str, Any] = {
+    "allow_origins": _cors_origins,
+    "allow_credentials": "*" not in _cors_origins,
+    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Accept", "Authorization", "X-Request-ID"],
+    "expose_headers": ["X-Request-ID"],
+}
 if _mcp_app is not None:
+
     class _MCPAwareCORSMiddleware:
         def __init__(self, app, **kwargs) -> None:
             self._app = app

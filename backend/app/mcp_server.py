@@ -16,7 +16,7 @@ Auth tiers (sourced from bearer JWT ``realm_access.roles``):
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastmcp import FastMCP
@@ -130,6 +130,21 @@ class ChampagneFestivalMcpBackend:
         }
 
     @staticmethod
+    def _edition_discovery_dict(edition: Edition, dates: list[date] | None = None) -> dict:
+        if dates is None:
+            dates = sorted({event.date for event in edition.events})
+        return {
+            "id": edition.id,
+            "year": edition.year,
+            "type": edition.edition_type,
+            "date_range": {
+                "start": str(dates[0]) if dates else None,
+                "end": str(dates[-1]) if dates else None,
+            },
+            "is_active": edition.active,
+        }
+
+    @staticmethod
     def _event_dict(event: Event) -> dict:
         return {
             "id": event.id,
@@ -228,6 +243,35 @@ class ChampagneFestivalMcpBackend:
             if edition is None:
                 return {"active_edition": None, "message": "No active or upcoming editions found."}
             return {"active_edition": self._edition_dict(edition)}
+
+    async def list_editions(self) -> dict:
+        """List past and upcoming festival editions for public discovery.
+
+        Returns edition IDs, years, types, date ranges, and active status.
+        No PII is included.
+        """
+        from sqlalchemy.orm import selectinload
+
+        async with self.session_factory() as db:
+            result = await db.execute(select(Edition).options(selectinload(Edition.events)))
+            editions: list[Edition] = list(result.scalars().all())
+
+        editions_with_dates = [(edition, sorted({event.date for event in edition.events})) for edition in editions]
+
+        def _sort_key(item: tuple[Edition, list[date]]) -> tuple[date, date, int, str]:
+            edition, dates = item
+            return (
+                dates[0] if dates else date.max,
+                dates[-1] if dates else date.max,
+                edition.year,
+                edition.id,
+            )
+
+        editions_with_dates.sort(key=_sort_key)
+        return {
+            "editions": [self._edition_discovery_dict(edition, dates) for edition, dates in editions_with_dates],
+            "count": len(editions),
+        }
 
     async def get_event_schedule(self, edition_id: str | None = None) -> dict:
         """Return the event schedule for an edition.
@@ -873,6 +917,7 @@ def create_mcp_server(
 
     # Register all tools
     mcp.tool(backend.get_active_edition)
+    mcp.tool(backend.list_editions)
     mcp.tool(backend.get_event_schedule)
     mcp.tool(backend.get_venue_plan_summary)
     mcp.tool(backend.find_guest)
