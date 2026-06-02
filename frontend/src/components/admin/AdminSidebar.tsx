@@ -3,6 +3,85 @@ import clsx from "clsx";
 import Button from "react-bootstrap/Button";
 import { m } from "@/paraglide/messages";
 
+interface SidebarItemProps {
+  itemKey: string;
+  icon: string;
+  label: string;
+  count?: number;
+  activeKey: string;
+  setActiveKey: (key: string) => void;
+  setSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+}
+
+function SidebarItem({
+  itemKey,
+  icon,
+  label,
+  count = 0,
+  activeKey,
+  setActiveKey,
+  setSidebarOpen,
+}: SidebarItemProps) {
+  return (
+    <button
+      type="button"
+      className={clsx("admin-nav-item", activeKey === itemKey && "is-active")}
+      onClick={() => {
+        setActiveKey(itemKey);
+        setSidebarOpen(false);
+      }}
+    >
+      <i className={clsx("bi", icon)} aria-hidden="true" />
+      <span>{label}</span>
+      {count > 0 && <span className="admin-nav-count">{count}</span>}
+    </button>
+  );
+}
+
+interface SidebarGroupProps {
+  groupKey: string;
+  icon: string;
+  label: string;
+  itemKeys: string[];
+  children: React.ReactNode;
+  activeKey: string;
+  expandedGroups: Set<string>;
+  toggleGroup: (group: string) => void;
+}
+
+function SidebarGroup({
+  groupKey,
+  icon,
+  label,
+  itemKeys,
+  children,
+  activeKey,
+  expandedGroups,
+  toggleGroup,
+}: SidebarGroupProps) {
+  return (
+    <div className="admin-nav-group">
+      <button
+        type="button"
+        className={clsx("admin-nav-group-header", itemKeys.includes(activeKey) && "has-active")}
+        onClick={() => toggleGroup(groupKey)}
+        aria-expanded={expandedGroups.has(groupKey)}
+      >
+        <i className={clsx("bi", icon)} aria-hidden="true" />
+        <span>{label}</span>
+        <i
+          className={clsx(
+            "bi admin-nav-chevron",
+            expandedGroups.has(groupKey) ? "bi-chevron-up" : "bi-chevron-down",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      {expandedGroups.has(groupKey) && <div className="admin-nav-sub">{children}</div>}
+    </div>
+  );
+}
+
 export interface AdminSidebarProps {
   activeKey: string;
   setActiveKey: (key: string) => void;
@@ -38,64 +117,8 @@ export default function AdminSidebar({
   onLoadData,
   onLogout,
 }: AdminSidebarProps) {
-  const SidebarItem = ({
-    itemKey,
-    icon,
-    label,
-    count = 0,
-  }: {
-    itemKey: string;
-    icon: string;
-    label: string;
-    count?: number;
-  }) => (
-    <button
-      type="button"
-      className={clsx("admin-nav-item", activeKey === itemKey && "is-active")}
-      onClick={() => {
-        setActiveKey(itemKey);
-        setSidebarOpen(false);
-      }}
-    >
-      <i className={clsx("bi", icon)} aria-hidden="true" />
-      <span>{label}</span>
-      {count > 0 && <span className="admin-nav-count">{count}</span>}
-    </button>
-  );
-
-  const SidebarGroup = ({
-    groupKey,
-    icon,
-    label,
-    itemKeys,
-    children,
-  }: {
-    groupKey: string;
-    icon: string;
-    label: string;
-    itemKeys: string[];
-    children: React.ReactNode;
-  }) => (
-    <div className="admin-nav-group">
-      <button
-        type="button"
-        className={clsx("admin-nav-group-header", itemKeys.includes(activeKey) && "has-active")}
-        onClick={() => toggleGroup(groupKey)}
-        aria-expanded={expandedGroups.has(groupKey)}
-      >
-        <i className={clsx("bi", icon)} aria-hidden="true" />
-        <span>{label}</span>
-        <i
-          className={clsx(
-            "bi admin-nav-chevron",
-            expandedGroups.has(groupKey) ? "bi-chevron-up" : "bi-chevron-down",
-          )}
-          aria-hidden="true"
-        />
-      </button>
-      {expandedGroups.has(groupKey) && <div className="admin-nav-sub">{children}</div>}
-    </div>
-  );
+  const itemProps = { activeKey, setActiveKey, setSidebarOpen };
+  const groupProps = { activeKey, expandedGroups, toggleGroup };
 
   return (
     <>
@@ -119,6 +142,7 @@ export default function AdminSidebar({
             icon="bi-calendar-check"
             label={m.admin_registrations_tab()}
             count={registrationCount}
+            {...itemProps}
           />
 
           <SidebarGroup
@@ -126,11 +150,13 @@ export default function AdminSidebar({
             icon="bi-calendar-event"
             label={m.admin_events_group()}
             itemKeys={["editions"]}
+            {...groupProps}
           >
             <SidebarItem
               itemKey="editions"
               icon="bi-calendar3"
               label={m.admin_content_editions_section()}
+              {...itemProps}
             />
           </SidebarGroup>
 
@@ -139,11 +165,13 @@ export default function AdminSidebar({
             icon="bi-collection"
             label={m.admin_content_tab()}
             itemKeys={["exhibitors"]}
+            {...groupProps}
           >
             <SidebarItem
               itemKey="exhibitors"
               icon="bi-shop"
               label={m.admin_content_exhibitors_section()}
+              {...itemProps}
             />
           </SidebarGroup>
 
@@ -152,13 +180,15 @@ export default function AdminSidebar({
             icon="bi-geo-alt"
             label={m.admin_venue_group()}
             itemKeys={["venues", "table-types", "floor-plans"]}
+            {...groupProps}
           >
-            <SidebarItem itemKey="venues" icon="bi-building" label={m.admin_venues_rooms_tab()} />
-            <SidebarItem itemKey="table-types" icon="bi-grid" label={m.admin_table_types_tab()} />
+            <SidebarItem itemKey="venues" icon="bi-building" label={m.admin_venues_rooms_tab()} {...itemProps} />
+            <SidebarItem itemKey="table-types" icon="bi-grid" label={m.admin_table_types_tab()} {...itemProps} />
             <SidebarItem
               itemKey="floor-plans"
               icon="bi-grid-3x3-gap"
               label={m.admin_floor_plans_tab()}
+              {...itemProps}
             />
           </SidebarGroup>
 
@@ -167,24 +197,28 @@ export default function AdminSidebar({
             icon="bi-people"
             label={m.admin_people_tab()}
             itemKeys={["directory", "members", "volunteers"]}
+            {...groupProps}
           >
             <SidebarItem
               itemKey="directory"
               icon="bi-person"
               label={m.admin_directory_tab()}
               count={peopleCount}
+              {...itemProps}
             />
             <SidebarItem
               itemKey="members"
               icon="bi-person-badge"
               label={m.admin_members_tab()}
               count={membersCount}
+              {...itemProps}
             />
             <SidebarItem
               itemKey="volunteers"
               icon="bi-hand-thumbs-up"
               label={m.admin_volunteers_tab()}
               count={volunteerCount}
+              {...itemProps}
             />
           </SidebarGroup>
         </nav>
