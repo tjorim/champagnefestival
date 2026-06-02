@@ -26,7 +26,7 @@ vi.mock("@/components/LanguageSwitcher", () => ({
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ to, ...props }: { to: string } & React.ComponentProps<"a">) => (
+  Link: ({ to, ...props }: { to: string } & import("react").ComponentProps<"a">) => (
     <a href={to} {...props} />
   ),
 }));
