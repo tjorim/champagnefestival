@@ -3,6 +3,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import Navbar from "react-bootstrap/Navbar";
 import Container from "react-bootstrap/Container";
 import { navigationItems } from "@/config/navigation";
+import { Link } from "@tanstack/react-router";
 
 interface HeaderProps {
   logoSrc?: string;
@@ -25,7 +26,12 @@ const Header = ({ logoSrc = "/images/logo.svg" }: HeaderProps) => {
           ))}
         </div>
 
-        <LanguageSwitcher />
+        <div className="d-flex align-items-center gap-3">
+          <LanguageSwitcher />
+          <Link to="/admin" className="text-light" aria-label={m.admin_title()}>
+            <i className="bi bi-shield-lock" aria-hidden="true" />
+          </Link>
+        </div>
       </Container>
     </Navbar>
   );

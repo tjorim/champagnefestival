@@ -67,7 +67,7 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
 /** Minimal top-bar shown on standalone admin / check-in pages */
 function StandaloneNavBar({ iconClass, title }: { iconClass: string; title: string }) {
   return (
-    <nav className="navbar bg-dark border-bottom border-secondary px-3 py-2">
+    <nav className="navbar fixed-top bg-dark border-bottom border-secondary px-3 py-2">
       <div className="container-fluid d-flex justify-content-between align-items-center">
         <span className="navbar-brand text-warning fw-bold mb-0">
           <i className={`${iconClass} me-2`} aria-hidden="true" />

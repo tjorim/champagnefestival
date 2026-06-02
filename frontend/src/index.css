@@ -54,7 +54,7 @@ body {
   background: var(--primary-color);
   color: white;
   padding: 8px;
-  z-index: 100;
+  z-index: 1031;
   transition: top 0.2s;
   border-radius: 0 0 4px 0;
   text-decoration: none;
