@@ -26,6 +26,7 @@ function SidebarItem({
     <button
       type="button"
       className={clsx("admin-nav-item", activeKey === itemKey && "is-active")}
+      aria-current={activeKey === itemKey ? "page" : undefined}
       onClick={() => {
         setActiveKey(itemKey);
         setSidebarOpen(false);
@@ -66,6 +67,7 @@ function SidebarGroup({
         className={clsx("admin-nav-group-header", itemKeys.includes(activeKey) && "has-active")}
         onClick={() => toggleGroup(groupKey)}
         aria-expanded={expandedGroups.has(groupKey)}
+        aria-controls={`admin-nav-sub-${groupKey}`}
       >
         <i className={clsx("bi", icon)} aria-hidden="true" />
         <span>{label}</span>
@@ -77,7 +79,11 @@ function SidebarGroup({
           aria-hidden="true"
         />
       </button>
-      {expandedGroups.has(groupKey) && <div className="admin-nav-sub">{children}</div>}
+      {expandedGroups.has(groupKey) && (
+        <div id={`admin-nav-sub-${groupKey}`} className="admin-nav-sub">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
