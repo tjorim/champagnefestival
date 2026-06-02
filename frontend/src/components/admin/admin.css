@@ -59,7 +59,10 @@
 }
 
 #admin .card.border-warning {
-  border-color: rgba(var(--adm-primary-rgb), 0.35) !important; /* overrides Bootstrap .border-warning utility */
+  border-color: rgba(
+    var(--adm-primary-rgb),
+    0.35
+  ) !important; /* overrides Bootstrap .border-warning utility */
   box-shadow:
     0 0 0 1px rgba(var(--adm-primary-rgb), 0.15),
     0 8px 24px rgba(0, 0, 0, 0.35);
@@ -374,12 +377,6 @@
   opacity: 1;
 }
 
-/* Sub-tab buttons (Venue/People content pane) */
-.admin-sub-tab {
-  border-radius: var(--adm-radius);
-  padding: 0.3rem 0.75rem;
-}
-
 /* Count badges in the nav */
 .admin-nav-count {
   margin-left: auto;
@@ -600,30 +597,6 @@
   background: rgba(var(--adm-primary-rgb), 0.18) !important;
   color: var(--adm-primary) !important;
   border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
-}
-
-/* ---- Breadcrumb / active-trail indicator ---- */
-.admin-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.75rem;
-  color: var(--adm-text-dim);
-  user-select: none;
-}
-
-.admin-breadcrumb-item {
-  white-space: nowrap;
-}
-
-.admin-breadcrumb-item.is-active {
-  color: var(--adm-text-muted);
-  font-weight: 500;
-}
-
-.admin-breadcrumb-sep {
-  font-size: 0.65rem;
-  opacity: 0.5;
 }
 
 /* ---- react-select dark theme (.admin-dialog scope) ---- */

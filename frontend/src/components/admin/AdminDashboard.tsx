@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import clsx from "clsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
@@ -71,10 +70,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   // Sidebar navigation state
   const [activeKey, setActiveKey] = useState("registrations");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(["programme"]));
-  const [venueTab, setVenueTab] = useState<"venues" | "table-types">("venues");
-  const [peopleTab, setPeopleTab] = useState<"directory" | "members" | "volunteers">("directory");
-  const [contentTab, setContentTab] = useState<"exhibitors" | "editions">("exhibitors");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(["events", "content", "venue", "people"]),
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleGroup = useCallback((group: string) => {
@@ -1320,7 +1318,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
     if (!navRef.current) return;
     const buttons = Array.from(
-      navRef.current.querySelectorAll<HTMLButtonElement>("button.admin-nav-item, button.admin-nav-group-header"),
+      navRef.current.querySelectorAll<HTMLButtonElement>(
+        "button.admin-nav-item, button.admin-nav-group-header",
+      ),
     );
     const focused = document.activeElement;
     const idx = buttons.indexOf(focused as HTMLButtonElement);
@@ -1927,9 +1927,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     return people
       .filter(
         (p) =>
-          p.id !== detailRegistration.personId &&
-          p.email &&
-          p.email.toLowerCase() === personEmail,
+          p.id !== detailRegistration.personId && p.email && p.email.toLowerCase() === personEmail,
       )
       .map((p) => ({ id: p.id, name: p.name }));
   }, [people, detailRegistration]);
@@ -1978,6 +1976,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             handleNavKeyDown={handleNavKeyDown}
             registrationCount={registrations.length}
             peopleCount={people.length}
+            membersCount={members.length}
+            volunteerCount={volunteers.length}
             isAnyFetching={isAnyFetching}
             onLoadData={loadData}
             onLogout={handleLogout}
@@ -2014,74 +2014,35 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     authHeaders={authHeaders}
                   />
                 )}
-                {activeKey === "content" && (
-                  <>
-                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
-                      <span className="admin-breadcrumb-item">{m.admin_content_tab()}</span>
-                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
-                      <span className="admin-breadcrumb-item is-active">
-                        {contentTab === "exhibitors"
-                          ? m.admin_content_exhibitors_section()
-                          : m.admin_content_editions_section()}
-                      </span>
-                    </nav>
-                    <div className="d-flex gap-2 mb-3">
-                      <button
-                        className={clsx(
-                          "admin-nav-item",
-                          "admin-sub-tab",
-                          contentTab === "exhibitors" && "is-active",
-                        )}
-                        onClick={() => setContentTab("exhibitors")}
-                      >
-                        <i className="bi bi-shop me-1" aria-hidden="true" />
-                        {m.admin_content_exhibitors_section()}
-                      </button>
-                      <button
-                        className={clsx(
-                          "admin-nav-item",
-                          "admin-sub-tab",
-                          contentTab === "editions" && "is-active",
-                        )}
-                        onClick={() => setContentTab("editions")}
-                      >
-                        <i className="bi bi-calendar3 me-1" aria-hidden="true" />
-                        {m.admin_content_editions_section()}
-                      </button>
-                    </div>
-                    {contentTab === "exhibitors" && (
-                      <Card bg="dark" text="white" border="secondary" className="mb-3">
-                        <Card.Body>
-                          <ContentSection
-                            sectionKey="exhibitors"
-                            title={m.admin_content_exhibitors_section()}
-                            authHeaders={authHeaders}
-                            onItemSaved={handleExhibitorSaved}
-                            onItemDeleted={handleExhibitorDeleted}
-                          />
-                        </Card.Body>
-                      </Card>
-                    )}
-                    {contentTab === "editions" && (
-                      <Card bg="dark" text="white" border="secondary" className="mb-3">
-                        <Card.Body>
-                          <EditionsSection
-                            authHeaders={authHeaders}
-                            venues={venues}
-                            onEditionMutated={() => {
-                              void loadData();
-                              void queryClient.invalidateQueries({
-                                queryKey: activeEditionQueryKey,
-                              });
-                              void queryClient.invalidateQueries({
-                                queryKey: queryKeys.admin.activeEditionEvents,
-                              });
-                            }}
-                          />
-                        </Card.Body>
-                      </Card>
-                    )}
-                  </>
+                {activeKey === "exhibitors" && (
+                  <Card bg="dark" text="white" border="secondary" className="mb-3">
+                    <Card.Body>
+                      <ContentSection
+                        sectionKey="exhibitors"
+                        title={m.admin_content_exhibitors_section()}
+                        authHeaders={authHeaders}
+                        onItemSaved={handleExhibitorSaved}
+                        onItemDeleted={handleExhibitorDeleted}
+                      />
+                    </Card.Body>
+                  </Card>
+                )}
+                {activeKey === "editions" && (
+                  <Card bg="dark" text="white" border="secondary" className="mb-3">
+                    <Card.Body>
+                      <EditionsSection
+                        authHeaders={authHeaders}
+                        venues={venues}
+                        onEditionMutated={() => {
+                          void loadData();
+                          void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
+                          void queryClient.invalidateQueries({
+                            queryKey: queryKeys.admin.activeEditionEvents,
+                          });
+                        }}
+                      />
+                    </Card.Body>
+                  </Card>
                 )}
                 {activeKey === "floor-plans" && (
                   <LayoutEditor
@@ -2110,159 +2071,58 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onResizeArea={handleResizeArea}
                   />
                 )}
-                {activeKey === "venue" && (
-                  <>
-                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
-                      <span className="admin-breadcrumb-item">{m.admin_venues_tab()}</span>
-                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
-                      <span className="admin-breadcrumb-item is-active">
-                        {venueTab === "venues" ? m.admin_venues_rooms_tab() : m.admin_table_types_tab()}
-                      </span>
-                    </nav>
-                    <div className="d-flex gap-2 mb-3">
-                      <button
-                        className={clsx(
-                          "admin-nav-item",
-                          "admin-sub-tab",
-                          venueTab === "venues" && "is-active",
-                        )}
-                        onClick={() => setVenueTab("venues")}
-                      >
-                        <i className="bi bi-building me-1" aria-hidden="true" />
-                        {m.admin_venues_rooms_tab()}
-                      </button>
-                      <button
-                        className={clsx(
-                          "admin-nav-item",
-                          "admin-sub-tab",
-                          venueTab === "table-types" && "is-active",
-                        )}
-                        onClick={() => setVenueTab("table-types")}
-                      >
-                        <i className="bi bi-grid me-1" aria-hidden="true" />
-                        {m.admin_table_types_tab()}
-                      </button>
-                    </div>
-                    {venueTab === "venues" && (
-                      <VenueManagement
-                        key="venues"
-                        venues={venues}
-                        rooms={rooms}
-                        onAdd={handleAddVenue}
-                        onArchive={handleArchiveVenue}
-                        onRestore={handleRestoreVenue}
-                        onDelete={handleDeleteVenue}
-                        onAddRoom={handleAddRoom}
-                        onArchiveRoom={handleArchiveRoom}
-                        onRestoreRoom={handleRestoreRoom}
-                      />
-                    )}
-                    {venueTab === "table-types" && (
-                      <TableTypeManagement
-                        key="table-types"
-                        tableTypes={tableTypes}
-                        onAdd={handleAddTableType}
-                        onUpdate={handleUpdateTableType}
-                        onArchive={handleArchiveTableType}
-                        onRestore={handleRestoreTableType}
-                      />
-                    )}
-                  </>
+                {activeKey === "venues" && (
+                  <VenueManagement
+                    venues={venues}
+                    rooms={rooms}
+                    onAdd={handleAddVenue}
+                    onArchive={handleArchiveVenue}
+                    onRestore={handleRestoreVenue}
+                    onDelete={handleDeleteVenue}
+                    onAddRoom={handleAddRoom}
+                    onArchiveRoom={handleArchiveRoom}
+                    onRestoreRoom={handleRestoreRoom}
+                  />
                 )}
-                {activeKey === "people" && (
-                  <>
-                    {/* Breadcrumb trail */}
-                    <nav aria-label="breadcrumb" className="admin-breadcrumb mb-2">
-                      <span className="admin-breadcrumb-item">{m.admin_people_tab()}</span>
-                      <i className="bi bi-chevron-right admin-breadcrumb-sep" aria-hidden="true" />
-                      <span className="admin-breadcrumb-item is-active">
-                        {peopleTab === "directory"
-                          ? m.admin_directory_tab()
-                          : peopleTab === "members"
-                            ? m.admin_members_tab()
-                            : m.admin_volunteers_tab()}
-                      </span>
-                    </nav>
-                    {/* People sub-tab bar */}
-                    <div className="d-flex gap-2 mb-3">
-                      <button
-                        className={clsx(
-                          "admin-nav-item",
-                          "admin-sub-tab",
-                          peopleTab === "directory" && "is-active",
-                        )}
-                        onClick={() => setPeopleTab("directory")}
-                      >
-                        <i className="bi bi-person me-1" aria-hidden="true" />
-                        {m.admin_directory_tab()}
-                        {people.length > 0 && (
-                          <span className="admin-nav-count ms-1">{people.length}</span>
-                        )}
-                      </button>
-                      <button
-                        className={clsx(
-                          "admin-nav-item",
-                          "admin-sub-tab",
-                          peopleTab === "members" && "is-active",
-                        )}
-                        onClick={() => setPeopleTab("members")}
-                      >
-                        <i className="bi bi-person-badge me-1" aria-hidden="true" />
-                        {m.admin_members_tab()}
-                        {members.length > 0 && (
-                          <span className="admin-nav-count ms-1">{members.length}</span>
-                        )}
-                      </button>
-                      <button
-                        className={clsx(
-                          "admin-nav-item",
-                          "admin-sub-tab",
-                          peopleTab === "volunteers" && "is-active",
-                        )}
-                        onClick={() => setPeopleTab("volunteers")}
-                      >
-                        <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
-                        {m.admin_volunteers_tab()}
-                        {volunteers.length > 0 && (
-                          <span className="admin-nav-count ms-1">{volunteers.length}</span>
-                        )}
-                      </button>
-                    </div>
-                    {peopleTab === "directory" && (
-                      <PeopleManagement
-                        key="directory"
-                        people={people}
-                        registrationCountByPersonId={registrationCountByPersonId}
-                        isLoading={isAnyFetching}
-                        authHeaders={authHeaders}
-                        onMerge={handleMergePeople}
-                        onCreate={handleCreatePerson}
-                        onUpdate={handleUpdatePerson}
-                        onDelete={handleDeletePerson}
-                      />
-                    )}
-                    {peopleTab === "members" && (
-                      <MembersManagement
-                        key="members"
-                        members={members}
-                        registrationCountByPersonId={registrationCountByPersonId}
-                        isLoading={isAnyFetching}
-                        onCreate={handleCreateMember}
-                        onUpdate={handleUpdateMember}
-                        onDelete={handleDeleteMember}
-                      />
-                    )}
-                    {peopleTab === "volunteers" && (
-                      <VolunteersManagement
-                        key="volunteers"
-                        volunteers={volunteers}
-                        isLoading={isAnyFetching}
-                        onCreate={handleCreateVolunteer}
-                        onUpdate={handleUpdateVolunteer}
-                        onDelete={handleDeleteVolunteer}
-                      />
-                    )}
-                  </>
+                {activeKey === "table-types" && (
+                  <TableTypeManagement
+                    tableTypes={tableTypes}
+                    onAdd={handleAddTableType}
+                    onUpdate={handleUpdateTableType}
+                    onArchive={handleArchiveTableType}
+                    onRestore={handleRestoreTableType}
+                  />
+                )}
+                {activeKey === "directory" && (
+                  <PeopleManagement
+                    people={people}
+                    registrationCountByPersonId={registrationCountByPersonId}
+                    isLoading={isAnyFetching}
+                    authHeaders={authHeaders}
+                    onMerge={handleMergePeople}
+                    onCreate={handleCreatePerson}
+                    onUpdate={handleUpdatePerson}
+                    onDelete={handleDeletePerson}
+                  />
+                )}
+                {activeKey === "members" && (
+                  <MembersManagement
+                    members={members}
+                    registrationCountByPersonId={registrationCountByPersonId}
+                    isLoading={isAnyFetching}
+                    onCreate={handleCreateMember}
+                    onUpdate={handleUpdateMember}
+                    onDelete={handleDeleteMember}
+                  />
+                )}
+                {activeKey === "volunteers" && (
+                  <VolunteersManagement
+                    volunteers={volunteers}
+                    isLoading={isAnyFetching}
+                    onCreate={handleCreateVolunteer}
+                    onUpdate={handleUpdateVolunteer}
+                    onDelete={handleDeleteVolunteer}
+                  />
                 )}
               </div>
             )}

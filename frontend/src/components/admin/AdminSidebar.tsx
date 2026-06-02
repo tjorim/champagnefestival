@@ -3,6 +3,85 @@ import clsx from "clsx";
 import Button from "react-bootstrap/Button";
 import { m } from "@/paraglide/messages";
 
+interface SidebarItemProps {
+  itemKey: string;
+  icon: string;
+  label: string;
+  count?: number;
+  activeKey: string;
+  setActiveKey: (key: string) => void;
+  setSidebarOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+}
+
+function SidebarItem({
+  itemKey,
+  icon,
+  label,
+  count = 0,
+  activeKey,
+  setActiveKey,
+  setSidebarOpen,
+}: SidebarItemProps) {
+  return (
+    <button
+      type="button"
+      className={clsx("admin-nav-item", activeKey === itemKey && "is-active")}
+      onClick={() => {
+        setActiveKey(itemKey);
+        setSidebarOpen(false);
+      }}
+    >
+      <i className={clsx("bi", icon)} aria-hidden="true" />
+      <span>{label}</span>
+      {count > 0 && <span className="admin-nav-count">{count}</span>}
+    </button>
+  );
+}
+
+interface SidebarGroupProps {
+  groupKey: string;
+  icon: string;
+  label: string;
+  itemKeys: string[];
+  children: React.ReactNode;
+  activeKey: string;
+  expandedGroups: Set<string>;
+  toggleGroup: (group: string) => void;
+}
+
+function SidebarGroup({
+  groupKey,
+  icon,
+  label,
+  itemKeys,
+  children,
+  activeKey,
+  expandedGroups,
+  toggleGroup,
+}: SidebarGroupProps) {
+  return (
+    <div className="admin-nav-group">
+      <button
+        type="button"
+        className={clsx("admin-nav-group-header", itemKeys.includes(activeKey) && "has-active")}
+        onClick={() => toggleGroup(groupKey)}
+        aria-expanded={expandedGroups.has(groupKey)}
+      >
+        <i className={clsx("bi", icon)} aria-hidden="true" />
+        <span>{label}</span>
+        <i
+          className={clsx(
+            "bi admin-nav-chevron",
+            expandedGroups.has(groupKey) ? "bi-chevron-up" : "bi-chevron-down",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      {expandedGroups.has(groupKey) && <div className="admin-nav-sub">{children}</div>}
+    </div>
+  );
+}
+
 export interface AdminSidebarProps {
   activeKey: string;
   setActiveKey: (key: string) => void;
@@ -14,6 +93,8 @@ export interface AdminSidebarProps {
   handleNavKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void;
   registrationCount: number;
   peopleCount: number;
+  membersCount: number;
+  volunteerCount: number;
   isAnyFetching: boolean;
   onLoadData: () => void;
   onLogout: () => void;
@@ -30,10 +111,15 @@ export default function AdminSidebar({
   handleNavKeyDown,
   registrationCount,
   peopleCount,
+  membersCount,
+  volunteerCount,
   isAnyFetching,
   onLoadData,
   onLogout,
 }: AdminSidebarProps) {
+  const itemProps = { activeKey, setActiveKey, setSidebarOpen };
+  const groupProps = { activeKey, expandedGroups, toggleGroup };
+
   return (
     <>
       {/* Sidebar */}
@@ -51,91 +137,90 @@ export default function AdminSidebar({
           ref={navRef}
           onKeyDown={handleNavKeyDown}
         >
-          {/* Registrations */}
-          <button
-            className={clsx("admin-nav-item", activeKey === "registrations" && "is-active")}
-            onClick={() => {
-              setActiveKey("registrations");
-              setSidebarOpen(false);
-            }}
-          >
-            <i className="bi bi-calendar-check" aria-hidden="true" />
-            <span>{m.admin_registrations_tab()}</span>
-            {registrationCount > 0 && (
-              <span className="admin-nav-count">{registrationCount}</span>
-            )}
-          </button>
+          <SidebarItem
+            itemKey="registrations"
+            icon="bi-calendar-check"
+            label={m.admin_registrations_tab()}
+            count={registrationCount}
+            {...itemProps}
+          />
 
-          {/* Programme group */}
-          <div className="admin-nav-group">
-            <button
-              className={clsx(
-                "admin-nav-group-header",
-                ["content", "floor-plans"].includes(activeKey) && "has-active",
-              )}
-              onClick={() => toggleGroup("programme")}
-              aria-expanded={expandedGroups.has("programme")}
-            >
-              <i className="bi bi-collection" aria-hidden="true" />
-              <span>{m.admin_programme_group()}</span>
-              <i
-                className={clsx(
-                  "bi admin-nav-chevron",
-                  expandedGroups.has("programme") ? "bi-chevron-up" : "bi-chevron-down",
-                )}
-                aria-hidden="true"
-              />
-            </button>
-            {expandedGroups.has("programme") && (
-              <div className="admin-nav-sub">
-                <button
-                  className={clsx("admin-nav-item", activeKey === "content" && "is-active")}
-                  onClick={() => {
-                    setActiveKey("content");
-                    setSidebarOpen(false);
-                  }}
-                >
-                  <i className="bi bi-images" aria-hidden="true" />
-                  <span>{m.admin_content_tab()}</span>
-                </button>
-                <button
-                  className={clsx("admin-nav-item", activeKey === "floor-plans" && "is-active")}
-                  onClick={() => {
-                    setActiveKey("floor-plans");
-                    setSidebarOpen(false);
-                  }}
-                >
-                  <i className="bi bi-grid-3x3-gap" aria-hidden="true" />
-                  <span>{m.admin_tables_tab()}</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Venue */}
-          <button
-            className={clsx("admin-nav-item", activeKey === "venue" && "is-active")}
-            onClick={() => {
-              setActiveKey("venue");
-              setSidebarOpen(false);
-            }}
+          <SidebarGroup
+            groupKey="events"
+            icon="bi-calendar-event"
+            label={m.admin_events_group()}
+            itemKeys={["editions"]}
+            {...groupProps}
           >
-            <i className="bi bi-geo-alt" aria-hidden="true" />
-            <span>{m.admin_venues_tab()}</span>
-          </button>
+            <SidebarItem
+              itemKey="editions"
+              icon="bi-calendar3"
+              label={m.admin_content_editions_section()}
+              {...itemProps}
+            />
+          </SidebarGroup>
 
-          {/* People group */}
-          <button
-            className={clsx("admin-nav-item", activeKey === "people" && "is-active")}
-            onClick={() => {
-              setActiveKey("people");
-              setSidebarOpen(false);
-            }}
+          <SidebarGroup
+            groupKey="content"
+            icon="bi-collection"
+            label={m.admin_content_tab()}
+            itemKeys={["exhibitors"]}
+            {...groupProps}
           >
-            <i className="bi bi-people" aria-hidden="true" />
-            <span>{m.admin_people_tab()}</span>
-            {peopleCount > 0 && <span className="admin-nav-count">{peopleCount}</span>}
-          </button>
+            <SidebarItem
+              itemKey="exhibitors"
+              icon="bi-shop"
+              label={m.admin_content_exhibitors_section()}
+              {...itemProps}
+            />
+          </SidebarGroup>
+
+          <SidebarGroup
+            groupKey="venue"
+            icon="bi-geo-alt"
+            label={m.admin_venue_group()}
+            itemKeys={["venues", "table-types", "floor-plans"]}
+            {...groupProps}
+          >
+            <SidebarItem itemKey="venues" icon="bi-building" label={m.admin_venues_rooms_tab()} {...itemProps} />
+            <SidebarItem itemKey="table-types" icon="bi-grid" label={m.admin_table_types_tab()} {...itemProps} />
+            <SidebarItem
+              itemKey="floor-plans"
+              icon="bi-grid-3x3-gap"
+              label={m.admin_floor_plans_tab()}
+              {...itemProps}
+            />
+          </SidebarGroup>
+
+          <SidebarGroup
+            groupKey="people"
+            icon="bi-people"
+            label={m.admin_people_tab()}
+            itemKeys={["directory", "members", "volunteers"]}
+            {...groupProps}
+          >
+            <SidebarItem
+              itemKey="directory"
+              icon="bi-person"
+              label={m.admin_directory_tab()}
+              count={peopleCount}
+              {...itemProps}
+            />
+            <SidebarItem
+              itemKey="members"
+              icon="bi-person-badge"
+              label={m.admin_members_tab()}
+              count={membersCount}
+              {...itemProps}
+            />
+            <SidebarItem
+              itemKey="volunteers"
+              icon="bi-hand-thumbs-up"
+              label={m.admin_volunteers_tab()}
+              count={volunteerCount}
+              {...itemProps}
+            />
+          </SidebarGroup>
         </nav>
 
         {/* Footer: status + actions */}
