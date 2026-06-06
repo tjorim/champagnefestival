@@ -55,6 +55,11 @@ updates:
         patterns:
           - "@tanstack/react-table"
           - "@tanstack/table-core"
+      # Group TanStack DB packages (both depend on @tanstack/db; mismatched versions cause type errors)
+      tanstack-db:
+        patterns:
+          - "@tanstack/react-db"
+          - "@tanstack/query-db-collection"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
