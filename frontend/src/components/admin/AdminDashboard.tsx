@@ -66,7 +66,7 @@ function isRegistrationInEdition(registration: Registration, editionId: string):
 }
 
 function activeEditionLabel(year: number): string {
-  return `Champagne Festival ${year}`;
+  return `${m.festival_name()} ${year}`;
 }
 
 interface AdminDashboardProps {
