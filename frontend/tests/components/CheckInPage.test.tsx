@@ -34,8 +34,11 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_already_in: () => "Already checked in at",
     checkin_event: () => "Event",
     checkin_guests: () => "Guests",
+    checkin_table: () => "Table",
     checkin_pre_orders: () => "Pre-orders",
     checkin_do_checkin: () => "Check in now",
+    checkin_actions_login_required: () => "Login for entrance actions.",
+    checkin_actions_unauthorized: () => "Unauthorized entrance action.",
     checkin_manual_search_title: () => "Find guest manually",
     checkin_manual_search_login_required: () => "Volunteer login required.",
     checkin_manual_search_label: () => "Guest name or email",
@@ -50,15 +53,17 @@ vi.mock("@/paraglide/messages", () => ({
     admin_login_button: () => "Login",
     admin_checked_in: () => "Checked in",
     admin_strap_issued: () => "Strap issued",
+    admin_issue_strap: () => "Issue strap",
     admin_bottle_delivered: () => "Delivered",
     admin_bottle_not_delivered: () => "Pending",
+    admin_mark_delivered: () => "Mark as delivered",
+    admin_mark_not_delivered: () => "Mark as not delivered",
+    admin_error_update_registration: () => "Failed to update registration.",
   },
 }));
 
 describe("CheckInPage", () => {
-  async function renderPage(
-    initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`,
-  ) {
+  async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`) {
     const rootRoute = createRootRoute();
     const checkInRoute = createRoute({
       getParentRoute: () => rootRoute,
@@ -81,6 +86,7 @@ describe("CheckInPage", () => {
     await waitFor(() => {
       expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
       expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+      expect(screen.getByText("T1")).toBeInTheDocument();
     });
   });
 
@@ -95,7 +101,7 @@ describe("CheckInPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
-      expect(screen.getByText("Strap issued.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /issue strap/i })).toBeInTheDocument();
     });
   });
 
@@ -130,7 +136,6 @@ describe("CheckInPage", () => {
       });
     });
   });
-
 
   it("searches and selects a registration when the QR code is unavailable", async () => {
     await renderPage("/check-in");
@@ -167,7 +172,41 @@ describe("CheckInPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
-      expect(screen.getByText("Strap issued.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /issue strap/i })).toBeInTheDocument();
+    });
+  });
+
+  it("issues a strap after check-in from the card", async () => {
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /issue strap/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /issue strap/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Strap issued")).toBeInTheDocument();
+    });
+  });
+
+  it("updates delivered pre-order quantities from the check-in card", async () => {
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 2/4")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Mark as delivered"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 3/4")).toBeInTheDocument();
     });
   });
 

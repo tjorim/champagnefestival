@@ -20,14 +20,22 @@ import {
   submitCheckIn,
   type CheckInData,
 } from "@/utils/publicRegistrationApi";
-import { searchVolunteerRegistrations, submitVolunteerCheckIn } from "@/utils/volunteerApi";
+import {
+  searchVolunteerRegistrations,
+  submitVolunteerCheckIn,
+  updateVolunteerRegistration,
+} from "@/utils/volunteerApi";
 
 interface CheckInCardProps {
   registration: CheckInData;
   success: boolean;
   isAlreadyCheckedIn: boolean;
   isCheckingIn: boolean;
+  isUpdatingRegistration: boolean;
+  canManageEntranceActions: boolean;
   onCheckIn: () => void;
+  onAdjustPreOrder: (productId: string, delta: number) => void;
+  onIssueStrap: () => void;
 }
 
 function CheckInCard({
@@ -35,7 +43,11 @@ function CheckInCard({
   success,
   isAlreadyCheckedIn,
   isCheckingIn,
+  isUpdatingRegistration,
+  canManageEntranceActions,
   onCheckIn,
+  onAdjustPreOrder,
+  onIssueStrap,
 }: CheckInCardProps) {
   return (
     <Card
@@ -74,7 +86,7 @@ function CheckInCard({
           <Alert variant="success" className="mb-3">
             <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
             <strong>{m.checkin_success()}</strong>
-            <div className="mt-1">{m.checkin_strap_issued()}</div>
+            {registration.strapIssued && <div className="mt-1">{m.checkin_strap_issued()}</div>}
           </Alert>
         )}
 
@@ -94,6 +106,12 @@ function CheckInCard({
             <span className="text-secondary">{m.checkin_guests()}</span>
             <span>{registration.guestCount}</span>
           </ListGroup.Item>
+          {registration.tableName && (
+            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between gap-3">
+              <span className="text-secondary">{m.checkin_table()}</span>
+              <span className="fw-semibold text-warning">{registration.tableName}</span>
+            </ListGroup.Item>
+          )}
         </ListGroup>
 
         {registration.preOrders.length > 0 && (
@@ -111,13 +129,41 @@ function CheckInCard({
                   <span>
                     {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
                   </span>
-                  <div className="d-flex gap-2 flex-wrap">
+                  <div className="d-flex align-items-center gap-2 flex-wrap">
                     <Badge bg={item.delivered ? "success" : "secondary"}>
                       {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                     </Badge>
                     <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
                       {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                     </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline-secondary"
+                      onClick={() => onAdjustPreOrder(item.productId, -1)}
+                      disabled={
+                        !canManageEntranceActions ||
+                        isUpdatingRegistration ||
+                        item.deliveredQuantity <= 0
+                      }
+                      title={m.admin_mark_not_delivered()}
+                    >
+                      <i className="bi bi-dash" aria-hidden="true" />
+                      <span className="visually-hidden">{m.admin_mark_not_delivered()}</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={item.delivered ? "success" : "outline-success"}
+                      onClick={() => onAdjustPreOrder(item.productId, 1)}
+                      disabled={
+                        !canManageEntranceActions ||
+                        isUpdatingRegistration ||
+                        item.deliveredQuantity >= item.quantity
+                      }
+                      title={m.admin_mark_delivered()}
+                    >
+                      <i className="bi bi-plus" aria-hidden="true" />
+                      <span className="visually-hidden">{m.admin_mark_delivered()}</span>
+                    </Button>
                   </div>
                 </ListGroup.Item>
               ))}
@@ -126,23 +172,50 @@ function CheckInCard({
         )}
       </Card.Body>
 
-      {!registration.checkedIn && (
-        <Card.Footer className="bg-dark border-secondary">
-          <Button variant="warning" className="w-100" onClick={onCheckIn} disabled={isCheckingIn}>
-            {isCheckingIn ? (
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-2"
-              />
-            ) : (
-              <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
-            )}
-            {m.checkin_do_checkin()}
-          </Button>
+      {(!registration.checkedIn || !registration.strapIssued) && (
+        <Card.Footer className="bg-dark border-secondary d-grid gap-2">
+          {!registration.checkedIn && (
+            <Button variant="warning" className="w-100" onClick={onCheckIn} disabled={isCheckingIn}>
+              {isCheckingIn ? (
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-2"
+                />
+              ) : (
+                <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
+              )}
+              {m.checkin_do_checkin()}
+            </Button>
+          )}
+          {registration.checkedIn && !registration.strapIssued && (
+            <Button
+              variant="info"
+              className="w-100"
+              onClick={onIssueStrap}
+              disabled={!canManageEntranceActions || isUpdatingRegistration}
+            >
+              {isUpdatingRegistration ? (
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-2"
+                />
+              ) : (
+                <i className="bi bi-person-badge-fill me-2" aria-hidden="true" />
+              )}
+              {m.admin_issue_strap()}
+            </Button>
+          )}
+          {!canManageEntranceActions && (
+            <div className="small text-secondary">{m.checkin_actions_login_required()}</div>
+          )}
         </Card.Footer>
       )}
     </Card>
@@ -200,7 +273,10 @@ export default function CheckInPage() {
       setSuccess(false);
       setAlreadyCheckedIn(false);
     },
-    onSuccess: ({ registration: updatedRegistration, alreadyCheckedIn: mutationAlreadyCheckedIn }) => {
+    onSuccess: ({
+      registration: updatedRegistration,
+      alreadyCheckedIn: mutationAlreadyCheckedIn,
+    }) => {
       queryClient.setQueryData(checkInQueryKey, updatedRegistration);
       setSuccess(true);
       setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
@@ -217,7 +293,10 @@ export default function CheckInPage() {
       setSuccess(false);
       setAlreadyCheckedIn(false);
     },
-    onSuccess: ({ registration: updatedRegistration, alreadyCheckedIn: mutationAlreadyCheckedIn }) => {
+    onSuccess: ({
+      registration: updatedRegistration,
+      alreadyCheckedIn: mutationAlreadyCheckedIn,
+    }) => {
       setManualRegistration(updatedRegistration);
       setSuccess(true);
       setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
@@ -230,14 +309,47 @@ export default function CheckInPage() {
     },
   });
 
-  const registration =
-    volunteerCheckInMutation.data?.registration ??
-    manualRegistration ??
-    checkInMutation.data?.registration ??
-    registrationQuery.data ??
-    null;
+  const updateRegistrationMutation = useMutation({
+    mutationFn: ({
+      targetRegistration,
+      preOrders,
+      strapIssued,
+    }: {
+      targetRegistration: CheckInData;
+      preOrders?: CheckInData["preOrders"];
+      strapIssued?: boolean;
+    }) =>
+      updateVolunteerRegistration(targetRegistration.id, { preOrders, strapIssued }, authHeaders),
+    retry: false,
+    onSuccess: (updatedRegistration) => {
+      setManualRegistration((prev) =>
+        prev?.id === updatedRegistration.id ? updatedRegistration : prev,
+      );
+      if (hasQrCredentials) {
+        queryClient.setQueryData(checkInQueryKey, updatedRegistration);
+      }
+      queryClient.setQueryData<CheckInData[]>(
+        queryKeys.volunteerRegistrationSearch(debouncedSearchTerm),
+        (prev) =>
+          prev?.map((item) => (item.id === updatedRegistration.id ? updatedRegistration : item)),
+      );
+    },
+    onSettled: async () => {
+      if (hasQrCredentials) {
+        await queryClient.invalidateQueries({ queryKey: checkInQueryKey });
+      }
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.volunteerRegistrationSearch(debouncedSearchTerm),
+      });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.admin.registrations });
+    },
+  });
+
+  const registration = manualRegistration ?? registrationQuery.data ?? null;
   const isLoading = hasQrCredentials ? registrationQuery.isPending : false;
   const isCheckingIn = checkInMutation.isPending || volunteerCheckInMutation.isPending;
+  const canManageEntranceActions = auth.isAuthenticated;
+  const isUpdatingRegistration = updateRegistrationMutation.isPending;
   const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
   const mutationError = checkInMutation.isError
     ? checkInMutation.error instanceof CheckInError
@@ -245,7 +357,11 @@ export default function CheckInPage() {
       : m.checkin_error()
     : volunteerCheckInMutation.isError
       ? volunteerCheckInMutation.error.message
-      : "";
+      : updateRegistrationMutation.isError
+        ? updateRegistrationMutation.error.message === "unauthorized"
+          ? m.checkin_actions_unauthorized()
+          : updateRegistrationMutation.error.message
+        : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = volunteerSearchQuery.data ?? [];
   const showSearchHint = useMemo(
@@ -261,6 +377,35 @@ export default function CheckInPage() {
     if (!manualRegistration) return;
     volunteerCheckInMutation.mutate();
   }, [checkInMutation, hasQrCredentials, manualRegistration, volunteerCheckInMutation]);
+
+  const handleAdjustPreOrder = useCallback(
+    (productId: string, delta: number) => {
+      if (!registration) return;
+      const updatedOrders = registration.preOrders.map((item) => {
+        if (item.productId !== productId) return item;
+        const deliveredQuantity = Math.max(
+          0,
+          Math.min(item.quantity, item.deliveredQuantity + delta),
+        );
+        return {
+          ...item,
+          deliveredQuantity,
+          remainingQuantity: item.quantity - deliveredQuantity,
+          delivered: deliveredQuantity === item.quantity,
+        };
+      });
+      updateRegistrationMutation.mutate({
+        targetRegistration: registration,
+        preOrders: updatedOrders,
+      });
+    },
+    [registration, updateRegistrationMutation],
+  );
+
+  const handleIssueStrap = useCallback(() => {
+    if (!registration) return;
+    updateRegistrationMutation.mutate({ targetRegistration: registration, strapIssued: true });
+  }, [registration, updateRegistrationMutation]);
 
   const handleSelectManualRegistration = useCallback((selected: CheckInData) => {
     setManualRegistration(selected);
@@ -308,7 +453,10 @@ export default function CheckInPage() {
                   <Collapse in={searchOpen}>
                     <Card.Body id="manual-checkin-search">
                       {!auth.isAuthenticated && (
-                        <Alert variant="info" className="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                        <Alert
+                          variant="info"
+                          className="d-flex justify-content-between align-items-center gap-3 flex-wrap"
+                        >
                           <span>{m.checkin_manual_search_login_required()}</span>
                           <Button variant="outline-warning" size="sm" onClick={auth.login}>
                             {m.admin_login_button()}
@@ -336,7 +484,9 @@ export default function CheckInPage() {
                       </Form.Group>
 
                       {showSearchHint && (
-                        <div className="text-secondary mt-3">{m.checkin_manual_search_min_chars()}</div>
+                        <div className="text-secondary mt-3">
+                          {m.checkin_manual_search_min_chars()}
+                        </div>
                       )}
 
                       {volunteerSearchQuery.isFetching && (
@@ -384,11 +534,14 @@ export default function CheckInPage() {
                               <span>
                                 <span className="fw-semibold d-block">{result.name}</span>
                                 <span className="text-secondary small">
-                                  {result.eventTitle || result.eventId} · {m.checkin_guests()}: {result.guestCount}
+                                  {result.eventTitle || result.eventId} · {m.checkin_guests()}:{" "}
+                                  {result.guestCount}
                                 </span>
                               </span>
                               <Badge bg={result.checkedIn ? "success" : "secondary"}>
-                                {result.checkedIn ? m.admin_checked_in() : m.checkin_manual_not_checked_in()}
+                                {result.checkedIn
+                                  ? m.admin_checked_in()
+                                  : m.checkin_manual_not_checked_in()}
                               </Badge>
                             </ListGroup.Item>
                           ))}
@@ -422,7 +575,11 @@ export default function CheckInPage() {
                 success={success}
                 isAlreadyCheckedIn={isAlreadyCheckedIn}
                 isCheckingIn={isCheckingIn}
+                isUpdatingRegistration={isUpdatingRegistration}
+                canManageEntranceActions={canManageEntranceActions}
                 onCheckIn={handleCheckIn}
+                onAdjustPreOrder={handleAdjustPreOrder}
+                onIssueStrap={handleIssueStrap}
               />
             )}
           </div>

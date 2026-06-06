@@ -231,7 +231,7 @@
   "checkin_pre_orders": "Précommandes",
   "checkin_not_found": "Réservation introuvable.",
   "checkin_invalid_token": "Code d'enregistrement invalide.",
-  "checkin_do_checkin": "Enregistrer & remettre le bracelet",
+  "checkin_do_checkin": "Enregistrer",
   "checkin_error": "Une erreur s'est produite lors de l'enregistrement.",
   "admin_content_tab": "Contenu",
   "admin_content_editions_section": "Éditions du festival",
@@ -588,5 +588,8 @@
   "checkin_manual_search_no_results": "Aucune réservation correspondante trouvée.",
   "checkin_manual_search_unauthorized": "Connectez-vous comme bénévole ou admin pour rechercher des réservations.",
   "checkin_manual_not_checked_in": "Pas encore enregistré",
-  "checkin_search_error": "Impossible de rechercher les réservations."
+  "checkin_search_error": "Impossible de rechercher les réservations.",
+  "checkin_table": "Table",
+  "checkin_actions_login_required": "Connectez-vous comme bénévole ou admin pour remettre les bracelets et mettre à jour les précommandes.",
+  "checkin_actions_unauthorized": "Connectez-vous comme bénévole ou admin pour mettre à jour les actions d’entrée."
 }

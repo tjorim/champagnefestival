@@ -231,7 +231,7 @@
   "checkin_pre_orders": "Pre-orders",
   "checkin_not_found": "Reservation not found.",
   "checkin_invalid_token": "Invalid check-in code.",
-  "checkin_do_checkin": "Check in & issue strap",
+  "checkin_do_checkin": "Check in",
   "checkin_error": "An error occurred during check-in.",
   "admin_content_tab": "Content",
   "admin_content_editions_section": "Festival Editions",
@@ -588,5 +588,8 @@
   "checkin_manual_search_no_results": "No matching registrations found.",
   "checkin_manual_search_unauthorized": "Sign in as a volunteer or admin to search registrations.",
   "checkin_manual_not_checked_in": "Not checked in",
-  "checkin_search_error": "Could not search registrations."
+  "checkin_search_error": "Could not search registrations.",
+  "checkin_table": "Table",
+  "checkin_actions_login_required": "Sign in as a volunteer or admin to issue straps and update pre-orders.",
+  "checkin_actions_unauthorized": "Sign in as a volunteer or admin to update entrance actions."
 }
