@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { editions, events } from "../data/editionStore";
 import { sharedStore, resetSharedStore } from "../data/registrations";
+import { seedTables } from "../data/venue";
 
 export const publicHandlers = [
   /** GET /api/editions/active — returns the active edition. */
@@ -150,11 +151,13 @@ export const publicHandlers = [
 
     const regPerson = reg.person as Record<string, unknown>;
     const regEvent = reg.event as Record<string, unknown> | null | undefined;
+    const regTable = seedTables.find((table) => table.id === reg.table_id);
     return HttpResponse.json({
       id: reg.id,
       name: regPerson?.name ?? "",
       event_id: reg.event_id,
       event_title: regEvent?.title ?? "",
+      table_name: regTable?.name ?? null,
       guest_count: reg.guest_count,
       pre_orders: reg.pre_orders,
       notes: reg.notes,
@@ -201,6 +204,7 @@ export const publicHandlers = [
     const updatedReg = sharedStore.registrations[idx]!;
     const regPerson2 = updatedReg.person as Record<string, unknown>;
     const regEvent2 = updatedReg.event as Record<string, unknown> | null | undefined;
+    const regTable2 = seedTables.find((table) => table.id === updatedReg.table_id);
     return HttpResponse.json({
       already_checked_in: alreadyCheckedIn,
       registration: {
@@ -208,6 +212,7 @@ export const publicHandlers = [
         name: regPerson2?.name ?? "",
         event_id: updatedReg.event_id,
         event_title: regEvent2?.title ?? "",
+        table_name: regTable2?.name ?? null,
         guest_count: updatedReg.guest_count,
         pre_orders: updatedReg.pre_orders,
         notes: updatedReg.notes,

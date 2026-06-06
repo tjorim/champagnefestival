@@ -1,5 +1,11 @@
 import { http, HttpResponse } from "msw";
-import { editions, events, resetEditionStore, type SeedEdition, type SeedEvent } from "../data/editionStore";
+import {
+  editions,
+  events,
+  resetEditionStore,
+  type SeedEdition,
+  type SeedEvent,
+} from "../data/editionStore";
 import { seedExhibitors } from "../data/exhibitors";
 import { seedPeople } from "../data/people";
 import {
@@ -125,7 +131,7 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
   return tables.map((table) => {
     const tableId = table.id;
     const registrationIds =
-      typeof tableId === "string" && tableId.length > 0 ? byTableId.get(tableId) ?? [] : [];
+      typeof tableId === "string" && tableId.length > 0 ? (byTableId.get(tableId) ?? []) : [];
     return { ...table, registration_ids: registrationIds };
   });
 }
@@ -138,16 +144,19 @@ function now(): string {
   return new Date().toISOString();
 }
 
-function registrationToCheckInResponse(registration: Record<string, unknown>): Record<string, unknown> {
+function registrationToCheckInResponse(
+  registration: Record<string, unknown>,
+): Record<string, unknown> {
   const person = registration.person as Record<string, unknown> | undefined;
   const event = registration.event as Record<string, unknown> | null | undefined;
+  const table = tables.find((item) => item.id === registration.table_id);
   return {
     id: registration.id,
     name: person?.name ?? "",
     event_id: registration.event_id,
     event_title: event?.title ?? "",
     table_id: registration.table_id ?? null,
-    table_name: null,
+    table_name: table?.name ?? null,
     guest_count: registration.guest_count,
     pre_orders: registration.pre_orders,
     notes: registration.notes,
@@ -204,13 +213,7 @@ export const adminHandlers = [
       if (!query) return true;
       const person = registration.person as Record<string, unknown> | undefined;
       const event = registration.event as Record<string, unknown> | undefined;
-      return [
-        person?.name,
-        person?.email,
-        registration.id,
-        registration.event_id,
-        event?.title,
-      ]
+      return [person?.name, person?.email, registration.id, registration.event_id, event?.title]
         .filter((value): value is string => typeof value === "string")
         .some((value) => value.toLowerCase().includes(query));
     });
@@ -246,6 +249,21 @@ export const adminHandlers = [
       already_checked_in: alreadyCheckedIn,
       registration: registrationToCheckInResponse(sharedStore.registrations[idx]!),
     });
+  }),
+
+  http.put("/api/volunteer/registrations/:id", async ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const idx = sharedStore.registrations.findIndex((r) => r.id === params.id);
+    if (idx === -1) return HttpResponse.json(null, { status: 404 });
+    const body = (await request.json()) as Record<string, unknown>;
+    sharedStore.registrations[idx] = {
+      ...sharedStore.registrations[idx]!,
+      ...(Array.isArray(body.pre_orders) ? { pre_orders: body.pre_orders } : {}),
+      ...(typeof body.strap_issued === "boolean" ? { strap_issued: body.strap_issued } : {}),
+      updated_at: now(),
+    };
+    return HttpResponse.json(registrationToCheckInResponse(sharedStore.registrations[idx]!));
   }),
 
   // ──────────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ export interface CheckInData {
   eventId: string;
   eventTitle: string;
   guestCount: number;
+  tableName?: string;
   preOrders: {
     productId: string;
     name: string;
@@ -36,6 +37,7 @@ interface CheckInResponseRegistration {
   event_id?: string;
   event_title?: string;
   guest_count?: number;
+  table_name?: string | null;
   pre_orders?: Record<string, unknown>[];
   notes?: string;
   accessibility_note?: string;
@@ -90,6 +92,7 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
     eventId: data.event_id ?? "",
     eventTitle: data.event_title ?? "",
     guestCount: data.guest_count ?? 1,
+    tableName: data.table_name ?? undefined,
     preOrders: rawOrders.filter(isGuestOrderItemResponse).map((item) => ({
       ...normalizeDeliveredQuantities(item),
       productId: item.product_id,
@@ -139,7 +142,7 @@ export async function submitCheckIn(
   const response = await fetch(`/api/check-in/${encodeURIComponent(registrationId)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: checkInToken, issue_strap: true }),
+    body: JSON.stringify({ token: checkInToken, issue_strap: false }),
   });
 
   if (response.status === 401) {
@@ -239,7 +242,9 @@ function isGuestOrderItemResponse(value: unknown): value is GuestOrderItemRespon
     typeof value.product_id === "string" &&
     typeof value.name === "string" &&
     typeof value.quantity === "number" &&
-    (value.delivered_quantity === undefined || value.delivered_quantity === null || typeof value.delivered_quantity === "number") &&
+    (value.delivered_quantity === undefined ||
+      value.delivered_quantity === null ||
+      typeof value.delivered_quantity === "number") &&
     typeof value.price === "number" &&
     typeof value.category === "string" &&
     typeof value.delivered === "boolean"

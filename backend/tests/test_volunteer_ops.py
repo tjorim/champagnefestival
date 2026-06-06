@@ -147,6 +147,39 @@ async def test_volunteer_can_check_in_from_registration_search(client):
 
 
 @pytest.mark.anyio
+async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(client):
+    registration = await _post_registration(client, path="/api/registrations")
+    assert registration.status_code == 201
+    registration_id = registration.json()["id"]
+
+    r = await client.put(
+        f"/api/volunteer/registrations/{registration_id}",
+        json={
+            "strap_issued": True,
+            "pre_orders": [
+                {
+                    "product_id": "prod-01",
+                    "name": "Champagne bottle",
+                    "quantity": 2,
+                    "delivered_quantity": 1,
+                    "price": 42,
+                    "category": "champagne",
+                    "delivered": False,
+                }
+            ],
+        },
+    )
+
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["id"] == registration_id
+    assert payload["strap_issued"] is True
+    assert payload["pre_orders"][0]["delivered_quantity"] == 1
+    assert "email" not in payload
+    assert "phone" not in payload
+
+
+@pytest.mark.anyio
 async def test_volunteer_table_order_lookup_returns_candidates_for_ambiguous_reference(client):
     await _create_table(client, name="Table 12")
     await _create_table(client, name="Table 12 terrace")
