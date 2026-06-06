@@ -696,3 +696,22 @@
 .admin-dialog .rs__menu-notice--no-options {
   color: var(--adm-text-muted) !important;
 }
+
+.admin-active-edition-strip {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(var(--adm-primary-rgb), 0.2), rgba(13, 110, 253, 0.16));
+  border: 0;
+  border-bottom: 1px solid var(--adm-border);
+  border-radius: var(--bs-card-border-radius);
+  color: var(--adm-text);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.65rem 1rem;
+  width: 100%;
+}
+
+.admin-active-edition-strip:hover,
+.admin-active-edition-strip:focus-visible {
+  background: linear-gradient(135deg, rgba(var(--adm-primary-rgb), 0.28), rgba(13, 110, 253, 0.22));
+}
