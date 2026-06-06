@@ -50,11 +50,6 @@ updates:
           - "leaflet"
           - "react-leaflet"
           - "@types/leaflet"
-      # Group TanStack table packages (must update together or pipelines fail)
-      tanstack-table:
-        patterns:
-          - "@tanstack/react-table"
-          - "@tanstack/table-core"
       # Group TanStack DB packages (both depend on @tanstack/db; mismatched versions cause type errors)
       tanstack-db:
         patterns:

@@ -2,7 +2,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { m } from "@/paraglide/messages";
 import type { AdminTableFeatures } from "@/hooks/useAdminTable";
-import type { RowData, Table } from "@tanstack/table-core";
+import type { RowData, Table } from "@tanstack/react-table";
 
 interface ColumnVisibilityDropdownProps<TData extends RowData> {
   table: Table<AdminTableFeatures, TData>;
