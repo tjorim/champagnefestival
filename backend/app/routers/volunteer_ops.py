@@ -399,6 +399,10 @@ async def volunteer_check_in_registration(
         strap_newly_issued = True
         changed = True
 
+    registration_dict = registration_to_checkin_dict(
+        registration, registration.person, registration.event, table_name=table_name
+    )
+
     if changed:
         request_id = getattr(request.state, "request_id", None)
         audit_base = {
@@ -421,22 +425,22 @@ async def volunteer_check_in_registration(
                 details={"event_id": registration.event_id, "source": "volunteer_search"},
                 **audit_base,
             )
+        reg_id = registration.id
+        event_id = registration.event_id
+        edition_id = registration.event.edition_id
         await db.commit()
-        await db.refresh(registration)
         try:
             await live_bus.publish(
                 live_mapping.check_in_changed(
-                    registration_id=registration.id,
-                    event_id=registration.event_id,
-                    edition_id=registration.event.edition_id,
+                    registration_id=reg_id,
+                    event_id=event_id,
+                    edition_id=edition_id,
                 )
             )
         except Exception:
-            logger.warning("live_bus.publish failed for volunteer check-in %s", registration.id, exc_info=True)
+            logger.warning("live_bus.publish failed for volunteer check-in %s", reg_id, exc_info=True)
 
     return {
-        "registration": registration_to_checkin_dict(
-            registration, registration.person, registration.event, table_name=table_name
-        ),
+        "registration": registration_dict,
         "already_checked_in": already,
     }

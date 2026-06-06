@@ -287,7 +287,7 @@ export default function CheckInPage() {
   });
 
   const volunteerCheckInMutation = useMutation({
-    mutationFn: () => submitVolunteerCheckIn(manualRegistration!.id, authHeaders),
+    mutationFn: (regId: string) => submitVolunteerCheckIn(regId, authHeaders),
     retry: false,
     onMutate: () => {
       setSuccess(false);
@@ -375,7 +375,7 @@ export default function CheckInPage() {
       return;
     }
     if (!manualRegistration) return;
-    volunteerCheckInMutation.mutate();
+    volunteerCheckInMutation.mutate(manualRegistration.id);
   }, [checkInMutation, hasQrCredentials, manualRegistration, volunteerCheckInMutation]);
 
   const handleAdjustPreOrder = useCallback(
