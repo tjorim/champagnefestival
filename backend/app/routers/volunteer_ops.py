@@ -16,7 +16,6 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel
 from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -28,7 +27,7 @@ from app.dependencies import Pagination
 from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Event, Person, Registration, Table
-from app.schemas import CheckInGuestOut, CheckInOut, OrderItemBase
+from app.schemas import CheckInGuestOut, CheckInOut, VolunteerCheckInRequest, VolunteerRegistrationUpdate
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     best_registration_match,
@@ -47,15 +46,6 @@ router = APIRouter(
     tags=["volunteer"],
     dependencies=[Depends(require_volunteer)],
 )
-
-
-class VolunteerCheckInRequest(BaseModel):
-    issue_strap: bool = True
-
-
-class VolunteerRegistrationUpdate(BaseModel):
-    pre_orders: list[OrderItemBase] | None = None
-    strap_issued: bool | None = None
 
 
 async def _resolve_tables(db: AsyncSession, reference: str) -> list[Table]:
@@ -314,8 +304,9 @@ async def update_volunteer_registration(
     }
 
     if body.pre_orders is not None:
-        registration.pre_orders = [item.model_dump() for item in body.pre_orders]
-        if registration.pre_orders != previous_orders:
+        new_orders = [item.model_dump() for item in body.pre_orders]
+        if new_orders != previous_orders:
+            registration.pre_orders = new_orders
             changed = True
             await write_audit_entry(
                 db,

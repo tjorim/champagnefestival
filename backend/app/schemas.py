@@ -424,6 +424,15 @@ class CheckInOut(BaseModel):
     already_checked_in: bool
 
 
+class VolunteerCheckInRequest(BaseModel):
+    issue_strap: bool = True
+
+
+class VolunteerRegistrationUpdate(BaseModel):
+    pre_orders: list[OrderItemBase] | None = None
+    strap_issued: bool | None = None
+
+
 # ---------------------------------------------------------------------------
 # People
 # ---------------------------------------------------------------------------

@@ -180,6 +180,24 @@ async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(
 
 
 @pytest.mark.anyio
+async def test_volunteer_update_registration_returns_404_for_unknown_id(client):
+    r = await client.put(
+        "/api/volunteer/registrations/nonexistent-id",
+        json={"strap_issued": True},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_volunteer_check_in_returns_404_for_unknown_id(client):
+    r = await client.post(
+        "/api/volunteer/registrations/nonexistent-id/check-in",
+        json={"issue_strap": False},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
 async def test_volunteer_table_order_lookup_returns_candidates_for_ambiguous_reference(client):
     await _create_table(client, name="Table 12")
     await _create_table(client, name="Table 12 terrace")

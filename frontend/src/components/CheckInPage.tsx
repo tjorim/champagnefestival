@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSearch } from "@tanstack/react-router";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
@@ -236,10 +236,13 @@ export default function CheckInPage() {
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
 
   const authHeaders = useCallback(
-    (): Record<string, string> => ({
-      "Content-Type": "application/json",
-      ...(auth.getAccessToken() ? { Authorization: `Bearer ${auth.getAccessToken()}` } : {}),
-    }),
+    (): Record<string, string> => {
+      const token = auth.getAccessToken();
+      return {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+    },
     [auth],
   );
 
@@ -364,10 +367,7 @@ export default function CheckInPage() {
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = volunteerSearchQuery.data ?? [];
-  const showSearchHint = useMemo(
-    () => !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2,
-    [hasQrCredentials, searchTerm],
-  );
+  const showSearchHint = !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
 
   const handleCheckIn = useCallback(() => {
     if (hasQrCredentials) {
