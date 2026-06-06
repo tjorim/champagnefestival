@@ -221,7 +221,7 @@
   "admin_error_check_in": "Échec de l'enregistrement.",
   "admin_error_bottle_delivery": "Échec de la mise à jour du statut de livraison.",
   "checkin_title": "Enregistrement",
-  "checkin_scan_prompt": "Scannez le code QR ou entrez l'identifiant de réservation",
+  "checkin_scan_prompt": "Scannez un code QR pour commencer, ou utilisez la recherche bénévole lorsqu’aucun code QR n’est disponible.",
   "checkin_looking_up": "Recherche de la réservation...",
   "checkin_success": "Enregistrement réussi !",
   "checkin_already_in": "Cet invité s'est déjà enregistré le",
@@ -577,5 +577,16 @@
   "admin_bulk_content_archive_error": "{failed} élément(s) sur {total} n'ont pas pu être archivés.",
   "admin_select_all": "Tout sélectionner (visibles)",
   "admin_value_yes": "Oui",
-  "admin_value_no": "Non"
+  "admin_value_no": "Non",
+  "checkin_manual_search_title": "Rechercher un invité manuellement",
+  "checkin_manual_search_login_required": "Une authentification bénévole est requise pour rechercher des réservations manuellement.",
+  "checkin_manual_search_label": "Nom ou e-mail de l’invité",
+  "checkin_manual_search_placeholder": "Rechercher par nom ou e-mail d’invité…",
+  "checkin_manual_search_help": "Les résultats masquent l’e-mail et le téléphone et affichent uniquement les informations utiles à l’entrée.",
+  "checkin_manual_search_min_chars": "Saisissez au moins 2 caractères pour rechercher.",
+  "checkin_manual_search_loading": "Recherche des réservations…",
+  "checkin_manual_search_no_results": "Aucune réservation correspondante trouvée.",
+  "checkin_manual_search_unauthorized": "Connectez-vous comme bénévole ou admin pour rechercher des réservations.",
+  "checkin_manual_not_checked_in": "Pas encore enregistré",
+  "checkin_search_error": "Impossible de rechercher les réservations."
 }

@@ -138,6 +138,26 @@ function now(): string {
   return new Date().toISOString();
 }
 
+function registrationToCheckInResponse(registration: Record<string, unknown>): Record<string, unknown> {
+  const person = registration.person as Record<string, unknown> | undefined;
+  const event = registration.event as Record<string, unknown> | null | undefined;
+  return {
+    id: registration.id,
+    name: person?.name ?? "",
+    event_id: registration.event_id,
+    event_title: event?.title ?? "",
+    table_id: registration.table_id ?? null,
+    table_name: null,
+    guest_count: registration.guest_count,
+    pre_orders: registration.pre_orders,
+    notes: registration.notes,
+    status: registration.status,
+    checked_in: registration.checked_in,
+    checked_in_at: registration.checked_in_at,
+    strap_issued: registration.strap_issued,
+  };
+}
+
 export const adminHandlers = [
   http.get("/api/mock/scenario", () => {
     return HttpResponse.json({
@@ -170,6 +190,62 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     return HttpResponse.json(sharedStore.registrations);
+  }),
+
+  http.get("/api/volunteer/registrations", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+
+    const url = new URL(request.url);
+    const query = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+    const limit = Number(url.searchParams.get("limit") ?? 10);
+
+    const matches = sharedStore.registrations.filter((registration) => {
+      if (!query) return true;
+      const person = registration.person as Record<string, unknown> | undefined;
+      const event = registration.event as Record<string, unknown> | undefined;
+      return [
+        person?.name,
+        person?.email,
+        registration.id,
+        registration.event_id,
+        event?.title,
+      ]
+        .filter((value): value is string => typeof value === "string")
+        .some((value) => value.toLowerCase().includes(query));
+    });
+
+    return HttpResponse.json(matches.slice(0, limit).map(registrationToCheckInResponse));
+  }),
+
+  http.post("/api/volunteer/registrations/:id/check-in", async ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
+
+    const idx = sharedStore.registrations.findIndex((r) => r.id === params.id);
+    if (idx === -1) return HttpResponse.json(null, { status: 404 });
+
+    const reg = sharedStore.registrations[idx]!;
+    const alreadyCheckedIn = Boolean(reg.checked_in);
+    sharedStore.registrations[idx] = {
+      ...reg,
+      checked_in: true,
+      checked_in_at: alreadyCheckedIn ? reg.checked_in_at : now(),
+      strap_issued: Boolean(reg.strap_issued) || body.issue_strap === true,
+      updated_at: now(),
+    };
+
+    return HttpResponse.json({
+      already_checked_in: alreadyCheckedIn,
+      registration: registrationToCheckInResponse(sharedStore.registrations[idx]!),
+    });
   }),
 
   // ──────────────────────────────────────────────────────────────

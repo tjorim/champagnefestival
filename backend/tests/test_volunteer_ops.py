@@ -120,6 +120,33 @@ async def test_volunteer_registrations_normalize_visible_table_reference_and_fil
 
 
 @pytest.mark.anyio
+async def test_volunteer_can_check_in_from_registration_search(client):
+    registration = await _post_registration(client, path="/api/registrations")
+    assert registration.status_code == 201
+    registration_id = registration.json()["id"]
+
+    r = await client.post(
+        f"/api/volunteer/registrations/{registration_id}/check-in",
+        json={"issue_strap": True},
+    )
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["already_checked_in"] is False
+    assert payload["registration"]["id"] == registration_id
+    assert payload["registration"]["checked_in"] is True
+    assert payload["registration"]["strap_issued"] is True
+    assert "email" not in payload["registration"]
+    assert "phone" not in payload["registration"]
+
+    r = await client.post(
+        f"/api/volunteer/registrations/{registration_id}/check-in",
+        json={"issue_strap": True},
+    )
+    assert r.status_code == 200
+    assert r.json()["already_checked_in"] is True
+
+
+@pytest.mark.anyio
 async def test_volunteer_table_order_lookup_returns_candidates_for_ambiguous_reference(client):
     await _create_table(client, name="Table 12")
     await _create_table(client, name="Table 12 terrace")

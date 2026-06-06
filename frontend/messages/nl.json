@@ -221,7 +221,7 @@
   "admin_error_check_in": "Inchecken mislukt.",
   "admin_error_bottle_delivery": "Levering bijwerken mislukt.",
   "checkin_title": "Incheck",
-  "checkin_scan_prompt": "Scan de QR-code of voer het reservatienummer in",
+  "checkin_scan_prompt": "Scan een QR-code om te beginnen, of gebruik de vrijwilligerszoekfunctie wanneer er geen QR-code beschikbaar is.",
   "checkin_looking_up": "Reservatie opzoeken...",
   "checkin_success": "Succesvol ingecheckt!",
   "checkin_already_in": "Deze gast is al ingecheckt op",
@@ -577,5 +577,16 @@
   "admin_bulk_content_archive_error": "{failed} van {total} items konden niet worden gearchiveerd.",
   "admin_select_all": "Alle zichtbare selecteren",
   "admin_value_yes": "Ja",
-  "admin_value_no": "Nee"
+  "admin_value_no": "Nee",
+  "checkin_manual_search_title": "Gast handmatig zoeken",
+  "checkin_manual_search_login_required": "Vrijwilligersauthenticatie is vereist om registraties handmatig te zoeken.",
+  "checkin_manual_search_label": "Naam of e-mailadres van gast",
+  "checkin_manual_search_placeholder": "Zoek op naam of e-mailadres van gast…",
+  "checkin_manual_search_help": "Resultaten verbergen e-mail- en telefoongegevens en tonen alleen informatie voor de ingang.",
+  "checkin_manual_search_min_chars": "Voer minstens 2 tekens in om te zoeken.",
+  "checkin_manual_search_loading": "Registraties zoeken…",
+  "checkin_manual_search_no_results": "Geen overeenkomende registraties gevonden.",
+  "checkin_manual_search_unauthorized": "Meld je aan als vrijwilliger of admin om registraties te zoeken.",
+  "checkin_manual_not_checked_in": "Niet ingecheckt",
+  "checkin_search_error": "Registraties zoeken is mislukt."
 }

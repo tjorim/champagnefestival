@@ -36,6 +36,18 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_guests: () => "Guests",
     checkin_pre_orders: () => "Pre-orders",
     checkin_do_checkin: () => "Check in now",
+    checkin_manual_search_title: () => "Find guest manually",
+    checkin_manual_search_login_required: () => "Volunteer login required.",
+    checkin_manual_search_label: () => "Guest name or email",
+    checkin_manual_search_placeholder: () => "Search by guest name or email…",
+    checkin_manual_search_help: () => "PII-minimal results.",
+    checkin_manual_search_min_chars: () => "Enter at least 2 characters to search.",
+    checkin_manual_search_loading: () => "Searching registrations…",
+    checkin_manual_search_no_results: () => "No matching registrations found.",
+    checkin_manual_search_unauthorized: () => "Sign in as a volunteer or admin.",
+    checkin_manual_not_checked_in: () => "Not checked in",
+    checkin_search_error: () => "Could not search registrations.",
+    admin_login_button: () => "Login",
     admin_checked_in: () => "Checked in",
     admin_strap_issued: () => "Strap issued",
     admin_bottle_delivered: () => "Delivered",
@@ -68,7 +80,7 @@ describe("CheckInPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
-      expect(screen.getByText(SEED_EVENT_TITLE)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
     });
   });
 
@@ -116,6 +128,46 @@ describe("CheckInPage", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: ["check-in", SEED_REG_ID, SEED_REG_TOKEN],
       });
+    });
+  });
+
+
+  it("searches and selects a registration when the QR code is unavailable", async () => {
+    await renderPage("/check-in");
+
+    expect(screen.getByText("Scan a QR code to begin.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+      expect(screen.getByText("Not checked in")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+
+    expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+  });
+
+  it("submits manual check-in for a selected volunteer search result", async () => {
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
+      expect(screen.getByText("Strap issued.")).toBeInTheDocument();
     });
   });
 

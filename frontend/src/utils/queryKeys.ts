@@ -3,6 +3,7 @@ export const queryKeys = {
   myRegistrations: (token: string) => ["my-registrations", token] as const,
   checkInRegistration: (registrationId: string, checkInToken: string) =>
     ["check-in", registrationId, checkInToken] as const,
+  volunteerRegistrationSearch: (query: string) => ["volunteer", "registrations", query] as const,
   admin: {
     registrations: ["admin", "registrations"] as const,
     tables: ["admin", "tables"] as const,
