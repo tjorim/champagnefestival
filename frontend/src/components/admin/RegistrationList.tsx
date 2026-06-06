@@ -24,6 +24,7 @@ import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import { fetchRegistrations } from "@/utils/adminFetch";
+import type { ActiveEdition } from "@/hooks/useActiveEdition";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
 
@@ -34,6 +35,8 @@ interface AllocationRef {
 }
 
 type EditionFilter = "all" | "festival" | "standalone";
+
+type DateFilter = "all" | "today";
 
 interface RegistrationListProps {
   registrations: Registration[];
@@ -49,6 +52,8 @@ interface RegistrationListProps {
   onIssueStrap: (registrationId: string) => Promise<void>;
   onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
+  activeEdition: ActiveEdition;
+  applyActiveEditionFilterRequest: number;
 }
 
 function statusBadgeVariant(status: RegistrationStatus): string {
@@ -100,6 +105,19 @@ function isStandaloneRegistration(registration: Registration) {
   return registration.event.edition.editionType !== "festival";
 }
 
+function toLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isRegistrationInEdition(registration: Registration, editionId: string): boolean {
+  return (
+    registration.event?.editionId === editionId || registration.event?.edition?.id === editionId
+  );
+}
+
 const columnHelper = createAppColumnHelper<Registration>();
 
 const registrationGlobalFilter: FilterFn<AdminTableFeatures, Registration> = (
@@ -129,10 +147,14 @@ export default function RegistrationList({
   onIssueStrap,
   onAddRegistration,
   authHeaders,
+  activeEdition,
+  applyActiveEditionFilterRequest,
 }: RegistrationListProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [allocationFilter, setAllocationFilter] = useState("");
   const [editionFilter, setEditionFilter] = useState<EditionFilter>("all");
+  const [activeEditionOnly, setActiveEditionOnly] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -143,6 +165,8 @@ export default function RegistrationList({
   const [bulkAction, setBulkAction] = useState<"confirm" | "cancel" | "paid" | null>(null);
   const [bulkInProgress, setBulkInProgress] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [todayKey] = useState(() => toLocalDateKey(new Date()));
+  const filterDefaultsAppliedRef = useRef<string | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
     return () => clearTimeout(timer);
@@ -154,7 +178,10 @@ export default function RegistrationList({
     staleTime: 30 * 1000,
     retry: false,
   });
-  const displayedRegistrations = debouncedQ ? (registrationSearchQuery.data ?? []) : registrations;
+  const displayedRegistrations = useMemo(
+    () => (debouncedQ ? (registrationSearchQuery.data ?? []) : registrations),
+    [debouncedQ, registrationSearchQuery.data, registrations],
+  );
 
   // Refs so column header/cell can read latest selection state without being in deps
   const selectedIdsRef = useRef<Set<string>>(selectedIds);
@@ -188,18 +215,45 @@ export default function RegistrationList({
     ? (allocationOptions.find((o) => o.key === allocationFilter)?.personId ?? null)
     : null;
 
-  // Domain-level pre-filter (edition type, status, allocation) — text search handled by TanStack
+  const activeEditionDateKeys = useMemo(
+    () => activeEdition.dates.map((date) => toLocalDateKey(date)),
+    [activeEdition.dates],
+  );
+  const activeDayIndex = activeEditionDateKeys.indexOf(todayKey);
+  const isActiveEditionDay = activeDayIndex >= 0;
+
+  useEffect(() => {
+    if (!isActiveEditionDay) return;
+    if (filterDefaultsAppliedRef.current === activeEdition.id) return;
+    filterDefaultsAppliedRef.current = activeEdition.id;
+    setActiveEditionOnly(true);
+  }, [activeEdition.id, isActiveEditionDay]);
+
+  // Domain-level pre-filter (active edition, date, edition type, status, allocation) — text search handled by TanStack
   const preFiltered = useMemo(
     () =>
       displayedRegistrations.filter((registration) => {
         if (filter !== "all" && registration.status !== filter) return false;
         if (filterPersonId && registration.person.id !== filterPersonId) return false;
+        if (activeEditionOnly && !isRegistrationInEdition(registration, activeEdition.id)) {
+          return false;
+        }
+        if (dateFilter === "today" && registration.event?.date !== todayKey) return false;
         const standalone = isStandaloneRegistration(registration);
         if (editionFilter === "festival" && standalone) return false;
         if (editionFilter === "standalone" && !standalone) return false;
         return true;
       }),
-    [displayedRegistrations, filter, filterPersonId, editionFilter],
+    [
+      displayedRegistrations,
+      filter,
+      filterPersonId,
+      activeEditionOnly,
+      activeEdition.id,
+      dateFilter,
+      todayKey,
+      editionFilter,
+    ],
   );
 
   const handleAssignTable = useCallback(
@@ -225,9 +279,22 @@ export default function RegistrationList({
         .length,
       standalone: registrations.filter((registration) => isStandaloneRegistration(registration))
         .length,
+      active: registrations.filter((registration) =>
+        isRegistrationInEdition(registration, activeEdition.id),
+      ).length,
     }),
-    [registrations],
+    [activeEdition.id, registrations],
   );
+
+  const todayCount = useMemo(
+    () => registrations.filter((registration) => registration.event?.date === todayKey).length,
+    [registrations, todayKey],
+  );
+
+  useEffect(() => {
+    if (applyActiveEditionFilterRequest === 0) return;
+    setActiveEditionOnly(true);
+  }, [applyActiveEditionFilterRequest]);
 
   // Isolated memo so that selectedIds changes only rebuild the select column, not all columns
   const selectColumn = useMemo(
@@ -656,6 +723,12 @@ export default function RegistrationList({
               >
                 {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
               </Button>
+              <Button
+                variant={activeEditionOnly ? "primary" : "outline-secondary"}
+                onClick={() => setActiveEditionOnly((current) => !current)}
+              >
+                {m.admin_filter_active_edition()} ({editionCounts.active})
+              </Button>
             </ButtonGroup>
             {allocationOptions.length > 0 && (
               <Form.Select
@@ -674,6 +747,14 @@ export default function RegistrationList({
                 ))}
               </Form.Select>
             )}
+            <ButtonGroup size="sm">
+              <Button
+                variant={dateFilter === "today" ? "primary" : "outline-secondary"}
+                onClick={() => setDateFilter((current) => (current === "today" ? "all" : "today"))}
+              >
+                {m.admin_filter_today()} ({todayCount})
+              </Button>
+            </ButtonGroup>
             <ButtonGroup size="sm">
               <Button
                 variant={filter === "all" ? "primary" : "outline-secondary"}
