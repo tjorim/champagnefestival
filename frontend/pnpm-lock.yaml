@@ -87,6 +87,9 @@ importers:
       '@inlang/plugin-message-format':
         specifier: ^4.4.0
         version: 4.4.0
+      '@tanstack/table-core':
+        specifier: 9.0.0-beta.1
+        version: 9.0.0-beta.1
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.1
