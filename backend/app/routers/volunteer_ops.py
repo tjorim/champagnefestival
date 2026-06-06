@@ -315,16 +315,15 @@ async def update_volunteer_registration(
                 **audit_base,
             )
 
-    if body.strap_issued is not None:
+    if body.strap_issued is not None and body.strap_issued != previous_strap_issued:
         registration.strap_issued = body.strap_issued
-        if registration.strap_issued != previous_strap_issued:
-            changed = True
-            await write_audit_entry(
-                db,
-                action="strap_issued" if registration.strap_issued else "strap_revoked",
-                details={"event_id": registration.event_id, "source": "volunteer_check_in"},
-                **audit_base,
-            )
+        changed = True
+        await write_audit_entry(
+            db,
+            action="strap_issued" if registration.strap_issued else "strap_revoked",
+            details={"event_id": registration.event_id, "source": "volunteer_check_in"},
+            **audit_base,
+        )
 
     if changed:
         await db.commit()

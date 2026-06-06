@@ -168,6 +168,12 @@ function CheckInCard({
                 </ListGroup.Item>
               ))}
             </ListGroup>
+            {!canManageEntranceActions && registration.checkedIn && registration.strapIssued && (
+              <div className="small text-secondary mt-2">
+                <i className="bi bi-info-circle me-1" aria-hidden="true" />
+                {m.checkin_actions_login_required()}
+              </div>
+            )}
           </div>
         )}
       </Card.Body>
@@ -252,6 +258,16 @@ export default function CheckInPage() {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    if (hasQrCredentials) {
+      setManualRegistration(null);
+      setSuccess(false);
+      setAlreadyCheckedIn(false);
+      setSearchTerm("");
+      setDebouncedSearchTerm("");
+    }
+  }, [registrationId, checkInToken, hasQrCredentials]);
 
   const registrationQuery = useQuery({
     queryKey: checkInQueryKey,
@@ -366,7 +382,7 @@ export default function CheckInPage() {
           : updateRegistrationMutation.error.message
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
-  const searchResults = volunteerSearchQuery.data ?? [];
+  const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
   const showSearchHint = !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
 
   const handleCheckIn = useCallback(() => {
