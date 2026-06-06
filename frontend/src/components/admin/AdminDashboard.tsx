@@ -2010,6 +2010,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onUpdatePayment={handleUpdatePayment}
                     onAssignTable={handleAssignTable}
                     onViewDetail={handleViewDetail}
+                    onCheckIn={handleCheckIn}
+                    onIssueStrap={handleIssueStrap}
                     onAddRegistration={handleAddRegistration}
                     authHeaders={authHeaders}
                   />

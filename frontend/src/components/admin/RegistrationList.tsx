@@ -9,6 +9,7 @@ import Card from "react-bootstrap/Card";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
@@ -44,6 +45,8 @@ interface RegistrationListProps {
   onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => Promise<void>;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onViewDetail: (registration: Registration) => void;
+  onCheckIn: (registrationId: string) => Promise<void>;
+  onIssueStrap: (registrationId: string) => Promise<void>;
   onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
 }
@@ -122,6 +125,8 @@ export default function RegistrationList({
   onUpdatePayment,
   onAssignTable,
   onViewDetail,
+  onCheckIn,
+  onIssueStrap,
   onAddRegistration,
   authHeaders,
 }: RegistrationListProps) {
@@ -424,6 +429,28 @@ export default function RegistrationList({
                   <i className="bi bi-check-lg" aria-hidden="true" />
                 </Button>
               )}
+              {!reg.checkedIn && (
+                <Button
+                  size="sm"
+                  variant="outline-success"
+                  onClick={() => onCheckIn(reg.id)}
+                  title={m.admin_mark_checked_in()}
+                  aria-label={m.admin_mark_checked_in()}
+                >
+                  <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                </Button>
+              )}
+              {reg.checkedIn && !reg.strapIssued && !isStandaloneRegistration(reg) && (
+                <Button
+                  size="sm"
+                  variant="outline-info"
+                  onClick={() => onIssueStrap(reg.id)}
+                  title={m.admin_issue_strap()}
+                  aria-label={m.admin_issue_strap()}
+                >
+                  <i className="bi bi-person-badge" aria-hidden="true" />
+                </Button>
+              )}
               {hasMoreActions && (
                 <Dropdown>
                   <Dropdown.Toggle
@@ -458,7 +485,16 @@ export default function RegistrationList({
         },
       }),
     ]),
-    [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
+    [
+      allContactPersonIds,
+      tables,
+      handleAssignTable,
+      onViewDetail,
+      onUpdateStatus,
+      onUpdatePayment,
+      onCheckIn,
+      onIssueStrap,
+    ],
   );
 
   const columns = useMemo(
@@ -496,6 +532,35 @@ export default function RegistrationList({
     [preFiltered, sorting, q],
   );
   preFilteredRef.current = visibleRegistrations;
+
+  const eventCapacityStats = useMemo(() => {
+    const statsByEvent = new Map<
+      string,
+      { checkedIn: number; total: number; title: string; maxCapacity?: number }
+    >();
+
+    for (const registration of visibleRegistrations) {
+      if (registration.status === "cancelled") continue;
+      const existing = statsByEvent.get(registration.eventId);
+      const guestCount = Math.max(0, registration.guestCount);
+      const checkedInGuests = registration.checkedIn ? guestCount : 0;
+      if (existing) {
+        existing.checkedIn += checkedInGuests;
+        existing.total += guestCount;
+      } else {
+        statsByEvent.set(registration.eventId, {
+          checkedIn: checkedInGuests,
+          total: guestCount,
+          title: registration.event?.title ?? registration.eventId,
+          maxCapacity: registration.event?.maxCapacity,
+        });
+      }
+    }
+
+    return [...statsByEvent.entries()]
+      .map(([eventId, stats]) => ({ eventId, ...stats }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [visibleRegistrations]);
 
   const handleExportCsv = useCallback(() => {
     const rows = table.getRowModel().rows.map(({ original: reg }) => ({
@@ -639,6 +704,46 @@ export default function RegistrationList({
               style={{ maxWidth: 220 }}
             />
           </div>
+          {eventCapacityStats.length > 0 && (
+            <div className="mt-2 pt-2 border-top border-secondary">
+              <div className="d-flex flex-column gap-2">
+                {eventCapacityStats.map((eventStats) => {
+                  const checkInPercent =
+                    eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
+                  const capacityPercent =
+                    eventStats.maxCapacity && eventStats.maxCapacity > 0
+                      ? (eventStats.total / eventStats.maxCapacity) * 100
+                      : 0;
+                  const progressVariant = capacityPercent >= 100 ? "danger" : "success";
+
+                  return (
+                    <div key={eventStats.eventId}>
+                      <div className="d-flex justify-content-between gap-2 small mb-1 flex-wrap">
+                        <span className="text-secondary text-truncate">
+                          {eventCapacityStats.length > 1 && (
+                            <span className="fw-semibold text-light me-2">{eventStats.title}</span>
+                          )}
+                          {m.admin_checked_in()}: {eventStats.checkedIn}/{eventStats.total}{" "}
+                          {m.admin_guests_count()}
+                        </span>
+                        {eventStats.maxCapacity && eventStats.maxCapacity > 0 && (
+                          <span className="text-secondary">
+                            {m.event_capacity()}: {eventStats.total}/{eventStats.maxCapacity}
+                          </span>
+                        )}
+                      </div>
+                      <ProgressBar
+                        now={checkInPercent}
+                        variant={progressVariant}
+                        className="bg-secondary"
+                        aria-label={`${eventStats.title}: ${eventStats.checkedIn}/${eventStats.total} ${m.admin_checked_in()}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {bulkError && (
             <Alert variant="danger" className="py-1 mt-2 mb-0" dismissible onClose={() => setBulkError(null)}>
               {bulkError}
