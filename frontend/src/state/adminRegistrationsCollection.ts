@@ -34,7 +34,7 @@ export type AdminRegistrationsCollection = ReturnType<typeof createAdminRegistra
 type AuthHeadersProvider = () => Record<string, string>;
 
 const activeAdminRegistrationsCollections = new Set<AdminRegistrationsCollection>();
-const latestRegistrationEventTimestamps = new Map<string, string>();
+const latestRegistrationEventTimestamps = new Map<string, number>();
 
 export function registerAdminRegistrationsCollection(
   collection: AdminRegistrationsCollection,
@@ -42,6 +42,9 @@ export function registerAdminRegistrationsCollection(
   activeAdminRegistrationsCollections.add(collection);
   return () => {
     activeAdminRegistrationsCollections.delete(collection);
+    if (activeAdminRegistrationsCollections.size === 0) {
+      latestRegistrationEventTimestamps.clear();
+    }
   };
 }
 
@@ -73,7 +76,7 @@ export function canPatchAdminRegistrationLiveEvent(envelope: LiveEnvelope): bool
   return (
     activeAdminRegistrationsCollections.size > 0 &&
     isRegistrationCollectionLiveEvent(envelope) &&
-    typeof envelope.scope.registration_id === "string" &&
+    typeof envelope.scope?.registration_id === "string" &&
     envelope.scope.registration_id.length > 0
   );
 }
@@ -87,13 +90,14 @@ export async function patchAdminRegistrationLiveEvent(
   }
 
   const registrationId = envelope.scope.registration_id!;
-  const eventTs = envelope.ts;
+  const eventTime = Date.parse(envelope.ts);
+  if (isNaN(eventTime)) return;
 
-  const lastTs = latestRegistrationEventTimestamps.get(registrationId);
-  if (lastTs && eventTs < lastTs) {
+  const lastTime = latestRegistrationEventTimestamps.get(registrationId);
+  if (lastTime !== undefined && eventTime < lastTime) {
     return;
   }
-  latestRegistrationEventTimestamps.set(registrationId, eventTs);
+  latestRegistrationEventTimestamps.set(registrationId, eventTime);
 
   if (envelope.topic === "registration" && envelope.action === "deleted") {
     for (const collection of activeAdminRegistrationsCollections) {
@@ -104,8 +108,8 @@ export async function patchAdminRegistrationLiveEvent(
 
   const registration = await fetchRegistration(registrationId, authHeaders);
 
-  const currentLastTs = latestRegistrationEventTimestamps.get(registrationId);
-  if (currentLastTs && eventTs < currentLastTs) {
+  const currentLastTime = latestRegistrationEventTimestamps.get(registrationId);
+  if (currentLastTime !== undefined && eventTime < currentLastTime) {
     return;
   }
 

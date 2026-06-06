@@ -635,6 +635,7 @@ export default function RegistrationList({
 
     for (const registration of visibleRegistrations) {
       if (registration.status === "cancelled") continue;
+      if (!registration.eventId) continue;
       const existing = statsByEvent.get(registration.eventId);
       const guestCount = Math.max(0, registration.guestCount ?? 0);
       const checkedInGuests = registration.checkedIn ? guestCount : 0;
