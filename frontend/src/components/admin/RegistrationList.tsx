@@ -9,6 +9,7 @@ import Card from "react-bootstrap/Card";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
@@ -23,6 +24,9 @@ import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import { fetchRegistrations } from "@/utils/adminFetch";
+import { toLocalDateKey } from "@/utils/dateUtils";
+import { isRegistrationInEdition } from "@/utils/adminUtils";
+import type { ActiveEdition } from "@/hooks/useActiveEdition";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
 
@@ -34,6 +38,8 @@ interface AllocationRef {
 
 type EditionFilter = "all" | "festival" | "standalone";
 
+type DateFilter = "all" | "today";
+
 interface RegistrationListProps {
   registrations: Registration[];
   tables: FloorTable[];
@@ -44,8 +50,12 @@ interface RegistrationListProps {
   onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => Promise<void>;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onViewDetail: (registration: Registration) => void;
+  onCheckIn: (registrationId: string) => Promise<void>;
+  onIssueStrap: (registrationId: string) => Promise<void>;
   onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
+  activeEdition: ActiveEdition;
+  applyActiveEditionFilterRequest: number;
 }
 
 function statusBadgeVariant(status: RegistrationStatus): string {
@@ -122,12 +132,18 @@ export default function RegistrationList({
   onUpdatePayment,
   onAssignTable,
   onViewDetail,
+  onCheckIn,
+  onIssueStrap,
   onAddRegistration,
   authHeaders,
+  activeEdition,
+  applyActiveEditionFilterRequest,
 }: RegistrationListProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [allocationFilter, setAllocationFilter] = useState("");
   const [editionFilter, setEditionFilter] = useState<EditionFilter>("all");
+  const [activeEditionOnly, setActiveEditionOnly] = useState(false);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -138,6 +154,9 @@ export default function RegistrationList({
   const [bulkAction, setBulkAction] = useState<"confirm" | "cancel" | "paid" | null>(null);
   const [bulkInProgress, setBulkInProgress] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [todayKey] = useState(() => toLocalDateKey(new Date()));
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const filterDefaultsAppliedRef = useRef<string | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
     return () => clearTimeout(timer);
@@ -149,7 +168,10 @@ export default function RegistrationList({
     staleTime: 30 * 1000,
     retry: false,
   });
-  const displayedRegistrations = debouncedQ ? (registrationSearchQuery.data ?? []) : registrations;
+  const displayedRegistrations = useMemo(
+    () => (debouncedQ ? (registrationSearchQuery.data ?? []) : registrations),
+    [debouncedQ, registrationSearchQuery.data, registrations],
+  );
 
   // Refs so column header/cell can read latest selection state without being in deps
   const selectedIdsRef = useRef<Set<string>>(selectedIds);
@@ -183,18 +205,45 @@ export default function RegistrationList({
     ? (allocationOptions.find((o) => o.key === allocationFilter)?.personId ?? null)
     : null;
 
-  // Domain-level pre-filter (edition type, status, allocation) — text search handled by TanStack
+  const activeEditionDateKeys = useMemo(
+    () => activeEdition.dates.map((date) => toLocalDateKey(date)),
+    [activeEdition.dates],
+  );
+  const activeDayIndex = activeEditionDateKeys.indexOf(todayKey);
+  const isActiveEditionDay = activeDayIndex >= 0;
+
+  useEffect(() => {
+    if (!isActiveEditionDay) return;
+    if (filterDefaultsAppliedRef.current === activeEdition.id) return;
+    filterDefaultsAppliedRef.current = activeEdition.id;
+    setActiveEditionOnly(true);
+  }, [activeEdition.id, isActiveEditionDay]);
+
+  // Domain-level pre-filter (active edition, date, edition type, status, allocation) — text search handled by TanStack
   const preFiltered = useMemo(
     () =>
       displayedRegistrations.filter((registration) => {
         if (filter !== "all" && registration.status !== filter) return false;
         if (filterPersonId && registration.person.id !== filterPersonId) return false;
+        if (activeEditionOnly && !isRegistrationInEdition(registration, activeEdition.id)) {
+          return false;
+        }
+        if (dateFilter === "today" && registration.event?.date !== todayKey) return false;
         const standalone = isStandaloneRegistration(registration);
         if (editionFilter === "festival" && standalone) return false;
         if (editionFilter === "standalone" && !standalone) return false;
         return true;
       }),
-    [displayedRegistrations, filter, filterPersonId, editionFilter],
+    [
+      displayedRegistrations,
+      filter,
+      filterPersonId,
+      activeEditionOnly,
+      activeEdition.id,
+      dateFilter,
+      todayKey,
+      editionFilter,
+    ],
   );
 
   const handleAssignTable = useCallback(
@@ -220,9 +269,22 @@ export default function RegistrationList({
         .length,
       standalone: registrations.filter((registration) => isStandaloneRegistration(registration))
         .length,
+      active: registrations.filter((registration) =>
+        isRegistrationInEdition(registration, activeEdition.id),
+      ).length,
     }),
-    [registrations],
+    [activeEdition.id, registrations],
   );
+
+  const todayCount = useMemo(
+    () => registrations.filter((registration) => registration.event?.date === todayKey).length,
+    [registrations, todayKey],
+  );
+
+  useEffect(() => {
+    if (applyActiveEditionFilterRequest === 0) return;
+    setActiveEditionOnly(true);
+  }, [applyActiveEditionFilterRequest]);
 
   // Isolated memo so that selectedIds changes only rebuild the select column, not all columns
   const selectColumn = useMemo(
@@ -273,6 +335,40 @@ export default function RegistrationList({
         meta: { tdClassName: "align-middle" },
       }),
     [selectedIds],
+  );
+
+  const handleCheckIn = useCallback(
+    async (id: string) => {
+      if (processingIds.has(id)) return;
+      setProcessingIds((prev) => new Set(prev).add(id));
+      try {
+        await onCheckIn(id);
+      } finally {
+        setProcessingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [onCheckIn, processingIds],
+  );
+
+  const handleIssueStrap = useCallback(
+    async (id: string) => {
+      if (processingIds.has(id)) return;
+      setProcessingIds((prev) => new Set(prev).add(id));
+      try {
+        await onIssueStrap(id);
+      } finally {
+        setProcessingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [onIssueStrap, processingIds],
   );
 
   const dataColumns = useMemo(
@@ -424,6 +520,30 @@ export default function RegistrationList({
                   <i className="bi bi-check-lg" aria-hidden="true" />
                 </Button>
               )}
+              {!reg.checkedIn && (
+                <Button
+                  size="sm"
+                  variant="outline-success"
+                  onClick={() => handleCheckIn(reg.id)}
+                  disabled={processingIds.has(reg.id)}
+                  title={m.admin_mark_checked_in()}
+                  aria-label={m.admin_mark_checked_in()}
+                >
+                  <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                </Button>
+              )}
+              {reg.checkedIn && !reg.strapIssued && !isStandaloneRegistration(reg) && (
+                <Button
+                  size="sm"
+                  variant="outline-info"
+                  onClick={() => handleIssueStrap(reg.id)}
+                  disabled={processingIds.has(reg.id)}
+                  title={m.admin_issue_strap()}
+                  aria-label={m.admin_issue_strap()}
+                >
+                  <i className="bi bi-person-badge" aria-hidden="true" />
+                </Button>
+              )}
               {hasMoreActions && (
                 <Dropdown>
                   <Dropdown.Toggle
@@ -458,7 +578,17 @@ export default function RegistrationList({
         },
       }),
     ]),
-    [allContactPersonIds, tables, handleAssignTable, onViewDetail, onUpdateStatus, onUpdatePayment],
+    [
+      allContactPersonIds,
+      tables,
+      handleAssignTable,
+      onViewDetail,
+      onUpdateStatus,
+      onUpdatePayment,
+      handleCheckIn,
+      handleIssueStrap,
+      processingIds,
+    ],
   );
 
   const columns = useMemo(
@@ -496,6 +626,42 @@ export default function RegistrationList({
     [preFiltered, sorting, q],
   );
   preFilteredRef.current = visibleRegistrations;
+
+  const eventCapacityStats = useMemo(() => {
+    const statsByEvent = new Map<
+      string,
+      { checkedIn: number; total: number; title: string; maxCapacity?: number }
+    >();
+
+    for (const registration of visibleRegistrations) {
+      if (registration.status === "cancelled") continue;
+      if (!registration.eventId) continue;
+      const existing = statsByEvent.get(registration.eventId);
+      const guestCount = Math.max(0, registration.guestCount ?? 0);
+      const checkedInGuests = registration.checkedIn ? guestCount : 0;
+      if (existing) {
+        existing.checkedIn += checkedInGuests;
+        existing.total += guestCount;
+        if (existing.title === registration.eventId && registration.event?.title) {
+          existing.title = registration.event.title;
+        }
+        if (existing.maxCapacity === undefined && registration.event?.maxCapacity !== undefined) {
+          existing.maxCapacity = registration.event.maxCapacity;
+        }
+      } else {
+        statsByEvent.set(registration.eventId, {
+          checkedIn: checkedInGuests,
+          total: guestCount,
+          title: registration.event?.title ?? registration.eventId,
+          maxCapacity: registration.event?.maxCapacity,
+        });
+      }
+    }
+
+    return [...statsByEvent.entries()]
+      .map(([eventId, stats]) => ({ eventId, ...stats }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [visibleRegistrations]);
 
   const handleExportCsv = useCallback(() => {
     const rows = table.getRowModel().rows.map(({ original: reg }) => ({
@@ -591,6 +757,12 @@ export default function RegistrationList({
               >
                 {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
               </Button>
+              <Button
+                variant={activeEditionOnly ? "primary" : "outline-secondary"}
+                onClick={() => setActiveEditionOnly((current) => !current)}
+              >
+                {m.admin_filter_active_edition()} ({editionCounts.active})
+              </Button>
             </ButtonGroup>
             {allocationOptions.length > 0 && (
               <Form.Select
@@ -609,6 +781,14 @@ export default function RegistrationList({
                 ))}
               </Form.Select>
             )}
+            <ButtonGroup size="sm">
+              <Button
+                variant={dateFilter === "today" ? "primary" : "outline-secondary"}
+                onClick={() => setDateFilter((current) => (current === "today" ? "all" : "today"))}
+              >
+                {m.admin_filter_today()} ({todayCount})
+              </Button>
+            </ButtonGroup>
             <ButtonGroup size="sm">
               <Button
                 variant={filter === "all" ? "primary" : "outline-secondary"}
@@ -639,6 +819,45 @@ export default function RegistrationList({
               style={{ maxWidth: 220 }}
             />
           </div>
+          {eventCapacityStats.length > 0 && (
+            <div className="mt-2 pt-2 border-top border-secondary">
+              <div className="d-flex flex-column gap-2">
+                {eventCapacityStats.map((eventStats) => {
+                  const checkInPercent =
+                    eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
+                  const isOverCapacity =
+                    eventStats.maxCapacity != null &&
+                    eventStats.maxCapacity > 0 &&
+                    eventStats.total >= eventStats.maxCapacity;
+
+                  return (
+                    <div key={eventStats.eventId}>
+                      <div className="d-flex justify-content-between gap-2 small mb-1 flex-wrap">
+                        <span className="text-secondary text-truncate">
+                          {eventCapacityStats.length > 1 && (
+                            <span className="fw-semibold text-light me-2">{eventStats.title}</span>
+                          )}
+                          {m.admin_checked_in()}: {eventStats.checkedIn}/{eventStats.total}{" "}
+                          {m.admin_guests_count()}
+                        </span>
+                        {eventStats.maxCapacity && eventStats.maxCapacity > 0 && (
+                          <span className={isOverCapacity ? "text-danger" : "text-secondary"}>
+                            {m.event_capacity()}: {eventStats.total}/{eventStats.maxCapacity}
+                          </span>
+                        )}
+                      </div>
+                      <ProgressBar
+                        now={checkInPercent}
+                        variant="success"
+                        className="bg-secondary"
+                        aria-label={`${eventStats.title}: ${eventStats.checkedIn}/${eventStats.total} ${m.admin_checked_in()}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {bulkError && (
             <Alert variant="danger" className="py-1 mt-2 mb-0" dismissible onClose={() => setBulkError(null)}>
               {bulkError}

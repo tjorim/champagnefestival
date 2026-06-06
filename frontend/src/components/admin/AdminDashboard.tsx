@@ -50,7 +50,13 @@ import {
   replaceVolunteerById,
   syncMembersWithPerson,
 } from "@/utils/adminApiMappers";
+import { toLocalDateKey } from "@/utils/dateUtils";
+import { isRegistrationInEdition } from "@/utils/adminUtils";
 import Card from "react-bootstrap/Card";
+
+function activeEditionLabel(year: number): string {
+  return `${m.festival_name()} ${year}`;
+}
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -65,6 +71,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const isAuthenticated = auth.isAuthenticated;
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
+  const [applyActiveEditionFilterRequest, setApplyActiveEditionFilterRequest] = useState(0);
   /** Full registration (with checkInToken) shown in the detail modal */
   const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
 
@@ -129,8 +136,33 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     await loadDataBase();
   }, [loadDataBase]);
 
-  const registrations = registrationsQuery.data ?? [];
+  const registrations = useMemo(() => registrationsQuery.data ?? [], [registrationsQuery.data]);
   const tables = tablesQuery.data ?? [];
+  const todayKey = useMemo(() => toLocalDateKey(new Date()), []);
+  const activeEditionDateKeys = useMemo(
+    () => activeEdition.dates.map((date) => toLocalDateKey(date)),
+    [activeEdition.dates],
+  );
+  const activeDayIndex = activeEditionDateKeys.indexOf(todayKey);
+  const isActiveEditionDay = activeDayIndex >= 0;
+  const activeEditionStats = useMemo(() => {
+    let checkedIn = 0;
+    let total = 0;
+    const eventIdsToday = new Set(
+      activeEdition.events.filter((event) => event.date === todayKey).map((event) => event.id),
+    );
+
+    for (const registration of registrations) {
+      if (registration.status === "cancelled") continue;
+      if (!isRegistrationInEdition(registration, activeEdition.id)) continue;
+      const guestCount = Math.max(0, registration.guestCount ?? 0);
+      total += guestCount;
+      if (registration.checkedIn) checkedIn += guestCount;
+    }
+
+    return { checkedIn, total, eventsToday: eventIdsToday.size };
+  }, [activeEdition.events, activeEdition.id, registrations, todayKey]);
+
   const venues = venuesQuery.data ?? [];
   const rooms = roomsQuery.data ?? [];
   const tableTypes = tableTypesQuery.data ?? [];
@@ -1985,6 +2017,38 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
           {/* Main content */}
           <div className="admin-main" id="admin-content">
+            {activeEdition.id !== "" && (
+              <button
+                type="button"
+                className="admin-active-edition-strip text-start mb-3"
+                onClick={() => {
+                  setActiveKey("registrations");
+                  setApplyActiveEditionFilterRequest((current) => current + 1);
+                }}
+                aria-label={m.admin_active_edition_apply_filter()}
+              >
+                <span className="fw-semibold">{activeEditionLabel(activeEdition.year)}</span>
+                {isActiveEditionDay && (
+                  <span className="text-warning">
+                    {m.admin_active_edition_day_progress({
+                      current: activeDayIndex + 1,
+                      total: activeEditionDateKeys.length,
+                    })}
+                  </span>
+                )}
+                <span>
+                  {m.admin_active_edition_checkins({
+                    checkedIn: activeEditionStats.checkedIn,
+                    total: activeEditionStats.total,
+                  })}
+                </span>
+                {isActiveEditionDay && (
+                  <span>
+                    {m.admin_active_edition_events_today({ count: activeEditionStats.eventsToday })}
+                  </span>
+                )}
+              </button>
+            )}
             {error && (
               <Alert variant="danger" className="mb-4" dismissible onClose={() => setError("")}>
                 {error}
@@ -2010,8 +2074,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onUpdatePayment={handleUpdatePayment}
                     onAssignTable={handleAssignTable}
                     onViewDetail={handleViewDetail}
+                    onCheckIn={handleCheckIn}
+                    onIssueStrap={handleIssueStrap}
                     onAddRegistration={handleAddRegistration}
                     authHeaders={authHeaders}
+                    activeEdition={activeEdition}
+                    applyActiveEditionFilterRequest={applyActiveEditionFilterRequest}
                   />
                 )}
                 {activeKey === "exhibitors" && (

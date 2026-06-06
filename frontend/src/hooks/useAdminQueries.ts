@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import {
   createAdminRegistrationsCollection,
+  registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
 import { queryKeys } from "@/utils/queryKeys";
@@ -83,11 +84,18 @@ export function useAdminQueries({
       }),
     [adminQueryOptions.enabled, authHeaders, queryClient],
   );
-  const registrationsLiveQuery = useLiveQuery(() => registrationsCollection, [registrationsCollection]);
+  const registrationsLiveQuery = useLiveQuery(
+    () => registrationsCollection,
+    [registrationsCollection],
+  );
   const registrationsCollectionRef = useRef(registrationsCollection);
   useEffect(() => {
     registrationsCollectionRef.current = registrationsCollection;
   }, [registrationsCollection]);
+  useEffect(
+    () => registerAdminRegistrationsCollection(registrationsCollection),
+    [registrationsCollection],
+  );
   const registrationsQuery = {
     data: registrationsLiveQuery.data,
     error: registrationsCollection.utils.lastError ?? null,
