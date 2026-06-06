@@ -609,11 +609,17 @@ export default function RegistrationList({
     for (const registration of visibleRegistrations) {
       if (registration.status === "cancelled") continue;
       const existing = statsByEvent.get(registration.eventId);
-      const guestCount = Math.max(0, registration.guestCount);
+      const guestCount = Math.max(0, registration.guestCount ?? 0);
       const checkedInGuests = registration.checkedIn ? guestCount : 0;
       if (existing) {
         existing.checkedIn += checkedInGuests;
         existing.total += guestCount;
+        if (existing.title === registration.eventId && registration.event?.title) {
+          existing.title = registration.event.title;
+        }
+        if (existing.maxCapacity === undefined && registration.event?.maxCapacity !== undefined) {
+          existing.maxCapacity = registration.event.maxCapacity;
+        }
       } else {
         statsByEvent.set(registration.eventId, {
           checkedIn: checkedInGuests,
