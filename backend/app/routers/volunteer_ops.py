@@ -337,7 +337,6 @@ async def update_volunteer_registration(
 
     if changed:
         await db.commit()
-        await db.refresh(registration)
         try:
             await live_bus.publish(
                 live_mapping.registration_changed(
