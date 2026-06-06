@@ -50,20 +50,9 @@ import {
   replaceVolunteerById,
   syncMembersWithPerson,
 } from "@/utils/adminApiMappers";
+import { toLocalDateKey } from "@/utils/dateUtils";
+import { isRegistrationInEdition } from "@/utils/adminUtils";
 import Card from "react-bootstrap/Card";
-
-function toLocalDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function isRegistrationInEdition(registration: Registration, editionId: string): boolean {
-  return (
-    registration.event?.editionId === editionId || registration.event?.edition?.id === editionId
-  );
-}
 
 function activeEditionLabel(year: number): string {
   return `${m.festival_name()} ${year}`;

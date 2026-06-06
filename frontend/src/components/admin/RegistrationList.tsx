@@ -24,6 +24,8 @@ import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import { fetchRegistrations } from "@/utils/adminFetch";
+import { toLocalDateKey } from "@/utils/dateUtils";
+import { isRegistrationInEdition } from "@/utils/adminUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
@@ -105,19 +107,6 @@ function isStandaloneRegistration(registration: Registration) {
   return registration.event.edition.editionType !== "festival";
 }
 
-function toLocalDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function isRegistrationInEdition(registration: Registration, editionId: string): boolean {
-  return (
-    registration.event?.editionId === editionId || registration.event?.edition?.id === editionId
-  );
-}
-
 const columnHelper = createAppColumnHelper<Registration>();
 
 const registrationGlobalFilter: FilterFn<AdminTableFeatures, Registration> = (
@@ -166,6 +155,7 @@ export default function RegistrationList({
   const [bulkInProgress, setBulkInProgress] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [todayKey] = useState(() => toLocalDateKey(new Date()));
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const filterDefaultsAppliedRef = useRef<string | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
@@ -347,6 +337,40 @@ export default function RegistrationList({
     [selectedIds],
   );
 
+  const handleCheckIn = useCallback(
+    async (id: string) => {
+      if (processingIds.has(id)) return;
+      setProcessingIds((prev) => new Set(prev).add(id));
+      try {
+        await onCheckIn(id);
+      } finally {
+        setProcessingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [onCheckIn, processingIds],
+  );
+
+  const handleIssueStrap = useCallback(
+    async (id: string) => {
+      if (processingIds.has(id)) return;
+      setProcessingIds((prev) => new Set(prev).add(id));
+      try {
+        await onIssueStrap(id);
+      } finally {
+        setProcessingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [onIssueStrap, processingIds],
+  );
+
   const dataColumns = useMemo(
     () => columnHelper.columns([
       columnHelper.accessor((row) => row.person.name, {
@@ -500,7 +524,8 @@ export default function RegistrationList({
                 <Button
                   size="sm"
                   variant="outline-success"
-                  onClick={() => onCheckIn(reg.id)}
+                  onClick={() => handleCheckIn(reg.id)}
+                  disabled={processingIds.has(reg.id)}
                   title={m.admin_mark_checked_in()}
                   aria-label={m.admin_mark_checked_in()}
                 >
@@ -511,7 +536,8 @@ export default function RegistrationList({
                 <Button
                   size="sm"
                   variant="outline-info"
-                  onClick={() => onIssueStrap(reg.id)}
+                  onClick={() => handleIssueStrap(reg.id)}
+                  disabled={processingIds.has(reg.id)}
                   title={m.admin_issue_strap()}
                   aria-label={m.admin_issue_strap()}
                 >
@@ -559,8 +585,9 @@ export default function RegistrationList({
       onViewDetail,
       onUpdateStatus,
       onUpdatePayment,
-      onCheckIn,
-      onIssueStrap,
+      handleCheckIn,
+      handleIssueStrap,
+      processingIds,
     ],
   );
 
@@ -797,11 +824,10 @@ export default function RegistrationList({
                 {eventCapacityStats.map((eventStats) => {
                   const checkInPercent =
                     eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
-                  const capacityPercent =
-                    eventStats.maxCapacity && eventStats.maxCapacity > 0
-                      ? (eventStats.total / eventStats.maxCapacity) * 100
-                      : 0;
-                  const progressVariant = capacityPercent >= 100 ? "danger" : "success";
+                  const isOverCapacity =
+                    eventStats.maxCapacity != null &&
+                    eventStats.maxCapacity > 0 &&
+                    eventStats.total >= eventStats.maxCapacity;
 
                   return (
                     <div key={eventStats.eventId}>
@@ -814,14 +840,14 @@ export default function RegistrationList({
                           {m.admin_guests_count()}
                         </span>
                         {eventStats.maxCapacity && eventStats.maxCapacity > 0 && (
-                          <span className="text-secondary">
+                          <span className={isOverCapacity ? "text-danger" : "text-secondary"}>
                             {m.event_capacity()}: {eventStats.total}/{eventStats.maxCapacity}
                           </span>
                         )}
                       </div>
                       <ProgressBar
                         now={checkInPercent}
-                        variant={progressVariant}
+                        variant="success"
                         className="bg-secondary"
                         aria-label={`${eventStats.title}: ${eventStats.checkedIn}/${eventStats.total} ${m.admin_checked_in()}`}
                       />
