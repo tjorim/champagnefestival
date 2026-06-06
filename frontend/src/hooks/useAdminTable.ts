@@ -15,8 +15,8 @@ export const {
   createAppColumnHelper,
   appFeatures,
 } = createTableHook({
-  _features: tableFeatures({ columnVisibilityFeature, globalFilteringFeature, rowSortingFeature }),
-  _rowModels: {
+  features: tableFeatures({ columnVisibilityFeature, globalFilteringFeature, rowSortingFeature }),
+  rowModels: {
     filteredRowModel: createFilteredRowModel(filterFns),
     sortedRowModel: createSortedRowModel(sortFns),
   },
