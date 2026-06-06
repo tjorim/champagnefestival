@@ -11,18 +11,23 @@ staff).
 
 from __future__ import annotations
 
+import logging
+from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_volunteer
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_volunteer
 from app.database import get_db
 from app.dependencies import Pagination
+from app.live import live_bus
+from app.live import mapping as live_mapping
 from app.models import Event, Person, Registration, Table
-from app.schemas import CheckInGuestOut
+from app.schemas import CheckInGuestOut, CheckInOut, VolunteerCheckInRequest, VolunteerRegistrationUpdate
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     best_registration_match,
@@ -33,6 +38,8 @@ from app.services.operational_search import (
     rank_table_reference,
 )
 from app.utils import registration_to_checkin_dict
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/volunteer",
@@ -258,3 +265,172 @@ async def search_registrations(
         registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
         for _, registration, table_name in ranked_rows[offset : offset + limit]
     ]
+
+
+@router.put("/registrations/{registration_id}", response_model=CheckInGuestOut)
+async def update_volunteer_registration(
+    registration_id: str,
+    body: VolunteerRegistrationUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Update entrance-facing registration fields from volunteer check-in."""
+
+    row = (
+        await db.execute(
+            select(Registration, Table.name)
+            .outerjoin(Table, Registration.table_id == Table.id)
+            .where(Registration.id == registration_id)
+            .options(selectinload(Registration.person), selectinload(Registration.event))
+        )
+    ).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+
+    registration, table_name = row
+    if registration.person is None or registration.event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+
+    previous_orders = list(registration.pre_orders) if registration.pre_orders else []
+    previous_strap_issued = registration.strap_issued
+    changed = False
+    request_id = getattr(request.state, "request_id", None)
+    audit_base = {
+        "actor": actor,
+        "resource_type": "registration",
+        "resource_id": registration.id,
+        "request_id": request_id,
+    }
+
+    if body.pre_orders is not None:
+        new_orders = [item.model_dump() for item in body.pre_orders]
+        if new_orders != previous_orders:
+            registration.pre_orders = new_orders
+            changed = True
+            await write_audit_entry(
+                db,
+                action="delivery_updated",
+                details={"event_id": registration.event_id, "source": "volunteer_check_in"},
+                **audit_base,
+            )
+
+    if body.strap_issued is not None and body.strap_issued != previous_strap_issued:
+        registration.strap_issued = body.strap_issued
+        changed = True
+        await write_audit_entry(
+            db,
+            action="strap_issued" if registration.strap_issued else "strap_revoked",
+            details={"event_id": registration.event_id, "source": "volunteer_check_in"},
+            **audit_base,
+        )
+
+    if changed:
+        await db.commit()
+        try:
+            await live_bus.publish(
+                live_mapping.registration_changed(
+                    action="updated",
+                    registration_id=registration.id,
+                    event_id=registration.event_id,
+                    edition_id=registration.event.edition_id,
+                )
+            )
+        except Exception:
+            logger.warning(
+                "live_bus.publish failed for volunteer registration update %s", registration.id, exc_info=True
+            )
+
+    return registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
+
+
+@router.post("/registrations/{registration_id}/check-in", response_model=CheckInOut)
+async def volunteer_check_in_registration(
+    registration_id: str,
+    body: VolunteerCheckInRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Mark a registration checked in from the authenticated volunteer flow.
+
+    This is the QR-code fallback for entrance volunteers. It accepts the same
+    ``issue_strap`` flag as the token-gated public check-in endpoint, but uses
+    the volunteer/admin Bearer token dependency instead of a per-registration
+    QR token. The response remains PII-free.
+    """
+
+    row = (
+        await db.execute(
+            select(Registration, Table.name)
+            .outerjoin(Table, Registration.table_id == Table.id)
+            .where(Registration.id == registration_id)
+            .options(selectinload(Registration.person), selectinload(Registration.event))
+        )
+    ).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+
+    registration, table_name = row
+    if registration.person is None or registration.event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+
+    already = registration.checked_in
+    changed = False
+    strap_newly_issued = False
+
+    if not already:
+        registration.checked_in = True
+        registration.checked_in_at = datetime.now(UTC)
+        changed = True
+
+    if body.issue_strap and not registration.strap_issued:
+        registration.strap_issued = True
+        strap_newly_issued = True
+        changed = True
+
+    registration_dict = registration_to_checkin_dict(
+        registration, registration.person, registration.event, table_name=table_name
+    )
+
+    if changed:
+        request_id = getattr(request.state, "request_id", None)
+        audit_base = {
+            "actor": actor,
+            "resource_type": "registration",
+            "resource_id": registration.id,
+            "request_id": request_id,
+        }
+        if not already:
+            await write_audit_entry(
+                db,
+                action="check_in",
+                details={"event_id": registration.event_id, "source": "volunteer_search"},
+                **audit_base,
+            )
+        if strap_newly_issued:
+            await write_audit_entry(
+                db,
+                action="strap_issued",
+                details={"event_id": registration.event_id, "source": "volunteer_search"},
+                **audit_base,
+            )
+        reg_id = registration.id
+        event_id = registration.event_id
+        edition_id = registration.event.edition_id
+        await db.commit()
+        try:
+            await live_bus.publish(
+                live_mapping.check_in_changed(
+                    registration_id=reg_id,
+                    event_id=event_id,
+                    edition_id=edition_id,
+                )
+            )
+        except Exception:
+            logger.warning("live_bus.publish failed for volunteer check-in %s", reg_id, exc_info=True)
+
+    return {
+        "registration": registration_dict,
+        "already_checked_in": already,
+    }
