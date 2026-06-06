@@ -2017,7 +2017,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
           {/* Main content */}
           <div className="admin-main" id="admin-content">
-            {isActiveEditionDay && (
+            {activeEdition.id !== "" && (
               <button
                 type="button"
                 className="admin-active-edition-strip text-start mb-3"
@@ -2028,21 +2028,25 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 aria-label={m.admin_active_edition_apply_filter()}
               >
                 <span className="fw-semibold">{activeEditionLabel(activeEdition.year)}</span>
-                <span className="text-warning">
-                  {m.admin_active_edition_day_progress({
-                    current: activeDayIndex + 1,
-                    total: activeEditionDateKeys.length,
-                  })}
-                </span>
+                {isActiveEditionDay && (
+                  <span className="text-warning">
+                    {m.admin_active_edition_day_progress({
+                      current: activeDayIndex + 1,
+                      total: activeEditionDateKeys.length,
+                    })}
+                  </span>
+                )}
                 <span>
                   {m.admin_active_edition_checkins({
                     checkedIn: activeEditionStats.checkedIn,
                     total: activeEditionStats.total,
                   })}
                 </span>
-                <span>
-                  {m.admin_active_edition_events_today({ count: activeEditionStats.eventsToday })}
-                </span>
+                {isActiveEditionDay && (
+                  <span>
+                    {m.admin_active_edition_events_today({ count: activeEditionStats.eventsToday })}
+                  </span>
+                )}
               </button>
             )}
             {error && (
