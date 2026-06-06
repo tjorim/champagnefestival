@@ -34,7 +34,10 @@ export function LiveUpdatesProvider(): null {
       getToken: getAccessToken,
       signal: controller.signal,
       onInvalidate(envelope) {
-        const canPatchRegistration = canPatchAdminRegistrationLiveEvent(envelope);
+        const queryState = queryClient.getQueryState(queryKeys.admin.registrations);
+        const isQuerySuccess = queryState?.status === "success";
+        const canPatchRegistration =
+          isQuerySuccess && canPatchAdminRegistrationLiveEvent(envelope);
 
         for (const key of envelope.keys) {
           const isAdminRegistrationsKey =

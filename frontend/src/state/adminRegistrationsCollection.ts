@@ -34,6 +34,7 @@ export type AdminRegistrationsCollection = ReturnType<typeof createAdminRegistra
 type AuthHeadersProvider = () => Record<string, string>;
 
 const activeAdminRegistrationsCollections = new Set<AdminRegistrationsCollection>();
+const latestRegistrationEventTimestamps = new Map<string, string>();
 
 export function registerAdminRegistrationsCollection(
   collection: AdminRegistrationsCollection,
@@ -49,6 +50,7 @@ export function resetAdminRegistrationsCollection(collection: AdminRegistrations
   collection.utils.writeBatch(() => {
     for (const key of collection.keys()) {
       collection.utils.writeDelete(key);
+      latestRegistrationEventTimestamps.delete(key);
     }
   });
 }
@@ -85,6 +87,14 @@ export async function patchAdminRegistrationLiveEvent(
   }
 
   const registrationId = envelope.scope.registration_id!;
+  const eventTs = envelope.ts;
+
+  const lastTs = latestRegistrationEventTimestamps.get(registrationId);
+  if (lastTs && eventTs < lastTs) {
+    return;
+  }
+  latestRegistrationEventTimestamps.set(registrationId, eventTs);
+
   if (envelope.topic === "registration" && envelope.action === "deleted") {
     for (const collection of activeAdminRegistrationsCollections) {
       collection.utils.writeDelete(registrationId);
@@ -93,6 +103,12 @@ export async function patchAdminRegistrationLiveEvent(
   }
 
   const registration = await fetchRegistration(registrationId, authHeaders);
+
+  const currentLastTs = latestRegistrationEventTimestamps.get(registrationId);
+  if (currentLastTs && eventTs < currentLastTs) {
+    return;
+  }
+
   for (const collection of activeAdminRegistrationsCollections) {
     collection.utils.writeUpsert(registration);
   }
