@@ -2,10 +2,7 @@ import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/ty
 import { apiToRegistration } from "@/types/registrationMapper";
 import type { Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
-import {
-  fetchArrayOrThrow,
-  fetchJsonOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
+import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 import {
   apiVenueToVenue,
@@ -28,6 +25,18 @@ export async function fetchRegistrations(
     m.admin_error_load_data(),
   );
   return Array.isArray(payload) ? payload.map(apiToRegistration) : [];
+}
+
+export async function fetchRegistration(
+  registrationId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Registration> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/registrations/${encodeURIComponent(registrationId)}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+  return apiToRegistration(payload);
 }
 
 export async function fetchTables(

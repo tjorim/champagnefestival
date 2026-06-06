@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  canPatchAdminRegistrationLiveEvent,
+  patchAdminRegistrationLiveEvent,
+} from "@/state/adminRegistrationsCollection";
 import { queryKeys } from "@/utils/queryKeys";
 import { connectLiveStream } from "@/utils/liveStream";
 
@@ -13,7 +17,8 @@ const ALL_LIVE_KEYS = [queryKeys.admin.registrations, queryKeys.admin.tables] as
  * Side-effect component — renders nothing.
  * Mount once inside QueryClientProvider on event-day operational routes
  * (/admin, /check-in).  Opens GET /api/live/stream when authenticated and
- * calls queryClient.invalidateQueries() for each key in received envelopes.
+ * incrementally patches the active admin registrations collection when possible,
+ * and falls back to queryClient.invalidateQueries() for other keys or failures.
  */
 export function LiveUpdatesProvider(): null {
   const queryClient = useQueryClient();
@@ -29,9 +34,26 @@ export function LiveUpdatesProvider(): null {
       getToken: getAccessToken,
       signal: controller.signal,
       onInvalidate(envelope) {
+        const canPatchRegistration = canPatchAdminRegistrationLiveEvent(envelope);
+
         for (const key of envelope.keys) {
-          queryClient.invalidateQueries({ queryKey: key });
+          const isAdminRegistrationsKey =
+            key.length === queryKeys.admin.registrations.length &&
+            key.every((part, index) => part === queryKeys.admin.registrations[index]);
+
+          if (!canPatchRegistration || !isAdminRegistrationsKey) {
+            queryClient.invalidateQueries({ queryKey: key });
+          }
         }
+
+        if (!canPatchRegistration) return;
+
+        void patchAdminRegistrationLiveEvent(envelope, () => {
+          const token = getAccessToken();
+          return token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>);
+        }).catch(() => {
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.registrations });
+        });
       },
       onReconnect() {
         for (const key of ALL_LIVE_KEYS) {
