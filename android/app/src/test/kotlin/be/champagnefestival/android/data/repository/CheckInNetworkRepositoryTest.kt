@@ -35,7 +35,7 @@ class CheckInNetworkRepositoryTest {
     @Test
     fun `lookupRegistration posts token and decodes registration`() =
         runTest {
-            server.enqueue(MockResponse(body = sampleRegistrationJson()))
+            server.enqueue(MockResponse.Builder().body(sampleRegistrationJson()).build())
 
             val result = repository.lookupRegistration("reg-1", "qr-token")
 
@@ -52,7 +52,7 @@ class CheckInNetworkRepositoryTest {
     @Test
     fun `searchRegistrations sends bearer auth and query filters`() =
         runTest {
-            server.enqueue(MockResponse(body = "[${sampleRegistrationJson()}]"))
+            server.enqueue(MockResponse.Builder().body("[${sampleRegistrationJson()}]").build())
 
             val result =
                 repository.searchRegistrations(
@@ -74,7 +74,7 @@ class CheckInNetworkRepositoryTest {
     @Test
     fun `submitCheckIn maps server errors to repository failure`() =
         runTest {
-            server.enqueue(MockResponse(code = 500, body = "{\"detail\":\"boom\"}"))
+            server.enqueue(MockResponse.Builder().code(500).body("{\"detail\":\"boom\"}").build())
 
             val result = repository.submitCheckIn("reg-1", "qr-token")
 

@@ -186,6 +186,13 @@ private fun PreviewView.bindCamera(
                 val cameraProvider = cameraProviderFuture.get()
                 val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
                 val scanner = BarcodeScanning.getClient()
+                lifecycleOwner.lifecycle.addObserver(
+                    object : androidx.lifecycle.DefaultLifecycleObserver {
+                        override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+                            scanner.close()
+                        }
+                    },
+                )
                 val analysis =
                     ImageAnalysis
                         .Builder()

@@ -6,18 +6,17 @@ import okhttp3.CertificatePinner
 object CertificatePinnerProvider {
     private const val API_HOST = "champagnefestival.tjor.im"
 
-    // Leaf certificate observed in Certificate Transparency for the production API, expiring July 11, 2026.
-    private const val API_LEAF_PIN = "sha256/4iYSVdRc1jul5AgK0EfE3bsgOSZWv54PqqQX04BBEoM="
-
-    // Let's Encrypt E7 intermediate public key pin. This backup pin keeps renewals from requiring app updates
-    // while still limiting trust to the issuing CA currently used by the production API.
+    // Let's Encrypt E7 intermediate public key pin.
     private const val LETS_ENCRYPT_E7_PIN = "sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU="
+
+    // ISRG Root X1 — backup pin so intermediate CA rotation doesn't brick the app.
+    private const val ISRG_ROOT_X1_PIN = "sha256/C5+Q0gPI67ZTmAD/C84YyfVdbRF+O60CHGxkg1/g7xs="
 
     fun productionPinner(): CertificatePinner =
         CertificatePinner
             .Builder()
-            .add(API_HOST, API_LEAF_PIN)
             .add(API_HOST, LETS_ENCRYPT_E7_PIN)
+            .add(API_HOST, ISRG_ROOT_X1_PIN)
             .build()
 
     fun forCurrentBuild(): CertificatePinner? =

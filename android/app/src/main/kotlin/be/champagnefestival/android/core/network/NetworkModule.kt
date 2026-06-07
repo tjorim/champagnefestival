@@ -20,7 +20,9 @@ class NetworkModule(
                 CertificatePinnerProvider.forCurrentBuild()?.let(::certificatePinner)
             }.addInterceptor { chain ->
                 val originalRequest = chain.request()
-                val overrideBaseUrl = runBlocking { sessionDataStore.apiBaseUrlFlow.filterNotNull().first() }
+                val overrideBaseUrl =
+                    sessionDataStore.apiBaseUrlFlow.value
+                        ?: runBlocking { sessionDataStore.apiBaseUrlFlow.filterNotNull().first() }
                 val overrideBase = overrideBaseUrl.toHttpUrlOrNull()
                 val updatedRequest =
                     if (overrideBase != null) {
