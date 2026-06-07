@@ -74,7 +74,13 @@ class CheckInNetworkRepositoryTest {
     @Test
     fun `submitCheckIn maps server errors to repository failure`() =
         runTest {
-            server.enqueue(MockResponse.Builder().code(500).body("{\"detail\":\"boom\"}").build())
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(500)
+                    .body("{\"detail\":\"boom\"}")
+                    .build(),
+            )
 
             val result = repository.submitCheckIn("reg-1", "qr-token")
 
