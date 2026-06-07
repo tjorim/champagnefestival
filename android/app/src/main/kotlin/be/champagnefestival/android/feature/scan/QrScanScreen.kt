@@ -64,13 +64,16 @@ fun QrScanScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var cameraPermissionGranted by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED,
+        )
     }
     var hasNavigated by remember { mutableStateOf(false) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        cameraPermissionGranted = granted
-    }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            cameraPermissionGranted = granted
+        }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -97,10 +100,11 @@ fun QrScanScreen(
     ) { padding ->
         if (!cameraPermissionGranted) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(24.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -114,9 +118,10 @@ fun QrScanScreen(
             }
         } else {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding),
             ) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -144,20 +149,22 @@ fun QrScanScreen(
                     },
                 )
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .fillMaxWidth(0.7f)
-                        .height(220.dp)
-                        .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
-                        .background(Color.Transparent),
+                    modifier =
+                        Modifier
+                            .align(Alignment.Center)
+                            .fillMaxWidth(0.7f)
+                            .height(220.dp)
+                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
+                            .background(Color.Transparent),
                 )
                 Text(
                     text = "Place the QR code inside the frame",
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(24.dp)
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(24.dp)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                 )
             }
         }
@@ -179,27 +186,30 @@ private fun PreviewView.bindCamera(
                 val cameraProvider = cameraProviderFuture.get()
                 val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
                 val scanner = BarcodeScanning.getClient()
-                val analysis = ImageAnalysis.Builder()
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build()
-                    .also { imageAnalysis ->
-                        imageAnalysis.setAnalyzer(executor) { imageProxy ->
-                            val mediaImage = imageProxy.image
-                            if (mediaImage == null) {
-                                imageProxy.close()
-                                return@setAnalyzer
-                            }
-                            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                            scanner.process(image)
-                                .addOnSuccessListener { barcodes ->
-                                    barcodes.firstOrNull { it.format == Barcode.FORMAT_QR_CODE }
-                                        ?.rawValue
-                                        ?.let(onQrDetected)
+                val analysis =
+                    ImageAnalysis
+                        .Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                        .also { imageAnalysis ->
+                            imageAnalysis.setAnalyzer(executor) { imageProxy ->
+                                val mediaImage = imageProxy.image
+                                if (mediaImage == null) {
+                                    imageProxy.close()
+                                    return@setAnalyzer
                                 }
-                                .addOnFailureListener(onError)
-                                .addOnCompleteListener { imageProxy.close() }
+                                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                                scanner
+                                    .process(image)
+                                    .addOnSuccessListener { barcodes ->
+                                        barcodes
+                                            .firstOrNull { it.format == Barcode.FORMAT_QR_CODE }
+                                            ?.rawValue
+                                            ?.let(onQrDetected)
+                                    }.addOnFailureListener(onError)
+                                    .addOnCompleteListener { imageProxy.close() }
+                            }
                         }
-                    }
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
             }.onFailure(onError)

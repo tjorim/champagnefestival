@@ -33,23 +33,26 @@ class AuthManager(
     fun startLogin(activity: Activity) {
         applicationScope.launch {
             val configuration = runCatching { fetchConfiguration() }.getOrNull() ?: return@launch
-            val request = AuthorizationRequest.Builder(
-                configuration,
-                oidcConfig.clientId,
-                ResponseTypeValues.CODE,
-                oidcConfig.redirectUri,
-            )
-                .setScope("openid profile email offline_access")
-                .build()
+            val request =
+                AuthorizationRequest
+                    .Builder(
+                        configuration,
+                        oidcConfig.clientId,
+                        ResponseTypeValues.CODE,
+                        oidcConfig.redirectUri,
+                    ).setScope("openid profile email offline_access")
+                    .build()
 
             withContext(Dispatchers.Main) {
-                val completionIntent = Intent(activity, activity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
-                val cancelIntent = Intent(activity, activity::class.java).apply {
-                    action = "be.champagnefestival.android.AUTH_CANCELLED"
-                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
+                val completionIntent =
+                    Intent(activity, activity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                val cancelIntent =
+                    Intent(activity, activity::class.java).apply {
+                        action = "be.champagnefestival.android.AUTH_CANCELLED"
+                        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
                 authService.performAuthorizationRequest(
                     request,
                     PendingIntent.getActivity(

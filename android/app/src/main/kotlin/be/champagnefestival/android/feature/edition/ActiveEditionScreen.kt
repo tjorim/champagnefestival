@@ -45,26 +45,50 @@ fun ActiveEditionScreen(
         topBar = { TopAppBar(title = { Text("Active edition") }) },
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(selected = false, onClick = onOpenScan, icon = { Icon(Icons.Default.QrCodeScanner, null) }, label = { Text("Scan") })
-                NavigationBarItem(selected = false, onClick = onOpenLookup, icon = { Icon(Icons.Default.Search, null) }, label = { Text("Lookup") })
-                NavigationBarItem(selected = false, onClick = onOpenSettings, icon = { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") })
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onOpenScan,
+                    icon = { Icon(Icons.Default.QrCodeScanner, null) },
+                    label = { Text("Scan") },
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onOpenLookup,
+                    icon = { Icon(Icons.Default.Search, null) },
+                    label = { Text("Lookup") },
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onOpenSettings,
+                    icon = { Icon(Icons.Default.Settings, null) },
+                    label = { Text("Settings") },
+                )
             }
         },
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
-            is UiState.Error -> ErrorContent(message = state.message, onRetry = viewModel::loadActiveEdition, modifier = Modifier.padding(padding))
+            is UiState.Error ->
+                ErrorContent(
+                    message = state.message,
+                    onRetry = viewModel::loadActiveEdition,
+                    modifier = Modifier.padding(padding),
+                )
             is UiState.Success -> EditionContent(edition = state.data, padding = padding)
         }
     }
 }
 
 @Composable
-private fun EditionContent(edition: EditionOut, padding: PaddingValues) {
+private fun EditionContent(
+    edition: EditionOut,
+    padding: PaddingValues,
+) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(padding),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.ktlint)
 }
 
 android {
@@ -26,6 +28,7 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/\"")
             buildConfigField("String", "OIDC_ISSUER_URL", "\"http://10.0.2.2:8080/realms/champagnefestival\"")
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
+            buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
         }
         release {
             isMinifyEnabled = true
@@ -34,6 +37,7 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://champagnefestival.tjor.im/\"")
             buildConfigField("String", "OIDC_ISSUER_URL", "\"https://auth.tjor.im/realms/champagnefestival\"")
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
+            buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
         }
     }
 
@@ -105,4 +109,19 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+}
+
+ktlint {
+    android = true
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = "17"
 }

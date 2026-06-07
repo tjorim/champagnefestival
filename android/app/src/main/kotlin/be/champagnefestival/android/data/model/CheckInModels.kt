@@ -31,10 +31,15 @@ data class CheckInGuestOut(
 )
 
 @Serializable
-data class CheckInLookupRequest(val token: String)
+data class CheckInLookupRequest(
+    val token: String,
+)
 
 @Serializable
-data class CheckInRequest(val token: String, val issue_strap: Boolean = true)
+data class CheckInRequest(
+    val token: String,
+    val issue_strap: Boolean = true,
+)
 
 @Serializable
 data class CheckInOut(

@@ -80,8 +80,15 @@ fun GuestLookupScreen(
             when (val state = uiState) {
                 GuestLookupUiState.Idle -> Text(stringResource(R.string.search_guest_idle_message))
                 GuestLookupUiState.Loading -> LoadingContent(modifier = Modifier.weight(1f))
-                is GuestLookupUiState.Error -> ErrorContent(message = state.message, onRetry = { viewModel.search(query, eventId) }, modifier = Modifier.weight(1f))
-                is GuestLookupUiState.Success -> LookupResults(registrations = state.registrations, padding = PaddingValues(vertical = 8.dp))
+                is GuestLookupUiState.Error ->
+                    ErrorContent(message = state.message, onRetry = {
+                        viewModel.search(query, eventId)
+                    }, modifier = Modifier.weight(1f))
+                is GuestLookupUiState.Success ->
+                    LookupResults(
+                        registrations = state.registrations,
+                        padding = PaddingValues(vertical = 8.dp),
+                    )
             }
         }
     }
@@ -98,9 +105,10 @@ private fun LookupResults(
     }
 
     val checkedInCount = registrations.count { it.checked_in }
-    val undeliveredItems = registrations.sumOf { registration ->
-        registration.pre_orders.filter { !it.delivered }.sumOf { it.quantity }
-    }
+    val undeliveredItems =
+        registrations.sumOf { registration ->
+            registration.pre_orders.filter { !it.delivered }.sumOf { it.quantity }
+        }
 
     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

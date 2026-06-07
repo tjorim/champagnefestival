@@ -1,0 +1,24 @@
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    active: false
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+
+naming:
+  ConstructorParameterNaming:
+    active: false
+  FunctionNaming:
+    active: false
+
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+  ReturnCount:
+    active: false
