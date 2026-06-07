@@ -61,7 +61,7 @@ class CheckInViewModel(
         id: String,
         token: String,
     ) {
-        if (_uiState.value is CheckInUiState.Loading) {
+        if (lastSubmittedId == id && _uiState.value is CheckInUiState.Loading) {
             return
         }
         if (lastSubmittedId == id && _uiState.value is CheckInUiState.CheckInSuccess) {
