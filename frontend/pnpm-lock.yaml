@@ -15,8 +15,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@tanstack/query-db-collection':
-        specifier: ^1.0.39
-        version: 1.0.39(@tanstack/query-core@5.101.0)(typescript@6.0.3)
+        specifier: ^1.0.40
+        version: 1.0.40(@tanstack/query-core@5.101.0)(typescript@6.0.3)
       '@tanstack/react-db':
         specifier: ^0.1.86
         version: 0.1.86(react@19.2.7)(typescript@6.0.3)
@@ -801,8 +801,8 @@ packages:
   '@tanstack/query-core@5.101.0':
     resolution: {integrity: sha512-cQetA74EB+seWySv1TTKr828TnP0u39m6LykwDXIo84SNortpDkp30TMEjkqtYCNP9c40uT/iwl6MLiufEt0Ow==}
 
-  '@tanstack/query-db-collection@1.0.39':
-    resolution: {integrity: sha512-mqcz9EvLjW2W1CCMi3urjZlxdGmsWCxLfI8N7TGBOCK0B0r1oamxRLqbR8DH+cO5ELcZRs/XiPRqZMJko/xzUQ==}
+  '@tanstack/query-db-collection@1.0.40':
+    resolution: {integrity: sha512-93iWTBvNwLmhH4L7BL66Khr/pan2pXbdXa0uRtjThW5KRvwBCH13E5CM0PVd1QO9EcrSM+HcNg3MLUPR0EJGPg==}
     peerDependencies:
       '@tanstack/query-core': ^5.0.0
       typescript: '>=4.7'
@@ -998,6 +998,11 @@ packages:
 
   acorn@8.16.0:
     resolution: {integrity: sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
+  acorn@8.17.0:
+    resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
 
@@ -2467,7 +2472,7 @@ snapshots:
 
   '@tanstack/query-core@5.101.0': {}
 
-  '@tanstack/query-db-collection@1.0.39(@tanstack/query-core@5.101.0)(typescript@6.0.3)':
+  '@tanstack/query-db-collection@1.0.40(@tanstack/query-core@5.101.0)(typescript@6.0.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@tanstack/db': 0.6.8(typescript@6.0.3)
@@ -2688,6 +2693,9 @@ snapshots:
       tinyrainbow: 3.1.0
 
   acorn@8.16.0: {}
+
+  acorn@8.17.0:
+    optional: true
 
   ansi-regex@5.0.1: {}
 
@@ -3306,7 +3314,7 @@ snapshots:
   terser@5.46.1:
     dependencies:
       '@jridgewell/source-map': 0.3.11
-      acorn: 8.16.0
+      acorn: 8.17.0
       commander: 2.20.3
       source-map-support: 0.5.21
     optional: true
