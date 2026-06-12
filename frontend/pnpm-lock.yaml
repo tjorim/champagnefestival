@@ -118,8 +118,8 @@ importers:
         specifier: ^4.1.8
         version: 4.1.8(vitest@4.1.8)
       happy-dom:
-        specifier: ^20.10.1
-        version: 20.10.1
+        specifier: ^20.10.2
+        version: 20.10.2
       msw:
         specifier: ^2.14.6
         version: 2.14.6(@types/node@25.9.2)(typescript@6.0.3)
@@ -137,7 +137,7 @@ importers:
         version: 8.0.16(@types/node@25.9.2)(terser@5.46.1)
       vitest:
         specifier: ^4.1.8
-        version: 4.1.8(@types/node@25.9.2)(@vitest/ui@4.1.8)(happy-dom@20.10.1)(msw@2.14.6(@types/node@25.9.2)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.2)(terser@5.46.1))
+        version: 4.1.8(@types/node@25.9.2)(@vitest/ui@4.1.8)(happy-dom@20.10.2)(msw@2.14.6(@types/node@25.9.2)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.2)(terser@5.46.1))
 
 packages:
 
@@ -1001,6 +1001,11 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  acorn@8.17.0:
+    resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
@@ -1232,8 +1237,8 @@ packages:
     resolution: {integrity: sha512-BBvQ/406p+4CZbTpCbVPSxfzrZrbnuWSP1ELYgyS6B+hNeKzgrdB4JczCa5VZUBQrDa9hUngm0KnexY6pJRN5Q==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
 
-  happy-dom@20.10.1:
-    resolution: {integrity: sha512-awPoqPjx8CgjapJllyDlgzgVHjBExcitKK5ZJkxwhQJyQpHFkyS2bEcqCm7IeW20cQvuCI0cz2Ifq79CJKqtiw==}
+  happy-dom@20.10.2:
+    resolution: {integrity: sha512-5p9Sxis3eowDJKqx90QCsgbNA02XXqJ59NOHvD4V6cxp+rP4d/xOyVx7uY3hS8hiUbY1VeiFH8lbJ81AyuDVLQ==}
     engines: {node: '>=20.0.0'}
 
   hasown@2.0.2:
@@ -2679,7 +2684,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vitest: 4.1.8(@types/node@25.9.2)(@vitest/ui@4.1.8)(happy-dom@20.10.1)(msw@2.14.6(@types/node@25.9.2)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.2)(terser@5.46.1))
+      vitest: 4.1.8(@types/node@25.9.2)(@vitest/ui@4.1.8)(happy-dom@20.10.2)(msw@2.14.6(@types/node@25.9.2)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.2)(terser@5.46.1))
 
   '@vitest/utils@4.1.8':
     dependencies:
@@ -2688,6 +2693,9 @@ snapshots:
       tinyrainbow: 3.1.0
 
   acorn@8.16.0: {}
+
+  acorn@8.17.0:
+    optional: true
 
   ansi-regex@5.0.1: {}
 
@@ -2859,7 +2867,7 @@ snapshots:
 
   graphql@16.14.0: {}
 
-  happy-dom@20.10.1:
+  happy-dom@20.10.2:
     dependencies:
       '@types/node': 25.9.2
       '@types/whatwg-mimetype': 3.0.2
@@ -3306,7 +3314,7 @@ snapshots:
   terser@5.46.1:
     dependencies:
       '@jridgewell/source-map': 0.3.11
-      acorn: 8.16.0
+      acorn: 8.17.0
       commander: 2.20.3
       source-map-support: 0.5.21
     optional: true
@@ -3385,7 +3393,7 @@ snapshots:
       fsevents: 2.3.3
       terser: 5.46.1
 
-  vitest@4.1.8(@types/node@25.9.2)(@vitest/ui@4.1.8)(happy-dom@20.10.1)(msw@2.14.6(@types/node@25.9.2)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.2)(terser@5.46.1)):
+  vitest@4.1.8(@types/node@25.9.2)(@vitest/ui@4.1.8)(happy-dom@20.10.2)(msw@2.14.6(@types/node@25.9.2)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.2)(terser@5.46.1)):
     dependencies:
       '@vitest/expect': 4.1.8
       '@vitest/mocker': 4.1.8(msw@2.14.6(@types/node@25.9.2)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.2)(terser@5.46.1))
@@ -3410,7 +3418,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 25.9.2
       '@vitest/ui': 4.1.8(vitest@4.1.8)
-      happy-dom: 20.10.1
+      happy-dom: 20.10.2
     transitivePeerDependencies:
       - msw
 
