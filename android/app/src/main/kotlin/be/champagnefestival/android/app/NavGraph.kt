@@ -74,14 +74,16 @@ fun NavGraph(app: ChampagneFestivalApp) {
             )
         }
         composable(Routes.Lookup) {
-            val viewModel: GuestLookupViewModel = viewModel(
-                factory = simpleFactory {
-                    GuestLookupViewModel(
-                        repository = app.checkInRepository,
-                        authTokenProvider = app.authManager::getAccessToken,
-                    )
-                },
-            )
+            val viewModel: GuestLookupViewModel =
+                viewModel(
+                    factory =
+                        simpleFactory {
+                            GuestLookupViewModel(
+                                repository = app.checkInRepository,
+                                authTokenProvider = app.authManager::getAccessToken,
+                            )
+                        },
+                )
             GuestLookupScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
@@ -89,16 +91,18 @@ fun NavGraph(app: ChampagneFestivalApp) {
         }
         composable(
             route = Routes.Registration,
-            arguments = listOf(
-                navArgument("id") { type = NavType.StringType },
-                navArgument("token") { type = NavType.StringType },
-            ),
+            arguments =
+                listOf(
+                    navArgument("id") { type = NavType.StringType },
+                    navArgument("token") { type = NavType.StringType },
+                ),
         ) { backStackEntry ->
             val id = Uri.decode(backStackEntry.arguments?.getString("id").orEmpty())
             val token = Uri.decode(backStackEntry.arguments?.getString("token").orEmpty())
-            val viewModel: RegistrationDetailViewModel = viewModel(
-                factory = simpleFactory { RegistrationDetailViewModel(app.checkInRepository) },
-            )
+            val viewModel: RegistrationDetailViewModel =
+                viewModel(
+                    factory = simpleFactory { RegistrationDetailViewModel(app.checkInRepository) },
+                )
             RegistrationDetailScreen(
                 id = id,
                 token = token,
@@ -111,10 +115,11 @@ fun NavGraph(app: ChampagneFestivalApp) {
         }
         composable(
             route = Routes.CheckInConfirm,
-            arguments = listOf(
-                navArgument("id") { type = NavType.StringType },
-                navArgument("token") { type = NavType.StringType },
-            ),
+            arguments =
+                listOf(
+                    navArgument("id") { type = NavType.StringType },
+                    navArgument("token") { type = NavType.StringType },
+                ),
         ) { backStackEntry ->
             val id = Uri.decode(backStackEntry.arguments?.getString("id").orEmpty())
             val token = Uri.decode(backStackEntry.arguments?.getString("token").orEmpty())
@@ -132,9 +137,10 @@ fun NavGraph(app: ChampagneFestivalApp) {
             )
         }
         composable(Routes.Settings) {
-            val viewModel: SettingsViewModel = viewModel(
-                factory = simpleFactory { SettingsViewModel(app.sessionDataStore, app.authManager) },
-            )
+            val viewModel: SettingsViewModel =
+                viewModel(
+                    factory = simpleFactory { SettingsViewModel(app.sessionDataStore, app.authManager) },
+                )
             SettingsScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
@@ -150,5 +156,8 @@ fun NavGraph(app: ChampagneFestivalApp) {
 
 private inline fun <reified T : ViewModel> simpleFactory(crossinline initializer: () -> T): ViewModelProvider.Factory =
     object : ViewModelProvider.Factory {
-        override fun <VM : ViewModel> create(modelClass: Class<VM>, extras: CreationExtras): VM = initializer() as VM
+        override fun <VM : ViewModel> create(
+            modelClass: Class<VM>,
+            extras: CreationExtras,
+        ): VM = initializer() as VM
     }

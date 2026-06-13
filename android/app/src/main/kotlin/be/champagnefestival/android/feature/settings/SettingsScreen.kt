@@ -74,9 +74,10 @@ private fun SettingsContent(
     val isUrlInvalid = apiBaseUrl.isNotBlank() && !apiBaseUrl.startsWith("http://") && !apiBaseUrl.startsWith("https://")
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OutlinedTextField(

@@ -10,7 +10,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ActiveEditionViewModel(private val repository: EditionRepository) : ViewModel() {
+class ActiveEditionViewModel(
+    private val repository: EditionRepository,
+) : ViewModel() {
     private val _uiState = MutableStateFlow<UiState<EditionOut>>(UiState.Loading)
     val uiState: StateFlow<UiState<EditionOut>> = _uiState.asStateFlow()
 
@@ -21,7 +23,8 @@ class ActiveEditionViewModel(private val repository: EditionRepository) : ViewMo
     fun loadActiveEdition() {
         _uiState.value = UiState.Loading
         viewModelScope.launch {
-            repository.getActiveEdition()
+            repository
+                .getActiveEdition()
                 .onSuccess { _uiState.value = UiState.Success(it) }
                 .onFailure { _uiState.value = UiState.Error(it.message ?: "Unable to load the active edition.") }
         }
