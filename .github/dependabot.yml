@@ -60,6 +60,10 @@ updates:
         patterns:
           - "@tanstack/react-db"
           - "@tanstack/query-db-collection"
+      # Group dnd-kit packages (share internal deps; mismatched versions cause type errors)
+      dnd-kit:
+        patterns:
+          - "@dnd-kit/*"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
