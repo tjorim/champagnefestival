@@ -2,6 +2,7 @@ import {
   createTableHook,
   tableFeatures,
   columnVisibilityFeature,
+  columnFilteringFeature,
   globalFilteringFeature,
   rowSortingFeature,
   createFilteredRowModel,
@@ -15,11 +16,16 @@ export const {
   createAppColumnHelper,
   appFeatures,
 } = createTableHook({
-  features: tableFeatures({ columnVisibilityFeature, globalFilteringFeature, rowSortingFeature }),
-  rowModels: {
-    filteredRowModel: createFilteredRowModel(filterFns),
-    sortedRowModel: createSortedRowModel(sortFns),
-  },
+  features: tableFeatures({
+    columnVisibilityFeature,
+    columnFilteringFeature,
+    globalFilteringFeature,
+    rowSortingFeature,
+    filteredRowModel: createFilteredRowModel(),
+    sortedRowModel: createSortedRowModel(),
+    filterFns,
+    sortFns,
+  }),
 });
 
 export type AdminTableFeatures = typeof appFeatures;
