@@ -109,4 +109,3 @@ async def delete_exhibitor(exhibitor_id: int, db: AsyncSession = Depends(get_db)
             edition.exhibitors = [eid for eid in edition.exhibitors if eid != exhibitor_id]
     await db.delete(e)
     await db.commit()
-

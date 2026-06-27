@@ -106,4 +106,3 @@ async def delete_room(room_id: str, db: AsyncSession = Depends(get_db)) -> None:
     r = await get_or_404(db, Room, room_id, "Room not found.")
     await db.delete(r)
     await db.commit()
-
