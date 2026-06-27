@@ -45,6 +45,8 @@ uv run alembic upgrade head
 4. Wait for backend/frontend checks and metadata validation to pass.
 5. Publish the generated draft release to trigger GitHub Pages deploy (`deploy.yml`).
 
+See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migration sign-off, and rollback procedures.
+
 ## Source Of Truth
 
 - `frontend/src/config/navigation.ts` for site navigation
