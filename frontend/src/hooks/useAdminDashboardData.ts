@@ -74,7 +74,7 @@ export function useAdminDashboardData({
   );
 
   const emailDuplicates = useMemo(() => {
-    if (!detailRegistration) return [];
+    if (!detailRegistration || !detailRegistration.person.email) return [];
     const personEmail = detailRegistration.person.email.toLowerCase();
     return people
       .filter(
