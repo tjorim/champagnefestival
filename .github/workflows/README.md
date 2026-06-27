@@ -53,7 +53,7 @@ Each CodeQL workflow also includes its own workflow file in `paths` so workflow 
 - Backend-only and docs-only pull requests should not run preview builds.
 - If previews must react to backend API contracts in the future, add only explicit contract paths (not all backend paths).
 
-## GitHub Pages deploy (`deploy.yml`)
+## Production deploy (`deploy.yml`)
 
 - Deploy is release/manual only (`release.published` and `workflow_dispatch`).
 - Frontend quality gates are required before publish:
@@ -74,7 +74,7 @@ Each CodeQL workflow also includes its own workflow file in `paths` so workflow 
   - Backend: `ruff check`, `ruff format --check`, `ty check`, `alembic upgrade head`, `pytest`
   - Frontend: `pnpm run typecheck`, `pnpm run lint`, `pnpm run test`, `pnpm run build`
 - Draft release creation is done only after all checks pass.
-- Publishing that draft release continues to trigger `deploy.yml` (`release.published`).
+- Publishing that draft release continues to trigger the production deploy via `deploy.yml` (`release.published`).
 
 ### Release checklist
 
@@ -84,7 +84,7 @@ Each CodeQL workflow also includes its own workflow file in `paths` so workflow 
   - `backend/pyproject.toml`
   - `backend/app/main.py`
 - Push `vX.Y.Z` tag to trigger draft release checks and draft release creation.
-- Publish the draft release to trigger GitHub Pages deployment.
+- Publish the draft release to trigger the production deploy.
 - Database migrations: run Alembic migrations separately when backend schema changes are included.
 - Backend health: verify API health and auth flows separately from frontend Pages deployment.
 

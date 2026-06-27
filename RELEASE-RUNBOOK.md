@@ -33,7 +33,7 @@ For every release that includes Alembic migrations, complete this before merging
 
 ## Post-deploy verification checklist
 
-Run these checks after publishing the draft release (GitHub Pages deploy completes within ~2–3 minutes):
+Run these checks after the production deploy completes (typically within ~2–3 minutes of publishing the draft release):
 
 - [ ] **Health endpoint** — `curl -sf https://champagnefestival.tjor.im/api/health` returns HTTP 200.
 - [ ] **Frontend loads** — open `https://champagnefestival.tjor.im` in a browser; the page renders without console errors.
@@ -46,14 +46,14 @@ If any check fails, proceed to the relevant rollback section below.
 
 ## Rollback: frontend
 
-The frontend is served as static files from `/srv/champagnefestival` on the VPS, managed by the infra stack in the private `tjorim/apps` repository (mirrored locally at `/opt/apps/infra`).
+The frontend is served as static files from `/srv/champagnefestival` on the VPS, managed by the infra stack in `/opt/apps/infra`.
 
 1. **Identify the previous good release** — note the tag of the last known-good release (e.g., `vX.Y.(Z-1)`).
 2. **Re-deploy the previous frontend build** via the infra stack:
    ```bash
    cd /opt/apps/infra
    # Update the pinned frontend version to the previous release tag, then apply
-   # (exact command depends on the infra playbook/compose setup in tjorim/apps)
+   # (exact command depends on the infra playbook/compose setup — see the private infra repo)
    ```
    If the infra stack uses a versioned artifact or Docker image for the frontend, roll back that image tag and restart the relevant service.
 3. **Verify** — re-run the frontend steps from the post-deploy checklist once the rollback is applied.

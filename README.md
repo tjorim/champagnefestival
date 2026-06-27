@@ -28,7 +28,7 @@ champagnefestival/
   - `backend/app/main.py`
 - Add a matching `CHANGELOG.md` entry header: `## [X.Y.Z] - YYYY-MM-DD`
 - Push tag `vX.Y.Z` to trigger the draft release workflow.
-- Publish the generated draft release to trigger GitHub Pages deployment.
+- Publish the generated draft release to trigger the production deploy.
 
 ## Quick start
 
