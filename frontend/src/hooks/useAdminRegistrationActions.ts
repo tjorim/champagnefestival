@@ -152,6 +152,7 @@ export function useAdminRegistrationActions({
       } catch (err) {
         devError("Failed to assign table", err);
         setRegistrationError(err instanceof Error ? err.message : m.admin_error_assign_table());
+        throw err;
       }
     },
     [
@@ -221,6 +222,7 @@ export function useAdminRegistrationActions({
       } catch (err) {
         devError("Failed to update bottle delivery status", err);
         setRegistrationError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
@@ -247,6 +249,7 @@ export function useAdminRegistrationActions({
       } catch (err) {
         devError("Failed to check in guest", err);
         setRegistrationError(err instanceof Error ? err.message : m.admin_error_check_in());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
@@ -273,6 +276,7 @@ export function useAdminRegistrationActions({
       } catch (err) {
         devError("Failed to issue strap", err);
         setRegistrationError(err instanceof Error ? err.message : m.admin_error_issue_strap());
+        throw err;
       }
     },
     [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
