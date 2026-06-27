@@ -17,23 +17,16 @@ import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
-import type { MemberFormData } from "./MemberFormModal";
-import type { PersonFormData } from "./PersonFormModal";
-import type { VolunteerFormData } from "./VolunteerFormModal";
 import type {
   Registration,
   RegistrationStatus,
-  PaymentStatus,
-  OrderItem,
 } from "@/types/registration";
-import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
-import { type Person, apiToPerson } from "@/types/person";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
 import { useAdminDashboardData } from "@/hooks/useAdminDashboardData";
+import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
-import { usePeopleMutations } from "@/hooks/usePeopleMutations";
-import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
+import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
@@ -47,10 +40,6 @@ import {
   apiRoomToRoom,
   apiTableToTable,
   apiAreaToArea,
-  mergeVolunteerPerson,
-  replacePersonById,
-  replaceVolunteerById,
-  syncMembersWithPerson,
 } from "@/utils/adminApiMappers";
 import Card from "react-bootstrap/Card";
 
@@ -162,30 +151,43 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   });
 
   const {
-    mergePeopleMutation,
-    createMemberMutation,
-    updateMemberMutation,
-    deleteMemberMutation,
-    createPersonMutation,
-    updatePersonMutation,
-    deletePersonMutation,
-    createVolunteerMutation,
-    updateVolunteerMutation,
-    deleteVolunteerMutation,
-  } = usePeopleMutations({
-    queryClient,
+    handleCreateMember,
+    handleCreatePerson,
+    handleCreateVolunteer,
+    handleDeleteMember,
+    handleDeletePerson,
+    handleDeleteVolunteer,
+    handleMergePeople,
+    handleUpdateMember,
+    handleUpdatePerson,
+    handleUpdateVolunteer,
+  } = useAdminPeopleActions({
     authHeaders,
-    peopleQueryKey,
-    membersQueryKey,
-    registrationsQueryKey,
     exhibitorsQueryKey,
+    membersQueryKey,
+    people,
+    peopleQueryKey,
+    queryClient,
+    registrationsQueryKey,
+    setDetailRegistration,
   });
 
-  const { updateRegistrationMutation } = useRegistrationAdminMutations({
-    queryClient,
+  const {
+    handleAddRegistration,
+    handleAssignTable,
+    handleCheckIn,
+    handleIssueStrap,
+    handleToggleDelivered,
+    handleUpdatePayment,
+    handleUpdateStatus,
+    handleViewDetail,
+  } = useAdminRegistrationActions({
     authHeaders,
+    queryClient,
     registrationsQueryKey,
     tablesQueryKey,
+    setDetailRegistration,
+    setRegistrationError,
   });
 
   const {
@@ -230,276 +232,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     setDetailRegistration(null);
     auth.logout();
   }, [auth, queryClient]);
-
-  const handleMergePeople = useCallback(
-    async (canonicalId: string, duplicateId: string) => {
-      const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
-      const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
-      const currentPeople = peopleQuery.data ?? [];
-      const duplicate = currentPeople.find((p) => p.id === duplicateId);
-      const existingCanonical = currentPeople.find((p) => p.id === canonicalId);
-      const shouldPreserveVolunteerData =
-        canonicalPerson.roles.includes("volunteer") ||
-        existingCanonical?.roles.includes("volunteer") ||
-        duplicate?.roles.includes("volunteer");
-      const mergedCanonical = shouldPreserveVolunteerData
-        ? mergeVolunteerPerson(existingCanonical, {
-            ...canonicalPerson,
-            helpPeriods: existingCanonical?.helpPeriods ?? duplicate?.helpPeriods ?? [],
-          })
-        : canonicalPerson;
-      // Replace both the canonical and duplicate in the canonical people list.
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev
-          ? prev
-              .filter((p) => p.id !== duplicateId)
-              .map((p) => (p.id === canonicalId ? mergedCanonical : p))
-          : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev
-          ? syncMembersWithPerson(
-              prev.filter((member) => member.id !== duplicateId),
-              mergedCanonical,
-            )
-          : prev,
-      );
-      // Re-point any registrations in state that were on the duplicate;
-      // also refresh person data on any already-canonical registrations (merged fields may have changed).
-      queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev
-          ? prev.map((r) =>
-              r.personId === duplicateId
-                ? { ...r, personId: canonicalId, person: canonicalPerson }
-                : r.personId === canonicalId
-                  ? { ...r, person: canonicalPerson }
-                  : r,
-            )
-          : prev,
-      );
-      // Re-point any exhibitors in state that were linked to the duplicate contact person
-      queryClient.setQueryData<
-        { id: number; name: string; active: boolean; contactPersonId: string | null }[]
-      >(exhibitorsQueryKey, (prev) =>
-        prev
-          ? prev.map((ex) =>
-              ex.contactPersonId === duplicateId ? { ...ex, contactPersonId: canonicalId } : ex,
-            )
-          : prev,
-      );
-    },
-    [
-      exhibitorsQueryKey,
-      membersQueryKey,
-      mergePeopleMutation,
-      peopleQuery.data,
-      peopleQueryKey,
-      queryClient,
-      registrationsQueryKey,
-    ],
-  );
-
-  const handleCreateMember = useCallback(
-    async (data: MemberFormData) => {
-      const d = await createMemberMutation.mutateAsync(data);
-      const createdMember = apiToPerson(d as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? [createdMember, ...prev] : [createdMember],
-      );
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? [createdMember, ...prev] : [createdMember],
-      );
-    },
-    [createMemberMutation, membersQueryKey, peopleQueryKey, queryClient],
-  );
-
-  const handleUpdateMember = useCallback(
-    async (id: string, data: MemberFormData) => {
-      const d = await updateMemberMutation.mutateAsync({ id, data });
-      const updatedMember = apiToPerson(d as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? prev.map((member) => (member.id === id ? updatedMember : member)) : prev,
-      );
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? replacePersonById(prev, updatedMember) : prev,
-      );
-      queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev
-          ? prev.map((r) =>
-              r.personId === id
-                ? {
-                    ...r,
-                    person: {
-                      id: updatedMember.id,
-                      name: updatedMember.name,
-                      email: updatedMember.email,
-                      phone: updatedMember.phone,
-                    },
-                  }
-                : r,
-            )
-          : prev,
-      );
-      setDetailRegistration((prev) =>
-        prev?.person.id === id
-          ? {
-              ...prev,
-              person: {
-                id: updatedMember.id,
-                name: updatedMember.name,
-                email: updatedMember.email,
-                phone: updatedMember.phone,
-              },
-            }
-          : prev,
-      );
-    },
-    [membersQueryKey, peopleQueryKey, queryClient, registrationsQueryKey, updateMemberMutation],
-  );
-
-  const handleDeleteMember = useCallback(
-    async (id: string) => {
-      await deleteMemberMutation.mutateAsync(id);
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? prev.filter((member) => member.id !== id) : prev,
-      );
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? prev.filter((person) => person.id !== id) : prev,
-      );
-    },
-    [deleteMemberMutation, membersQueryKey, peopleQueryKey, queryClient],
-  );
-
-  const handleCreatePerson = useCallback(
-    async (data: PersonFormData) => {
-      const d = await createPersonMutation.mutateAsync(data);
-      const createdPerson = apiToPerson(d as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? [createdPerson, ...prev] : [createdPerson],
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? syncMembersWithPerson(prev, createdPerson) : prev,
-      );
-    },
-    [createPersonMutation, membersQueryKey, peopleQueryKey, queryClient],
-  );
-
-  const handleUpdatePerson = useCallback(
-    async (id: string, data: PersonFormData) => {
-      const d = await updatePersonMutation.mutateAsync({ id, data });
-      const updated = apiToPerson(d as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? replacePersonById(prev, updated) : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? syncMembersWithPerson(prev, updated) : prev,
-      );
-      queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev
-          ? prev.map((r) =>
-              r.personId === id
-                ? {
-                    ...r,
-                    person: {
-                      id: updated.id,
-                      name: updated.name,
-                      email: updated.email,
-                      phone: updated.phone,
-                    },
-                  }
-                : r,
-            )
-          : prev,
-      );
-      setDetailRegistration((prev) =>
-        prev?.person.id === id
-          ? {
-              ...prev,
-              person: {
-                id: updated.id,
-                name: updated.name,
-                email: updated.email,
-                phone: updated.phone,
-              },
-            }
-          : prev,
-      );
-    },
-    [membersQueryKey, peopleQueryKey, queryClient, registrationsQueryKey, updatePersonMutation],
-  );
-
-  const handleDeletePerson = useCallback(
-    async (id: string) => {
-      await deletePersonMutation.mutateAsync(id);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? prev.filter((p) => p.id !== id) : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? prev.filter((member) => member.id !== id) : prev,
-      );
-    },
-    [deletePersonMutation, membersQueryKey, peopleQueryKey, queryClient],
-  );
-
-  const handleCreateVolunteer = useCallback(
-    async (data: VolunteerFormData) => {
-      const d = await createVolunteerMutation.mutateAsync(data);
-      const createdVolunteer = apiToPerson(d as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? [mergeVolunteerPerson(undefined, createdVolunteer), ...prev] : prev,
-      );
-    },
-    [createVolunteerMutation, peopleQueryKey, queryClient],
-  );
-
-  const handleUpdateVolunteer = useCallback(
-    async (id: string, data: VolunteerFormData) => {
-      const d = await updateVolunteerMutation.mutateAsync({ id, data });
-      const updatedVolunteer = apiToPerson(d as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? replaceVolunteerById(prev, updatedVolunteer) : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev
-          ? prev.map((member) =>
-              member.id === id
-                ? {
-                    ...member,
-                    name: updatedVolunteer.name,
-                    address: updatedVolunteer.address,
-                    active: updatedVolunteer.active,
-                    updatedAt: updatedVolunteer.updatedAt,
-                  }
-                : member,
-            )
-          : prev,
-      );
-    },
-    [membersQueryKey, peopleQueryKey, queryClient, updateVolunteerMutation],
-  );
-
-  const handleDeleteVolunteer = useCallback(
-    async (id: string) => {
-      await deleteVolunteerMutation.mutateAsync(id);
-      // The person record is preserved (soft archive); only the volunteer role
-      // and help periods are removed.  Update local state accordingly so that
-      // the person remains visible in People/Members tabs if applicable.
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev
-          ? prev.map((person) =>
-              person.id !== id
-                ? person
-                : {
-                    ...person,
-                    roles: person.roles.filter((r) => r !== "volunteer"),
-                    helpPeriods: [],
-                  },
-            )
-          : prev,
-      );
-    },
-    [deleteVolunteerMutation, peopleQueryKey, queryClient],
-  );
 
   const handleExhibitorSaved = useCallback(
     (item: ItemDraft) => {
@@ -610,120 +342,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [sidebarOpen]);
-
-  const handleUpdateStatus = useCallback(
-    async (id: string, status: RegistrationStatus) => {
-      try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id,
-            payload: { status },
-            fallbackMessage: m.admin_error_update_registration(),
-          }),
-        );
-        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev
-            ? prev.map((r) =>
-                r.id === id ? { ...r, status: updated.status, updatedAt: updated.updatedAt } : r,
-              )
-            : prev,
-        );
-        setDetailRegistration((prev) =>
-          prev?.id === id
-            ? { ...prev, status: updated.status, updatedAt: updated.updatedAt }
-            : prev,
-        );
-      } catch (err) {
-        devError("Failed to update registration status", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_update_registration());
-        throw err;
-      }
-    },
-    [queryClient, registrationsQueryKey, updateRegistrationMutation],
-  );
-
-  const handleUpdatePayment = useCallback(
-    async (id: string, paymentStatus: PaymentStatus) => {
-      try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id,
-            payload: { payment_status: paymentStatus },
-            fallbackMessage: m.admin_error_update_payment(),
-          }),
-        );
-        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev
-            ? prev.map((r) =>
-                r.id === id
-                  ? { ...r, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt }
-                  : r,
-              )
-            : prev,
-        );
-        setDetailRegistration((prev) =>
-          prev?.id === id
-            ? { ...prev, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt }
-            : prev,
-        );
-      } catch (err) {
-        devError("Failed to update payment status", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_update_payment());
-        throw err;
-      }
-    },
-    [queryClient, registrationsQueryKey, updateRegistrationMutation],
-  );
-
-  const handleAssignTable = useCallback(
-    async (registrationId: string, tableId: string | undefined) => {
-      try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id: registrationId,
-            payload: { table_id: tableId ?? null },
-            fallbackMessage: m.admin_error_assign_table(),
-          }),
-        );
-        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev
-            ? prev.map((r) =>
-                r.id === registrationId
-                  ? { ...r, tableId: updated.tableId, updatedAt: updated.updatedAt }
-                  : r,
-              )
-            : prev,
-        );
-        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-          prev
-            ? prev.map((t) => {
-                const wasAssigned = t.registrationIds.includes(registrationId);
-                const shouldBeAssigned = t.id === updated.tableId;
-                if (wasAssigned && !shouldBeAssigned) {
-                  return {
-                    ...t,
-                    registrationIds: t.registrationIds.filter((id) => id !== registrationId),
-                  };
-                }
-                if (!wasAssigned && shouldBeAssigned) {
-                  return { ...t, registrationIds: [...t.registrationIds, registrationId] };
-                }
-                return t;
-              })
-            : prev,
-        );
-        setDetailRegistration((prev) =>
-          prev?.id === registrationId
-            ? { ...prev, tableId: updated.tableId, updatedAt: updated.updatedAt }
-            : prev,
-        );
-      } catch (err) {
-        devError("Failed to assign table", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_assign_table());
-      }
-    },
-    [queryClient, registrationsQueryKey, tablesQueryKey, updateRegistrationMutation],
-  );
 
   const handleAddTable = useCallback(
     async (name: string, capacity: number, layoutId: string, tableTypeId: string) => {
@@ -1034,15 +652,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [areasQuery.data, layoutsQuery.data, roomsQuery.data, resizeAreaMutation],
   );
 
-  const handleAddRegistration = useCallback(
-    (registration: Registration) => {
-      queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev ? [registration, ...prev] : [registration],
-      );
-    },
-    [queryClient, registrationsQueryKey],
-  );
-
   const handleAddTableType = useCallback(
     async (data: Omit<TableType, "id">) => {
       const d = await createTableTypeMutation.mutateAsync(data);
@@ -1071,100 +680,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleRestoreTableType = useCallback(
     (id: string) => handleUpdateTableType(id, { active: true }),
     [handleUpdateTableType],
-  );
-
-  /** Fetch the full registration (including checkInToken) and open detail modal */
-  const handleViewDetail = useCallback(
-    async (res: Registration) => {
-      try {
-        const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-          `/api/registrations/${res.id}`,
-          { headers: authHeaders() },
-          m.admin_error_load_data(),
-        );
-        setDetailRegistration(apiToRegistration(data));
-      } catch (err) {
-        devError("Failed to fetch registration detail, falling back to list data", err);
-        setDetailRegistration(res);
-      }
-    },
-    [authHeaders],
-  );
-
-  const handleToggleDelivered = useCallback(
-    async (registrationId: string, updatedOrders: OrderItem[]) => {
-      try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id: registrationId,
-            payload: {
-              pre_orders: updatedOrders.map((o) => ({
-                product_id: o.productId,
-                name: o.name,
-                quantity: o.quantity,
-                delivered_quantity: o.deliveredQuantity,
-                price: o.price,
-                category: o.category,
-                delivered: o.delivered,
-              })),
-            },
-            fallbackMessage: m.admin_error_bottle_delivery(),
-          }),
-        );
-        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev ? prev.map((r) => (r.id === registrationId ? updated : r)) : prev,
-        );
-        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
-      } catch (err) {
-        devError("Failed to update bottle delivery status", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
-      }
-    },
-    [queryClient, registrationsQueryKey, updateRegistrationMutation],
-  );
-
-  const handleCheckIn = useCallback(
-    async (registrationId: string) => {
-      try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id: registrationId,
-            payload: { checked_in: true },
-            fallbackMessage: m.admin_error_check_in(),
-          }),
-        );
-        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev ? prev.map((r) => (r.id === registrationId ? updated : r)) : prev,
-        );
-        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
-      } catch (err) {
-        devError("Failed to check in guest", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_check_in());
-      }
-    },
-    [queryClient, registrationsQueryKey, updateRegistrationMutation],
-  );
-
-  const handleIssueStrap = useCallback(
-    async (registrationId: string) => {
-      try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id: registrationId,
-            payload: { strap_issued: true },
-            fallbackMessage: m.admin_error_issue_strap(),
-          }),
-        );
-        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev ? prev.map((r) => (r.id === registrationId ? updated : r)) : prev,
-        );
-        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
-      } catch (err) {
-        devError("Failed to issue strap", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_issue_strap());
-      }
-    },
-    [queryClient, registrationsQueryKey, updateRegistrationMutation],
   );
 
   if (!visible) return null;
