@@ -33,8 +33,7 @@ async def get_table_order_summary(
                     "table_reference": table_reference,
                     "registrations": [],
                     "candidates": [
-                        {"table_id": table.id, "table_name": table.name}
-                        for table in candidates[:DEFAULT_RESULT_LIMIT]
+                        {"table_id": table.id, "table_name": table.name} for table in candidates[:DEFAULT_RESULT_LIMIT]
                     ],
                     "message": (
                         "No table matched this reference."

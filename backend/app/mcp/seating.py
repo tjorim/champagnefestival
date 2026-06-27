@@ -134,9 +134,7 @@ async def get_table_seating(
             if not layout_ids:
                 return {"tables": [], "edition_id": edition.id}
 
-            tables_result2 = await db.execute(
-                select(Table).where(Table.layout_id.in_(layout_ids)).order_by(Table.name)
-            )
+            tables_result2 = await db.execute(select(Table).where(Table.layout_id.in_(layout_ids)).order_by(Table.name))
             tables = list(tables_result2.scalars().all())
 
         if not tables:

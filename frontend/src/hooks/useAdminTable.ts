@@ -21,11 +21,11 @@ export const {
     columnFilteringFeature,
     globalFilteringFeature,
     rowSortingFeature,
+    filteredRowModel: createFilteredRowModel(),
+    sortedRowModel: createSortedRowModel(),
+    filterFns,
+    sortFns,
   }),
-  rowModels: {
-    filteredRowModel: createFilteredRowModel(filterFns),
-    sortedRowModel: createSortedRowModel(sortFns),
-  },
 });
 
 export type AdminTableFeatures = typeof appFeatures;

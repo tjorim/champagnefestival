@@ -124,9 +124,7 @@ async def get_undelivered_champagne_by_table(session_factory: Any, edition_id: s
                     "pending_registrations": [],
                 }
             pending_table_map[tbl_id]["pending_lines"] += len(pending_items)
-            pending_table_map[tbl_id]["pending_quantity"] += sum(
-                item["remaining_quantity"] for item in pending_items
-            )
+            pending_table_map[tbl_id]["pending_quantity"] += sum(item["remaining_quantity"] for item in pending_items)
             pending_table_map[tbl_id]["pending_registrations"].append(reg.id)
 
         if not pending_table_map:

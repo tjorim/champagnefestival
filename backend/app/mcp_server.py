@@ -28,7 +28,7 @@ from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
 from app.mcp import public as mcp_public
 from app.mcp import seating as mcp_seating
-from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER, person_dict
+from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +82,6 @@ class ChampagneFestivalMcpBackend:
         if role == ROLE_PUBLIC:
             raise PermissionError("Authentication required: this tool is only available to volunteers and admins.")
         return role
-
-    @staticmethod
-    def _person_dict(person: Any, *, role: str) -> dict:
-        return person_dict(person, role=role)
 
     # ------------------------------------------------------------------
     # Tools — public (no auth)

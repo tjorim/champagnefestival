@@ -27,11 +27,7 @@ async def get_active_edition_obj(db: Any) -> Edition | None:
     def _end_date(edition: Edition) -> date | None:
         return max((ev.date for ev in edition.events), default=None)
 
-    upcoming = [
-        e
-        for e in editions
-        if (end := _end_date(e)) is not None and end >= today
-    ]
+    upcoming = [e for e in editions if (end := _end_date(e)) is not None and end >= today]
     if not upcoming:
         return None
     return min(upcoming, key=lambda e: _end_date(e) or today)
