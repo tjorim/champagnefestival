@@ -121,18 +121,21 @@ export default function MyRegistrationsPage() {
                       autoComplete="email"
                       isInvalid={isEmailInvalid}
                       className="bg-dark text-light border-secondary"
+                      aria-describedby={error ? "email-error" : undefined}
                     />
                   </Form.Group>
 
-                  {error && (
-                    <Alert variant="danger" className="mb-3">
-                      <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                      {error}
-                    </Alert>
-                  )}
+                  <div id="email-error" role="alert">
+                    {error && (
+                      <Alert variant="danger" className="mb-3">
+                        <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                        {error}
+                      </Alert>
+                    )}
+                  </div>
 
                   {requestSent && (
-                    <Alert variant="info" className="mb-3">
+                    <Alert variant="info" className="mb-3" role="status" aria-live="polite">
                       <div className="fw-semibold mb-1">{m.my_registrations_request_success()}</div>
                       <div>{m.my_registrations_request_pending_notice()}</div>
                     </Alert>
@@ -177,7 +180,7 @@ export default function MyRegistrationsPage() {
                 )}
 
                 {tokenError && (
-                  <Alert variant="danger" className="mb-3">
+                  <Alert variant="danger" className="mb-3" role="alert">
                     <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
                     {tokenError}
                   </Alert>

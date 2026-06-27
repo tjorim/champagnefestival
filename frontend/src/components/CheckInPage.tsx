@@ -82,20 +82,24 @@ function CheckInCard({
       </Card.Header>
 
       <Card.Body>
-        {success && (
-          <Alert variant="success" className="mb-3">
-            <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
-            <strong>{m.checkin_success()}</strong>
-            {registration.strapIssued && <div className="mt-1">{m.checkin_strap_issued()}</div>}
-          </Alert>
-        )}
+        <div role="status" aria-live="polite">
+          {success && (
+            <Alert variant="success" className="mb-3">
+              <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
+              <strong>{m.checkin_success()}</strong>
+              {registration.strapIssued && <div className="mt-1">{m.checkin_strap_issued()}</div>}
+            </Alert>
+          )}
+        </div>
 
-        {isAlreadyCheckedIn && !success && registration.checkedInAt && (
-          <Alert variant="warning" className="mb-3">
-            <i className="bi bi-exclamation-circle-fill me-2" aria-hidden="true" />
-            {m.checkin_already_in()} {new Date(registration.checkedInAt).toLocaleTimeString()}
-          </Alert>
-        )}
+        <div role="alert" aria-live="assertive">
+          {isAlreadyCheckedIn && !success && registration.checkedInAt && (
+            <Alert variant="warning" className="mb-3">
+              <i className="bi bi-exclamation-circle-fill me-2" aria-hidden="true" />
+              {m.checkin_already_in()} {new Date(registration.checkedInAt).toLocaleTimeString()}
+            </Alert>
+          )}
+        </div>
 
         <ListGroup variant="flush" className="bg-dark">
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between gap-3">
@@ -506,7 +510,7 @@ export default function CheckInPage() {
                       )}
 
                       {volunteerSearchQuery.isFetching && (
-                        <div className="text-secondary mt-3">
+                        <div className="text-secondary mt-3" role="status" aria-live="polite">
                           <Spinner
                             as="span"
                             animation="border"
@@ -520,7 +524,7 @@ export default function CheckInPage() {
                       )}
 
                       {volunteerSearchQuery.isError && (
-                        <Alert variant="danger" className="mt-3 mb-0">
+                        <Alert variant="danger" className="mt-3 mb-0" role="alert">
                           <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
                           {volunteerSearchQuery.error.message === "unauthorized"
                             ? m.checkin_manual_search_unauthorized()
@@ -579,7 +583,7 @@ export default function CheckInPage() {
             )}
 
             {(mutationError || queryError) && (
-              <Alert variant="danger">
+              <Alert variant="danger" role="alert">
                 <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
                 {mutationError || queryError}
               </Alert>
