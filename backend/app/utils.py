@@ -34,7 +34,7 @@ T = TypeVar("T", bound=Base)
 async def get_or_404(
     db: AsyncSession,
     model: type[T],
-    object_id: object,
+    object_id: Any,
     detail: str,
     *,
     options: Sequence[ORMOption] | None = None,

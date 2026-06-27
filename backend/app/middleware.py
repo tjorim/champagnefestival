@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import Settings
 
@@ -12,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 class MCPAwareCORSMiddleware:
-    def __init__(self, app, **kwargs: Any) -> None:
+    def __init__(self, app: ASGIApp, **kwargs: Any) -> None:
         self._app = app
         self._cors = CORSMiddleware(app, **kwargs)
 
-    async def __call__(self, scope, receive, send) -> None:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope.get("type") == "http" and scope.get("path", "").startswith("/mcp"):
             await self._app(scope, receive, send)
         else:
