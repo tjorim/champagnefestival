@@ -53,14 +53,10 @@ Each CodeQL workflow also includes its own workflow file in `paths` so workflow 
 - Backend-only and docs-only pull requests should not run preview builds.
 - If previews must react to backend API contracts in the future, add only explicit contract paths (not all backend paths).
 
-## Production deploy (`deploy.yml`)
+## Production deploy
 
-- Deploy is release/manual only (`release.published` and `workflow_dispatch`).
-- Frontend quality gates are required before publish:
-  - `pnpm run lint`
-  - `pnpm run test`
-  - `pnpm run build`
-- Backend install/build is intentionally excluded from this workflow.
+- Deployment is managed by the private infra repo via submodules; there is no `deploy.yml` workflow in this repository.
+- Publishing a GitHub release signals that the build is ready; the infra repo picks up the new tag via its submodule update process.
 
 ## Draft release workflow (`release-draft.yml`)
 
@@ -74,7 +70,7 @@ Each CodeQL workflow also includes its own workflow file in `paths` so workflow 
   - Backend: `ruff check`, `ruff format --check`, `ty check`, `alembic upgrade head`, `pytest`
   - Frontend: `pnpm run typecheck`, `pnpm run lint`, `pnpm run test`, `pnpm run build`
 - Draft release creation is done only after all checks pass.
-- Publishing that draft release continues to trigger the production deploy via `deploy.yml` (`release.published`).
+- Publishing that draft release signals the build is ready; the infra repo's submodule update process handles the actual production deploy.
 
 ### Release checklist
 
