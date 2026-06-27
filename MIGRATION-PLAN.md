@@ -52,6 +52,7 @@
 
 2. **Client-side performance variability**
    - Mitigation: keep bundle analysis in the release process, monitor Core Web Vitals, and prioritize low-end device testing
+   - **CI budget in place**: `frontend-ci.yml` enforces a JS size ceiling (total ≤ 2 200 kB, index ≤ 1 050 kB, AdminDashboard ≤ 700 kB) based on the 2026-06-27 baseline.
 
 3. **Quality drift over time**
    - Mitigation: keep CI gates strict and extend automated tests in areas with recurring defects
