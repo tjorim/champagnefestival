@@ -28,14 +28,14 @@ test.describe("Public landing page", () => {
     const scheduleLink = page.locator('a[href="#schedule"]').first();
     await expect(scheduleLink).toBeVisible();
     await scheduleLink.click();
-    await expect(page.locator("#schedule")).toBeVisible();
+    await expect(page.locator("#schedule")).toBeInViewport();
   });
 
   test("contact section is reachable via navigation", async ({ page }) => {
     const contactLink = page.locator('a[href="#contact"]').first();
     await expect(contactLink).toBeVisible();
     await contactLink.click();
-    await expect(page.locator("#contact")).toBeVisible();
+    await expect(page.locator("#contact")).toBeInViewport();
   });
 
   test("faq section exists on page", async ({ page }) => {

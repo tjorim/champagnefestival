@@ -24,35 +24,28 @@ test.describe("Guest registration", () => {
     await expect(regButton).toBeDisabled();
   });
 
-  test("POST /api/registrations returns 201 with mock data", async ({ page }) => {
-    // Use page.evaluate so the fetch runs inside the browser context where
-    // the MSW service worker intercepts it (page.request bypasses the SW).
+  test("registration form can be submitted when registrations are open", async ({ page }) => {
+    // Move the browser clock to when registrations are open (events open 2027-01-01)
+    await page.clock.setFixedTime(new Date("2027-02-01T12:00:00Z"));
+
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    const result = await page.evaluate(async () => {
-      const res = await fetch("/api/registrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "E2E Test User",
-          email: "e2e@example.com",
-          phone: "+32471000001",
-          event_id: "event-01",
-          guest_count: 2,
-          notes: "Playwright E2E test",
-          pre_orders: [],
-          honeypot: "",
-          form_start_time: new Date().toISOString(),
-        }),
-      });
-      return { status: res.status, body: await res.json() };
-    });
+    // CTA button should now be enabled
+    const regButton = page.locator("#registrations button[type='button']").first();
+    await expect(regButton).toBeEnabled();
+    await regButton.click();
 
-    expect(result.status).toBe(201);
-    const body = result.body as Record<string, unknown>;
-    expect(body.id).toBeTruthy();
-    expect(body.status).toBe("pending");
-    expect(body.check_in_token).toBeTruthy();
+    // Fill in the form (labels include a trailing " *" for required fields)
+    await page.getByLabel(/^Name/).fill("E2E Test User");
+    await page.getByLabel(/^Email/).fill("e2e@example.com");
+    await page.getByLabel(/Phone/).fill("+32471000001");
+    await page.getByLabel(/Guests/).fill("2");
+
+    // Submit
+    await page.getByRole("button", { name: /submit registration/i }).click();
+
+    // Success alert should appear inside the modal
+    await expect(page.locator(".modal").getByRole("alert")).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -9,7 +9,7 @@ test.describe("Guest self-service (/my-registrations)", () => {
     await expect(page.locator("#my-registrations-title, h2")).toBeVisible();
 
     // Email input should be present
-    await expect(page.locator('input[type="email"], #my-registrations-email')).toBeVisible();
+    await expect(page.getByLabel("Email address")).toBeVisible();
   });
 
   test("submitting a valid email shows confirmation", async ({ page }) => {
@@ -17,14 +17,14 @@ test.describe("Guest self-service (/my-registrations)", () => {
     await page.waitForLoadState("networkidle");
 
     // Fill in a valid email
-    await page.fill('input[type="email"], #my-registrations-email', "alice@moet.com");
+    await page.getByLabel("Email address").fill("alice@moet.com");
 
     // Submit the form
-    await page.click('button[type="submit"]');
+    await page.getByRole("button", { name: /email me a secure link/i }).click();
 
     // Confirmation/info alert should appear
     await expect(
-      page.locator("[role='status'], .alert-info").first(),
+      page.getByRole("status").first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -32,10 +32,10 @@ test.describe("Guest self-service (/my-registrations)", () => {
     await page.goto("/my-registrations");
     await page.waitForLoadState("networkidle");
 
-    await page.fill('input[type="email"], #my-registrations-email', "not-an-email");
-    await page.click('button[type="submit"]');
+    await page.getByLabel("Email address").fill("not-an-email");
+    await page.getByRole("button", { name: /email me a secure link/i }).click();
 
-    await expect(page.locator("[role='alert'], .alert-danger").first()).toBeVisible({
+    await expect(page.getByRole("alert").first()).toBeVisible({
       timeout: 5_000,
     });
   });
@@ -64,7 +64,7 @@ test.describe("Guest self-service (/my-registrations)", () => {
     await resetButton.click();
 
     // Should return to the email form
-    await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByLabel("Email address")).toBeVisible({ timeout: 5_000 });
   });
 
   test("back to site link navigates home", async ({ page }) => {

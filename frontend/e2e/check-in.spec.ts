@@ -9,7 +9,7 @@ test.describe("Check-in flow", () => {
     await expect(page.locator("#checkin-title, h2")).toBeVisible();
 
     // Scan prompt alert should appear (there may be multiple alerts; any is fine)
-    await expect(page.locator("[role='alert'], .alert").first()).toBeVisible();
+    await expect(page.getByRole("alert").first()).toBeVisible();
 
     // Manual search section should be present
     await expect(page.locator("#manual-checkin-search")).toBeVisible();
@@ -34,7 +34,7 @@ test.describe("Check-in flow", () => {
     await expect(page.locator("text=Alice Dupont")).toBeVisible({ timeout: 10_000 });
 
     // Check-in button should be present and enabled
-    const checkInButton = page.locator("button.btn-warning").filter({ hasText: /check.in/i });
+    const checkInButton = page.getByRole("button", { name: /check.in/i });
     await expect(checkInButton).toBeVisible();
     await expect(checkInButton).toBeEnabled();
   });
@@ -46,12 +46,12 @@ test.describe("Check-in flow", () => {
     await expect(page.locator("text=Alice Dupont")).toBeVisible({ timeout: 10_000 });
 
     // Click check-in button
-    const checkInButton = page.locator("button.btn-warning").filter({ hasText: /check.in/i });
+    const checkInButton = page.getByRole("button", { name: /check.in/i });
     await checkInButton.click();
 
     // Success alert should appear
     await expect(
-      page.locator("[role='status'], .alert-success").first(),
+      page.getByRole("status").first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -60,7 +60,7 @@ test.describe("Check-in flow", () => {
     await page.waitForLoadState("networkidle");
 
     // An error alert should appear
-    await expect(page.locator("[role='alert'].alert-danger, .alert-danger")).toBeVisible({
+    await expect(page.getByRole("alert")).toBeVisible({
       timeout: 10_000,
     });
   });

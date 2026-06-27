@@ -19,7 +19,7 @@ test.describe("Admin dashboard", () => {
   test("shows login prompt when not authenticated", async ({ page }) => {
     // When unauthenticated, the admin dashboard shows a login button/form
     await expect(
-      page.locator("button, [role='button']").filter({ hasText: /log.?in|sign.?in/i }).first(),
+      page.getByRole("button", { name: /log.?in|sign.?in/i }).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
