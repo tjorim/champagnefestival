@@ -89,7 +89,7 @@ Here is my detailed review of the current codebase.
 
 ## Code Structure & Organization
 
-- [ ] **Step 1: Add a shared admin query-invalidation helper**
+- [x] **Step 1: Add a shared admin query-invalidation helper**
   - **Task**: Introduce `invalidateAdmin(queryClient, keys)` that accepts an array of query keys and
     issues the `queryClient.invalidateQueries(...)` calls in one place. Replace the 58 inline
     invalidation calls in `AdminDashboard.tsx` with it. No behavior change — same keys invalidated.
@@ -106,7 +106,7 @@ Here is my detailed review of the current codebase.
   - **Success Criteria**: All admin tests pass; no `invalidateQueries` call remains duplicated;
     typecheck/lint clean.
 
-- [ ] **Step 2: Extract people/members/volunteers mutations into `usePeopleMutations`**
+- [x] **Step 2: Extract people/members/volunteers mutations into `usePeopleMutations`**
   - **Task**: Move the create/update/delete `useMutation` definitions for people, members, and
     volunteers (currently ~10 mutations) out of `AdminDashboard.tsx` into a colocated hook that
     receives `queryClient`, `authHeaders`, and the relevant query keys and returns the mutation
@@ -119,7 +119,7 @@ Here is my detailed review of the current codebase.
   - **Success Criteria**: `AdminDashboard.tsx` shrinks by the moved mutations; people/member/
     volunteer tests still pass.
 
-- [ ] **Step 3: Extract venue/layout/table-type mutations into `useVenueMutations`**
+- [x] **Step 3: Extract venue/layout/table-type mutations into `useVenueMutations`**
   - **Task**: Same pattern as Step 2 for the venue, room, table, table-type, area, and layout
     mutations. Keep `LayoutEditor` integration intact by passing the hook's results down unchanged.
   - **Files**:
@@ -129,7 +129,7 @@ Here is my detailed review of the current codebase.
   - **Step Dependencies**: Step 1.
   - **Success Criteria**: Venue/layout admin tests pass; dashboard mutation count materially reduced.
 
-- [ ] **Step 4: Extract registration mutations into `useRegistrationAdminMutations`**
+- [x] **Step 4: Extract registration mutations into `useRegistrationAdminMutations`**
   - **Task**: Move registration create/update/delete/merge and check-in-related mutations into a
     dedicated hook, completing the dashboard slim-down.
   - **Files**:
@@ -140,7 +140,7 @@ Here is my detailed review of the current codebase.
   - **Success Criteria**: `AdminDashboard.tsx` is reduced to orchestration/layout; all admin tests
     green. Target: dashboard well under ~1,000 lines.
 
-- [ ] **Step 5: Extract pure geometry helpers from `LayoutEditor`**
+- [x] **Step 5: Extract pure geometry helpers from `LayoutEditor`**
   - **Task**: Move pure functions (`getTablesInArea`, rotation/containment math, and any
     px/coordinate conversions not already in `layoutUtils.ts`) into `utils/layoutGeometry.ts` and
     add focused unit tests for the rotation edge cases. `LayoutEditor` imports them.
@@ -154,7 +154,7 @@ Here is my detailed review of the current codebase.
 
 ## Code Quality & Best Practices
 
-- [ ] **Step 6: Add a shared `get_or_404` backend helper and adopt it in resource routers**
+- [x] **Step 6: Add a shared `get_or_404` backend helper and adopt it in resource routers**
   - **Task**: Add a generic `get_or_404(db, Model, id, detail=...)` to `app/utils.py` (or a new
     `app/crud.py`) and replace the per-router `_get_or_404` copies in `areas.py` and `rooms.py`
     first (the clearest duplicates), preserving each router's existing 404 message text.
@@ -170,14 +170,14 @@ Here is my detailed review of the current codebase.
   - **Success Criteria**: `uv run pytest tests/test_areas.py tests/test_rooms.py` passes; no
     behavior or status-code change.
 
-- [ ] **Step 7: Roll out `get_or_404` to remaining CRUD routers**
+- [x] **Step 7: Roll out `get_or_404` to remaining CRUD routers**
   - **Task**: Apply the Step 6 helper to `tables.py`, `table_types.py`, `venues.py`, `layouts.py`,
     and any other router still carrying a private `_get_or_404`. One small change each.
   - **Files** (≤20): the listed routers + their existing test modules (no new tests required).
   - **Step Dependencies**: Step 6.
   - **Success Criteria**: Full backend suite green; the `_get_or_404` pattern no longer duplicated.
 
-- [ ] **Step 8: Extract the MCP-aware CORS middleware into its own module**
+- [x] **Step 8: Extract the MCP-aware CORS middleware into its own module**
   - **Task**: Move the inline `_MCPAwareCORSMiddleware` class and CORS-kwargs construction out of
     `main.py` into `app/middleware.py`, with a single factory `add_cors_middleware(app, settings)`.
     Add a focused test asserting `/mcp` paths bypass CORS and other paths don't.

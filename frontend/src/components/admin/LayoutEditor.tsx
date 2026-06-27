@@ -27,48 +27,8 @@ import {
   getCanvasSizePx,
   getTableSizePx,
 } from "@/utils/layoutUtils";
+import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
-
-/**
- * Returns the tables whose centre point falls within the area's bounding rectangle,
- * accounting for the area's rotation by transforming table centres into the area's
- * local coordinate space before the containment check.
- */
-function getTablesInArea(
-  area: FloorArea,
-  tables: FloorTable[],
-  tableTypes: TableType[],
-  canvasW: number,
-  canvasH: number,
-): FloorTable[] {
-  const areaLeft = (area.x / 100) * canvasW;
-  const areaTop = (area.y / 100) * canvasH;
-  // Match DraggableArea's rendered dimensions (Math.round + minimums)
-  const { width: areaW, height: areaH } = getAreaSizePx(area.widthM, area.lengthM);
-
-  // Centre of the (unrotated) area bounding box
-  const acx = areaLeft + areaW / 2;
-  const acy = areaTop + areaH / 2;
-
-  // Rotate points into the area's local space by applying -rotation
-  const rad = -((area.rotation ?? 0) * Math.PI) / 180;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
-
-  return tables.filter((t) => {
-    const { width: w, height: l } = getTableSizePx(t, tableTypes);
-    const cx = (t.x / 100) * canvasW + w / 2;
-    const cy = (t.y / 100) * canvasH + l / 2;
-
-    // Translate to area-centre-relative coordinates, then rotate
-    const dx = cx - acx;
-    const dy = cy - acy;
-    const lx = cos * dx - sin * dy;
-    const ly = sin * dx + cos * dy;
-
-    return Math.abs(lx) <= areaW / 2 && Math.abs(ly) <= areaH / 2;
-  });
-}
 
 // Preset icons available for floor areas — labels resolved at render time for i18n
 function getAreaIcons(): { value: string; label: string }[] {
