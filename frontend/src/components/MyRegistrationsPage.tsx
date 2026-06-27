@@ -125,12 +125,14 @@ export default function MyRegistrationsPage() {
                     />
                   </Form.Group>
 
-                  {error && (
-                    <Alert id="email-error" variant="danger" className="mb-3" role="alert">
-                      <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                      {error}
-                    </Alert>
-                  )}
+                  <div id="email-error" role="alert">
+                    {error && (
+                      <Alert variant="danger" className="mb-3">
+                        <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                        {error}
+                      </Alert>
+                    )}
+                  </div>
 
                   {requestSent && (
                     <Alert variant="info" className="mb-3" role="status" aria-live="polite">

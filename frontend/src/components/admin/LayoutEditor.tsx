@@ -217,8 +217,19 @@ function DraggableTable({
       }}
       title={`${table.name} — ${assignedCount}/${table.capacity}`}
       role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       aria-pressed={isInteractive ? isSelected : undefined}
       aria-label={`${m.admin_table_label()} ${table.name}`}
+      onKeyDown={
+        isInteractive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
     >
       <i className="bi bi-people-fill fs-5" aria-hidden="true" />
       <span className="small fw-semibold fs-2xs">{table.name}</span>
@@ -296,8 +307,19 @@ function DraggableArea({
       }}
       title={area.label}
       role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       aria-pressed={isInteractive ? isSelected : undefined}
       aria-label={`${m.admin_layout_area_label_prefix()} ${area.label}`}
+      onKeyDown={
+        isInteractive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
     >
       <i className={clsx("bi", area.icon || "bi-shop", "fs-xs")} aria-hidden="true" />
       <span className="fw-semibold text-truncate w-100 text-center px-1 fs-3xs">{area.label}</span>
