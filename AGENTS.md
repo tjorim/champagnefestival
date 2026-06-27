@@ -43,7 +43,9 @@ uv run alembic upgrade head
 2. Add/update `CHANGELOG.md` entry header as `## [X.Y.Z] - YYYY-MM-DD`.
 3. Push tag `vX.Y.Z` to run `.github/workflows/release-draft.yml`.
 4. Wait for backend/frontend checks and metadata validation to pass.
-5. Publish the generated draft release to trigger GitHub Pages deploy (`deploy.yml`).
+5. Publish the generated draft release to trigger the VPS deploy via the infra stack in `/opt/apps/infra`.
+
+See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migration sign-off, and rollback procedures.
 
 ## Source Of Truth
 
@@ -51,6 +53,22 @@ uv run alembic upgrade head
 - `frontend/messages/` for translation content
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior
 - `frontend/src/utils/adminApi.ts` and `frontend/src/utils/adminRegistrationApi.ts` for admin API integration
+
+## CI & workflows
+
+Third-party actions are pinned to full commit SHAs with inline version comments.
+
+Required status checks on `main`:
+
+- `Backend CI / Lint, Typecheck, Migrate & Test`
+- `Frontend CI / Typecheck, Lint, Test & Build`
+- `Android CI / Lint, Unit Test & Build` (when Android changes are required)
+- Relevant CodeQL checks (`CodeQL Backend`, `CodeQL Frontend`, `CodeQL Actions`, `CodeQL Android`)
+
+Future workflow additions should follow these conventions:
+- Event-day Android APK/manual workflows stay separate from normal frontend/backend CI.
+- Android release artifacts skip gracefully when signing secrets are missing.
+- New workflows scope their `paths` triggers to the code they actually test.
 
 ## Conventions
 
