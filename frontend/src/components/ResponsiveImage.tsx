@@ -34,8 +34,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
       className={`position-relative ${className}`}
       style={fill ? { width: "100%", height: "100%" } : undefined}
     >
-      {/* Aspect ratio container */}
-      {aspectRatio && !fill && <div style={{ paddingBottom: aspectRatio }} />}
+      {aspectRatio && !fill && <div style={{ paddingBottom: aspectRatio }} aria-hidden="true" />}
 
       <img
         src={src}

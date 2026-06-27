@@ -1,6 +1,18 @@
 import "@testing-library/jest-dom";
+import { configureAxe, toHaveNoViolations } from "jest-axe";
+import { expect } from "vitest";
 import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
+
+expect.extend(toHaveNoViolations);
+
+// Suppress non-critical axe rules that don't apply to dark-themed SPAs served
+// over HTTPS (color-contrast false positives from happy-dom's CSS support).
+configureAxe({
+  rules: [
+    { id: "color-contrast", enabled: false },
+  ],
+});
 import { server } from "@/mocks/server";
 import { resetAdminStore } from "@/mocks/handlers/admin";
 

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { axe } from "jest-axe";
 import { describe, it, expect } from "vitest";
 import ResponsiveImage from "@/components/ResponsiveImage";
 
@@ -52,5 +53,19 @@ describe("ResponsiveImage component", () => {
   it("forwards alt=\"\" for decorative images", () => {
     const { container } = render(<ResponsiveImage src="/images/deco.jpg" alt="" />);
     expect(container.querySelector("img")).toHaveAttribute("alt", "");
+  });
+
+  it("has no axe violations with a descriptive alt text", async () => {
+    const { container } = render(<ResponsiveImage src="/images/test.jpg" alt="Festival grounds" />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations with empty alt for a decorative image", async () => {
+    const { container } = render(
+      <ResponsiveImage src="/images/deco.jpg" alt="" width={400} height={300} />,
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

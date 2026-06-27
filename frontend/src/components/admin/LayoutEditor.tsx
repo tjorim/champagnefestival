@@ -403,6 +403,7 @@ function RoomCanvas({
           {m.admin_table_move_hint()}
         </span>
       </p>
+      <p className="visually-hidden">{m.admin_layout_keyboard_hint()}</p>
       <DragDropProvider sensors={SENSORS} modifiers={modifiers} onDragEnd={handleDragEnd}>
         <div
           ref={canvasRef}

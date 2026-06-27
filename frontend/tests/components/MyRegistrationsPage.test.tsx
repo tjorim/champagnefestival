@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { axe } from "jest-axe";
 import { describe, it, expect, vi } from "vitest";
 import {
   createMemoryHistory,
@@ -129,5 +130,54 @@ describe("MyRegistrationsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Please enter a valid email address.")).toBeInTheDocument();
     });
+  });
+
+  it("has no axe violations on the email request form", async () => {
+    const { container } = await renderPage();
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations when showing an email validation error", async () => {
+    const { container } = await renderPage();
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "not-an-email" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /email me a secure link/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Please enter a valid email address.")).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations when registrations are loaded", async () => {
+    const { container } = await renderPage("/my-registrations?token=any-valid-token");
+
+    await waitFor(() => {
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations when showing a token error", async () => {
+    server.use(
+      http.post("/api/registrations/my/access", () => HttpResponse.json(null, { status: 401 })),
+    );
+
+    const { container } = await renderPage("/my-registrations?token=expired-token");
+
+    await waitFor(() => {
+      expect(screen.getByText("This secure link is invalid or expired.")).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

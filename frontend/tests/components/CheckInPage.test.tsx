@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import {
   createMemoryHistory,
@@ -232,5 +233,38 @@ describe("CheckInPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Registration not found.")).toBeInTheDocument();
     });
+  });
+
+  it("has no axe violations on the QR check-in flow with a loaded registration", async () => {
+    const { container } = await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations on the manual search flow", async () => {
+    const { container } = await renderPage("/check-in");
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations when showing an error", async () => {
+    server.use(
+      http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 404 })),
+    );
+
+    const { container } = await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Registration not found.")).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
