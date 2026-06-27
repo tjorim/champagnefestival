@@ -209,7 +209,7 @@ Here is my detailed review of the current codebase.
 
 ## UI/UX
 
-- [ ] **Step 10: Give the admin dashboard per-domain error surfacing**
+- [x] **Step 10: Give the admin dashboard per-domain error surfacing**
   - **Task**: Replace the single global `error` string with a small typed error map (or per-section
     error state) so a failed people-mutation shows near People and a failed venue-mutation near
     Venue. **Retain a fallback global error banner/channel** for systemic, non-domain-specific
@@ -225,7 +225,7 @@ Here is my detailed review of the current codebase.
   - **Success Criteria**: A simulated mutation failure renders its message in the correct section;
     existing tests pass.
 
-- [ ] **Step 11: Audit image alternative text via `ResponsiveImage`**
+- [x] **Step 11: Audit image alternative text via `ResponsiveImage`**
   - **Task**: Review every `ResponsiveImage`/`<img>` usage and ensure informative images carry
     descriptive (i18n) `alt` text and decorative ones use `alt=""`. Add a lightweight test that
     `ResponsiveImage` forwards `alt` correctly.
@@ -238,7 +238,7 @@ Here is my detailed review of the current codebase.
 
 ## Tooling & Process
 
-- [ ] **Step 12: Enforce a frontend bundle-size budget in CI**
+- [x] **Step 12: Enforce a frontend bundle-size budget in CI**
   - **Task**: Address the open `MIGRATION-PLAN.md` item by adding a build-output size check to the
     frontend CI workflow (fail when the main JS/CSS chunk exceeds an agreed threshold). Start with a
     generous budget set from the current build to prevent regressions, not to force an immediate cut.
