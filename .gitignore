@@ -150,3 +150,7 @@ build
 *.db-shm
 nohup.out
 frontend/package-lock.json
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
