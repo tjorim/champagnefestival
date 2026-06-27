@@ -54,6 +54,22 @@ See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migrat
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior
 - `frontend/src/utils/adminApi.ts` and `frontend/src/utils/adminRegistrationApi.ts` for admin API integration
 
+## CI & workflows
+
+Third-party actions are pinned to full commit SHAs with inline version comments.
+
+Required status checks on `main`:
+
+- `Backend CI / Lint, Typecheck, Migrate & Test`
+- `Frontend CI / Typecheck, Lint, Test & Build`
+- `Android CI / Lint, Unit Test & Build` (when Android changes are required)
+- Relevant CodeQL checks (`CodeQL Backend`, `CodeQL Frontend`, `CodeQL Actions`, `CodeQL Android`)
+
+Future workflow additions should follow these conventions:
+- Event-day Android APK/manual workflows stay separate from normal frontend/backend CI.
+- Android release artifacts skip gracefully when signing secrets are missing.
+- New workflows scope their `paths` triggers to the code they actually test.
+
 ## Conventions
 
 - Use American English in code, comments, and UI text
