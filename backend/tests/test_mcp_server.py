@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import app.mcp_server as mcp_module
+from app.mcp.utils import person_dict
 from app.mcp_server import (
     ROLE_ADMIN,
     ROLE_PUBLIC,
@@ -1161,7 +1162,7 @@ class TestPIIFiltering:
         # _person_dict is called internally with role; public should not reach it
         # but if it does, it would only return id and name
         person = _make_person()
-        d = ChampagneFestivalMcpBackend._person_dict(person, role=ROLE_PUBLIC)
+        d = person_dict(person, role=ROLE_PUBLIC)
         assert "id" in d
         assert "name" in d
         assert "email" not in d
@@ -1170,7 +1171,7 @@ class TestPIIFiltering:
 
     def test_person_dict_volunteer_shows_contact_not_sensitive(self):
         person = _make_person(address="Rue 1", notes="VIP")
-        d = ChampagneFestivalMcpBackend._person_dict(person, role=ROLE_VOLUNTEER)
+        d = person_dict(person, role=ROLE_VOLUNTEER)
         assert "email" in d
         assert "phone" in d
         assert "address" not in d
@@ -1180,7 +1181,7 @@ class TestPIIFiltering:
 
     def test_person_dict_admin_shows_all_allowed_fields(self):
         person = _make_person(address="Rue 1", notes="VIP", club_name="Club A")
-        d = ChampagneFestivalMcpBackend._person_dict(person, role=ROLE_ADMIN)
+        d = person_dict(person, role=ROLE_ADMIN)
         assert "email" in d
         assert "phone" in d
         assert "address" in d
