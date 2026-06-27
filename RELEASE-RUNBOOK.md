@@ -28,7 +28,7 @@ For every release that includes Alembic migrations, complete this before merging
 5. **Take a backup** — before applying migrations in production, snapshot the database:
    ```bash
    # Run from the VPS or a host with access to the Postgres container
-   docker compose exec db pg_dump -U postgres champagnefestival > backup-$(date +%Y%m%d%H%M%S).sql
+   docker compose exec -T db pg_dump -c -U postgres champagnefestival > backup-$(date +%Y%m%d%H%M%S).sql
    ```
 
 ## Post-deploy verification checklist
@@ -44,19 +44,19 @@ Run these checks after publishing the draft release (GitHub Pages deploy complet
 
 If any check fails, proceed to the relevant rollback section below.
 
-## Rollback: frontend (GitHub Pages)
+## Rollback: frontend
 
-The frontend is deployed as a GitHub Pages artifact via `deploy.yml` on `release.published`.
+The frontend is served as static files from `/srv/champagnefestival` on the VPS, managed by the infra stack in the private `tjorim/apps` repository (mirrored locally at `/opt/apps/infra`).
 
-1. **Identify the previous good release** — find the last published release on GitHub (`vX.Y.(Z-1)` or similar).
-2. **Re-publish the previous release**:
-   - Go to the repository's **Releases** page.
-   - Open the previous release and click **Edit release**.
-   - Save without changes to re-trigger `deploy.yml` via `release.published`.
-   - Alternatively, use `workflow_dispatch` on `deploy.yml` and select the previous tag's SHA.
-3. **Verify** — re-run the frontend steps from the post-deploy checklist once the deploy workflow completes.
-
-> If the previous GitHub Pages artifact is no longer available, check out the previous tag locally, run `pnpm build`, and manually push the `frontend/dist/` output to the `gh-pages` branch.
+1. **Identify the previous good release** — note the tag of the last known-good release (e.g., `vX.Y.(Z-1)`).
+2. **Re-deploy the previous frontend build** via the infra stack:
+   ```bash
+   cd /opt/apps/infra
+   # Update the pinned frontend version to the previous release tag, then apply
+   # (exact command depends on the infra playbook/compose setup in tjorim/apps)
+   ```
+   If the infra stack uses a versioned artifact or Docker image for the frontend, roll back that image tag and restart the relevant service.
+3. **Verify** — re-run the frontend steps from the post-deploy checklist once the rollback is applied.
 
 ## Rollback: backend
 
@@ -84,7 +84,7 @@ docker compose run --rm champagnefestival-api alembic downgrade <previous_revisi
 
 > **Data-loss warning:** if the downgrade path drops columns or tables, data written since the upgrade is permanently lost. Restore from the pre-deploy backup instead:
 > ```bash
-> docker compose exec db psql -U postgres champagnefestival < backup-YYYYMMDDHHMMSS.sql
+> docker compose exec -T db psql -U postgres champagnefestival < backup-YYYYMMDDHHMMSS.sql
 > ```
 
 ### 3. Verify
@@ -96,5 +96,5 @@ Re-run the full post-deploy verification checklist against the rolled-back versi
 If both frontend and backend must be rolled back simultaneously (e.g., a breaking API contract change):
 
 1. Follow the backend rollback steps first to restore the API.
-2. Re-publish the previous GitHub Pages release to restore the frontend.
+2. Follow the frontend rollback steps to restore the previous static build on the VPS.
 3. Verify the health endpoint, frontend load, and registration flow together.

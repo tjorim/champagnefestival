@@ -43,7 +43,7 @@ uv run alembic upgrade head
 2. Add/update `CHANGELOG.md` entry header as `## [X.Y.Z] - YYYY-MM-DD`.
 3. Push tag `vX.Y.Z` to run `.github/workflows/release-draft.yml`.
 4. Wait for backend/frontend checks and metadata validation to pass.
-5. Publish the generated draft release to trigger GitHub Pages deploy (`deploy.yml`).
+5. Publish the generated draft release to trigger the VPS deploy via the infra stack in `/opt/apps/infra`.
 
 See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migration sign-off, and rollback procedures.
 
