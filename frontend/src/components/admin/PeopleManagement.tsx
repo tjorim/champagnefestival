@@ -102,7 +102,10 @@ export default function PeopleManagement({
     staleTime: 30 * 1000,
     retry: false,
   });
-  const displayedPeople = debouncedQ ? (peopleSearchQuery.data ?? []) : people;
+  const displayedPeople = useMemo(
+    () => (debouncedQ ? (peopleSearchQuery.data ?? []) : people),
+    [debouncedQ, people, peopleSearchQuery.data],
+  );
 
   const preFiltered = useMemo(
     () =>

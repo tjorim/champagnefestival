@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import {
   createAdminRegistrationsCollection,
   registerAdminRegistrationsCollection,
@@ -24,7 +23,6 @@ interface UseAdminQueriesOptions {
   visible: boolean;
   isAuthenticated: boolean;
   authHeaders: () => Record<string, string>;
-  activeEdition: ActiveEdition;
 }
 
 export const ADMIN_RESOURCE_KEYS = [
@@ -53,7 +51,6 @@ export function useAdminQueries({
   visible,
   isAuthenticated,
   authHeaders,
-  activeEdition,
 }: UseAdminQueriesOptions) {
   const queryClient = useQueryClient();
 
@@ -167,21 +164,6 @@ export function useAdminQueries({
     membersQuery,
   ];
 
-  const layoutDayOptions = useMemo(() => {
-    const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-
-    return uniqueDates.map((date) => ({
-      date,
-      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      }),
-    }));
-  }, [activeEdition.events]);
-
   const loadData = useCallback(async () => {
     await queryClient.refetchQueries({
       predicate: (query) => shouldRefetchAdminResourceQuery(query.queryKey),
@@ -214,8 +196,6 @@ export function useAdminQueries({
     areasQueryKey,
     peopleQueryKey,
     membersQueryKey,
-    // Layout helper
-    layoutDayOptions,
     // Refetch all
     loadData,
   };

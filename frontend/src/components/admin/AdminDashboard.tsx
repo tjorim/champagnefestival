@@ -30,6 +30,7 @@ import { apiToRegistration } from "@/types/registrationMapper";
 import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
 import { type Person, apiToPerson } from "@/types/person";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
+import { useAdminDashboardData } from "@/hooks/useAdminDashboardData";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
@@ -51,8 +52,6 @@ import {
   replaceVolunteerById,
   syncMembersWithPerson,
 } from "@/utils/adminApiMappers";
-import { toLocalDateKey } from "@/utils/dateUtils";
-import { isRegistrationInEdition } from "@/utils/adminUtils";
 import Card from "react-bootstrap/Card";
 
 function activeEditionLabel(year: number): string {
@@ -124,13 +123,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     areasQueryKey,
     peopleQueryKey,
     membersQueryKey,
-    layoutDayOptions,
     loadData: loadDataBase,
   } = useAdminQueries({
     visible,
     isAuthenticated,
     authHeaders,
-    activeEdition,
   });
 
   const loadData = useCallback(async () => {
@@ -140,31 +137,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const registrations = useMemo(() => registrationsQuery.data ?? [], [registrationsQuery.data]);
   const tables = tablesQuery.data ?? [];
-  const todayKey = useMemo(() => toLocalDateKey(new Date()), []);
-  const activeEditionDateKeys = useMemo(
-    () => activeEdition.dates.map((date) => toLocalDateKey(date)),
-    [activeEdition.dates],
-  );
-  const activeDayIndex = activeEditionDateKeys.indexOf(todayKey);
-  const isActiveEditionDay = activeDayIndex >= 0;
-  const activeEditionStats = useMemo(() => {
-    let checkedIn = 0;
-    let total = 0;
-    const eventIdsToday = new Set(
-      activeEdition.events.filter((event) => event.date === todayKey).map((event) => event.id),
-    );
-
-    for (const registration of registrations) {
-      if (registration.status === "cancelled") continue;
-      if (!isRegistrationInEdition(registration, activeEdition.id)) continue;
-      const guestCount = Math.max(0, registration.guestCount ?? 0);
-      total += guestCount;
-      if (registration.checkedIn) checkedIn += guestCount;
-    }
-
-    return { checkedIn, total, eventsToday: eventIdsToday.size };
-  }, [activeEdition.events, activeEdition.id, registrations, todayKey]);
-
   const venues = venuesQuery.data ?? [];
   const rooms = roomsQuery.data ?? [];
   const tableTypes = tableTypesQuery.data ?? [];
@@ -173,6 +145,21 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const areas = areasQuery.data ?? [];
   const people = peopleQuery.data ?? [];
   const members = membersQuery.data ?? [];
+  const {
+    activeDayIndex,
+    activeEditionDateKeys,
+    activeEditionStats,
+    emailDuplicates,
+    isActiveEditionDay,
+    layoutDayOptions,
+    registrationCountByPersonId,
+    volunteers,
+  } = useAdminDashboardData({
+    activeEdition,
+    detailRegistration,
+    people,
+    registrations,
+  });
 
   const {
     mergePeopleMutation,
@@ -543,11 +530,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       >(exhibitorsQueryKey, (prev) => (prev ? prev.filter((e) => e.id !== id) : prev));
     },
     [exhibitorsQueryKey, queryClient],
-  );
-
-  const volunteers = useMemo(
-    () => (peopleQuery.data ?? []).filter((person) => person.roles.includes("volunteer")),
-    [peopleQuery.data],
   );
 
   useEffect(() => {
@@ -1184,28 +1166,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
   );
-
-  // Computed maps derived from people/registrations state — must stay above any early return
-  // to satisfy the Rules of Hooks (hooks must be called unconditionally).
-  const registrationCountByPersonId = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const r of registrationsQuery.data ?? []) {
-      if (r.personId == null) continue;
-      counts[r.personId] = (counts[r.personId] ?? 0) + 1;
-    }
-    return Object.fromEntries((peopleQuery.data ?? []).map((p) => [p.id, counts[p.id] ?? 0]));
-  }, [peopleQuery.data, registrationsQuery.data]);
-
-  const emailDuplicates = useMemo(() => {
-    if (!detailRegistration) return [];
-    const personEmail = detailRegistration.person.email.toLowerCase();
-    return people
-      .filter(
-        (p) =>
-          p.id !== detailRegistration.personId && p.email && p.email.toLowerCase() === personEmail,
-      )
-      .map((p) => ({ id: p.id, name: p.name }));
-  }, [people, detailRegistration]);
 
   if (!visible) return null;
 
