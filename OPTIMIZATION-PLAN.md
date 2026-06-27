@@ -189,7 +189,7 @@ Here is my detailed review of the current codebase.
   - **Success Criteria**: App boots; existing health/request-correlation tests pass; new CORS test
     passes.
 
-- [ ] **Step 9: Split `mcp_server.py` tool implementations by domain**
+- [x] **Step 9: Split `mcp_server.py` tool implementations by domain**
   - **Task**: Without changing the registered tool surface, split the 1,106-line module so seating,
     orders, delivery, and check-in tool bodies live in separate domain modules imported by
     `create_mcp_server`. Keep `ChampagneFestivalMcpBackend` as the thin assembling class.
