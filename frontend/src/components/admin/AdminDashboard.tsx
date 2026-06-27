@@ -70,7 +70,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const isAuthenticated = auth.isAuthenticated;
-  const [error, setError] = useState("");
+  const [globalError, setGlobalError] = useState("");
+  const [registrationError, setRegistrationError] = useState("");
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   const [applyActiveEditionFilterRequest, setApplyActiveEditionFilterRequest] = useState(0);
   /** Full registration (with checkInToken) shown in the detail modal */
@@ -133,7 +134,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   });
 
   const loadData = useCallback(async () => {
-    setError("");
+    setGlobalError("");
     await loadDataBase();
   }, [loadDataBase]);
 
@@ -574,10 +575,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     const firstError = errors.find((e) => e !== null);
     if (firstError) {
       devError("Failed to load dashboard data", firstError);
-      setError(m.admin_error_load_data());
+      setGlobalError(m.admin_error_load_data());
     } else {
       // All queries succeeded or are still loading — clear any previous error.
-      setError("");
+      setGlobalError("");
     }
   }, [
     registrationsQuery.error,
@@ -652,7 +653,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
       } catch (err) {
         devError("Failed to update registration status", err);
-        setError(err instanceof Error ? err.message : m.admin_error_update_registration());
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_update_registration());
         throw err;
       }
     },
@@ -685,7 +686,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
       } catch (err) {
         devError("Failed to update payment status", err);
-        setError(err instanceof Error ? err.message : m.admin_error_update_payment());
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_update_payment());
         throw err;
       }
     },
@@ -736,7 +737,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         );
       } catch (err) {
         devError("Failed to assign table", err);
-        setError(err instanceof Error ? err.message : m.admin_error_assign_table());
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_assign_table());
       }
     },
     [queryClient, registrationsQueryKey, tablesQueryKey, updateRegistrationMutation],
@@ -1134,7 +1135,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         devError("Failed to update bottle delivery status", err);
-        setError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1156,7 +1157,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         devError("Failed to check in guest", err);
-        setError(err instanceof Error ? err.message : m.admin_error_check_in());
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_check_in());
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1178,7 +1179,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         devError("Failed to issue strap", err);
-        setError(err instanceof Error ? err.message : m.admin_error_issue_strap());
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_issue_strap());
       }
     },
     [queryClient, registrationsQueryKey, updateRegistrationMutation],
@@ -1291,9 +1292,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
               </button>
             )}
-            {error && (
-              <Alert variant="danger" className="mb-4" dismissible onClose={() => setError("")}>
-                {error}
+            {globalError && (
+              <Alert variant="danger" className="mb-4" dismissible onClose={() => setGlobalError("")}>
+                {globalError}
               </Alert>
             )}
 
@@ -1322,6 +1323,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     authHeaders={authHeaders}
                     activeEdition={activeEdition}
                     applyActiveEditionFilterRequest={applyActiveEditionFilterRequest}
+                    sectionError={registrationError}
+                    onClearSectionError={() => setRegistrationError("")}
                   />
                 )}
                 {activeKey === "exhibitors" && (
@@ -1456,7 +1459,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               setDetailRegistration(null);
             } catch (err) {
               devError("Failed to merge people", err);
-              setError(err instanceof Error ? err.message : m.admin_people_merge_error());
+              setRegistrationError(err instanceof Error ? err.message : m.admin_people_merge_error());
             }
           }}
         />
