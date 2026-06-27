@@ -91,8 +91,13 @@ Here is my detailed review of the current codebase.
 
 - [ ] **Step 1: Add a shared admin query-invalidation helper**
   - **Task**: Introduce `invalidateAdmin(queryClient, keys)` that accepts an array of query keys and
-    issues the `void queryClient.invalidateQueries(...)` calls in one place. Replace the 58 inline
+    issues the `queryClient.invalidateQueries(...)` calls in one place. Replace the 58 inline
     invalidation calls in `AdminDashboard.tsx` with it. No behavior change — same keys invalidated.
+    The helper must **return a combined `Promise<void>`** (e.g. `Promise.all(keys.map(...)).then(() => {})`)
+    rather than discarding the per-key promises with `void`, so mutations can `await` it in
+    `onSuccess`/`onSettled` and keep loading/pending states alive until the refetch completes
+    (prevents premature spinner dismissal). Existing `void`-style call sites can keep their `void`
+    prefix unchanged.
   - **Files**:
     - `frontend/src/utils/queryInvalidation.ts`: new helper + unit-testable signature.
     - `frontend/src/components/admin/AdminDashboard.tsx`: swap inline calls for the helper.
@@ -153,6 +158,10 @@ Here is my detailed review of the current codebase.
   - **Task**: Add a generic `get_or_404(db, Model, id, detail=...)` to `app/utils.py` (or a new
     `app/crud.py`) and replace the per-router `_get_or_404` copies in `areas.py` and `rooms.py`
     first (the clearest duplicates), preserving each router's existing 404 message text.
+    Implement it with **Python typing generics** — a `TypeVar("T", bound=Base)` and a
+    `model: type[T]` parameter returning `T` — so `ty` infers the concrete model type (`Room`,
+    `Area`, …) at each call site instead of falling back to `Any`/`Base` and forcing type
+    assertions or suppressions.
   - **Files**:
     - `backend/app/utils.py`: add `get_or_404`.
     - `backend/app/routers/areas.py`, `backend/app/routers/rooms.py`: adopt it.
@@ -184,10 +193,16 @@ Here is my detailed review of the current codebase.
   - **Task**: Without changing the registered tool surface, split the 1,106-line module so seating,
     orders, delivery, and check-in tool bodies live in separate domain modules imported by
     `create_mcp_server`. Keep `ChampagneFestivalMcpBackend` as the thin assembling class.
-  - **Files** (≤20): `backend/app/mcp/__init__.py`, `backend/app/mcp/seating.py`,
-    `backend/app/mcp/orders.py`, `backend/app/mcp/delivery.py`, `backend/app/mcp/check_in.py`,
-    `backend/app/mcp_server.py` (now an assembler), `backend/tests/test_mcp_server.py` (unchanged
-    assertions).
+    **First extract the shared dependencies** that the domain tools rely on — role/permission
+    helpers (`_resolve_role`, `_require_volunteer`), the active-edition accessor
+    (`_get_active_edition_obj`), serialization helpers (`_person_dict`, `_order_item_dict`, …),
+    and `session_factory` — into a shared `app/mcp/utils.py` (or a small base class), then have the
+    domain modules import/receive them. This avoids both duplication and circular imports between
+    `mcp_server.py` and the domain modules.
+  - **Files** (≤20): `backend/app/mcp/__init__.py`, `backend/app/mcp/utils.py` (shared helpers +
+    `session_factory` access), `backend/app/mcp/seating.py`, `backend/app/mcp/orders.py`,
+    `backend/app/mcp/delivery.py`, `backend/app/mcp/check_in.py`, `backend/app/mcp_server.py`
+    (now an assembler), `backend/tests/test_mcp_server.py` (unchanged assertions).
   - **Step Dependencies**: None.
   - **Success Criteria**: `uv run pytest tests/test_mcp_server.py` passes unchanged; tool names and
     schemas identical.
@@ -197,7 +212,10 @@ Here is my detailed review of the current codebase.
 - [ ] **Step 10: Give the admin dashboard per-domain error surfacing**
   - **Task**: Replace the single global `error` string with a small typed error map (or per-section
     error state) so a failed people-mutation shows near People and a failed venue-mutation near
-    Venue. Keep using Paraglide strings; no new hardcoded text.
+    Venue. **Retain a fallback global error banner/channel** for systemic, non-domain-specific
+    failures — initial data-load errors in the dashboard `useEffect`, and authentication/
+    unauthorized errors — so those are not lost or mis-mapped to an unrelated section. Keep using
+    Paraglide strings; no new hardcoded text.
   - **Files**:
     - `frontend/src/components/admin/AdminDashboard.tsx`: section-scoped error state.
     - `frontend/src/components/admin/*Management.tsx`: accept/display the scoped error prop
