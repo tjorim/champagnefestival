@@ -39,7 +39,12 @@ async def get_or_404(
     *,
     options: Sequence[ORMOption] | None = None,
 ) -> T:
-    obj = await db.get(model, object_id, options=options)
+    # populate_existing ensures loader options (e.g. selectinload) are applied even when the
+    # instance is already present in the identity map — for example an object that was just added
+    # and committed, leaving its relationships expired. Without this, Session.get returns the
+    # cached instance without eager-loading, and accessing a relationship later triggers a lazy
+    # load outside the async greenlet (MissingGreenlet).
+    obj = await db.get(model, object_id, options=options, populate_existing=options is not None)
     if obj is None:
         raise HTTPException(status_code=404, detail=detail)
     return obj
