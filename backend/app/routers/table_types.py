@@ -8,7 +8,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Table, TableType
 from app.schemas import TableTypeCreate, TableTypeOut, TableTypeUpdate
-from app.utils import make_id, table_type_to_dict
+from app.utils import get_or_404, make_id, table_type_to_dict
 
 router = APIRouter(
     prefix="/api/table-types",
@@ -53,7 +53,7 @@ async def list_table_types(
 
 @router.get("/{type_id}", response_model=TableTypeOut)
 async def get_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return table_type_to_dict(await _get_or_404(db, type_id))
+    return table_type_to_dict(await get_or_404(db, TableType, type_id, "Table type not found."))
 
 
 @router.put("/{type_id}", response_model=TableTypeOut)
@@ -62,7 +62,7 @@ async def update_table_type(
     body: TableTypeUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    tt = await _get_or_404(db, type_id)
+    tt = await get_or_404(db, TableType, type_id, "Table type not found.")
     if body.name is not None:
         tt.name = body.name
     if body.shape is not None:
@@ -90,7 +90,7 @@ async def update_table_type(
 
 @router.delete("/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    tt = await _get_or_404(db, type_id)
+    tt = await get_or_404(db, TableType, type_id, "Table type not found.")
     in_use = await db.execute(select(Table).where(Table.table_type_id == type_id).limit(1))
     if in_use.scalars().first() is not None:
         raise HTTPException(
@@ -99,11 +99,3 @@ async def delete_table_type(type_id: str, db: AsyncSession = Depends(get_db)) ->
         )
     await db.delete(tt)
     await db.commit()
-
-
-async def _get_or_404(db: AsyncSession, type_id: str) -> TableType:
-    result = await db.execute(select(TableType).where(TableType.id == type_id))
-    tt = result.scalar_one_or_none()
-    if tt is None:
-        raise HTTPException(status_code=404, detail="Table type not found.")
-    return tt

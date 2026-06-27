@@ -8,7 +8,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Area, Exhibitor, Layout
 from app.schemas import AreaCreate, AreaOut, AreaUpdate
-from app.utils import area_to_dict, make_id
+from app.utils import area_to_dict, get_or_404, make_id
 
 router = APIRouter(
     prefix="/api/areas",
@@ -63,7 +63,7 @@ async def list_areas(
 
 @router.get("/{area_id}", response_model=AreaOut)
 async def get_area(area_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return area_to_dict(await _get_or_404(db, area_id))
+    return area_to_dict(await get_or_404(db, Area, area_id, "Area not found."))
 
 
 @router.put("/{area_id}", response_model=AreaOut)
@@ -72,7 +72,7 @@ async def update_area(
     body: AreaUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    a = await _get_or_404(db, area_id)
+    a = await get_or_404(db, Area, area_id, "Area not found.")
 
     if body.label is not None:
         a.label = body.label
@@ -105,14 +105,6 @@ async def update_area(
 
 @router.delete("/{area_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_area(area_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    a = await _get_or_404(db, area_id)
+    a = await get_or_404(db, Area, area_id, "Area not found.")
     await db.delete(a)
     await db.commit()
-
-
-async def _get_or_404(db: AsyncSession, area_id: str) -> Area:
-    result = await db.execute(select(Area).where(Area.id == area_id))
-    a = result.scalar_one_or_none()
-    if a is None:
-        raise HTTPException(status_code=404, detail="Area not found.")
-    return a

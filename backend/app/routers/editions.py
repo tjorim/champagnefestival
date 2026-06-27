@@ -14,7 +14,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Edition, Exhibitor, Venue
 from app.schemas import EditionCreate, EditionOut, EditionType, EditionUpdate
-from app.utils import edition_to_dict, event_to_summary_dict, venue_to_dict
+from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ async def list_editions(
 
 @router.get("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    edition = await _get_or_404(db, edition_id)
+    edition = await _get_edition_or_404(db, edition_id)
     return await _edition_payload(db, edition)
 
 
@@ -102,13 +102,13 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
     await _validate_exhibitor_ids(db, edition.exhibitors)
     db.add(edition)
     await db.commit()
-    edition = await _get_or_404(db, edition.id)
+    edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition)
 
 
 @router.put("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
 async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession = Depends(get_db)) -> dict:
-    edition = await _get_or_404(db, edition_id)
+    edition = await _get_edition_or_404(db, edition_id)
 
     for field in [
         "year",
@@ -137,7 +137,7 @@ async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession 
     _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
 
     await db.commit()
-    edition = await _get_or_404(db, edition.id)
+    edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition)
 
 
@@ -147,7 +147,7 @@ async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession 
     dependencies=[Depends(require_admin)],
 )
 async def delete_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    edition = await _get_or_404(db, edition_id)
+    edition = await _get_edition_or_404(db, edition_id)
     await db.delete(edition)
     await db.commit()
 
@@ -165,12 +165,14 @@ async def _load_editions(
     return list((await db.execute(stmt)).scalars().all())
 
 
-async def _get_or_404(db: AsyncSession, edition_id: str) -> Edition:
-    result = await db.execute(select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id))
-    edition = result.scalar_one_or_none()
-    if edition is None:
-        raise HTTPException(status_code=404, detail="Edition not found.")
-    return edition
+async def _get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
+    return await get_or_404(
+        db,
+        Edition,
+        edition_id,
+        "Edition not found.",
+        options=[selectinload(Edition.events)],
+    )
 
 
 async def _load_venue(db: AsyncSession, venue_id: str) -> dict:

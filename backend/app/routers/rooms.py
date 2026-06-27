@@ -8,7 +8,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Room, Venue
 from app.schemas import RoomCreate, RoomOut, RoomUpdate
-from app.utils import make_id, room_to_dict
+from app.utils import get_or_404, make_id, room_to_dict
 
 router = APIRouter(
     prefix="/api/rooms",
@@ -64,7 +64,7 @@ async def list_rooms(db: AsyncSession = Depends(get_db)) -> list[dict]:
 
 @router.get("/{room_id}", response_model=RoomOut)
 async def get_room(room_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return room_to_dict(await _get_or_404(db, room_id))
+    return room_to_dict(await get_or_404(db, Room, room_id, "Room not found."))
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ async def update_room(
     body: RoomUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    r = await _get_or_404(db, room_id)
+    r = await get_or_404(db, Room, room_id, "Room not found.")
 
     if body.name is not None:
         r.name = body.name
@@ -103,19 +103,7 @@ async def update_room(
 
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_room(room_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    r = await _get_or_404(db, room_id)
+    r = await get_or_404(db, Room, room_id, "Room not found.")
     await db.delete(r)
     await db.commit()
 
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-
-async def _get_or_404(db: AsyncSession, room_id: str) -> Room:
-    result = await db.execute(select(Room).where(Room.id == room_id))
-    r = result.scalar_one_or_none()
-    if r is None:
-        raise HTTPException(status_code=404, detail="Room not found.")
-    return r

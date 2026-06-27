@@ -36,6 +36,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
 import { devError } from "@/utils/devLog";
 import {
@@ -180,10 +181,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_people_merge_error(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
-      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: exhibitorsQueryKey });
+      void invalidateAdmin(queryClient, [
+        peopleQueryKey,
+        membersQueryKey,
+        registrationsQueryKey,
+        exhibitorsQueryKey,
+      ]);
     },
     retry: false,
   });
@@ -208,8 +211,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_members_error_create(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void invalidateAdmin(queryClient, [membersQueryKey, peopleQueryKey]);
     },
     retry: false,
   });
@@ -234,9 +236,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_members_error_update(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
-      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
+      void invalidateAdmin(queryClient, [membersQueryKey, peopleQueryKey, registrationsQueryKey]);
     },
     retry: false,
   });
@@ -249,8 +249,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_members_error_delete(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void invalidateAdmin(queryClient, [membersQueryKey, peopleQueryKey]);
     },
     retry: false,
   });
@@ -276,8 +275,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_people_error_create(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
     },
     retry: false,
   });
@@ -303,9 +301,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_people_error_update(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
-      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
+      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey, registrationsQueryKey]);
     },
     retry: false,
   });
@@ -318,8 +314,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_person(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
     },
     retry: false,
   });
@@ -346,7 +341,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_volunteers_error_create(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
+      void invalidateAdmin(queryClient, [peopleQueryKey]);
     },
     retry: false,
   });
@@ -373,8 +368,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_volunteers_error_update(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
     },
     retry: false,
   });
@@ -387,8 +381,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_volunteers_error_delete(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: peopleQueryKey });
-      void queryClient.invalidateQueries({ queryKey: membersQueryKey });
+      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
     },
     retry: false,
   });
@@ -409,8 +402,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fallbackMessage,
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: registrationsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void invalidateAdmin(queryClient, [registrationsQueryKey, tablesQueryKey]);
     },
     retry: false,
   });
@@ -451,7 +443,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_add_table(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void invalidateAdmin(queryClient, [tablesQueryKey]);
     },
     retry: false,
   });
@@ -483,7 +475,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void invalidateAdmin(queryClient, [tablesQueryKey]);
     },
     retry: false,
   });
@@ -511,7 +503,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void invalidateAdmin(queryClient, [tablesQueryKey]);
     },
     retry: false,
   });
@@ -540,7 +532,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       devError("Failed to persist table position");
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void invalidateAdmin(queryClient, [tablesQueryKey]);
     },
     retry: false,
   });
@@ -569,7 +561,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       devError("Failed to persist table rotation");
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void invalidateAdmin(queryClient, [tablesQueryKey]);
     },
     retry: false,
   });
@@ -582,7 +574,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_table(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      void invalidateAdmin(queryClient, [tablesQueryKey]);
     },
     retry: false,
   });
@@ -611,7 +603,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_add_venue(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: venuesQueryKey });
+      void invalidateAdmin(queryClient, [venuesQueryKey]);
     },
     retry: false,
   });
@@ -624,7 +616,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         active ? m.admin_error_restore_venue() : m.admin_error_archive_venue(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: venuesQueryKey });
+      void invalidateAdmin(queryClient, [venuesQueryKey]);
     },
     retry: false,
   });
@@ -637,11 +629,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_venue(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: venuesQueryKey });
-      void queryClient.invalidateQueries({ queryKey: roomsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: layoutsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [
+        venuesQueryKey,
+        roomsQueryKey,
+        layoutsQueryKey,
+        tablesQueryKey,
+        areasQueryKey,
+      ]);
     },
     retry: false,
   });
@@ -676,7 +670,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_add_room(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: roomsQueryKey });
+      void invalidateAdmin(queryClient, [roomsQueryKey]);
     },
     retry: false,
   });
@@ -697,7 +691,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         fallbackMessage,
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: roomsQueryKey });
+      void invalidateAdmin(queryClient, [roomsQueryKey]);
     },
     retry: false,
   });
@@ -719,7 +713,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_add_layout(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: layoutsQueryKey });
+      void invalidateAdmin(queryClient, [layoutsQueryKey]);
     },
     retry: false,
   });
@@ -732,9 +726,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_layout(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: layoutsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: tablesQueryKey });
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [layoutsQueryKey, tablesQueryKey, areasQueryKey]);
     },
     retry: false,
   });
@@ -781,7 +773,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_add_area(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [areasQueryKey]);
     },
     retry: false,
   });
@@ -810,7 +802,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       devError("Failed to persist area label");
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [areasQueryKey]);
     },
     retry: false,
   });
@@ -843,7 +835,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       devError("Failed to persist area resize");
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [areasQueryKey]);
     },
     retry: false,
   });
@@ -864,7 +856,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       );
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [areasQueryKey]);
     },
     retry: false,
   });
@@ -893,7 +885,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       devError("Failed to persist area position");
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [areasQueryKey]);
     },
     retry: false,
   });
@@ -922,7 +914,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       devError("Failed to persist area rotation");
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [areasQueryKey]);
     },
     retry: false,
   });
@@ -935,7 +927,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_delete_area(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: areasQueryKey });
+      void invalidateAdmin(queryClient, [areasQueryKey]);
     },
     retry: false,
   });
@@ -959,7 +951,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_add_table_type(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tableTypesQueryKey });
+      void invalidateAdmin(queryClient, [tableTypesQueryKey]);
     },
     retry: false,
   });
@@ -984,7 +976,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         m.admin_error_update_table_type(),
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: tableTypesQueryKey });
+      void invalidateAdmin(queryClient, [tableTypesQueryKey]);
     },
     retry: false,
   });
@@ -1669,11 +1661,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
           prev ? [...prev, createdLayout] : [createdLayout],
         );
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: layoutsQueryKey }),
-          queryClient.invalidateQueries({ queryKey: tablesQueryKey }),
-          queryClient.invalidateQueries({ queryKey: areasQueryKey }),
-        ]);
+        await invalidateAdmin(queryClient, [layoutsQueryKey, tablesQueryKey, areasQueryKey]);
         return;
       }
 
@@ -2103,10 +2091,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                         venues={venues}
                         onEditionMutated={() => {
                           void loadData();
-                          void queryClient.invalidateQueries({ queryKey: activeEditionQueryKey });
-                          void queryClient.invalidateQueries({
-                            queryKey: queryKeys.admin.activeEditionEvents,
-                          });
+                          void invalidateAdmin(queryClient, [
+                            activeEditionQueryKey,
+                            queryKeys.admin.activeEditionEvents,
+                          ]);
                         }}
                       />
                     </Card.Body>
