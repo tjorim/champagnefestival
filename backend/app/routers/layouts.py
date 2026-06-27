@@ -12,7 +12,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Area, Edition, Layout, Room, Table, TableType
 from app.schemas import LayoutCopyCreate, LayoutCreate, LayoutOut
-from app.utils import layout_to_dict, make_id
+from app.utils import get_or_404, layout_to_dict, make_id
 
 # Mirror the rendering constants from frontend/src/utils/layoutUtils.ts so that
 # the backend containment check matches the frontend's hit-testing exactly.
@@ -88,7 +88,7 @@ async def copy_layout(
     body: LayoutCopyCreate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    source = await _get_or_404(db, source_layout_id)
+    source = await get_or_404(db, Layout, source_layout_id, "Layout not found.")
     resolved_day_id, resolved_date = await _resolve_layout_day(db, body)
 
     existing_stmt = select(Layout).where(
@@ -212,7 +212,7 @@ async def list_layouts(
 
 @router.get("/{layout_id}", response_model=LayoutOut)
 async def get_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    payloads = await _layout_payloads(db, [await _get_or_404(db, layout_id)])
+    payloads = await _layout_payloads(db, [await get_or_404(db, Layout, layout_id, "Layout not found.")])
     return payloads[0]
 
 
@@ -223,7 +223,7 @@ async def get_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> dict
 
 @router.delete("/{layout_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    lay = await _get_or_404(db, layout_id)
+    lay = await get_or_404(db, Layout, layout_id, "Layout not found.")
     tables_in_use = await db.execute(select(Table).where(Table.layout_id == layout_id).limit(1))
     if tables_in_use.scalars().first() is not None:
         raise HTTPException(
@@ -237,14 +237,6 @@ async def delete_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> N
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
-
-
-async def _get_or_404(db: AsyncSession, layout_id: str) -> Layout:
-    result = await db.execute(select(Layout).where(Layout.id == layout_id))
-    lay = result.scalar_one_or_none()
-    if lay is None:
-        raise HTTPException(status_code=404, detail="Layout not found.")
-    return lay
 
 
 async def _layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[dict]:

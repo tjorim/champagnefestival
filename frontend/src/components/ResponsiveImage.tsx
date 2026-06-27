@@ -51,9 +51,8 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
           left: 0,
         }}
         onError={(e) => {
-          console.error(`Failed to load image: ${src}`);
-          // You might want to set a fallback image here
           e.currentTarget.src = "/images/logo.svg";
+          e.currentTarget.onerror = null;
         }}
       />
     </div>

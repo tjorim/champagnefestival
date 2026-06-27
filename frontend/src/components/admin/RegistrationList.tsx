@@ -56,6 +56,8 @@ interface RegistrationListProps {
   authHeaders: () => Record<string, string>;
   activeEdition: ActiveEdition;
   applyActiveEditionFilterRequest: number;
+  sectionError?: string;
+  onClearSectionError?: () => void;
 }
 
 function statusBadgeVariant(status: RegistrationStatus): string {
@@ -138,6 +140,8 @@ export default function RegistrationList({
   authHeaders,
   activeEdition,
   applyActiveEditionFilterRequest,
+  sectionError,
+  onClearSectionError,
 }: RegistrationListProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [allocationFilter, setAllocationFilter] = useState("");
@@ -903,6 +907,16 @@ export default function RegistrationList({
         </Card.Header>
 
         <Card.Body className="p-0">
+          {sectionError && (
+            <Alert
+              variant="danger"
+              dismissible
+              className="m-3 mb-0"
+              onClose={onClearSectionError}
+            >
+              {sectionError}
+            </Alert>
+          )}
           {registrationSearchQuery.isLoading ? (
             <p className="text-secondary text-center py-4 mb-0">
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />

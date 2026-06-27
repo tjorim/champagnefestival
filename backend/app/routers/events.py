@@ -13,7 +13,7 @@ from app.auth import require_admin, require_volunteer
 from app.database import get_db
 from app.models import Edition, Event
 from app.schemas import EventCreate, EventOut, EventUpdate
-from app.utils import event_to_summary_dict, make_id
+from app.utils import event_to_summary_dict, get_or_404, make_id
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -47,7 +47,7 @@ async def list_events(
 
 @router.get("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
 async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    event = await _get_or_404(db, event_id)
+    event = await _get_event_or_404(db, event_id)
     return event_to_summary_dict(event, include_edition=True)
 
 
@@ -81,13 +81,13 @@ async def create_event(body: EventCreate, db: AsyncSession = Depends(get_db)) ->
     )
     db.add(event)
     await db.commit()
-    event = await _get_or_404(db, event.id)
+    event = await _get_event_or_404(db, event.id)
     return event_to_summary_dict(event, include_edition=True)
 
 
 @router.put("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
 async def update_event(event_id: str, body: EventUpdate, db: AsyncSession = Depends(get_db)) -> dict:
-    event = await _get_or_404(db, event_id)
+    event = await _get_event_or_404(db, event_id)
     edition = event.edition
 
     if "edition_id" in body.model_fields_set and body.edition_id is not None:
@@ -126,23 +126,25 @@ async def update_event(event_id: str, body: EventUpdate, db: AsyncSession = Depe
             setattr(event, field, getattr(body, field))
 
     await db.commit()
-    event = await _get_or_404(db, event.id)
+    event = await _get_event_or_404(db, event.id)
     return event_to_summary_dict(event, include_edition=True)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 async def delete_event(event_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    event = await _get_or_404(db, event_id)
+    event = await _get_event_or_404(db, event_id)
     await db.delete(event)
     await db.commit()
 
 
-async def _get_or_404(db: AsyncSession, event_id: str) -> Event:
-    result = await db.execute(select(Event).options(selectinload(Event.edition)).where(Event.id == event_id))
-    event = result.scalar_one_or_none()
-    if event is None:
-        raise HTTPException(status_code=404, detail="Event not found.")
-    return event
+async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
+    return await get_or_404(
+        db,
+        Event,
+        event_id,
+        "Event not found.",
+        options=[selectinload(Event.edition)],
+    )
 
 
 async def _ensure_edition_exists(db: AsyncSession, edition_id: str) -> Edition:

@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import secrets
 import time
+from collections.abc import Sequence
 from datetime import date
-from typing import Any
+from typing import Any, TypeVar
 
+from fastapi import HTTPException
 from sqlalchemy import Text, cast
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.interfaces import ORMOption
 
+from app.database import Base
 from app.models import (
     Area,
     Edition,
@@ -22,6 +27,27 @@ from app.models import (
     TableType,
     Venue,
 )
+
+T = TypeVar("T", bound=Base)
+
+
+async def get_or_404(
+    db: AsyncSession,
+    model: type[T],
+    object_id: Any,
+    detail: str,
+    *,
+    options: Sequence[ORMOption] | None = None,
+) -> T:
+    # populate_existing ensures loader options (e.g. selectinload) are applied even when the
+    # instance is already present in the identity map — for example an object that was just added
+    # and committed, leaving its relationships expired. Without this, Session.get returns the
+    # cached instance without eager-loading, and accessing a relationship later triggers a lazy
+    # load outside the async greenlet (MissingGreenlet).
+    obj = await db.get(model, object_id, options=options, populate_existing=options is not None)
+    if obj is None:
+        raise HTTPException(status_code=404, detail=detail)
+    return obj
 
 
 def roles_contains(role: str) -> Any:

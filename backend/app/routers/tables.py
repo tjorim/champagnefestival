@@ -13,7 +13,7 @@ from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableCreate, TableOut, TableUpdate
-from app.utils import make_id, table_to_dict
+from app.utils import get_or_404, make_id, table_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
 
 @router.get("/{table_id}", response_model=TableOut)
 async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    t = await _get_or_404(db, table_id)
+    t = await get_or_404(db, Table, table_id, "Table not found.")
     res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
     registration_ids = [row[0] for row in res_result.all()]
     return table_to_dict(t, registration_ids)
@@ -122,7 +122,7 @@ async def update_table(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    t = await _get_or_404(db, table_id)
+    t = await get_or_404(db, Table, table_id, "Table not found.")
 
     # All fields in TableUpdate are Optional[…], so an absent key and an
     # explicit null both arrive here as None and are simply skipped.  Only
@@ -182,7 +182,7 @@ async def delete_table(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
-    t = await _get_or_404(db, table_id)
+    t = await get_or_404(db, Table, table_id, "Table not found.")
     edition_id = await _get_layout_edition_id(db, t.layout_id)
     await write_audit_entry(
         db,
@@ -199,19 +199,6 @@ async def delete_table(
         await live_bus.publish(live_mapping.seating_changed(action="deleted", table_id=table_id, edition_id=edition_id))
     except Exception:
         logger.warning("live_bus.publish failed for deleted table %s", table_id, exc_info=True)
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-
-async def _get_or_404(db: AsyncSession, table_id: str) -> Table:
-    result = await db.execute(select(Table).where(Table.id == table_id))
-    t = result.scalar_one_or_none()
-    if t is None:
-        raise HTTPException(status_code=404, detail="Table not found.")
-    return t
 
 
 async def _get_layout_edition_id(db: AsyncSession, layout_id: str) -> str | None:

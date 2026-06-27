@@ -18,7 +18,7 @@ from app.services.operational_search import (
     person_search_order_by,
     person_search_predicate,
 )
-from app.utils import make_id, person_to_dict, registration_to_list_dict, roles_contains
+from app.utils import get_or_404, make_id, person_to_dict, registration_to_list_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/people",
@@ -186,7 +186,7 @@ async def list_people(
 
 @router.get("/{person_id}", response_model=PersonOut)
 async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    person = await _get_or_404(db, person_id)
+    person = await _get_person_or_404(db, person_id)
     return person_to_dict(person)
 
 
@@ -196,7 +196,7 @@ async def update_person(
     body: PersonUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    person = await _get_or_404(db, person_id)
+    person = await _get_person_or_404(db, person_id)
 
     for field in (
         "name",
@@ -255,7 +255,7 @@ async def list_person_registrations(
     person_id: str,
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    person = await _get_or_404(db, person_id)
+    person = await _get_person_or_404(db, person_id)
 
     result = await db.execute(
         select(Registration)
@@ -287,8 +287,8 @@ async def merge_people(
     if person_id == duplicate_id:
         raise HTTPException(status_code=400, detail="Cannot merge a person with themselves.")
 
-    canonical = await _get_or_404(db, person_id)
-    duplicate = await _get_or_404(db, duplicate_id)
+    canonical = await _get_person_or_404(db, person_id)
+    duplicate = await _get_person_or_404(db, duplicate_id)
 
     # Guard unique identity fields before making any changes.
     # Normalise values with the same routine used by create/update so that
@@ -354,14 +354,10 @@ async def merge_people(
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_person(person_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    person = await _get_or_404(db, person_id)
+    person = await _get_person_or_404(db, person_id)
     await db.delete(person)
     await db.commit()
 
 
-async def _get_or_404(db: AsyncSession, person_id: str) -> Person:
-    result = await db.execute(select(Person).where(Person.id == person_id))
-    person = result.scalar_one_or_none()
-    if person is None:
-        raise HTTPException(status_code=404, detail="Person not found.")
-    return person
+async def _get_person_or_404(db: AsyncSession, person_id: str) -> Person:
+    return await get_or_404(db, Person, person_id, "Person not found.")

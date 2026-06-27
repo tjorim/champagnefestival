@@ -12,7 +12,7 @@ from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Person
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
-from app.utils import make_id, person_to_dict, roles_contains
+from app.utils import get_or_404, make_id, person_to_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/members",
@@ -142,7 +142,7 @@ async def list_members(
 
 @router.get("/{person_id}", response_model=PersonOut)
 async def get_member(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    person = await _get_or_404(db, person_id)
+    person = await _get_member_or_404(db, person_id)
     return person_to_dict(person)
 
 
@@ -152,7 +152,7 @@ async def update_member(
     body: PersonUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    person = await _get_or_404(db, person_id)
+    person = await _get_member_or_404(db, person_id)
 
     for field in (
         "name",
@@ -203,14 +203,13 @@ async def update_member(
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_member(person_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    person = await _get_or_404(db, person_id)
+    person = await _get_member_or_404(db, person_id)
     await db.delete(person)
     await db.commit()
 
 
-async def _get_or_404(db: AsyncSession, person_id: str) -> Person:
-    result = await db.execute(select(Person).where(Person.id == person_id))
-    person = result.scalar_one_or_none()
-    if person is None or not _has_member_role(person):
+async def _get_member_or_404(db: AsyncSession, person_id: str) -> Person:
+    person = await get_or_404(db, Person, person_id, "Member not found.")
+    if not _has_member_role(person):
         raise HTTPException(status_code=404, detail="Member not found.")
     return person

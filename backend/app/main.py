@@ -3,10 +3,8 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
@@ -15,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.database import create_tables
 from app.mcp_server import build_keycloak_auth, create_mcp_server
+from app.middleware import add_cors_middleware
 from app.observability import request_metrics_middleware
 from app.routers import (
     areas,
@@ -98,36 +97,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-_cors_origins = settings.get_cors_origins_list()
-
-if not _cors_origins:
-    logger.warning("No CORS origins configured — all cross-origin requests will be blocked!")
-else:
-    logger.info(f"CORS middleware configured with origins: {_cors_origins}")
-
-_cors_kwargs: dict[str, Any] = {
-    "allow_origins": _cors_origins,
-    "allow_credentials": "*" not in _cors_origins,
-    "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Accept", "Authorization", "X-Request-ID"],
-    "expose_headers": ["X-Request-ID"],
-}
-if _mcp_app is not None:
-
-    class _MCPAwareCORSMiddleware:
-        def __init__(self, app, **kwargs) -> None:
-            self._app = app
-            self._cors = CORSMiddleware(app, **kwargs)
-
-        async def __call__(self, scope, receive, send) -> None:
-            if scope.get("type") == "http" and scope.get("path", "").startswith("/mcp"):
-                await self._app(scope, receive, send)
-            else:
-                await self._cors(scope, receive, send)
-
-    app.add_middleware(_MCPAwareCORSMiddleware, **_cors_kwargs)
-else:
-    app.add_middleware(CORSMiddleware, **_cors_kwargs)
+add_cors_middleware(app, settings, mcp_enabled=_mcp_app is not None)
 
 # Metrics middleware is registered last so it is outermost and captures every request,
 # including those short-circuited by CORS or SuperTokens.

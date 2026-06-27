@@ -48,4 +48,9 @@ describe("ResponsiveImage component", () => {
     );
     expect(screen.getByRole("img")).toHaveAttribute("sizes", "(max-width: 768px) 100vw, 50vw");
   });
+
+  it("forwards alt=\"\" for decorative images", () => {
+    const { container } = render(<ResponsiveImage src="/images/deco.jpg" alt="" />);
+    expect(container.querySelector("img")).toHaveAttribute("alt", "");
+  });
 });

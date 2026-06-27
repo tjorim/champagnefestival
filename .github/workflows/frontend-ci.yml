@@ -58,3 +58,36 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: Bundle size budget
+        run: |
+          # Generous ceilings — ~30% above the 2026-06-27 baseline.
+          # Raise only after a deliberate, reviewed size increase.
+          # Baselines (kB, uncompressed): total JS ≈ 1 654, index ≈ 785, AdminDashboard ≈ 517
+          TOTAL_MAX_KB=2200
+          INDEX_MAX_KB=1050
+          ADMIN_MAX_KB=700
+
+          total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
+          index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
+          admin_kb=$(find dist/assets -name 'AdminDashboard-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
+
+          echo "Total JS:       ${total_kb} kB  (budget: ${TOTAL_MAX_KB} kB)"
+          echo "index chunk:    ${index_kb} kB  (budget: ${INDEX_MAX_KB} kB)"
+          echo "AdminDashboard: ${admin_kb} kB  (budget: ${ADMIN_MAX_KB} kB)"
+
+          failed=0
+          if [ "$total_kb" -gt "$TOTAL_MAX_KB" ]; then
+            echo "FAIL: total JS ${total_kb} kB exceeds budget ${TOTAL_MAX_KB} kB"
+            failed=1
+          fi
+          if [ "$index_kb" -gt "$INDEX_MAX_KB" ]; then
+            echo "FAIL: index chunk ${index_kb} kB exceeds budget ${INDEX_MAX_KB} kB"
+            failed=1
+          fi
+          if [ "$admin_kb" -gt "$ADMIN_MAX_KB" ]; then
+            echo "FAIL: AdminDashboard chunk ${admin_kb} kB exceeds budget ${ADMIN_MAX_KB} kB"
+            failed=1
+          fi
+          [ "$failed" -eq 0 ] && echo "All chunks within budget."
+          exit $failed

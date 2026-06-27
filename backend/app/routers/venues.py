@@ -8,7 +8,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Edition, Room, Venue
 from app.schemas import VenueCreate, VenueOut, VenueUpdate
-from app.utils import make_id, venue_to_dict
+from app.utils import get_or_404, make_id, venue_to_dict
 
 router = APIRouter(
     prefix="/api/venues",
@@ -54,7 +54,7 @@ async def list_venues(
 
 @router.get("/{venue_id}", response_model=VenueOut, dependencies=[Depends(require_admin)])
 async def get_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return venue_to_dict(await _get_or_404(db, venue_id))
+    return venue_to_dict(await get_or_404(db, Venue, venue_id, "Venue not found."))
 
 
 @router.put("/{venue_id}", response_model=VenueOut)
@@ -64,7 +64,7 @@ async def update_venue(
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    v = await _get_or_404(db, venue_id)
+    v = await get_or_404(db, Venue, venue_id, "Venue not found.")
     if body.name is not None:
         v.name = body.name
     if body.address is not None:
@@ -92,7 +92,7 @@ async def delete_venue(
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    v = await _get_or_404(db, venue_id)
+    v = await get_or_404(db, Venue, venue_id, "Venue not found.")
     in_use = await db.execute(select(Edition).where(Edition.venue_id == venue_id).limit(1))
     if in_use.scalars().first() is not None:
         raise HTTPException(
@@ -107,11 +107,3 @@ async def delete_venue(
         )
     await db.delete(v)
     await db.commit()
-
-
-async def _get_or_404(db: AsyncSession, venue_id: str) -> Venue:
-    result = await db.execute(select(Venue).where(Venue.id == venue_id))
-    v = result.scalar_one_or_none()
-    if v is None:
-        raise HTTPException(status_code=404, detail="Venue not found.")
-    return v

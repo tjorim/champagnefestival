@@ -9,7 +9,7 @@ from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Edition, Exhibitor, Person
 from app.schemas import ExhibitorCreate, ExhibitorOut, ExhibitorUpdate
-from app.utils import exhibitor_to_dict
+from app.utils import exhibitor_to_dict, get_or_404
 
 router = APIRouter(prefix="/api/exhibitors", tags=["exhibitors"])
 
@@ -73,7 +73,7 @@ async def create_exhibitor(body: ExhibitorCreate, db: AsyncSession = Depends(get
 
 @router.put("/{exhibitor_id}", response_model=ExhibitorOut, dependencies=[Depends(require_admin)])
 async def update_exhibitor(exhibitor_id: int, body: ExhibitorUpdate, db: AsyncSession = Depends(get_db)) -> dict:
-    e = await _get_or_404(db, exhibitor_id)
+    e = await get_or_404(db, Exhibitor, exhibitor_id, "Exhibitor not found.")
     if body.name is not None:
         e.name = body.name
     if body.image is not None:
@@ -102,18 +102,10 @@ async def update_exhibitor(exhibitor_id: int, body: ExhibitorUpdate, db: AsyncSe
     dependencies=[Depends(require_admin)],
 )
 async def delete_exhibitor(exhibitor_id: int, db: AsyncSession = Depends(get_db)) -> None:
-    e = await _get_or_404(db, exhibitor_id)
+    e = await get_or_404(db, Exhibitor, exhibitor_id, "Exhibitor not found.")
     editions_result = await db.execute(select(Edition))
     for edition in editions_result.scalars().all():
         if exhibitor_id in edition.exhibitors:
             edition.exhibitors = [eid for eid in edition.exhibitors if eid != exhibitor_id]
     await db.delete(e)
     await db.commit()
-
-
-async def _get_or_404(db: AsyncSession, exhibitor_id: int) -> Exhibitor:
-    result = await db.execute(select(Exhibitor).where(Exhibitor.id == exhibitor_id))
-    e = result.scalar_one_or_none()
-    if e is None:
-        raise HTTPException(status_code=404, detail="Exhibitor not found.")
-    return e

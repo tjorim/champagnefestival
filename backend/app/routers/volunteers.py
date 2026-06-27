@@ -21,7 +21,7 @@ from app.schemas import (
     VolunteerOut,
     VolunteerUpdate,
 )
-from app.utils import make_id, person_to_dict, roles_contains
+from app.utils import get_or_404, make_id, person_to_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/volunteers",
@@ -175,7 +175,7 @@ async def list_volunteers(
 
 @router.get("/{volunteer_id}", response_model=VolunteerOut)
 async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    volunteer = await _get_or_404(db, volunteer_id)
+    volunteer = await _get_volunteer_or_404(db, volunteer_id)
     periods_map = await _load_periods_map(db, [volunteer.id])
     return _to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
 
@@ -186,7 +186,7 @@ async def update_volunteer(
     body: VolunteerUpdate,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    volunteer = await _get_or_404(db, volunteer_id)
+    volunteer = await _get_volunteer_or_404(db, volunteer_id)
 
     if "national_register_number" in body.model_fields_set and body.national_register_number is not None:
         await _ensure_unique_fields(
@@ -230,16 +230,15 @@ async def delete_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)
     membership data, and audit history are preserved.  Only the 'volunteer'
     role and associated help periods are removed.
     """
-    volunteer = await _get_or_404(db, volunteer_id)
+    volunteer = await _get_volunteer_or_404(db, volunteer_id)
     await db.execute(delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id))
     _remove_volunteer_role(volunteer)
     await db.commit()
 
 
-async def _get_or_404(db: AsyncSession, volunteer_id: str) -> Person:
-    result = await db.execute(select(Person).where(Person.id == volunteer_id))
-    volunteer = result.scalar_one_or_none()
-    if volunteer is None or "volunteer" not in volunteer.roles:
+async def _get_volunteer_or_404(db: AsyncSession, volunteer_id: str) -> Person:
+    volunteer = await get_or_404(db, Person, volunteer_id, "Volunteer not found.")
+    if "volunteer" not in volunteer.roles:
         raise HTTPException(status_code=404, detail="Volunteer not found.")
     return volunteer
 

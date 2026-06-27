@@ -16,33 +16,21 @@ Auth tiers (sourced from bearer JWT ``realm_access.roles``):
 from __future__ import annotations
 
 import logging
-from datetime import UTC, date, datetime
 from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.config import settings
-from app.models import Edition, Event, Layout, Person, Registration, Table, Venue
-from app.services.operational_search import (
-    DEFAULT_RESULT_LIMIT,
-    best_person_match,
-    person_search_order_by,
-    person_search_predicate,
-    rank_table_reference,
-)
+from app.mcp import check_in as mcp_check_in
+from app.mcp import delivery as mcp_delivery
+from app.mcp import orders as mcp_orders
+from app.mcp import public as mcp_public
+from app.mcp import seating as mcp_seating
+from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Role constants
-# ---------------------------------------------------------------------------
-
-ROLE_ADMIN = "admin"
-ROLE_VOLUNTEER = "volunteer"
-ROLE_PUBLIC = "public"
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +39,7 @@ ROLE_PUBLIC = "public"
 
 
 class ChampagneFestivalMcpBackend:
-    """Orchestrates DB queries and shapes payloads for MCP tools.
+    """Thin assembler: resolves auth and delegates to domain modules.
 
     Parameters
     ----------
@@ -96,144 +84,6 @@ class ChampagneFestivalMcpBackend:
         return role
 
     # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    async def _get_active_edition_obj(self, db: Any) -> Edition | None:
-        """Return the current or next upcoming active edition, or ``None``."""
-        from sqlalchemy.orm import selectinload
-
-        result = await db.execute(select(Edition).options(selectinload(Edition.events)).where(Edition.active.is_(True)))
-        editions: list[Edition] = list(result.scalars().all())
-        if not editions:
-            return None
-        today = datetime.now(UTC).date()
-
-        def _end_date(edition: Edition):
-            return max((ev.date for ev in edition.events), default=None)
-
-        upcoming = [
-            e
-            for e in editions
-            if _end_date(e) is not None and _end_date(e) >= today  # type: ignore[operator]
-        ]
-        if not upcoming:
-            return None
-        # Return soonest upcoming edition
-        return min(upcoming, key=lambda e: _end_date(e) or today)
-
-    @staticmethod
-    def _edition_dict(edition: Edition) -> dict:
-        events = sorted(edition.events, key=lambda ev: (ev.date, ev.start_time))
-        return {
-            "id": edition.id,
-            "year": edition.year,
-            "month": edition.month,
-            "edition_type": edition.edition_type,
-            "active": edition.active,
-            "event_count": len(events),
-            "dates": sorted({str(ev.date) for ev in events}),
-            "venue_id": edition.venue_id,
-        }
-
-    @staticmethod
-    def _edition_discovery_dict(edition: Edition, dates: list[date] | None = None) -> dict:
-        if dates is None:
-            dates = sorted({event.date for event in edition.events})
-        return {
-            "id": edition.id,
-            "year": edition.year,
-            "type": edition.edition_type,
-            "date_range": {
-                "start": str(dates[0]) if dates else None,
-                "end": str(dates[-1]) if dates else None,
-            },
-            "is_active": edition.active,
-        }
-
-    @staticmethod
-    def _event_dict(event: Event) -> dict:
-        return {
-            "id": event.id,
-            "edition_id": event.edition_id,
-            "title": event.title,
-            "description": event.description,
-            "date": str(event.date),
-            "start_time": event.start_time,
-            "end_time": event.end_time,
-            "category": event.category,
-            "registration_required": event.registration_required,
-            "max_capacity": event.max_capacity,
-            "active": event.active,
-        }
-
-    @staticmethod
-    def _person_dict(person: Person, *, role: str) -> dict:
-        """Return person fields allowed for ``role``."""
-        base: dict = {
-            "id": person.id,
-            "name": person.name,
-        }
-        if role in (ROLE_VOLUNTEER, ROLE_ADMIN):
-            base["email"] = person.email
-            base["phone"] = person.phone
-        if role == ROLE_ADMIN:
-            base["address"] = person.address
-            base["club_name"] = person.club_name
-            base["roles"] = person.roles
-            base["notes"] = person.notes
-        return base
-
-    @staticmethod
-    def _order_item_dict(item: Any) -> dict:
-        if not isinstance(item, dict):
-            item = {}
-        try:
-            quantity = int(item.get("quantity", 0))
-        except (TypeError, ValueError):
-            quantity = 0
-        quantity = max(quantity, 0)
-
-        delivered_flag = bool(item.get("delivered", False))
-        delivered_quantity_raw = item.get("delivered_quantity")
-        if delivered_quantity_raw is None:
-            delivered_quantity = quantity if delivered_flag else 0
-        else:
-            try:
-                delivered_quantity = int(delivered_quantity_raw)
-            except (TypeError, ValueError):
-                delivered_quantity = 0
-        delivered_quantity = max(0, min(delivered_quantity, quantity))
-        remaining_quantity = quantity - delivered_quantity
-
-        return {
-            "product_id": item.get("product_id", ""),
-            "name": item.get("name", ""),
-            "category": item.get("category", ""),
-            "quantity": quantity,
-            "price": item.get("price", 0.0),
-            "delivered_quantity": delivered_quantity,
-            "remaining_quantity": remaining_quantity,
-            "delivered": remaining_quantity == 0,
-        }
-
-    @staticmethod
-    def _registration_base_dict(reg: Registration, person: Person, *, role: str) -> dict:
-        return {
-            "id": reg.id,
-            "event_id": reg.event_id,
-            "person": ChampagneFestivalMcpBackend._person_dict(person, role=role),
-            "guest_count": reg.guest_count,
-            "table_id": reg.table_id,
-            "status": reg.status,
-            "payment_status": reg.payment_status,
-            "checked_in": reg.checked_in,
-            "checked_in_at": reg.checked_in_at.isoformat() if reg.checked_in_at else None,
-            "strap_issued": reg.strap_issued,
-            "accessibility_note": reg.accessibility_note,
-        }
-
-    # ------------------------------------------------------------------
     # Tools — public (no auth)
     # ------------------------------------------------------------------
 
@@ -245,11 +95,7 @@ class ChampagneFestivalMcpBackend:
 
         Returns an empty dict when no active or upcoming edition is found.
         """
-        async with self.session_factory() as db:
-            edition = await self._get_active_edition_obj(db)
-            if edition is None:
-                return {"active_edition": None, "message": "No active or upcoming editions found."}
-            return {"active_edition": self._edition_dict(edition)}
+        return await mcp_public.get_active_edition(self.session_factory)
 
     async def list_editions(self) -> dict:
         """List past and upcoming festival editions for public discovery.
@@ -257,28 +103,7 @@ class ChampagneFestivalMcpBackend:
         Returns edition IDs, years, types, date ranges, and active status.
         No PII is included.
         """
-        from sqlalchemy.orm import selectinload
-
-        async with self.session_factory() as db:
-            result = await db.execute(select(Edition).options(selectinload(Edition.events)))
-            editions: list[Edition] = list(result.scalars().all())
-
-        editions_with_dates = [(edition, sorted({event.date for event in edition.events})) for edition in editions]
-
-        def _sort_key(item: tuple[Edition, list[date]]) -> tuple[date, date, int, str]:
-            edition, dates = item
-            return (
-                dates[0] if dates else date.max,
-                dates[-1] if dates else date.max,
-                edition.year,
-                edition.id,
-            )
-
-        editions_with_dates.sort(key=_sort_key)
-        return {
-            "editions": [self._edition_discovery_dict(edition, dates) for edition, dates in editions_with_dates],
-            "count": len(editions),
-        }
+        return await mcp_public.list_editions(self.session_factory)
 
     async def get_event_schedule(self, edition_id: str | None = None) -> dict:
         """Return the event schedule for an edition.
@@ -291,26 +116,7 @@ class ChampagneFestivalMcpBackend:
         Returns a list of events with date, times, title, and category.
         No PII is included.
         """
-        from sqlalchemy.orm import selectinload
-
-        async with self.session_factory() as db:
-            if edition_id:
-                result = await db.execute(
-                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
-                )
-                edition: Edition | None = result.scalar_one_or_none()
-                if edition is None:
-                    return {"events": [], "message": f"Edition '{edition_id}' not found."}
-            else:
-                edition = await self._get_active_edition_obj(db)
-                if edition is None:
-                    return {"events": [], "message": "No active edition found."}
-
-            events = sorted(edition.events, key=lambda ev: (ev.date, ev.start_time))
-            return {
-                "edition_id": edition.id,
-                "events": [self._event_dict(ev) for ev in events],
-            }
+        return await mcp_public.get_event_schedule(self.session_factory, edition_id)
 
     async def get_venue_plan_summary(self, edition_id: str | None = None) -> dict:
         """Return a high-level overview of the venue plan for an edition.
@@ -322,66 +128,7 @@ class ChampagneFestivalMcpBackend:
         edition_id:
             The edition ID. When omitted, the active edition is used.
         """
-        from sqlalchemy.orm import selectinload
-
-        async with self.session_factory() as db:
-            if edition_id:
-                result = await db.execute(
-                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
-                )
-                edition: Edition | None = result.scalar_one_or_none()
-                if edition is None:
-                    return {"rooms": [], "message": f"Edition '{edition_id}' not found."}
-            else:
-                edition = await self._get_active_edition_obj(db)
-                if edition is None:
-                    return {"rooms": [], "message": "No active edition found."}
-
-            # Load venue
-            venue_result = await db.execute(select(Venue).where(Venue.id == edition.venue_id))
-            venue: Venue | None = venue_result.scalar_one_or_none()
-
-            # Load layouts for this edition
-            layouts_result = await db.execute(
-                select(Layout).options(selectinload(Layout.room)).where(Layout.edition_id == edition.id)
-            )
-            layouts: list[Layout] = list(layouts_result.scalars().all())
-
-            # For each layout count tables
-            table_counts: dict[str, int] = {}
-            if layouts:
-                layout_ids = [lay.id for lay in layouts]
-                counts_result = await db.execute(
-                    select(Table.layout_id, func.count(Table.id))
-                    .where(Table.layout_id.in_(layout_ids))
-                    .group_by(Table.layout_id)
-                )
-                table_counts = {row[0]: row[1] for row in counts_result.all()}
-
-            rooms_seen: set[str] = set()
-            room_summaries: list[dict] = []
-            for layout in layouts:
-                room = layout.room
-                if room.id in rooms_seen:
-                    continue
-                rooms_seen.add(room.id)
-                room_summaries.append(
-                    {
-                        "room_id": room.id,
-                        "room_name": room.name,
-                        "layout_id": layout.id,
-                        "day_id": layout.day_id,
-                        "table_count": table_counts.get(layout.id, 0),
-                    }
-                )
-
-            return {
-                "edition_id": edition.id,
-                "venue_id": edition.venue_id,
-                "venue_name": venue.name if venue else None,
-                "rooms": room_summaries,
-                "total_tables": sum(table_counts.values()),
-            }
+        return await mcp_public.get_venue_plan_summary(self.session_factory, edition_id)
 
     # ------------------------------------------------------------------
     # Tools — volunteer/admin only
@@ -407,70 +154,7 @@ class ChampagneFestivalMcpBackend:
         Returns a list of matching persons with contact info (role-dependent).
         """
         role = self._require_volunteer()
-
-        name = name.strip() if name else None
-        email = email.strip() if email else None
-        if not name and not email:
-            raise ValueError("Provide at least one of 'name' or 'email' to search.")
-
-        async with self.session_factory() as db:
-            stmt = (
-                select(Person)
-                .where(person_search_predicate(name=name, email=email))
-                .order_by(*person_search_order_by(name=name, email=email))
-                .limit(DEFAULT_RESULT_LIMIT + 1)
-            )
-            result = await db.execute(stmt)
-            persons: list[Person] = list(result.scalars().all())
-            person_ids = [person.id for person in persons[:DEFAULT_RESULT_LIMIT]]
-            registrations_by_person: dict[str, list[Registration]] = {}
-            if person_ids:
-                registrations_result = await db.execute(
-                    select(Registration)
-                    .where(Registration.person_id.in_(person_ids))
-                    .order_by(Registration.created_at.desc())
-                )
-                for registration in registrations_result.scalars().all():
-                    bucket = registrations_by_person.setdefault(registration.person_id, [])
-                    if len(bucket) < DEFAULT_RESULT_LIMIT:
-                        bucket.append(registration)
-            ranked = [
-                (
-                    best_person_match(
-                        name=name,
-                        email=email,
-                        candidate_name=person.name,
-                        candidate_email=person.email,
-                    ),
-                    person,
-                )
-                for person in persons
-            ]
-
-            return {
-                "guests": [
-                    {
-                        **self._person_dict(person, role=role),
-                        "match": (
-                            {"field": match.field, "kind": match.kind}
-                            if match is not None
-                            else {"field": "name" if name else "email", "kind": "fuzzy"}
-                        ),
-                        "registrations": [
-                            {
-                                "registration_id": registration.id,
-                                "event_id": registration.event_id,
-                                "table_id": registration.table_id,
-                                "status": registration.status,
-                            }
-                            for registration in registrations_by_person.get(person.id, [])[:DEFAULT_RESULT_LIMIT]
-                        ],
-                    }
-                    for match, person in ranked[:DEFAULT_RESULT_LIMIT]
-                ],
-                "count": min(len(ranked), DEFAULT_RESULT_LIMIT),
-                "has_more": len(persons) > DEFAULT_RESULT_LIMIT,
-            }
+        return await mcp_seating.find_guest(self.session_factory, role, name, email)
 
     async def get_guest_registration(self, registration_id: str) -> dict:
         """Return full registration details for a specific registration ID.
@@ -484,21 +168,7 @@ class ChampagneFestivalMcpBackend:
             The registration ID (e.g. ``reg_1234567890_abcdef12``).
         """
         role = self._require_volunteer()
-
-        async with self.session_factory() as db:
-            result = await db.execute(select(Registration).where(Registration.id == registration_id))
-            reg: Registration | None = result.scalar_one_or_none()
-            if reg is None:
-                return {"registration": None, "message": f"Registration '{registration_id}' not found."}
-
-            person_result = await db.execute(select(Person).where(Person.id == reg.person_id))
-            person: Person | None = person_result.scalar_one_or_none()
-            if person is None:
-                return {"registration": None, "message": "Person not found for this registration."}
-
-            d = self._registration_base_dict(reg, person, role=role)
-            d["pre_orders"] = [self._order_item_dict(item) for item in (reg.pre_orders or [])]
-            return {"registration": d}
+        return await mcp_seating.get_guest_registration(self.session_factory, role, registration_id)
 
     async def get_table_seating(self, table_id: str | None = None) -> dict:
         """Return seating information for a table, or all tables for the active edition.
@@ -512,85 +182,7 @@ class ChampagneFestivalMcpBackend:
             Specific table ID. When omitted, all tables for the active edition are returned.
         """
         self._require_volunteer()
-
-        from sqlalchemy.orm import selectinload  # noqa: F401 — selectinload may be used by edition query
-
-        async with self.session_factory() as db:
-            if table_id:
-                tables_result = await db.execute(select(Table).where(Table.id == table_id))
-                tables: list[Table] = list(tables_result.scalars().all())
-                if not tables:
-                    return {"tables": [], "message": f"Table '{table_id}' not found."}
-            else:
-                # Get all tables for the active edition via its layouts
-                edition = await self._get_active_edition_obj(db)
-                if edition is None:
-                    return {"tables": [], "message": "No active edition found."}
-
-                layouts_result = await db.execute(select(Layout).where(Layout.edition_id == edition.id))
-                layout_ids = [lay.id for lay in layouts_result.scalars().all()]
-                if not layout_ids:
-                    return {"tables": [], "edition_id": edition.id}
-
-                tables_result2 = await db.execute(
-                    select(Table).where(Table.layout_id.in_(layout_ids)).order_by(Table.name)
-                )
-                tables = list(tables_result2.scalars().all())
-
-            if not tables:
-                return {"tables": []}
-
-            # Load registrations for these tables
-            table_ids = [t.id for t in tables]
-            regs_result = await db.execute(select(Registration).where(Registration.table_id.in_(table_ids)))
-            regs: list[Registration] = list(regs_result.scalars().all())
-
-            # Load persons for these registrations
-            person_ids = list({reg.person_id for reg in regs})
-            persons: dict[str, Person] = {}
-            if person_ids:
-                persons_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
-                persons = {p.id: p for p in persons_result.scalars().all()}
-
-            # Build table → registrations map
-            table_reg_map: dict[str, list[Registration]] = {}
-            for reg in regs:
-                if reg.table_id:
-                    table_reg_map.setdefault(reg.table_id, []).append(reg)
-
-            result_tables = []
-            for table in tables:
-                table_regs = table_reg_map.get(table.id, [])
-                guests = []
-                for reg in table_regs:
-                    person = persons.get(reg.person_id)
-                    if person is None:
-                        continue
-                    guests.append(
-                        {
-                            "registration_id": reg.id,
-                            "name": person.name,
-                            "guest_count": reg.guest_count,
-                            "checked_in": reg.checked_in,
-                            "checked_in_at": reg.checked_in_at.isoformat() if reg.checked_in_at else None,
-                            "strap_issued": reg.strap_issued,
-                            "status": reg.status,
-                            "event_id": reg.event_id,
-                        }
-                    )
-                result_tables.append(
-                    {
-                        "table_id": table.id,
-                        "table_name": table.name,
-                        "capacity": table.capacity,
-                        "layout_id": table.layout_id,
-                        "guests": guests,
-                        "guest_count": sum(g["guest_count"] for g in guests),
-                        "checked_in_count": sum(1 for g in guests if g["checked_in"]),
-                    }
-                )
-
-            return {"tables": result_tables, "count": len(result_tables)}
+        return await mcp_seating.get_table_seating(self.session_factory, table_id)
 
     async def resolve_table_reference(self, reference: str) -> dict:
         """Resolve a visible table number, name, or label to internal table IDs.
@@ -599,33 +191,7 @@ class ChampagneFestivalMcpBackend:
         typo suggestions. Requires the ``volunteer`` or ``admin`` role.
         """
         self._require_volunteer()
-        reference = reference.strip()
-        if not reference:
-            raise ValueError("Provide a table reference to resolve.")
-
-        async with self.session_factory() as db:
-            tables_result = await db.execute(select(Table).order_by(Table.name))
-            ranked = [
-                (match, table)
-                for table in tables_result.scalars().all()
-                if (match := rank_table_reference(reference, table_id=table.id, table_name=table.name)) is not None
-            ]
-            ranked.sort(key=lambda item: (item[0], item[1].name, item[1].id))
-            candidates = [
-                {
-                    "table_id": table.id,
-                    "table_name": table.name,
-                    "layout_id": table.layout_id,
-                    "capacity": table.capacity,
-                    "match": {"kind": match.kind},
-                }
-                for match, table in ranked[:DEFAULT_RESULT_LIMIT]
-            ]
-            return {
-                "tables": candidates,
-                "count": len(candidates),
-                "has_more": len(ranked) > DEFAULT_RESULT_LIMIT,
-            }
+        return await mcp_seating.resolve_table_reference(self.session_factory, reference)
 
     async def get_table_order_summary(
         self,
@@ -647,79 +213,7 @@ class ChampagneFestivalMcpBackend:
             is omitted. Ambiguous references return candidates for selection.
         """
         role = self._require_volunteer()
-        if not table_id and not table_reference:
-            raise ValueError("Provide 'table_id' or 'table_reference'.")
-
-        async with self.session_factory() as db:
-            if not table_id and table_reference:
-                tables_result = await db.execute(select(Table).order_by(Table.name))
-                candidates = [
-                    table
-                    for table in tables_result.scalars().all()
-                    if rank_table_reference(table_reference, table_id=table.id, table_name=table.name) is not None
-                ]
-                if len(candidates) != 1:
-                    return {
-                        "table_reference": table_reference,
-                        "registrations": [],
-                        "candidates": [
-                            {"table_id": table.id, "table_name": table.name}
-                            for table in candidates[:DEFAULT_RESULT_LIMIT]
-                        ],
-                        "message": (
-                            "No table matched this reference."
-                            if not candidates
-                            else "Multiple tables matched this reference; choose a table_id."
-                        ),
-                    }
-                table_id = candidates[0].id
-            if table_id is None:
-                raise ValueError("table_id could not be resolved.")
-            # Verify table exists
-            table_result = await db.execute(select(Table).where(Table.id == table_id))
-            table: Table | None = table_result.scalar_one_or_none()
-            if table is None:
-                return {"table_id": table_id, "registrations": [], "message": f"Table '{table_id}' not found."}
-
-            # Load registrations at this table
-            regs_result = await db.execute(select(Registration).where(Registration.table_id == table_id))
-            regs: list[Registration] = list(regs_result.scalars().all())
-
-            person_ids = list({reg.person_id for reg in regs})
-            persons: dict[str, Person] = {}
-            if person_ids:
-                persons_result = await db.execute(select(Person).where(Person.id.in_(person_ids)))
-                persons = {p.id: p for p in persons_result.scalars().all()}
-
-            reg_summaries = []
-            for reg in regs:
-                person = persons.get(reg.person_id)
-                orders = [self._order_item_dict(item) for item in (reg.pre_orders or [])]
-                ordered_quantity_total = sum(o["quantity"] for o in orders)
-                delivered_quantity_total = sum(o["delivered_quantity"] for o in orders)
-                remaining_quantity_total = sum(o["remaining_quantity"] for o in orders)
-                reg_summaries.append(
-                    {
-                        "registration_id": reg.id,
-                        "person_name": person.name if person else None,
-                        "person_id": reg.person_id if role == ROLE_ADMIN else None,
-                        "guest_count": reg.guest_count,
-                        "checked_in": reg.checked_in,
-                        "orders": orders,
-                        "order_count": len(orders),
-                        "ordered_quantity_total": ordered_quantity_total,
-                        "delivered_quantity_total": delivered_quantity_total,
-                        "remaining_quantity_total": remaining_quantity_total,
-                        "all_delivered": all(o["remaining_quantity"] == 0 for o in orders) if orders else True,
-                    }
-                )
-
-            return {
-                "table_id": table_id,
-                "table_name": table.name,
-                "registrations": reg_summaries,
-                "registration_count": len(reg_summaries),
-            }
+        return await mcp_orders.get_table_order_summary(self.session_factory, role, table_id, table_reference)
 
     async def get_guest_order_status(self, registration_id: str) -> dict:
         """Return the order status for a specific registration.
@@ -734,41 +228,7 @@ class ChampagneFestivalMcpBackend:
             The registration ID.
         """
         self._require_volunteer()
-
-        async with self.session_factory() as db:
-            result = await db.execute(select(Registration).where(Registration.id == registration_id))
-            reg: Registration | None = result.scalar_one_or_none()
-            if reg is None:
-                return {
-                    "registration_id": registration_id,
-                    "orders": [],
-                    "message": f"Registration '{registration_id}' not found.",
-                }
-
-            person_result = await db.execute(select(Person).where(Person.id == reg.person_id))
-            person: Person | None = person_result.scalar_one_or_none()
-
-            orders = [self._order_item_dict(item) for item in (reg.pre_orders or [])]
-            champagne_orders = [o for o in orders if o["category"] == "champagne"]
-            delivered = [o for o in champagne_orders if o["delivered"]]
-            pending = [o for o in champagne_orders if not o["delivered"]]
-            champagne_quantity_ordered = sum(o["quantity"] for o in champagne_orders)
-            champagne_quantity_delivered = sum(o["delivered_quantity"] for o in champagne_orders)
-            champagne_quantity_pending = sum(o["remaining_quantity"] for o in champagne_orders)
-
-            return {
-                "registration_id": reg.id,
-                "person_name": person.name if person else None,
-                "table_id": reg.table_id,
-                "checked_in": reg.checked_in,
-                "orders": orders,
-                "champagne_lines_total": len(champagne_orders),
-                "champagne_lines_delivered": len(delivered),
-                "champagne_lines_pending": len(pending),
-                "champagne_quantity_ordered": champagne_quantity_ordered,
-                "champagne_quantity_delivered": champagne_quantity_delivered,
-                "champagne_quantity_pending": champagne_quantity_pending,
-            }
+        return await mcp_orders.get_guest_order_status(self.session_factory, registration_id)
 
     async def get_champagne_delivery_summary(self, edition_id: str | None = None) -> dict:
         """Return a champagne delivery summary across all registrations for an edition.
@@ -783,72 +243,7 @@ class ChampagneFestivalMcpBackend:
             The edition ID. When omitted, the active edition is used.
         """
         self._require_volunteer()
-
-        from sqlalchemy.orm import selectinload
-
-        async with self.session_factory() as db:
-            if edition_id:
-                edition_result = await db.execute(
-                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
-                )
-                edition: Edition | None = edition_result.scalar_one_or_none()
-                if edition is None:
-                    return {"edition_id": edition_id, "products": [], "message": f"Edition '{edition_id}' not found."}
-            else:
-                edition = await self._get_active_edition_obj(db)
-                if edition is None:
-                    return {"edition_id": None, "products": [], "message": "No active edition found."}
-
-            # Get all event IDs for this edition
-            event_ids = [ev.id for ev in edition.events]
-            if not event_ids:
-                return {"edition_id": edition.id, "products": [], "message": "No events found in this edition."}
-
-            regs_result = await db.execute(select(Registration).where(Registration.event_id.in_(event_ids)))
-            regs: list[Registration] = list(regs_result.scalars().all())
-
-            # Aggregate champagne order items by product
-            product_stats: dict[str, dict] = {}
-            for reg in regs:
-                for item in reg.pre_orders or []:
-                    normalized_item = self._order_item_dict(item)
-                    if normalized_item["category"] != "champagne":
-                        continue
-                    pid = normalized_item["product_id"]
-                    name = normalized_item["name"]
-                    qty = normalized_item["quantity"]
-                    delivered_qty = normalized_item["delivered_quantity"]
-                    remaining_qty = normalized_item["remaining_quantity"]
-                    delivered = remaining_qty == 0
-
-                    if pid not in product_stats:
-                        product_stats[pid] = {
-                            "product_id": pid,
-                            "product_name": name,
-                            "ordered_lines": 0,
-                            "delivered_lines": 0,
-                            "pending_lines": 0,
-                            "partially_delivered_lines": 0,
-                            "ordered_quantity": 0,
-                            "delivered_quantity": 0,
-                            "pending_quantity": 0,
-                        }
-                    product_stats[pid]["ordered_lines"] += 1
-                    product_stats[pid]["ordered_quantity"] += qty
-                    if delivered:
-                        product_stats[pid]["delivered_lines"] += 1
-                    else:
-                        product_stats[pid]["pending_lines"] += 1
-                        if delivered_qty > 0:
-                            product_stats[pid]["partially_delivered_lines"] += 1
-                    product_stats[pid]["delivered_quantity"] += delivered_qty
-                    product_stats[pid]["pending_quantity"] += remaining_qty
-
-            products = sorted(product_stats.values(), key=lambda x: x["product_name"])
-            return {
-                "edition_id": edition.id,
-                "products": products,
-            }
+        return await mcp_delivery.get_champagne_delivery_summary(self.session_factory, edition_id)
 
     async def get_undelivered_champagne_by_table(self, edition_id: str | None = None) -> dict:
         """Return tables that have at least one undelivered champagne order.
@@ -861,81 +256,7 @@ class ChampagneFestivalMcpBackend:
             The edition ID. When omitted, the active edition is used.
         """
         self._require_volunteer()
-
-        from sqlalchemy.orm import selectinload
-
-        async with self.session_factory() as db:
-            if edition_id:
-                edition_result = await db.execute(
-                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
-                )
-                edition: Edition | None = edition_result.scalar_one_or_none()
-                if edition is None:
-                    return {"tables": [], "message": f"Edition '{edition_id}' not found."}
-            else:
-                edition = await self._get_active_edition_obj(db)
-                if edition is None:
-                    return {"tables": [], "message": "No active edition found."}
-
-            event_ids = [ev.id for ev in edition.events]
-            if not event_ids:
-                return {"edition_id": edition.id, "tables": []}
-
-            regs_result = await db.execute(
-                select(Registration).where(
-                    Registration.event_id.in_(event_ids),
-                    Registration.table_id.isnot(None),
-                )
-            )
-            regs: list[Registration] = list(regs_result.scalars().all())
-
-            # Find registrations with at least one undelivered champagne item
-            pending_table_map: dict[str, dict] = {}
-            for reg in regs:
-                if not reg.table_id:
-                    continue
-                pending_items = []
-                for item in reg.pre_orders or []:
-                    normalized_item = self._order_item_dict(item)
-                    if normalized_item["category"] == "champagne" and normalized_item["remaining_quantity"] > 0:
-                        pending_items.append(normalized_item)
-                if not pending_items:
-                    continue
-                tbl_id = reg.table_id
-                if tbl_id not in pending_table_map:
-                    pending_table_map[tbl_id] = {
-                        "table_id": tbl_id,
-                        "pending_lines": 0,
-                        "pending_quantity": 0,
-                        "pending_registrations": [],
-                    }
-                pending_table_map[tbl_id]["pending_lines"] += len(pending_items)
-                pending_table_map[tbl_id]["pending_quantity"] += sum(
-                    item["remaining_quantity"] for item in pending_items
-                )
-                pending_table_map[tbl_id]["pending_registrations"].append(reg.id)
-
-            if not pending_table_map:
-                return {"edition_id": edition.id, "tables": [], "message": "All champagne orders have been delivered."}
-
-            # Load table names
-            table_ids = list(pending_table_map.keys())
-            tables_result = await db.execute(select(Table).where(Table.id.in_(table_ids)))
-            table_name_map = {t.id: t.name for t in tables_result.scalars().all()}
-
-            tables = []
-            for tbl_id, data in sorted(pending_table_map.items(), key=lambda x: table_name_map.get(x[0]) or ""):
-                tables.append(
-                    {
-                        "table_id": tbl_id,
-                        "table_name": table_name_map.get(tbl_id, tbl_id),
-                        "pending_lines": data["pending_lines"],
-                        "pending_quantity": data["pending_quantity"],
-                        "pending_registration_ids": data["pending_registrations"],
-                    }
-                )
-
-            return {"edition_id": edition.id, "tables": tables, "count": len(tables)}
+        return await mcp_delivery.get_undelivered_champagne_by_table(self.session_factory, edition_id)
 
     async def get_check_in_summary(self, edition_id: str | None = None) -> dict:
         """Return check-in statistics for an edition.
@@ -950,49 +271,7 @@ class ChampagneFestivalMcpBackend:
             The edition ID. When omitted, the active edition is used.
         """
         self._require_volunteer()
-
-        from sqlalchemy.orm import selectinload
-
-        async with self.session_factory() as db:
-            if edition_id:
-                edition_result = await db.execute(
-                    select(Edition).options(selectinload(Edition.events)).where(Edition.id == edition_id)
-                )
-                edition: Edition | None = edition_result.scalar_one_or_none()
-                if edition is None:
-                    return {"message": f"Edition '{edition_id}' not found."}
-            else:
-                edition = await self._get_active_edition_obj(db)
-                if edition is None:
-                    return {"message": "No active edition found."}
-
-            event_ids = [ev.id for ev in edition.events]
-            if not event_ids:
-                return {
-                    "edition_id": edition.id,
-                    "total_registrations": 0,
-                    "checked_in": 0,
-                    "not_checked_in": 0,
-                    "total_guests": 0,
-                    "straps_issued": 0,
-                }
-
-            regs_result = await db.execute(select(Registration).where(Registration.event_id.in_(event_ids)))
-            regs: list[Registration] = list(regs_result.scalars().all())
-
-            total = len(regs)
-            checked_in = sum(1 for r in regs if r.checked_in)
-            total_guests = sum(r.guest_count for r in regs)
-            straps = sum(1 for r in regs if r.strap_issued)
-
-            return {
-                "edition_id": edition.id,
-                "total_registrations": total,
-                "checked_in": checked_in,
-                "not_checked_in": total - checked_in,
-                "total_guests": total_guests,
-                "straps_issued": straps,
-            }
+        return await mcp_check_in.get_check_in_summary(self.session_factory, edition_id)
 
 
 # ---------------------------------------------------------------------------
