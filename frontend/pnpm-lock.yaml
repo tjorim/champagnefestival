@@ -75,8 +75,8 @@ importers:
         specifier: ^5.10.2
         version: 5.10.2(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       swiper:
-        specifier: ^12.2.0
-        version: 12.2.0
+        specifier: ^14.0.0
+        version: 14.0.0
     devDependencies:
       '@inlang/paraglide-js':
         specifier: ^2.20.2
@@ -1849,8 +1849,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  swiper@12.2.0:
-    resolution: {integrity: sha512-K8uXsBZU6ME97Ia3xbBge8IRCnR1lOmIILzvY/jGVic7dSTQ530s3uO8RvXbPUtkkXLWIwmZLRPbtDxRWVAFdg==}
+  swiper@14.0.0:
+    resolution: {integrity: sha512-F6DXjC+GKt8WGvutu+35FIZO9iZkde+XxDwFqfw0tlFijDwfG7DikHYUiFQKqIYEp25q8TQSqI3Nh2+bHxs2uA==}
     engines: {node: '>= 4.7.0'}
 
   tagged-tag@1.0.0:
@@ -3641,7 +3641,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  swiper@12.2.0: {}
+  swiper@14.0.0: {}
 
   tagged-tag@1.0.0: {}
 
