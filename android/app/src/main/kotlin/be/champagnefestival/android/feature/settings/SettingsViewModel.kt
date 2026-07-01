@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
@@ -26,14 +27,19 @@ class SettingsViewModel(
         viewModelScope.launch {
             sessionDataStore.apiBaseUrlFlow
                 .combine(sessionDataStore.biometricLockEnabledFlow) { apiBaseUrl, biometricLockEnabled ->
-                    SettingsUiModel(
-                        apiBaseUrl = apiBaseUrl ?: BuildConfig.API_BASE_URL,
-                        defaultApiBaseUrl = BuildConfig.API_BASE_URL,
-                        oidcIssuerUrl = BuildConfig.OIDC_ISSUER_URL,
-                        versionName = BuildConfig.VERSION_NAME,
-                        biometricLockEnabled = biometricLockEnabled,
-                    )
-                }.collect { model ->
+                    // Null while the persisted lock setting is still loading; wait for it so the
+                    // toggle doesn't flash the wrong state.
+                    biometricLockEnabled?.let {
+                        SettingsUiModel(
+                            apiBaseUrl = apiBaseUrl ?: BuildConfig.API_BASE_URL,
+                            defaultApiBaseUrl = BuildConfig.API_BASE_URL,
+                            oidcIssuerUrl = BuildConfig.OIDC_ISSUER_URL,
+                            versionName = BuildConfig.VERSION_NAME,
+                            biometricLockEnabled = it,
+                        )
+                    }
+                }.filterNotNull()
+                .collect { model ->
                     _uiState.value = UiState.Success(model)
                 }
         }

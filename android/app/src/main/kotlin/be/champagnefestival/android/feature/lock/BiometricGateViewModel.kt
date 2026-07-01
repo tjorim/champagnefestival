@@ -1,5 +1,6 @@
 package be.champagnefestival.android.feature.lock
 
+import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -55,12 +56,6 @@ class BiometricGateViewModel(
     private fun promptForAuthentication(activity: FragmentActivity) {
         _uiState.value = LockUiState.Prompting
 
-        val cryptoObject = cryptoProvider.createCryptoObject()
-        if (cryptoObject == null) {
-            _uiState.value = LockUiState.Failed("Could not verify device security. Please try again.")
-            return
-        }
-
         val callback =
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -88,6 +83,17 @@ class BiometricGateViewModel(
                 .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
                 .build()
 
-        prompt.authenticate(promptInfo, cryptoObject)
+        // BiometricPrompt rejects a CryptoObject combined with DEVICE_CREDENTIAL below API 30
+        // (IllegalArgumentException), so only the keystore-verified path is available on R+.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val cryptoObject = cryptoProvider.createCryptoObject()
+            if (cryptoObject == null) {
+                _uiState.value = LockUiState.Failed("Could not verify device security. Please try again.")
+                return
+            }
+            prompt.authenticate(promptInfo, cryptoObject)
+        } else {
+            prompt.authenticate(promptInfo)
+        }
     }
 }

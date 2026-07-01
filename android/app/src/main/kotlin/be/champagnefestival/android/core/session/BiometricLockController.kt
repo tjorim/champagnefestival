@@ -17,7 +17,7 @@ class BiometricLockController(
     private val idleTimeoutMillis: Long = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : DefaultLifecycleObserver {
-    val lockEnabledFlow: StateFlow<Boolean> = sessionDataStore.biometricLockEnabledFlow
+    val lockEnabledFlow: StateFlow<Boolean?> = sessionDataStore.biometricLockEnabledFlow
 
     private val _isLocked = MutableStateFlow(true)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
@@ -31,7 +31,8 @@ class BiometricLockController(
     override fun onStart(owner: LifecycleOwner) {
         if (
             IdleLockPolicy.shouldRequireUnlock(
-                lockEnabled = lockEnabledFlow.value,
+                // Fail secure if the setting hasn't loaded from DataStore yet.
+                lockEnabled = lockEnabledFlow.value ?: true,
                 lastBackgroundedAtMillis = lastBackgroundedAtMillis,
                 nowMillis = clock(),
                 idleTimeoutMillis = idleTimeoutMillis,

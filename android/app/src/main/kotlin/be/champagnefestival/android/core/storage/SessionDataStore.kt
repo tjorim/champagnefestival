@@ -47,9 +47,10 @@ class SessionDataStore(
     private val _apiBaseUrlFlow = MutableStateFlow<String?>(null)
     val apiBaseUrlFlow: StateFlow<String?> = _apiBaseUrlFlow
 
-    // Event-device threat model: lock is opt-out, not opt-in.
-    private val _biometricLockEnabledFlow = MutableStateFlow(DEFAULT_BIOMETRIC_LOCK_ENABLED)
-    val biometricLockEnabledFlow: StateFlow<Boolean> = _biometricLockEnabledFlow
+    // Event-device threat model: lock is opt-out, not opt-in. Null until the persisted
+    // value has been read, so callers can distinguish "loading" from "disabled".
+    private val _biometricLockEnabledFlow = MutableStateFlow<Boolean?>(null)
+    val biometricLockEnabledFlow: StateFlow<Boolean?> = _biometricLockEnabledFlow
 
     init {
         applicationScope.launch {

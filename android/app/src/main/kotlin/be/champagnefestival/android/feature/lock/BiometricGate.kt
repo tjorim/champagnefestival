@@ -1,5 +1,6 @@
 package be.champagnefestival.android.feature.lock
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,7 +22,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,9 +40,15 @@ fun BiometricGate(
 ) {
     val lockEnabled by app.biometricLockController.lockEnabledFlow.collectAsState()
     val locked by app.biometricLockController.isLocked.collectAsState()
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = LocalActivity.current as? FragmentActivity
 
-    if (!lockEnabled || !locked || activity == null) {
+    // Still loading the persisted setting from DataStore: render nothing rather than
+    // flashing the lock screen (or skipping it) based on a not-yet-confirmed default.
+    if (lockEnabled == null) {
+        return
+    }
+
+    if (lockEnabled == false || !locked || activity == null) {
         content()
         return
     }

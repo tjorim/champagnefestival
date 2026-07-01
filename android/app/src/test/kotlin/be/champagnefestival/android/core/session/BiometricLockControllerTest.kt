@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BiometricLockControllerTest {
-    private val lockEnabledFlow = MutableStateFlow(true)
+    private val lockEnabledFlow = MutableStateFlow<Boolean?>(true)
     private val sessionDataStore =
         mockk<SessionDataStore> {
             every { biometricLockEnabledFlow } returns lockEnabledFlow
@@ -62,6 +62,20 @@ class BiometricLockControllerTest {
         controller.onStart(owner)
 
         assertFalse(controller.isLocked.value)
+    }
+
+    @Test
+    fun `re-locks on resume when the setting has not loaded yet`() {
+        lockEnabledFlow.value = null
+        var now = 0L
+        val controller = BiometricLockController(sessionDataStore, idleTimeoutMillis = 60_000L, clock = { now })
+        controller.markUnlocked()
+
+        controller.onStop(owner)
+        now += 60_000L
+        controller.onStart(owner)
+
+        assertTrue(controller.isLocked.value)
     }
 
     @Test
