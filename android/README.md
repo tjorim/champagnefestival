@@ -31,9 +31,29 @@ be.champagnefestival.android/
 | Variant | API base URL | OIDC issuer |
 |---------|-------------|-------------|
 | `debug` | `http://10.0.2.2:8000/` (emulator → localhost) | `http://10.0.2.2:9000/…` |
+| `staging` | `https://staging.champagnefestival.tjor.im/` (placeholder, configurable) | `https://staging-auth.tjor.im/…` (placeholder, configurable) |
 | `release` | `https://api.champagnefestival.tjor.im/` | `https://auth.tjor.im/…` |
 
 The API base URL can be overridden at runtime via **Settings → API base URL**.
+
+### Staging variant
+
+`staging` is a debug-signed, debuggable variant with its own application ID
+(`be.champagnefestival.android.staging`), so it installs alongside the debug and
+release apps. Its backend URLs resolve from a Gradle property or environment
+variable of the same name, falling back to the placeholders above:
+
+- `CHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL`
+- `CHAMPAGNEFESTIVAL_ANDROID_STAGING_OIDC_ISSUER_URL`
+
+```bash
+./gradlew assembleStaging \
+  -PCHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL=https://staging.example.com/
+```
+
+CI can build a distributable staging APK without production signing secrets via
+the manual **Android Staging APK** workflow (`.github/workflows/android-staging.yml`),
+which accepts both URLs as optional inputs.
 
 ## Getting Started
 

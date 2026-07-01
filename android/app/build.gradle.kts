@@ -8,6 +8,28 @@ plugins {
 
 fun quoted(value: String) = "\"$value\""
 
+// Resolves a config value from a Gradle property or environment variable of the
+// same name, treating blank values as unset (e.g. an empty workflow input).
+fun resolveConfigValue(
+    name: String,
+    defaultValue: String,
+): String =
+    sequenceOf(
+        providers.gradleProperty(name).orNull,
+        providers.environmentVariable(name).orNull,
+    ).firstOrNull { !it.isNullOrBlank() } ?: defaultValue
+
+val stagingApiBaseUrl =
+    resolveConfigValue(
+        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL",
+        "https://staging.champagnefestival.tjor.im/",
+    )
+val stagingOidcIssuerUrl =
+    resolveConfigValue(
+        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_OIDC_ISSUER_URL",
+        "https://staging-auth.tjor.im/realms/champagnefestival",
+    )
+
 val prodCertificatePinHost =
     providers
         .gradleProperty("CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST")
@@ -45,6 +67,14 @@ android {
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
+        }
+        create("staging") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug")
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            buildConfigField("String", "API_BASE_URL", quoted(stagingApiBaseUrl))
+            buildConfigField("String", "OIDC_ISSUER_URL", quoted(stagingOidcIssuerUrl))
         }
         release {
             isMinifyEnabled = true
