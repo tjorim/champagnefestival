@@ -32,6 +32,8 @@ class AuthManager(
 ) {
     private val authService = AuthorizationService(context)
     private val refreshMutex = Mutex()
+    private val configMutex = Mutex()
+    private var cachedConfiguration: AuthorizationServiceConfiguration? = null
 
     val loggedIn: StateFlow<String?> = sessionDataStore.accessTokenFlow
 
@@ -152,7 +154,19 @@ class AuthManager(
         sessionDataStore.clearSession()
     }
 
-    private suspend fun fetchConfiguration(): AuthorizationServiceConfiguration =
+    /**
+     * OIDC discovery only needs to happen once per process; the issuer's configuration
+     * does not change at runtime. Cache it so login and every token refresh don't each
+     * pay for a round trip to the discovery endpoint.
+     */
+    private suspend fun fetchConfiguration(): AuthorizationServiceConfiguration {
+        cachedConfiguration?.let { return it }
+        return configMutex.withLock {
+            cachedConfiguration ?: fetchConfigurationFromIssuer().also { cachedConfiguration = it }
+        }
+    }
+
+    private suspend fun fetchConfigurationFromIssuer(): AuthorizationServiceConfiguration =
         suspendCancellableCoroutine { continuation ->
             AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(oidcConfig.issuerUrl)) { config, ex ->
                 when {
