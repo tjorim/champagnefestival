@@ -6,6 +6,20 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
+fun quoted(value: String) = "\"$value\""
+
+val prodCertificatePinHost =
+    providers
+        .gradleProperty("CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST")
+        .orElse("champagnefestival.tjor.im")
+val prodCertificatePins =
+    providers
+        .gradleProperty("CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS")
+        .orElse(
+            "sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=," +
+                "sha256/C5+Q0gPI67ZTmAD/C84YyfVdbRF+O60CHGxkg1/g7xs=",
+        )
+
 android {
     namespace = "be.champagnefestival.android"
     compileSdk = 37
@@ -29,6 +43,8 @@ android {
             buildConfigField("String", "OIDC_ISSUER_URL", "\"http://10.0.2.2:8080/realms/champagnefestival\"")
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
+            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
         }
         release {
             isMinifyEnabled = true
@@ -38,6 +54,8 @@ android {
             buildConfigField("String", "OIDC_ISSUER_URL", "\"https://auth.tjor.im/realms/champagnefestival\"")
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
+            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(prodCertificatePinHost.get()))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(prodCertificatePins.get()))
         }
     }
 

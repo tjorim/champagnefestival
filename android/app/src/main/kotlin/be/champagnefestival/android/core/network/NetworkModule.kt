@@ -17,7 +17,7 @@ class NetworkModule(
         OkHttpClient
             .Builder()
             .apply {
-                CertificatePinnerProvider.forCurrentBuild()?.let(::certificatePinner)
+                certificatePinner(CertificatePinnerProvider.forCurrentBuild())
             }.addInterceptor { chain ->
                 val originalRequest = chain.request()
                 val overrideBaseUrl =
