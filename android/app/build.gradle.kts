@@ -73,13 +73,8 @@ android {
             matchingFallbacks += listOf("debug")
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
-            signingConfig = signingConfigs.getByName("debug")
             buildConfigField("String", "API_BASE_URL", quoted(stagingApiBaseUrl))
             buildConfigField("String", "OIDC_ISSUER_URL", quoted(stagingOidcIssuerUrl))
-            buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
-            buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
-            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
-            buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
         }
         release {
             isMinifyEnabled = true
