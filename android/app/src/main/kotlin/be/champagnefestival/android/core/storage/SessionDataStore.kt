@@ -2,12 +2,12 @@ package be.champagnefestival.android.core.storage
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import be.champagnefestival.android.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,11 +18,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.IOException
 
-class SessionDataStore(context: Context, applicationScope: CoroutineScope) {
-    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
-        scope = applicationScope,
-        produceFile = { context.preferencesDataStoreFile("session_preferences") },
-    )
+class SessionDataStore(
+    context: Context,
+    applicationScope: CoroutineScope,
+) {
+    private val dataStore: DataStore<Preferences> =
+        PreferenceDataStoreFactory.create(
+            scope = applicationScope,
+            produceFile = { context.preferencesDataStoreFile("session_preferences") },
+        )
 
     private val accessTokenKey = stringPreferencesKey("access_token")
     private val refreshTokenKey = stringPreferencesKey("refresh_token")
@@ -50,16 +54,14 @@ class SessionDataStore(context: Context, applicationScope: CoroutineScope) {
                     } else {
                         throw exception
                     }
-                }
-                .map { preferences ->
+                }.map { preferences ->
                     SessionSnapshot(
                         accessToken = preferences[accessTokenKey],
                         refreshToken = preferences[refreshTokenKey],
                         idToken = preferences[idTokenKey],
                         apiBaseUrl = preferences[apiBaseUrlKey] ?: BuildConfig.API_BASE_URL,
                     )
-                }
-                .collect { snapshot ->
+                }.collect { snapshot ->
                     _accessTokenFlow.value = snapshot.accessToken
                     _refreshTokenFlow.value = snapshot.refreshToken
                     _idTokenFlow.value = snapshot.idToken
@@ -68,7 +70,11 @@ class SessionDataStore(context: Context, applicationScope: CoroutineScope) {
         }
     }
 
-    suspend fun saveTokens(accessToken: String, refreshToken: String?, idToken: String?) {
+    suspend fun saveTokens(
+        accessToken: String,
+        refreshToken: String?,
+        idToken: String?,
+    ) {
         dataStore.edit { preferences ->
             preferences[accessTokenKey] = accessToken
             refreshToken?.let { preferences[refreshTokenKey] = it }

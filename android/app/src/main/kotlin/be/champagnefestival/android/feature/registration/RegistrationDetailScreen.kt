@@ -58,8 +58,14 @@ fun RegistrationDetailScreen(
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
-            is UiState.Error -> ErrorContent(message = state.message, onRetry = { viewModel.loadRegistration(id, token) }, modifier = Modifier.padding(padding))
-            is UiState.Success -> RegistrationContent(registration = state.data, modifier = Modifier.padding(padding), onCheckIn = { onCheckIn(id, token) })
+            is UiState.Error ->
+                ErrorContent(message = state.message, onRetry = {
+                    viewModel.loadRegistration(id, token)
+                }, modifier = Modifier.padding(padding))
+            is UiState.Success ->
+                RegistrationContent(registration = state.data, modifier = Modifier.padding(padding), onCheckIn = {
+                    onCheckIn(id, token)
+                })
         }
     }
 }

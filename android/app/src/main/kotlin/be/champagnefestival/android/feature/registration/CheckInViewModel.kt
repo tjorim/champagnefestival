@@ -12,53 +12,79 @@ import kotlinx.coroutines.launch
 
 sealed class CheckInUiState {
     data object Loading : CheckInUiState()
-    data class RegistrationLoaded(val registration: CheckInGuestOut) : CheckInUiState()
-    data class CheckInSuccess(val registration: CheckInGuestOut, val alreadyCheckedIn: Boolean) : CheckInUiState()
-    data class Error(val message: String) : CheckInUiState()
+
+    data class RegistrationLoaded(
+        val registration: CheckInGuestOut,
+    ) : CheckInUiState()
+
+    data class CheckInSuccess(
+        val registration: CheckInGuestOut,
+        val alreadyCheckedIn: Boolean,
+    ) : CheckInUiState()
+
+    data class Error(
+        val message: String,
+    ) : CheckInUiState()
+
     data object Unauthorized : CheckInUiState()
 }
 
-class CheckInViewModel(private val repository: CheckInRepository) : ViewModel() {
+class CheckInViewModel(
+    private val repository: CheckInRepository,
+) : ViewModel() {
     private val _uiState = MutableStateFlow<CheckInUiState>(CheckInUiState.Loading)
     val uiState: StateFlow<CheckInUiState> = _uiState.asStateFlow()
 
     private var lastSubmittedId: String? = null
 
-    fun loadRegistration(id: String, token: String) {
+    fun loadRegistration(
+        id: String,
+        token: String,
+    ) {
         _uiState.value = CheckInUiState.Loading
         viewModelScope.launch {
-            repository.lookupRegistration(id = id, token = token)
+            repository
+                .lookupRegistration(id = id, token = token)
                 .onSuccess { _uiState.value = CheckInUiState.RegistrationLoaded(it) }
                 .onFailure { error ->
-                    _uiState.value = if (error is UnauthorizedException) {
-                        CheckInUiState.Unauthorized
-                    } else {
-                        CheckInUiState.Error(error.message ?: "Unable to load registration.")
-                    }
+                    _uiState.value =
+                        if (error is UnauthorizedException) {
+                            CheckInUiState.Unauthorized
+                        } else {
+                            CheckInUiState.Error(error.message ?: "Unable to load registration.")
+                        }
                 }
         }
     }
 
-    fun submitCheckIn(id: String, token: String) {
+    fun submitCheckIn(
+        id: String,
+        token: String,
+    ) {
+        if (lastSubmittedId == id && _uiState.value is CheckInUiState.Loading) {
+            return
+        }
         if (lastSubmittedId == id && _uiState.value is CheckInUiState.CheckInSuccess) {
             return
         }
         _uiState.value = CheckInUiState.Loading
         lastSubmittedId = id
         viewModelScope.launch {
-            repository.submitCheckIn(id = id, token = token)
+            repository
+                .submitCheckIn(id = id, token = token)
                 .onSuccess { result ->
-                    _uiState.value = CheckInUiState.CheckInSuccess(
-                        registration = result.registration,
-                        alreadyCheckedIn = result.already_checked_in,
-                    )
-                }
-                .onFailure { error ->
-                    _uiState.value = if (error is UnauthorizedException) {
-                        CheckInUiState.Unauthorized
-                    } else {
-                        CheckInUiState.Error(error.message ?: "Unable to submit check-in.")
-                    }
+                    _uiState.value =
+                        CheckInUiState.CheckInSuccess(
+                            registration = result.registration,
+                            alreadyCheckedIn = result.already_checked_in,
+                        )
+                }.onFailure { error ->
+                    _uiState.value =
+                        if (error is UnauthorizedException) {
+                            CheckInUiState.Unauthorized
+                        } else {
+                            CheckInUiState.Error(error.message ?: "Unable to submit check-in.")
+                        }
                 }
         }
     }

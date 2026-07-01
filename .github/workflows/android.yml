@@ -44,6 +44,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Static analysis
+        run: ./gradlew ktlintCheck detekt
+
       - name: Lint
         run: ./gradlew lintDebug
 

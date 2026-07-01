@@ -11,13 +11,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.GrantTypeValues
 import net.openid.appauth.ResponseTypeValues
+import net.openid.appauth.TokenRequest
 import kotlin.coroutines.resume
 
 class AuthManager(
@@ -27,47 +31,87 @@ class AuthManager(
     private val oidcConfig: OidcConfig = OidcConfig(),
 ) {
     private val authService = AuthorizationService(context)
+    private val refreshMutex = Mutex()
+    private val configMutex = Mutex()
+    private var cachedConfiguration: AuthorizationServiceConfiguration? = null
 
     val loggedIn: StateFlow<String?> = sessionDataStore.accessTokenFlow
 
-    fun startLogin(activity: Activity) {
-        applicationScope.launch {
-            val configuration = runCatching { fetchConfiguration() }.getOrNull() ?: return@launch
-            val request = AuthorizationRequest.Builder(
-                configuration,
-                oidcConfig.clientId,
-                ResponseTypeValues.CODE,
-                oidcConfig.redirectUri,
-            )
-                .setScope("openid profile email offline_access")
+    suspend fun startLogin(activity: Activity): Result<Unit> {
+        val configuration = runCatching { fetchConfiguration() }.getOrElse { return Result.failure(it) }
+        val request =
+            AuthorizationRequest
+                .Builder(
+                    configuration,
+                    oidcConfig.clientId,
+                    ResponseTypeValues.CODE,
+                    oidcConfig.redirectUri,
+                ).setScope("openid profile email offline_access")
                 .build()
 
-            withContext(Dispatchers.Main) {
-                val completionIntent = Intent(activity, activity::class.java).apply {
+        withContext(Dispatchers.Main) {
+            val completionIntent =
+                Intent(activity, activity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
-                val cancelIntent = Intent(activity, activity::class.java).apply {
+            val cancelIntent =
+                Intent(activity, activity::class.java).apply {
                     action = "be.champagnefestival.android.AUTH_CANCELLED"
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
-                authService.performAuthorizationRequest(
-                    request,
-                    PendingIntent.getActivity(
-                        activity,
-                        1001,
-                        completionIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
-                    ),
-                    PendingIntent.getActivity(
-                        activity,
-                        1002,
-                        cancelIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
-                    ),
-                )
-            }
+            authService.performAuthorizationRequest(
+                request,
+                PendingIntent.getActivity(
+                    activity,
+                    1001,
+                    completionIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+                ),
+                PendingIntent.getActivity(
+                    activity,
+                    1002,
+                    cancelIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+                ),
+            )
         }
+        return Result.success(Unit)
     }
+
+    /**
+     * Exchanges the stored refresh token for a new access token. Used by
+     * [be.champagnefestival.android.core.network.TokenAuthenticator] to recover from an
+     * expired access token without forcing the user to sign in again mid-shift.
+     */
+    suspend fun getFreshAccessToken(): String? =
+        refreshMutex.withLock {
+            val refreshToken = sessionDataStore.refreshTokenFlow.value ?: return null
+            val configuration = runCatching { fetchConfiguration() }.getOrNull() ?: return null
+            val request =
+                TokenRequest
+                    .Builder(configuration, oidcConfig.clientId)
+                    .setGrantType(GrantTypeValues.REFRESH_TOKEN)
+                    .setRefreshToken(refreshToken)
+                    .build()
+
+            val (response, exception) =
+                suspendCancellableCoroutine<Pair<net.openid.appauth.TokenResponse?, AuthorizationException?>> { continuation ->
+                    authService.performTokenRequest(request) { tokenResponse, tokenException ->
+                        continuation.resume(tokenResponse to tokenException)
+                    }
+                }
+
+            val accessToken = response?.accessToken
+            if (exception != null || accessToken.isNullOrBlank()) {
+                return null
+            }
+            sessionDataStore.saveTokens(
+                accessToken = accessToken,
+                refreshToken = response.refreshToken ?: refreshToken,
+                idToken = response.idToken,
+            )
+            accessToken
+        }
 
     suspend fun handleAuthResponse(intent: Intent): Result<Unit> {
         if (intent.action == "be.champagnefestival.android.AUTH_CANCELLED") {
@@ -110,7 +154,19 @@ class AuthManager(
         sessionDataStore.clearSession()
     }
 
-    private suspend fun fetchConfiguration(): AuthorizationServiceConfiguration =
+    /**
+     * OIDC discovery only needs to happen once per process; the issuer's configuration
+     * does not change at runtime. Cache it so login and every token refresh don't each
+     * pay for a round trip to the discovery endpoint.
+     */
+    private suspend fun fetchConfiguration(): AuthorizationServiceConfiguration {
+        cachedConfiguration?.let { return it }
+        return configMutex.withLock {
+            cachedConfiguration ?: fetchConfigurationFromIssuer().also { cachedConfiguration = it }
+        }
+    }
+
+    private suspend fun fetchConfigurationFromIssuer(): AuthorizationServiceConfiguration =
         suspendCancellableCoroutine { continuation ->
             AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(oidcConfig.issuerUrl)) { config, ex ->
                 when {

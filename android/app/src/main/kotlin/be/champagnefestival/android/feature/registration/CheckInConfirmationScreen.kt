@@ -55,16 +55,23 @@ fun CheckInConfirmationScreen(
     ) { padding ->
         when (val state = uiState) {
             CheckInUiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
-            is CheckInUiState.Error -> ErrorContent(message = state.message, onRetry = { viewModel.submitCheckIn(id, token) }, modifier = Modifier.padding(padding))
-            CheckInUiState.Unauthorized -> ErrorContent(message = "The check-in token is no longer valid.", onRetry = { viewModel.submitCheckIn(id, token) }, modifier = Modifier.padding(padding))
+            is CheckInUiState.Error ->
+                ErrorContent(message = state.message, onRetry = {
+                    viewModel.submitCheckIn(id, token)
+                }, modifier = Modifier.padding(padding))
+            CheckInUiState.Unauthorized ->
+                ErrorContent(message = "The check-in token is no longer valid.", onRetry = {
+                    viewModel.submitCheckIn(id, token)
+                }, modifier = Modifier.padding(padding))
             is CheckInUiState.RegistrationLoaded -> LoadingContent(modifier = Modifier.padding(padding))
             is CheckInUiState.CheckInSuccess -> {
                 val registration = state.registration
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(24.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(24.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
