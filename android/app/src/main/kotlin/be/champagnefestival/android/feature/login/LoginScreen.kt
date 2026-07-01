@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,9 +26,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.ui.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +40,7 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val loggedIn by viewModel.loggedIn.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(loggedIn) {
         if (!loggedIn.isNullOrBlank()) {
@@ -75,8 +79,21 @@ fun LoginScreen(
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = { viewModel.startLogin(context.findActivity()) }) {
-                Text("Sign in with OIDC")
+            val currentState = uiState
+            if (currentState is UiState.Loading) {
+                CircularProgressIndicator()
+            } else {
+                Button(onClick = { viewModel.startLogin(context.findActivity()) }) {
+                    Text("Sign in with OIDC")
+                }
+            }
+            if (currentState is UiState.Error) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = currentState.message,
+                    color = Color.Red,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }

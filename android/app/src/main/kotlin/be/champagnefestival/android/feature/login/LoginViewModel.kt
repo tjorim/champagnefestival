@@ -2,11 +2,13 @@ package be.champagnefestival.android.feature.login
 
 import android.app.Activity
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import be.champagnefestival.android.core.auth.AuthManager
 import be.champagnefestival.android.ui.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class LoginViewModel(
     private val authManager: AuthManager,
@@ -17,8 +19,15 @@ class LoginViewModel(
     val loggedIn = authManager.loggedIn
 
     fun startLogin(activity: Activity) {
-        _uiState.value = UiState.Loading
-        authManager.startLogin(activity)
-        _uiState.value = UiState.Success(Unit)
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            _uiState.value =
+                authManager.startLogin(activity).fold(
+                    onSuccess = { UiState.Success(Unit) },
+                    onFailure = { error ->
+                        UiState.Error(error.message ?: "Unable to start sign-in. Check your connection and try again.")
+                    },
+                )
+        }
     }
 }

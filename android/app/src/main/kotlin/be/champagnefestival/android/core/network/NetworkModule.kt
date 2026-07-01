@@ -1,6 +1,7 @@
 package be.champagnefestival.android.core.network
 
 import be.champagnefestival.android.BuildConfig
+import be.champagnefestival.android.core.auth.AuthManager
 import be.champagnefestival.android.core.storage.SessionDataStore
 import be.champagnefestival.android.data.api.ChampagneApiService
 import kotlinx.coroutines.flow.filterNotNull
@@ -12,12 +13,14 @@ import okhttp3.logging.HttpLoggingInterceptor
 
 class NetworkModule(
     sessionDataStore: SessionDataStore,
+    authManager: AuthManager,
 ) {
     private val client =
         OkHttpClient
             .Builder()
             .apply {
                 certificatePinner(CertificatePinnerProvider.forCurrentBuild())
+                authenticator(TokenAuthenticator(sessionDataStore, authManager))
             }.addInterceptor { chain ->
                 val originalRequest = chain.request()
                 val overrideBaseUrl =

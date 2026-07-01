@@ -28,7 +28,7 @@ class ChampagneFestivalApp : Application() {
         super.onCreate()
         sessionDataStore = SessionDataStore(this, applicationScope)
         authManager = AuthManager(this, sessionDataStore, applicationScope)
-        networkModule = NetworkModule(sessionDataStore)
+        networkModule = NetworkModule(sessionDataStore, authManager)
         checkInRepository = DefaultCheckInRepository(networkModule.apiService)
         editionRepository = DefaultEditionRepository(networkModule.apiService)
     }
