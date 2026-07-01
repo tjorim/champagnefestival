@@ -1,8 +1,10 @@
 package be.champagnefestival.android
 
 import android.app.Application
+import androidx.lifecycle.ProcessLifecycleOwner
 import be.champagnefestival.android.core.auth.AuthManager
 import be.champagnefestival.android.core.network.NetworkModule
+import be.champagnefestival.android.core.session.BiometricLockController
 import be.champagnefestival.android.core.storage.SessionDataStore
 import be.champagnefestival.android.data.repository.DefaultCheckInRepository
 import be.champagnefestival.android.data.repository.DefaultEditionRepository
@@ -23,6 +25,8 @@ class ChampagneFestivalApp : Application() {
         private set
     lateinit var editionRepository: DefaultEditionRepository
         private set
+    lateinit var biometricLockController: BiometricLockController
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -31,5 +35,7 @@ class ChampagneFestivalApp : Application() {
         networkModule = NetworkModule(sessionDataStore, authManager)
         checkInRepository = DefaultCheckInRepository(networkModule.apiService)
         editionRepository = DefaultEditionRepository(networkModule.apiService)
+        biometricLockController = BiometricLockController(sessionDataStore)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(biometricLockController)
     }
 }
