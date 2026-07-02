@@ -12,7 +12,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -21,9 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import be.champagnefestival.android.ui.UiState
@@ -72,9 +68,6 @@ private fun SettingsContent(
     settings: SettingsUiModel,
     modifier: Modifier = Modifier,
 ) {
-    var apiBaseUrl by remember(settings.apiBaseUrl) { mutableStateOf(settings.apiBaseUrl) }
-    val isUrlInvalid = apiBaseUrl.isNotBlank() && !apiBaseUrl.startsWith("http://") && !apiBaseUrl.startsWith("https://")
-
     Column(
         modifier =
             modifier
@@ -82,19 +75,12 @@ private fun SettingsContent(
                 .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        OutlinedTextField(
-            value = apiBaseUrl,
-            onValueChange = { apiBaseUrl = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("API base URL") },
-            isError = isUrlInvalid,
-            supportingText = {
-                if (isUrlInvalid) {
-                    Text("URL must start with http:// or https://")
-                }
-            },
+        ApiBaseUrlOverrideCard(
+            apiBaseUrl = settings.apiBaseUrl,
+            defaultApiBaseUrl = settings.defaultApiBaseUrl,
+            onSave = viewModel::saveApiBaseUrl,
+            onReset = viewModel::resetApiBaseUrl,
         )
-        Text("Default API base URL: ${settings.defaultApiBaseUrl}")
         Text("OIDC issuer: ${settings.oidcIssuerUrl}")
         Text("App version: ${settings.versionName}")
         Row(
@@ -106,18 +92,6 @@ private fun SettingsContent(
                 checked = settings.biometricLockEnabled,
                 onCheckedChange = viewModel::setBiometricLockEnabled,
             )
-        }
-        Button(
-            onClick = { viewModel.saveApiBaseUrl(apiBaseUrl) },
-            enabled = !isUrlInvalid,
-        ) {
-            Text("Save base URL")
-        }
-        Button(onClick = {
-            apiBaseUrl = settings.defaultApiBaseUrl
-            viewModel.resetApiBaseUrl()
-        }) {
-            Text("Reset base URL")
         }
         Button(onClick = viewModel::logout) {
             Text("Logout")
