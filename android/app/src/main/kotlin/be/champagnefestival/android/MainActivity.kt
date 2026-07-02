@@ -1,14 +1,15 @@
 package be.champagnefestival.android
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import be.champagnefestival.android.app.NavGraph
+import be.champagnefestival.android.feature.lock.BiometricGate
 import be.champagnefestival.android.ui.theme.ChampagneFestivalTheme
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val app: ChampagneFestivalApp
         get() = application as ChampagneFestivalApp
 
@@ -19,7 +20,9 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             ChampagneFestivalTheme {
-                NavGraph(app = app)
+                BiometricGate(app = app) {
+                    NavGraph(app = app)
+                }
             }
         }
     }

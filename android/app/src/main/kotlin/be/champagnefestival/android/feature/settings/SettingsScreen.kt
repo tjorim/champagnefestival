@@ -2,6 +2,7 @@ package be.champagnefestival.android.feature.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -95,6 +97,16 @@ private fun SettingsContent(
         Text("Default API base URL: ${settings.defaultApiBaseUrl}")
         Text("OIDC issuer: ${settings.oidcIssuerUrl}")
         Text("App version: ${settings.versionName}")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text("Require biometric unlock")
+            Switch(
+                checked = settings.biometricLockEnabled,
+                onCheckedChange = viewModel::setBiometricLockEnabled,
+            )
+        }
         Button(
             onClick = { viewModel.saveApiBaseUrl(apiBaseUrl) },
             enabled = !isUrlInvalid,

@@ -9,6 +9,8 @@ import be.champagnefestival.android.ui.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(
@@ -23,17 +25,23 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
-            sessionDataStore.apiBaseUrlFlow.collect { apiBaseUrl ->
-                _uiState.value =
-                    UiState.Success(
+            sessionDataStore.apiBaseUrlFlow
+                .combine(sessionDataStore.biometricLockEnabledFlow) { apiBaseUrl, biometricLockEnabled ->
+                    // Null while the persisted lock setting is still loading; wait for it so the
+                    // toggle doesn't flash the wrong state.
+                    biometricLockEnabled?.let {
                         SettingsUiModel(
                             apiBaseUrl = apiBaseUrl ?: BuildConfig.API_BASE_URL,
                             defaultApiBaseUrl = BuildConfig.API_BASE_URL,
                             oidcIssuerUrl = BuildConfig.OIDC_ISSUER_URL,
                             versionName = BuildConfig.VERSION_NAME,
-                        ),
-                    )
-            }
+                            biometricLockEnabled = it,
+                        )
+                    }
+                }.filterNotNull()
+                .collect { model ->
+                    _uiState.value = UiState.Success(model)
+                }
         }
     }
 
@@ -53,6 +61,12 @@ class SettingsViewModel(
         }
     }
 
+    fun setBiometricLockEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionDataStore.setBiometricLockEnabled(enabled)
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             authManager.logout()
@@ -66,4 +80,5 @@ data class SettingsUiModel(
     val defaultApiBaseUrl: String,
     val oidcIssuerUrl: String,
     val versionName: String,
+    val biometricLockEnabled: Boolean,
 )

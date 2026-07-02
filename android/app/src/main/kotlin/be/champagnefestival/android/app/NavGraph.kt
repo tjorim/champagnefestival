@@ -2,9 +2,6 @@ package be.champagnefestival.android.app
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -12,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import be.champagnefestival.android.ChampagneFestivalApp
+import be.champagnefestival.android.core.di.simpleFactory
 import be.champagnefestival.android.feature.edition.ActiveEditionScreen
 import be.champagnefestival.android.feature.edition.ActiveEditionViewModel
 import be.champagnefestival.android.feature.login.LoginScreen
@@ -153,11 +151,3 @@ fun NavGraph(app: ChampagneFestivalApp) {
         }
     }
 }
-
-private inline fun <reified T : ViewModel> simpleFactory(crossinline initializer: () -> T): ViewModelProvider.Factory =
-    object : ViewModelProvider.Factory {
-        override fun <VM : ViewModel> create(
-            modelClass: Class<VM>,
-            extras: CreationExtras,
-        ): VM = initializer() as VM
-    }
