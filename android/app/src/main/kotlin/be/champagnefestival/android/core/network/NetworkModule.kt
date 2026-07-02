@@ -4,7 +4,6 @@ import be.champagnefestival.android.BuildConfig
 import be.champagnefestival.android.core.auth.AuthManager
 import be.champagnefestival.android.core.storage.SessionDataStore
 import be.champagnefestival.android.data.api.ChampagneApiService
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 
@@ -18,25 +17,11 @@ class NetworkModule(
             .apply {
                 certificatePinner(CertificatePinnerProvider.forCurrentBuild())
                 authenticator(TokenAuthenticator(sessionDataStore, authManager))
-            }.addInterceptor { chain ->
-                val originalRequest = chain.request()
-                val overrideBaseUrl = sessionDataStore.apiBaseUrlFlow.value ?: BuildConfig.API_BASE_URL
-                val overrideBase = overrideBaseUrl.toHttpUrlOrNull()
-                val updatedRequest =
-                    if (overrideBase != null) {
-                        val updatedUrl =
-                            originalRequest.url
-                                .newBuilder()
-                                .scheme(overrideBase.scheme)
-                                .host(overrideBase.host)
-                                .port(overrideBase.port)
-                                .build()
-                        originalRequest.newBuilder().url(updatedUrl).build()
-                    } else {
-                        originalRequest
-                    }
-                chain.proceed(updatedRequest)
             }.addInterceptor(
+                DynamicBaseUrlInterceptor {
+                    sessionDataStore.apiBaseUrlFlow.value ?: BuildConfig.API_BASE_URL
+                },
+            ).addInterceptor(
                 HttpLoggingInterceptor().apply {
                     level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.BASIC
                 },
