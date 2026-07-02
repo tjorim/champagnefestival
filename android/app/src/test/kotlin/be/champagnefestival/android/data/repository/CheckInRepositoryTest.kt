@@ -5,7 +5,6 @@ import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.data.model.CheckInOut
 import io.mockk.coEvery
 import io.mockk.mockk
-import javax.net.ssl.SSLPeerUnverifiedException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -14,6 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
+import javax.net.ssl.SSLPeerUnverifiedException
 
 class CheckInRepositoryTest {
     private val apiService = mockk<ChampagneApiService>()
