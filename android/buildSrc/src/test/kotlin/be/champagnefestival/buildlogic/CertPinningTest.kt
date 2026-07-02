@@ -105,7 +105,7 @@ class CertPinningTest {
             assertThrows(IllegalStateException::class.java) {
                 CertPinning.requireHostForPins(listOf("sha256/abc"), "")
             }
-        assertTrue(exception.message.orEmpty().contains("CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST"))
+        assertTrue(exception.message.orEmpty().contains("ANDROID_CERTIFICATE_PIN_HOST"))
     }
 
     @Test

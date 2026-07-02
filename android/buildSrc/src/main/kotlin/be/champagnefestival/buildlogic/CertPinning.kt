@@ -45,7 +45,7 @@ object CertPinning {
         check(pins.isEmpty() || host.isNotBlank()) {
             "Certificate pins are configured but no pin host is set. " +
                 "Certificate pinning would be ineffective — fix " +
-                "CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST."
+                "ANDROID_CERTIFICATE_PIN_HOST."
         }
     }
 }

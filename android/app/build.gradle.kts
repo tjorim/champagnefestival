@@ -45,43 +45,28 @@ fun resolveConfigValue(
     return explicitValue ?: defaultValue
 }
 
-// No staging backend is deployed yet; unlike release, a missing staging value
-// falls back to the placeholder instead of failing (staging builds are ad-hoc
-// test artifacts, not something shipped to real users).
-val stagingApiBaseUrl =
-    resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL",
-        required = false,
-        defaultValue = "https://staging.placeholder.invalid/",
-    )
-val stagingOidcIssuerUrl =
-    resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_OIDC_ISSUER_URL",
-        required = false,
-        defaultValue = "https://staging-auth.placeholder.invalid/realms/champagnefestival",
-    )
 val releaseApiBaseUrl =
     resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL",
+        "ANDROID_API_BASE_URL",
         required = isReleaseArtifactRequested(),
         defaultValue = "https://release.placeholder.invalid/",
     )
 val releaseOidcIssuerUrl =
     resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL",
+        "ANDROID_OIDC_ISSUER_URL",
         required = isReleaseArtifactRequested(),
         defaultValue = "https://release-auth.placeholder.invalid/realms/champagnefestival",
     )
 
-val prodCertificatePinHost =
+val releaseCertificatePinHost =
     resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST",
+        "ANDROID_CERTIFICATE_PIN_HOST",
         required = isReleaseArtifactRequested(),
         defaultValue = "champagnefestival.tjor.im",
     )
-val prodCertificatePinsRaw =
+val releaseCertificatePinsRaw =
     resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS",
+        "ANDROID_CERTIFICATE_PINS",
         required = isReleaseArtifactRequested(),
         defaultValue = "",
     )
@@ -89,9 +74,9 @@ val prodCertificatePinsRaw =
 // Pin-format and host-requires-pins validation live in buildSrc's CertPinning
 // so they have unit tests (script-local functions in a Kotlin DSL build script
 // cannot be tested directly).
-val prodCertificatePins = CertPinning.resolvePins(prodCertificatePinsRaw)
-CertPinning.requireValidPinFormats(prodCertificatePins)
-CertPinning.requireHostForPins(prodCertificatePins, prodCertificatePinHost)
+val releaseCertificatePins = CertPinning.resolvePins(releaseCertificatePinsRaw)
+CertPinning.requireValidPinFormats(releaseCertificatePins)
+CertPinning.requireHostForPins(releaseCertificatePins, releaseCertificatePinHost)
 
 android {
     namespace = "be.champagnefestival.android"
@@ -138,14 +123,6 @@ android {
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
         }
-        create("staging") {
-            initWith(getByName("debug"))
-            matchingFallbacks += listOf("debug")
-            applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
-            buildConfigField("String", "API_BASE_URL", quoted(stagingApiBaseUrl))
-            buildConfigField("String", "OIDC_ISSUER_URL", quoted(stagingOidcIssuerUrl))
-        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -158,8 +135,8 @@ android {
             buildConfigField("String", "OIDC_ISSUER_URL", quoted(releaseOidcIssuerUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
-            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(prodCertificatePinHost))
-            buildConfigField("String", "CERTIFICATE_PINS", quoted(prodCertificatePins.joinToString(",")))
+            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(releaseCertificatePinHost))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins.joinToString(",")))
         }
     }
 

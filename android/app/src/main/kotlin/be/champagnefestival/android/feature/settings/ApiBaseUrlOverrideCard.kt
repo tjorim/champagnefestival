@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import be.champagnefestival.android.core.network.DynamicBaseUrlInterceptor
 
 /**
- * Lets the user override the API base URL at runtime (e.g. to point the app at a staging or
+ * Lets the user override the API base URL at runtime (e.g. to point the app at a
  * local backend) and shows the build's default for reference. Validation reuses
  * [DynamicBaseUrlInterceptor.isValidOverride] so the UI stays in sync with the rule the
  * interceptor itself applies when rewriting requests.

@@ -29,7 +29,7 @@ that's issued via Google Trust Services (`GTS Root R4` / `WE1`), not Let's Encry
 > host (see `android/README.md` → "Choosing what to pin"). Since the pinned cert is Cloudflare's
 > edge certificate, its rotation cadence and CA are controlled by Cloudflare's edge certificate
 > settings, not Caddy's ACME config. If Cloudflare's certificate authority or intermediate ever
-> changes, the pins in the `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS` GitHub secret must be
+> changes, the pins in the `ANDROID_CERTIFICATE_PINS` GitHub secret must be
 > regenerated and a new release shipped, or the app will fail to connect.
 
 ## Frontend build
