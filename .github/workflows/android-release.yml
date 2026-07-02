@@ -56,6 +56,8 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL: ${{ secrets.CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL }}
+          CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL: ${{ secrets.CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL }}
         run: ./gradlew :app:assembleRelease
 
       - name: Upload release APK

@@ -55,6 +55,18 @@ CI can build a distributable staging APK without production signing secrets via
 the manual **Android Staging APK** workflow (`.github/workflows/android-staging.yml`),
 which accepts both URLs as optional inputs.
 
+### Release variant
+
+The manual **Android Release APK** workflow (`.github/workflows/android-release.yml`)
+builds a signed release APK and requires these repository secrets:
+
+- `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD` — release signing
+- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL` — e.g. `https://api.champagnefestival.tjor.im/`
+- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL` — e.g. `https://auth.tjor.im/realms/champagnefestival`
+
+If the two URL secrets are unset, `assembleRelease` fails fast rather than
+silently shipping an APK pointed at a placeholder host.
+
 ## Getting Started
 
 ### Prerequisites
