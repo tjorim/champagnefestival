@@ -1,5 +1,6 @@
 package be.champagnefestival.android.data.repository
 
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 import java.io.IOException
 import javax.net.ssl.SSLPeerUnverifiedException
@@ -25,6 +26,8 @@ suspend fun <T> runApiCall(
         )
     } catch (exception: IOException) {
         Result.failure(ApiException("Unable to reach the server. Check your connection and try again.", exception))
+    } catch (exception: CancellationException) {
+        throw exception
     } catch (exception: Exception) {
         Result.failure(ApiException(exception.message ?: "Something went wrong.", exception))
     }
