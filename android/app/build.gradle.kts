@@ -34,15 +34,15 @@ fun resolveConfigValue(
     required: Boolean,
     defaultValue: String = "",
 ): String {
-    val value =
+    val explicitValue =
         sequenceOf(
             providers.gradleProperty(name).orNull,
             providers.environmentVariable(name).orNull,
-        ).firstOrNull { !it.isNullOrBlank() } ?: defaultValue.takeIf { it.isNotBlank() }
-    if (required && value.isNullOrBlank()) {
+        ).firstOrNull { !it.isNullOrBlank() }
+    if (required && explicitValue.isNullOrBlank()) {
         error("Missing required build property '$name'. Set it as a Gradle property or env var.")
     }
-    return value.orEmpty()
+    return explicitValue ?: defaultValue
 }
 
 // No staging backend is deployed yet; unlike release, a missing staging value
