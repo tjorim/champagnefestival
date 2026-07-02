@@ -5,6 +5,7 @@ import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.data.model.CheckInOut
 import io.mockk.coEvery
 import io.mockk.mockk
+import javax.net.ssl.SSLPeerUnverifiedException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -38,6 +39,19 @@ class CheckInRepositoryTest {
             val result = repository.lookupRegistration("reg-1", "token")
 
             assertTrue(result.isFailure)
+        }
+
+    @Test
+    fun `lookupRegistration distinguishes certificate pin failures from generic connectivity errors`() =
+        runTest {
+            coEvery { apiService.lookupCheckIn("reg-1", any()) } throws SSLPeerUnverifiedException("pin failure")
+
+            val result = repository.lookupRegistration("reg-1", "token")
+
+            assertTrue(result.isFailure)
+            val message = result.exceptionOrNull()?.message
+            assertTrue(message?.contains("certificate", ignoreCase = true) == true)
+            assertTrue(message?.contains("Unable to reach the server") == false)
         }
 
     @Test

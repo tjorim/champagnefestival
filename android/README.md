@@ -63,9 +63,24 @@ builds a signed release APK and requires these repository secrets:
 - `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD` — release signing
 - `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL` — e.g. `https://api.champagnefestival.tjor.im/`
 - `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL` — e.g. `https://auth.tjor.im/realms/champagnefestival`
+- `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST` — e.g. `champagnefestival.tjor.im`
+- `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS` — comma-separated `sha256/<base64 SPKI hash>`
+  pins for the current leaf certificate and a backup (e.g. the issuing CA), used for certificate
+  pinning in release builds
 
-If the two URL secrets are unset, `assembleRelease` fails fast rather than
-silently shipping an APK pointed at a placeholder host.
+If any of these secrets are unset, `assembleRelease` fails fast rather than
+silently shipping an APK pointed at a placeholder host or stale certificate pins.
+
+Certificate pins must be rotated whenever the production TLS certificate chain changes
+(e.g. a CA migration), or every release build will reject valid connections to the
+real server. Regenerate them with:
+
+```bash
+openssl s_client -connect champagnefestival.tjor.im:443 -servername champagnefestival.tjor.im \
+  </dev/null 2>/dev/null | openssl x509 -pubkey -noout \
+  | openssl pkey -pubin -outform der \
+  | openssl dgst -sha256 -binary | openssl enc -base64
+```
 
 ## Getting Started
 

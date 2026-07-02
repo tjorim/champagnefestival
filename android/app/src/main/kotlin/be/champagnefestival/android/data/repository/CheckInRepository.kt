@@ -7,6 +7,7 @@ import be.champagnefestival.android.data.model.CheckInOut
 import be.champagnefestival.android.data.model.CheckInRequest
 import retrofit2.HttpException
 import java.io.IOException
+import javax.net.ssl.SSLPeerUnverifiedException
 
 interface CheckInRepository {
     suspend fun lookupRegistration(
@@ -61,6 +62,10 @@ class DefaultCheckInRepository(
             } else {
                 Result.failure(ApiException(exception.message(), exception))
             }
+        } catch (exception: SSLPeerUnverifiedException) {
+            Result.failure(
+                ApiException("Secure connection to the server could not be verified. Please update the app.", exception),
+            )
         } catch (exception: IOException) {
             Result.failure(ApiException("Unable to reach the server. Check your connection and try again.", exception))
         } catch (exception: Exception) {
