@@ -74,23 +74,24 @@ val releaseOidcIssuerUrl =
     )
 
 val prodCertificatePinHost =
-    providers
-        .gradleProperty("CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST")
-        .orElse("champagnefestival.tjor.im")
+    resolveConfigValue(
+        "CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST",
+        required = isReleaseArtifactRequested(),
+        defaultValue = "champagnefestival.tjor.im",
+    )
 val prodCertificatePinsRaw =
-    providers
-        .gradleProperty("CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS")
-        .orElse(
-            "sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=," +
-                "sha256/C5+Q0gPI67ZTmAD/C84YyfVdbRF+O60CHGxkg1/g7xs=",
-        )
+    resolveConfigValue(
+        "CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS",
+        required = isReleaseArtifactRequested(),
+        defaultValue = "",
+    )
 
 // Pin-format and host-requires-pins validation live in buildSrc's CertPinning
 // so they have unit tests (script-local functions in a Kotlin DSL build script
 // cannot be tested directly).
-val prodCertificatePins = CertPinning.resolvePins(prodCertificatePinsRaw.get())
+val prodCertificatePins = CertPinning.resolvePins(prodCertificatePinsRaw)
 CertPinning.requireValidPinFormats(prodCertificatePins)
-CertPinning.requireHostForPins(prodCertificatePins, prodCertificatePinHost.get())
+CertPinning.requireHostForPins(prodCertificatePins, prodCertificatePinHost)
 
 android {
     namespace = "be.champagnefestival.android"
@@ -157,7 +158,7 @@ android {
             buildConfigField("String", "OIDC_ISSUER_URL", quoted(releaseOidcIssuerUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
-            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(prodCertificatePinHost.get()))
+            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(prodCertificatePinHost))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(prodCertificatePins.joinToString(",")))
         }
     }

@@ -13,6 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
+import javax.net.ssl.SSLPeerUnverifiedException
 
 class CheckInRepositoryTest {
     private val apiService = mockk<ChampagneApiService>()
@@ -38,6 +39,19 @@ class CheckInRepositoryTest {
             val result = repository.lookupRegistration("reg-1", "token")
 
             assertTrue(result.isFailure)
+        }
+
+    @Test
+    fun `lookupRegistration distinguishes certificate pin failures from generic connectivity errors`() =
+        runTest {
+            coEvery { apiService.lookupCheckIn("reg-1", any()) } throws SSLPeerUnverifiedException("pin failure")
+
+            val result = repository.lookupRegistration("reg-1", "token")
+
+            assertTrue(result.isFailure)
+            val message = result.exceptionOrNull()?.message
+            assertTrue(message?.contains("certificate", ignoreCase = true) == true)
+            assertTrue(message?.contains("Unable to reach the server") == false)
         }
 
     @Test

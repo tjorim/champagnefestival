@@ -61,11 +61,58 @@ The manual **Android Release APK** workflow (`.github/workflows/android-release.
 builds a signed release APK and requires these repository secrets:
 
 - `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD` — release signing
-- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL` — e.g. `https://api.champagnefestival.tjor.im/`
+- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL` — e.g. `https://champagnefestival.tjor.im/`
+  (the backend is routed by path under the main host — `/api*`, not a separate `api.` subdomain —
+  see `DEPLOYMENT.md`; `ChampagneApiService` endpoints already include the `api/` prefix)
 - `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL` — e.g. `https://auth.tjor.im/realms/champagnefestival`
+- `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST` — e.g. `champagnefestival.tjor.im`
+- `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS` — comma-separated `sha256/<base64 SPKI hash>` pins,
+  used for certificate pinning in release builds (see "Choosing what to pin" below)
 
-If the two URL secrets are unset, `assembleRelease` fails fast rather than
-silently shipping an APK pointed at a placeholder host.
+If any of these secrets are unset, `assembleRelease` fails fast rather than
+silently shipping an APK pointed at a placeholder host or stale certificate pins.
+
+#### Choosing what to pin
+
+`OkHttp`'s `CertificatePinner` matches a pin against **any** certificate in the chain, not just
+the leaf, so which certificate(s) you pin determines how often the pins need to be rotated:
+
+- **Leaf certificate** — changes on every renewal. Note that the certificate a client actually
+  sees is whatever terminates client-facing TLS — for this project that's Cloudflare's edge
+  certificate (see `DEPLOYMENT.md`), not necessarily Caddy's origin certificate. Most ACME/edge
+  TLS providers generate a new key pair per certificate by default, so pinning the leaf means the
+  pins go stale roughly every 60–90 days, requiring a new app release each time or every release
+  build will start rejecting valid connections.
+- **Issuing intermediate CA** (recommended) — rotates on the order of years, not months, so this
+  survives routine certificate renewals. This is what most production pinning setups pin against.
+- **Root CA** — most stable, but pins the broadest trust scope (any cert from that root would be
+  accepted for the pinned host).
+
+Pin **both** the current issuing intermediate and a backup (either the root, or a second
+intermediate the CA publishes as a cross-sign/rollover target) so a routine CA-side rollover
+doesn't lock out installed apps before the next release.
+
+Regenerate pins with (index `0` is the leaf, `1` is the first intermediate, `2` the next, etc. —
+inspect the `subject=`/`issuer=` lines from the second command to identify which index is which):
+
+```bash
+# Show the chain so you can identify the intermediate/root you want to pin
+openssl s_client -connect champagnefestival.tjor.im:443 -servername champagnefestival.tjor.im \
+  -showcerts </dev/null 2>/dev/null | grep -E "^(subject|issuer)="
+
+# Compute the SPKI pin for chain certificate at index N (0=leaf, 1=intermediate, ...)
+N=1
+openssl s_client -connect champagnefestival.tjor.im:443 -servername champagnefestival.tjor.im \
+  -showcerts </dev/null 2>/dev/null \
+  | awk -v n="$N" '/BEGIN CERTIFICATE/{c++} c==n+1{print} /END CERTIFICATE/&&c==n+1{exit}' \
+  | openssl x509 -pubkey -noout \
+  | openssl pkey -pubin -outform der \
+  | openssl dgst -sha256 -binary | openssl enc -base64
+```
+
+Certificate pins must still be rotated whenever the **issuing CA itself changes** (e.g. migrating
+hosting/CDN providers, or Caddy switching ACME CAs) — pinning the intermediate only protects
+against routine leaf renewal, not a CA migration.
 
 ## Getting Started
 
