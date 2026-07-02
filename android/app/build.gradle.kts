@@ -10,26 +10,67 @@ plugins {
 
 fun quoted(value: String) = "\"$value\""
 
+val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(":").lowercase() }
+
+// Signing/URL credentials only matter for tasks that produce a build artifact for
+// that variant. Lint and unit tests compile and analyze the release variant but
+// never sign or ship anything, so lintRelease/testReleaseUnitTest must not require
+// production config to be set.
+fun isReleaseArtifactRequested(): Boolean {
+    if (requestedTaskNames.isEmpty()) return false
+    val artifactVerbs = listOf("assemble", "bundle", "install", "package")
+    return requestedTaskNames.any { taskName ->
+        (taskName.contains("release") && artifactVerbs.any { verb -> taskName.contains(verb) }) ||
+            taskName in listOf("assemble", "build", "bundle")
+    }
+}
+
 // Resolves a config value from a Gradle property or environment variable of the
-// same name, treating blank values as unset (e.g. an empty workflow input).
+// same name, treating blank values as unset (e.g. an empty workflow input). When
+// `required` is true and the variant that needs it is actually being built, a
+// missing value fails the build instead of silently falling back to `defaultValue`.
 fun resolveConfigValue(
     name: String,
-    defaultValue: String,
-): String =
-    sequenceOf(
-        providers.gradleProperty(name).orNull,
-        providers.environmentVariable(name).orNull,
-    ).firstOrNull { !it.isNullOrBlank() } ?: defaultValue
+    required: Boolean,
+    defaultValue: String = "",
+): String {
+    val value =
+        sequenceOf(
+            providers.gradleProperty(name).orNull,
+            providers.environmentVariable(name).orNull,
+        ).firstOrNull { !it.isNullOrBlank() } ?: defaultValue.takeIf { it.isNotBlank() }
+    if (required && value.isNullOrBlank()) {
+        error("Missing required build property '$name'. Set it as a Gradle property or env var.")
+    }
+    return value.orEmpty()
+}
 
+// No staging backend is deployed yet; unlike release, a missing staging value
+// falls back to the placeholder instead of failing (staging builds are ad-hoc
+// test artifacts, not something shipped to real users).
 val stagingApiBaseUrl =
     resolveConfigValue(
         "CHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL",
-        "https://staging.champagnefestival.tjor.im/",
+        required = false,
+        defaultValue = "https://staging.placeholder.invalid/",
     )
 val stagingOidcIssuerUrl =
     resolveConfigValue(
         "CHAMPAGNEFESTIVAL_ANDROID_STAGING_OIDC_ISSUER_URL",
-        "https://staging-auth.tjor.im/realms/champagnefestival",
+        required = false,
+        defaultValue = "https://staging-auth.placeholder.invalid/realms/champagnefestival",
+    )
+val releaseApiBaseUrl =
+    resolveConfigValue(
+        "CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL",
+        required = isReleaseArtifactRequested(),
+        defaultValue = "https://release.placeholder.invalid/",
+    )
+val releaseOidcIssuerUrl =
+    resolveConfigValue(
+        "CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL",
+        required = isReleaseArtifactRequested(),
+        defaultValue = "https://release-auth.placeholder.invalid/realms/champagnefestival",
     )
 
 val prodCertificatePinHost =
@@ -54,6 +95,25 @@ CertPinning.requireHostForPins(prodCertificatePins, prodCertificatePinHost.get()
 android {
     namespace = "be.champagnefestival.android"
     compileSdk = 37
+
+    val keystorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePassword = providers.environmentVariable("STORE_PASSWORD").orNull
+    val keystoreKeyAlias = providers.environmentVariable("KEY_ALIAS").orNull
+    val keystoreKeyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+    signingConfigs {
+        if (!keystorePath.isNullOrBlank() &&
+            !keystorePassword.isNullOrBlank() &&
+            !keystoreKeyAlias.isNullOrBlank() &&
+            !keystoreKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                keyAlias = keystoreKeyAlias
+                keyPassword = keystoreKeyPassword
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "be.champagnefestival.android"
@@ -88,9 +148,13 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null) {
+                signingConfig = releaseSigningConfig
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("String", "API_BASE_URL", "\"https://champagnefestival.tjor.im/\"")
-            buildConfigField("String", "OIDC_ISSUER_URL", "\"https://auth.tjor.im/realms/champagnefestival\"")
+            buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
+            buildConfigField("String", "OIDC_ISSUER_URL", quoted(releaseOidcIssuerUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(prodCertificatePinHost.get()))
