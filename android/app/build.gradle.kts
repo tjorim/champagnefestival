@@ -146,8 +146,11 @@ android {
             buildConfigField("String", "OIDC_ISSUER_URL", quoted(stagingOidcIssuerUrl))
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Internal volunteer/staff tool distributed as a sideloaded APK, not a
+            // Play Store listing: obfuscation and size trimming aren't worth the
+            // risk of R8 stripping classes CameraX/ML Kit resolve via reflection.
+            isMinifyEnabled = false
+            isShrinkResources = false
             val releaseSigningConfig = signingConfigs.findByName("release")
             if (releaseSigningConfig != null) {
                 signingConfig = releaseSigningConfig
