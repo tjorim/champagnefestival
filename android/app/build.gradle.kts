@@ -45,21 +45,6 @@ fun resolveConfigValue(
     return explicitValue ?: defaultValue
 }
 
-// No staging backend is deployed yet; unlike release, a missing staging value
-// falls back to the placeholder instead of failing (staging builds are ad-hoc
-// test artifacts, not something shipped to real users).
-val stagingApiBaseUrl =
-    resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL",
-        required = false,
-        defaultValue = "https://staging.placeholder.invalid/",
-    )
-val stagingOidcIssuerUrl =
-    resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_OIDC_ISSUER_URL",
-        required = false,
-        defaultValue = "https://staging-auth.placeholder.invalid/realms/champagnefestival",
-    )
 val releaseApiBaseUrl =
     resolveConfigValue(
         "CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL",
@@ -137,14 +122,6 @@ android {
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
-        }
-        create("staging") {
-            initWith(getByName("debug"))
-            matchingFallbacks += listOf("debug")
-            applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
-            buildConfigField("String", "API_BASE_URL", quoted(stagingApiBaseUrl))
-            buildConfigField("String", "OIDC_ISSUER_URL", quoted(stagingOidcIssuerUrl))
         }
         release {
             isMinifyEnabled = true
