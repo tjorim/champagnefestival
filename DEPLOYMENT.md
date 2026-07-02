@@ -18,6 +18,15 @@ VPS
 
 Caddy handles HTTPS certificates automatically via Let's Encrypt.
 
+> **Android app certificate pinning:** the Android release build pins TLS certificates for this
+> host (see `android/README.md` → "Choosing what to pin"). If the ACME CA or intermediate ever
+> changes, the pins in the `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS` GitHub secret must be
+> regenerated and a new release shipped, or the app will fail to connect. Caddy's ACME client
+> generates a new key pair on every certificate renewal by default; if pins are ever set against
+> the leaf certificate instead of the issuing intermediate, consider setting `reuse_private_keys`
+> in Caddy's global TLS options so the leaf key — and the pin — stays stable across the automatic
+> ~60–90 day renewal cycle (that setting lives in the infra stack's Caddyfile, not this repo).
+
 ## Frontend build
 
 Build the frontend and ensure `frontend/dist/` is up to date before deploying:
