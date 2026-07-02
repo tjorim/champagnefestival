@@ -5,27 +5,32 @@ This repository contains:
 - A **React/Vite frontend** in `frontend/`.
 - A **FastAPI backend** in `backend/`.
 
-Production runs on a **VPS** with Caddy as the reverse proxy.
+Production runs on a **VPS** with Caddy as the reverse proxy, fronted by **Cloudflare**
+(`champagnefestival.tjor.im` is proxied, not DNS-only).
 
 ## Architecture
 
 ```
-VPS
-├── Caddy  (TLS termination + reverse proxy)
-│   └── champagnefestival.be  →  frontend static files + /api/* → backend
-└── champagnefestival-api  (FastAPI, port 8000, internal only)
+Cloudflare  (edge TLS termination)
+└── VPS
+    ├── Caddy  (reverse proxy; may also terminate TLS on the Cloudflare→origin leg)
+    │   └── champagnefestival.tjor.im  →  frontend static files + /api*, /docs*, /openapi.json, /mcp* → backend
+    └── champagnefestival-api  (FastAPI, port 8000, internal only)
 ```
 
-Caddy handles HTTPS certificates automatically via Let's Encrypt.
+Caddy handles HTTPS certificates automatically via Let's Encrypt on the origin. Because
+Cloudflare proxies the public hostname, **clients (including the Android app) only ever see
+Cloudflare's edge certificate**, not Caddy's origin certificate directly — as of this writing
+that's issued via Google Trust Services (`GTS Root R4` / `WE1`), not Let's Encrypt. Don't assume
+"Caddy uses Let's Encrypt" tells you what CA a client actually observes; check the live chain
+(e.g. via `openssl s_client`) instead.
 
 > **Android app certificate pinning:** the Android release build pins TLS certificates for this
-> host (see `android/README.md` → "Choosing what to pin"). If the ACME CA or intermediate ever
+> host (see `android/README.md` → "Choosing what to pin"). Since the pinned cert is Cloudflare's
+> edge certificate, its rotation cadence and CA are controlled by Cloudflare's edge certificate
+> settings, not Caddy's ACME config. If Cloudflare's certificate authority or intermediate ever
 > changes, the pins in the `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS` GitHub secret must be
-> regenerated and a new release shipped, or the app will fail to connect. Caddy's ACME client
-> generates a new key pair on every certificate renewal by default; if pins are ever set against
-> the leaf certificate instead of the issuing intermediate, consider setting `reuse_private_keys`
-> in Caddy's global TLS options so the leaf key — and the pin — stays stable across the automatic
-> ~60–90 day renewal cycle (that setting lives in the infra stack's Caddyfile, not this repo).
+> regenerated and a new release shipped, or the app will fail to connect.
 
 ## Frontend build
 

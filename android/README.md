@@ -61,7 +61,9 @@ The manual **Android Release APK** workflow (`.github/workflows/android-release.
 builds a signed release APK and requires these repository secrets:
 
 - `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD` — release signing
-- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL` — e.g. `https://api.champagnefestival.tjor.im/`
+- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL` — e.g. `https://champagnefestival.tjor.im/`
+  (the backend is routed by path under the main host — `/api*`, not a separate `api.` subdomain —
+  see `DEPLOYMENT.md`; `ChampagneApiService` endpoints already include the `api/` prefix)
 - `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL` — e.g. `https://auth.tjor.im/realms/champagnefestival`
 - `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST` — e.g. `champagnefestival.tjor.im`
 - `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS` — comma-separated `sha256/<base64 SPKI hash>` pins,
@@ -75,10 +77,12 @@ silently shipping an APK pointed at a placeholder host or stale certificate pins
 `OkHttp`'s `CertificatePinner` matches a pin against **any** certificate in the chain, not just
 the leaf, so which certificate(s) you pin determines how often the pins need to be rotated:
 
-- **Leaf certificate** — changes on every renewal. Caddy's ACME client (like most ACME clients)
-  generates a new key pair per certificate by default, so pinning the leaf means the pins go
-  stale roughly every 60–90 days (Let's Encrypt's certificate lifetime), requiring a new app
-  release each time or every release build will start rejecting valid connections.
+- **Leaf certificate** — changes on every renewal. Note that the certificate a client actually
+  sees is whatever terminates client-facing TLS — for this project that's Cloudflare's edge
+  certificate (see `DEPLOYMENT.md`), not necessarily Caddy's origin certificate. Most ACME/edge
+  TLS providers generate a new key pair per certificate by default, so pinning the leaf means the
+  pins go stale roughly every 60–90 days, requiring a new app release each time or every release
+  build will start rejecting valid connections.
 - **Issuing intermediate CA** (recommended) — rotates on the order of years, not months, so this
   survives routine certificate renewals. This is what most production pinning setups pin against.
 - **Root CA** — most stable, but pins the broadest trust scope (any cert from that root would be
