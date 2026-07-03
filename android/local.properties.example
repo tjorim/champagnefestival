@@ -1,0 +1,15 @@
+# Copy this file to local.properties (already in .gitignore) and fill in the values.
+# local.properties is never committed to version control.
+
+# ---- Android SDK location (required by Android Gradle Plugin) ----
+# sdk.dir=/Users/<you>/Library/Android/sdk
+
+# API base URL (required when building a release artifact, e.g.
+# :app:assembleRelease -- not just that one task; debug always uses the
+# Android emulator loopback, http://10.0.2.2:8000/, and isn't configurable).
+# ANDROID_API_BASE_URL=https://champagnefestival.tjor.im/
+
+# Certificate pin host and pins (required when building a release artifact;
+# debug never pins, regardless of these values).
+# ANDROID_CERTIFICATE_PIN_HOST=champagnefestival.tjor.im
+# ANDROID_CERTIFICATE_PINS=sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=,sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=
