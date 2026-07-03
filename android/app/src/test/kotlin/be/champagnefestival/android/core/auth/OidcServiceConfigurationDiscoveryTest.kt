@@ -58,7 +58,9 @@ class OidcServiceConfigurationDiscoveryTest {
                     ).build(),
             )
 
-            val config = OidcServiceConfigurationDiscovery(OkHttpClient()).fetch(server.url("/").toString())
+            val config =
+                OidcServiceConfigurationDiscovery(OkHttpClient())
+                    .fetch(server.url("/").toString())
 
             assertEquals("/api/auth/oidc-config", server.takeRequest().url.encodedPath)
             assertEquals(
@@ -74,11 +76,19 @@ class OidcServiceConfigurationDiscoveryTest {
     @Test
     fun `fetch throws with bounded error snippet on non-2xx response`() =
         runTest {
-            server.enqueue(MockResponse.Builder().code(502).body("x".repeat(5000)).build())
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(502)
+                    .body("x".repeat(5000))
+                    .build(),
+            )
 
             val exception =
-                runCatching { OidcServiceConfigurationDiscovery(OkHttpClient()).fetch(server.url("/").toString()) }
-                    .exceptionOrNull()
+                runCatching {
+                    OidcServiceConfigurationDiscovery(OkHttpClient())
+                        .fetch(server.url("/").toString())
+                }.exceptionOrNull()
 
             assertTrue(exception is IOException)
             assertTrue(exception!!.message!!.contains("HTTP 502"))
