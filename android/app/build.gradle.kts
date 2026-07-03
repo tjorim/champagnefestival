@@ -1,4 +1,5 @@
 import be.champagnefestival.buildlogic.CertPinning
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -10,6 +11,14 @@ plugins {
 
 fun quoted(value: String) = "\"$value\""
 
+val localProperties =
+    Properties().also { props ->
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { props.load(it) }
+        }
+    }
+
 val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(":").lowercase() }
 
 // Signing/URL credentials only matter for tasks that produce a build artifact for
@@ -18,89 +27,86 @@ val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfter
 // production config to be set.
 fun isReleaseArtifactRequested(): Boolean {
     if (requestedTaskNames.isEmpty()) return false
-    val artifactVerbs = listOf("assemble", "bundle", "install", "package")
+    val nonArtifactKeywords = listOf("test", "lint", "detekt", "ktlint")
     return requestedTaskNames.any { taskName ->
-        (taskName.contains("release") && artifactVerbs.any { verb -> taskName.contains(verb) }) ||
+        (taskName.contains("release") && nonArtifactKeywords.none { taskName.contains(it) }) ||
             taskName in listOf("assemble", "build", "bundle")
     }
 }
 
-// Resolves a config value from a Gradle property or environment variable of the
-// same name, treating blank values as unset (e.g. an empty workflow input). When
-// `required` is true and the variant that needs it is actually being built, a
-// missing value fails the build instead of silently falling back to `defaultValue`.
+// Resolves a config value from local.properties, a Gradle property, or an
+// environment variable, treating blank values as unset (e.g. an empty workflow
+// input). When `required` is true and the variant that needs it is actually
+// being built, a missing value fails the build instead of silently falling
+// back to `defaultValue`.
 fun resolveConfigValue(
-    name: String,
+    key: String,
+    envKey: String,
     required: Boolean,
     defaultValue: String = "",
 ): String {
+    // A blank value counts as missing so a placeholder line in local.properties
+    // still falls through to the next source or the default.
     val explicitValue =
         sequenceOf(
-            providers.gradleProperty(name).orNull,
-            providers.environmentVariable(name).orNull,
+            localProperties.getProperty(key),
+            providers.gradleProperty(key).orNull,
+            providers.environmentVariable(envKey).orNull,
         ).firstOrNull { !it.isNullOrBlank() }
     if (required && explicitValue.isNullOrBlank()) {
-        error("Missing required build property '$name'. Set it as a Gradle property or env var.")
+        error(
+            "Missing required build property '$key'. " +
+                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'.",
+        )
     }
     return explicitValue ?: defaultValue
 }
 
-// No staging backend is deployed yet; unlike release, a missing staging value
-// falls back to the placeholder instead of failing (staging builds are ad-hoc
-// test artifacts, not something shipped to real users).
-val stagingApiBaseUrl =
-    resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL",
-        required = false,
-        defaultValue = "https://staging.placeholder.invalid/",
-    )
-val stagingOidcIssuerUrl =
-    resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_STAGING_OIDC_ISSUER_URL",
-        required = false,
-        defaultValue = "https://staging-auth.placeholder.invalid/realms/champagnefestival",
-    )
 val releaseApiBaseUrl =
     resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL",
+        "ANDROID_API_BASE_URL",
+        "ANDROID_API_BASE_URL",
         required = isReleaseArtifactRequested(),
         defaultValue = "https://release.placeholder.invalid/",
     )
-val releaseOidcIssuerUrl =
-    resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL",
-        required = isReleaseArtifactRequested(),
-        defaultValue = "https://release-auth.placeholder.invalid/realms/champagnefestival",
-    )
 
-val prodCertificatePinHost =
+val releaseCertificatePinHost =
     resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST",
+        "ANDROID_CERTIFICATE_PIN_HOST",
+        "ANDROID_CERTIFICATE_PIN_HOST",
         required = isReleaseArtifactRequested(),
         defaultValue = "champagnefestival.tjor.im",
     )
-val prodCertificatePinsRaw =
+val releaseCertificatePinsRaw =
     resolveConfigValue(
-        "CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS",
+        "ANDROID_CERTIFICATE_PINS",
+        "ANDROID_CERTIFICATE_PINS",
         required = isReleaseArtifactRequested(),
         defaultValue = "",
     )
 
 // Pin-format and host-requires-pins validation live in buildSrc's CertPinning
 // so they have unit tests (script-local functions in a Kotlin DSL build script
-// cannot be tested directly).
-val prodCertificatePins = CertPinning.resolvePins(prodCertificatePinsRaw)
-CertPinning.requireValidPinFormats(prodCertificatePins)
-CertPinning.requireHostForPins(prodCertificatePins, prodCertificatePinHost)
+// cannot be tested directly). Only enforced for actual release artifact
+// requests, matching the release API URL requirement above.
+val releaseCertificatePins = CertPinning.resolvePins(releaseCertificatePinsRaw)
+if (isReleaseArtifactRequested()) {
+    CertPinning.requireValidPinFormats(releaseCertificatePins)
+    CertPinning.requireHostConfiguredForPins(releaseCertificatePinHost, releaseCertificatePins)
+}
 
 android {
     namespace = "be.champagnefestival.android"
     compileSdk = 37
 
-    val keystorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
-    val keystorePassword = providers.environmentVariable("STORE_PASSWORD").orNull
-    val keystoreKeyAlias = providers.environmentVariable("KEY_ALIAS").orNull
-    val keystoreKeyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+    val keystorePath =
+        localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePassword =
+        localProperties.getProperty("keystorePassword")
+            ?: providers.environmentVariable("STORE_PASSWORD").orNull
+    val keystoreKeyAlias = localProperties.getProperty("keyAlias") ?: providers.environmentVariable("KEY_ALIAS").orNull
+    val keystoreKeyPassword =
+        localProperties.getProperty("keyPassword") ?: providers.environmentVariable("KEY_PASSWORD").orNull
     signingConfigs {
         if (!keystorePath.isNullOrBlank() &&
             !keystorePassword.isNullOrBlank() &&
@@ -132,19 +138,10 @@ android {
             applicationIdSuffix = ".debug"
             isDebuggable = true
             buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/\"")
-            buildConfigField("String", "OIDC_ISSUER_URL", "\"http://10.0.2.2:8080/realms/champagnefestival\"")
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
-        }
-        create("staging") {
-            initWith(getByName("debug"))
-            matchingFallbacks += listOf("debug")
-            applicationIdSuffix = ".staging"
-            versionNameSuffix = "-staging"
-            buildConfigField("String", "API_BASE_URL", quoted(stagingApiBaseUrl))
-            buildConfigField("String", "OIDC_ISSUER_URL", quoted(stagingOidcIssuerUrl))
         }
         release {
             isMinifyEnabled = true
@@ -155,11 +152,10 @@ android {
             }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
-            buildConfigField("String", "OIDC_ISSUER_URL", quoted(releaseOidcIssuerUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
-            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(prodCertificatePinHost))
-            buildConfigField("String", "CERTIFICATE_PINS", quoted(prodCertificatePins.joinToString(",")))
+            buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(releaseCertificatePinHost))
+            buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins.joinToString(",")))
         }
     }
 
@@ -232,6 +228,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
+    testImplementation(libs.json)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.okhttp.mockwebserver)

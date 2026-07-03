@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.observability import metrics
+from app.oidc_config import OIDCTokenError, _resolve_jwks_uri
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +53,15 @@ async def readiness_check(
         return {"status": "not_ready"}
 
     if settings.oidc_issuer_url:
-        jwks_uri = settings.oidc_jwks_uri or f"{settings.oidc_issuer_url.rstrip('/')}/.well-known/jwks.json"
         try:
+            jwks_uri = await _resolve_jwks_uri()
             async with httpx.AsyncClient(timeout=5) as client:
                 oidc_response = await client.get(jwks_uri)
             oidc_response.raise_for_status()
+        except OIDCTokenError:
+            logger.exception("Readiness check failed: OIDC discovery failed")
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            return {"status": "not_ready"}
         except Exception:
             logger.exception("Readiness check failed: OIDC JWKS endpoint unreachable (%s)", jwks_uri)
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE

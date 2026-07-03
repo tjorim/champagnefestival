@@ -87,31 +87,40 @@ class CertPinningTest {
         }
     }
 
-    // ── requireHostForPins ───────────────────────────────────────────────────
+    // ── requireHostConfiguredForPins ─────────────────────────────────────────
 
     @Test
-    fun `requireHostForPins passes when pins are configured and host is set`() {
-        CertPinning.requireHostForPins(listOf("sha256/abc"), "champagnefestival.tjor.im")
+    fun `requireHostConfiguredForPins accepts matching host and pins`() {
+        CertPinning.requireHostConfiguredForPins(host = "champagnefestival.tjor.im", pins = listOf("sha256/abc"))
     }
 
     @Test
-    fun `requireHostForPins passes when no pins are configured, regardless of host`() {
-        CertPinning.requireHostForPins(emptyList(), "")
+    fun `requireHostConfiguredForPins accepts both empty`() {
+        CertPinning.requireHostConfiguredForPins(host = "", pins = emptyList())
     }
 
     @Test
-    fun `requireHostForPins fails when pins are configured but host is blank`() {
+    fun `requireHostConfiguredForPins fails when pins are configured but host is blank`() {
         val exception =
             assertThrows(IllegalStateException::class.java) {
-                CertPinning.requireHostForPins(listOf("sha256/abc"), "")
+                CertPinning.requireHostConfiguredForPins(host = "", pins = listOf("sha256/abc"))
             }
-        assertTrue(exception.message.orEmpty().contains("CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST"))
+        assertTrue(exception.message.orEmpty().contains("ANDROID_CERTIFICATE_PIN_HOST"))
     }
 
     @Test
-    fun `requireHostForPins fails when pins are configured but host is whitespace only`() {
+    fun `requireHostConfiguredForPins fails when pins are configured but host is whitespace only`() {
         assertThrows(IllegalStateException::class.java) {
-            CertPinning.requireHostForPins(listOf("sha256/abc"), "   ")
+            CertPinning.requireHostConfiguredForPins(host = "   ", pins = listOf("sha256/abc"))
         }
+    }
+
+    @Test
+    fun `requireHostConfiguredForPins fails when host is configured but pins are empty`() {
+        val exception =
+            assertThrows(IllegalStateException::class.java) {
+                CertPinning.requireHostConfiguredForPins(host = "champagnefestival.tjor.im", pins = emptyList())
+            }
+        assertTrue(exception.message.orEmpty().contains("ANDROID_CERTIFICATE_PINS"))
     }
 }

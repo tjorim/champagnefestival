@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     """Expected audience claim in the JWT. Optional."""
 
     oidc_jwks_uri: str = ""
-    """JWKS endpoint override. Defaults to {oidc_issuer_url}/.well-known/jwks.json when empty."""
+    """JWKS endpoint override. Discovered from OIDC metadata when empty."""
 
     oidc_algorithms: str = "RS256"
     """Comma-separated list of accepted JWT signing algorithms."""

@@ -28,32 +28,12 @@ be.champagnefestival.android/
 
 ## Build Variants
 
-| Variant | API base URL | OIDC issuer |
+| Variant | API base URL | OIDC config |
 |---------|-------------|-------------|
-| `debug` | `http://10.0.2.2:8000/` (emulator → localhost) | `http://10.0.2.2:9000/…` |
-| `staging` | `https://staging.champagnefestival.tjor.im/` (placeholder, configurable) | `https://staging-auth.tjor.im/…` (placeholder, configurable) |
-| `release` | `https://api.champagnefestival.tjor.im/` | `https://auth.tjor.im/…` |
+| `debug` | `http://10.0.2.2:8000/` (emulator → localhost) | `/api/auth/oidc-config` from the API |
+| `release` | `https://champagnefestival.tjor.im/` | `/api/auth/oidc-config` from the API |
 
 The API base URL can be overridden at runtime via **Settings → API base URL**.
-
-### Staging variant
-
-`staging` is a debug-signed, debuggable variant with its own application ID
-(`be.champagnefestival.android.staging`), so it installs alongside the debug and
-release apps. Its backend URLs resolve from a Gradle property or environment
-variable of the same name, falling back to the placeholders above:
-
-- `CHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL`
-- `CHAMPAGNEFESTIVAL_ANDROID_STAGING_OIDC_ISSUER_URL`
-
-```bash
-./gradlew assembleStaging \
-  -PCHAMPAGNEFESTIVAL_ANDROID_STAGING_API_BASE_URL=https://staging.example.com/
-```
-
-CI can build a distributable staging APK without production signing secrets via
-the manual **Android Staging APK** workflow (`.github/workflows/android-staging.yml`),
-which accepts both URLs as optional inputs.
 
 ### Release variant
 
@@ -61,16 +41,18 @@ The manual **Android Release APK** workflow (`.github/workflows/android-release.
 builds a signed release APK and requires these repository secrets:
 
 - `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD` — release signing
-- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_API_BASE_URL` — e.g. `https://champagnefestival.tjor.im/`
+- `ANDROID_API_BASE_URL` — e.g. `https://champagnefestival.tjor.im/`
   (the backend is routed by path under the main host — `/api*`, not a separate `api.` subdomain —
   see `DEPLOYMENT.md`; `ChampagneApiService` endpoints already include the `api/` prefix)
-- `CHAMPAGNEFESTIVAL_ANDROID_RELEASE_OIDC_ISSUER_URL` — e.g. `https://auth.tjor.im/realms/champagnefestival`
-- `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PIN_HOST` — e.g. `champagnefestival.tjor.im`
-- `CHAMPAGNEFESTIVAL_ANDROID_PROD_CERTIFICATE_PINS` — comma-separated `sha256/<base64 SPKI hash>` pins,
+- `ANDROID_CERTIFICATE_PIN_HOST` — e.g. `champagnefestival.tjor.im`
+- `ANDROID_CERTIFICATE_PINS` — comma-separated `sha256/<base64 SPKI hash>` pins,
   used for certificate pinning in release builds (see "Choosing what to pin" below)
 
 If any of these secrets are unset, `assembleRelease` fails fast rather than
 silently shipping an APK pointed at a placeholder host or stale certificate pins.
+OIDC authorization and token endpoints are discovered from
+`${ANDROID_API_BASE_URL}/api/auth/oidc-config`, so the Android workflow does not
+need an OIDC issuer secret.
 
 #### Choosing what to pin
 
