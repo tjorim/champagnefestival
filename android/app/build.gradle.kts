@@ -106,8 +106,7 @@ val appVersion =
         .map { json ->
             Regex(""""version":\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
                 ?: error("Could not find a \"version\" field in frontend/package.json")
-        }
-        .get()
+        }.get()
 
 fun versionCodeFor(version: String): Int {
     val parts = version.substringBefore("-").substringBefore("+").split(".")
@@ -124,8 +123,7 @@ val gitCommit =
             .exec {
                 commandLine("git", "rev-parse", "--short", "HEAD")
                 isIgnoreExitValue = true
-            }
-            .standardOutput
+            }.standardOutput
             .asText
             .get()
             .trim()
