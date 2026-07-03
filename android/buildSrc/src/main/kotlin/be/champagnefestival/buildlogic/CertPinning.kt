@@ -38,14 +38,19 @@ object CertPinning {
         }
     }
 
-    fun requireHostForPins(
-        pins: List<String>,
+    // Pins configured without a host (or vice versa) would silently disable
+    // pinning at runtime — catch that misconfiguration at build time instead.
+    fun requireHostConfiguredForPins(
         host: String,
+        pins: List<String>,
     ) {
         check(pins.isEmpty() || host.isNotBlank()) {
-            "Certificate pins are configured but no pin host is set. " +
-                "Certificate pinning would be ineffective — fix " +
-                "ANDROID_CERTIFICATE_PIN_HOST."
+            "Certificate pins are configured (ANDROID_CERTIFICATE_PINS) but no host is set " +
+                "via ANDROID_CERTIFICATE_PIN_HOST. Certificate pinning would be ineffective."
+        }
+        check(host.isBlank() || pins.isNotEmpty()) {
+            "Certificate pin host is configured (ANDROID_CERTIFICATE_PIN_HOST) but no pins are " +
+                "set via ANDROID_CERTIFICATE_PINS. Certificate pinning would be ineffective."
         }
     }
 }

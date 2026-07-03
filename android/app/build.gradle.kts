@@ -1,4 +1,5 @@
 import be.champagnefestival.buildlogic.CertPinning
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -9,6 +10,14 @@ plugins {
 }
 
 fun quoted(value: String) = "\"$value\""
+
+val localProperties =
+    Properties().also { props ->
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { props.load(it) }
+        }
+    }
 
 val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(":").lowercase() }
 
@@ -25,28 +34,35 @@ fun isReleaseArtifactRequested(): Boolean {
     }
 }
 
-// Resolves a config value from a Gradle property or environment variable of the
-// same name, treating blank values as unset (e.g. an empty workflow input). When
-// `required` is true and the variant that needs it is actually being built, a
-// missing value fails the build instead of silently falling back to `defaultValue`.
+// Resolves a config value from local.properties, a Gradle property, or an
+// environment variable, treating blank values as unset (e.g. an empty workflow
+// input). When `required` is true and the variant that needs it is actually
+// being built, a missing value fails the build instead of silently falling
+// back to `defaultValue`.
 fun resolveConfigValue(
-    name: String,
+    key: String,
+    envKey: String,
     required: Boolean,
     defaultValue: String = "",
 ): String {
     val explicitValue =
         sequenceOf(
-            providers.gradleProperty(name).orNull,
-            providers.environmentVariable(name).orNull,
+            localProperties.getProperty(key),
+            providers.gradleProperty(key).orNull,
+            providers.environmentVariable(envKey).orNull,
         ).firstOrNull { !it.isNullOrBlank() }
     if (required && explicitValue.isNullOrBlank()) {
-        error("Missing required build property '$name'. Set it as a Gradle property or env var.")
+        error(
+            "Missing required build property '$key'. " +
+                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'.",
+        )
     }
     return explicitValue ?: defaultValue
 }
 
 val releaseApiBaseUrl =
     resolveConfigValue(
+        "ANDROID_API_BASE_URL",
         "ANDROID_API_BASE_URL",
         required = isReleaseArtifactRequested(),
         defaultValue = "https://release.placeholder.invalid/",
@@ -55,11 +71,13 @@ val releaseApiBaseUrl =
 val releaseCertificatePinHost =
     resolveConfigValue(
         "ANDROID_CERTIFICATE_PIN_HOST",
+        "ANDROID_CERTIFICATE_PIN_HOST",
         required = isReleaseArtifactRequested(),
         defaultValue = "champagnefestival.tjor.im",
     )
 val releaseCertificatePinsRaw =
     resolveConfigValue(
+        "ANDROID_CERTIFICATE_PINS",
         "ANDROID_CERTIFICATE_PINS",
         required = isReleaseArtifactRequested(),
         defaultValue = "",
@@ -72,17 +90,21 @@ val releaseCertificatePinsRaw =
 val releaseCertificatePins = CertPinning.resolvePins(releaseCertificatePinsRaw)
 if (isReleaseArtifactRequested()) {
     CertPinning.requireValidPinFormats(releaseCertificatePins)
-    CertPinning.requireHostForPins(releaseCertificatePins, releaseCertificatePinHost)
+    CertPinning.requireHostConfiguredForPins(releaseCertificatePinHost, releaseCertificatePins)
 }
 
 android {
     namespace = "be.champagnefestival.android"
     compileSdk = 37
 
-    val keystorePath = providers.environmentVariable("KEYSTORE_PATH").orNull
-    val keystorePassword = providers.environmentVariable("STORE_PASSWORD").orNull
-    val keystoreKeyAlias = providers.environmentVariable("KEY_ALIAS").orNull
-    val keystoreKeyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+    val keystorePath =
+        localProperties.getProperty("keystorePath") ?: providers.environmentVariable("KEYSTORE_PATH").orNull
+    val keystorePassword =
+        localProperties.getProperty("keystorePassword")
+            ?: providers.environmentVariable("STORE_PASSWORD").orNull
+    val keystoreKeyAlias = localProperties.getProperty("keyAlias") ?: providers.environmentVariable("KEY_ALIAS").orNull
+    val keystoreKeyPassword =
+        localProperties.getProperty("keyPassword") ?: providers.environmentVariable("KEY_PASSWORD").orNull
     signingConfigs {
         if (!keystorePath.isNullOrBlank() &&
             !keystorePassword.isNullOrBlank() &&
