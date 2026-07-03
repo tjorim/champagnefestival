@@ -141,7 +141,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "be.champagnefestival.android"
+        applicationId = "im.tjor.champagnefestival"
         minSdk = 26
         targetSdk = 37
         // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
@@ -149,7 +149,7 @@ android {
         versionName = appVersion
         buildConfigField("String", "BUILD_COMMIT", quoted(gitCommit))
 
-        manifestPlaceholders["appAuthRedirectScheme"] = "be.champagnefestival.android"
+        manifestPlaceholders["appAuthRedirectScheme"] = "im.tjor.champagnefestival"
     }
 
     buildTypes {
