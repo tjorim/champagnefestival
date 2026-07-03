@@ -18,9 +18,9 @@ val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfter
 // production config to be set.
 fun isReleaseArtifactRequested(): Boolean {
     if (requestedTaskNames.isEmpty()) return false
-    val artifactVerbs = listOf("assemble", "bundle", "install", "package")
+    val nonArtifactKeywords = listOf("test", "lint", "detekt", "ktlint")
     return requestedTaskNames.any { taskName ->
-        (taskName.contains("release") && artifactVerbs.any { verb -> taskName.contains(verb) }) ||
+        (taskName.contains("release") && nonArtifactKeywords.none { taskName.contains(it) }) ||
             taskName in listOf("assemble", "build", "bundle")
     }
 }
@@ -67,10 +67,13 @@ val releaseCertificatePinsRaw =
 
 // Pin-format and host-requires-pins validation live in buildSrc's CertPinning
 // so they have unit tests (script-local functions in a Kotlin DSL build script
-// cannot be tested directly).
+// cannot be tested directly). Only enforced for actual release artifact
+// requests, matching the release API URL requirement above.
 val releaseCertificatePins = CertPinning.resolvePins(releaseCertificatePinsRaw)
-CertPinning.requireValidPinFormats(releaseCertificatePins)
-CertPinning.requireHostForPins(releaseCertificatePins, releaseCertificatePinHost)
+if (isReleaseArtifactRequested()) {
+    CertPinning.requireValidPinFormats(releaseCertificatePins)
+    CertPinning.requireHostForPins(releaseCertificatePins, releaseCertificatePinHost)
+}
 
 android {
     namespace = "be.champagnefestival.android"
