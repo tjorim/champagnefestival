@@ -84,6 +84,11 @@ updates:
       - "backend"
       - "python"
     versioning-strategy: "increase"
+    groups:
+      python-quality:
+        patterns:
+          - "ruff"
+          - "ty"
 
   - package-ecosystem: "gradle"
     directory: "/android"
@@ -154,3 +159,7 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action/*"
