@@ -4,7 +4,6 @@ import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import be.champagnefestival.android.core.storage.SessionDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,11 +28,12 @@ class AuthManager(
     private val sessionDataStore: SessionDataStore,
     private val applicationScope: CoroutineScope,
     private val oidcConfig: OidcConfig = OidcConfig(),
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(),
 ) {
     private val authService = AuthorizationService(context)
     private val refreshMutex = Mutex()
     private val configMutex = Mutex()
-    private var cachedConfiguration: AuthorizationServiceConfiguration? = null
+    private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
     val loggedIn: StateFlow<String?> = sessionDataStore.accessTokenFlow
 
@@ -160,20 +160,11 @@ class AuthManager(
      * pay for a round trip to the discovery endpoint.
      */
     private suspend fun fetchConfiguration(): AuthorizationServiceConfiguration {
-        cachedConfiguration?.let { return it }
+        val apiBaseUrl = sessionDataStore.apiBaseUrlFlow.value ?: oidcConfig.apiBaseUrl
+        cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
         return configMutex.withLock {
-            cachedConfiguration ?: fetchConfigurationFromIssuer().also { cachedConfiguration = it }
+            cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
+                ?: oidcDiscovery.fetch(apiBaseUrl).also { cachedConfiguration = apiBaseUrl to it }
         }
     }
-
-    private suspend fun fetchConfigurationFromIssuer(): AuthorizationServiceConfiguration =
-        suspendCancellableCoroutine { continuation ->
-            AuthorizationServiceConfiguration.fetchFromIssuer(Uri.parse(oidcConfig.issuerUrl)) { config, ex ->
-                when {
-                    ex != null -> continuation.resumeWith(Result.failure(ex))
-                    config != null -> continuation.resume(config)
-                    else -> continuation.resumeWith(Result.failure(IllegalStateException("OIDC discovery failed.")))
-                }
-            }
-        }
 }

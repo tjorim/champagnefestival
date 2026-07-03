@@ -33,7 +33,7 @@ class SettingsViewModel(
                         SettingsUiModel(
                             apiBaseUrl = apiBaseUrl ?: BuildConfig.API_BASE_URL,
                             defaultApiBaseUrl = BuildConfig.API_BASE_URL,
-                            oidcIssuerUrl = BuildConfig.OIDC_ISSUER_URL,
+                            oidcConfigUrl = "${(apiBaseUrl ?: BuildConfig.API_BASE_URL).trimEnd('/')}/api/auth/oidc-config",
                             versionName = BuildConfig.VERSION_NAME,
                             biometricLockEnabled = it,
                         )
@@ -78,7 +78,7 @@ class SettingsViewModel(
 data class SettingsUiModel(
     val apiBaseUrl: String,
     val defaultApiBaseUrl: String,
-    val oidcIssuerUrl: String,
+    val oidcConfigUrl: String,
     val versionName: String,
     val biometricLockEnabled: Boolean,
 )

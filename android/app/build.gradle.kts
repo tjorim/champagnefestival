@@ -51,12 +51,6 @@ val releaseApiBaseUrl =
         required = isReleaseArtifactRequested(),
         defaultValue = "https://release.placeholder.invalid/",
     )
-val releaseOidcIssuerUrl =
-    resolveConfigValue(
-        "ANDROID_OIDC_ISSUER_URL",
-        required = isReleaseArtifactRequested(),
-        defaultValue = "https://release-auth.placeholder.invalid/realms/champagnefestival",
-    )
 
 val releaseCertificatePinHost =
     resolveConfigValue(
@@ -117,7 +111,6 @@ android {
             applicationIdSuffix = ".debug"
             isDebuggable = true
             buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/\"")
-            buildConfigField("String", "OIDC_ISSUER_URL", "\"http://10.0.2.2:8080/realms/champagnefestival\"")
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
@@ -132,7 +125,6 @@ android {
             }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
-            buildConfigField("String", "OIDC_ISSUER_URL", quoted(releaseOidcIssuerUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(releaseCertificatePinHost))

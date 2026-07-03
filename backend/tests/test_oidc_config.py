@@ -3,7 +3,10 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 
+from app.config import settings
+from app.main import app
 from app import oidc_config as oc
 
 
@@ -13,6 +16,31 @@ def test_get_jwks_uri_requires_issuer_without_override(monkeypatch) -> None:
 
     with pytest.raises(oc.OIDCTokenError, match="OIDC_ISSUER_URL is not configured"):
         oc._get_jwks_uri()
+
+
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_returns_public_provider_urls(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "oidc_issuer_url", "https://auth.example.test/realms/champagnefestival/")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/auth/oidc-config")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "issuer": "https://auth.example.test/realms/champagnefestival",
+        "authorization_url": "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/auth",
+        "token_url": "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/token",
+    }
+
+
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_returns_503_when_issuer_unset(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "oidc_issuer_url", "")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/auth/oidc-config")
+
+    assert response.status_code == 503
 
 
 def test_get_jwks_uri_uses_override_without_issuer(monkeypatch) -> None:

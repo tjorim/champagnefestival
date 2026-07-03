@@ -28,10 +28,10 @@ be.champagnefestival.android/
 
 ## Build Variants
 
-| Variant | API base URL | OIDC issuer |
+| Variant | API base URL | OIDC config |
 |---------|-------------|-------------|
-| `debug` | `http://10.0.2.2:8000/` (emulator → localhost) | `http://10.0.2.2:9000/…` |
-| `release` | `https://champagnefestival.tjor.im/` | `https://auth.tjor.im/…` |
+| `debug` | `http://10.0.2.2:8000/` (emulator → localhost) | `/api/auth/oidc-config` from the API |
+| `release` | `https://champagnefestival.tjor.im/` | `/api/auth/oidc-config` from the API |
 
 The API base URL can be overridden at runtime via **Settings → API base URL**.
 
@@ -44,13 +44,15 @@ builds a signed release APK and requires these repository secrets:
 - `ANDROID_API_BASE_URL` — e.g. `https://champagnefestival.tjor.im/`
   (the backend is routed by path under the main host — `/api*`, not a separate `api.` subdomain —
   see `DEPLOYMENT.md`; `ChampagneApiService` endpoints already include the `api/` prefix)
-- `ANDROID_OIDC_ISSUER_URL` — e.g. `https://auth.tjor.im/realms/champagnefestival`
 - `ANDROID_CERTIFICATE_PIN_HOST` — e.g. `champagnefestival.tjor.im`
 - `ANDROID_CERTIFICATE_PINS` — comma-separated `sha256/<base64 SPKI hash>` pins,
   used for certificate pinning in release builds (see "Choosing what to pin" below)
 
 If any of these secrets are unset, `assembleRelease` fails fast rather than
 silently shipping an APK pointed at a placeholder host or stale certificate pins.
+OIDC authorization and token endpoints are discovered from
+`${ANDROID_API_BASE_URL}/api/auth/oidc-config`, so the Android workflow does not
+need an OIDC issuer secret.
 
 #### Choosing what to pin
 

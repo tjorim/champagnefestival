@@ -81,7 +81,7 @@ private fun SettingsContent(
             onSave = viewModel::saveApiBaseUrl,
             onReset = viewModel::resetApiBaseUrl,
         )
-        Text("OIDC issuer: ${settings.oidcIssuerUrl}")
+        Text("OIDC config: ${settings.oidcConfigUrl}")
         Text("App version: ${settings.versionName}")
         Row(
             modifier = Modifier.fillMaxWidth(),
