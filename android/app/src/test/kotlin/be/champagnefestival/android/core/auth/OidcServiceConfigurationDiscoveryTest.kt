@@ -24,7 +24,8 @@ class OidcServiceConfigurationDiscoveryTest {
     }
 
     @Test
-    fun `fetch calls API config endpoint and uses returned auth and token urls`() = runTest {
+    fun `fetch calls API config endpoint and uses returned auth and token urls`() =
+        runTest {
         server.enqueue(
             MockResponse
                 .Builder()
@@ -50,5 +51,5 @@ class OidcServiceConfigurationDiscoveryTest {
             "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/token",
             config.tokenEndpoint.toString(),
         )
-    }
+        }
 }

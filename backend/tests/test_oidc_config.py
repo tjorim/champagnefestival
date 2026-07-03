@@ -5,9 +5,9 @@ from types import SimpleNamespace
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import oidc_config as oc
 from app.config import settings
 from app.main import app
-from app import oidc_config as oc
 
 
 def test_get_jwks_uri_requires_issuer_without_override(monkeypatch) -> None:
