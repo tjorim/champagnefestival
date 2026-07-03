@@ -19,5 +19,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "ChampagneFestival"
+rootProject.name = "champagnefestival-android"
 include(":app")
