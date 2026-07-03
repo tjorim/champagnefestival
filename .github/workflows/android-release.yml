@@ -69,3 +69,45 @@ jobs:
           path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Bundle release AAB
+        if: steps.keystore.outputs.signing_available == 'true'
+        env:
+          KEYSTORE_PATH: ${{ steps.keystore.outputs.keystore_path }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          ANDROID_API_BASE_URL: ${{ secrets.ANDROID_API_BASE_URL }}
+          ANDROID_CERTIFICATE_PIN_HOST: ${{ secrets.ANDROID_CERTIFICATE_PIN_HOST }}
+          ANDROID_CERTIFICATE_PINS: ${{ secrets.ANDROID_CERTIFICATE_PINS }}
+        run: ./gradlew :app:bundleRelease
+
+      - name: Upload release AAB
+        if: steps.keystore.outputs.signing_available == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Check Play Store publishing credentials
+        id: play
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ -n "${PLAY_SERVICE_ACCOUNT_JSON}" ]]; then
+            echo "publish_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::PLAY_SERVICE_ACCOUNT_JSON is not set. Play Store publish will be skipped."
+            echo "publish_available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to Play Store (internal track)
+        if: steps.keystore.outputs.signing_available == 'true' && steps.play.outputs.publish_available == 'true'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: be.champagnefestival.android
+          releaseFiles: android/app/build/outputs/bundle/release/*.aab
+          track: internal
