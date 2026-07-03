@@ -201,6 +201,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
+    testImplementation(libs.json)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.okhttp.mockwebserver)

@@ -23,9 +23,14 @@ class OidcServiceConfigurationDiscoveryTest {
         server.start()
         mockkStatic(Uri::class)
         every { Uri.parse(any()) } answers {
-            val value = firstArg<String>()
-            mockk<Uri> { every { toString() } returns value }
+            fakeUri(firstArg())
         }
+    }
+
+    private fun fakeUri(value: String): Uri {
+        val uri = mockk<Uri>()
+        every { uri.toString() } returns value
+        return uri
     }
 
     @After
