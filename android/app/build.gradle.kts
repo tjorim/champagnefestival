@@ -167,8 +167,6 @@ android {
         versionCode = versionCodeFor(appVersion)
         versionName = appVersion
         buildConfigField("String", "BUILD_COMMIT", quoted(gitCommit))
-
-        manifestPlaceholders["appAuthRedirectScheme"] = "im.tjor.champagnefestival"
     }
 
     buildTypes {

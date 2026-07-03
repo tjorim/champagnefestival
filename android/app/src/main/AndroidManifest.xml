@@ -36,7 +36,7 @@
 
                 <data
                     android:host="oauth2redirect"
-                    android:scheme="${appAuthRedirectScheme}" />
+                    android:scheme="${applicationId}" />
             </intent-filter>
         </activity>
     </application>
