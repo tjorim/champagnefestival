@@ -1,7 +1,6 @@
 package be.champagnefestival.android.core.auth
 
 import android.net.Uri
-import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.openid.appauth.AuthorizationServiceConfiguration
@@ -9,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.IOException
 
 class OidcServiceConfigurationDiscovery(
     private val client: OkHttpClient = OkHttpClient(),
