@@ -56,7 +56,7 @@ Key variables:
 | `DATABASE_URL` | e.g. `postgresql+asyncpg://user:password@postgres:5432/champagnefestival` |
 | `OIDC_ISSUER_URL` | OIDC provider base URL, e.g. `https://auth.example.com/application/o/champagnefestival` |
 | `OIDC_AUDIENCE` | Expected audience claim in the JWT (optional) |
-| `OIDC_JWKS_URI` | JWKS endpoint override (defaults to `{OIDC_ISSUER_URL}/.well-known/jwks.json`) |
+| `OIDC_JWKS_URI` | JWKS endpoint override; leave empty to discover `jwks_uri` from OIDC metadata |
 | `OIDC_ALGORITHMS` | Accepted JWT algorithms, default `RS256` |
 | `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `SMTP_*` | Optional — reservation confirmation emails |

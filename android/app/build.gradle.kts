@@ -45,6 +45,8 @@ fun resolveConfigValue(
     required: Boolean,
     defaultValue: String = "",
 ): String {
+    // A blank value counts as missing so a placeholder line in local.properties
+    // still falls through to the next source or the default.
     val explicitValue =
         sequenceOf(
             localProperties.getProperty(key),

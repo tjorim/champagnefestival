@@ -11,8 +11,10 @@ import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 class OidcServiceConfigurationDiscoveryTest {
     private lateinit var server: MockWebServer
@@ -67,5 +69,19 @@ class OidcServiceConfigurationDiscoveryTest {
                 "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/token",
                 config.tokenEndpoint.toString(),
             )
+        }
+
+    @Test
+    fun `fetch throws with bounded error snippet on non-2xx response`() =
+        runTest {
+            server.enqueue(MockResponse.Builder().code(502).body("x".repeat(5000)).build())
+
+            val exception =
+                runCatching { OidcServiceConfigurationDiscovery(OkHttpClient()).fetch(server.url("/").toString()) }
+                    .exceptionOrNull()
+
+            assertTrue(exception is IOException)
+            assertTrue(exception!!.message!!.contains("HTTP 502"))
+            assertTrue(exception.message!!.length < 1200)
         }
 }

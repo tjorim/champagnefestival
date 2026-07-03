@@ -1,6 +1,7 @@
 package be.champagnefestival.android.core.auth
 
 import android.net.Uri
+import be.champagnefestival.android.core.network.CertificatePinnerProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.openid.appauth.AuthorizationServiceConfiguration
@@ -11,15 +12,25 @@ import org.json.JSONObject
 import java.io.IOException
 
 class OidcServiceConfigurationDiscovery(
-    private val client: OkHttpClient = OkHttpClient(),
+    // Discovery returns the endpoints the whole auth flow trusts, so it must be
+    // pinned exactly like the API client; a plain OkHttpClient would let a
+    // MITM with a rogue CA swap in attacker-controlled authorization/token URLs.
+    private val client: OkHttpClient =
+        OkHttpClient
+            .Builder()
+            .certificatePinner(CertificatePinnerProvider.forCurrentBuild())
+            .build(),
 ) {
     suspend fun fetch(apiBaseUrl: String): AuthorizationServiceConfiguration =
         withContext(Dispatchers.IO) {
             client.newCall(Request.Builder().url(configUrl(apiBaseUrl)).build()).execute().use { response ->
-                val body = response.body.string()
                 if (!response.isSuccessful) {
-                    throw IOException("OIDC config endpoint returned HTTP ${response.code}: $body")
+                    // Peek a bounded snippet: an arbitrary server behind a user-set URL can
+                    // return an error page of any size, which must not be fully buffered.
+                    val errorBody = runCatching { response.peekBody(1024).string() }.getOrElse { "" }
+                    throw IOException("OIDC config endpoint returned HTTP ${response.code}: $errorBody")
                 }
+                val body = response.body.string()
                 if (body.isBlank()) {
                     throw IOException("Empty response from OIDC config endpoint")
                 }
