@@ -13,7 +13,7 @@ dependencies = [
   "fastapi==0.138.1",
   "fastmcp==3.4.2",
   "httpx==0.28.1",
-  "phonenumbers==9.0.33",
+  "phonenumbers==9.0.34",
   "psycopg[binary]==3.3.4",
   "pydantic[email]==2.13.4",
   "pydantic-settings==2.14.2",
