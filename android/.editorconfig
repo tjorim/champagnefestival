@@ -7,8 +7,8 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.{kt,kts}]
-indent_style = space
-indent_size = 4
-# Compose functions and route constants intentionally use PascalCase/camelCase names.
-ktlint_standard_function-naming = disabled
+ktlint_code_style = android_studio
+max_line_length = 160
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Route constants intentionally use PascalCase names.
 ktlint_standard_property-naming = disabled
