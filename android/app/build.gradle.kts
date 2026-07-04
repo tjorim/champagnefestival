@@ -111,7 +111,15 @@ val appVersion =
 fun versionCodeFor(version: String): Int {
     val parts = version.substringBefore("-").substringBefore("+").split(".")
     check(parts.size == 3) { "Expected a MAJOR.MINOR.PATCH version, got \"$version\"" }
-    val (major, minor, patch) = parts.map { it.toInt() }
+    val (major, minor, patch) =
+        parts.map {
+            it.toIntOrNull() ?: error("Invalid integer component \"$it\" in version \"$version\"")
+        }
+    // minor/patch must each fit in 3 digits or they'd overflow into the next digit
+    // group and collide with a different version's computed code.
+    check(major >= 0) { "Major version must be non-negative, got $major" }
+    check(minor in 0..999) { "Minor version must be between 0 and 999 to avoid versionCode collision, got $minor" }
+    check(patch in 0..999) { "Patch version must be between 0 and 999 to avoid versionCode collision, got $patch" }
     return major * 1_000_000 + minor * 1_000 + patch
 }
 
