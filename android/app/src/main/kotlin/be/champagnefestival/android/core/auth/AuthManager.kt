@@ -28,9 +28,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 @Singleton
-class AuthManager
-@Inject
-constructor(
+class AuthManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val secureSessionStore: SecureSessionStore,
     private val apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,

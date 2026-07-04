@@ -7,14 +7,14 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Persists an optional runtime override for the API base URL, letting an installed build
@@ -22,9 +22,7 @@ import kotlinx.coroutines.runBlocking
  * When no override is set, callers fall back to the build-configured default.
  */
 @Singleton
-class ApiBaseUrlOverrideStore
-@Inject
-constructor(@ApplicationContext context: Context) {
+class ApiBaseUrlOverrideStore @Inject constructor(@ApplicationContext context: Context) {
     private val dataStore =
         PreferenceDataStoreFactory.create(
             produceFile = { context.preferencesDataStoreFile(PREFERENCES_FILE) },

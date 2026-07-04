@@ -8,9 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SecureSessionStore
-@Inject
-constructor(@ApplicationContext context: Context) {
+class SecureSessionStore @Inject constructor(@ApplicationContext context: Context) {
     private val prefs by lazy {
         val masterKey = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
         EncryptedSharedPreferences.create(

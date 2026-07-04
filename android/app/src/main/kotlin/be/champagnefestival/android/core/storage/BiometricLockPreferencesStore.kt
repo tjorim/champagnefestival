@@ -20,9 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class BiometricLockPreferencesStore
-@Inject
-constructor(
+class BiometricLockPreferencesStore @Inject constructor(
     @ApplicationContext context: Context,
     applicationScope: CoroutineScope,
 ) {
