@@ -54,18 +54,15 @@ import java.util.concurrent.Executors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QrScanScreen(
-    viewModel: QrScanViewModel,
-    onBack: () -> Unit,
-    onRegistrationScanned: (String, String) -> Unit,
-) {
+fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationScanned: (String, String) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val errorMessage by viewModel.errorMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var cameraPermissionGranted by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED,
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
         )
     }
     var hasNavigated by remember { mutableStateOf(false) }
@@ -93,25 +90,25 @@ fun QrScanScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
+                }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (!cameraPermissionGranted) {
             Column(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(24.dp),
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Camera access is required to scan volunteer check-in codes.")
                 Button(
                     onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                    modifier = Modifier.padding(top = 16.dp),
+                    modifier = Modifier.padding(top = 16.dp)
                 ) {
                     Text("Grant camera access")
                 }
@@ -119,9 +116,9 @@ fun QrScanScreen(
         } else {
             Box(
                 modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
             ) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -143,28 +140,28 @@ fun QrScanScreen(
                                 },
                                 onError = { throwable ->
                                     viewModel.reportError(throwable.message ?: "Unable to start the camera scanner.")
-                                },
+                                }
                             )
                         }
-                    },
+                    }
                 )
                 Box(
                     modifier =
-                        Modifier
-                            .align(Alignment.Center)
-                            .fillMaxWidth(0.7f)
-                            .height(220.dp)
-                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
-                            .background(Color.Transparent),
+                    Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth(0.7f)
+                        .height(220.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
+                        .background(Color.Transparent)
                 )
                 Text(
                     text = "Place the QR code inside the frame",
                     modifier =
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(24.dp)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(24.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 )
             }
         }
@@ -177,7 +174,7 @@ private fun PreviewView.bindCamera(
     previewView: PreviewView,
     executor: java.util.concurrent.Executor,
     onQrDetected: (String) -> Unit,
-    onError: (Throwable) -> Unit,
+    onError: (Throwable) -> Unit
 ) {
     val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
     cameraProviderFuture.addListener(
@@ -191,7 +188,7 @@ private fun PreviewView.bindCamera(
                         override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
                             scanner.close()
                         }
-                    },
+                    }
                 )
                 val analysis =
                     ImageAnalysis
@@ -221,6 +218,6 @@ private fun PreviewView.bindCamera(
                 cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
             }.onFailure(onError)
         },
-        ContextCompat.getMainExecutor(context),
+        ContextCompat.getMainExecutor(context)
     )
 }

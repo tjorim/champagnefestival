@@ -22,7 +22,7 @@ class CheckInNetworkRepositoryTest {
         val apiService =
             ApiServiceFactory.create(
                 baseUrl = server.url("/").toString(),
-                client = OkHttpClient(),
+                client = OkHttpClient()
             )
         repository = DefaultCheckInRepository(apiService)
     }
@@ -33,60 +33,57 @@ class CheckInNetworkRepositoryTest {
     }
 
     @Test
-    fun `lookupRegistration posts token and decodes registration`() =
-        runTest {
-            server.enqueue(MockResponse.Builder().body(sampleRegistrationJson()).build())
+    fun `lookupRegistration posts token and decodes registration`() = runTest {
+        server.enqueue(MockResponse.Builder().body(sampleRegistrationJson()).build())
 
-            val result = repository.lookupRegistration("reg-1", "qr-token")
+        val result = repository.lookupRegistration("reg-1", "qr-token")
 
-            assertTrue(result.isSuccess)
-            assertEquals("Jane Doe", result.getOrNull()?.name)
-            assertEquals(2, result.getOrNull()?.guest_count)
+        assertTrue(result.isSuccess)
+        assertEquals("Jane Doe", result.getOrNull()?.name)
+        assertEquals(2, result.getOrNull()?.guest_count)
 
-            val request = server.takeRequest()
-            assertEquals("POST", request.method)
-            assertEquals("/api/check-in/reg-1/lookup", request.url.encodedPath)
-            assertEquals("{\"token\":\"qr-token\"}", request.body?.utf8())
-        }
-
-    @Test
-    fun `searchRegistrations sends bearer auth and query filters`() =
-        runTest {
-            server.enqueue(MockResponse.Builder().body("[${sampleRegistrationJson()}]").build())
-
-            val result =
-                repository.searchRegistrations(
-                    query = "jane",
-                    eventId = "event-1",
-                    authToken = "access-token",
-                )
-
-            assertTrue(result.isSuccess)
-            assertEquals(1, result.getOrNull()?.size)
-
-            val request = server.takeRequest()
-            assertEquals("GET", request.method)
-            assertEquals("Bearer access-token", request.headers["Authorization"])
-            assertEquals("jane", request.url.queryParameter("q"))
-            assertEquals("event-1", request.url.queryParameter("event_id"))
-        }
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/check-in/reg-1/lookup", request.url.encodedPath)
+        assertEquals("{\"token\":\"qr-token\"}", request.body?.utf8())
+    }
 
     @Test
-    fun `submitCheckIn maps server errors to repository failure`() =
-        runTest {
-            server.enqueue(
-                MockResponse
-                    .Builder()
-                    .code(500)
-                    .body("{\"detail\":\"boom\"}")
-                    .build(),
+    fun `searchRegistrations sends bearer auth and query filters`() = runTest {
+        server.enqueue(MockResponse.Builder().body("[${sampleRegistrationJson()}]").build())
+
+        val result =
+            repository.searchRegistrations(
+                query = "jane",
+                eventId = "event-1",
+                authToken = "access-token"
             )
 
-            val result = repository.submitCheckIn("reg-1", "qr-token")
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull()?.size)
 
-            assertTrue(result.isFailure)
-            assertTrue(result.exceptionOrNull() is ApiException)
-        }
+        val request = server.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("Bearer access-token", request.headers["Authorization"])
+        assertEquals("jane", request.url.queryParameter("q"))
+        assertEquals("event-1", request.url.queryParameter("event_id"))
+    }
+
+    @Test
+    fun `submitCheckIn maps server errors to repository failure`() = runTest {
+        server.enqueue(
+            MockResponse
+                .Builder()
+                .code(500)
+                .body("{\"detail\":\"boom\"}")
+                .build()
+        )
+
+        val result = repository.submitCheckIn("reg-1", "qr-token")
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is ApiException)
+    }
 
     private fun sampleRegistrationJson(): String =
         """

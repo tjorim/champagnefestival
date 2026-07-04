@@ -16,7 +16,7 @@ private val LightColors =
         onBackground = MidnightNavy,
         surface = ColorWhite,
         onSurface = DeepCharcoal,
-        error = ErrorRed,
+        error = ErrorRed
     )
 
 private val DarkColors =
@@ -29,17 +29,14 @@ private val DarkColors =
         onBackground = WarmCream,
         surface = DeepCharcoal,
         onSurface = WarmCream,
-        error = ErrorRed,
+        error = ErrorRed
     )
 
 @Composable
-fun ChampagneFestivalTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-) {
+fun ChampagneFestivalTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = AppTypography,
-        content = content,
+        content = content
     )
 }

@@ -15,9 +15,7 @@ import okhttp3.Response
  * does via `currentOverrideBlocking()`. Returns the request untouched when the provider yields
  * null or an unparseable URL, leaving OkHttp's own configured base URL in effect.
  */
-class DynamicBaseUrlInterceptor(
-    private val baseUrlProvider: () -> String?,
-) : Interceptor {
+class DynamicBaseUrlInterceptor(private val baseUrlProvider: () -> String?) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val target = baseUrlProvider()?.toHttpUrlOrNull() ?: return chain.proceed(request)

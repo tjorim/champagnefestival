@@ -29,17 +29,15 @@ class DynamicBaseUrlInterceptorTest {
         overrideServer.close()
     }
 
-    private fun client(baseUrlProvider: () -> String?): OkHttpClient =
-        OkHttpClient
-            .Builder()
-            .addInterceptor(DynamicBaseUrlInterceptor(baseUrlProvider))
-            .build()
+    private fun client(baseUrlProvider: () -> String?): OkHttpClient = OkHttpClient
+        .Builder()
+        .addInterceptor(DynamicBaseUrlInterceptor(baseUrlProvider))
+        .build()
 
-    private fun requestAgainstDefaultServer(): Request =
-        Request
-            .Builder()
-            .url(defaultServer.url("/api/settings?user=1"))
-            .build()
+    private fun requestAgainstDefaultServer(): Request = Request
+        .Builder()
+        .url(defaultServer.url("/api/settings?user=1"))
+        .build()
 
     @Test
     fun `request goes to the default server when the provider returns the default URL`() {
@@ -118,5 +116,6 @@ class DynamicBaseUrlInterceptorTest {
         assertFalse(DynamicBaseUrlInterceptor.isValidOverride(""))
     }
 
-    private fun okhttp3.HttpUrl.encodedPathAndQueryOrPath(): String = encodedQuery?.let { "$encodedPath?$it" } ?: encodedPath
+    private fun okhttp3.HttpUrl.encodedPathAndQueryOrPath(): String =
+        encodedQuery?.let { "$encodedPath?$it" } ?: encodedPath
 }

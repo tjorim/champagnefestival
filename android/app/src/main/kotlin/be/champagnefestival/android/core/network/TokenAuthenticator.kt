@@ -7,13 +7,8 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 
-class TokenAuthenticator(
-    private val authManager: AuthManager,
-) : Authenticator {
-    override fun authenticate(
-        route: Route?,
-        response: Response,
-    ): Request? {
+class TokenAuthenticator(private val authManager: AuthManager) : Authenticator {
+    override fun authenticate(route: Route?, response: Response): Request? {
         if (response.priorResponse != null) return null
         val authHeader = response.request.header("Authorization") ?: return null
         val failedToken = authHeader.removePrefix("Bearer ").trim()

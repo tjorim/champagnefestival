@@ -34,10 +34,7 @@ import be.champagnefestival.android.ui.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(
-    viewModel: LoginViewModel,
-    onLoggedIn: () -> Unit,
-) {
+fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
     val context = LocalContext.current
     val loggedIn by viewModel.loggedIn.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -49,34 +46,35 @@ fun LoginScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Volunteer Check-In") }) },
+        topBar = { TopAppBar(title = { Text("Volunteer Check-In") }) }
     ) { padding ->
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = Icons.Default.QrCodeScanner,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth(0.25f),
+                modifier = Modifier.fillMaxWidth(0.25f)
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "Champagne Festival",
                 style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Sign in with OIDC to access volunteer tools for active editions, QR check-in, and guest lookup.",
+                text = "Sign in with OIDC to access volunteer tools for active editions, " +
+                    "QR check-in, and guest lookup.",
                 style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(32.dp))
             val currentState = uiState
@@ -92,16 +90,15 @@ fun LoginScreen(
                 Text(
                     text = currentState.message,
                     color = Color.Red,
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Center
                 )
             }
         }
     }
 }
 
-private tailrec fun Context.findActivity(): Activity =
-    when (this) {
-        is Activity -> this
-        is ContextWrapper -> baseContext.findActivity()
-        else -> error("Activity context required.")
-    }
+private tailrec fun Context.findActivity(): Activity = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> error("Activity context required.")
+}

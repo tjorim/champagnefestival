@@ -34,10 +34,7 @@ import be.champagnefestival.android.ui.components.LoadingContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GuestLookupScreen(
-    viewModel: GuestLookupViewModel,
-    onBack: () -> Unit,
-) {
+fun GuestLookupScreen(viewModel: GuestLookupViewModel, onBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     var query by remember { mutableStateOf("") }
     var eventId by remember { mutableStateOf("") }
@@ -50,11 +47,14 @@ fun GuestLookupScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
+                }
             )
-        },
+        }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             OutlinedTextField(
                 value = query,
                 onValueChange = {
@@ -63,7 +63,7 @@ fun GuestLookupScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.search_guest_label)) },
-                singleLine = true,
+                singleLine = true
             )
             OutlinedTextField(
                 value = eventId,
@@ -75,7 +75,7 @@ fun GuestLookupScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Optional event ID filter") },
-                singleLine = true,
+                singleLine = true
             )
             when (val state = uiState) {
                 GuestLookupUiState.Idle -> Text(stringResource(R.string.search_guest_idle_message))
@@ -87,7 +87,7 @@ fun GuestLookupScreen(
                 is GuestLookupUiState.Success ->
                     LookupResults(
                         registrations = state.registrations,
-                        padding = PaddingValues(vertical = 8.dp),
+                        padding = PaddingValues(vertical = 8.dp)
                     )
             }
         }
@@ -95,10 +95,7 @@ fun GuestLookupScreen(
 }
 
 @Composable
-private fun LookupResults(
-    registrations: List<CheckInGuestOut>,
-    padding: PaddingValues,
-) {
+private fun LookupResults(registrations: List<CheckInGuestOut>, padding: PaddingValues) {
     if (registrations.isEmpty()) {
         Text("No registrations matched your search.")
         return

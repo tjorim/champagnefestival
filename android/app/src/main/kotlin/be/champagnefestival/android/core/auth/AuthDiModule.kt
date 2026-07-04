@@ -15,5 +15,6 @@ object AuthDiModule {
 
     @Provides
     @Singleton
-    fun provideOidcServiceConfigurationDiscovery(): OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery()
+    fun provideOidcServiceConfigurationDiscovery(): OidcServiceConfigurationDiscovery =
+        OidcServiceConfigurationDiscovery()
 }

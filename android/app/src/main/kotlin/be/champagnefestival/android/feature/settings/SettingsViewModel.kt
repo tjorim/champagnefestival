@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
     private val biometricLockPreferencesStore: BiometricLockPreferencesStore,
-    private val authManager: AuthManager,
+    private val authManager: AuthManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<UiState<SettingsUiModel>>(UiState.Loading)
     val uiState: StateFlow<UiState<SettingsUiModel>> = _uiState.asStateFlow()
@@ -35,9 +35,11 @@ class SettingsViewModel(
                         SettingsUiModel(
                             apiBaseUrl = apiBaseUrl ?: BuildConfig.API_BASE_URL,
                             defaultApiBaseUrl = BuildConfig.API_BASE_URL,
-                            oidcConfigUrl = "${(apiBaseUrl ?: BuildConfig.API_BASE_URL).trimEnd('/')}/api/auth/oidc-config",
+                            oidcConfigUrl = "${(apiBaseUrl ?: BuildConfig.API_BASE_URL).trimEnd(
+                                '/'
+                            )}/api/auth/oidc-config",
                             versionName = BuildConfig.VERSION_NAME,
-                            biometricLockEnabled = it,
+                            biometricLockEnabled = it
                         )
                     }
                 }.filterNotNull()
@@ -82,5 +84,5 @@ data class SettingsUiModel(
     val defaultApiBaseUrl: String,
     val oidcConfigUrl: String,
     val versionName: String,
-    val biometricLockEnabled: Boolean,
+    val biometricLockEnabled: Boolean
 )

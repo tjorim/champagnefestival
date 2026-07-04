@@ -33,7 +33,7 @@ fun CheckInConfirmationScreen(
     token: String,
     viewModel: CheckInViewModel,
     onBack: () -> Unit,
-    onDone: () -> Unit,
+    onDone: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -49,9 +49,9 @@ fun CheckInConfirmationScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         when (val state = uiState) {
             CheckInUiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
@@ -68,28 +68,32 @@ fun CheckInConfirmationScreen(
                 val registration = state.registration
                 Column(
                     modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(padding)
-                            .padding(24.dp),
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(24.dp),
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         imageVector = if (state.alreadyCheckedIn) Icons.Default.Warning else Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = if (state.alreadyCheckedIn) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                        tint = if (state.alreadyCheckedIn) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
                     )
                     Text(
                         text = if (state.alreadyCheckedIn) "Already checked in" else "Check-in complete",
                         style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(top = 16.dp),
+                        modifier = Modifier.padding(top = 16.dp)
                     )
                     Text(registration.name, modifier = Modifier.padding(top = 8.dp))
                     Text(registration.event_title)
                     Text(
                         text = registration.checked_in_at ?: "Checked in just now",
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                     Button(onClick = onDone, modifier = Modifier.padding(top = 24.dp)) {
                         Text("Back to active edition")

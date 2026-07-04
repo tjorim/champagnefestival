@@ -37,7 +37,7 @@ fun ActiveEditionScreen(
     viewModel: ActiveEditionViewModel,
     onOpenScan: () -> Unit,
     onOpenLookup: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -49,22 +49,22 @@ fun ActiveEditionScreen(
                     selected = false,
                     onClick = onOpenScan,
                     icon = { Icon(Icons.Default.QrCodeScanner, null) },
-                    label = { Text("Scan") },
+                    label = { Text("Scan") }
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = onOpenLookup,
                     icon = { Icon(Icons.Default.Search, null) },
-                    label = { Text("Lookup") },
+                    label = { Text("Lookup") }
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = onOpenSettings,
                     icon = { Icon(Icons.Default.Settings, null) },
-                    label = { Text("Settings") },
+                    label = { Text("Settings") }
                 )
             }
-        },
+        }
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
@@ -72,7 +72,7 @@ fun ActiveEditionScreen(
                 ErrorContent(
                     message = state.message,
                     onRetry = viewModel::loadActiveEdition,
-                    modifier = Modifier.padding(padding),
+                    modifier = Modifier.padding(padding)
                 )
             is UiState.Success -> EditionContent(edition = state.data, padding = padding)
         }
@@ -80,24 +80,27 @@ fun ActiveEditionScreen(
 }
 
 @Composable
-private fun EditionContent(
-    edition: EditionOut,
-    padding: PaddingValues,
-) {
+private fun EditionContent(edition: EditionOut, padding: PaddingValues) {
     LazyColumn(
         modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(padding),
+        Modifier
+            .fillMaxSize()
+            .padding(padding),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("${edition.month} ${edition.year}", style = MaterialTheme.typography.headlineSmall)
-                    Text(edition.edition_type.replaceFirstChar(Char::titlecase), style = MaterialTheme.typography.bodyLarge)
-                    Text(if (edition.active) "Currently active" else "Inactive", color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        edition.edition_type.replaceFirstChar(Char::titlecase),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        if (edition.active) "Currently active" else "Inactive",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
@@ -106,7 +109,7 @@ private fun EditionContent(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "No events are available for the active edition yet.",
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
@@ -117,7 +120,10 @@ private fun EditionContent(
                         Text(event.title, style = MaterialTheme.typography.titleMedium)
                         Text(event.date)
                         Text("${event.start_time}${event.end_time?.let { end -> " - $end" } ?: ""}")
-                        Text(event.category.replaceFirstChar(Char::titlecase), color = MaterialTheme.colorScheme.secondary)
+                        Text(
+                            event.category.replaceFirstChar(Char::titlecase),
+                            color = MaterialTheme.colorScheme.secondary
+                        )
                         if (event.description.isNotBlank()) {
                             Text(event.description, style = MaterialTheme.typography.bodyMedium)
                         }

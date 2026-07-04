@@ -34,80 +34,75 @@ class GuestLookupViewModelTest {
     }
 
     @Test
-    fun `initial state is idle`() =
-        runTest {
-            assertEquals(GuestLookupUiState.Idle, viewModel.uiState.value)
-        }
+    fun `initial state is idle`() = runTest {
+        assertEquals(GuestLookupUiState.Idle, viewModel.uiState.value)
+    }
 
     @Test
-    fun `search results loading state`() =
-        runTest {
-            coEvery { repository.searchRegistrations(any(), any(), any()) } returns Result.success(emptyList())
+    fun `search results loading state`() = runTest {
+        coEvery { repository.searchRegistrations(any(), any(), any()) } returns Result.success(emptyList())
 
-            viewModel.uiState.test {
-                assertEquals(GuestLookupUiState.Idle, awaitItem())
-                viewModel.search("Jane", null)
-                dispatcher.scheduler.advanceTimeBy(300)
-                assertEquals(GuestLookupUiState.Loading, awaitItem())
-                cancelAndIgnoreRemainingEvents()
-            }
+        viewModel.uiState.test {
+            assertEquals(GuestLookupUiState.Idle, awaitItem())
+            viewModel.search("Jane", null)
+            dispatcher.scheduler.advanceTimeBy(300)
+            assertEquals(GuestLookupUiState.Loading, awaitItem())
+            cancelAndIgnoreRemainingEvents()
         }
+    }
 
     @Test
-    fun `search results success`() =
-        runTest {
-            val registrations = listOf(sampleRegistration())
-            coEvery { repository.searchRegistrations("Jane", null, "jwt") } returns Result.success(registrations)
+    fun `search results success`() = runTest {
+        val registrations = listOf(sampleRegistration())
+        coEvery { repository.searchRegistrations("Jane", null, "jwt") } returns Result.success(registrations)
 
-            viewModel.uiState.test {
-                awaitItem()
-                viewModel.search("Jane", null)
-                dispatcher.scheduler.advanceTimeBy(300)
-                assertEquals(GuestLookupUiState.Loading, awaitItem())
-                dispatcher.scheduler.advanceUntilIdle()
-                assertEquals(GuestLookupUiState.Success(registrations), awaitItem())
-            }
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.search("Jane", null)
+            dispatcher.scheduler.advanceTimeBy(300)
+            assertEquals(GuestLookupUiState.Loading, awaitItem())
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(GuestLookupUiState.Success(registrations), awaitItem())
         }
+    }
 
     @Test
-    fun `search results error`() =
-        runTest {
-            coEvery { repository.searchRegistrations("Jane", null, "jwt") } returns Result.failure(IllegalStateException("Boom"))
+    fun `search results error`() = runTest {
+        coEvery { repository.searchRegistrations("Jane", null, "jwt") } returns
+            Result.failure(IllegalStateException("Boom"))
 
-            viewModel.uiState.test {
-                awaitItem()
-                viewModel.search("Jane", null)
-                dispatcher.scheduler.advanceTimeBy(300)
-                assertEquals(GuestLookupUiState.Loading, awaitItem())
-                dispatcher.scheduler.advanceUntilIdle()
-                assertEquals(GuestLookupUiState.Error("Boom"), awaitItem())
-            }
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.search("Jane", null)
+            dispatcher.scheduler.advanceTimeBy(300)
+            assertEquals(GuestLookupUiState.Loading, awaitItem())
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(GuestLookupUiState.Error("Boom"), awaitItem())
         }
+    }
 
     @Test
-    fun `empty search results`() =
-        runTest {
-            coEvery { repository.searchRegistrations("Jane", null, "jwt") } returns Result.success(emptyList())
+    fun `empty search results`() = runTest {
+        coEvery { repository.searchRegistrations("Jane", null, "jwt") } returns Result.success(emptyList())
 
-            viewModel.uiState.test {
-                awaitItem()
-                viewModel.search("Jane", null)
-                dispatcher.scheduler.advanceTimeBy(300)
-                awaitItem()
-                dispatcher.scheduler.advanceUntilIdle()
-                assertEquals(GuestLookupUiState.Success(emptyList()), awaitItem())
-            }
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.search("Jane", null)
+            dispatcher.scheduler.advanceTimeBy(300)
+            awaitItem()
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(GuestLookupUiState.Success(emptyList()), awaitItem())
         }
+    }
 
-    private fun sampleRegistration() =
-        CheckInGuestOut(
-            id = "reg-1",
-            name = "Jane Doe",
-            event_id = "event-1",
-            event_title = "Friday Tasting",
-            guest_count = 2,
-            status = "confirmed",
-            checked_in = false,
-            strap_issued = false,
-        )
+    private fun sampleRegistration() = CheckInGuestOut(
+        id = "reg-1",
+        name = "Jane Doe",
+        event_id = "event-1",
+        event_title = "Friday Tasting",
+        guest_count = 2,
+        status = "confirmed",
+        checked_in = false,
+        strap_issued = false
+    )
 }

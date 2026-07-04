@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class BiometricLockController(
     biometricLockPreferencesStore: BiometricLockPreferencesStore,
     private val idleTimeoutMillis: Long = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS,
-    private val clock: () -> Long = System::currentTimeMillis,
+    private val clock: () -> Long = System::currentTimeMillis
 ) : DefaultLifecycleObserver {
     val lockEnabledFlow: StateFlow<Boolean?> = biometricLockPreferencesStore.biometricLockEnabledFlow
 
@@ -35,7 +35,7 @@ class BiometricLockController(
                 lockEnabled = lockEnabledFlow.value ?: true,
                 lastBackgroundedAtMillis = lastBackgroundedAtMillis,
                 nowMillis = clock(),
-                idleTimeoutMillis = idleTimeoutMillis,
+                idleTimeoutMillis = idleTimeoutMillis
             )
         ) {
             _isLocked.value = true

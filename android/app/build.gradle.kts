@@ -41,24 +41,19 @@ fun isReleaseArtifactRequested(): Boolean {
 // input). When `required` is true and the variant that needs it is actually
 // being built, a missing value fails the build instead of silently falling
 // back to `defaultValue`.
-fun resolveConfigValue(
-    key: String,
-    envKey: String,
-    required: Boolean,
-    defaultValue: String = "",
-): String {
+fun resolveConfigValue(key: String, envKey: String, required: Boolean, defaultValue: String = ""): String {
     // A blank value counts as missing so a placeholder line in local.properties
     // still falls through to the next source or the default.
     val explicitValue =
         sequenceOf(
             localProperties.getProperty(key),
             providers.gradleProperty(key).orNull,
-            providers.environmentVariable(envKey).orNull,
+            providers.environmentVariable(envKey).orNull
         ).firstOrNull { !it.isNullOrBlank() }
     if (required && explicitValue.isNullOrBlank()) {
         error(
             "Missing required build property '$key'. " +
-                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'.",
+                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'."
         )
     }
     return explicitValue ?: defaultValue
@@ -69,7 +64,7 @@ val releaseApiBaseUrl =
         "ANDROID_API_BASE_URL",
         "ANDROID_API_BASE_URL",
         required = isReleaseArtifactRequested(),
-        defaultValue = "https://release.placeholder.invalid/",
+        defaultValue = "https://release.placeholder.invalid/"
     )
 
 val releaseCertificatePinHost =
@@ -77,14 +72,14 @@ val releaseCertificatePinHost =
         "ANDROID_CERTIFICATE_PIN_HOST",
         "ANDROID_CERTIFICATE_PIN_HOST",
         required = isReleaseArtifactRequested(),
-        defaultValue = "champagnefestival.tjor.im",
+        defaultValue = "champagnefestival.tjor.im"
     )
 val releaseCertificatePinsRaw =
     resolveConfigValue(
         "ANDROID_CERTIFICATE_PINS",
         "ANDROID_CERTIFICATE_PINS",
         required = isReleaseArtifactRequested(),
-        defaultValue = "",
+        defaultValue = ""
     )
 
 // Pin-format and host-requires-pins validation live in buildSrc's CertPinning

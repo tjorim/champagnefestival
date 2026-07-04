@@ -27,14 +27,14 @@ fun ApiBaseUrlOverrideCard(
     defaultApiBaseUrl: String,
     onSave: (String) -> Unit,
     onReset: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     var apiBaseUrlInput by remember(apiBaseUrl) { mutableStateOf(apiBaseUrl) }
     val isUrlInvalid = apiBaseUrlInput.isNotBlank() && !DynamicBaseUrlInterceptor.isValidOverride(apiBaseUrlInput)
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         OutlinedTextField(
             value = apiBaseUrlInput,
@@ -46,12 +46,12 @@ fun ApiBaseUrlOverrideCard(
                 if (isUrlInvalid) {
                     Text("URL must start with http:// or https://")
                 }
-            },
+            }
         )
         Text("Default API base URL: $defaultApiBaseUrl")
         Button(
             onClick = { onSave(apiBaseUrlInput) },
-            enabled = !isUrlInvalid,
+            enabled = !isUrlInvalid
         ) {
             Text("Save base URL")
         }

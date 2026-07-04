@@ -20,25 +20,19 @@ interface ChampagneApiService {
     @GET("api/events")
     suspend fun getEvents(
         @Header("Authorization") auth: String,
-        @Query("edition_id") editionId: String? = null,
+        @Query("edition_id") editionId: String? = null
     ): List<EventSummary>
 
     @POST("api/check-in/{id}/lookup")
-    suspend fun lookupCheckIn(
-        @Path("id") id: String,
-        @Body body: CheckInLookupRequest,
-    ): CheckInGuestOut
+    suspend fun lookupCheckIn(@Path("id") id: String, @Body body: CheckInLookupRequest): CheckInGuestOut
 
     @POST("api/check-in/{id}")
-    suspend fun submitCheckIn(
-        @Path("id") id: String,
-        @Body body: CheckInRequest,
-    ): CheckInOut
+    suspend fun submitCheckIn(@Path("id") id: String, @Body body: CheckInRequest): CheckInOut
 
     @GET("api/volunteer/registrations")
     suspend fun searchRegistrations(
         @Header("Authorization") auth: String,
         @Query("q") query: String?,
-        @Query("event_id") eventId: String?,
+        @Query("event_id") eventId: String?
     ): List<CheckInGuestOut>
 }

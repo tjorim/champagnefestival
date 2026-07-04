@@ -7,10 +7,7 @@ import be.champagnefestival.android.data.api.ChampagneApiService
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 
-class NetworkModule(
-    apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
-    authManager: AuthManager,
-) {
+class NetworkModule(apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore, authManager: AuthManager) {
     private val client =
         OkHttpClient
             .Builder()
@@ -20,11 +17,12 @@ class NetworkModule(
             }.addInterceptor(
                 DynamicBaseUrlInterceptor {
                     apiBaseUrlOverrideStore.currentOverrideBlocking() ?: BuildConfig.API_BASE_URL
-                },
+                }
             ).addInterceptor(
                 HttpLoggingInterceptor().apply {
-                    level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.BASIC
-                },
+                    level =
+                        if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.BASIC
+                }
             ).build()
 
     val apiService: ChampagneApiService = ApiServiceFactory.create(BuildConfig.API_BASE_URL, client)

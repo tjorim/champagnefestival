@@ -4,18 +4,13 @@ import be.champagnefestival.android.BuildConfig
 import okhttp3.CertificatePinner
 
 object CertificatePinnerProvider {
-    fun forCurrentBuild(): CertificatePinner =
-        fromConfig(
-            enabled = BuildConfig.CERTIFICATE_PINNING_ENABLED,
-            host = BuildConfig.CERTIFICATE_PIN_HOST,
-            pins = BuildConfig.CERTIFICATE_PINS.toCsvList(),
-        )
+    fun forCurrentBuild(): CertificatePinner = fromConfig(
+        enabled = BuildConfig.CERTIFICATE_PINNING_ENABLED,
+        host = BuildConfig.CERTIFICATE_PIN_HOST,
+        pins = BuildConfig.CERTIFICATE_PINS.toCsvList()
+    )
 
-    fun fromConfig(
-        enabled: Boolean,
-        host: String,
-        pins: List<String>,
-    ): CertificatePinner {
+    fun fromConfig(enabled: Boolean, host: String, pins: List<String>): CertificatePinner {
         if (!enabled || host.isEmpty() || pins.isEmpty()) return CertificatePinner.DEFAULT
 
         return CertificatePinner
@@ -25,8 +20,7 @@ object CertificatePinnerProvider {
             }.build()
     }
 
-    private fun String.toCsvList(): List<String> =
-        split(",")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
+    private fun String.toCsvList(): List<String> = split(",")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
 }

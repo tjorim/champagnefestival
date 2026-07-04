@@ -49,16 +49,17 @@ fun NavGraph(app: ChampagneFestivalApp) {
                     navController.navigate(Routes.Edition) {
                         popUpTo(Routes.Login) { inclusive = true }
                     }
-                },
+                }
             )
         }
         composable(Routes.Edition) {
-            val viewModel: ActiveEditionViewModel = viewModel(factory = simpleFactory { ActiveEditionViewModel(app.editionRepository) })
+            val viewModel: ActiveEditionViewModel =
+                viewModel(factory = simpleFactory { ActiveEditionViewModel(app.editionRepository) })
             ActiveEditionScreen(
                 viewModel = viewModel,
                 onOpenScan = { navController.navigate(Routes.Scan) },
                 onOpenLookup = { navController.navigate(Routes.Lookup) },
-                onOpenSettings = { navController.navigate(Routes.Settings) },
+                onOpenSettings = { navController.navigate(Routes.Settings) }
             )
         }
         composable(Routes.Scan) {
@@ -68,38 +69,38 @@ fun NavGraph(app: ChampagneFestivalApp) {
                 onBack = { navController.popBackStack() },
                 onRegistrationScanned = { registrationId, token ->
                     navController.navigate("registration/${Uri.encode(registrationId)}/${Uri.encode(token)}")
-                },
+                }
             )
         }
         composable(Routes.Lookup) {
             val viewModel: GuestLookupViewModel =
                 viewModel(
                     factory =
-                        simpleFactory {
-                            GuestLookupViewModel(
-                                repository = app.checkInRepository,
-                                authTokenProvider = app.authManager::getAccessToken,
-                            )
-                        },
+                    simpleFactory {
+                        GuestLookupViewModel(
+                            repository = app.checkInRepository,
+                            authTokenProvider = app.authManager::getAccessToken
+                        )
+                    }
                 )
             GuestLookupScreen(
                 viewModel = viewModel,
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack() }
             )
         }
         composable(
             route = Routes.Registration,
             arguments =
-                listOf(
-                    navArgument("id") { type = NavType.StringType },
-                    navArgument("token") { type = NavType.StringType },
-                ),
+            listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("token") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val id = Uri.decode(backStackEntry.arguments?.getString("id").orEmpty())
             val token = Uri.decode(backStackEntry.arguments?.getString("token").orEmpty())
             val viewModel: RegistrationDetailViewModel =
                 viewModel(
-                    factory = simpleFactory { RegistrationDetailViewModel(app.checkInRepository) },
+                    factory = simpleFactory { RegistrationDetailViewModel(app.checkInRepository) }
                 )
             RegistrationDetailScreen(
                 id = id,
@@ -108,20 +109,21 @@ fun NavGraph(app: ChampagneFestivalApp) {
                 onBack = { navController.popBackStack() },
                 onCheckIn = { regId, regToken ->
                     navController.navigate("checkin_confirm/${Uri.encode(regId)}/${Uri.encode(regToken)}")
-                },
+                }
             )
         }
         composable(
             route = Routes.CheckInConfirm,
             arguments =
-                listOf(
-                    navArgument("id") { type = NavType.StringType },
-                    navArgument("token") { type = NavType.StringType },
-                ),
+            listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("token") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
             val id = Uri.decode(backStackEntry.arguments?.getString("id").orEmpty())
             val token = Uri.decode(backStackEntry.arguments?.getString("token").orEmpty())
-            val viewModel: CheckInViewModel = viewModel(factory = simpleFactory { CheckInViewModel(app.checkInRepository) })
+            val viewModel: CheckInViewModel =
+                viewModel(factory = simpleFactory { CheckInViewModel(app.checkInRepository) })
             CheckInConfirmationScreen(
                 id = id,
                 token = token,
@@ -131,16 +133,20 @@ fun NavGraph(app: ChampagneFestivalApp) {
                     navController.navigate(Routes.Edition) {
                         popUpTo(Routes.Edition) { inclusive = true }
                     }
-                },
+                }
             )
         }
         composable(Routes.Settings) {
             val viewModel: SettingsViewModel =
                 viewModel(
                     factory =
-                        simpleFactory {
-                            SettingsViewModel(app.apiBaseUrlOverrideStore, app.biometricLockPreferencesStore, app.authManager)
-                        },
+                    simpleFactory {
+                        SettingsViewModel(
+                            app.apiBaseUrlOverrideStore,
+                            app.biometricLockPreferencesStore,
+                            app.authManager
+                        )
+                    }
                 )
             SettingsScreen(
                 viewModel = viewModel,
@@ -149,7 +155,7 @@ fun NavGraph(app: ChampagneFestivalApp) {
                     navController.navigate(Routes.Login) {
                         popUpTo(Routes.Edition) { inclusive = true }
                     }
-                },
+                }
             )
         }
     }

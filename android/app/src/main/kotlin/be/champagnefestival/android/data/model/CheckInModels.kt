@@ -10,7 +10,7 @@ data class OrderItem(
     val price: Double,
     val category: String,
     val delivered_quantity: Int? = null,
-    val delivered: Boolean = false,
+    val delivered: Boolean = false
 )
 
 @Serializable
@@ -27,22 +27,14 @@ data class CheckInGuestOut(
     val status: String,
     val checked_in: Boolean,
     val checked_in_at: String? = null,
-    val strap_issued: Boolean,
+    val strap_issued: Boolean
 )
 
 @Serializable
-data class CheckInLookupRequest(
-    val token: String,
-)
+data class CheckInLookupRequest(val token: String)
 
 @Serializable
-data class CheckInRequest(
-    val token: String,
-    val issue_strap: Boolean = true,
-)
+data class CheckInRequest(val token: String, val issue_strap: Boolean = true)
 
 @Serializable
-data class CheckInOut(
-    val registration: CheckInGuestOut,
-    val already_checked_in: Boolean,
-)
+data class CheckInOut(val registration: CheckInGuestOut, val already_checked_in: Boolean)

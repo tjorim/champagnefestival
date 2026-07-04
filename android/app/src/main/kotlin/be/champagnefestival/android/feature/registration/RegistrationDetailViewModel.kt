@@ -10,16 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class RegistrationDetailViewModel(
-    private val repository: CheckInRepository,
-) : ViewModel() {
+class RegistrationDetailViewModel(private val repository: CheckInRepository) : ViewModel() {
     private val _uiState = MutableStateFlow<UiState<CheckInGuestOut>>(UiState.Loading)
     val uiState: StateFlow<UiState<CheckInGuestOut>> = _uiState.asStateFlow()
 
-    fun loadRegistration(
-        id: String,
-        token: String,
-    ) {
+    fun loadRegistration(id: String, token: String) {
         _uiState.value = UiState.Loading
         viewModelScope.launch {
             repository

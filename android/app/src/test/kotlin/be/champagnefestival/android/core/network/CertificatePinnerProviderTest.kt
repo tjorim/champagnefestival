@@ -12,7 +12,7 @@ class CertificatePinnerProviderTest {
             CertificatePinnerProvider.fromConfig(
                 enabled = false,
                 host = "champagnefestival.tjor.im",
-                pins = listOf("sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU="),
+                pins = listOf("sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=")
             )
 
         assertEquals(CertificatePinner.DEFAULT, pinner)
@@ -24,7 +24,7 @@ class CertificatePinnerProviderTest {
             CertificatePinnerProvider.fromConfig(
                 enabled = true,
                 host = "champagnefestival.tjor.im",
-                pins = listOf("sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU="),
+                pins = listOf("sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=")
             )
 
         assertNotEquals(CertificatePinner.DEFAULT, pinner)
@@ -36,7 +36,7 @@ class CertificatePinnerProviderTest {
             CertificatePinnerProvider.fromConfig(
                 enabled = true,
                 host = "champagnefestival.tjor.im",
-                pins = emptyList(),
+                pins = emptyList()
             )
 
         assertEquals(CertificatePinner.DEFAULT, pinner)
@@ -48,7 +48,7 @@ class CertificatePinnerProviderTest {
             CertificatePinnerProvider.fromConfig(
                 enabled = true,
                 host = "",
-                pins = listOf("sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU="),
+                pins = listOf("sha256/y7xVm0TVJNahMr2sZydE2jQH8SquXV9yLF9seROHHHU=")
             )
 
         assertEquals(CertificatePinner.DEFAULT, pinner)
