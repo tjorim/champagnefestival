@@ -11,8 +11,8 @@ class IdleLockPolicyTest {
             IdleLockPolicy.shouldRequireUnlock(
                 lockEnabled = false,
                 lastBackgroundedAtMillis = 0L,
-                nowMillis = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS * 10,
-            ),
+                nowMillis = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS * 10
+            )
         )
     }
 
@@ -22,8 +22,8 @@ class IdleLockPolicyTest {
             IdleLockPolicy.shouldRequireUnlock(
                 lockEnabled = true,
                 lastBackgroundedAtMillis = null,
-                nowMillis = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS * 10,
-            ),
+                nowMillis = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS * 10
+            )
         )
     }
 
@@ -35,8 +35,8 @@ class IdleLockPolicyTest {
                 lockEnabled = true,
                 lastBackgroundedAtMillis = 1_000L,
                 nowMillis = 1_000L + idleTimeoutMillis - 1,
-                idleTimeoutMillis = idleTimeoutMillis,
-            ),
+                idleTimeoutMillis = idleTimeoutMillis
+            )
         )
     }
 
@@ -48,8 +48,8 @@ class IdleLockPolicyTest {
                 lockEnabled = true,
                 lastBackgroundedAtMillis = 1_000L,
                 nowMillis = 1_000L + idleTimeoutMillis,
-                idleTimeoutMillis = idleTimeoutMillis,
-            ),
+                idleTimeoutMillis = idleTimeoutMillis
+            )
         )
     }
 
@@ -59,8 +59,8 @@ class IdleLockPolicyTest {
             IdleLockPolicy.shouldRequireUnlock(
                 lockEnabled = true,
                 lastBackgroundedAtMillis = 0L,
-                nowMillis = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS * 10,
-            ),
+                nowMillis = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS * 10
+            )
         )
     }
 }

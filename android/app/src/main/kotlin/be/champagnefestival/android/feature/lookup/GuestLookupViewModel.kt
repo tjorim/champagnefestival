@@ -17,28 +17,19 @@ sealed class GuestLookupUiState {
 
     data object Loading : GuestLookupUiState()
 
-    data class Success(
-        val registrations: List<CheckInGuestOut>,
-    ) : GuestLookupUiState()
+    data class Success(val registrations: List<CheckInGuestOut>) : GuestLookupUiState()
 
-    data class Error(
-        val message: String,
-    ) : GuestLookupUiState()
+    data class Error(val message: String) : GuestLookupUiState()
 }
 
-class GuestLookupViewModel(
-    private val repository: CheckInRepository,
-    private val authTokenProvider: () -> String?,
-) : ViewModel() {
+class GuestLookupViewModel(private val repository: CheckInRepository, private val authTokenProvider: () -> String?) :
+    ViewModel() {
     private val _uiState = MutableStateFlow<GuestLookupUiState>(GuestLookupUiState.Idle)
     val uiState: StateFlow<GuestLookupUiState> = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
 
-    fun search(
-        query: String,
-        eventId: String?,
-    ) {
+    fun search(query: String, eventId: String?) {
         searchJob?.cancel()
         if (query.isBlank() && eventId.isNullOrBlank()) {
             _uiState.value = GuestLookupUiState.Idle
@@ -63,7 +54,7 @@ class GuestLookupViewModel(
                                 when (it) {
                                     is UnauthorizedException -> it.message ?: "Unauthorized"
                                     else -> it.message ?: "Unable to search registrations."
-                                },
+                                }
                             )
                     }
             }

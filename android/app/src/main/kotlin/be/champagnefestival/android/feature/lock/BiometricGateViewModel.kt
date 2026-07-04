@@ -20,18 +20,14 @@ sealed class LockUiState {
 
     data object Prompting : LockUiState()
 
-    data class NoCredentialEnrolled(
-        val message: String,
-    ) : LockUiState()
+    data class NoCredentialEnrolled(val message: String) : LockUiState()
 
-    data class Failed(
-        val message: String,
-    ) : LockUiState()
+    data class Failed(val message: String) : LockUiState()
 }
 
 class BiometricGateViewModel(
     private val controller: BiometricLockController,
-    private val cryptoProvider: BiometricCryptoProvider = BiometricCryptoProvider(),
+    private val cryptoProvider: BiometricCryptoProvider = BiometricCryptoProvider()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<LockUiState>(LockUiState.Checking)
     val uiState: StateFlow<LockUiState> = _uiState.asStateFlow()
@@ -43,7 +39,7 @@ class BiometricGateViewModel(
                 _uiState.value =
                     LockUiState.NoCredentialEnrolled(
                         "No biometric or device credential is set up on this device. " +
-                            "Set one up in your device security settings, or continue without app lock.",
+                            "Set one up in your device security settings, or continue without app lock."
                     )
         }
     }
@@ -62,10 +58,7 @@ class BiometricGateViewModel(
                     controller.markUnlocked()
                 }
 
-                override fun onAuthenticationError(
-                    errorCode: Int,
-                    errString: CharSequence,
-                ) {
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     _uiState.value = LockUiState.Failed(errString.toString())
                 }
 

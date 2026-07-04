@@ -8,38 +8,20 @@ import be.champagnefestival.android.data.model.CheckInRequest
 import retrofit2.HttpException
 
 interface CheckInRepository {
-    suspend fun lookupRegistration(
-        id: String,
-        token: String,
-    ): Result<CheckInGuestOut>
+    suspend fun lookupRegistration(id: String, token: String): Result<CheckInGuestOut>
 
-    suspend fun submitCheckIn(
-        id: String,
-        token: String,
-    ): Result<CheckInOut>
+    suspend fun submitCheckIn(id: String, token: String): Result<CheckInOut>
 
-    suspend fun searchRegistrations(
-        query: String,
-        eventId: String?,
-        authToken: String,
-    ): Result<List<CheckInGuestOut>>
+    suspend fun searchRegistrations(query: String, eventId: String?, authToken: String): Result<List<CheckInGuestOut>>
 }
 
-class DefaultCheckInRepository(
-    private val apiService: ChampagneApiService,
-) : CheckInRepository {
-    override suspend fun lookupRegistration(
-        id: String,
-        token: String,
-    ): Result<CheckInGuestOut> =
+class DefaultCheckInRepository(private val apiService: ChampagneApiService) : CheckInRepository {
+    override suspend fun lookupRegistration(id: String, token: String): Result<CheckInGuestOut> =
         runApiCall(mapHttpException = ::mapAuthAwareException) {
             apiService.lookupCheckIn(id = id, body = CheckInLookupRequest(token))
         }
 
-    override suspend fun submitCheckIn(
-        id: String,
-        token: String,
-    ): Result<CheckInOut> =
+    override suspend fun submitCheckIn(id: String, token: String): Result<CheckInOut> =
         runApiCall(mapHttpException = ::mapAuthAwareException) {
             apiService.submitCheckIn(id = id, body = CheckInRequest(token = token))
         }
@@ -47,15 +29,14 @@ class DefaultCheckInRepository(
     override suspend fun searchRegistrations(
         query: String,
         eventId: String?,
-        authToken: String,
-    ): Result<List<CheckInGuestOut>> =
-        runApiCall(mapHttpException = ::mapAuthAwareException) {
-            apiService.searchRegistrations(
-                auth = bearer(authToken),
-                query = query.takeIf { it.isNotBlank() },
-                eventId = eventId?.takeIf { it.isNotBlank() },
-            )
-        }
+        authToken: String
+    ): Result<List<CheckInGuestOut>> = runApiCall(mapHttpException = ::mapAuthAwareException) {
+        apiService.searchRegistrations(
+            auth = bearer(authToken),
+            query = query.takeIf { it.isNotBlank() },
+            eventId = eventId?.takeIf { it.isNotBlank() }
+        )
+    }
 
     private fun mapAuthAwareException(exception: HttpException): Exception =
         if (exception.code() == 401) UnauthorizedException() else ApiException(exception.message(), exception)

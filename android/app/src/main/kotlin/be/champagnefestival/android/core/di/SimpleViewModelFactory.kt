@@ -7,8 +7,5 @@ import androidx.lifecycle.viewmodel.CreationExtras
 /** Manual-DI ViewModel factory: builds a ViewModel from a plain constructor lambda. */
 inline fun <reified T : ViewModel> simpleFactory(crossinline initializer: () -> T): ViewModelProvider.Factory =
     object : ViewModelProvider.Factory {
-        override fun <VM : ViewModel> create(
-            modelClass: Class<VM>,
-            extras: CreationExtras,
-        ): VM = initializer() as VM
+        override fun <VM : ViewModel> create(modelClass: Class<VM>, extras: CreationExtras): VM = initializer() as VM
     }

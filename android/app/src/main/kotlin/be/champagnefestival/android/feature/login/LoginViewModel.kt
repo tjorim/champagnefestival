@@ -10,9 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class LoginViewModel(
-    private val authManager: AuthManager,
-) : ViewModel() {
+class LoginViewModel(private val authManager: AuthManager) : ViewModel() {
     private val _uiState = MutableStateFlow<UiState<Unit>>(UiState.Success(Unit))
     val uiState: StateFlow<UiState<Unit>> = _uiState.asStateFlow()
 
@@ -26,7 +24,7 @@ class LoginViewModel(
                     onSuccess = { UiState.Success(Unit) },
                     onFailure = { error ->
                         UiState.Error(error.message ?: "Unable to start sign-in. Check your connection and try again.")
-                    },
+                    }
                 )
         }
     }

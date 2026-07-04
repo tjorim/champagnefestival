@@ -16,7 +16,7 @@ object IdleLockPolicy {
         lockEnabled: Boolean,
         lastBackgroundedAtMillis: Long?,
         nowMillis: Long,
-        idleTimeoutMillis: Long = DEFAULT_IDLE_TIMEOUT_MILLIS,
+        idleTimeoutMillis: Long = DEFAULT_IDLE_TIMEOUT_MILLIS
     ): Boolean {
         if (!lockEnabled || lastBackgroundedAtMillis == null) return false
         return nowMillis - lastBackgroundedAtMillis >= idleTimeoutMillis

@@ -1,4 +1,5 @@
 import be.champagnefestival.buildlogic.CertPinning
+import groovy.json.JsonSlurper
 import java.util.Properties
 
 plugins {
@@ -7,6 +8,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 fun quoted(value: String) = "\"$value\""
@@ -39,24 +42,19 @@ fun isReleaseArtifactRequested(): Boolean {
 // input). When `required` is true and the variant that needs it is actually
 // being built, a missing value fails the build instead of silently falling
 // back to `defaultValue`.
-fun resolveConfigValue(
-    key: String,
-    envKey: String,
-    required: Boolean,
-    defaultValue: String = "",
-): String {
+fun resolveConfigValue(key: String, envKey: String, required: Boolean, defaultValue: String = ""): String {
     // A blank value counts as missing so a placeholder line in local.properties
     // still falls through to the next source or the default.
     val explicitValue =
         sequenceOf(
             localProperties.getProperty(key),
             providers.gradleProperty(key).orNull,
-            providers.environmentVariable(envKey).orNull,
+            providers.environmentVariable(envKey).orNull
         ).firstOrNull { !it.isNullOrBlank() }
     if (required && explicitValue.isNullOrBlank()) {
         error(
             "Missing required build property '$key'. " +
-                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'.",
+                "Set it in local.properties, as a Gradle property, or as the env var '$envKey'."
         )
     }
     return explicitValue ?: defaultValue
@@ -67,7 +65,7 @@ val releaseApiBaseUrl =
         "ANDROID_API_BASE_URL",
         "ANDROID_API_BASE_URL",
         required = isReleaseArtifactRequested(),
-        defaultValue = "https://release.placeholder.invalid/",
+        defaultValue = "https://release.placeholder.invalid/"
     )
 
 val releaseCertificatePinHost =
@@ -75,14 +73,14 @@ val releaseCertificatePinHost =
         "ANDROID_CERTIFICATE_PIN_HOST",
         "ANDROID_CERTIFICATE_PIN_HOST",
         required = isReleaseArtifactRequested(),
-        defaultValue = "champagnefestival.tjor.im",
+        defaultValue = "champagnefestival.tjor.im"
     )
 val releaseCertificatePinsRaw =
     resolveConfigValue(
         "ANDROID_CERTIFICATE_PINS",
         "ANDROID_CERTIFICATE_PINS",
         required = isReleaseArtifactRequested(),
-        defaultValue = "",
+        defaultValue = ""
     )
 
 // Pin-format and host-requires-pins validation live in buildSrc's CertPinning
@@ -94,6 +92,56 @@ if (isReleaseArtifactRequested()) {
     CertPinning.requireValidPinFormats(releaseCertificatePins)
     CertPinning.requireHostConfiguredForPins(releaseCertificatePinHost, releaseCertificatePins)
 }
+
+// Single source of truth for the app version: frontend/package.json, kept in
+// lockstep with the web release version instead of a hand-maintained literal here.
+// Read via providers.fileContents (not File.readText()) so the file is tracked
+// as a build configuration input and this stays Configuration Cache-compatible.
+val appVersion =
+    providers
+        .fileContents(layout.projectDirectory.file("../../frontend/package.json"))
+        .asText
+        .map { jsonText ->
+            val json = JsonSlurper().parseText(jsonText) as Map<*, *>
+            json["version"] as? String
+                ?: error("Could not find a \"version\" field in frontend/package.json")
+        }.get()
+
+fun versionCodeFor(version: String): Int {
+    val parts = version.substringBefore("-").substringBefore("+").split(".")
+    check(parts.size == 3) { "Expected a MAJOR.MINOR.PATCH version, got \"$version\"" }
+    val (major, minor, patch) =
+        parts.map {
+            it.toIntOrNull() ?: error("Invalid integer component \"$it\" in version \"$version\"")
+        }
+    // minor/patch must each fit in 3 digits or they'd overflow into the next digit
+    // group and collide with a different version's computed code.
+    check(major >= 0) { "Major version must be non-negative, got $major" }
+    check(minor in 0..999) { "Minor version must be between 0 and 999 to avoid versionCode collision, got $minor" }
+    check(patch in 0..999) { "Patch version must be between 0 and 999 to avoid versionCode collision, got $patch" }
+    val versionCode = major * 1_000_000 + minor * 1_000 + patch
+    check(versionCode <= 2_100_000_000) {
+        "versionCode $versionCode exceeds Google Play maximum of 2100000000"
+    }
+    return versionCode
+}
+
+// Falls back to "unknown" rather than failing the build when git is unavailable
+// (e.g. building from a downloaded source archive with no .git directory).
+val gitCommit =
+    try {
+        providers
+            .exec {
+                commandLine("git", "rev-parse", "--short", "HEAD")
+                isIgnoreExitValue = true
+            }.standardOutput
+            .asText
+            .get()
+            .trim()
+            .ifEmpty { "unknown" }
+    } catch (e: Exception) {
+        "unknown"
+    }
 
 android {
     namespace = "be.champagnefestival.android"
@@ -123,14 +171,13 @@ android {
     }
 
     defaultConfig {
-        applicationId = "be.champagnefestival.android"
+        applicationId = "im.tjor.champagnefestival"
         minSdk = 26
         targetSdk = 37
         // versionCode = MAJOR * 1000000 + MINOR * 1000 + PATCH (e.g. v1.2.3 → 1002003)
-        versionCode = 1000000
-        versionName = "1.0.0"
-
-        manifestPlaceholders["appAuthRedirectScheme"] = "be.champagnefestival.android"
+        versionCode = versionCodeFor(appVersion)
+        versionName = appVersion
+        buildConfigField("String", "BUILD_COMMIT", quoted(gitCommit))
     }
 
     buildTypes {
@@ -201,6 +248,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.security.crypto)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -222,6 +270,8 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

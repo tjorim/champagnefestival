@@ -1,7 +1,9 @@
 """Health check and metrics endpoints."""
 
+import asyncio
 import hmac
 import logging
+import time
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -34,6 +36,35 @@ def liveness_check() -> dict[str, str]:
     return {"status": "alive"}
 
 
+async def _check_jwks_reachable() -> bool:
+    jwks_uri = await _resolve_jwks_uri()
+    async with httpx.AsyncClient(timeout=5) as client:
+        oidc_response = await client.get(jwks_uri)
+    oidc_response.raise_for_status()
+    return True
+
+
+_JWKS_READINESS_CACHE_SECONDS = 30.0
+_jwks_readiness_cache: tuple[float, bool] | None = None
+_jwks_readiness_lock = asyncio.Lock()
+
+
+async def _jwks_reachable() -> bool:
+    global _jwks_readiness_cache  # noqa: PLW0603
+    now = time.monotonic()
+    if _jwks_readiness_cache is not None and now - _jwks_readiness_cache[0] < _JWKS_READINESS_CACHE_SECONDS:
+        return _jwks_readiness_cache[1]
+
+    async with _jwks_readiness_lock:
+        now = time.monotonic()
+        if _jwks_readiness_cache is not None and now - _jwks_readiness_cache[0] < _JWKS_READINESS_CACHE_SECONDS:
+            return _jwks_readiness_cache[1]
+
+        reachable = await _check_jwks_reachable()
+        _jwks_readiness_cache = (now, True) if reachable else None
+        return reachable
+
+
 @router.get("/health/readiness")
 async def readiness_check(
     response: Response,
@@ -54,16 +85,16 @@ async def readiness_check(
 
     if settings.oidc_issuer_url:
         try:
-            jwks_uri = await _resolve_jwks_uri()
-            async with httpx.AsyncClient(timeout=5) as client:
-                oidc_response = await client.get(jwks_uri)
-            oidc_response.raise_for_status()
+            reachable = await _jwks_reachable()
         except OIDCTokenError:
             logger.exception("Readiness check failed: OIDC discovery failed")
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
             return {"status": "not_ready"}
         except Exception:
-            logger.exception("Readiness check failed: OIDC JWKS endpoint unreachable (%s)", jwks_uri)
+            logger.exception("Readiness check failed: OIDC JWKS endpoint unreachable")
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            return {"status": "not_ready"}
+        if not reachable:
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
             return {"status": "not_ready"}
 

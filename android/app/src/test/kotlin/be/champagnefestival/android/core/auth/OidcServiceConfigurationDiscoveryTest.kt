@@ -5,6 +5,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -14,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.IOException
 
 class OidcServiceConfigurationDiscoveryTest {
     private lateinit var server: MockWebServer
@@ -42,56 +42,54 @@ class OidcServiceConfigurationDiscoveryTest {
     }
 
     @Test
-    fun `fetch calls API config endpoint and uses returned auth and token urls`() =
-        runTest {
-            server.enqueue(
-                MockResponse
-                    .Builder()
-                    .body(
-                        """
+    fun `fetch calls API config endpoint and uses returned auth and token urls`() = runTest {
+        server.enqueue(
+            MockResponse
+                .Builder()
+                .body(
+                    """
                         {
                           "issuer": "https://auth.example.test/realms/champagnefestival",
                           "authorization_url": "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/auth",
                           "token_url": "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/token"
                         }
-                        """.trimIndent(),
-                    ).build(),
-            )
+                    """.trimIndent()
+                ).build()
+        )
 
-            val config =
-                OidcServiceConfigurationDiscovery(OkHttpClient())
-                    .fetch(server.url("/").toString())
+        val config =
+            OidcServiceConfigurationDiscovery(OkHttpClient())
+                .fetch(server.url("/").toString())
 
-            assertEquals("/api/auth/oidc-config", server.takeRequest().url.encodedPath)
-            assertEquals(
-                "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/auth",
-                config.authorizationEndpoint.toString(),
-            )
-            assertEquals(
-                "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/token",
-                config.tokenEndpoint.toString(),
-            )
-        }
+        assertEquals("/api/auth/oidc-config", server.takeRequest().url.encodedPath)
+        assertEquals(
+            "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/auth",
+            config.authorizationEndpoint.toString()
+        )
+        assertEquals(
+            "https://auth.example.test/realms/champagnefestival/protocol/openid-connect/token",
+            config.tokenEndpoint.toString()
+        )
+    }
 
     @Test
-    fun `fetch throws with bounded error snippet on non-2xx response`() =
-        runTest {
-            server.enqueue(
-                MockResponse
-                    .Builder()
-                    .code(502)
-                    .body("x".repeat(5000))
-                    .build(),
-            )
+    fun `fetch throws with bounded error snippet on non-2xx response`() = runTest {
+        server.enqueue(
+            MockResponse
+                .Builder()
+                .code(502)
+                .body("x".repeat(5000))
+                .build()
+        )
 
-            val exception =
-                runCatching {
-                    OidcServiceConfigurationDiscovery(OkHttpClient())
-                        .fetch(server.url("/").toString())
-                }.exceptionOrNull()
+        val exception =
+            runCatching {
+                OidcServiceConfigurationDiscovery(OkHttpClient())
+                    .fetch(server.url("/").toString())
+            }.exceptionOrNull()
 
-            assertTrue(exception is IOException)
-            assertTrue(exception!!.message!!.contains("HTTP 502"))
-            assertTrue(exception.message!!.length < 1200)
-        }
+        assertTrue(exception is IOException)
+        assertTrue(exception!!.message!!.contains("HTTP 502"))
+        assertTrue(exception.message!!.length < 1200)
+    }
 }

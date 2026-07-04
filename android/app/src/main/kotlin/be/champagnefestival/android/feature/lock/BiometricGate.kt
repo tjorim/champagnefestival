@@ -34,10 +34,7 @@ import be.champagnefestival.android.core.di.simpleFactory
  * cached guest/registration data is shown before re-authentication succeeds.
  */
 @Composable
-fun BiometricGate(
-    app: ChampagneFestivalApp,
-    content: @Composable () -> Unit,
-) {
+fun BiometricGate(app: ChampagneFestivalApp, content: @Composable () -> Unit) {
     val lockEnabled by app.biometricLockController.lockEnabledFlow.collectAsState()
     val locked by app.biometricLockController.isLocked.collectAsState()
     val activity = LocalActivity.current as? FragmentActivity
@@ -64,25 +61,21 @@ fun BiometricGate(
     LockScreenContent(
         uiState = uiState,
         onRetry = { viewModel.authenticate(activity) },
-        onContinueWithoutBiometric = viewModel::continueWithoutBiometric,
+        onContinueWithoutBiometric = viewModel::continueWithoutBiometric
     )
 }
 
 @Composable
-private fun LockScreenContent(
-    uiState: LockUiState,
-    onRetry: () -> Unit,
-    onContinueWithoutBiometric: () -> Unit,
-) {
+private fun LockScreenContent(uiState: LockUiState, onRetry: () -> Unit, onContinueWithoutBiometric: () -> Unit) {
     Scaffold { padding ->
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(16.dp))

@@ -28,11 +28,7 @@ import be.champagnefestival.android.ui.components.LoadingContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    viewModel: SettingsViewModel,
-    onBack: () -> Unit,
-    onLoggedOut: () -> Unit,
-) {
+fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val loggedOut by viewModel.loggedOut.collectAsState()
 
@@ -50,47 +46,48 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
-            is UiState.Error -> ErrorContent(message = state.message, onRetry = {}, modifier = Modifier.padding(padding))
-            is UiState.Success -> SettingsContent(viewModel = viewModel, settings = state.data, modifier = Modifier.padding(padding))
+            is UiState.Error -> ErrorContent(message = state.message, onRetry = {
+            }, modifier = Modifier.padding(padding))
+            is UiState.Success -> SettingsContent(
+                viewModel = viewModel,
+                settings = state.data,
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }
 
 @Composable
-private fun SettingsContent(
-    viewModel: SettingsViewModel,
-    settings: SettingsUiModel,
-    modifier: Modifier = Modifier,
-) {
+private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiModel, modifier: Modifier = Modifier) {
     Column(
         modifier =
-            modifier
-                .fillMaxSize()
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         ApiBaseUrlOverrideCard(
             apiBaseUrl = settings.apiBaseUrl,
             defaultApiBaseUrl = settings.defaultApiBaseUrl,
             onSave = viewModel::saveApiBaseUrl,
-            onReset = viewModel::resetApiBaseUrl,
+            onReset = viewModel::resetApiBaseUrl
         )
         Text("OIDC config: ${settings.oidcConfigUrl}")
         Text("App version: ${settings.versionName}")
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("Require biometric unlock")
             Switch(
                 checked = settings.biometricLockEnabled,
-                onCheckedChange = viewModel::setBiometricLockEnabled,
+                onCheckedChange = viewModel::setBiometricLockEnabled
             )
         }
         Button(onClick = viewModel::logout) {

@@ -15,15 +15,11 @@ object ApiServiceFactory {
             coerceInputValues = true
         }
 
-    fun create(
-        baseUrl: String,
-        client: OkHttpClient,
-    ): ChampagneApiService =
-        Retrofit
-            .Builder()
-            .baseUrl(baseUrl)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-            .create(ChampagneApiService::class.java)
+    fun create(baseUrl: String, client: OkHttpClient): ChampagneApiService = Retrofit
+        .Builder()
+        .baseUrl(baseUrl)
+        .client(client)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(ChampagneApiService::class.java)
 }

@@ -8,7 +8,7 @@ data class EditionSummary(
     val year: Int,
     val month: String,
     val edition_type: String,
-    val active: Boolean,
+    val active: Boolean
 )
 
 @Serializable
@@ -23,7 +23,7 @@ data class EventSummary(
     val category: String,
     val registration_required: Boolean,
     val active: Boolean,
-    val edition: EditionSummary? = null,
+    val edition: EditionSummary? = null
 )
 
 @Serializable
@@ -33,5 +33,5 @@ data class EditionOut(
     val month: String,
     val edition_type: String,
     val active: Boolean,
-    val events: List<EventSummary> = emptyList(),
+    val events: List<EventSummary> = emptyList()
 )

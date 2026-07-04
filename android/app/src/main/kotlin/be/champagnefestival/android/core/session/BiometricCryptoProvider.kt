@@ -27,10 +27,9 @@ class BiometricCryptoProvider {
                 BiometricPrompt.CryptoObject(buildCipher())
             }.getOrNull()
 
-    private fun buildCipher(): Cipher =
-        Cipher.getInstance(TRANSFORMATION).apply {
-            init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
-        }
+    private fun buildCipher(): Cipher = Cipher.getInstance(TRANSFORMATION).apply {
+        init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey())
+    }
 
     private fun getOrCreateSecretKey(): SecretKey {
         val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }

@@ -13,34 +13,22 @@ import kotlinx.coroutines.launch
 sealed class CheckInUiState {
     data object Loading : CheckInUiState()
 
-    data class RegistrationLoaded(
-        val registration: CheckInGuestOut,
-    ) : CheckInUiState()
+    data class RegistrationLoaded(val registration: CheckInGuestOut) : CheckInUiState()
 
-    data class CheckInSuccess(
-        val registration: CheckInGuestOut,
-        val alreadyCheckedIn: Boolean,
-    ) : CheckInUiState()
+    data class CheckInSuccess(val registration: CheckInGuestOut, val alreadyCheckedIn: Boolean) : CheckInUiState()
 
-    data class Error(
-        val message: String,
-    ) : CheckInUiState()
+    data class Error(val message: String) : CheckInUiState()
 
     data object Unauthorized : CheckInUiState()
 }
 
-class CheckInViewModel(
-    private val repository: CheckInRepository,
-) : ViewModel() {
+class CheckInViewModel(private val repository: CheckInRepository) : ViewModel() {
     private val _uiState = MutableStateFlow<CheckInUiState>(CheckInUiState.Loading)
     val uiState: StateFlow<CheckInUiState> = _uiState.asStateFlow()
 
     private var lastSubmittedId: String? = null
 
-    fun loadRegistration(
-        id: String,
-        token: String,
-    ) {
+    fun loadRegistration(id: String, token: String) {
         _uiState.value = CheckInUiState.Loading
         viewModelScope.launch {
             repository
@@ -57,10 +45,7 @@ class CheckInViewModel(
         }
     }
 
-    fun submitCheckIn(
-        id: String,
-        token: String,
-    ) {
+    fun submitCheckIn(id: String, token: String) {
         if (lastSubmittedId == id && _uiState.value is CheckInUiState.Loading) {
             return
         }
@@ -76,7 +61,7 @@ class CheckInViewModel(
                     _uiState.value =
                         CheckInUiState.CheckInSuccess(
                             registration = result.registration,
-                            alreadyCheckedIn = result.already_checked_in,
+                            alreadyCheckedIn = result.already_checked_in
                         )
                 }.onFailure { error ->
                     _uiState.value =

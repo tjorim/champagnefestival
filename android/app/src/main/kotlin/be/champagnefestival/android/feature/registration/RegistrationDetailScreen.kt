@@ -36,7 +36,7 @@ fun RegistrationDetailScreen(
     token: String,
     viewModel: RegistrationDetailViewModel,
     onBack: () -> Unit,
-    onCheckIn: (String, String) -> Unit,
+    onCheckIn: (String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -52,9 +52,9 @@ fun RegistrationDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
+                }
             )
-        },
+        }
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
@@ -71,14 +71,10 @@ fun RegistrationDetailScreen(
 }
 
 @Composable
-private fun RegistrationContent(
-    registration: CheckInGuestOut,
-    modifier: Modifier = Modifier,
-    onCheckIn: () -> Unit,
-) {
+private fun RegistrationContent(registration: CheckInGuestOut, modifier: Modifier = Modifier, onCheckIn: () -> Unit) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -112,7 +108,7 @@ private fun RegistrationContent(
                 Text(
                     text = "Pre-orders",
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
             items(registration.pre_orders, key = { it.product_id }) { item ->
