@@ -22,58 +22,62 @@ import javax.inject.Singleton
  * When no override is set, callers fall back to the build-configured default.
  */
 @Singleton
-class ApiBaseUrlOverrideStore @Inject constructor(@ApplicationContext context: Context) {
-    private val dataStore =
-        PreferenceDataStoreFactory.create(
-            produceFile = { context.preferencesDataStoreFile(PREFERENCES_FILE) },
-        )
+class ApiBaseUrlOverrideStore
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+    ) {
+        private val dataStore =
+            PreferenceDataStoreFactory.create(
+                produceFile = { context.preferencesDataStoreFile(PREFERENCES_FILE) },
+            )
 
-    val override: Flow<String?> =
-        dataStore.data
-            .catch { error ->
-                if (error is IOException) emit(emptyPreferences()) else throw error
-            }.map { prefs ->
-                prefs[KEY_API_BASE_URL_OVERRIDE]?.takeIf { it.isNotBlank() }
-            }
+        val override: Flow<String?> =
+            dataStore.data
+                .catch { error ->
+                    if (error is IOException) emit(emptyPreferences()) else throw error
+                }.map { prefs ->
+                    prefs[KEY_API_BASE_URL_OVERRIDE]?.takeIf { it.isNotBlank() }
+                }
 
-    @Volatile
-    private var isCacheLoaded = false
+        @Volatile
+        private var isCacheLoaded = false
 
-    @Volatile
-    private var cachedOverride: String? = null
+        @Volatile
+        private var cachedOverride: String? = null
 
-    /**
-     * Synchronous read for request-time consumers (OkHttp interceptors run on background
-     * threads). Backed by an in-memory cache after the first read so requests never block
-     * on `runBlocking`; the cache is kept in sync by [setOverride] and [clearOverride], the
-     * only writers to this store.
-     */
-    fun currentOverrideBlocking(): String? {
-        if (!isCacheLoaded) {
-            synchronized(this) {
-                if (!isCacheLoaded) {
-                    cachedOverride = runBlocking { override.first() }
-                    isCacheLoaded = true
+        /**
+         * Synchronous read for request-time consumers (OkHttp interceptors run on background
+         * threads). Backed by an in-memory cache after the first read so requests never block
+         * on `runBlocking`; the cache is kept in sync by [setOverride] and [clearOverride], the
+         * only writers to this store.
+         */
+        fun currentOverrideBlocking(): String? {
+            if (!isCacheLoaded) {
+                synchronized(this) {
+                    if (!isCacheLoaded) {
+                        cachedOverride = runBlocking { override.first() }
+                        isCacheLoaded = true
+                    }
                 }
             }
+            return cachedOverride
         }
-        return cachedOverride
-    }
 
-    suspend fun setOverride(url: String) {
-        dataStore.edit { it[KEY_API_BASE_URL_OVERRIDE] = url }
-        cachedOverride = url
-        isCacheLoaded = true
-    }
+        suspend fun setOverride(url: String) {
+            dataStore.edit { it[KEY_API_BASE_URL_OVERRIDE] = url }
+            cachedOverride = url
+            isCacheLoaded = true
+        }
 
-    suspend fun clearOverride() {
-        dataStore.edit { it.remove(KEY_API_BASE_URL_OVERRIDE) }
-        cachedOverride = null
-        isCacheLoaded = true
-    }
+        suspend fun clearOverride() {
+            dataStore.edit { it.remove(KEY_API_BASE_URL_OVERRIDE) }
+            cachedOverride = null
+            isCacheLoaded = true
+        }
 
-    private companion object {
-        const val PREFERENCES_FILE = "api_base_url_override"
-        val KEY_API_BASE_URL_OVERRIDE = stringPreferencesKey("api_base_url_override")
+        private companion object {
+            const val PREFERENCES_FILE = "api_base_url_override"
+            val KEY_API_BASE_URL_OVERRIDE = stringPreferencesKey("api_base_url_override")
+        }
     }
-}

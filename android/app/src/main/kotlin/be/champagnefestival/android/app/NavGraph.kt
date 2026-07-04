@@ -137,9 +137,10 @@ fun NavGraph(app: ChampagneFestivalApp) {
         composable(Routes.Settings) {
             val viewModel: SettingsViewModel =
                 viewModel(
-                    factory = simpleFactory {
-                        SettingsViewModel(app.apiBaseUrlOverrideStore, app.biometricLockPreferencesStore, app.authManager)
-                    },
+                    factory =
+                        simpleFactory {
+                            SettingsViewModel(app.apiBaseUrlOverrideStore, app.biometricLockPreferencesStore, app.authManager)
+                        },
                 )
             SettingsScreen(
                 viewModel = viewModel,

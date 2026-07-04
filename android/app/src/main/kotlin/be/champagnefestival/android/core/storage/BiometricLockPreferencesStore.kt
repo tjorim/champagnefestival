@@ -20,38 +20,40 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class BiometricLockPreferencesStore @Inject constructor(
-    @ApplicationContext context: Context,
-    applicationScope: CoroutineScope,
-) {
-    private val dataStore: DataStore<Preferences> =
-        PreferenceDataStoreFactory.create(
-            scope = applicationScope,
-            produceFile = { context.preferencesDataStoreFile("biometric_lock_preferences") },
-        )
+class BiometricLockPreferencesStore
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+        applicationScope: CoroutineScope,
+    ) {
+        private val dataStore: DataStore<Preferences> =
+            PreferenceDataStoreFactory.create(
+                scope = applicationScope,
+                produceFile = { context.preferencesDataStoreFile("biometric_lock_preferences") },
+            )
 
-    private val biometricLockEnabledKey = booleanPreferencesKey("biometric_lock_enabled")
+        private val biometricLockEnabledKey = booleanPreferencesKey("biometric_lock_enabled")
 
-    // Event-device threat model: lock is opt-out, not opt-in. Null until the persisted
-    // value has been read, so callers can distinguish "loading" from "disabled".
-    private val _biometricLockEnabledFlow = MutableStateFlow<Boolean?>(null)
-    val biometricLockEnabledFlow: StateFlow<Boolean?> = _biometricLockEnabledFlow
+        // Event-device threat model: lock is opt-out, not opt-in. Null until the persisted
+        // value has been read, so callers can distinguish "loading" from "disabled".
+        private val _biometricLockEnabledFlow = MutableStateFlow<Boolean?>(null)
+        val biometricLockEnabledFlow: StateFlow<Boolean?> = _biometricLockEnabledFlow
 
-    init {
-        applicationScope.launch {
-            dataStore.data
-                .catch { exception ->
-                    if (exception is IOException) emit(emptyPreferences()) else throw exception
-                }.map { it[biometricLockEnabledKey] ?: DEFAULT_BIOMETRIC_LOCK_ENABLED }
-                .collect { _biometricLockEnabledFlow.value = it }
+        init {
+            applicationScope.launch {
+                dataStore.data
+                    .catch { exception ->
+                        if (exception is IOException) emit(emptyPreferences()) else throw exception
+                    }.map { it[biometricLockEnabledKey] ?: DEFAULT_BIOMETRIC_LOCK_ENABLED }
+                    .collect { _biometricLockEnabledFlow.value = it }
+            }
+        }
+
+        suspend fun setBiometricLockEnabled(enabled: Boolean) {
+            dataStore.edit { it[biometricLockEnabledKey] = enabled }
+        }
+
+        private companion object {
+            const val DEFAULT_BIOMETRIC_LOCK_ENABLED = true
         }
     }
-
-    suspend fun setBiometricLockEnabled(enabled: Boolean) {
-        dataStore.edit { it[biometricLockEnabledKey] = enabled }
-    }
-
-    private companion object {
-        const val DEFAULT_BIOMETRIC_LOCK_ENABLED = true
-    }
-}
