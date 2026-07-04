@@ -65,7 +65,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Champagne Festival",
+                text = "Champagnefestival",
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center
             )

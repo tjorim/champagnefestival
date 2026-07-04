@@ -71,7 +71,7 @@ class BiometricGateViewModel(
         val promptInfo =
             BiometricPrompt.PromptInfo
                 .Builder()
-                .setTitle("Unlock Champagne Festival")
+                .setTitle("Unlock Champagnefestival")
                 .setSubtitle("Verify it's you to continue")
                 .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
                 .build()

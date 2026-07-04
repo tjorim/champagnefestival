@@ -79,7 +79,7 @@ private fun LockScreenContent(uiState: LockUiState, onRetry: () -> Unit, onConti
         ) {
             Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Champagne Festival is locked", style = MaterialTheme.typography.titleLarge)
+            Text("Champagnefestival is locked", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(24.dp))
             when (uiState) {
                 LockUiState.Checking, LockUiState.Prompting -> CircularProgressIndicator()

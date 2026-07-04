@@ -1,4 +1,4 @@
-# Champagne Festival — Android
+# Champagnefestival — Android
 
 Native Android companion app for on-site volunteer check-in and event-day guest lookup.
 
