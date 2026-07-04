@@ -131,7 +131,6 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
                             scaleType = PreviewView.ScaleType.FILL_CENTER
                             bindCamera(
                                 lifecycleOwner = lifecycleOwner,
-                                previewView = this,
                                 scanner = scanner,
                                 executor = cameraExecutor,
                                 onQrDetected = { rawValue ->
@@ -175,7 +174,6 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 private fun PreviewView.bindCamera(
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
-    previewView: PreviewView,
     scanner: BarcodeScanner,
     executor: java.util.concurrent.Executor,
     onQrDetected: (String) -> Unit,
@@ -186,7 +184,7 @@ private fun PreviewView.bindCamera(
         {
             runCatching {
                 val cameraProvider = cameraProviderFuture.get()
-                val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
+                val preview = Preview.Builder().build().also { it.surfaceProvider = surfaceProvider }
                 val analysis =
                     ImageAnalysis
                         .Builder()
