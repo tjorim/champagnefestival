@@ -2,7 +2,7 @@
 
 import phonenumbers
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Text, cast, or_, select, update
+from sqlalchemy import Text, cast, delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -355,6 +355,7 @@ async def merge_people(
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_person(person_id: str, db: AsyncSession = Depends(get_db)) -> None:
     person = await _get_person_or_404(db, person_id)
+    await db.execute(delete(Registration).where(Registration.person_id == person_id))
     await db.delete(person)
     await db.commit()
 

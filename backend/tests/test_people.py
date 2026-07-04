@@ -84,6 +84,41 @@ async def test_people_crud_roles_and_filters(client):
 
 
 @pytest.mark.anyio
+async def test_delete_person_removes_existing_registrations(client):
+    person = await client.post(
+        "/api/people",
+        json={"name": "Delete Me", "email": "delete.me@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    assert person.status_code == 201
+    person_id = person.json()["id"]
+
+    event = await _create_event(client, edition_id="edition-delete-person")
+    registration = await client.post(
+        "/api/registrations/admin",
+        json={
+            "person_id": person_id,
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [],
+            "notes": "",
+            "accessibility_note": "",
+            "status": "confirmed",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert registration.status_code == 201
+
+    r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
+
+    assert r.status_code == 204
+    assert (await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)).status_code == 404
+    registrations = await client.get("/api/registrations", headers=ADMIN_HEADERS)
+    assert registrations.status_code == 200
+    assert registrations.json() == []
+
+
+@pytest.mark.anyio
 async def test_reservation_auto_links_certain_person(client):
     """Same email + same name (case/whitespace insensitive) → reservation links to existing person."""
     bob_phone = "+32470123456"
