@@ -123,7 +123,8 @@ cd android
 
 The app uses OpenID Connect (Keycloak / authentik) via [AppAuth for Android](https://github.com/openid/AppAuth-Android).
 
-OIDC redirect URI: `be.champagnefestival.android://oauth2redirect`
+OIDC redirect URI: `im.tjor.champagnefestival://oauth2redirect`
+(debug builds use `im.tjor.champagnefestival.debug://oauth2redirect`, from the `applicationIdSuffix`)
 
 Register this redirect URI with your OIDC provider.
 
