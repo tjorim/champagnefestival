@@ -30,6 +30,7 @@ interface AppRouteComponents {
   AdminPage: RouteComponent;
   CheckInRoute: RouteComponent;
   MyRegistrationsRoute: RouteComponent;
+  PrivacyPolicyRoute: RouteComponent;
 }
 
 export function createAppRouter({
@@ -37,6 +38,7 @@ export function createAppRouter({
   AdminPage,
   CheckInRoute,
   MyRegistrationsRoute,
+  PrivacyPolicyRoute,
 }: AppRouteComponents) {
   const rootRoute = createRootRoute({
     notFoundComponent: App,
@@ -68,11 +70,18 @@ export function createAppRouter({
     component: MyRegistrationsRoute,
   });
 
+  const privacyPolicyRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/privacy",
+    component: PrivacyPolicyRoute,
+  });
+
   const routeTree = rootRoute.addChildren([
     indexRoute,
     adminRoute,
     checkInRoute,
     myRegistrationsRoute,
+    privacyPolicyRoute,
   ]);
 
   return createRouter({
