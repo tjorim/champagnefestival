@@ -1,4 +1,5 @@
 import be.champagnefestival.buildlogic.CertPinning
+import groovy.json.JsonSlurper
 import java.util.Properties
 
 plugins {
@@ -100,8 +101,9 @@ val appVersion =
     providers
         .fileContents(layout.projectDirectory.file("../../frontend/package.json"))
         .asText
-        .map { json ->
-            Regex(""""version":\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
+        .map { jsonText ->
+            val json = JsonSlurper().parseText(jsonText) as Map<*, *>
+            json["version"] as? String
                 ?: error("Could not find a \"version\" field in frontend/package.json")
         }.get()
 
@@ -117,7 +119,11 @@ fun versionCodeFor(version: String): Int {
     check(major >= 0) { "Major version must be non-negative, got $major" }
     check(minor in 0..999) { "Minor version must be between 0 and 999 to avoid versionCode collision, got $minor" }
     check(patch in 0..999) { "Patch version must be between 0 and 999 to avoid versionCode collision, got $patch" }
-    return major * 1_000_000 + minor * 1_000 + patch
+    val versionCode = major * 1_000_000 + minor * 1_000 + patch
+    check(versionCode <= 2_100_000_000) {
+        "versionCode $versionCode exceeds Google Play maximum of 2100000000"
+    }
+    return versionCode
 }
 
 // Falls back to "unknown" rather than failing the build when git is unavailable

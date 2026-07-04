@@ -28,6 +28,27 @@ async def test_readiness(client):
 
 
 @pytest.mark.anyio
+async def test_jwks_reachable_coalesces_concurrent_cache_misses(monkeypatch):
+    from app.routers import health
+
+    calls = 0
+
+    async def reachable() -> bool:
+        nonlocal calls
+        calls += 1
+        await health.asyncio.sleep(0)
+        return True
+
+    monkeypatch.setattr(health, "_jwks_readiness_cache", None)
+    monkeypatch.setattr(health, "_check_jwks_reachable", reachable)
+
+    results = await health.asyncio.gather(*(health._jwks_reachable() for _ in range(5)))
+
+    assert results == [True] * 5
+    assert calls == 1
+
+
+@pytest.mark.anyio
 async def test_health_summary(client):
     r = await client.get("/api/health")
     assert r.status_code == 200
