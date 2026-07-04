@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
@@ -67,6 +68,7 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
     }
     var hasNavigated by remember { mutableStateOf(false) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    val scanner = remember { BarcodeScanning.getClient() }
     val permissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             cameraPermissionGranted = granted
@@ -74,6 +76,7 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
 
     DisposableEffect(Unit) {
         onDispose {
+            scanner.close()
             cameraExecutor.shutdown()
         }
     }
@@ -129,6 +132,7 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
                             bindCamera(
                                 lifecycleOwner = lifecycleOwner,
                                 previewView = this,
+                                scanner = scanner,
                                 executor = cameraExecutor,
                                 onQrDetected = { rawValue ->
                                     if (!hasNavigated) {
@@ -172,6 +176,7 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
 private fun PreviewView.bindCamera(
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
     previewView: PreviewView,
+    scanner: BarcodeScanner,
     executor: java.util.concurrent.Executor,
     onQrDetected: (String) -> Unit,
     onError: (Throwable) -> Unit
@@ -182,14 +187,6 @@ private fun PreviewView.bindCamera(
             runCatching {
                 val cameraProvider = cameraProviderFuture.get()
                 val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
-                val scanner = BarcodeScanning.getClient()
-                lifecycleOwner.lifecycle.addObserver(
-                    object : androidx.lifecycle.DefaultLifecycleObserver {
-                        override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
-                            scanner.close()
-                        }
-                    }
-                )
                 val analysis =
                     ImageAnalysis
                         .Builder()

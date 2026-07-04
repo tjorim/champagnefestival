@@ -22,14 +22,14 @@ constructor(@ApplicationContext context: Context) {
         )
     }
 
-    fun readAuthStateJson(): String? = prefs.getString(KEY_AUTH_STATE, null)
+    fun readAuthStateJson(): String? = runCatching { prefs.getString(KEY_AUTH_STATE, null) }.getOrNull()
 
     fun writeAuthStateJson(value: String) {
-        prefs.edit().putString(KEY_AUTH_STATE, value).apply()
+        runCatching { prefs.edit().putString(KEY_AUTH_STATE, value).apply() }
     }
 
     fun clear() {
-        prefs.edit().remove(KEY_AUTH_STATE).apply()
+        runCatching { prefs.edit().remove(KEY_AUTH_STATE).apply() }
     }
 
     private companion object {

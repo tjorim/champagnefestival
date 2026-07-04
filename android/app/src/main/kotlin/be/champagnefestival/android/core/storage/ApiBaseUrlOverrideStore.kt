@@ -10,11 +10,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 /**
  * Persists an optional runtime override for the API base URL, letting an installed build
@@ -24,54 +27,49 @@ import kotlinx.coroutines.runBlocking
 @Singleton
 class ApiBaseUrlOverrideStore
 @Inject
-constructor(@ApplicationContext context: Context) {
+constructor(
+    @ApplicationContext context: Context,
+    applicationScope: CoroutineScope
+) {
     private val dataStore =
         PreferenceDataStoreFactory.create(
+            scope = applicationScope,
             produceFile = { context.preferencesDataStoreFile(PREFERENCES_FILE) }
         )
 
-    val override: Flow<String?> =
-        dataStore.data
+    private val overrideFlow: Flow<String?> =
+        dataStore
+            .data
             .catch { error ->
                 if (error is IOException) emit(emptyPreferences()) else throw error
             }.map { prefs ->
                 prefs[KEY_API_BASE_URL_OVERRIDE]?.takeIf { it.isNotBlank() }
             }
 
-    @Volatile
-    private var isCacheLoaded = false
+    private val _override = MutableStateFlow<String?>(null)
+    val override: StateFlow<String?> = _override.asStateFlow()
 
-    @Volatile
-    private var cachedOverride: String? = null
+    init {
+        applicationScope.launch {
+            overrideFlow.collect { _override.value = it }
+        }
+    }
 
     /**
      * Synchronous read for request-time consumers (OkHttp interceptors run on background
-     * threads). Backed by an in-memory cache after the first read so requests never block
-     * on `runBlocking`; the cache is kept in sync by [setOverride] and [clearOverride], the
-     * only writers to this store.
+     * threads). Backed by an in-memory cache kept in sync by the application-scope
+     * DataStore collection.
      */
-    fun currentOverrideBlocking(): String? {
-        if (!isCacheLoaded) {
-            synchronized(this) {
-                if (!isCacheLoaded) {
-                    cachedOverride = runBlocking { override.first() }
-                    isCacheLoaded = true
-                }
-            }
-        }
-        return cachedOverride
-    }
+    fun currentOverrideBlocking(): String? = override.value
 
     suspend fun setOverride(url: String) {
         dataStore.edit { it[KEY_API_BASE_URL_OVERRIDE] = url }
-        cachedOverride = url
-        isCacheLoaded = true
+        _override.value = url
     }
 
     suspend fun clearOverride() {
         dataStore.edit { it.remove(KEY_API_BASE_URL_OVERRIDE) }
-        cachedOverride = null
-        isCacheLoaded = true
+        _override.value = null
     }
 
     private companion object {

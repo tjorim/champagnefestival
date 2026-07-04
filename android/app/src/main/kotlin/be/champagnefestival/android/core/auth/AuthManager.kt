@@ -42,6 +42,7 @@ constructor(
     private val configMutex = Mutex()
     private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
+    @Volatile
     private var authState: AuthState = loadPersistedState()
 
     private val _loggedIn = MutableStateFlow(authState.accessToken)
@@ -153,7 +154,7 @@ constructor(
      * pay for a round trip to the discovery endpoint.
      */
     private suspend fun fetchConfiguration(): AuthorizationServiceConfiguration {
-        val apiBaseUrl = apiBaseUrlOverrideStore.currentOverrideBlocking() ?: BuildConfig.API_BASE_URL
+        val apiBaseUrl = apiBaseUrlOverrideStore.override.value ?: BuildConfig.API_BASE_URL
         cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
         return configMutex.withLock {
             cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
