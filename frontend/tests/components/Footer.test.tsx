@@ -6,14 +6,14 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     festival_name: () => "Champagne Festival",
     footer_rights: () => "All rights reserved.",
+    footer_privacy: () => "Privacy Policy",
   },
 }));
 
-// Mock the PrivacyPolicy component since we're only testing the Footer
-vi.mock("@/components/PrivacyPolicy", () => ({
-  default: function MockPrivacyPolicy() {
-    return <button data-testid="privacy-button">Privacy Policy</button>;
-  },
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, ...props }: { to: string } & import("react").ComponentProps<"a">) => (
+    <a href={to} {...props} />
+  ),
 }));
 
 describe("Footer component", () => {
@@ -27,11 +27,11 @@ describe("Footer component", () => {
     expect(footer).toHaveTextContent(`© ${currentYear} Champagne Festival. All rights reserved.`);
   });
 
-  it("renders privacy policy button", () => {
+  it("renders a link to the privacy policy page", () => {
     render(<Footer />);
 
-    // Check that the privacy policy button is rendered
-    expect(screen.getByTestId("privacy-button")).toBeInTheDocument();
-    expect(screen.getByText("Privacy Policy")).toBeInTheDocument();
+    const privacyLink = screen.getByRole("link", { name: "Privacy Policy" });
+    expect(privacyLink).toBeInTheDocument();
+    expect(privacyLink).toHaveAttribute("href", "/privacy");
   });
 });

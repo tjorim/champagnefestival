@@ -1,5 +1,5 @@
+import { Link } from "@tanstack/react-router";
 import { m } from "@/paraglide/messages";
-import PrivacyPolicy from "./PrivacyPolicy";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -14,7 +14,9 @@ const Footer = () => {
             </p>
           </div>
           <div className="col-md-6 text-center text-md-end">
-            <PrivacyPolicy />
+            <Link to="/privacy" className="text-white text-decoration-none footer-link">
+              {m.footer_privacy()}
+            </Link>
           </div>
         </div>
       </div>

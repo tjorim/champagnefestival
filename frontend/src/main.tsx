@@ -40,6 +40,7 @@ const CommunityEvents = lazy(() => import("./components/CommunityEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
+const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -156,6 +157,23 @@ function MyRegistrationsRoute() {
       <main id="main-content">
         <AppSuspense errorFallbackText={m.my_registrations_error()}>
           <MyRegistrationsPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /privacy */
+function PrivacyPolicyRoute() {
+  return (
+    <div className="App">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-shield-check" title={m.privacy_title()} />
+      <main id="main-content">
+        <AppSuspense errorFallbackText={m.error_loading_privacy()}>
+          <PrivacyPolicyPage />
         </AppSuspense>
       </main>
     </div>
@@ -431,6 +449,7 @@ const router = createAppRouter({
   AdminPage,
   CheckInRoute,
   MyRegistrationsRoute,
+  PrivacyPolicyRoute,
 });
 
 declare module "@tanstack/react-router" {

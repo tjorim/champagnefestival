@@ -27,8 +27,32 @@ export const privacyPolicyConfig: PrivacyPolicyConfig = {
       getContent: m.privacy_data_collection_content,
     },
     {
+      getTitle: m.privacy_account_title,
+      getContent: m.privacy_account_content,
+    },
+    {
+      getTitle: m.privacy_registration_title,
+      getContent: m.privacy_registration_content,
+    },
+    {
+      getTitle: m.privacy_camera_title,
+      getContent: m.privacy_camera_content,
+    },
+    {
       getTitle: m.privacy_data_use_title,
       getContent: m.privacy_data_use_content,
+    },
+    {
+      getTitle: m.privacy_api_communication_title,
+      getContent: m.privacy_api_communication_content,
+    },
+    {
+      getTitle: m.privacy_diagnostics_title,
+      getContent: m.privacy_diagnostics_content,
+    },
+    {
+      getTitle: m.privacy_data_retention_title,
+      getContent: m.privacy_data_retention_content,
     },
     {
       getTitle: m.privacy_data_protection_title,
@@ -37,6 +61,18 @@ export const privacyPolicyConfig: PrivacyPolicyConfig = {
     {
       getTitle: m.privacy_cookies_title,
       getContent: m.privacy_cookies_content,
+    },
+    {
+      getTitle: m.privacy_rights_title,
+      getContent: m.privacy_rights_content,
+    },
+    {
+      getTitle: m.privacy_children_title,
+      getContent: m.privacy_children_content,
+    },
+    {
+      getTitle: m.privacy_changes_title,
+      getContent: m.privacy_changes_content,
     },
     {
       getTitle: m.privacy_contact_us_title,
