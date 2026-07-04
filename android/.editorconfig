@@ -8,7 +8,7 @@ trim_trailing_whitespace = true
 
 [*.{kt,kts}]
 ktlint_code_style = android_studio
-max_line_length = 160
+max_line_length = 120
 ktlint_function_naming_ignore_when_annotated_with = Composable
 # Route constants intentionally use PascalCase names.
 ktlint_standard_property-naming = disabled
