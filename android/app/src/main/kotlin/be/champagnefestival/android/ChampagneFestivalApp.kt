@@ -5,20 +5,24 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import be.champagnefestival.android.core.auth.AuthManager
 import be.champagnefestival.android.core.network.NetworkModule
 import be.champagnefestival.android.core.session.BiometricLockController
-import be.champagnefestival.android.core.storage.SessionDataStore
+import be.champagnefestival.android.core.storage.ApiBaseUrlOverrideStore
+import be.champagnefestival.android.core.storage.BiometricLockPreferencesStore
 import be.champagnefestival.android.data.repository.DefaultCheckInRepository
 import be.champagnefestival.android.data.repository.DefaultEditionRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
+@HiltAndroidApp
 class ChampagneFestivalApp : Application() {
-    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Inject
+    lateinit var apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore
 
-    lateinit var sessionDataStore: SessionDataStore
-        private set
+    @Inject
+    lateinit var biometricLockPreferencesStore: BiometricLockPreferencesStore
+
+    @Inject
     lateinit var authManager: AuthManager
-        private set
+
     lateinit var networkModule: NetworkModule
         private set
     lateinit var checkInRepository: DefaultCheckInRepository
@@ -30,12 +34,10 @@ class ChampagneFestivalApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        sessionDataStore = SessionDataStore(this, applicationScope)
-        authManager = AuthManager(this, sessionDataStore, applicationScope)
-        networkModule = NetworkModule(sessionDataStore, authManager)
+        networkModule = NetworkModule(apiBaseUrlOverrideStore, authManager)
         checkInRepository = DefaultCheckInRepository(networkModule.apiService)
         editionRepository = DefaultEditionRepository(networkModule.apiService)
-        biometricLockController = BiometricLockController(sessionDataStore)
+        biometricLockController = BiometricLockController(biometricLockPreferencesStore)
         ProcessLifecycleOwner.get().lifecycle.addObserver(biometricLockController)
     }
 }

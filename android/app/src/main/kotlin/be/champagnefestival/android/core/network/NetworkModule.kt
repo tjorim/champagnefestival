@@ -2,13 +2,13 @@ package be.champagnefestival.android.core.network
 
 import be.champagnefestival.android.BuildConfig
 import be.champagnefestival.android.core.auth.AuthManager
-import be.champagnefestival.android.core.storage.SessionDataStore
+import be.champagnefestival.android.core.storage.ApiBaseUrlOverrideStore
 import be.champagnefestival.android.data.api.ChampagneApiService
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 
 class NetworkModule(
-    sessionDataStore: SessionDataStore,
+    apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
     authManager: AuthManager,
 ) {
     private val client =
@@ -16,10 +16,10 @@ class NetworkModule(
             .Builder()
             .apply {
                 certificatePinner(CertificatePinnerProvider.forCurrentBuild())
-                authenticator(TokenAuthenticator(sessionDataStore, authManager))
+                authenticator(TokenAuthenticator(authManager))
             }.addInterceptor(
                 DynamicBaseUrlInterceptor {
-                    sessionDataStore.apiBaseUrlFlow.value ?: BuildConfig.API_BASE_URL
+                    apiBaseUrlOverrideStore.currentOverrideBlocking() ?: BuildConfig.API_BASE_URL
                 },
             ).addInterceptor(
                 HttpLoggingInterceptor().apply {

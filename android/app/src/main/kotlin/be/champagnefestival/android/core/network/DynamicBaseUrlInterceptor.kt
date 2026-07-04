@@ -11,9 +11,9 @@ import okhttp3.Response
  * request instead of requiring an app restart.
  *
  * [baseUrlProvider] is expected to already resolve the effective base URL — i.e. the
- * user's override when one is set, otherwise the build's default — as [SessionDataStore]
- * does via `apiBaseUrlFlow`. Returns the request untouched when the provider yields null
- * or an unparseable URL, leaving OkHttp's own configured base URL in effect.
+ * user's override when one is set, otherwise the build's default — as `ApiBaseUrlOverrideStore`
+ * does via `currentOverrideBlocking()`. Returns the request untouched when the provider yields
+ * null or an unparseable URL, leaving OkHttp's own configured base URL in effect.
  */
 class DynamicBaseUrlInterceptor(
     private val baseUrlProvider: () -> String?,

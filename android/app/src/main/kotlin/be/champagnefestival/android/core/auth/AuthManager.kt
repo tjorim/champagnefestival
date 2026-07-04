@@ -4,38 +4,48 @@ import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import be.champagnefestival.android.core.storage.SessionDataStore
-import kotlinx.coroutines.CoroutineScope
+import be.champagnefestival.android.BuildConfig
+import be.champagnefestival.android.core.storage.ApiBaseUrlOverrideStore
+import be.champagnefestival.android.core.storage.SecureSessionStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
-import net.openid.appauth.GrantTypeValues
 import net.openid.appauth.ResponseTypeValues
-import net.openid.appauth.TokenRequest
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.coroutines.resume
 
-class AuthManager(
-    private val context: Context,
-    private val sessionDataStore: SessionDataStore,
-    private val applicationScope: CoroutineScope,
-    private val oidcConfig: OidcConfig = OidcConfig(),
-    private val oidcDiscovery: OidcServiceConfigurationDiscovery = OidcServiceConfigurationDiscovery(),
+@Singleton
+class AuthManager
+@Inject
+constructor(
+    @ApplicationContext private val context: Context,
+    private val secureSessionStore: SecureSessionStore,
+    private val apiBaseUrlOverrideStore: ApiBaseUrlOverrideStore,
+    private val oidcConfig: OidcConfig,
+    private val oidcDiscovery: OidcServiceConfigurationDiscovery,
 ) {
     private val authService = AuthorizationService(context)
     private val refreshMutex = Mutex()
     private val configMutex = Mutex()
     private var cachedConfiguration: Pair<String, AuthorizationServiceConfiguration>? = null
 
-    val loggedIn: StateFlow<String?> = sessionDataStore.accessTokenFlow
+    private var authState: AuthState = loadPersistedState()
+
+    private val _loggedIn = MutableStateFlow(authState.accessToken)
+    val loggedIn: StateFlow<String?> = _loggedIn.asStateFlow()
 
     suspend fun startLogin(activity: Activity): Result<Unit> {
         val configuration = runCatching { fetchConfiguration() }.getOrElse { return Result.failure(it) }
@@ -46,7 +56,7 @@ class AuthManager(
                     oidcConfig.clientId,
                     ResponseTypeValues.CODE,
                     oidcConfig.redirectUri,
-                ).setScope("openid profile email offline_access")
+                ).setScope(oidcConfig.scope)
                 .build()
 
         withContext(Dispatchers.Main) {
@@ -79,38 +89,24 @@ class AuthManager(
     }
 
     /**
-     * Exchanges the stored refresh token for a new access token. Used by
+     * Exchanges the stored refresh token for a new access token via AppAuth's own
+     * [AuthState] bookkeeping. Used by
      * [be.champagnefestival.android.core.network.TokenAuthenticator] to recover from an
      * expired access token without forcing the user to sign in again mid-shift.
      */
     suspend fun getFreshAccessToken(): String? =
         refreshMutex.withLock {
-            val refreshToken = sessionDataStore.refreshTokenFlow.value ?: return null
-            val configuration = runCatching { fetchConfiguration() }.getOrNull() ?: return null
-            val request =
-                TokenRequest
-                    .Builder(configuration, oidcConfig.clientId)
-                    .setGrantType(GrantTypeValues.REFRESH_TOKEN)
-                    .setRefreshToken(refreshToken)
-                    .build()
-
-            val (response, exception) =
-                suspendCancellableCoroutine<Pair<net.openid.appauth.TokenResponse?, AuthorizationException?>> { continuation ->
-                    authService.performTokenRequest(request) { tokenResponse, tokenException ->
-                        continuation.resume(tokenResponse to tokenException)
+            suspendCancellableCoroutine { continuation ->
+                authState.performActionWithFreshTokens(authService) { accessToken, _, exception ->
+                    if (exception != null || accessToken.isNullOrBlank()) {
+                        clearState()
+                        continuation.resume(null)
+                        return@performActionWithFreshTokens
                     }
+                    persistState(authState)
+                    continuation.resume(accessToken)
                 }
-
-            val accessToken = response?.accessToken
-            if (exception != null || accessToken.isNullOrBlank()) {
-                return null
             }
-            sessionDataStore.saveTokens(
-                accessToken = accessToken,
-                refreshToken = response.refreshToken ?: refreshToken,
-                idToken = response.idToken,
-            )
-            accessToken
         }
 
     suspend fun handleAuthResponse(intent: Intent): Result<Unit> {
@@ -133,25 +129,20 @@ class AuthManager(
                 } else if (tokenResponse == null) {
                     continuation.resume(Result.failure(IllegalStateException("Token exchange failed.")))
                 } else {
-                    applicationScope.launch {
-                        sessionDataStore.saveTokens(
-                            accessToken = tokenResponse.accessToken.orEmpty(),
-                            refreshToken = tokenResponse.refreshToken,
-                            idToken = tokenResponse.idToken,
-                        )
-                        continuation.resume(Result.success(Unit))
-                    }
+                    val newState = AuthState(response, null).apply { update(tokenResponse, tokenException) }
+                    persistState(newState)
+                    continuation.resume(Result.success(Unit))
                 }
             }
         }
     }
 
-    fun isLoggedIn(): Boolean = !sessionDataStore.accessTokenFlow.value.isNullOrBlank()
+    fun isLoggedIn(): Boolean = !authState.accessToken.isNullOrBlank()
 
-    fun getAccessToken(): String? = sessionDataStore.accessTokenFlow.value
+    fun getAccessToken(): String? = authState.accessToken
 
-    suspend fun logout() {
-        sessionDataStore.clearSession()
+    fun logout() {
+        clearState()
     }
 
     /**
@@ -160,11 +151,28 @@ class AuthManager(
      * pay for a round trip to the discovery endpoint.
      */
     private suspend fun fetchConfiguration(): AuthorizationServiceConfiguration {
-        val apiBaseUrl = sessionDataStore.apiBaseUrlFlow.value ?: oidcConfig.apiBaseUrl
+        val apiBaseUrl = apiBaseUrlOverrideStore.currentOverrideBlocking() ?: BuildConfig.API_BASE_URL
         cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.let { return it.second }
         return configMutex.withLock {
             cachedConfiguration?.takeIf { it.first == apiBaseUrl }?.second
                 ?: oidcDiscovery.fetch(apiBaseUrl).also { cachedConfiguration = apiBaseUrl to it }
         }
+    }
+
+    private fun loadPersistedState(): AuthState {
+        val json = secureSessionStore.readAuthStateJson() ?: return AuthState()
+        return runCatching { AuthState.jsonDeserialize(json) }.getOrElse { AuthState() }
+    }
+
+    private fun persistState(state: AuthState) {
+        authState = state
+        secureSessionStore.writeAuthStateJson(state.jsonSerializeString())
+        _loggedIn.value = state.accessToken
+    }
+
+    private fun clearState() {
+        authState = AuthState()
+        secureSessionStore.clear()
+        _loggedIn.value = null
     }
 }

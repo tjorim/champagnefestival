@@ -2,7 +2,7 @@ package be.champagnefestival.android.core.session
 
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import be.champagnefestival.android.core.storage.SessionDataStore
+import be.champagnefestival.android.core.storage.BiometricLockPreferencesStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,11 +13,11 @@ import kotlinx.coroutines.flow.asStateFlow
  * PII is never shown before the gate has confirmed the current lock setting.
  */
 class BiometricLockController(
-    sessionDataStore: SessionDataStore,
+    biometricLockPreferencesStore: BiometricLockPreferencesStore,
     private val idleTimeoutMillis: Long = IdleLockPolicy.DEFAULT_IDLE_TIMEOUT_MILLIS,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : DefaultLifecycleObserver {
-    val lockEnabledFlow: StateFlow<Boolean?> = sessionDataStore.biometricLockEnabledFlow
+    val lockEnabledFlow: StateFlow<Boolean?> = biometricLockPreferencesStore.biometricLockEnabledFlow
 
     private val _isLocked = MutableStateFlow(true)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
