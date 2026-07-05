@@ -21,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import be.champagnefestival.android.ui.UiState
 import be.champagnefestival.android.ui.components.ErrorContent
@@ -65,6 +66,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut
 
 @Composable
 private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiModel, modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
+
     Column(
         modifier =
         modifier
@@ -93,5 +96,13 @@ private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiMo
         Button(onClick = viewModel::logout) {
             Text("Logout")
         }
+        Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
+            Text("Privacy policy")
+        }
+        Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
+            Text("Request account or data deletion")
+        }
     }
 }
+
+private const val PRIVACY_POLICY_URL = "https://champagnefestival.tjor.im/privacy"
