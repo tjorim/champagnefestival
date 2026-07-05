@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -127,3 +127,29 @@ async def get_my_qr(
     token = jwt.encode(token_payload, _qr_secret(), algorithm=_QR_ALGORITHM)
 
     return MyQrOut(token=token, expires_at=expires_at)
+
+
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_account(
+    claims: dict[str, Any] = Depends(get_current_claims),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete the caller's portal account while preserving festival records.
+
+    Registrations, pre-orders, payment state, check-in state, and audit history
+    are operational festival records.  Deleting the portal account only removes
+    the OIDC-backed account link so those records can still be fulfilled and
+    retained for event/accounting purposes.
+    """
+    oidc_subject: str = claims.get("sub", "")
+    if not oidc_subject:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
+
+    result = await db.execute(select(User).where(User.oidc_subject == oidc_subject))
+    user = result.scalar_one_or_none()
+    if user is None:
+        return
+
+    await db.execute(update(Registration).where(Registration.user_id == user.id).values(user_id=None))
+    await db.execute(delete(User).where(User.id == user.id))
+    await db.commit()
