@@ -100,7 +100,7 @@ private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiMo
             Text("Privacy policy")
         }
         Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
-            Text("Request account or data deletion")
+            Text("Privacy and deletion options")
         }
     }
 }
