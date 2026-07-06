@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.live import live_bus
 from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
 
 # ---------------------------------------------------------------------------
@@ -108,14 +109,18 @@ async def test_delete_person_removes_existing_registrations(client):
         headers=ADMIN_HEADERS,
     )
     assert registration.status_code == 201
+    registration_id = registration.json()["id"]
 
-    r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
+    async with live_bus.subscribe() as queue:
+        r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
+        event = queue.get_nowait()
 
     assert r.status_code == 204
     assert (await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)).status_code == 404
-    registrations = await client.get("/api/registrations", headers=ADMIN_HEADERS)
-    assert registrations.status_code == 200
-    assert registrations.json() == []
+    assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 404
+    assert event.topic == "registration"
+    assert event.action == "deleted"
+    assert event.scope.registration_id == registration_id
 
 
 @pytest.mark.anyio

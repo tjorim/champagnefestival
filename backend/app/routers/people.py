@@ -1,8 +1,10 @@
 """People CRUD endpoints (admin-only)."""
 
+import logging
+
 import phonenumbers
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Text, cast, delete, or_, select, update
+from sqlalchemy import Text, cast, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -10,6 +12,8 @@ from sqlalchemy.orm import selectinload
 from app.auth import require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
+from app.live import live_bus
+from app.live import mapping as live_mapping
 from app.models import Event, Exhibitor, Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services.operational_search import (
@@ -25,6 +29,7 @@ router = APIRouter(
     tags=["people"],
     dependencies=[Depends(require_admin)],
 )
+logger = logging.getLogger(__name__)
 
 
 def _normalise_roles(roles: list[str]) -> list[str]:
@@ -355,9 +360,29 @@ async def merge_people(
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_person(person_id: str, db: AsyncSession = Depends(get_db)) -> None:
     person = await _get_person_or_404(db, person_id)
-    await db.execute(delete(Registration).where(Registration.person_id == person_id))
+    result = await db.execute(
+        select(Registration)
+        .options(selectinload(Registration.event).selectinload(Event.edition))
+        .where(Registration.person_id == person_id)
+    )
+    registrations = result.scalars().all()
+    registration_scopes = [
+        {
+            "registration_id": registration.id,
+            "event_id": registration.event_id,
+            "edition_id": registration.event.edition_id,
+        }
+        for registration in registrations
+    ]
+    for registration in registrations:
+        await db.delete(registration)
     await db.delete(person)
     await db.commit()
+    for scope in registration_scopes:
+        try:
+            await live_bus.publish(live_mapping.registration_changed(action="deleted", **scope))
+        except Exception:
+            logger.warning("live_bus.publish failed for deleted registration %s", scope["registration_id"], exc_info=True)
 
 
 async def _get_person_or_404(db: AsyncSession, person_id: str) -> Person:
