@@ -3,8 +3,10 @@ package be.champagnefestival.android.feature.registration
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import be.champagnefestival.android.data.model.CheckInGuestOut
+import be.champagnefestival.android.data.repository.ApiErrorReason
 import be.champagnefestival.android.data.repository.CheckInRepository
 import be.champagnefestival.android.data.repository.UnauthorizedException
+import be.champagnefestival.android.data.repository.toApiErrorReason
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +19,7 @@ sealed class CheckInUiState {
 
     data class CheckInSuccess(val registration: CheckInGuestOut, val alreadyCheckedIn: Boolean) : CheckInUiState()
 
-    data class Error(val message: String) : CheckInUiState()
+    data class Error(val reason: ApiErrorReason) : CheckInUiState()
 
     data object Unauthorized : CheckInUiState()
 }
@@ -39,7 +41,7 @@ class CheckInViewModel(private val repository: CheckInRepository) : ViewModel() 
                         if (error is UnauthorizedException) {
                             CheckInUiState.Unauthorized
                         } else {
-                            CheckInUiState.Error(error.message ?: "Unable to load registration.")
+                            CheckInUiState.Error(error.toApiErrorReason())
                         }
                 }
         }
@@ -68,7 +70,7 @@ class CheckInViewModel(private val repository: CheckInRepository) : ViewModel() 
                         if (error is UnauthorizedException) {
                             CheckInUiState.Unauthorized
                         } else {
-                            CheckInUiState.Error(error.message ?: "Unable to submit check-in.")
+                            CheckInUiState.Error(error.toApiErrorReason())
                         }
                 }
         }

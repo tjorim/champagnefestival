@@ -1,0 +1,85 @@
+<resources>
+    <string name="app_name">Champagnefestival</string>
+    <string name="search_guest_label">Rechercher un invité, e-mail, table, événement ou commande</string>
+    <string name="search_guest_idle_message">Recherchez par invité, e-mail, table, événement ou détail de commande.</string>
+
+    <string name="back_content_description">Retour</string>
+    <string name="retry_button">Réessayer</string>
+    <string name="connectivity_offline_banner">Aucune connexion internet</string>
+
+    <string name="error_network_unavailable">Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.</string>
+    <string name="error_certificate_untrusted">Le certificat du serveur n\'a pas pu être vérifié. Veuillez mettre à jour l\'application.</string>
+    <string name="error_unauthorized">Le code d\'enregistrement n\'est plus valide.</string>
+    <string name="error_server">Le serveur a rejeté la demande. Veuillez réessayer.</string>
+    <string name="error_unknown">Une erreur s\'est produite. Veuillez réessayer.</string>
+
+    <string name="settings_title">Paramètres</string>
+    <string name="settings_oidc_config_format">Configuration OIDC : %1$s</string>
+    <string name="settings_app_version_format">Version de l\'application : %1$s</string>
+    <string name="settings_biometric_lock_label">Exiger le déverrouillage biométrique</string>
+    <string name="settings_logout_button">Déconnexion</string>
+    <string name="settings_api_base_url_label">URL de base de l\'API</string>
+    <string name="settings_api_base_url_error">L\'URL doit commencer par http:// ou https://</string>
+    <string name="settings_api_base_url_default_format">URL de base par défaut : %1$s</string>
+    <string name="settings_api_base_url_save_button">Enregistrer l\'URL de base</string>
+    <string name="settings_api_base_url_reset_button">Réinitialiser l\'URL de base</string>
+    <string name="settings_privacy_and_deletion_options">Confidentialité et options de suppression</string>
+
+    <string name="lookup_title">Recherche d\'invités</string>
+    <string name="lookup_event_filter_label">Filtre facultatif par ID d\'événement</string>
+    <string name="lookup_no_results">Aucune réservation ne correspond à votre recherche.</string>
+    <string name="lookup_summary_title">Résumé du jour</string>
+    <string name="lookup_summary_guests_format">Invités dans les résultats : %1$d</string>
+    <string name="lookup_summary_checked_in_format">Enregistrés : %1$d</string>
+    <string name="lookup_summary_undelivered_format">Articles non livrés : %1$d</string>
+    <string name="lookup_guest_count_format">Convives : %1$d</string>
+
+    <string name="registration_table_format">Table : %1$s</string>
+    <string name="registration_table_unassigned">Non attribuée</string>
+    <string name="registration_checked_in_label">Enregistré</string>
+    <string name="registration_pending_checkin_label">En attente d\'enregistrement</string>
+    <string name="registration_all_delivered_label">Tous les articles livrés</string>
+    <string name="registration_pending_delivery_format">Articles en attente de livraison : %1$d</string>
+
+    <string name="checkin_result_title">Résultat de l\'enregistrement</string>
+    <string name="checkin_already_in_title">Déjà enregistré</string>
+    <string name="checkin_complete_title">Enregistrement réussi</string>
+    <string name="checkin_just_now_fallback">Enregistré à l\'instant</string>
+    <string name="checkin_back_to_edition_button">Retour à l\'édition active</string>
+
+    <string name="registration_detail_title">Détails de la réservation</string>
+    <string name="registration_party_size_format">Nombre de convives : %1$d</string>
+    <string name="registration_status_format">Statut : %1$s</string>
+    <string name="registration_not_checked_in_label">Pas encore enregistré</string>
+    <string name="registration_strap_issued_label">Bracelet remis</string>
+    <string name="registration_strap_not_issued_label">Bracelet non remis</string>
+    <string name="registration_notes_format">Notes : %1$s</string>
+    <string name="registration_check_in_button">Enregistrer</string>
+    <string name="registration_no_preorders">Aucune précommande pour cet invité.</string>
+    <string name="registration_preorders_title">Précommandes</string>
+    <string name="registration_preorder_quantity_format">Quantité : %1$d</string>
+    <string name="registration_preorder_category_format">Catégorie : %1$s</string>
+    <string name="registration_preorder_delivered_label">Livraison : Livré</string>
+    <string name="registration_preorder_not_delivered_label">Livraison : Non livré</string>
+
+    <string name="lock_title">Champagnefestival est verrouillé</string>
+    <string name="lock_continue_button">Continuer</string>
+    <string name="lock_retry_button">Réessayer</string>
+
+    <string name="edition_title">Édition active</string>
+    <string name="nav_scan_label">Scanner</string>
+    <string name="nav_lookup_label">Recherche</string>
+    <string name="nav_settings_label">Paramètres</string>
+    <string name="edition_active_label">Actuellement active</string>
+    <string name="edition_inactive_label">Inactive</string>
+    <string name="edition_no_events">Aucun événement disponible pour l\'édition active pour le moment.</string>
+
+    <string name="scan_title">Scanner le QR code du bracelet</string>
+    <string name="scan_camera_permission_rationale">L\'accès à la caméra est requis pour scanner les codes d\'enregistrement des bénévoles.</string>
+    <string name="scan_grant_camera_button">Autoriser l\'accès à la caméra</string>
+    <string name="scan_frame_instruction">Placez le QR code dans le cadre</string>
+
+    <string name="login_title">Enregistrement bénévole</string>
+    <string name="login_description">Connectez-vous avec OIDC pour accéder aux outils bénévoles des éditions actives, à l\'enregistrement QR et à la recherche d\'invités.</string>
+    <string name="login_button">Se connecter avec OIDC</string>
+</resources>

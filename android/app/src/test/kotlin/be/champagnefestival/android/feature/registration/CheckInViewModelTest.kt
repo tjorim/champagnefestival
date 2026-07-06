@@ -3,6 +3,7 @@ package be.champagnefestival.android.feature.registration
 import app.cash.turbine.test
 import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.data.model.CheckInOut
+import be.champagnefestival.android.data.repository.ApiErrorReason
 import be.champagnefestival.android.data.repository.CheckInRepository
 import be.champagnefestival.android.data.repository.UnauthorizedException
 import io.mockk.coEvery
@@ -64,7 +65,7 @@ class CheckInViewModelTest {
             awaitItem()
             viewModel.loadRegistration("reg-1", "token")
             dispatcher.scheduler.advanceUntilIdle()
-            assertEquals(CheckInUiState.Error("Network down"), awaitItem())
+            assertEquals(CheckInUiState.Error(ApiErrorReason.UNKNOWN), awaitItem())
         }
     }
 

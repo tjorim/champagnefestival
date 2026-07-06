@@ -2,6 +2,7 @@ package be.champagnefestival.android.app
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -36,11 +37,11 @@ private object Routes {
 }
 
 @Composable
-fun NavGraph(app: ChampagneFestivalApp) {
+fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val startDestination = if (app.authManager.isLoggedIn()) Routes.Edition else Routes.Login
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(Routes.Login) {
             val viewModel: LoginViewModel = viewModel(factory = simpleFactory { LoginViewModel(app.authManager) })
             LoginScreen(

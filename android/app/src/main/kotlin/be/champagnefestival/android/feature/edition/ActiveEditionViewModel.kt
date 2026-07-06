@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import be.champagnefestival.android.data.model.EditionOut
 import be.champagnefestival.android.data.repository.EditionRepository
+import be.champagnefestival.android.data.repository.toApiErrorReason
 import be.champagnefestival.android.ui.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +25,7 @@ class ActiveEditionViewModel(private val repository: EditionRepository) : ViewMo
             repository
                 .getActiveEdition()
                 .onSuccess { _uiState.value = UiState.Success(it) }
-                .onFailure { _uiState.value = UiState.Error(it.message ?: "Unable to load the active edition.") }
+                .onFailure { _uiState.value = UiState.Error(it.toApiErrorReason()) }
         }
     }
 }

@@ -2,6 +2,7 @@ package be.champagnefestival.android.feature.lookup
 
 import app.cash.turbine.test
 import be.champagnefestival.android.data.model.CheckInGuestOut
+import be.champagnefestival.android.data.repository.ApiErrorReason
 import be.champagnefestival.android.data.repository.CheckInRepository
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -77,7 +78,7 @@ class GuestLookupViewModelTest {
             dispatcher.scheduler.advanceTimeBy(300)
             assertEquals(GuestLookupUiState.Loading, awaitItem())
             dispatcher.scheduler.advanceUntilIdle()
-            assertEquals(GuestLookupUiState.Error("Boom"), awaitItem())
+            assertEquals(GuestLookupUiState.Error(ApiErrorReason.UNKNOWN), awaitItem())
         }
     }
 

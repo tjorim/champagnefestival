@@ -22,9 +22,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.R
+import be.champagnefestival.android.data.repository.ApiErrorReason
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
+import be.champagnefestival.android.ui.components.errorMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,10 +48,13 @@ fun CheckInConfirmationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Check-in result") },
+                title = { Text(stringResource(R.string.checkin_result_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_content_description)
+                        )
                     }
                 }
             )
@@ -56,11 +63,11 @@ fun CheckInConfirmationScreen(
         when (val state = uiState) {
             CheckInUiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
             is CheckInUiState.Error ->
-                ErrorContent(message = state.message, onRetry = {
+                ErrorContent(message = errorMessage(state.reason), onRetry = {
                     viewModel.submitCheckIn(id, token)
                 }, modifier = Modifier.padding(padding))
             CheckInUiState.Unauthorized ->
-                ErrorContent(message = "The check-in token is no longer valid.", onRetry = {
+                ErrorContent(message = errorMessage(ApiErrorReason.UNAUTHORIZED), onRetry = {
                     viewModel.submitCheckIn(id, token)
                 }, modifier = Modifier.padding(padding))
             is CheckInUiState.RegistrationLoaded -> LoadingContent(modifier = Modifier.padding(padding))
@@ -85,18 +92,22 @@ fun CheckInConfirmationScreen(
                         }
                     )
                     Text(
-                        text = if (state.alreadyCheckedIn) "Already checked in" else "Check-in complete",
+                        text = if (state.alreadyCheckedIn) {
+                            stringResource(R.string.checkin_already_in_title)
+                        } else {
+                            stringResource(R.string.checkin_complete_title)
+                        },
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.padding(top = 16.dp)
                     )
                     Text(registration.name, modifier = Modifier.padding(top = 8.dp))
                     Text(registration.event_title)
                     Text(
-                        text = registration.checked_in_at ?: "Checked in just now",
+                        text = registration.checked_in_at ?: stringResource(R.string.checkin_just_now_fallback),
                         modifier = Modifier.padding(top = 8.dp)
                     )
                     Button(onClick = onDone, modifier = Modifier.padding(top = 24.dp)) {
-                        Text("Back to active edition")
+                        Text(stringResource(R.string.checkin_back_to_edition_button))
                     }
                 }
             }

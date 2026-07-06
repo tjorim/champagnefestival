@@ -44,9 +44,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import be.champagnefestival.android.R
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -88,10 +90,13 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Scan wristband QR") },
+                title = { Text(stringResource(R.string.scan_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_content_description)
+                        )
                     }
                 }
             )
@@ -108,12 +113,12 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Camera access is required to scan volunteer check-in codes.")
+                Text(stringResource(R.string.scan_camera_permission_rationale))
                 Button(
                     onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
-                    Text("Grant camera access")
+                    Text(stringResource(R.string.scan_grant_camera_button))
                 }
             }
         } else {
@@ -158,7 +163,7 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
                         .background(Color.Transparent)
                 )
                 Text(
-                    text = "Place the QR code inside the frame",
+                    text = stringResource(R.string.scan_frame_instruction),
                     modifier =
                     Modifier
                         .align(Alignment.BottomCenter)

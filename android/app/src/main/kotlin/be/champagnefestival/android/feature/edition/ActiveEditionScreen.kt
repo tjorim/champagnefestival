@@ -25,11 +25,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.R
 import be.champagnefestival.android.data.model.EditionOut
 import be.champagnefestival.android.ui.UiState
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
+import be.champagnefestival.android.ui.components.errorMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,26 +45,26 @@ fun ActiveEditionScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Active edition") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.edition_title)) }) },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = false,
                     onClick = onOpenScan,
                     icon = { Icon(Icons.Default.QrCodeScanner, null) },
-                    label = { Text("Scan") }
+                    label = { Text(stringResource(R.string.nav_scan_label)) }
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = onOpenLookup,
                     icon = { Icon(Icons.Default.Search, null) },
-                    label = { Text("Lookup") }
+                    label = { Text(stringResource(R.string.nav_lookup_label)) }
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = onOpenSettings,
                     icon = { Icon(Icons.Default.Settings, null) },
-                    label = { Text("Settings") }
+                    label = { Text(stringResource(R.string.nav_settings_label)) }
                 )
             }
         }
@@ -70,7 +73,7 @@ fun ActiveEditionScreen(
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
             is UiState.Error ->
                 ErrorContent(
-                    message = state.message,
+                    message = errorMessage(state.reason),
                     onRetry = viewModel::loadActiveEdition,
                     modifier = Modifier.padding(padding)
                 )
@@ -98,7 +101,11 @@ private fun EditionContent(edition: EditionOut, padding: PaddingValues) {
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
-                        if (edition.active) "Currently active" else "Inactive",
+                        if (edition.active) {
+                            stringResource(R.string.edition_active_label)
+                        } else {
+                            stringResource(R.string.edition_inactive_label)
+                        },
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -108,7 +115,7 @@ private fun EditionContent(edition: EditionOut, padding: PaddingValues) {
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "No events are available for the active edition yet.",
+                        text = stringResource(R.string.edition_no_events),
                         modifier = Modifier.padding(16.dp)
                     )
                 }

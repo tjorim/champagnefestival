@@ -28,9 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.R
 import be.champagnefestival.android.ui.UiState
+import be.champagnefestival.android.ui.components.errorMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +49,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Volunteer Check-In") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.login_title)) }) }
     ) { padding ->
         Column(
             modifier =
@@ -65,14 +68,13 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Champagnefestival",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Sign in with OIDC to access volunteer tools for active editions, " +
-                    "QR check-in, and guest lookup.",
+                text = stringResource(R.string.login_description),
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
@@ -82,13 +84,13 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
                 CircularProgressIndicator()
             } else {
                 Button(onClick = { viewModel.startLogin(context.findActivity()) }) {
-                    Text("Sign in with OIDC")
+                    Text(stringResource(R.string.login_button))
                 }
             }
             if (currentState is UiState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = currentState.message,
+                    text = errorMessage(currentState.reason),
                     color = Color.Red,
                     textAlign = TextAlign.Center
                 )

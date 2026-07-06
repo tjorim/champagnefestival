@@ -3,6 +3,7 @@ package be.champagnefestival.android
 import android.app.Application
 import androidx.lifecycle.ProcessLifecycleOwner
 import be.champagnefestival.android.core.auth.AuthManager
+import be.champagnefestival.android.core.network.ConnectivityObserver
 import be.champagnefestival.android.core.network.NetworkModule
 import be.champagnefestival.android.core.session.BiometricLockController
 import be.champagnefestival.android.core.storage.ApiBaseUrlOverrideStore
@@ -22,6 +23,9 @@ class ChampagneFestivalApp : Application() {
 
     @Inject
     lateinit var authManager: AuthManager
+
+    @Inject
+    lateinit var connectivityObserver: ConnectivityObserver
 
     lateinit var networkModule: NetworkModule
         private set

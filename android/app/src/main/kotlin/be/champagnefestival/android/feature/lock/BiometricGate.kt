@@ -22,10 +22,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import be.champagnefestival.android.ChampagneFestivalApp
+import be.champagnefestival.android.R
 import be.champagnefestival.android.core.di.simpleFactory
 
 /**
@@ -79,19 +81,19 @@ private fun LockScreenContent(uiState: LockUiState, onRetry: () -> Unit, onConti
         ) {
             Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Champagnefestival is locked", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.lock_title), style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(24.dp))
             when (uiState) {
                 LockUiState.Checking, LockUiState.Prompting -> CircularProgressIndicator()
                 is LockUiState.NoCredentialEnrolled -> {
                     Text(uiState.message)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onContinueWithoutBiometric) { Text("Continue") }
+                    Button(onClick = onContinueWithoutBiometric) { Text(stringResource(R.string.lock_continue_button)) }
                 }
                 is LockUiState.Failed -> {
                     Text(uiState.message)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onRetry) { Text("Try again") }
+                    Button(onClick = onRetry) { Text(stringResource(R.string.lock_retry_button)) }
                 }
             }
         }
