@@ -113,14 +113,14 @@ async def test_delete_person_removes_existing_registrations(client):
 
     async with live_bus.subscribe() as queue:
         r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
-        event = queue.get_nowait()
+        live_event = await queue.get()
 
     assert r.status_code == 204
     assert (await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)).status_code == 404
     assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 404
-    assert event.topic == "registration"
-    assert event.action == "deleted"
-    assert event.scope.registration_id == registration_id
+    assert live_event.topic == "registration"
+    assert live_event.action == "deleted"
+    assert live_event.scope.registration_id == registration_id
 
 
 @pytest.mark.anyio

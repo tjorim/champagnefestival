@@ -2,4 +2,5 @@
     <string name="app_name">Champagnefestival</string>
     <string name="search_guest_label">Search guest, email, table, event, or order</string>
     <string name="search_guest_idle_message">Search by guest, email, table, event, or order detail.</string>
+    <string name="settings_privacy_and_deletion_options">Privacy and deletion options</string>
 </resources>

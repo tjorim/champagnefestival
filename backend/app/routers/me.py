@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -150,6 +150,5 @@ async def delete_my_account(
     if user is None:
         return
 
-    await db.execute(update(Registration).where(Registration.user_id == user.id).values(user_id=None))
     await db.execute(delete(User).where(User.id == user.id))
     await db.commit()

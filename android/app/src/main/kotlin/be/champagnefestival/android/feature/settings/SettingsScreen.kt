@@ -22,7 +22,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.R
 import be.champagnefestival.android.ui.UiState
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
@@ -97,10 +99,7 @@ private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiMo
             Text("Logout")
         }
         Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
-            Text("Privacy policy")
-        }
-        Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
-            Text("Privacy and deletion options")
+            Text(stringResource(id = R.string.settings_privacy_and_deletion_options))
         }
     }
 }
