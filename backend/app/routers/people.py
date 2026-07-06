@@ -382,7 +382,9 @@ async def delete_person(person_id: str, db: AsyncSession = Depends(get_db)) -> N
         try:
             await live_bus.publish(live_mapping.registration_changed(action="deleted", **scope))
         except Exception:
-            logger.warning("live_bus.publish failed for deleted registration %s", scope["registration_id"], exc_info=True)
+            logger.warning(
+                "live_bus.publish failed for deleted registration %s", scope["registration_id"], exc_info=True
+            )
 
 
 async def _get_person_or_404(db: AsyncSession, person_id: str) -> Person:
