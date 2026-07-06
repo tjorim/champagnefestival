@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.live import live_bus
 from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
 
 # ---------------------------------------------------------------------------
@@ -81,6 +82,45 @@ async def test_people_crud_roles_and_filters(client):
 
     r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
+
+
+@pytest.mark.anyio
+async def test_delete_person_removes_existing_registrations(client):
+    person = await client.post(
+        "/api/people",
+        json={"name": "Delete Me", "email": "delete.me@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    assert person.status_code == 201
+    person_id = person.json()["id"]
+
+    event = await _create_event(client, edition_id="edition-delete-person")
+    registration = await client.post(
+        "/api/registrations/admin",
+        json={
+            "person_id": person_id,
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [],
+            "notes": "",
+            "accessibility_note": "",
+            "status": "confirmed",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert registration.status_code == 201
+    registration_id = registration.json()["id"]
+
+    async with live_bus.subscribe() as queue:
+        r = await client.delete(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
+        live_event = await queue.get()
+
+    assert r.status_code == 204
+    assert (await client.get(f"/api/people/{person_id}/registrations", headers=ADMIN_HEADERS)).status_code == 404
+    assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 404
+    assert live_event.topic == "registration"
+    assert live_event.action == "deleted"
+    assert live_event.scope.registration_id == registration_id
 
 
 @pytest.mark.anyio

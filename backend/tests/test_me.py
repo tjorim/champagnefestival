@@ -6,11 +6,13 @@ from typing import cast
 
 import jwt
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User
+from app.models import Registration, User
 from app.routers import me
+from tests.helpers import _post_registration
 
 ADMIN_HEADERS = {"Authorization": "Bearer admin-token"}
 
@@ -137,3 +139,30 @@ async def test_me_qr_idempotent_user(me_client, db_session):
     count_result = await db_session.execute(select(func.count()).where(User.oidc_subject == "visitor-sub"))
     count = count_result.scalar_one()
     assert count == 1
+
+
+@pytest.mark.anyio
+async def test_delete_me_unlinks_account_without_deleting_registration(me_client, client, db_session):
+    """Deleting a portal account keeps reservation/order records for operations."""
+    user = User(id="usr-visitor", oidc_subject="visitor-sub")
+    db_session.add(user)
+    response = await _post_registration(client)
+    assert response.status_code == 201
+    registration_id = response.json()["id"]
+
+    registration = await db_session.get(Registration, registration_id)
+    assert registration is not None
+    registration.user_id = user.id
+    await db_session.commit()
+
+    delete_response = await me_client.delete("/api/me")
+    assert delete_response.status_code == 204
+
+    deleted_user = (await db_session.execute(select(User).where(User.id == user.id))).scalar_one_or_none()
+    assert deleted_user is None
+
+    retained_registration = await db_session.get(Registration, registration_id)
+    assert retained_registration is not None
+    await db_session.refresh(retained_registration)
+    assert retained_registration.user_id is None
+    assert isinstance(retained_registration.pre_orders, list)
