@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 suspend fun <T> retryWithBackoff(
     maxAttempts: Int = 3,
     initialDelayMillis: Long = 500,
+    maxDelayMillis: Long = 30_000,
     factor: Double = 2.0,
     shouldRetry: (Throwable) -> Boolean = ::isTransientNetworkFailure,
     block: suspend () -> T
@@ -34,7 +35,7 @@ suspend fun <T> retryWithBackoff(
                 throw exception
             }
             delay(delayMillis)
-            delayMillis = (delayMillis * factor).toLong()
+            delayMillis = (delayMillis * factor).toLong().coerceAtMost(maxDelayMillis)
         }
     }
 }
