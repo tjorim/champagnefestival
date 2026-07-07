@@ -4,7 +4,6 @@ import be.champagnefestival.android.core.network.ConnectivityObserver
 import be.champagnefestival.android.core.storage.PendingCheckInStore
 import be.champagnefestival.android.data.repository.CheckInRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
@@ -21,7 +20,6 @@ class CheckInSyncManager(
     init {
         applicationScope.launch {
             connectivityObserver.isOnline
-                .distinctUntilChanged()
                 .filter { isOnline -> isOnline }
                 .collect { syncPending() }
         }
