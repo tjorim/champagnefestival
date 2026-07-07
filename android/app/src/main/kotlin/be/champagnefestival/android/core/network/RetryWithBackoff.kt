@@ -7,6 +7,13 @@ import java.net.UnknownHostException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
+/** Tuning for [retryWithBackoff]'s delay between attempts. */
+data class BackoffPolicy(
+    val initialDelayMillis: Long = 500,
+    val maxDelayMillis: Long = 30_000,
+    val factor: Double = 2.0
+)
+
 /**
  * Retries [block] on transient connectivity failures only (dropped connections, timeouts,
  * DNS blips). A certificate failure won't be fixed by retrying, and an HTTP error response
@@ -16,14 +23,12 @@ import kotlinx.coroutines.delay
  */
 suspend fun <T> retryWithBackoff(
     maxAttempts: Int = 3,
-    initialDelayMillis: Long = 500,
-    maxDelayMillis: Long = 30_000,
-    factor: Double = 2.0,
+    backoffPolicy: BackoffPolicy = BackoffPolicy(),
     shouldRetry: (Throwable) -> Boolean = ::isTransientNetworkFailure,
     block: suspend () -> T
 ): T {
     var attempt = 0
-    var delayMillis = initialDelayMillis
+    var delayMillis = backoffPolicy.initialDelayMillis
     while (true) {
         try {
             return block()
@@ -35,7 +40,7 @@ suspend fun <T> retryWithBackoff(
                 throw exception
             }
             delay(delayMillis)
-            delayMillis = (delayMillis * factor).toLong().coerceAtMost(maxDelayMillis)
+            delayMillis = (delayMillis * backoffPolicy.factor).toLong().coerceAtMost(backoffPolicy.maxDelayMillis)
         }
     }
 }
