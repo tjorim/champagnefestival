@@ -65,6 +65,11 @@
     <string name="lock_title">Champagnefestival is locked</string>
     <string name="lock_continue_button">Continue</string>
     <string name="lock_retry_button">Try again</string>
+    <string name="lock_no_credential_message">No biometric or device credential is set up on this device. Set one up in your device security settings, or continue without app lock.</string>
+    <string name="lock_authentication_failed_message">Authentication not recognized. Try again.</string>
+    <string name="lock_crypto_unavailable_message">Could not verify device security. Please try again.</string>
+    <string name="lock_prompt_title">Unlock Champagnefestival</string>
+    <string name="lock_prompt_subtitle">Verify it\'s you to continue</string>
 
     <string name="edition_title">Active edition</string>
     <string name="nav_scan_label">Scan</string>
@@ -80,6 +85,8 @@
     <string name="scan_frame_instruction">Place the QR code inside the frame</string>
     <string name="scan_torch_turn_on">Turn on flashlight</string>
     <string name="scan_torch_turn_off">Turn off flashlight</string>
+    <string name="scan_invalid_qr_message">Invalid QR code. Expected registrationId:token.</string>
+    <string name="scan_camera_start_error">Unable to start the camera scanner.</string>
 
     <string name="login_title">Volunteer Check-In</string>
     <string name="login_description">Sign in with OIDC to access volunteer tools for active editions, QR check-in, and guest lookup.</string>

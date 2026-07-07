@@ -65,6 +65,11 @@
     <string name="lock_title">Champagnefestival is vergrendeld</string>
     <string name="lock_continue_button">Doorgaan</string>
     <string name="lock_retry_button">Opnieuw proberen</string>
+    <string name="lock_no_credential_message">Er zijn geen biometrische gegevens of een apparaatcode ingesteld op dit toestel. Stel er een in via de beveiligingsinstellingen van je toestel, of ga verder zonder app-vergrendeling.</string>
+    <string name="lock_authentication_failed_message">Verificatie niet herkend. Probeer opnieuw.</string>
+    <string name="lock_crypto_unavailable_message">Kon de apparaatbeveiliging niet verifiëren. Probeer het opnieuw.</string>
+    <string name="lock_prompt_title">Champagnefestival ontgrendelen</string>
+    <string name="lock_prompt_subtitle">Verifieer jezelf om verder te gaan</string>
 
     <string name="edition_title">Actieve editie</string>
     <string name="nav_scan_label">Scannen</string>
@@ -80,6 +85,8 @@
     <string name="scan_frame_instruction">Plaats de QR-code binnen het kader</string>
     <string name="scan_torch_turn_on">Zaklamp inschakelen</string>
     <string name="scan_torch_turn_off">Zaklamp uitschakelen</string>
+    <string name="scan_invalid_qr_message">Ongeldige QR-code. Verwacht formaat: registratieId:token.</string>
+    <string name="scan_camera_start_error">Kan de camerascanner niet starten.</string>
 
     <string name="login_title">Vrijwilliger check-in</string>
     <string name="login_description">Meld je aan met OIDC voor toegang tot vrijwilligerstools voor actieve edities, QR-check-in en gastenzoekfunctie.</string>

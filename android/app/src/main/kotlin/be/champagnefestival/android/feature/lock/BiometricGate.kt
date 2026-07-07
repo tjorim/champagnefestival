@@ -55,14 +55,22 @@ fun BiometricGate(app: ChampagneFestivalApp, content: @Composable () -> Unit) {
     val viewModel: BiometricGateViewModel =
         viewModel(factory = simpleFactory { BiometricGateViewModel(app.biometricLockController) })
     val uiState by viewModel.uiState.collectAsState()
+    val promptStrings =
+        BiometricPromptStrings(
+            noCredentialEnrolledMessage = stringResource(R.string.lock_no_credential_message),
+            authenticationFailedMessage = stringResource(R.string.lock_authentication_failed_message),
+            cryptoUnavailableMessage = stringResource(R.string.lock_crypto_unavailable_message),
+            promptTitle = stringResource(R.string.lock_prompt_title),
+            promptSubtitle = stringResource(R.string.lock_prompt_subtitle)
+        )
 
     LaunchedEffect(Unit) {
-        viewModel.authenticate(activity)
+        viewModel.authenticate(activity, promptStrings)
     }
 
     LockScreenContent(
         uiState = uiState,
-        onRetry = { viewModel.authenticate(activity) },
+        onRetry = { viewModel.authenticate(activity, promptStrings) },
         onContinueWithoutBiometric = viewModel::continueWithoutBiometric
     )
 }

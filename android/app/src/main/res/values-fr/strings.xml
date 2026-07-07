@@ -65,6 +65,11 @@
     <string name="lock_title">Champagnefestival est verrouillé</string>
     <string name="lock_continue_button">Continuer</string>
     <string name="lock_retry_button">Réessayer</string>
+    <string name="lock_no_credential_message">Aucune donnée biométrique ni code de sécurité n\'est configuré sur cet appareil. Configurez-en un dans les paramètres de sécurité de votre appareil, ou continuez sans verrouillage de l\'application.</string>
+    <string name="lock_authentication_failed_message">Authentification non reconnue. Réessayez.</string>
+    <string name="lock_crypto_unavailable_message">Impossible de vérifier la sécurité de l\'appareil. Veuillez réessayer.</string>
+    <string name="lock_prompt_title">Déverrouiller Champagnefestival</string>
+    <string name="lock_prompt_subtitle">Vérifiez votre identité pour continuer</string>
 
     <string name="edition_title">Édition active</string>
     <string name="nav_scan_label">Scanner</string>
@@ -80,6 +85,8 @@
     <string name="scan_frame_instruction">Placez le QR code dans le cadre</string>
     <string name="scan_torch_turn_on">Allumer la lampe torche</string>
     <string name="scan_torch_turn_off">Éteindre la lampe torche</string>
+    <string name="scan_invalid_qr_message">Code QR invalide. Format attendu : identifiantDeReservation:jeton.</string>
+    <string name="scan_camera_start_error">Impossible de démarrer le scanner de la caméra.</string>
 
     <string name="login_title">Enregistrement bénévole</string>
     <string name="login_description">Connectez-vous avec OIDC pour accéder aux outils bénévoles des éditions actives, à l\'enregistrement QR et à la recherche d\'invités.</string>

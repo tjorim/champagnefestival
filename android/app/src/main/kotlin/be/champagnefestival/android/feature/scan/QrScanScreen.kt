@@ -67,6 +67,8 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val invalidQrMessage = stringResource(R.string.scan_invalid_qr_message)
+    val cameraStartErrorMessage = stringResource(R.string.scan_camera_start_error)
     val snackbarHostState = remember { SnackbarHostState() }
     var cameraPermissionGranted by remember {
         mutableStateOf(
@@ -166,19 +168,23 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
                                 lifecycleOwner = lifecycleOwner,
                                 scanner = scanner,
                                 executor = cameraExecutor,
-                                onCameraBound = { boundCamera -> camera = boundCamera },
-                                onQrDetected = { rawValue ->
-                                    if (!hasNavigated) {
-                                        viewModel.parseQrPayload(rawValue)?.let { (registrationId, token) ->
-                                            hasNavigated = true
-                                            context.vibrateSuccess()
-                                            onRegistrationScanned(registrationId, token)
+                                callbacks =
+                                CameraBindCallbacks(
+                                    onCameraBound = { boundCamera -> camera = boundCamera },
+                                    onQrDetected = { rawValue ->
+                                        if (!hasNavigated) {
+                                            val parsed = viewModel.parseQrPayload(rawValue, invalidQrMessage)
+                                            if (parsed != null) {
+                                                hasNavigated = true
+                                                context.vibrateSuccess()
+                                                onRegistrationScanned(parsed.first, parsed.second)
+                                            }
                                         }
+                                    },
+                                    onError = { throwable ->
+                                        viewModel.reportError(throwable.message ?: cameraStartErrorMessage)
                                     }
-                                },
-                                onError = { throwable ->
-                                    viewModel.reportError(throwable.message ?: "Unable to start the camera scanner.")
-                                }
+                                )
                             )
                         }
                     }
@@ -221,9 +227,7 @@ private fun PreviewView.bindCamera(
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
     scanner: BarcodeScanner,
     executor: java.util.concurrent.Executor,
-    onCameraBound: (Camera) -> Unit,
-    onQrDetected: (String) -> Unit,
-    onError: (Throwable) -> Unit
+    callbacks: CameraBindCallbacks
 ) {
     val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
     cameraProviderFuture.addListener(
@@ -250,8 +254,8 @@ private fun PreviewView.bindCamera(
                                         barcodes
                                             .firstOrNull { it.format == Barcode.FORMAT_QR_CODE }
                                             ?.rawValue
-                                            ?.let(onQrDetected)
-                                    }.addOnFailureListener(onError)
+                                            ?.let(callbacks.onQrDetected)
+                                    }.addOnFailureListener(callbacks.onError)
                                     .addOnCompleteListener { imageProxy.close() }
                             }
                         }
@@ -263,8 +267,8 @@ private fun PreviewView.bindCamera(
                         preview,
                         analysis
                     )
-                onCameraBound(camera)
-            }.onFailure(onError)
+                callbacks.onCameraBound(camera)
+            }.onFailure(callbacks.onError)
         },
         ContextCompat.getMainExecutor(context)
     )
