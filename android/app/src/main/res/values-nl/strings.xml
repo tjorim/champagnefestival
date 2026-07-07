@@ -78,6 +78,8 @@
     <string name="scan_camera_permission_rationale">Cameratoegang is vereist om de check-in codes van vrijwilligers te scannen.</string>
     <string name="scan_grant_camera_button">Cameratoegang toestaan</string>
     <string name="scan_frame_instruction">Plaats de QR-code binnen het kader</string>
+    <string name="scan_torch_turn_on">Zaklamp inschakelen</string>
+    <string name="scan_torch_turn_off">Zaklamp uitschakelen</string>
 
     <string name="login_title">Vrijwilliger check-in</string>
     <string name="login_description">Meld je aan met OIDC voor toegang tot vrijwilligerstools voor actieve edities, QR-check-in en gastenzoekfunctie.</string>

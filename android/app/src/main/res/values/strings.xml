@@ -78,6 +78,8 @@
     <string name="scan_camera_permission_rationale">Camera access is required to scan volunteer check-in codes.</string>
     <string name="scan_grant_camera_button">Grant camera access</string>
     <string name="scan_frame_instruction">Place the QR code inside the frame</string>
+    <string name="scan_torch_turn_on">Turn on flashlight</string>
+    <string name="scan_torch_turn_off">Turn off flashlight</string>
 
     <string name="login_title">Volunteer Check-In</string>
     <string name="login_description">Sign in with OIDC to access volunteer tools for active editions, QR check-in, and guest lookup.</string>

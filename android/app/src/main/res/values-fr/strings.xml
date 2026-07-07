@@ -78,6 +78,8 @@
     <string name="scan_camera_permission_rationale">L\'accès à la caméra est requis pour scanner les codes d\'enregistrement des bénévoles.</string>
     <string name="scan_grant_camera_button">Autoriser l\'accès à la caméra</string>
     <string name="scan_frame_instruction">Placez le QR code dans le cadre</string>
+    <string name="scan_torch_turn_on">Allumer la lampe torche</string>
+    <string name="scan_torch_turn_off">Éteindre la lampe torche</string>
 
     <string name="login_title">Enregistrement bénévole</string>
     <string name="login_description">Connectez-vous avec OIDC pour accéder aux outils bénévoles des éditions actives, à l\'enregistrement QR et à la recherche d\'invités.</string>

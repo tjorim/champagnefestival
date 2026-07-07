@@ -1,8 +1,12 @@
 package be.champagnefestival.android.feature.scan
 
 import android.Manifest
+import android.content.Context
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
@@ -21,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -69,6 +75,8 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
         )
     }
     var hasNavigated by remember { mutableStateOf(false) }
+    var camera by remember { mutableStateOf<Camera?>(null) }
+    var torchOn by remember { mutableStateOf(false) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val scanner = remember { BarcodeScanning.getClient() }
     val permissionLauncher =
@@ -84,7 +92,10 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
     }
 
     LaunchedEffect(errorMessage) {
-        errorMessage?.let { snackbarHostState.showSnackbar(it) }
+        errorMessage?.let {
+            context.vibrateError()
+            snackbarHostState.showSnackbar(it)
+        }
     }
 
     Scaffold(
@@ -97,6 +108,23 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back_content_description)
                         )
+                    }
+                },
+                actions = {
+                    if (camera?.cameraInfo?.hasFlashUnit() == true) {
+                        IconButton(
+                            onClick = {
+                                torchOn = !torchOn
+                                camera?.cameraControl?.enableTorch(torchOn)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (torchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                                contentDescription = stringResource(
+                                    if (torchOn) R.string.scan_torch_turn_off else R.string.scan_torch_turn_on
+                                )
+                            )
+                        }
                     }
                 }
             )
@@ -138,10 +166,12 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
                                 lifecycleOwner = lifecycleOwner,
                                 scanner = scanner,
                                 executor = cameraExecutor,
+                                onCameraBound = { boundCamera -> camera = boundCamera },
                                 onQrDetected = { rawValue ->
                                     if (!hasNavigated) {
                                         viewModel.parseQrPayload(rawValue)?.let { (registrationId, token) ->
                                             hasNavigated = true
+                                            context.vibrateSuccess()
                                             onRegistrationScanned(registrationId, token)
                                         }
                                     }
@@ -176,11 +206,22 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
     }
 }
 
+private fun Context.vibrateSuccess() {
+    val vibrator = getSystemService(Vibrator::class.java) ?: return
+    vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+}
+
+private fun Context.vibrateError() {
+    val vibrator = getSystemService(Vibrator::class.java) ?: return
+    vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 80, 60), -1))
+}
+
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 private fun PreviewView.bindCamera(
     lifecycleOwner: androidx.lifecycle.LifecycleOwner,
     scanner: BarcodeScanner,
     executor: java.util.concurrent.Executor,
+    onCameraBound: (Camera) -> Unit,
     onQrDetected: (String) -> Unit,
     onError: (Throwable) -> Unit
 ) {
@@ -215,7 +256,14 @@ private fun PreviewView.bindCamera(
                             }
                         }
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
+                val camera =
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        analysis
+                    )
+                onCameraBound(camera)
             }.onFailure(onError)
         },
         ContextCompat.getMainExecutor(context)
