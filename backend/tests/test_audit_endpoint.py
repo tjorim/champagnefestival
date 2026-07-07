@@ -19,7 +19,9 @@ async def test_audit_lists_entries_from_mutations(client):
     assert r.status_code == 201
     venue_id = r.json()["id"]
 
-    r = await client.get("/api/audit", params={"resource_type": "venue", "resource_id": venue_id}, headers=ADMIN_HEADERS)
+    r = await client.get(
+        "/api/audit", params={"resource_type": "venue", "resource_id": venue_id}, headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200
     entries = r.json()
     assert len(entries) == 1
@@ -35,7 +37,9 @@ async def test_audit_filters_by_action(client):
     venue_id = r.json()["id"]
     await client.put(f"/api/venues/{venue_id}", json={"city": "Bredene"}, headers=ADMIN_HEADERS)
 
-    r = await client.get("/api/audit", params={"resource_id": venue_id, "action": "venue_updated"}, headers=ADMIN_HEADERS)
+    r = await client.get(
+        "/api/audit", params={"resource_id": venue_id, "action": "venue_updated"}, headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200
     entries = r.json()
     assert len(entries) == 1
