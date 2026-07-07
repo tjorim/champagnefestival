@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin, require_volunteer
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin, require_volunteer
 from app.database import get_db
 from app.models import Edition, Event
 from app.schemas import EventCreate, EventOut, EventUpdate
@@ -57,7 +58,12 @@ async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_admin)],
 )
-async def create_event(body: EventCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_event(
+    body: EventCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     edition = await _ensure_edition_exists(db, body.edition_id)
     await _validate_standalone_event_date(db, edition, body.date)
     _validate_registration_settings(
@@ -80,13 +86,28 @@ async def create_event(body: EventCreate, db: AsyncSession = Depends(get_db)) ->
         active=body.active,
     )
     db.add(event)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="event_created",
+        resource_type="event",
+        resource_id=event.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"title": event.title, "edition_id": event.edition_id},
+    )
     await db.commit()
     event = await _get_event_or_404(db, event.id)
     return event_to_summary_dict(event, include_edition=True)
 
 
 @router.put("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
-async def update_event(event_id: str, body: EventUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+async def update_event(
+    event_id: str,
+    body: EventUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     event = await _get_event_or_404(db, event_id)
     edition = event.edition
 
@@ -125,15 +146,38 @@ async def update_event(event_id: str, body: EventUpdate, db: AsyncSession = Depe
         if field in body.model_fields_set:
             setattr(event, field, getattr(body, field))
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="event_updated",
+        resource_type="event",
+        resource_id=event.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     event = await _get_event_or_404(db, event.id)
     return event_to_summary_dict(event, include_edition=True)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
-async def delete_event(event_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_event(
+    event_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     event = await _get_event_or_404(db, event_id)
     await db.delete(event)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="event_deleted",
+        resource_type="event",
+        resource_id=event_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()
 
 

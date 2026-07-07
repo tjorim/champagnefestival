@@ -3,12 +3,13 @@
 import math
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Area, Edition, Layout, Room, Table, TableType
 from app.schemas import LayoutCopyCreate, LayoutCreate, LayoutOut
@@ -50,7 +51,9 @@ def _js_round(x: float) -> int:
 @router.post("", response_model=LayoutOut, status_code=status.HTTP_201_CREATED)
 async def create_layout(
     body: LayoutCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     resolved_day_id, resolved_date = await _resolve_layout_day(db, body)
     existing_stmt = select(Layout).where(
@@ -77,6 +80,15 @@ async def create_layout(
         label=body.label.strip(),
     )
     db.add(lay)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="layout_created",
+        resource_type="layout",
+        resource_id=lay.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"room_id": lay.room_id, "day_id": lay.day_id},
+    )
     await db.commit()
     await db.refresh(lay)
     return layout_to_dict(lay, date=resolved_date)
@@ -86,7 +98,9 @@ async def create_layout(
 async def copy_layout(
     source_layout_id: str,
     body: LayoutCopyCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     source = await get_or_404(db, Layout, source_layout_id, "Layout not found.")
     resolved_day_id, resolved_date = await _resolve_layout_day(db, body)
@@ -181,6 +195,15 @@ async def copy_layout(
                 )
             )
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="layout_copied",
+        resource_type="layout",
+        resource_id=cloned.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"source_layout_id": source_layout_id, "room_id": cloned.room_id, "day_id": cloned.day_id},
+    )
     await db.commit()
     await db.refresh(cloned)
     return layout_to_dict(cloned, date=resolved_date)
@@ -222,7 +245,12 @@ async def get_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> dict
 
 
 @router.delete("/{layout_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_layout(
+    layout_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     lay = await get_or_404(db, Layout, layout_id, "Layout not found.")
     tables_in_use = await db.execute(select(Table).where(Table.layout_id == layout_id).limit(1))
     if tables_in_use.scalars().first() is not None:
@@ -231,6 +259,15 @@ async def delete_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> N
             detail="Cannot delete: tables are still assigned to this layout.",
         )
     await db.delete(lay)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="layout_deleted",
+        resource_type="layout",
+        resource_id=layout_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()
 
 
