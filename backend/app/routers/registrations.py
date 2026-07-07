@@ -258,15 +258,15 @@ async def export_registrations_csv(
         writer.writerow(
             [
                 person.name,
-                person.email,
-                person.phone,
+                person.email or "",
+                person.phone or "",
                 table_map.get(row.table_id, ""),
                 row.guest_count,
                 row.status,
                 row.payment_status,
                 "yes" if row.checked_in else "no",
                 "yes" if row.strap_issued else "no",
-                row.notes,
+                row.notes or "",
             ]
         )
     buffer.seek(0)

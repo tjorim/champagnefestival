@@ -209,14 +209,14 @@ async def export_volunteers_csv(db: AsyncSession = Depends(get_db)) -> Streaming
     for volunteer in volunteers:
         periods = periods_map.get(volunteer.id, [])
         if not periods:
-            writer.writerow([volunteer.name, volunteer.national_register_number or "", volunteer.address, "", ""])
+            writer.writerow([volunteer.name, volunteer.national_register_number or "", volunteer.address or "", "", ""])
             continue
         for period in periods:
             writer.writerow(
                 [
                     volunteer.name,
                     volunteer.national_register_number or "",
-                    volunteer.address,
+                    volunteer.address or "",
                     period.first_help_day.isoformat(),
                     period.last_help_day.isoformat() if period.last_help_day else "",
                 ]
