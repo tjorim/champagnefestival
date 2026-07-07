@@ -115,5 +115,5 @@ export async function downloadFileOrThrow(
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(objectUrl);
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
 }

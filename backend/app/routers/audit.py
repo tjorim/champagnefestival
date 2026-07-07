@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
@@ -42,8 +42,12 @@ async def list_audit_entries(
     if action:
         stmt = stmt.where(AuditEntry.action == action)
     if since:
+        if since.tzinfo is None:
+            since = since.replace(tzinfo=UTC)
         stmt = stmt.where(AuditEntry.timestamp >= since)
     if until:
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=UTC)
         stmt = stmt.where(AuditEntry.timestamp <= until)
     stmt = stmt.order_by(AuditEntry.timestamp.desc())
     stmt = apply_pagination(stmt, pagination)

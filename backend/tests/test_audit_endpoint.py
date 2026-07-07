@@ -58,6 +58,23 @@ async def test_audit_supports_pagination(client):
 
 
 @pytest.mark.anyio
+async def test_audit_filters_by_timezone_naive_since_and_until(client):
+    """A `since`/`until` query value without a UTC offset must not crash the comparison
+    against the timezone-aware `timestamp` column."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    venue_id = r.json()["id"]
+
+    r = await client.get(
+        "/api/audit",
+        params={"resource_id": venue_id, "since": "2000-01-01T00:00:00", "until": "2100-01-01T00:00:00"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+
+@pytest.mark.anyio
 async def test_audit_resource_types_lists_distinct_values(client):
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     assert r.status_code == 201

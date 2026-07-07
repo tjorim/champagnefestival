@@ -13,12 +13,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -42,19 +41,15 @@ class PendingCheckInStore @Inject constructor(@ApplicationContext context: Conte
                 if (error is IOException) emit(emptyPreferences()) else throw error
             }.map { prefs -> decode(prefs[KEY_PENDING_CHECK_INS]) }
 
-    private val _pending = MutableStateFlow<List<PendingCheckIn>>(emptyList())
-    val pending: StateFlow<List<PendingCheckIn>> = _pending.asStateFlow()
-
-    init {
-        applicationScope.launch {
-            pendingFlow.collect { _pending.value = it }
-        }
-    }
+    val pending: StateFlow<List<PendingCheckIn>> =
+        pendingFlow.stateIn(scope = applicationScope, started = SharingStarted.Eagerly, initialValue = emptyList())
 
     suspend fun enqueue(item: PendingCheckIn) {
         dataStore.edit { prefs ->
             val current = decode(prefs[KEY_PENDING_CHECK_INS])
-            prefs[KEY_PENDING_CHECK_INS] = json.encodeToString(current + item)
+            if (current.none { it.id == item.id }) {
+                prefs[KEY_PENDING_CHECK_INS] = json.encodeToString(current + item)
+            }
         }
     }
 

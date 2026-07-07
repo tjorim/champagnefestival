@@ -3,6 +3,7 @@ package be.champagnefestival.android.core.session
 import be.champagnefestival.android.core.network.ConnectivityObserver
 import be.champagnefestival.android.core.storage.PendingCheckInStore
 import be.champagnefestival.android.data.repository.CheckInRepository
+import be.champagnefestival.android.data.repository.UnauthorizedException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -27,9 +28,15 @@ class CheckInSyncManager(
 
     suspend fun syncPending() {
         pendingCheckInStore.pending.value.forEach { item ->
-            checkInRepository.submitCheckIn(id = item.id, token = item.token).onSuccess {
-                pendingCheckInStore.remove(item.id)
-            }
+            checkInRepository.submitCheckIn(id = item.id, token = item.token).fold(
+                onSuccess = { pendingCheckInStore.remove(item.id) },
+                onFailure = { error ->
+                    // Invalid/stale token means retrying forever can't succeed for this item.
+                    if (error is UnauthorizedException) {
+                        pendingCheckInStore.remove(item.id)
+                    }
+                }
+            )
         }
     }
 }
