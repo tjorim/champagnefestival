@@ -25,8 +25,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/champagne
       ENVIRONMENT: development
       # OIDC_ISSUER_URL is not required in development (admin endpoints return 401
-      # until it's set). Set it here, or in backend/.env, if you need to exercise
-      # admin auth against a local OIDC provider.
+      # until it's set). There's no local IdP in this compose file, so this points
+      # at the real production Keycloak realm — the debug Android client's redirect
+      # URI must be registered on that realm's client for login to complete.
+      OIDC_ISSUER_URL: https://auth.tjor.im/realms/champagnefestival
+      OIDC_AUDIENCE: champagnefestival
       CORS_ORIGINS: http://localhost:5173
     depends_on:
       db:
