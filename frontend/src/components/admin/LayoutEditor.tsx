@@ -667,6 +667,7 @@ export default function LayoutEditor({
 
   const handleDeleteTable = useCallback(
     async (tableId: string) => {
+      if (!window.confirm(m.admin_layout_table_delete_confirm())) return;
       setDeleteTableError(null);
       try {
         await onDeleteTable(tableId);
@@ -709,6 +710,7 @@ export default function LayoutEditor({
 
   const handleDeleteArea = useCallback(
     async (areaId: string) => {
+      if (!window.confirm(m.admin_layout_area_delete_confirm())) return;
       setDeleteAreaError(null);
       try {
         await onDeleteArea(areaId);

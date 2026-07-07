@@ -1,5 +1,45 @@
-import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
+import type {
+  Room,
+  FloorTable,
+  FloorArea,
+  TableType,
+  Layout,
+  Venue,
+  AuditEntry,
+  EditionAttendanceStats,
+} from "@/types/admin";
 import type { Person } from "@/types/person";
+
+/** Map FastAPI snake_case audit entry response to frontend camelCase AuditEntry type */
+export function apiAuditEntryToAuditEntry(d: Record<string, unknown>): AuditEntry {
+  return {
+    id: d.id as string,
+    timestamp: d.timestamp as string,
+    actor: d.actor as string,
+    action: d.action as string,
+    resourceType: d.resource_type as string,
+    resourceId: d.resource_id as string,
+    requestId: (d.request_id ?? null) as string | null,
+    details: (d.details ?? {}) as Record<string, unknown>,
+  };
+}
+
+/** Map FastAPI snake_case edition attendance stats response to frontend camelCase type */
+export function apiEditionStatsToEditionAttendanceStats(
+  d: Record<string, unknown>,
+): EditionAttendanceStats {
+  return {
+    editionId: d.edition_id as string,
+    year: d.year as number,
+    month: d.month as string,
+    editionType: d.edition_type as string,
+    startDate: (d.start_date ?? null) as string | null,
+    eventsCount: d.events_count as number,
+    totalRegistrations: d.total_registrations as number,
+    totalGuests: d.total_guests as number,
+    totalCheckedIn: d.total_checked_in as number,
+  };
+}
 
 /** Map FastAPI snake_case venue response to frontend camelCase Venue type */
 export function apiVenueToVenue(d: Record<string, unknown>): Venue {

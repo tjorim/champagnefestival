@@ -23,10 +23,11 @@ import { exportToCsv } from "@/utils/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
-import { fetchRegistrations } from "@/utils/adminFetch";
+import { downloadRegistrationsCsv, fetchRegistrations } from "@/utils/adminFetch";
 import { toLocalDateKey } from "@/utils/dateUtils";
 import { isRegistrationInEdition } from "@/utils/adminUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
+import { devError } from "@/utils/devLog";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
 
@@ -158,6 +159,8 @@ export default function RegistrationList({
   const [bulkAction, setBulkAction] = useState<"confirm" | "cancel" | "paid" | null>(null);
   const [bulkInProgress, setBulkInProgress] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [exportingEventId, setExportingEventId] = useState<string | null>(null);
+  const [eventExportError, setEventExportError] = useState<string | null>(null);
   const [todayKey] = useState(() => toLocalDateKey(new Date()));
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const filterDefaultsAppliedRef = useRef<string | null>(null);
@@ -682,6 +685,22 @@ export default function RegistrationList({
     exportToCsv("registrations.csv", rows);
   }, [table]);
 
+  const handleExportEventCsv = useCallback(
+    async (eventId: string) => {
+      setEventExportError(null);
+      setExportingEventId(eventId);
+      try {
+        await downloadRegistrationsCsv(authHeaders, eventId);
+      } catch (err) {
+        devError("Failed to export guest list", err);
+        setEventExportError(err instanceof Error ? err.message : m.admin_registrations_export_event_csv_error());
+      } finally {
+        setExportingEventId(null);
+      }
+    },
+    [authHeaders],
+  );
+
 
   const executeBulkAction = useCallback(async () => {
     if (!bulkAction || selectedIds.size === 0) return;
@@ -844,11 +863,26 @@ export default function RegistrationList({
                           {m.admin_checked_in()}: {eventStats.checkedIn}/{eventStats.total}{" "}
                           {m.admin_guests_count()}
                         </span>
-                        {eventStats.maxCapacity && eventStats.maxCapacity > 0 && (
-                          <span className={isOverCapacity ? "text-danger" : "text-secondary"}>
-                            {m.event_capacity()}: {eventStats.total}/{eventStats.maxCapacity}
-                          </span>
-                        )}
+                        <span className="d-flex align-items-center gap-2">
+                          {eventStats.maxCapacity && eventStats.maxCapacity > 0 && (
+                            <span className={isOverCapacity ? "text-danger" : "text-secondary"}>
+                              {m.event_capacity()}: {eventStats.total}/{eventStats.maxCapacity}
+                            </span>
+                          )}
+                          <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            className="py-0 px-1"
+                            disabled={exportingEventId === eventStats.eventId}
+                            onClick={() => void handleExportEventCsv(eventStats.eventId)}
+                            title={m.admin_registrations_export_event_csv()}
+                            aria-label={m.admin_registrations_export_event_csv_for({
+                              event: eventStats.title,
+                            })}
+                          >
+                            <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" />
+                          </Button>
+                        </span>
                       </div>
                       <ProgressBar
                         now={checkInPercent}
@@ -865,6 +899,16 @@ export default function RegistrationList({
           {bulkError && (
             <Alert variant="danger" className="py-1 mt-2 mb-0" dismissible onClose={() => setBulkError(null)}>
               {bulkError}
+            </Alert>
+          )}
+          {eventExportError && (
+            <Alert
+              variant="danger"
+              className="py-1 mt-2 mb-0"
+              dismissible
+              onClose={() => setEventExportError(null)}
+            >
+              {eventExportError}
             </Alert>
           )}
           {/* Bulk action bar */}

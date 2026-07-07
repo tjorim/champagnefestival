@@ -227,6 +227,27 @@ export default function AdminSidebar({
               {...itemProps}
             />
           </SidebarGroup>
+
+          <SidebarGroup
+            groupKey="insights"
+            icon="bi-graph-up"
+            label={m.admin_insights_group()}
+            itemKeys={["analytics", "audit-log"]}
+            {...groupProps}
+          >
+            <SidebarItem
+              itemKey="analytics"
+              icon="bi-bar-chart"
+              label={m.admin_analytics_tab()}
+              {...itemProps}
+            />
+            <SidebarItem
+              itemKey="audit-log"
+              icon="bi-journal-text"
+              label={m.admin_audit_log_tab()}
+              {...itemProps}
+            />
+          </SidebarGroup>
         </nav>
 
         {/* Footer: status + actions */}

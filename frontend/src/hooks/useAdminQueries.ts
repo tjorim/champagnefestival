@@ -54,7 +54,7 @@ export function useAdminQueries({
 }: UseAdminQueriesOptions) {
   const queryClient = useQueryClient();
 
-  // Per-resource query keys (no longer scoped to a token; SuperTokens manages sessions)
+  // Per-resource query keys (no longer scoped to a token; OIDC manages the session)
   const registrationsQueryKey = queryKeys.admin.registrations;
   const tablesQueryKey = queryKeys.admin.tables;
   const venuesQueryKey = queryKeys.admin.venues;

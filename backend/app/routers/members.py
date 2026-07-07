@@ -3,14 +3,20 @@
 Members are stored in the people table as a subset with role='member'.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
-from app.models import Person
+from app.live import live_bus
+from app.live import mapping as live_mapping
+from app.models import Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import get_or_404, make_id, person_to_dict, roles_contains
 
@@ -19,6 +25,7 @@ router = APIRouter(
     tags=["members"],
     dependencies=[Depends(require_admin)],
 )
+logger = logging.getLogger(__name__)
 
 
 def _normalise_roles(roles: list[str]) -> list[str]:
@@ -74,7 +81,9 @@ async def _ensure_unique_fields(
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 async def create_member(
     body: PersonCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     nrr = _normalise_optional_identity(body.national_register_number)
     eid = _normalise_optional_identity(body.eid_document_number)
@@ -101,6 +110,15 @@ async def create_member(
     _ensure_member_role(person)
 
     db.add(person)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="member_created",
+        resource_type="person",
+        resource_id=person.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"roles": person.roles},
+    )
     await db.commit()
     await db.refresh(person)
     return person_to_dict(person)
@@ -150,7 +168,9 @@ async def get_member(person_id: str, db: AsyncSession = Depends(get_db)) -> dict
 async def update_member(
     person_id: str,
     body: PersonUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     person = await _get_member_or_404(db, person_id)
 
@@ -196,16 +216,60 @@ async def update_member(
         person.roles = _normalise_roles(body.roles)
     _ensure_member_role(person)
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="member_updated",
+        resource_type="person",
+        resource_id=person.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(person)
     return person_to_dict(person)
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_member(person_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_member(
+    person_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     person = await _get_member_or_404(db, person_id)
+    result = await db.execute(
+        select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
+    )
+    registrations = result.scalars().all()
+    registration_scopes = [
+        {
+            "registration_id": registration.id,
+            "event_id": registration.event_id,
+            "edition_id": registration.event.edition_id,
+        }
+        for registration in registrations
+    ]
+    for registration in registrations:
+        await db.delete(registration)
     await db.delete(person)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="member_deleted",
+        resource_type="person",
+        resource_id=person_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"deleted_registration_count": len(registrations)},
+    )
     await db.commit()
+    for scope in registration_scopes:
+        try:
+            await live_bus.publish(live_mapping.registration_changed(action="deleted", **scope))
+        except Exception:
+            logger.warning(
+                "live_bus.publish failed for deleted registration %s", scope["registration_id"], exc_info=True
+            )
 
 
 async def _get_member_or_404(db: AsyncSession, person_id: str) -> Person:

@@ -1,0 +1,83 @@
+/*
+ * AnalyticsDashboard chart styling.
+ *
+ * Colors come from the data-viz skill's reference categorical palette,
+ * dark-mode steps only (this app is fixed to data-bs-theme="dark").
+ * Validated against this app's actual chart surface (--adm-surface, #1e1e1e):
+ * node scripts/validate_palette.js "#3987e5,#199e70,..." --mode dark --surface "#1e1e1e"
+ * → all checks pass for slots 1 (blue) and 2 (aqua) used here.
+ */
+
+.viz-root {
+  --series-guests: #3987e5; /* categorical slot 1 (blue) */
+  --series-checked-in: #199e70; /* categorical slot 2 (aqua) */
+  --viz-text-secondary: #c3c2b7;
+  --viz-text-muted: #898781;
+  --viz-gridline: #2c2c2a;
+  --viz-axis: #383835;
+  --viz-surface: #1e1e1e;
+}
+
+.analytics-legend {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--viz-text-secondary);
+}
+
+.analytics-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.analytics-legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.analytics-series-guests {
+  fill: var(--series-guests);
+  background-color: var(--series-guests);
+}
+
+.analytics-series-checked-in {
+  fill: var(--series-checked-in);
+  background-color: var(--series-checked-in);
+}
+
+.analytics-gridline {
+  stroke: var(--viz-gridline);
+  stroke-width: 1;
+}
+
+.analytics-axis-line {
+  stroke: var(--viz-axis);
+  stroke-width: 1;
+}
+
+.analytics-axis-label {
+  fill: var(--viz-text-muted);
+  font-size: 11px;
+}
+
+.analytics-tooltip {
+  position: relative;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--viz-surface);
+  border: 1px solid var(--viz-axis);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--viz-text-secondary);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-width: fit-content;
+}
+
+.analytics-tooltip .analytics-legend-swatch {
+  margin-right: 0.35rem;
+}

@@ -5,15 +5,16 @@ from __future__ import annotations
 import logging
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Edition, Exhibitor, Venue
-from app.schemas import EditionCreate, EditionOut, EditionType, EditionUpdate
+from app.models import Edition, Event, Exhibitor, Registration, Venue
+from app.schemas import EditionAttendanceStats, EditionCreate, EditionOut, EditionType, EditionUpdate
 from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
@@ -66,6 +67,53 @@ async def list_editions(
     return await _edition_payloads(db, _sorted_editions(editions))
 
 
+@router.get("/stats", response_model=list[EditionAttendanceStats], dependencies=[Depends(require_admin)])
+async def list_edition_attendance_stats(
+    db: AsyncSession = Depends(get_db),
+    edition_type: EditionType | None = Query(default=None),
+) -> list[dict]:
+    """Per-edition attendance/check-in totals, oldest first, for a cross-edition trend view.
+
+    Includes inactive (past) editions since the point is historical comparison.
+    Registered but cancelled bookings are excluded from every count.
+    """
+    editions = await _load_editions(db, include_inactive=True, edition_type=edition_type)
+    editions = _sorted_editions(editions)
+
+    stmt = (
+        select(
+            Event.edition_id,
+            func.count(Registration.id).label("total_registrations"),
+            func.coalesce(func.sum(Registration.guest_count), 0).label("total_guests"),
+            func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in.is_(True)), 0).label(
+                "total_checked_in"
+            ),
+        )
+        .join(Event, Event.id == Registration.event_id)
+        .where(Registration.status != "cancelled")
+        .group_by(Event.edition_id)
+    )
+    stats_by_edition = {row.edition_id: row for row in (await db.execute(stmt)).all()}
+
+    payloads = []
+    for edition in editions:
+        stats = stats_by_edition.get(edition.id)
+        payloads.append(
+            {
+                "edition_id": edition.id,
+                "year": edition.year,
+                "month": edition.month,
+                "edition_type": edition.edition_type,
+                "start_date": _edition_start_date(edition),
+                "events_count": len(edition.events),
+                "total_registrations": stats.total_registrations if stats else 0,
+                "total_guests": stats.total_guests if stats else 0,
+                "total_checked_in": stats.total_checked_in if stats else 0,
+            }
+        )
+    return payloads
+
+
 @router.get("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     edition = await _get_edition_or_404(db, edition_id)
@@ -78,7 +126,12 @@ async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> di
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_admin)],
 )
-async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_edition(
+    body: EditionCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     if (await db.execute(select(Edition).where(Edition.id == body.id))).scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -101,13 +154,28 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
     )
     await _validate_exhibitor_ids(db, edition.exhibitors)
     db.add(edition)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_created",
+        resource_type="edition",
+        resource_id=edition.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"year": edition.year, "month": edition.month, "edition_type": edition.edition_type},
+    )
     await db.commit()
     edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition)
 
 
 @router.put("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
-async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+async def update_edition(
+    edition_id: str,
+    body: EditionUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     edition = await _get_edition_or_404(db, edition_id)
 
     for field in [
@@ -136,6 +204,15 @@ async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession 
 
     _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_updated",
+        resource_type="edition",
+        resource_id=edition.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition)
@@ -146,9 +223,23 @@ async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession 
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_admin)],
 )
-async def delete_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_edition(
+    edition_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     edition = await _get_edition_or_404(db, edition_id)
     await db.delete(edition)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_deleted",
+        resource_type="edition",
+        resource_id=edition_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()
 
 
