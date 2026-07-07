@@ -7,13 +7,6 @@ import java.net.UnknownHostException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
-/** Tuning for [retryWithBackoff]'s delay between attempts. */
-data class BackoffPolicy(
-    val initialDelayMillis: Long = 500,
-    val maxDelayMillis: Long = 30_000,
-    val factor: Double = 2.0
-)
-
 /**
  * Retries [block] on transient connectivity failures only (dropped connections, timeouts,
  * DNS blips). A certificate failure won't be fixed by retrying, and an HTTP error response
