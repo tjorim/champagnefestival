@@ -49,6 +49,7 @@ function renderVolunteersManagement(opts: RenderOpts = {}) {
     <VolunteersManagement
       volunteers={opts.volunteers ?? [makeVolunteer()]}
       isLoading={opts.isLoading ?? false}
+      authHeaders={() => ({})}
       onCreate={onCreate}
       onUpdate={onUpdate}
       onDelete={onDelete}

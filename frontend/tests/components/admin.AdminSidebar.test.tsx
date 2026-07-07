@@ -19,6 +19,9 @@ vi.mock("@/paraglide/messages", () => ({
     admin_directory_tab: () => "Directory",
     admin_members_tab: () => "Members",
     admin_volunteers_tab: () => "Volunteers",
+    admin_insights_group: () => "Insights",
+    admin_analytics_tab: () => "Analytics",
+    admin_audit_log_tab: () => "Audit Log",
     admin_authenticated: () => "Authenticated",
     admin_refresh: () => "Refresh",
     admin_logout: () => "Log out",
@@ -73,6 +76,7 @@ describe("AdminSidebar", () => {
       "Directory3",
       "Members4",
       "Volunteers5",
+      "Insights",
     ]);
   });
 

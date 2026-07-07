@@ -6,15 +6,15 @@ import logging
 from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Edition, Exhibitor, Venue
-from app.schemas import EditionCreate, EditionOut, EditionType, EditionUpdate
+from app.models import Edition, Event, Exhibitor, Registration, Venue
+from app.schemas import EditionAttendanceStats, EditionCreate, EditionOut, EditionType, EditionUpdate
 from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
@@ -65,6 +65,51 @@ async def list_editions(
 ) -> list[dict]:
     editions = await _load_editions(db, include_inactive=include_inactive)
     return await _edition_payloads(db, _sorted_editions(editions))
+
+
+@router.get("/stats", response_model=list[EditionAttendanceStats], dependencies=[Depends(require_admin)])
+async def list_edition_attendance_stats(
+    db: AsyncSession = Depends(get_db),
+    edition_type: EditionType | None = Query(default=None),
+) -> list[dict]:
+    """Per-edition attendance/check-in totals, oldest first, for a cross-edition trend view.
+
+    Includes inactive (past) editions since the point is historical comparison.
+    Registered but cancelled bookings are excluded from every count.
+    """
+    editions = await _load_editions(db, include_inactive=True, edition_type=edition_type)
+    editions = _sorted_editions(editions)
+
+    stmt = (
+        select(
+            Event.edition_id,
+            func.count(Registration.id).label("total_registrations"),
+            func.coalesce(func.sum(Registration.guest_count), 0).label("total_guests"),
+            func.count(Registration.id).filter(Registration.checked_in.is_(True)).label("total_checked_in"),
+        )
+        .join(Event, Event.id == Registration.event_id)
+        .where(Registration.status != "cancelled")
+        .group_by(Event.edition_id)
+    )
+    stats_by_edition = {row.edition_id: row for row in (await db.execute(stmt)).all()}
+
+    payloads = []
+    for edition in editions:
+        stats = stats_by_edition.get(edition.id)
+        payloads.append(
+            {
+                "edition_id": edition.id,
+                "year": edition.year,
+                "month": edition.month,
+                "edition_type": edition.edition_type,
+                "start_date": _edition_start_date(edition),
+                "events_count": len(edition.events),
+                "total_registrations": stats.total_registrations if stats else 0,
+                "total_guests": stats.total_guests if stats else 0,
+                "total_checked_in": stats.total_checked_in if stats else 0,
+            }
+        )
+    return payloads
 
 
 @router.get("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])

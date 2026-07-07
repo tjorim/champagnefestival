@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -16,10 +16,13 @@ import {
   type AdminTableFeatures,
 } from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
+import { downloadVolunteersCsv } from "@/utils/adminFetch";
+import { devError } from "@/utils/devLog";
 
 interface VolunteersManagementProps {
   volunteers: Person[];
   isLoading: boolean;
+  authHeaders: () => Record<string, string>;
   onCreate: (data: VolunteerFormData) => Promise<void>;
   onUpdate: (id: string, data: VolunteerFormData) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -58,6 +61,7 @@ volunteersGlobalFilter.autoRemove = (val: unknown) => !val || String(val) === ""
 export default function VolunteersManagement({
   volunteers,
   isLoading,
+  authHeaders,
   onCreate,
   onUpdate,
   onDelete,
@@ -73,6 +77,21 @@ export default function VolunteersManagement({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+
+  const handleExportCsv = useCallback(async () => {
+    setExportError("");
+    setExporting(true);
+    try {
+      await downloadVolunteersCsv(authHeaders);
+    } catch (err) {
+      devError("Failed to export volunteers", err);
+      setExportError(err instanceof Error ? err.message : m.admin_volunteers_export_csv_error());
+    } finally {
+      setExporting(false);
+    }
+  }, [authHeaders]);
 
   // Pre-filter by active status; text search handled by TanStack
   const preFiltered = useMemo(
@@ -218,18 +237,34 @@ export default function VolunteersManagement({
         <Card.Header className="pb-2">
           <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
             <span className="fw-semibold">{m.admin_volunteers_tab()}</span>
-            <Button
-              size="sm"
-              variant="outline-primary"
-              onClick={() => {
-                setEditingVolunteer(null);
-                setShowForm(true);
-              }}
-            >
-              <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
-              {m.admin_volunteers_add()}
-            </Button>
+            <div className="d-flex gap-2">
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                onClick={() => void handleExportCsv()}
+                disabled={exporting}
+              >
+                <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
+                {m.admin_volunteers_export_csv()}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => {
+                  setEditingVolunteer(null);
+                  setShowForm(true);
+                }}
+              >
+                <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
+                {m.admin_volunteers_add()}
+              </Button>
+            </div>
           </div>
+          {exportError && (
+            <Alert variant="danger" className="py-1 mb-2" dismissible onClose={() => setExportError("")}>
+              {exportError}
+            </Alert>
+          )}
           <div className="d-flex flex-wrap gap-2 align-items-center">
             <Form.Select
               size="sm"

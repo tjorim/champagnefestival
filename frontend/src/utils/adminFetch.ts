@@ -1,8 +1,21 @@
-import type { Room, FloorTable, FloorArea, TableType, Layout, Venue } from "@/types/admin";
+import type {
+  Room,
+  FloorTable,
+  FloorArea,
+  TableType,
+  Layout,
+  Venue,
+  AuditEntry,
+  EditionAttendanceStats,
+} from "@/types/admin";
 import { apiToRegistration } from "@/types/registrationMapper";
 import type { Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
-import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
+import {
+  downloadFileOrThrow,
+  fetchArrayOrThrow,
+  fetchJsonOrThrowWithUnauthorized,
+} from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 import {
   apiVenueToVenue,
@@ -11,6 +24,8 @@ import {
   apiRoomToRoom,
   apiTableToTable,
   apiAreaToArea,
+  apiAuditEntryToAuditEntry,
+  apiEditionStatsToEditionAttendanceStats,
   mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
@@ -164,5 +179,79 @@ export async function fetchMembers(authHeaders: () => Record<string, string>): P
     { headers: authHeaders() },
     m.admin_error_load_data(),
     apiToPerson,
+  );
+}
+
+export interface AuditEntryFilters {
+  resourceType?: string;
+  resourceId?: string;
+  actor?: string;
+  action?: string;
+  limit?: number;
+  page?: number;
+}
+
+export async function fetchAuditEntries(
+  authHeaders: () => Record<string, string>,
+  filters: AuditEntryFilters = {},
+): Promise<AuditEntry[]> {
+  const params = new URLSearchParams();
+  if (filters.resourceType) params.set("resource_type", filters.resourceType);
+  if (filters.resourceId) params.set("resource_id", filters.resourceId);
+  if (filters.actor) params.set("actor", filters.actor);
+  if (filters.action) params.set("action", filters.action);
+  params.set("limit", String(filters.limit ?? 50));
+  params.set("page", String(filters.page ?? 1));
+
+  return fetchArrayOrThrow(
+    `/api/audit?${params.toString()}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiAuditEntryToAuditEntry,
+  );
+}
+
+export async function fetchAuditResourceTypes(
+  authHeaders: () => Record<string, string>,
+): Promise<string[]> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<string[]>(
+    "/api/audit/resource-types",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+  return Array.isArray(payload) ? payload : [];
+}
+
+export async function fetchEditionStats(
+  authHeaders: () => Record<string, string>,
+): Promise<EditionAttendanceStats[]> {
+  return fetchArrayOrThrow(
+    "/api/editions/stats",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiEditionStatsToEditionAttendanceStats,
+  );
+}
+
+export async function downloadRegistrationsCsv(
+  authHeaders: () => Record<string, string>,
+  eventId: string,
+): Promise<void> {
+  await downloadFileOrThrow(
+    `/api/registrations/export?event_id=${encodeURIComponent(eventId)}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    "guest-list.csv",
+  );
+}
+
+export async function downloadVolunteersCsv(
+  authHeaders: () => Record<string, string>,
+): Promise<void> {
+  await downloadFileOrThrow(
+    "/api/volunteers/export",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    "volunteers-insurance-list.csv",
   );
 }

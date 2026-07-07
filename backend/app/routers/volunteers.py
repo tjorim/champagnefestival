@@ -5,11 +5,14 @@ Volunteer help periods are stored separately so a person can help across
 multiple non-contiguous festival dates.
 """
 
+import csv
+import io
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
 from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
@@ -186,6 +189,45 @@ async def list_volunteers(
     rows = (await db.execute(stmt)).scalars().all()
     periods_map = await _load_periods_map(db, [row.id for row in rows])
     return [_to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]
+
+
+@router.get("/export")
+async def export_volunteers_csv(db: AsyncSession = Depends(get_db)) -> StreamingResponse:
+    """Export active volunteers with their help periods as CSV, for insurance reporting.
+
+    One row per help period (a volunteer with multiple non-contiguous periods
+    gets one row per period) since insurers typically need each covered date
+    range listed separately.
+    """
+    stmt = select(Person).where(roles_contains("volunteer"), Person.active.is_(True)).order_by(Person.name)
+    volunteers = (await db.execute(stmt)).scalars().all()
+    periods_map = await _load_periods_map(db, [v.id for v in volunteers])
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["Name", "National Register Number", "Address", "Period Start", "Period End"])
+    for volunteer in volunteers:
+        periods = periods_map.get(volunteer.id, [])
+        if not periods:
+            writer.writerow([volunteer.name, volunteer.national_register_number or "", volunteer.address, "", ""])
+            continue
+        for period in periods:
+            writer.writerow(
+                [
+                    volunteer.name,
+                    volunteer.national_register_number or "",
+                    volunteer.address,
+                    period.first_help_day.isoformat(),
+                    period.last_help_day.isoformat() if period.last_help_day else "",
+                ]
+            )
+    buffer.seek(0)
+
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="volunteers-insurance-list.csv"'},
+    )
 
 
 @router.get("/{volunteer_id}", response_model=VolunteerOut)

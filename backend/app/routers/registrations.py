@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import logging
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -12,6 +15,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.responses import StreamingResponse
 
 from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
@@ -21,7 +25,7 @@ from app.dependencies import Pagination, apply_pagination
 from app.email import send_guest_access_email
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.models import Edition, Event, Person, Registration, ReservationAccessToken
+from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit
 from app.routers.people import parse_phone
 from app.schemas import (
@@ -220,6 +224,60 @@ async def list_registrations(
     rows = (await db.execute(stmt)).scalars().all()
     person_map = await _fetch_person_map(db, list(rows))
     return [registration_to_list_dict(row, person_map[row.person_id], row.event) for row in rows]
+
+
+@router.get("/export", dependencies=[Depends(require_admin)])
+async def export_registrations_csv(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Export the guest list for one event as CSV (name, table, party size, status)."""
+    event = await _get_event_or_404(db, event_id)
+
+    stmt = (
+        select(Registration)
+        .where(Registration.event_id == event_id, Registration.status != "cancelled")
+        .order_by(Registration.created_at)
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    person_map = await _fetch_person_map(db, list(rows))
+
+    table_ids = {row.table_id for row in rows if row.table_id}
+    table_map: dict[str, str] = {}
+    if table_ids:
+        tables = (await db.execute(select(Table).where(Table.id.in_(table_ids)))).scalars().all()
+        table_map = {t.id: t.name for t in tables}
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        ["Name", "Email", "Phone", "Table", "Guests", "Status", "Payment", "Checked In", "Strap Issued", "Notes"]
+    )
+    for row in rows:
+        person = person_map[row.person_id]
+        writer.writerow(
+            [
+                person.name,
+                person.email,
+                person.phone,
+                table_map.get(row.table_id, ""),
+                row.guest_count,
+                row.status,
+                row.payment_status,
+                "yes" if row.checked_in else "no",
+                "yes" if row.strap_issued else "no",
+                row.notes,
+            ]
+        )
+    buffer.seek(0)
+
+    safe_title = re.sub(r"[^A-Za-z0-9._-]+", "_", event.title).strip("_") or event_id
+    filename = f"guest-list-{safe_title}.csv"
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post(
