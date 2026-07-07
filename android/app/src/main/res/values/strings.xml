@@ -78,6 +78,7 @@
     <string name="edition_active_label">Currently active</string>
     <string name="edition_inactive_label">Inactive</string>
     <string name="edition_no_events">No events are available for the active edition yet.</string>
+    <string name="edition_checkin_progress_format">%1$d / %2$d checked in</string>
 
     <string name="scan_title">Scan wristband QR</string>
     <string name="scan_camera_permission_rationale">Camera access is required to scan volunteer check-in codes.</string>

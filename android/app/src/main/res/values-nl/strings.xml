@@ -78,6 +78,7 @@
     <string name="edition_active_label">Momenteel actief</string>
     <string name="edition_inactive_label">Inactief</string>
     <string name="edition_no_events">Er zijn nog geen evenementen beschikbaar voor de actieve editie.</string>
+    <string name="edition_checkin_progress_format">%1$d / %2$d ingecheckt</string>
 
     <string name="scan_title">Scan QR-code van polsband</string>
     <string name="scan_camera_permission_rationale">Cameratoegang is vereist om de check-in codes van vrijwilligers te scannen.</string>

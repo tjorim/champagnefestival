@@ -151,6 +151,12 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class EventCheckInStats(BaseModel):
+    event_id: str
+    total: int
+    checked_in: int
+
+
 # ---------------------------------------------------------------------------
 # Registrations
 # ---------------------------------------------------------------------------

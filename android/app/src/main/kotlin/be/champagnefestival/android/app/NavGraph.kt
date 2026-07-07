@@ -55,7 +55,12 @@ fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
         }
         composable(Routes.Edition) {
             val viewModel: ActiveEditionViewModel =
-                viewModel(factory = simpleFactory { ActiveEditionViewModel(app.editionRepository) })
+                viewModel(
+                    factory =
+                    simpleFactory {
+                        ActiveEditionViewModel(app.editionRepository, app.authManager::getAccessToken)
+                    }
+                )
             ActiveEditionScreen(
                 viewModel = viewModel,
                 onOpenScan = { navController.navigate(Routes.Scan) },

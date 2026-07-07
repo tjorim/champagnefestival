@@ -136,6 +136,7 @@ The Android app consumes these backend endpoints:
 |--------|------|------|-------------|
 | `GET`  | `/api/editions/active` | public | Active edition context |
 | `GET`  | `/api/events` | volunteer+ Bearer | Event list |
+| `GET`  | `/api/events/checkin-stats` | volunteer+ Bearer | Per-event registration/check-in counts |
 | `POST` | `/api/check-in/{id}/lookup` | token-gated | Look up registration by QR token |
 | `POST` | `/api/check-in/{id}` | token-gated | Mark guest checked in |
 | `GET`  | `/api/volunteer/registrations?q=` | volunteer+ Bearer | Guest/table lookup with order + delivery state |

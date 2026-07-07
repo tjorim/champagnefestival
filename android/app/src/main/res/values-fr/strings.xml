@@ -78,6 +78,7 @@
     <string name="edition_active_label">Actuellement active</string>
     <string name="edition_inactive_label">Inactive</string>
     <string name="edition_no_events">Aucun événement disponible pour l\'édition active pour le moment.</string>
+    <string name="edition_checkin_progress_format">%1$d / %2$d enregistrés</string>
 
     <string name="scan_title">Scanner le QR code du bracelet</string>
     <string name="scan_camera_permission_rationale">L\'accès à la caméra est requis pour scanner les codes d\'enregistrement des bénévoles.</string>
