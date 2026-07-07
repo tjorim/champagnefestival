@@ -45,7 +45,7 @@
     <string name="checkin_already_in_title">Al ingecheckt</string>
     <string name="checkin_complete_title">Succesvol ingecheckt</string>
     <string name="checkin_just_now_fallback">Zojuist ingecheckt</string>
-    <string name="checkin_back_to_edition_button">Terug naar actieve editie</string>
+    <string name="checkin_continue_button">Doorgaan</string>
 
     <string name="registration_detail_title">Registratiedetails</string>
     <string name="registration_party_size_format">Aantal gasten: %1$d</string>

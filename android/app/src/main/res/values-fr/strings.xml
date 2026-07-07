@@ -45,7 +45,7 @@
     <string name="checkin_already_in_title">Déjà enregistré</string>
     <string name="checkin_complete_title">Enregistrement réussi</string>
     <string name="checkin_just_now_fallback">Enregistré à l\'instant</string>
-    <string name="checkin_back_to_edition_button">Retour à l\'édition active</string>
+    <string name="checkin_continue_button">Continuer</string>
 
     <string name="registration_detail_title">Détails de la réservation</string>
     <string name="registration_party_size_format">Nombre de convives : %1$d</string>

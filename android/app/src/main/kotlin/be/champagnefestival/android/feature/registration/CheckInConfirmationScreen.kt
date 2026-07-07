@@ -1,9 +1,11 @@
 package be.champagnefestival.android.feature.registration
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -29,7 +31,15 @@ import be.champagnefestival.android.data.repository.ApiErrorReason
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
 import be.champagnefestival.android.ui.components.toStringRes
+import kotlinx.coroutines.delay
 
+private const val AUTO_RETURN_DELAY_MILLIS = 1500L
+
+/**
+ * Shows the outcome of a check-in and returns to the scanner - automatically after a short
+ * delay, or immediately if staff tap the continue button - so the common busy-line case
+ * doesn't need an extra tap between guests.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckInConfirmationScreen(
@@ -43,6 +53,13 @@ fun CheckInConfirmationScreen(
 
     LaunchedEffect(id, token) {
         viewModel.submitCheckIn(id = id, token = token)
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is CheckInUiState.CheckInSuccess) {
+            delay(AUTO_RETURN_DELAY_MILLIS)
+            onDone()
+        }
     }
 
     Scaffold(
@@ -73,10 +90,16 @@ fun CheckInConfirmationScreen(
             is CheckInUiState.RegistrationLoaded -> LoadingContent(modifier = Modifier.padding(padding))
             is CheckInUiState.CheckInSuccess -> {
                 val registration = state.registration
+                val containerColor = if (state.alreadyCheckedIn) {
+                    MaterialTheme.colorScheme.tertiaryContainer
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                }
                 Column(
                     modifier =
                     Modifier
                         .fillMaxSize()
+                        .background(containerColor)
                         .padding(padding)
                         .padding(24.dp),
                     verticalArrangement = Arrangement.Center,
@@ -85,10 +108,11 @@ fun CheckInConfirmationScreen(
                     Icon(
                         imageVector = if (state.alreadyCheckedIn) Icons.Default.Warning else Icons.Default.CheckCircle,
                         contentDescription = null,
+                        modifier = Modifier.size(96.dp),
                         tint = if (state.alreadyCheckedIn) {
-                            MaterialTheme.colorScheme.tertiary
+                            MaterialTheme.colorScheme.onTertiaryContainer
                         } else {
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.onPrimaryContainer
                         }
                     )
                     Text(
@@ -107,7 +131,7 @@ fun CheckInConfirmationScreen(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                     Button(onClick = onDone, modifier = Modifier.padding(top = 24.dp)) {
-                        Text(stringResource(R.string.checkin_back_to_edition_button))
+                        Text(stringResource(R.string.checkin_continue_button))
                     }
                 }
             }

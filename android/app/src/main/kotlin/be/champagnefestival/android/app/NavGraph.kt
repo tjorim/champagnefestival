@@ -69,6 +69,13 @@ fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onRegistrationScanned = { registrationId, token ->
+                    // Fast lane: scanning a wristband checks the guest in immediately, without
+                    // an intermediate review tap, since that's the common case in a busy line.
+                    navController.navigate("checkin_confirm/${Uri.encode(registrationId)}/${Uri.encode(token)}")
+                },
+                onManualEntrySubmitted = { registrationId, token ->
+                    // Manual entry is the exception path (damaged/unscannable code), so route
+                    // through the detail screen for a review step before checking in.
                     navController.navigate("registration/${Uri.encode(registrationId)}/${Uri.encode(token)}")
                 }
             )
@@ -131,9 +138,9 @@ fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onDone = {
-                    navController.navigate(Routes.Edition) {
-                        popUpTo(Routes.Edition) { inclusive = true }
-                    }
+                    // Return to the scanner (skipping any intermediate review/detail screen) so
+                    // staff can keep processing the next guest in line without extra taps.
+                    navController.popBackStack(Routes.Scan, false)
                 }
             )
         }

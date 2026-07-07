@@ -45,7 +45,7 @@
     <string name="checkin_already_in_title">Already checked in</string>
     <string name="checkin_complete_title">Check-in complete</string>
     <string name="checkin_just_now_fallback">Checked in just now</string>
-    <string name="checkin_back_to_edition_button">Back to active edition</string>
+    <string name="checkin_continue_button">Continue</string>
 
     <string name="registration_detail_title">Registration details</string>
     <string name="registration_party_size_format">Party size: %1$d</string>

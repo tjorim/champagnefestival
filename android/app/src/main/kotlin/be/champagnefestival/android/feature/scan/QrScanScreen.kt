@@ -72,7 +72,12 @@ import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationScanned: (String, String) -> Unit) {
+fun QrScanScreen(
+    viewModel: QrScanViewModel,
+    onBack: () -> Unit,
+    onRegistrationScanned: (String, String) -> Unit,
+    onManualEntrySubmitted: (String, String) -> Unit
+) {
     val context = LocalContext.current
     val view = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -255,7 +260,7 @@ fun QrScanScreen(viewModel: QrScanViewModel, onBack: () -> Unit, onRegistrationS
             onSubmit = { registrationId, token ->
                 showManualEntry = false
                 hasNavigated = true
-                onRegistrationScanned(registrationId, token)
+                onManualEntrySubmitted(registrationId, token)
             }
         )
     }
