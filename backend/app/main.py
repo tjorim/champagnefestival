@@ -101,7 +101,7 @@ app = FastAPI(
 add_cors_middleware(app, settings, mcp_enabled=_mcp_app is not None)
 
 # Metrics middleware is registered last so it is outermost and captures every request,
-# including those short-circuited by CORS or SuperTokens.
+# including those short-circuited by CORS or OIDC auth.
 app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware)
 
 
