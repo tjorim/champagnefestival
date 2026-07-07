@@ -58,8 +58,15 @@ logger = logging.getLogger(__name__)
 @router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
 async def create_registration(
     body: RegistrationCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_rate_limit(client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please try again later.",
+        )
     check_honeypot(body.honeypot)
     check_form_timing(body.form_start_time)
 

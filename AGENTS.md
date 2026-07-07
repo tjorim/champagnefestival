@@ -62,6 +62,7 @@ Required status checks on `main`:
 
 - `Backend CI / Lint, Typecheck, Migrate & Test`
 - `Frontend CI / Typecheck, Lint, Test & Build`
+- `Frontend CI / E2E Tests (Chromium)`
 - `Android CI / Lint, Unit Test & Build` (when Android changes are required)
 - Relevant CodeQL checks (`CodeQL Backend`, `CodeQL Frontend`, `CodeQL Actions`, `CodeQL Android`)
 
