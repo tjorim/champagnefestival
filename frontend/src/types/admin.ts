@@ -81,3 +81,26 @@ export interface Room {
   color: string;
   active: boolean;
 }
+
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  requestId: string | null;
+  details: Record<string, unknown>;
+}
+
+export interface EditionAttendanceStats {
+  editionId: string;
+  year: number;
+  month: string;
+  editionType: string;
+  startDate: string | null;
+  eventsCount: number;
+  totalRegistrations: number;
+  totalGuests: number;
+  totalCheckedIn: number;
+}

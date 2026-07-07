@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, _create_event
+from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, _create_event, _post_registration
 
 
 @pytest.mark.anyio
@@ -274,3 +274,73 @@ async def test_edition_rejects_vendor_exhibitors(client):
     )
     assert r.status_code == 400
     assert "vendor" in r.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Edition attendance stats
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_edition_stats_requires_admin(unauth_client):
+    r = await unauth_client.get("/api/editions/stats")
+    assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_edition_stats_aggregates_registrations(client):
+    event = await _create_event(client, edition_id="edition-stats", title="Stats Night", date="2099-04-10")
+
+    r1 = await _post_registration(client, event=event, name="Guest One", email="one@example.com", guest_count=2)
+    assert r1.status_code == 201
+    r2 = await _post_registration(client, event=event, name="Guest Two", email="two@example.com", guest_count=3)
+    assert r2.status_code == 201
+
+    # Check one of them in.
+    reg_id = r1.json()["id"]
+    r = await client.get(f"/api/registrations/{reg_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    token = r.json()["check_in_token"]
+    r = await client.post(f"/api/check-in/{reg_id}/lookup", json={"token": token})
+    assert r.status_code == 200
+    r = await client.post(f"/api/check-in/{reg_id}", json={"token": token})
+    assert r.status_code == 200
+
+    # A cancelled registration must not count.
+    r3 = await _post_registration(client, event=event, name="Guest Three", email="three@example.com", guest_count=1)
+    cancelled_id = r3.json()["id"]
+    r = await client.put(
+        f"/api/registrations/{cancelled_id}",
+        json={"status": "cancelled"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+
+    r = await client.get("/api/editions/stats", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    entry = next(e for e in r.json() if e["edition_id"] == "edition-stats")
+    assert entry["events_count"] == 1
+    assert entry["total_registrations"] == 2
+    assert entry["total_guests"] == 5
+    assert entry["total_checked_in"] == 1
+    assert entry["start_date"] == "2099-04-10"
+
+
+@pytest.mark.anyio
+async def test_edition_stats_includes_editions_with_no_registrations(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+    r = await client.post(
+        "/api/editions",
+        json={"id": "edition-stats-empty", "year": 2100, "month": "march", "venue_id": venue_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.get("/api/editions/stats", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    entry = next(e for e in r.json() if e["edition_id"] == "edition-stats-empty")
+    assert entry["total_registrations"] == 0
+    assert entry["total_guests"] == 0
+    assert entry["total_checked_in"] == 0
+    assert entry["events_count"] == 0

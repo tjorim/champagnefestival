@@ -17,6 +17,7 @@ from app.middleware import add_cors_middleware
 from app.observability import request_metrics_middleware
 from app.routers import (
     areas,
+    audit,
     auth,
     check_in,
     contact,
@@ -116,6 +117,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
 
 app.include_router(registrations.router)
 app.include_router(auth.router)
+app.include_router(audit.router)
 app.include_router(members.router)
 app.include_router(events.router)
 app.include_router(check_in.router)

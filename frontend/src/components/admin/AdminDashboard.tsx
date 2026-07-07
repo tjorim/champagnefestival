@@ -15,6 +15,8 @@ import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
 import VolunteersManagement from "./VolunteersManagement";
+import AnalyticsDashboard from "./AnalyticsDashboard";
+import AuditLogViewer from "./AuditLogViewer";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import type {
@@ -57,7 +59,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // Sidebar navigation state
   const [activeKey, setActiveKey] = useState("registrations");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(["events", "content", "venue", "people"]),
+    () => new Set(["events", "content", "venue", "people", "insights"]),
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -561,11 +563,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <VolunteersManagement
                     volunteers={volunteers}
                     isLoading={isAnyFetching}
+                    authHeaders={authHeaders}
                     onCreate={handleCreateVolunteer}
                     onUpdate={handleUpdateVolunteer}
                     onDelete={handleDeleteVolunteer}
                   />
                 )}
+                {activeKey === "analytics" && <AnalyticsDashboard authHeaders={authHeaders} />}
+                {activeKey === "audit-log" && <AuditLogViewer authHeaders={authHeaders} />}
               </div>
             )}
           </div>
