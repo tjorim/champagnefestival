@@ -50,7 +50,8 @@ fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
                     navController.navigate(Routes.Edition) {
                         popUpTo(Routes.Login) { inclusive = true }
                     }
-                }
+                },
+                onOpenSettings = { navController.navigate(Routes.Settings) }
             )
         }
         composable(Routes.Edition) {

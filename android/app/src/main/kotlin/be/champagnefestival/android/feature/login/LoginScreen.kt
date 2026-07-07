@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,7 +39,7 @@ import be.champagnefestival.android.ui.components.toStringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
+fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val loggedIn by viewModel.loggedIn.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -49,7 +51,16 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.login_title)) }) }
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.login_title)) },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.nav_settings_label))
+                    }
+                }
+            )
+        }
     ) { padding ->
         Column(
             modifier =
