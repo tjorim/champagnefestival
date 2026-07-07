@@ -403,9 +403,7 @@ async def delete_person(
 ) -> None:
     person = await _get_person_or_404(db, person_id)
     result = await db.execute(
-        select(Registration)
-        .options(selectinload(Registration.event).selectinload(Event.edition))
-        .where(Registration.person_id == person_id)
+        select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
     )
     registrations = result.scalars().all()
     registration_scopes = [

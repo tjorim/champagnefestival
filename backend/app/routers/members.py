@@ -16,7 +16,7 @@ from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.models import Event, Person, Registration
+from app.models import Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import get_or_404, make_id, person_to_dict, roles_contains
 
@@ -239,9 +239,7 @@ async def delete_member(
 ) -> None:
     person = await _get_member_or_404(db, person_id)
     result = await db.execute(
-        select(Registration)
-        .options(selectinload(Registration.event).selectinload(Event.edition))
-        .where(Registration.person_id == person_id)
+        select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
     )
     registrations = result.scalars().all()
     registration_scopes = [

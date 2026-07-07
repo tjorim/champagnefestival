@@ -85,7 +85,9 @@ async def list_edition_attendance_stats(
             Event.edition_id,
             func.count(Registration.id).label("total_registrations"),
             func.coalesce(func.sum(Registration.guest_count), 0).label("total_guests"),
-            func.count(Registration.id).filter(Registration.checked_in.is_(True)).label("total_checked_in"),
+            func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in.is_(True)), 0).label(
+                "total_checked_in"
+            ),
         )
         .join(Event, Event.id == Registration.event_id)
         .where(Registration.status != "cancelled")

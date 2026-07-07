@@ -322,7 +322,7 @@ async def test_edition_stats_aggregates_registrations(client):
     assert entry["events_count"] == 1
     assert entry["total_registrations"] == 2
     assert entry["total_guests"] == 5
-    assert entry["total_checked_in"] == 1
+    assert entry["total_checked_in"] == 2
     assert entry["start_date"] == "2099-04-10"
 
 
