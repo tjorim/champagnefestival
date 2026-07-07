@@ -86,11 +86,7 @@ fun ActiveEditionScreen(
 }
 
 @Composable
-private fun EditionContent(
-    edition: EditionOut,
-    checkInStats: Map<String, EventCheckInStats>,
-    padding: PaddingValues
-) {
+private fun EditionContent(edition: EditionOut, checkInStats: Map<String, EventCheckInStats>, padding: PaddingValues) {
     LazyColumn(
         modifier =
         Modifier

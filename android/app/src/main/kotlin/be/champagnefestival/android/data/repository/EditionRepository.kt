@@ -20,10 +20,8 @@ class DefaultEditionRepository(private val apiService: ChampagneApiService) : Ed
         apiService.getEvents(auth = "Bearer $authToken", editionId = editionId)
     }
 
-    override suspend fun getCheckInStats(
-        editionId: String?,
-        authToken: String
-    ): Result<List<EventCheckInStats>> = runApiCall {
-        apiService.getCheckInStats(auth = "Bearer $authToken", editionId = editionId)
-    }
+    override suspend fun getCheckInStats(editionId: String?, authToken: String): Result<List<EventCheckInStats>> =
+        runApiCall {
+            apiService.getCheckInStats(auth = "Bearer $authToken", editionId = editionId)
+        }
 }

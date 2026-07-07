@@ -12,10 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ActiveEditionViewModel(
-    private val repository: EditionRepository,
-    private val authTokenProvider: () -> String?
-) : ViewModel() {
+class ActiveEditionViewModel(private val repository: EditionRepository, private val authTokenProvider: () -> String?) :
+    ViewModel() {
     private val _uiState = MutableStateFlow<UiState<EditionOut>>(UiState.Loading)
     val uiState: StateFlow<UiState<EditionOut>> = _uiState.asStateFlow()
 

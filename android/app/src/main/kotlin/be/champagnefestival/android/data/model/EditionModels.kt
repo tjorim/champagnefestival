@@ -37,8 +37,4 @@ data class EditionOut(
 )
 
 @Serializable
-data class EventCheckInStats(
-    val event_id: String,
-    val total: Int,
-    val checked_in: Int
-)
+data class EventCheckInStats(val event_id: String, val total: Int, val checked_in: Int)
