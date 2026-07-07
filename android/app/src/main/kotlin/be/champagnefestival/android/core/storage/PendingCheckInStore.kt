@@ -28,12 +28,7 @@ import kotlinx.serialization.json.Json
  * connectivity returns without staff needing to rescan the wristband.
  */
 @Singleton
-class PendingCheckInStore
-@Inject
-constructor(
-    @ApplicationContext context: Context,
-    applicationScope: CoroutineScope
-) {
+class PendingCheckInStore @Inject constructor(@ApplicationContext context: Context, applicationScope: CoroutineScope) {
     private val dataStore =
         PreferenceDataStoreFactory.create(
             scope = applicationScope,
