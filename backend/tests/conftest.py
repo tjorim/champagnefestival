@@ -106,8 +106,8 @@ async def unauth_client(db_session):
     """Client that simulates unauthenticated requests.
 
     ``require_admin`` is overridden with a function that always raises 401,
-    mimicking what SuperTokens ``verify_session`` does for unauthenticated
-    callers.  Use this fixture in tests that verify endpoints reject
+    mimicking what it does for a request with a missing or invalid OIDC
+    Bearer token.  Use this fixture in tests that verify endpoints reject
     unauthenticated access.
     """
     from fastapi import HTTPException
@@ -131,9 +131,9 @@ async def forbidden_client(db_session):
     """Client that simulates a session without the admin role.
 
     ``require_admin`` is overridden with a function that always raises 403,
-    mimicking what SuperTokens ``verify_session`` does when the session exists
-    but lacks the ``admin`` role (``UserRoleClaim`` check fails).  Use this
-    fixture in tests that verify endpoints reject non-admin sessions.
+    mimicking what it does when the token is valid but its
+    ``realm_access.roles`` claim lacks ``admin``.  Use this fixture in
+    tests that verify endpoints reject non-admin sessions.
     """
     from fastapi import HTTPException
 

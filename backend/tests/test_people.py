@@ -631,6 +631,45 @@ async def test_members_crud(client):
 
 
 @pytest.mark.anyio
+async def test_delete_member_removes_existing_registrations(client):
+    """Deleting a member with existing registrations must not hit the registrations FK RESTRICT."""
+    member = await client.post(
+        "/api/members",
+        json={"name": "Delete Member", "email": "delete.member@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    assert member.status_code == 201
+    member_id = member.json()["id"]
+
+    event = await _create_event(client, edition_id="edition-delete-member")
+    registration = await client.post(
+        "/api/registrations/admin",
+        json={
+            "person_id": member_id,
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [],
+            "notes": "",
+            "accessibility_note": "",
+            "status": "confirmed",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert registration.status_code == 201
+    registration_id = registration.json()["id"]
+
+    async with live_bus.subscribe() as queue:
+        r = await client.delete(f"/api/members/{member_id}", headers=ADMIN_HEADERS)
+        live_event = await queue.get()
+
+    assert r.status_code == 204
+    assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 404
+    assert live_event.topic == "registration"
+    assert live_event.action == "deleted"
+    assert live_event.scope.registration_id == registration_id
+
+
+@pytest.mark.anyio
 async def test_members_support_limit_and_page(client):
     created_ids: set[str] = set()
     for i, name in enumerate(("Member Alpha", "Member Bravo", "Member Charlie")):

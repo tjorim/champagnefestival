@@ -1,10 +1,11 @@
 """Area management endpoints (admin only)."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Area, Exhibitor, Layout
 from app.schemas import AreaCreate, AreaOut, AreaUpdate
@@ -18,7 +19,12 @@ router = APIRouter(
 
 
 @router.post("", response_model=AreaOut, status_code=status.HTTP_201_CREATED)
-async def create_area(body: AreaCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_area(
+    body: AreaCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
     if lay.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail=f"Layout '{body.layout_id}' not found.")
@@ -44,6 +50,15 @@ async def create_area(body: AreaCreate, db: AsyncSession = Depends(get_db)) -> d
         rotation=body.rotation,
     )
     db.add(a)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="area_created",
+        resource_type="area",
+        resource_id=a.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"label": a.label, "layout_id": a.layout_id},
+    )
     await db.commit()
     await db.refresh(a)
     return area_to_dict(a)
@@ -70,7 +85,9 @@ async def get_area(area_id: str, db: AsyncSession = Depends(get_db)) -> dict:
 async def update_area(
     area_id: str,
     body: AreaUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     a = await get_or_404(db, Area, area_id, "Area not found.")
 
@@ -98,13 +115,36 @@ async def update_area(
                 raise HTTPException(status_code=400, detail="Exhibitor is inactive.")
         a.exhibitor_id = body.exhibitor_id
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="area_updated",
+        resource_type="area",
+        resource_id=a.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(a)
     return area_to_dict(a)
 
 
 @router.delete("/{area_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_area(area_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_area(
+    area_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     a = await get_or_404(db, Area, area_id, "Area not found.")
     await db.delete(a)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="area_deleted",
+        resource_type="area",
+        resource_id=area_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()

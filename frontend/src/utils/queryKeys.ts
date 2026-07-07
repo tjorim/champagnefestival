@@ -23,6 +23,10 @@ export const queryKeys = {
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,
+    auditResourceTypes: ["admin", "audit", "resource-types"] as const,
+    auditEntries: (filters: { resourceType: string; resourceId: string; page: number }) =>
+      ["admin", "audit", "entries", filters.resourceType, filters.resourceId, filters.page] as const,
+    editionStats: ["admin", "edition-stats"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
       editions: ["admin", "content-management", "editions"] as const,

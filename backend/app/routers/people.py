@@ -3,13 +3,14 @@
 import logging
 
 import phonenumbers
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import Text, cast, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.live import live_bus
@@ -112,7 +113,12 @@ async def _ensure_unique_identity_fields(
 
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
-async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_person(
+    body: PersonCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     national_register_number = _normalise_optional_identity(body.national_register_number)
     eid_document_number = _normalise_optional_identity(body.eid_document_number)
     await _ensure_unique_identity_fields(
@@ -137,6 +143,15 @@ async def create_person(body: PersonCreate, db: AsyncSession = Depends(get_db)) 
     person.roles = _normalise_roles(body.roles)
 
     db.add(person)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="person_created",
+        resource_type="person",
+        resource_id=person.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"roles": person.roles},
+    )
     try:
         await db.commit()
     except IntegrityError:
@@ -199,7 +214,9 @@ async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> dict
 async def update_person(
     person_id: str,
     body: PersonUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     person = await _get_person_or_404(db, person_id)
 
@@ -246,6 +263,15 @@ async def update_person(
     if body.roles is not None:
         person.roles = _normalise_roles(body.roles)
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="person_updated",
+        resource_type="person",
+        resource_id=person.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     try:
         await db.commit()
     except IntegrityError:
@@ -276,7 +302,9 @@ async def list_person_registrations(
 async def merge_people(
     person_id: str,
     duplicate_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     """Merge duplicate_id into person_id (admin-only).
 
@@ -352,18 +380,30 @@ async def merge_people(
     )
 
     await db.delete(duplicate)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="person_merged",
+        resource_type="person",
+        resource_id=canonical.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"duplicate_id": duplicate_id},
+    )
     await db.commit()
     await db.refresh(canonical)
     return person_to_dict(canonical)
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_person(person_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_person(
+    person_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     person = await _get_person_or_404(db, person_id)
     result = await db.execute(
-        select(Registration)
-        .options(selectinload(Registration.event).selectinload(Event.edition))
-        .where(Registration.person_id == person_id)
+        select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
     )
     registrations = result.scalars().all()
     registration_scopes = [
@@ -377,6 +417,15 @@ async def delete_person(person_id: str, db: AsyncSession = Depends(get_db)) -> N
     for registration in registrations:
         await db.delete(registration)
     await db.delete(person)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="person_deleted",
+        resource_type="person",
+        resource_id=person_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"deleted_registration_count": len(registrations)},
+    )
     await db.commit()
     for scope in registration_scopes:
         try:

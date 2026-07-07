@@ -151,6 +151,12 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class EventCheckInStats(BaseModel):
+    event_id: str
+    total: int
+    checked_in: int
+
+
 # ---------------------------------------------------------------------------
 # Registrations
 # ---------------------------------------------------------------------------
@@ -863,3 +869,28 @@ class EditionOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AuditEntryOut(BaseModel):
+    id: str
+    timestamp: datetime
+    actor: str
+    action: str
+    resource_type: str
+    resource_id: str
+    request_id: str | None
+    details: dict
+
+    model_config = {"from_attributes": True}
+
+
+class EditionAttendanceStats(BaseModel):
+    edition_id: str
+    year: int
+    month: str
+    edition_type: str
+    start_date: dt_date | None
+    events_count: int
+    total_registrations: int
+    total_guests: int
+    total_checked_in: int

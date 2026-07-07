@@ -13,7 +13,7 @@ from app.database import get_db
 from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Event, Person, Registration, Table
-from app.ratelimit import check_rate_limit
+from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
 from app.utils import registration_to_checkin_dict
 
@@ -42,7 +42,7 @@ async def lookup_check_in(
     Only exposes fields needed on the tablet (name, party size, event, pre-orders,
     check-in/strap status). PII fields (email, phone) are not included.
     """
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -75,7 +75,7 @@ async def post_check_in(
 
     Returns ``already_checked_in: true`` if the guest scanned their QR twice.
     """
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -93,13 +93,7 @@ async def post_check_in(
     already = r.checked_in
     changed = False
     strap_newly_issued = False
-    actor = request.headers.get("X-Real-IP")
-    if not actor:
-        forwarded = request.headers.get("X-Forwarded-For")
-        if forwarded and forwarded.strip():
-            actor = forwarded.split(",")[0].strip()
-        else:
-            actor = request.client.host if request.client else "unknown"
+    actor = get_client_ip(request)
     request_id = getattr(request.state, "request_id", None)
 
     if not already:

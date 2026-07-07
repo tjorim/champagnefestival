@@ -28,6 +28,7 @@ import be.champagnefestival.android.R
 import be.champagnefestival.android.ui.UiState
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
+import be.champagnefestival.android.ui.components.toStringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,10 +45,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back_content_description)
+                        )
                     }
                 }
             )
@@ -55,7 +59,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
-            is UiState.Error -> ErrorContent(message = state.message, onRetry = {
+            is UiState.Error -> ErrorContent(message = stringResource(state.reason.toStringRes()), onRetry = {
             }, modifier = Modifier.padding(padding))
             is UiState.Success -> SettingsContent(
                 viewModel = viewModel,
@@ -83,20 +87,20 @@ private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiMo
             onSave = viewModel::saveApiBaseUrl,
             onReset = viewModel::resetApiBaseUrl
         )
-        Text("OIDC config: ${settings.oidcConfigUrl}")
-        Text("App version: ${settings.versionName}")
+        Text(stringResource(R.string.settings_oidc_config_format, settings.oidcConfigUrl))
+        Text(stringResource(R.string.settings_app_version_format, settings.versionName))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Require biometric unlock")
+            Text(stringResource(R.string.settings_biometric_lock_label))
             Switch(
                 checked = settings.biometricLockEnabled,
                 onCheckedChange = viewModel::setBiometricLockEnabled
             )
         }
         Button(onClick = viewModel::logout) {
-            Text("Logout")
+            Text(stringResource(R.string.settings_logout_button))
         }
         Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {
             Text(stringResource(id = R.string.settings_privacy_and_deletion_options))

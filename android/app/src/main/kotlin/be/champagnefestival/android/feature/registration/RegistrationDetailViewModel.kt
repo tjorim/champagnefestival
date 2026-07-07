@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.data.repository.CheckInRepository
+import be.champagnefestival.android.data.repository.toApiErrorReason
 import be.champagnefestival.android.ui.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,7 @@ class RegistrationDetailViewModel(private val repository: CheckInRepository) : V
             repository
                 .lookupRegistration(id = id, token = token)
                 .onSuccess { _uiState.value = UiState.Success(it) }
-                .onFailure { _uiState.value = UiState.Error(it.message ?: "Unable to load registration.") }
+                .onFailure { _uiState.value = UiState.Error(it.toApiErrorReason()) }
         }
     }
 }

@@ -1,10 +1,11 @@
 """Room management endpoints (admin only)."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Room, Venue
 from app.schemas import RoomCreate, RoomOut, RoomUpdate
@@ -25,7 +26,9 @@ router = APIRouter(
 @router.post("", response_model=RoomOut, status_code=status.HTTP_201_CREATED)
 async def create_room(
     body: RoomCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
     if venue.scalar_one_or_none() is None:
@@ -41,6 +44,15 @@ async def create_room(
         active=body.active,
     )
     db.add(r)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="room_created",
+        resource_type="room",
+        resource_id=r.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"name": r.name, "venue_id": r.venue_id},
+    )
     await db.commit()
     await db.refresh(r)
     return room_to_dict(r)
@@ -76,7 +88,9 @@ async def get_room(room_id: str, db: AsyncSession = Depends(get_db)) -> dict:
 async def update_room(
     room_id: str,
     body: RoomUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     r = await get_or_404(db, Room, room_id, "Room not found.")
 
@@ -91,6 +105,15 @@ async def update_room(
     if body.active is not None:
         r.active = body.active
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="room_updated",
+        resource_type="room",
+        resource_id=r.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(r)
     return room_to_dict(r)
@@ -102,7 +125,21 @@ async def update_room(
 
 
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_room(room_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_room(
+    room_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     r = await get_or_404(db, Room, room_id, "Room not found.")
     await db.delete(r)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="room_deleted",
+        resource_type="room",
+        resource_id=room_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()

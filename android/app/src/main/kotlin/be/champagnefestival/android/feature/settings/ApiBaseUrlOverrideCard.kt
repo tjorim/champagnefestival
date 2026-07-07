@@ -12,7 +12,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import be.champagnefestival.android.R
 import be.champagnefestival.android.core.network.DynamicBaseUrlInterceptor
 
 /**
@@ -40,26 +42,26 @@ fun ApiBaseUrlOverrideCard(
             value = apiBaseUrlInput,
             onValueChange = { apiBaseUrlInput = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("API base URL") },
+            label = { Text(stringResource(R.string.settings_api_base_url_label)) },
             isError = isUrlInvalid,
             supportingText = {
                 if (isUrlInvalid) {
-                    Text("URL must start with http:// or https://")
+                    Text(stringResource(R.string.settings_api_base_url_error))
                 }
             }
         )
-        Text("Default API base URL: $defaultApiBaseUrl")
+        Text(stringResource(R.string.settings_api_base_url_default_format, defaultApiBaseUrl))
         Button(
             onClick = { onSave(apiBaseUrlInput) },
             enabled = !isUrlInvalid
         ) {
-            Text("Save base URL")
+            Text(stringResource(R.string.settings_api_base_url_save_button))
         }
         Button(onClick = {
             apiBaseUrlInput = defaultApiBaseUrl
             onReset()
         }) {
-            Text("Reset base URL")
+            Text(stringResource(R.string.settings_api_base_url_reset_button))
         }
     }
 }

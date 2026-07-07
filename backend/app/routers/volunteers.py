@@ -5,13 +5,17 @@ Volunteer help periods are stored separately so a person can help across
 multiple non-contiguous festival dates.
 """
 
+import csv
+import io
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Person, VolunteerPeriod
@@ -115,7 +119,12 @@ async def _load_periods_map(db: AsyncSession, volunteer_ids: list[str]) -> dict[
 
 
 @router.post("", response_model=VolunteerOut, status_code=status.HTTP_201_CREATED)
-async def create_volunteer(body: VolunteerCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_volunteer(
+    body: VolunteerCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     await _ensure_unique_fields(
         db,
         national_register_number=body.national_register_number,
@@ -135,6 +144,15 @@ async def create_volunteer(body: VolunteerCreate, db: AsyncSession = Depends(get
     db.add(person)
     await db.flush()
     await _replace_help_periods(db, person.id, body.help_periods)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="volunteer_created",
+        resource_type="person",
+        resource_id=person.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"help_period_count": len(body.help_periods)},
+    )
     await db.commit()
     await db.refresh(person)
     periods_map = await _load_periods_map(db, [person.id])
@@ -173,6 +191,45 @@ async def list_volunteers(
     return [_to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]
 
 
+@router.get("/export")
+async def export_volunteers_csv(db: AsyncSession = Depends(get_db)) -> StreamingResponse:
+    """Export active volunteers with their help periods as CSV, for insurance reporting.
+
+    One row per help period (a volunteer with multiple non-contiguous periods
+    gets one row per period) since insurers typically need each covered date
+    range listed separately.
+    """
+    stmt = select(Person).where(roles_contains("volunteer"), Person.active.is_(True)).order_by(Person.name)
+    volunteers = (await db.execute(stmt)).scalars().all()
+    periods_map = await _load_periods_map(db, [v.id for v in volunteers])
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["Name", "National Register Number", "Address", "Period Start", "Period End"])
+    for volunteer in volunteers:
+        periods = periods_map.get(volunteer.id, [])
+        if not periods:
+            writer.writerow([volunteer.name, volunteer.national_register_number or "", volunteer.address or "", "", ""])
+            continue
+        for period in periods:
+            writer.writerow(
+                [
+                    volunteer.name,
+                    volunteer.national_register_number or "",
+                    volunteer.address or "",
+                    period.first_help_day.isoformat(),
+                    period.last_help_day.isoformat() if period.last_help_day else "",
+                ]
+            )
+    buffer.seek(0)
+
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="volunteers-insurance-list.csv"'},
+    )
+
+
 @router.get("/{volunteer_id}", response_model=VolunteerOut)
 async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     volunteer = await _get_volunteer_or_404(db, volunteer_id)
@@ -184,7 +241,9 @@ async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -
 async def update_volunteer(
     volunteer_id: str,
     body: VolunteerUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     volunteer = await _get_volunteer_or_404(db, volunteer_id)
 
@@ -216,6 +275,15 @@ async def update_volunteer(
 
     _ensure_volunteer_role(volunteer)
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="volunteer_updated",
+        resource_type="person",
+        resource_id=volunteer.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(volunteer)
     periods_map = await _load_periods_map(db, [volunteer.id])
@@ -223,7 +291,12 @@ async def update_volunteer(
 
 
 @router.delete("/{volunteer_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_volunteer(
+    volunteer_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     """Remove the volunteer role from a person (soft archive).
 
     The underlying Person record is kept intact so that reservations,
@@ -233,6 +306,15 @@ async def delete_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)
     volunteer = await _get_volunteer_or_404(db, volunteer_id)
     await db.execute(delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id))
     _remove_volunteer_role(volunteer)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="volunteer_role_removed",
+        resource_type="person",
+        resource_id=volunteer_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()
 
 

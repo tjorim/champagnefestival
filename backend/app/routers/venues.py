@@ -1,10 +1,11 @@
 """Venue management endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Edition, Room, Venue
 from app.schemas import VenueCreate, VenueOut, VenueUpdate
@@ -19,8 +20,10 @@ router = APIRouter(
 @router.post("", response_model=VenueOut, status_code=status.HTTP_201_CREATED)
 async def create_venue(
     body: VenueCreate,
+    request: Request,
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     v = Venue(
         id=make_id("venue"),
@@ -33,6 +36,15 @@ async def create_venue(
         lng=body.lng,
     )
     db.add(v)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="venue_created",
+        resource_type="venue",
+        resource_id=v.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"name": v.name},
+    )
     await db.commit()
     await db.refresh(v)
     return venue_to_dict(v)
@@ -61,8 +73,10 @@ async def get_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> dict:
 async def update_venue(
     venue_id: str,
     body: VenueUpdate,
+    request: Request,
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     v = await get_or_404(db, Venue, venue_id, "Venue not found.")
     if body.name is not None:
@@ -81,6 +95,15 @@ async def update_venue(
         v.lng = body.lng
     if body.active is not None:
         v.active = body.active
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="venue_updated",
+        resource_type="venue",
+        resource_id=v.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(v)
     return venue_to_dict(v)
@@ -89,8 +112,10 @@ async def update_venue(
 @router.delete("/{venue_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_venue(
     venue_id: str,
+    request: Request,
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> None:
     v = await get_or_404(db, Venue, venue_id, "Venue not found.")
     in_use = await db.execute(select(Edition).where(Edition.venue_id == venue_id).limit(1))
@@ -106,4 +131,13 @@ async def delete_venue(
             detail="Cannot delete: rooms are still using this venue.",
         )
     await db.delete(v)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="venue_deleted",
+        resource_type="venue",
+        resource_id=venue_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()
