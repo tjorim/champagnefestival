@@ -3,11 +3,11 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import VenueManagement from "@/components/admin/VenueManagement";
 import type { Room, Venue } from "@/types/admin";
 
-// happy-dom does not implement window.confirm, so it must be stubbed with a
-// plain assignment (vi.spyOn requires an existing function to wrap).
+// happy-dom does not implement window.confirm, so it must be stubbed rather
+// than wrapped (vi.spyOn requires an existing function).
 function mockConfirm(returnValue: boolean) {
   const fn = vi.fn().mockReturnValue(returnValue);
-  window.confirm = fn;
+  vi.stubGlobal("confirm", fn);
   return fn;
 }
 
@@ -104,8 +104,7 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
 describe("VenueManagement", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    // @ts-expect-error -- clean up the manual window.confirm stub between tests
-    delete window.confirm;
+    vi.unstubAllGlobals();
   });
 
   it("renders venue rows with address/city/postal/country and room badges", () => {
@@ -205,7 +204,7 @@ describe("VenueManagement", () => {
 
   it("calls onRestore immediately with no confirm prompt", () => {
     const confirmSpy = vi.fn();
-    window.confirm = confirmSpy;
+    vi.stubGlobal("confirm", confirmSpy);
     const { onRestore } = renderVenueManagement();
 
     const archivedRow = screen.getByText("Old Barn").closest("tr") as HTMLElement;

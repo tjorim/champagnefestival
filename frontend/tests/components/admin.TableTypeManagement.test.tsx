@@ -63,8 +63,7 @@ function renderTableTypeManagement(overrides: RenderOverrides = {}) {
 describe("TableTypeManagement", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    // @ts-expect-error -- clean up the manual window.confirm stub between tests
-    delete window.confirm;
+    vi.unstubAllGlobals();
   });
 
   it("renders table type rows with shape/width/length/height/capacity, and the archived badge with dimmed row styling", () => {
@@ -169,7 +168,7 @@ describe("TableTypeManagement", () => {
 
   it("archives an active row immediately, with no confirm prompt", () => {
     const confirmSpy = vi.fn();
-    window.confirm = confirmSpy;
+    vi.stubGlobal("confirm", confirmSpy);
     const { onArchive } = renderTableTypeManagement();
 
     const activeRow = screen.getByText("Standard Rectangle").closest("tr") as HTMLElement;
@@ -181,7 +180,7 @@ describe("TableTypeManagement", () => {
 
   it("restores an archived row immediately, with no confirm prompt, and hides the edit button on archived rows", () => {
     const confirmSpy = vi.fn();
-    window.confirm = confirmSpy;
+    vi.stubGlobal("confirm", confirmSpy);
     const { onRestore } = renderTableTypeManagement();
 
     const archivedRow = screen.getByText("Retired Round").closest("tr") as HTMLElement;
