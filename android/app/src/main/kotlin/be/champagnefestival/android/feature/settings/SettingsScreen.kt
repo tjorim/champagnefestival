@@ -28,7 +28,7 @@ import be.champagnefestival.android.R
 import be.champagnefestival.android.ui.UiState
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
-import be.champagnefestival.android.ui.components.errorMessage
+import be.champagnefestival.android.ui.components.toStringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +59,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
-            is UiState.Error -> ErrorContent(message = errorMessage(state.reason), onRetry = {
+            is UiState.Error -> ErrorContent(message = stringResource(state.reason.toStringRes()), onRetry = {
             }, modifier = Modifier.padding(padding))
             is UiState.Success -> SettingsContent(
                 viewModel = viewModel,

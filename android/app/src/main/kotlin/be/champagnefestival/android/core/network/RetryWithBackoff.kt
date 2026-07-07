@@ -1,10 +1,9 @@
 package be.champagnefestival.android.core.network
 
-import java.io.IOException
 import java.net.ConnectException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import javax.net.ssl.SSLPeerUnverifiedException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
@@ -12,7 +11,8 @@ import kotlinx.coroutines.delay
  * Retries [block] on transient connectivity failures only (dropped connections, timeouts,
  * DNS blips). A certificate failure won't be fixed by retrying, and an HTTP error response
  * (including 5xx) is a real answer from the server, not a blip - both are surfaced
- * immediately instead of being retried.
+ * immediately instead of being retried. Other IOExceptions (e.g. response parsing failures)
+ * aren't retried either, since retrying them can't succeed and only delays the failure.
  */
 suspend fun <T> retryWithBackoff(
     maxAttempts: Int = 3,
@@ -28,7 +28,7 @@ suspend fun <T> retryWithBackoff(
             return block()
         } catch (exception: CancellationException) {
             throw exception
-        } catch (exception: Throwable) {
+        } catch (exception: Exception) {
             attempt++
             if (attempt >= maxAttempts || !shouldRetry(exception)) {
                 throw exception
@@ -40,8 +40,6 @@ suspend fun <T> retryWithBackoff(
 }
 
 fun isTransientNetworkFailure(throwable: Throwable): Boolean = when (throwable) {
-    is SSLPeerUnverifiedException -> false
-    is SocketTimeoutException, is UnknownHostException, is ConnectException -> true
-    is IOException -> true
+    is SocketTimeoutException, is UnknownHostException, is ConnectException, is SocketException -> true
     else -> false
 }

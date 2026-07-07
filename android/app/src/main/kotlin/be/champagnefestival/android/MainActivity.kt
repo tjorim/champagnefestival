@@ -5,10 +5,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.weight
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import be.champagnefestival.android.app.NavGraph
 import be.champagnefestival.android.feature.lock.BiometricGate
@@ -28,7 +28,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             ChampagneFestivalTheme {
                 BiometricGate(app = app) {
-                    val isOnline by app.connectivityObserver.isOnline.collectAsState()
+                    val isOnline by app.connectivityObserver.isOnline.collectAsStateWithLifecycle()
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (!isOnline) {
                             ConnectivityBanner()

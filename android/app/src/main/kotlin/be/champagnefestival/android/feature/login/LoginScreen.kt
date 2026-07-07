@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import be.champagnefestival.android.R
 import be.champagnefestival.android.ui.UiState
-import be.champagnefestival.android.ui.components.errorMessage
+import be.champagnefestival.android.ui.components.toStringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +90,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
             if (currentState is UiState.Error) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = errorMessage(currentState.reason),
+                    text = stringResource(currentState.reason.toStringRes()),
                     color = Color.Red,
                     textAlign = TextAlign.Center
                 )

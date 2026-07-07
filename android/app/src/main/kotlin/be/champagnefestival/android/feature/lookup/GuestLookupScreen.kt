@@ -31,7 +31,7 @@ import be.champagnefestival.android.R
 import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
-import be.champagnefestival.android.ui.components.errorMessage
+import be.champagnefestival.android.ui.components.toStringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +85,7 @@ fun GuestLookupScreen(viewModel: GuestLookupViewModel, onBack: () -> Unit) {
                 GuestLookupUiState.Idle -> Text(stringResource(R.string.search_guest_idle_message))
                 GuestLookupUiState.Loading -> LoadingContent(modifier = Modifier.weight(1f))
                 is GuestLookupUiState.Error ->
-                    ErrorContent(message = errorMessage(state.reason), onRetry = {
+                    ErrorContent(message = stringResource(state.reason.toStringRes()), onRetry = {
                         viewModel.search(query, eventId)
                     }, modifier = Modifier.weight(1f))
                 is GuestLookupUiState.Success ->

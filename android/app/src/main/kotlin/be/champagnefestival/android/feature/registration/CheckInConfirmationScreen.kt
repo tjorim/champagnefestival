@@ -28,7 +28,7 @@ import be.champagnefestival.android.R
 import be.champagnefestival.android.data.repository.ApiErrorReason
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
-import be.champagnefestival.android.ui.components.errorMessage
+import be.champagnefestival.android.ui.components.toStringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,11 +63,11 @@ fun CheckInConfirmationScreen(
         when (val state = uiState) {
             CheckInUiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
             is CheckInUiState.Error ->
-                ErrorContent(message = errorMessage(state.reason), onRetry = {
+                ErrorContent(message = stringResource(state.reason.toStringRes()), onRetry = {
                     viewModel.submitCheckIn(id, token)
                 }, modifier = Modifier.padding(padding))
             CheckInUiState.Unauthorized ->
-                ErrorContent(message = errorMessage(ApiErrorReason.UNAUTHORIZED), onRetry = {
+                ErrorContent(message = stringResource(ApiErrorReason.UNAUTHORIZED.toStringRes()), onRetry = {
                     viewModel.submitCheckIn(id, token)
                 }, modifier = Modifier.padding(padding))
             is CheckInUiState.RegistrationLoaded -> LoadingContent(modifier = Modifier.padding(padding))

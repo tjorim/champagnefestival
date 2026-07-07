@@ -32,7 +32,7 @@ import be.champagnefestival.android.data.model.EditionOut
 import be.champagnefestival.android.ui.UiState
 import be.champagnefestival.android.ui.components.ErrorContent
 import be.champagnefestival.android.ui.components.LoadingContent
-import be.champagnefestival.android.ui.components.errorMessage
+import be.champagnefestival.android.ui.components.toStringRes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +73,7 @@ fun ActiveEditionScreen(
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
             is UiState.Error ->
                 ErrorContent(
-                    message = errorMessage(state.reason),
+                    message = stringResource(state.reason.toStringRes()),
                     onRetry = viewModel::loadActiveEdition,
                     modifier = Modifier.padding(padding)
                 )

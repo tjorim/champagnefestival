@@ -1,6 +1,7 @@
 package be.champagnefestival.android.core.network
 
 import java.io.IOException
+import java.net.SocketException
 import javax.net.ssl.SSLPeerUnverifiedException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -18,12 +19,12 @@ class RetryWithBackoffTest {
     private val dispatcher = StandardTestDispatcher()
 
     @Test
-    fun `retries transient IOException until it succeeds`() = runTest(dispatcher) {
+    fun `retries transient connectivity failures until it succeeds`() = runTest(dispatcher) {
         var attempts = 0
         val result =
             retryWithBackoff {
                 attempts++
-                if (attempts < 3) throw IOException("connection reset") else "ok"
+                if (attempts < 3) throw SocketException("connection reset") else "ok"
             }
 
         assertEquals("ok", result)
@@ -36,10 +37,10 @@ class RetryWithBackoffTest {
         try {
             retryWithBackoff(maxAttempts = 3) {
                 attempts++
-                throw IOException("connection reset")
+                throw SocketException("connection reset")
             }
-            fail("Expected IOException to be thrown")
-        } catch (expected: IOException) {
+            fail("Expected SocketException to be thrown")
+        } catch (expected: SocketException) {
             // expected once retries are exhausted
         }
         assertEquals(3, attempts)
@@ -56,6 +57,21 @@ class RetryWithBackoffTest {
             fail("Expected SSLPeerUnverifiedException to be thrown")
         } catch (expected: SSLPeerUnverifiedException) {
             // expected - certificate failures are not transient
+        }
+        assertEquals(1, attempts)
+    }
+
+    @Test
+    fun `does not retry non-transient IOException such as response parsing failures`() = runTest(dispatcher) {
+        var attempts = 0
+        try {
+            retryWithBackoff {
+                attempts++
+                throw IOException("malformed response body")
+            }
+            fail("Expected IOException to be thrown")
+        } catch (expected: IOException) {
+            // expected - retrying can't fix a parsing failure, only delay it
         }
         assertEquals(1, attempts)
     }
