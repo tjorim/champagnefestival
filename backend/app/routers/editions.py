@@ -5,12 +5,13 @@ from __future__ import annotations
 import logging
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Edition, Exhibitor, Venue
 from app.schemas import EditionCreate, EditionOut, EditionType, EditionUpdate
@@ -78,7 +79,12 @@ async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> di
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_admin)],
 )
-async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_edition(
+    body: EditionCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     if (await db.execute(select(Edition).where(Edition.id == body.id))).scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -101,13 +107,28 @@ async def create_edition(body: EditionCreate, db: AsyncSession = Depends(get_db)
     )
     await _validate_exhibitor_ids(db, edition.exhibitors)
     db.add(edition)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_created",
+        resource_type="edition",
+        resource_id=edition.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"year": edition.year, "month": edition.month, "edition_type": edition.edition_type},
+    )
     await db.commit()
     edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition)
 
 
 @router.put("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
-async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+async def update_edition(
+    edition_id: str,
+    body: EditionUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     edition = await _get_edition_or_404(db, edition_id)
 
     for field in [
@@ -136,6 +157,15 @@ async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession 
 
     _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
 
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_updated",
+        resource_type="edition",
+        resource_id=edition.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition)
@@ -146,9 +176,23 @@ async def update_edition(edition_id: str, body: EditionUpdate, db: AsyncSession 
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_admin)],
 )
-async def delete_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_edition(
+    edition_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     edition = await _get_edition_or_404(db, edition_id)
     await db.delete(edition)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_deleted",
+        resource_type="edition",
+        resource_id=edition_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()
 
 

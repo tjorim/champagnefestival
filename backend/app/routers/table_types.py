@@ -1,10 +1,11 @@
 """Table type management endpoints (admin only)."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Table, TableType
 from app.schemas import TableTypeCreate, TableTypeOut, TableTypeUpdate
@@ -20,7 +21,9 @@ router = APIRouter(
 @router.post("", response_model=TableTypeOut, status_code=status.HTTP_201_CREATED)
 async def create_table_type(
     body: TableTypeCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     tt = TableType(
         id=make_id("ttype"),
@@ -33,6 +36,15 @@ async def create_table_type(
         active=body.active,
     )
     db.add(tt)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="table_type_created",
+        resource_type="table_type",
+        resource_id=tt.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"name": tt.name, "shape": tt.shape},
+    )
     await db.commit()
     await db.refresh(tt)
     return table_type_to_dict(tt)
@@ -60,7 +72,9 @@ async def get_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> di
 async def update_table_type(
     type_id: str,
     body: TableTypeUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
 ) -> dict:
     tt = await get_or_404(db, TableType, type_id, "Table type not found.")
     if body.name is not None:
@@ -83,13 +97,27 @@ async def update_table_type(
         tt.max_capacity = body.max_capacity
     if body.active is not None:
         tt.active = body.active
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="table_type_updated",
+        resource_type="table_type",
+        resource_id=tt.id,
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(tt)
     return table_type_to_dict(tt)
 
 
 @router.delete("/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_table_type(
+    type_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     tt = await get_or_404(db, TableType, type_id, "Table type not found.")
     in_use = await db.execute(select(Table).where(Table.table_type_id == type_id).limit(1))
     if in_use.scalars().first() is not None:
@@ -98,4 +126,13 @@ async def delete_table_type(type_id: str, db: AsyncSession = Depends(get_db)) ->
             detail="Cannot delete: tables are still using this type.",
         )
     await db.delete(tt)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="table_type_deleted",
+        resource_type="table_type",
+        resource_id=type_id,
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()

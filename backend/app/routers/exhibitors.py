@@ -1,10 +1,11 @@
 """Exhibitor management endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
+from app.audit import write_audit_entry
+from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Edition, Exhibitor, Person
@@ -53,7 +54,12 @@ async def list_exhibitors(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_admin)],
 )
-async def create_exhibitor(body: ExhibitorCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def create_exhibitor(
+    body: ExhibitorCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     contact = await _load_contact(db, body.contact_person_id)
     if body.contact_person_id and contact is None:
         raise HTTPException(status_code=404, detail="Person not found.")
@@ -66,13 +72,29 @@ async def create_exhibitor(body: ExhibitorCreate, db: AsyncSession = Depends(get
         contact_person_id=body.contact_person_id,
     )
     db.add(e)
+    await db.flush()
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="exhibitor_created",
+        resource_type="exhibitor",
+        resource_id=str(e.id),
+        request_id=getattr(request.state, "request_id", None),
+        details={"name": e.name, "type": e.type},
+    )
     await db.commit()
     await db.refresh(e)
     return exhibitor_to_dict(e, contact)
 
 
 @router.put("/{exhibitor_id}", response_model=ExhibitorOut, dependencies=[Depends(require_admin)])
-async def update_exhibitor(exhibitor_id: int, body: ExhibitorUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+async def update_exhibitor(
+    exhibitor_id: int,
+    body: ExhibitorUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
     e = await get_or_404(db, Exhibitor, exhibitor_id, "Exhibitor not found.")
     if body.name is not None:
         e.name = body.name
@@ -90,6 +112,15 @@ async def update_exhibitor(exhibitor_id: int, body: ExhibitorUpdate, db: AsyncSe
             if contact_check is None:
                 raise HTTPException(status_code=404, detail="Person not found.")
         e.contact_person_id = body.contact_person_id
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="exhibitor_updated",
+        resource_type="exhibitor",
+        resource_id=str(e.id),
+        request_id=getattr(request.state, "request_id", None),
+        details={"fields_changed": sorted(body.model_fields_set)},
+    )
     await db.commit()
     await db.refresh(e)
     contact = await _load_contact(db, e.contact_person_id)
@@ -101,11 +132,25 @@ async def update_exhibitor(exhibitor_id: int, body: ExhibitorUpdate, db: AsyncSe
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_admin)],
 )
-async def delete_exhibitor(exhibitor_id: int, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_exhibitor(
+    exhibitor_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> None:
     e = await get_or_404(db, Exhibitor, exhibitor_id, "Exhibitor not found.")
     editions_result = await db.execute(select(Edition))
     for edition in editions_result.scalars().all():
         if exhibitor_id in edition.exhibitors:
             edition.exhibitors = [eid for eid in edition.exhibitors if eid != exhibitor_id]
     await db.delete(e)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="exhibitor_deleted",
+        resource_type="exhibitor",
+        resource_id=str(exhibitor_id),
+        request_id=getattr(request.state, "request_id", None),
+        details={},
+    )
     await db.commit()
