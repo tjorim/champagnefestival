@@ -336,6 +336,8 @@
   "admin_layout_copy_areas_hint": "Tables inside copied areas are included automatically.",
   "admin_layout_day_label": "Day",
   "admin_layout_delete_confirm": "Delete this layout? All tables in this layout will also be deleted.",
+  "admin_layout_table_delete_confirm": "Delete this table? This cannot be undone.",
+  "admin_layout_area_delete_confirm": "Delete this area? This cannot be undone.",
   "admin_error_add_layout": "Failed to create layout.",
   "admin_error_delete_layout": "Failed to delete layout.",
   "admin_error_add_table_type": "Failed to add table type.",

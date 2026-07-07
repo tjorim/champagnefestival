@@ -336,6 +336,8 @@
   "admin_layout_copy_areas_hint": "Les tables dans les zones copiées sont incluses automatiquement.",
   "admin_layout_day_label": "Jour",
   "admin_layout_delete_confirm": "Supprimer cet agencement ? Toutes les tables associées seront également supprimées.",
+  "admin_layout_table_delete_confirm": "Supprimer cette table ? Cette action est irréversible.",
+  "admin_layout_area_delete_confirm": "Supprimer cette zone ? Cette action est irréversible.",
   "admin_error_add_layout": "Impossible de créer l'agencement.",
   "admin_error_delete_layout": "Impossible de supprimer l'agencement.",
   "admin_error_add_table_type": "Impossible d'ajouter le type.",

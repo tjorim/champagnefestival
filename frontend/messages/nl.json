@@ -336,6 +336,8 @@
   "admin_layout_copy_areas_hint": "Tafels binnen gekopieerde zones worden automatisch meegenomen.",
   "admin_layout_day_label": "Dag",
   "admin_layout_delete_confirm": "Deze indeling verwijderen? Alle tafels in deze indeling worden ook verwijderd.",
+  "admin_layout_table_delete_confirm": "Deze tafel verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "admin_layout_area_delete_confirm": "Deze zone verwijderen? Dit kan niet ongedaan worden gemaakt.",
   "admin_error_add_layout": "Indeling aanmaken mislukt.",
   "admin_error_delete_layout": "Indeling verwijderen mislukt.",
   "admin_error_add_table_type": "Tafeltype toevoegen mislukt.",
