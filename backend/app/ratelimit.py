@@ -12,9 +12,30 @@ from __future__ import annotations
 import collections
 from datetime import UTC, datetime, timedelta
 
+from fastapi import Request
+
 _RATE_LIMIT_MAX_REQUESTS = 5
 _RATE_LIMIT_WINDOW_SECONDS = 600
 _rate_limit_buckets: dict[str, collections.deque[datetime]] = {}
+
+
+def get_client_ip(request: Request) -> str:
+    """Best-effort real client IP behind a reverse proxy.
+
+    Checks ``X-Real-IP`` first (set explicitly and exclusively by a trusted
+    proxy, never a raw client-appended list), then the first entry of
+    ``X-Forwarded-For``, then falls back to the direct connection IP. Only
+    trustworthy if the reverse proxy in front of this app actually sets/
+    overwrites these headers with the real client IP rather than passing
+    through whatever the client sent — see backend/README.md.
+    """
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip and real_ip.strip():
+        return real_ip.strip()
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded and forwarded.strip():
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 def check_rate_limit(client_ip: str) -> bool:

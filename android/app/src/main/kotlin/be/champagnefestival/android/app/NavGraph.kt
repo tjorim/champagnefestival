@@ -2,6 +2,7 @@ package be.champagnefestival.android.app
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -36,11 +37,11 @@ private object Routes {
 }
 
 @Composable
-fun NavGraph(app: ChampagneFestivalApp) {
+fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val startDestination = if (app.authManager.isLoggedIn()) Routes.Edition else Routes.Login
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(Routes.Login) {
             val viewModel: LoginViewModel = viewModel(factory = simpleFactory { LoginViewModel(app.authManager) })
             LoginScreen(
@@ -54,7 +55,12 @@ fun NavGraph(app: ChampagneFestivalApp) {
         }
         composable(Routes.Edition) {
             val viewModel: ActiveEditionViewModel =
-                viewModel(factory = simpleFactory { ActiveEditionViewModel(app.editionRepository) })
+                viewModel(
+                    factory =
+                    simpleFactory {
+                        ActiveEditionViewModel(app.editionRepository, app.authManager::getAccessToken)
+                    }
+                )
             ActiveEditionScreen(
                 viewModel = viewModel,
                 onOpenScan = { navController.navigate(Routes.Scan) },
@@ -68,6 +74,13 @@ fun NavGraph(app: ChampagneFestivalApp) {
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onRegistrationScanned = { registrationId, token ->
+                    // Fast lane: scanning a wristband checks the guest in immediately, without
+                    // an intermediate review tap, since that's the common case in a busy line.
+                    navController.navigate("checkin_confirm/${Uri.encode(registrationId)}/${Uri.encode(token)}")
+                },
+                onManualEntrySubmitted = { registrationId, token ->
+                    // Manual entry is the exception path (damaged/unscannable code), so route
+                    // through the detail screen for a review step before checking in.
                     navController.navigate("registration/${Uri.encode(registrationId)}/${Uri.encode(token)}")
                 }
             )
@@ -123,16 +136,21 @@ fun NavGraph(app: ChampagneFestivalApp) {
             val id = Uri.decode(backStackEntry.arguments?.getString("id").orEmpty())
             val token = Uri.decode(backStackEntry.arguments?.getString("token").orEmpty())
             val viewModel: CheckInViewModel =
-                viewModel(factory = simpleFactory { CheckInViewModel(app.checkInRepository) })
+                viewModel(
+                    factory =
+                    simpleFactory {
+                        CheckInViewModel(app.checkInRepository, app.connectivityObserver, app.pendingCheckInStore)
+                    }
+                )
             CheckInConfirmationScreen(
                 id = id,
                 token = token,
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onDone = {
-                    navController.navigate(Routes.Edition) {
-                        popUpTo(Routes.Edition) { inclusive = true }
-                    }
+                    // Return to the scanner (skipping any intermediate review/detail screen) so
+                    // staff can keep processing the next guest in line without extra taps.
+                    navController.popBackStack(Routes.Scan, false)
                 }
             )
         }

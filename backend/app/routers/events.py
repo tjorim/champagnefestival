@@ -5,15 +5,15 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin, require_volunteer
 from app.database import get_db
-from app.models import Edition, Event
-from app.schemas import EventCreate, EventOut, EventUpdate
+from app.models import Edition, Event, Registration
+from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate
 from app.utils import event_to_summary_dict, get_or_404, make_id
 
 router = APIRouter(prefix="/api/events", tags=["events"])
@@ -44,6 +44,36 @@ async def list_events(
         stmt = stmt.where(Event.active.is_(active))
     events = (await db.execute(stmt)).scalars().all()
     return [event_to_summary_dict(event, include_edition=True) for event in events]
+
+
+@router.get(
+    "/checkin-stats",
+    response_model=list[EventCheckInStats],
+    dependencies=[Depends(require_volunteer)],
+)
+async def get_checkin_stats(
+    db: AsyncSession = Depends(get_db),
+    edition_id: str | None = Query(default=None),
+) -> list[dict]:
+    """Per-event registration/check-in counts, for a live progress display at the entrance.
+
+    Registered but cancelled bookings are excluded from both counts, since they were never
+    going to show up. Kept separate from the public `/api/editions/active` payload (and from
+    `EventOut`) since check-in progress is volunteer/admin-only information.
+    """
+    stmt = (
+        select(
+            Registration.event_id,
+            func.count(Registration.id).label("total"),
+            func.count(Registration.id).filter(Registration.checked_in.is_(True)).label("checked_in"),
+        )
+        .where(Registration.status != "cancelled")
+        .group_by(Registration.event_id)
+    )
+    if edition_id is not None:
+        stmt = stmt.join(Event, Event.id == Registration.event_id).where(Event.edition_id == edition_id)
+    rows = (await db.execute(stmt)).all()
+    return [{"event_id": row.event_id, "total": row.total, "checked_in": row.checked_in} for row in rows]
 
 
 @router.get("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])

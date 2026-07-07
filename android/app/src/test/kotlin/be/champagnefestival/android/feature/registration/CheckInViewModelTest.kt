@@ -1,14 +1,22 @@
 package be.champagnefestival.android.feature.registration
 
 import app.cash.turbine.test
+import be.champagnefestival.android.core.network.ConnectivityObserver
+import be.champagnefestival.android.core.storage.PendingCheckInStore
 import be.champagnefestival.android.data.model.CheckInGuestOut
 import be.champagnefestival.android.data.model.CheckInOut
+import be.champagnefestival.android.data.model.PendingCheckIn
+import be.champagnefestival.android.data.repository.ApiErrorReason
+import be.champagnefestival.android.data.repository.ApiException
 import be.champagnefestival.android.data.repository.CheckInRepository
 import be.champagnefestival.android.data.repository.UnauthorizedException
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -22,12 +30,18 @@ import org.junit.Test
 class CheckInViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = mockk<CheckInRepository>()
+    private val isOnlineFlow = MutableStateFlow(true)
+    private val connectivityObserver =
+        mockk<ConnectivityObserver> {
+            every { isOnline } returns isOnlineFlow
+        }
+    private val pendingCheckInStore = mockk<PendingCheckInStore>(relaxed = true)
     private lateinit var viewModel: CheckInViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        viewModel = CheckInViewModel(repository)
+        viewModel = CheckInViewModel(repository, connectivityObserver, pendingCheckInStore)
     }
 
     @After
@@ -64,7 +78,7 @@ class CheckInViewModelTest {
             awaitItem()
             viewModel.loadRegistration("reg-1", "token")
             dispatcher.scheduler.advanceUntilIdle()
-            assertEquals(CheckInUiState.Error("Network down"), awaitItem())
+            assertEquals(CheckInUiState.Error(ApiErrorReason.UNKNOWN), awaitItem())
         }
     }
 
@@ -106,6 +120,34 @@ class CheckInViewModelTest {
             dispatcher.scheduler.advanceUntilIdle()
             assertEquals(CheckInUiState.CheckInSuccess(registration, alreadyCheckedIn = true), awaitItem())
         }
+    }
+
+    @Test
+    fun `submit check-in queues locally when offline`() = runTest {
+        isOnlineFlow.value = false
+
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.submitCheckIn("reg-1", "token")
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(CheckInUiState.Queued, awaitItem())
+        }
+        coVerify { pendingCheckInStore.enqueue(match<PendingCheckIn> { it.id == "reg-1" && it.token == "token" }) }
+        coVerify(exactly = 0) { repository.submitCheckIn(any(), any()) }
+    }
+
+    @Test
+    fun `submit check-in queues locally when the network is unreachable mid-request`() = runTest {
+        coEvery { repository.submitCheckIn("reg-1", "token") } returns
+            Result.failure(ApiException("offline", ApiErrorReason.NETWORK_UNAVAILABLE))
+
+        viewModel.uiState.test {
+            awaitItem()
+            viewModel.submitCheckIn("reg-1", "token")
+            dispatcher.scheduler.advanceUntilIdle()
+            assertEquals(CheckInUiState.Queued, awaitItem())
+        }
+        coVerify { pendingCheckInStore.enqueue(match<PendingCheckIn> { it.id == "reg-1" && it.token == "token" }) }
     }
 
     private fun sampleRegistration(checkedIn: Boolean = false) = CheckInGuestOut(

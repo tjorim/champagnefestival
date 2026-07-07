@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import be.champagnefestival.android.core.auth.AuthManager
+import be.champagnefestival.android.data.repository.toApiErrorReason
 import be.champagnefestival.android.ui.UiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,9 +23,7 @@ class LoginViewModel(private val authManager: AuthManager) : ViewModel() {
             _uiState.value =
                 authManager.startLogin(activity).fold(
                     onSuccess = { UiState.Success(Unit) },
-                    onFailure = { error ->
-                        UiState.Error(error.message ?: "Unable to start sign-in. Check your connection and try again.")
-                    }
+                    onFailure = { error -> UiState.Error(error.toApiErrorReason()) }
                 )
         }
     }

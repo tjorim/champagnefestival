@@ -2,5 +2,104 @@
     <string name="app_name">Champagnefestival</string>
     <string name="search_guest_label">Search guest, email, table, event, or order</string>
     <string name="search_guest_idle_message">Search by guest, email, table, event, or order detail.</string>
+
+    <string name="back_content_description">Back</string>
+    <string name="retry_button">Retry</string>
+    <string name="connectivity_offline_banner">No internet connection</string>
+    <string name="pending_sync_banner_format">Pending sync: %1$d</string>
+
+    <string name="error_network_unavailable">Unable to reach the server. Check your connection and try again.</string>
+    <string name="error_certificate_untrusted">The server\'s certificate could not be verified. Please update the app.</string>
+    <string name="error_unauthorized">The check-in token is no longer valid.</string>
+    <string name="error_server">The server rejected the request. Please try again.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_oidc_config_format">OIDC config: %1$s</string>
+    <string name="settings_app_version_format">App version: %1$s</string>
+    <string name="settings_biometric_lock_label">Require biometric unlock</string>
+    <string name="settings_logout_button">Logout</string>
+    <string name="settings_api_base_url_label">API base URL</string>
+    <string name="settings_api_base_url_error">URL must start with http:// or https://</string>
+    <string name="settings_api_base_url_default_format">Default API base URL: %1$s</string>
+    <string name="settings_api_base_url_save_button">Save base URL</string>
+    <string name="settings_api_base_url_reset_button">Reset base URL</string>
     <string name="settings_privacy_and_deletion_options">Privacy and deletion options</string>
+
+    <string name="lookup_title">Guest lookup</string>
+    <string name="lookup_event_filter_label">Optional event ID filter</string>
+    <string name="lookup_no_results">No registrations matched your search.</string>
+    <string name="lookup_summary_title">Event-day summary</string>
+    <string name="lookup_summary_guests_format">Guests in results: %1$d</string>
+    <string name="lookup_summary_checked_in_format">Checked in: %1$d</string>
+    <string name="lookup_summary_undelivered_format">Undelivered items: %1$d</string>
+    <string name="lookup_guest_count_format">Guests: %1$d</string>
+
+    <string name="registration_table_format">Table: %1$s</string>
+    <string name="registration_table_unassigned">Unassigned</string>
+    <string name="registration_checked_in_label">Checked in</string>
+    <string name="registration_pending_checkin_label">Pending check-in</string>
+    <string name="registration_all_delivered_label">All items delivered</string>
+    <string name="registration_pending_delivery_format">Pending delivery items: %1$d</string>
+
+    <string name="checkin_result_title">Check-in result</string>
+    <string name="checkin_already_in_title">Already checked in</string>
+    <string name="checkin_complete_title">Check-in complete</string>
+    <string name="checkin_just_now_fallback">Checked in just now</string>
+    <string name="checkin_continue_button">Continue</string>
+    <string name="checkin_queued_title">Saved for later</string>
+    <string name="checkin_queued_subtitle">No connection right now — this check-in will sync automatically once you\'re back online.</string>
+
+    <string name="registration_detail_title">Registration details</string>
+    <string name="registration_party_size_format">Party size: %1$d</string>
+    <string name="registration_status_format">Status: %1$s</string>
+    <string name="registration_not_checked_in_label">Not checked in</string>
+    <string name="registration_strap_issued_label">Strap issued</string>
+    <string name="registration_strap_not_issued_label">Strap not issued</string>
+    <string name="registration_notes_format">Notes: %1$s</string>
+    <string name="registration_check_in_button">Check In</string>
+    <string name="registration_no_preorders">No pre-orders for this guest.</string>
+    <string name="registration_preorders_title">Pre-orders</string>
+    <string name="registration_preorder_quantity_format">Quantity: %1$d</string>
+    <string name="registration_preorder_category_format">Category: %1$s</string>
+    <string name="registration_preorder_delivered_label">Delivery: Delivered</string>
+    <string name="registration_preorder_not_delivered_label">Delivery: Not delivered</string>
+
+    <string name="lock_title">Champagnefestival is locked</string>
+    <string name="lock_continue_button">Continue</string>
+    <string name="lock_retry_button">Try again</string>
+    <string name="lock_no_credential_message">No biometric or device credential is set up on this device. Set one up in your device security settings, or continue without app lock.</string>
+    <string name="lock_authentication_failed_message">Authentication not recognized. Try again.</string>
+    <string name="lock_crypto_unavailable_message">Could not verify device security. Please try again.</string>
+    <string name="lock_prompt_title">Unlock Champagnefestival</string>
+    <string name="lock_prompt_subtitle">Verify it\'s you to continue</string>
+
+    <string name="edition_title">Active edition</string>
+    <string name="nav_scan_label">Scan</string>
+    <string name="nav_lookup_label">Lookup</string>
+    <string name="nav_settings_label">Settings</string>
+    <string name="edition_active_label">Currently active</string>
+    <string name="edition_inactive_label">Inactive</string>
+    <string name="edition_no_events">No events are available for the active edition yet.</string>
+    <string name="edition_checkin_progress_format">%1$d / %2$d checked in</string>
+
+    <string name="scan_title">Scan wristband QR</string>
+    <string name="scan_camera_permission_rationale">Camera access is required to scan volunteer check-in codes.</string>
+    <string name="scan_grant_camera_button">Grant camera access</string>
+    <string name="scan_frame_instruction">Place the QR code inside the frame</string>
+    <string name="scan_torch_turn_on">Turn on flashlight</string>
+    <string name="scan_torch_turn_off">Turn off flashlight</string>
+    <string name="scan_invalid_qr_message">Invalid QR code. Expected registrationId:token.</string>
+    <string name="scan_camera_start_error">Unable to start the camera scanner.</string>
+    <string name="scan_manual_entry_button">Enter code manually</string>
+    <string name="scan_manual_entry_title">Manual check-in entry</string>
+    <string name="scan_manual_entry_description">Use this if the wristband QR code is damaged or won\'t scan.</string>
+    <string name="scan_manual_entry_id_label">Registration ID</string>
+    <string name="scan_manual_entry_token_label">Check-in token</string>
+    <string name="scan_manual_entry_submit">Continue</string>
+    <string name="scan_manual_entry_cancel">Cancel</string>
+
+    <string name="login_title">Volunteer Check-In</string>
+    <string name="login_description">Sign in with OIDC to access volunteer tools for active editions, QR check-in, and guest lookup.</string>
+    <string name="login_button">Sign in with OIDC</string>
 </resources>

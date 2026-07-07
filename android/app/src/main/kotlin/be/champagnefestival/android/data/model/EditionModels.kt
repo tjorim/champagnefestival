@@ -35,3 +35,6 @@ data class EditionOut(
     val active: Boolean,
     val events: List<EventSummary> = emptyList()
 )
+
+@Serializable
+data class EventCheckInStats(val event_id: String, val total: Int, val checked_in: Int)

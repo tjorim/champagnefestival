@@ -25,6 +25,18 @@ sealed class LockUiState {
     data class Failed(val message: String) : LockUiState()
 }
 
+/**
+ * Localized copy for the biometric lock screen, supplied by the caller since [ViewModel]s
+ * have no Compose context to resolve string resources themselves.
+ */
+data class BiometricPromptStrings(
+    val noCredentialEnrolledMessage: String,
+    val authenticationFailedMessage: String,
+    val cryptoUnavailableMessage: String,
+    val promptTitle: String,
+    val promptSubtitle: String
+)
+
 class BiometricGateViewModel(
     private val controller: BiometricLockController,
     private val cryptoProvider: BiometricCryptoProvider = BiometricCryptoProvider()
@@ -32,15 +44,10 @@ class BiometricGateViewModel(
     private val _uiState = MutableStateFlow<LockUiState>(LockUiState.Checking)
     val uiState: StateFlow<LockUiState> = _uiState.asStateFlow()
 
-    fun authenticate(activity: FragmentActivity) {
+    fun authenticate(activity: FragmentActivity, strings: BiometricPromptStrings) {
         when (BiometricManager.from(activity).canAuthenticate(ALLOWED_AUTHENTICATORS)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> promptForAuthentication(activity)
-            else ->
-                _uiState.value =
-                    LockUiState.NoCredentialEnrolled(
-                        "No biometric or device credential is set up on this device. " +
-                            "Set one up in your device security settings, or continue without app lock."
-                    )
+            BiometricManager.BIOMETRIC_SUCCESS -> promptForAuthentication(activity, strings)
+            else -> _uiState.value = LockUiState.NoCredentialEnrolled(strings.noCredentialEnrolledMessage)
         }
     }
 
@@ -49,7 +56,7 @@ class BiometricGateViewModel(
         controller.markUnlocked()
     }
 
-    private fun promptForAuthentication(activity: FragmentActivity) {
+    private fun promptForAuthentication(activity: FragmentActivity, strings: BiometricPromptStrings) {
         _uiState.value = LockUiState.Prompting
 
         val callback =
@@ -63,7 +70,7 @@ class BiometricGateViewModel(
                 }
 
                 override fun onAuthenticationFailed() {
-                    _uiState.value = LockUiState.Failed("Authentication not recognized. Try again.")
+                    _uiState.value = LockUiState.Failed(strings.authenticationFailedMessage)
                 }
             }
 
@@ -71,8 +78,8 @@ class BiometricGateViewModel(
         val promptInfo =
             BiometricPrompt.PromptInfo
                 .Builder()
-                .setTitle("Unlock Champagnefestival")
-                .setSubtitle("Verify it's you to continue")
+                .setTitle(strings.promptTitle)
+                .setSubtitle(strings.promptSubtitle)
                 .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
                 .build()
 
@@ -81,7 +88,7 @@ class BiometricGateViewModel(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val cryptoObject = cryptoProvider.createCryptoObject()
             if (cryptoObject == null) {
-                _uiState.value = LockUiState.Failed("Could not verify device security. Please try again.")
+                _uiState.value = LockUiState.Failed(strings.cryptoUnavailableMessage)
                 return
             }
             prompt.authenticate(promptInfo, cryptoObject)

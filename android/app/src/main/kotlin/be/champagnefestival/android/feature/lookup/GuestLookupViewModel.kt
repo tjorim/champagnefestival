@@ -3,8 +3,9 @@ package be.champagnefestival.android.feature.lookup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import be.champagnefestival.android.data.model.CheckInGuestOut
+import be.champagnefestival.android.data.repository.ApiErrorReason
 import be.champagnefestival.android.data.repository.CheckInRepository
-import be.champagnefestival.android.data.repository.UnauthorizedException
+import be.champagnefestival.android.data.repository.toApiErrorReason
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,7 @@ sealed class GuestLookupUiState {
 
     data class Success(val registrations: List<CheckInGuestOut>) : GuestLookupUiState()
 
-    data class Error(val message: String) : GuestLookupUiState()
+    data class Error(val reason: ApiErrorReason) : GuestLookupUiState()
 }
 
 class GuestLookupViewModel(private val repository: CheckInRepository, private val authTokenProvider: () -> String?) :
@@ -41,22 +42,14 @@ class GuestLookupViewModel(private val repository: CheckInRepository, private va
                 _uiState.value = GuestLookupUiState.Loading
                 val authToken = authTokenProvider()
                 if (authToken.isNullOrBlank()) {
-                    _uiState.value = GuestLookupUiState.Error("Sign in again to search registrations.")
+                    _uiState.value = GuestLookupUiState.Error(ApiErrorReason.UNAUTHORIZED)
                     return@launch
                 }
 
                 repository
                     .searchRegistrations(query = query, eventId = eventId, authToken = authToken)
                     .onSuccess { _uiState.value = GuestLookupUiState.Success(it) }
-                    .onFailure {
-                        _uiState.value =
-                            GuestLookupUiState.Error(
-                                when (it) {
-                                    is UnauthorizedException -> it.message ?: "Unauthorized"
-                                    else -> it.message ?: "Unable to search registrations."
-                                }
-                            )
-                    }
+                    .onFailure { _uiState.value = GuestLookupUiState.Error(it.toApiErrorReason()) }
             }
     }
 }

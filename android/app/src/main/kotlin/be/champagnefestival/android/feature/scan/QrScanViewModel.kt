@@ -15,7 +15,7 @@ class QrScanViewModel : ViewModel() {
         _errorMessage.value = message
     }
 
-    fun parseQrPayload(rawValue: String): Pair<String, String>? {
+    fun parseQrPayload(rawValue: String, invalidPayloadMessage: String): Pair<String, String>? {
         val parts = rawValue.split(":", limit = 2)
         return if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
             _errorMessage.value = null
@@ -24,7 +24,7 @@ class QrScanViewModel : ViewModel() {
         } else {
             if (lastInvalidPayload != rawValue) {
                 lastInvalidPayload = rawValue
-                _errorMessage.value = "Invalid QR code. Expected registrationId:token."
+                _errorMessage.value = invalidPayloadMessage
             }
             null
         }

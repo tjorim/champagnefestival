@@ -26,7 +26,7 @@ from app.email import send_guest_access_email
 from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
-from app.ratelimit import check_rate_limit
+from app.ratelimit import check_rate_limit, get_client_ip
 from app.routers.people import parse_phone
 from app.schemas import (
     RegistrationAccessLookupRequest,
@@ -65,7 +65,7 @@ async def create_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -290,7 +290,7 @@ async def request_my_registrations_access(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> RegistrationLookupRequestAccepted:
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

@@ -38,8 +38,11 @@ class DefaultCheckInRepository(private val apiService: ChampagneApiService) : Ch
         )
     }
 
-    private fun mapAuthAwareException(exception: HttpException): Exception =
-        if (exception.code() == 401) UnauthorizedException() else ApiException(exception.message(), exception)
+    private fun mapAuthAwareException(exception: HttpException): Exception = if (exception.code() == 401) {
+        UnauthorizedException()
+    } else {
+        ApiException(exception.message(), ApiErrorReason.SERVER_ERROR, exception)
+    }
 }
 
 private fun bearer(token: String): String = "Bearer $token"
