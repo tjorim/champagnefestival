@@ -87,6 +87,13 @@
     <string name="scan_torch_turn_off">Zaklamp uitschakelen</string>
     <string name="scan_invalid_qr_message">Ongeldige QR-code. Verwacht formaat: registratieId:token.</string>
     <string name="scan_camera_start_error">Kan de camerascanner niet starten.</string>
+    <string name="scan_manual_entry_button">Code handmatig invoeren</string>
+    <string name="scan_manual_entry_title">Handmatige invoer voor inchecken</string>
+    <string name="scan_manual_entry_description">Gebruik dit als de QR-code van de polsband beschadigd is of niet scant.</string>
+    <string name="scan_manual_entry_id_label">Registratie-ID</string>
+    <string name="scan_manual_entry_token_label">Check-in token</string>
+    <string name="scan_manual_entry_submit">Doorgaan</string>
+    <string name="scan_manual_entry_cancel">Annuleren</string>
 
     <string name="login_title">Vrijwilliger check-in</string>
     <string name="login_description">Meld je aan met OIDC voor toegang tot vrijwilligerstools voor actieve edities, QR-check-in en gastenzoekfunctie.</string>

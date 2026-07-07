@@ -87,6 +87,13 @@
     <string name="scan_torch_turn_off">Éteindre la lampe torche</string>
     <string name="scan_invalid_qr_message">Code QR invalide. Format attendu : identifiantDeReservation:jeton.</string>
     <string name="scan_camera_start_error">Impossible de démarrer le scanner de la caméra.</string>
+    <string name="scan_manual_entry_button">Saisir le code manuellement</string>
+    <string name="scan_manual_entry_title">Saisie manuelle pour l\'enregistrement</string>
+    <string name="scan_manual_entry_description">Utilisez ceci si le QR code du bracelet est endommagé ou ne se scanne pas.</string>
+    <string name="scan_manual_entry_id_label">ID de réservation</string>
+    <string name="scan_manual_entry_token_label">Jeton d\'enregistrement</string>
+    <string name="scan_manual_entry_submit">Continuer</string>
+    <string name="scan_manual_entry_cancel">Annuler</string>
 
     <string name="login_title">Enregistrement bénévole</string>
     <string name="login_description">Connectez-vous avec OIDC pour accéder aux outils bénévoles des éditions actives, à l\'enregistrement QR et à la recherche d\'invités.</string>
