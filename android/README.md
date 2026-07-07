@@ -144,9 +144,17 @@ The Android app consumes these backend endpoints:
 ## Screens
 
 - **Login** — OIDC sign-in flow
-- **Active Edition** — current/upcoming edition overview with event list
-- **QR Scan** — CameraX live scanner, parses `{registrationId}:{token}` QR payloads
+- **Active Edition** — current/upcoming edition overview with event list and live check-in progress
+- **QR Scan** — CameraX live scanner (torch toggle, tap-to-focus), parses `{registrationId}:{token}` QR payloads, manual entry fallback
 - **Guest Lookup** — debounced guest/table search with check-in + delivery summary
 - **Registration Detail** — guest info, table, pre-orders, delivery state, check-in action
-- **Check-in Confirmation** — success / already-checked-in result with guest name
+- **Check-in Confirmation** — success / already-checked-in / queued-for-sync result, auto-returns to the scanner
 - **Settings** — API URL override, OIDC info, app version, logout
+
+### Offline check-in queue
+
+Scanning a wristband while offline saves the check-in locally (`PendingCheckInStore`, DataStore-backed)
+instead of failing outright. `CheckInSyncManager` submits queued check-ins automatically once
+connectivity returns, relying on the backend's idempotent check-in endpoint (a repeat submission
+just returns `already_checked_in: true`, it never errors). A banner shows the pending count until
+everything has synced.

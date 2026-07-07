@@ -6,6 +6,7 @@
     <string name="back_content_description">Retour</string>
     <string name="retry_button">Réessayer</string>
     <string name="connectivity_offline_banner">Aucune connexion internet</string>
+    <string name="pending_sync_banner_format">En attente de synchronisation : %1$d</string>
 
     <string name="error_network_unavailable">Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.</string>
     <string name="error_certificate_untrusted">Le certificat du serveur n\'a pas pu être vérifié. Veuillez mettre à jour l\'application.</string>
@@ -46,6 +47,8 @@
     <string name="checkin_complete_title">Enregistrement réussi</string>
     <string name="checkin_just_now_fallback">Enregistré à l\'instant</string>
     <string name="checkin_continue_button">Continuer</string>
+    <string name="checkin_queued_title">Enregistré pour plus tard</string>
+    <string name="checkin_queued_subtitle">Pas de connexion pour le moment — cet enregistrement sera synchronisé automatiquement dès que vous serez de nouveau en ligne.</string>
 
     <string name="registration_detail_title">Détails de la réservation</string>
     <string name="registration_party_size_format">Nombre de convives : %1$d</string>

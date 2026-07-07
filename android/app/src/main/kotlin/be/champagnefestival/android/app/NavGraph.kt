@@ -136,7 +136,12 @@ fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
             val id = Uri.decode(backStackEntry.arguments?.getString("id").orEmpty())
             val token = Uri.decode(backStackEntry.arguments?.getString("token").orEmpty())
             val viewModel: CheckInViewModel =
-                viewModel(factory = simpleFactory { CheckInViewModel(app.checkInRepository) })
+                viewModel(
+                    factory =
+                    simpleFactory {
+                        CheckInViewModel(app.checkInRepository, app.connectivityObserver, app.pendingCheckInStore)
+                    }
+                )
             CheckInConfirmationScreen(
                 id = id,
                 token = token,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,7 +57,7 @@ fun CheckInConfirmationScreen(
     }
 
     LaunchedEffect(uiState) {
-        if (uiState is CheckInUiState.CheckInSuccess) {
+        if (uiState is CheckInUiState.CheckInSuccess || uiState is CheckInUiState.Queued) {
             delay(AUTO_RETURN_DELAY_MILLIS)
             onDone()
         }
@@ -88,6 +89,37 @@ fun CheckInConfirmationScreen(
                     viewModel.submitCheckIn(id, token)
                 }, modifier = Modifier.padding(padding))
             is CheckInUiState.RegistrationLoaded -> LoadingContent(modifier = Modifier.padding(padding))
+            CheckInUiState.Queued -> {
+                Column(
+                    modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(padding)
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(96.dp),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = stringResource(R.string.checkin_queued_title),
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.checkin_queued_subtitle),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Button(onClick = onDone, modifier = Modifier.padding(top = 24.dp)) {
+                        Text(stringResource(R.string.checkin_continue_button))
+                    }
+                }
+            }
             is CheckInUiState.CheckInSuccess -> {
                 val registration = state.registration
                 val containerColor = if (state.alreadyCheckedIn) {

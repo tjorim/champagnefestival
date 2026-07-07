@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import be.champagnefestival.android.app.NavGraph
 import be.champagnefestival.android.feature.lock.BiometricGate
 import be.champagnefestival.android.ui.components.ConnectivityBanner
+import be.champagnefestival.android.ui.components.PendingSyncBanner
 import be.champagnefestival.android.ui.theme.ChampagneFestivalTheme
 import kotlinx.coroutines.launch
 
@@ -28,9 +29,13 @@ class MainActivity : FragmentActivity() {
             ChampagneFestivalTheme {
                 BiometricGate(app = app) {
                     val isOnline by app.connectivityObserver.isOnline.collectAsStateWithLifecycle()
+                    val pendingCheckIns by app.pendingCheckInStore.pending.collectAsStateWithLifecycle()
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (!isOnline) {
                             ConnectivityBanner()
+                        }
+                        if (pendingCheckIns.isNotEmpty()) {
+                            PendingSyncBanner(count = pendingCheckIns.size)
                         }
                         NavGraph(app = app, modifier = Modifier.weight(1f))
                     }

@@ -6,6 +6,7 @@
     <string name="back_content_description">Terug</string>
     <string name="retry_button">Opnieuw proberen</string>
     <string name="connectivity_offline_banner">Geen internetverbinding</string>
+    <string name="pending_sync_banner_format">Wachtend op synchronisatie: %1$d</string>
 
     <string name="error_network_unavailable">Kan de server niet bereiken. Controleer je verbinding en probeer het opnieuw.</string>
     <string name="error_certificate_untrusted">Het certificaat van de server kon niet worden geverifieerd. Werk de app bij.</string>
@@ -46,6 +47,8 @@
     <string name="checkin_complete_title">Succesvol ingecheckt</string>
     <string name="checkin_just_now_fallback">Zojuist ingecheckt</string>
     <string name="checkin_continue_button">Doorgaan</string>
+    <string name="checkin_queued_title">Opgeslagen voor later</string>
+    <string name="checkin_queued_subtitle">Geen verbinding op dit moment — deze check-in wordt automatisch gesynchroniseerd zodra je weer online bent.</string>
 
     <string name="registration_detail_title">Registratiedetails</string>
     <string name="registration_party_size_format">Aantal gasten: %1$d</string>

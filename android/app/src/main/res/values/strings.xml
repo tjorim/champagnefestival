@@ -6,6 +6,7 @@
     <string name="back_content_description">Back</string>
     <string name="retry_button">Retry</string>
     <string name="connectivity_offline_banner">No internet connection</string>
+    <string name="pending_sync_banner_format">Pending sync: %1$d</string>
 
     <string name="error_network_unavailable">Unable to reach the server. Check your connection and try again.</string>
     <string name="error_certificate_untrusted">The server\'s certificate could not be verified. Please update the app.</string>
@@ -46,6 +47,8 @@
     <string name="checkin_complete_title">Check-in complete</string>
     <string name="checkin_just_now_fallback">Checked in just now</string>
     <string name="checkin_continue_button">Continue</string>
+    <string name="checkin_queued_title">Saved for later</string>
+    <string name="checkin_queued_subtitle">No connection right now — this check-in will sync automatically once you\'re back online.</string>
 
     <string name="registration_detail_title">Registration details</string>
     <string name="registration_party_size_format">Party size: %1$d</string>
