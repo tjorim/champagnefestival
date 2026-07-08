@@ -62,6 +62,19 @@ export interface ActiveEditionState {
   isLoaded: boolean;
   /** True only when a real edition was fetched — false while loading or when there's none/an error. */
   hasEdition: boolean;
+  /** True when the fetch itself failed (network error, 5xx, ...) — false for the legitimate "no active edition" 404. */
+  hasLoadError: boolean;
+}
+
+/** Thrown when the API responds with a non-ok status; carries the status so callers can tell a real failure apart from a 404 "no active edition" response. */
+export class ActiveEditionFetchError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ActiveEditionFetchError";
+    this.status = status;
+  }
 }
 
 export const activeEditionQueryKey = queryKeys.activeEdition;
@@ -167,7 +180,7 @@ function createFallbackEdition(): ActiveEdition {
 export async function fetchActiveEdition(): Promise<ActiveEdition> {
   const res = await fetch("/api/editions/active");
   if (!res.ok) {
-    throw new Error(`Failed to load active edition: ${res.status}`);
+    throw new ActiveEditionFetchError(`Failed to load active edition: ${res.status}`, res.status);
   }
 
   const api = (await res.json()) as ApiEdition;
@@ -185,11 +198,13 @@ export function activeEditionQueryOptions() {
 
 export function useActiveEdition(): ActiveEditionState {
   const query = useQuery(activeEditionQueryOptions());
+  const isNotFound = query.error instanceof ActiveEditionFetchError && query.error.status === 404;
 
   return {
     edition: query.data ?? createFallbackEdition(),
     isLoaded: query.status !== "pending",
     hasEdition: query.isSuccess,
+    hasLoadError: query.isError && !isNotFound,
   };
 }
 

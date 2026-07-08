@@ -8,7 +8,8 @@
       name="description"
       content="Champagnefestival - Celebrating the finest champagne producers and local community."
     />
-    <meta name="theme-color" content="#6e8efb" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#100f0d" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbf4e6" />
     <meta name="robots" content="index, follow" />
     <meta name="author" content="Champagnefestival Organization" />
     <meta name="keywords" content="champagne, festival, belgium, wine, tasting, event, community" />
@@ -62,6 +63,16 @@
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍾</text></svg>"
     />
     <link rel="canonical" href="%VITE_PUBLIC_URL%" />
+    <script>
+      (() => {
+        const query = window.matchMedia("(prefers-color-scheme: light)");
+        const applyTheme = () => {
+          document.documentElement.dataset.bsTheme = query.matches ? "light" : "dark";
+        };
+        applyTheme();
+        query.addEventListener?.("change", applyTheme);
+      })();
+    </script>
   </head>
 
   <body>

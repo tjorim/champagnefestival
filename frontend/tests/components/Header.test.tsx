@@ -8,6 +8,7 @@ vi.mock("@/paraglide/messages", () => ({
     language_select: () => "Select language",
     header_logo_alt: () => "Champagnefestival logo",
     admin_title: () => "Administration",
+    admin_toggle_navigation: () => "Toggle navigation",
     nav_schedule: () => "Schedule",
     nav_community_events: () => "Community events",
     nav_faq: () => "FAQ",
@@ -65,8 +66,11 @@ describe("Header component", () => {
 
   it("links to the administration page", () => {
     render(<Header />);
-    const adminLink = screen.getByRole("link", { name: "Administration" });
-    expect(adminLink).toHaveAttribute("href", "/admin");
-    expect(adminLink.querySelector(".bi-shield-lock")).toBeInTheDocument();
+    const adminLinks = screen.getAllByRole("link", { name: "Administration" });
+    expect(adminLinks.length).toBeGreaterThan(0);
+    adminLinks.forEach((adminLink) => {
+      expect(adminLink).toHaveAttribute("href", "/admin");
+      expect(adminLink.querySelector(".bi-shield-lock")).toBeInTheDocument();
+    });
   });
 });

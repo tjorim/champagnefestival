@@ -84,7 +84,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
   return (
     <div className="schedule-container">
       <Tab.Container activeKey={activeDay} onSelect={(k) => k && setActiveDay(Number(k))}>
-        <Nav variant="tabs" className="mb-4 justify-content-center">
+        <Nav variant="tabs" className="schedule-tabs mb-4 justify-content-center">
           {days.map((day) => (
             <Nav.Item key={day.id}>
               <Nav.Link eventKey={day.id} className="px-4">
@@ -112,10 +112,10 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
               <div className="events-list">
                 {sortedEvents.map((event) => {
                   return (
-                    <Card key={event.id} className="mb-3 shadow-sm border-0">
+                    <Card key={event.id} className="event-card mb-3 border-0">
                       <Card.Body>
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div className="event-time text-muted me-3 text-nowrap">
+                        <div className="d-flex justify-content-between align-items-start gap-3">
+                          <div className="event-time me-3 text-nowrap">
                             {event.endTime ? (
                               <>
                                 <div title={m.schedule_start_time()}>{event.startTime}</div>
@@ -150,9 +150,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-5">
-                <p>{m.schedule_no_events()}</p>
-              </div>
+              <p className="text-center mb-0">{m.schedule_no_events()}</p>
             )}
           </Tab.Pane>
         </Tab.Content>

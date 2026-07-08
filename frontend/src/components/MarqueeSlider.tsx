@@ -85,7 +85,7 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({ items = [] }) => {
         );
 
   return (
-    <div className="mx-auto my-4">
+    <div className="marquee-slider mx-auto my-4">
       <Swiper
         modules={[Autoplay, Navigation, Pagination]}
         spaceBetween={16}
@@ -124,13 +124,13 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({ items = [] }) => {
       >
         {carouselItems.map((item, index) => (
           <SwiperSlide key={`${item.id}-${index}`}>
-            <div className="h-100">
-              <div className="overflow-hidden shadow-sm mb-2">
-                <div className="position-relative w-100" style={{ aspectRatio: "4/3" }}>
+            <div className="marquee-card h-100">
+              <div className="marquee-logo-frame overflow-hidden shadow-sm mb-2">
+                <div className="position-relative w-100 h-100">
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-100 h-100 object-fit-contain"
+                    className="marquee-logo-image w-100 h-100 object-fit-contain"
                     onError={(e) => {
                       // Quietly set a fallback image without console errors
                       e.currentTarget.src = "/images/logo.svg";
@@ -140,7 +140,7 @@ const MarqueeSlider: React.FC<MarqueeSliderProps> = ({ items = [] }) => {
                   />
                 </div>
               </div>
-              <h5 className="text-center small">{item.name}</h5>
+              <h5 className="marquee-logo-title text-center small">{item.name}</h5>
             </div>
           </SwiperSlide>
         ))}

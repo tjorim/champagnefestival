@@ -109,7 +109,7 @@ export default function CommunityEvents() {
               )}
 
               {items.map((item) => (
-                <Card key={item.id} className="mb-3 shadow-sm border-0">
+                <Card key={item.id} className="event-card mb-3 border-0">
                   <Card.Body>
                     <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
                       <div>

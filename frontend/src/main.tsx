@@ -1,4 +1,4 @@
-import React, { lazy, useMemo, useState } from "react";
+import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Link, RouterProvider } from "@tanstack/react-router";
@@ -7,6 +7,7 @@ import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "leaflet/dist/leaflet.css";
+import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 
 import { oidcConfig } from "./config/oidc";
@@ -69,13 +70,13 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
 /** Minimal top-bar shown on standalone admin / check-in pages */
 function StandaloneNavBar({ iconClass, title }: { iconClass: string; title: string }) {
   return (
-    <nav className="navbar fixed-top bg-dark border-bottom border-secondary px-3 py-2">
-      <div className="container-fluid d-flex justify-content-between align-items-center">
-        <span className="navbar-brand text-warning fw-bold mb-0">
+    <nav className="standalone-navbar navbar fixed-top px-3 py-2">
+      <div className="container-fluid d-flex justify-content-between align-items-center gap-2">
+        <span className="standalone-navbar-brand navbar-brand fw-bold mb-0">
           <i className={`${iconClass} me-2`} aria-hidden="true" />
           {title}
         </span>
-        <div className="d-flex gap-2 align-items-center">
+        <div className="standalone-navbar-actions d-flex gap-2 align-items-center">
           <LanguageSwitcher />
           <Link to="/" className="btn btn-sm btn-outline-secondary">
             <i className="bi bi-arrow-left me-1" aria-hidden="true" />
@@ -114,13 +115,13 @@ function SuspendedMarqueeSlider({
 /** Route component for /admin */
 function AdminPage() {
   return (
-    <div className="App">
+    <div className="App standalone-app">
       <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
       <StandaloneNavBar iconClass="bi bi-shield-lock" title={m.admin_title()} />
-      <main id="main-content">
+      <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.admin_error_load_dashboard()}>
           <AdminDashboard visible={true} />
         </AppSuspense>
@@ -132,13 +133,13 @@ function AdminPage() {
 /** Route component for /check-in */
 function CheckInRoute() {
   return (
-    <div className="App">
+    <div className="App standalone-app">
       <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
       <StandaloneNavBar iconClass="bi bi-qr-code-scan" title={m.checkin_title()} />
-      <main id="main-content">
+      <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.admin_error_load_checkin()}>
           <CheckInPage />
         </AppSuspense>
@@ -150,12 +151,12 @@ function CheckInRoute() {
 /** Route component for /my-registrations */
 function MyRegistrationsRoute() {
   return (
-    <div className="App">
+    <div className="App standalone-app">
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
       <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_registrations_title()} />
-      <main id="main-content">
+      <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.my_registrations_error()}>
           <MyRegistrationsPage />
         </AppSuspense>
@@ -167,12 +168,12 @@ function MyRegistrationsRoute() {
 /** Route component for /privacy */
 function PrivacyPolicyRoute() {
   return (
-    <div className="App">
+    <div className="App standalone-app">
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
       <StandaloneNavBar iconClass="bi bi-shield-check" title={m.privacy_title()} />
-      <main id="main-content">
+      <main id="main-content" className="standalone-main standalone-document-main">
         <AppSuspense errorFallbackText={m.error_loading_privacy()}>
           <PrivacyPolicyPage />
         </AppSuspense>
@@ -186,7 +187,7 @@ function App() {
   useLanguage();
 
   // Fetch live edition data; keep an empty fallback shape on API errors.
-  const { edition, hasEdition } = useActiveEdition();
+  const { edition, hasEdition, hasLoadError } = useActiveEdition();
   const { producers, sponsors } = edition;
 
   // Derive festival start/end dates from the active edition
@@ -196,6 +197,72 @@ function App() {
   );
 
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [showBubbles, setShowBubbles] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("champagnefestival:bubbles") === "true";
+  });
+  const bubbleTapCountRef = useRef(0);
+  const bubbleTapResetRef = useRef<number | null>(null);
+  const bubbleKeyBufferRef = useRef("");
+
+  useEffect(() => {
+    window.localStorage.setItem("champagnefestival:bubbles", String(showBubbles));
+  }, [showBubbles]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key.length !== 1) return;
+
+      bubbleKeyBufferRef.current = `${bubbleKeyBufferRef.current}${event.key.toLowerCase()}`.slice(
+        -7,
+      );
+
+      if (bubbleKeyBufferRef.current.endsWith("bubbles")) {
+        setShowBubbles((enabled) => !enabled);
+        bubbleKeyBufferRef.current = "";
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (bubbleTapResetRef.current) {
+        window.clearTimeout(bubbleTapResetRef.current);
+      }
+    };
+  }, []);
+
+  const handleBrandClick = useCallback(() => {
+    bubbleTapCountRef.current += 1;
+
+    if (bubbleTapResetRef.current) {
+      window.clearTimeout(bubbleTapResetRef.current);
+    }
+
+    bubbleTapResetRef.current = window.setTimeout(() => {
+      bubbleTapCountRef.current = 0;
+      bubbleTapResetRef.current = null;
+    }, 1400);
+
+    if (bubbleTapCountRef.current >= 5) {
+      setShowBubbles((enabled) => !enabled);
+      bubbleTapCountRef.current = 0;
+    }
+  }, []);
 
   const registrableEvents = useMemo(() => {
     const now = new Date();
@@ -219,32 +286,33 @@ function App() {
         {m.accessibility_skip_to_content()}
       </a>
 
-      {/* Animated background */}
-      <SuspenseWithBoundary
-        fallback={
-          <div className="bubble-background-placeholder" aria-label={m.loading_background()} />
-        }
-        errorFallback={null}
-      >
-        <BubbleBackground />
-      </SuspenseWithBoundary>
+      {showBubbles && (
+        <SuspenseWithBoundary fallback={null} errorFallback={null}>
+          <BubbleBackground />
+        </SuspenseWithBoundary>
+      )}
 
       {/* Header & Navigation */}
-      <Header />
+      <Header onBrandClick={handleBrandClick} />
       <EventStructuredData />
 
       <main id="main-content">
         {/* Hero Section */}
         <section className="hero" id="welcome">
-          <h1 className="brand-title">{m.welcome_title()}</h1>
-          <p className="hero-subtitle">{m.welcome_subtitle()}</p>
-          <a
-            href="#next-festival"
-            className="btn bg-brand-gradient text-white rounded-pill border-0 py-2 px-4 fw-bold"
-          >
-            {m.welcome_learn_more()}
-            <i className="bi bi-arrow-down-circle ms-2"></i>
-          </a>
+          <div className="hero-content">
+            <span className="hero-kicker">{m.festival_name()}</span>
+            <h1 className="brand-title">{m.welcome_title()}</h1>
+            <p className="hero-subtitle">{m.welcome_subtitle()}</p>
+            <div className="hero-actions">
+              <a href="#next-festival" className="btn btn-champagne btn-lg">
+                {m.welcome_learn_more()}
+                <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+              </a>
+              <a href="#schedule" className="btn btn-outline-light btn-lg">
+                {m.schedule_title()}
+              </a>
+            </div>
+          </div>
         </section>
 
         {/* What we do */}
@@ -260,8 +328,17 @@ function App() {
             </div>
             {/* Features in full width to display side by side */}
             <div className="features">
-              {featureItems.map((feature) => (
+              {featureItems.map((feature, index) => (
                 <div key={feature.id} className="feature">
+                  <span className="feature-icon" aria-hidden="true">
+                    <i
+                      className={
+                        ["bi bi-cup-straw", "bi bi-calendar2-event", "bi bi-people"][
+                          index
+                        ] ?? "bi bi-stars"
+                      }
+                    />
+                  </span>
                   <h3>{feature.getTitle()}</h3>
                   <p>{feature.getDesc()}</p>
                 </div>
@@ -307,11 +384,15 @@ function App() {
             />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <div className="schedule-container">
+                {hasLoadError ? (
+                  <Alert variant="danger" className="mb-0">
+                    {m.error_schedule()}
+                  </Alert>
+                ) : (
                   <AppSuspense errorFallbackText={m.error_schedule()}>
                     <Schedule events={edition.events} />
                   </AppSuspense>
-                </div>
+                )}
               </div>
             </div>
           </div>
