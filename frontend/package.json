@@ -2,7 +2,7 @@
   "name": "champagnefestival",
   "version": "0.1.0",
   "private": true,
-  "description": "Champagne Festival website using React and Bootstrap",
+  "description": "Champagnefestival website using React and Bootstrap",
   "type": "module",
   "scripts": {
     "dev": "vite",

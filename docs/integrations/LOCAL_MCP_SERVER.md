@@ -1,6 +1,6 @@
-# Local MCP Server — Champagne Festival
+# Local MCP Server — Champagnefestival
 
-The Champagne Festival backend ships a read-only [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server built with [FastMCP v3](https://gofastmcp.com/).
+The Champagnefestival backend ships a read-only [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server built with [FastMCP v3](https://gofastmcp.com/).
 
 It exposes operational tools that allow desktop agents (Claude Desktop, Codex CLI, etc.) to answer event-day questions:
 
@@ -16,7 +16,7 @@ It exposes operational tools that allow desktop agents (Claude Desktop, Codex CL
 
 - Python 3.13+
 - [`uv`](https://docs.astral.sh/uv/) (recommended) or pip
-- A running PostgreSQL database with the Champagne Festival schema
+- A running PostgreSQL database with the Champagnefestival schema
 - Environment variables (copy `backend/.env.example` → `backend/.env` and fill in at minimum `DATABASE_URL`)
 
 ---

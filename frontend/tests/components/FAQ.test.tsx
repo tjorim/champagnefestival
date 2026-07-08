@@ -4,7 +4,7 @@ import FAQ from "@/components/FAQ";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
-    faq_q1: () => "What is the Champagne Festival?",
+    faq_q1: () => "What is the Champagnefestival?",
     faq_a1: () => "An annual celebration of champagne.",
     faq_q2: () => "When does it take place?",
     faq_a2: () => "First full weekend of October.",
@@ -20,7 +20,7 @@ vi.mock("@/paraglide/messages", () => ({
 describe("FAQ component", () => {
   it("renders all 5 FAQ items by default", () => {
     render(<FAQ />);
-    expect(screen.getByText("What is the Champagne Festival?")).toBeInTheDocument();
+    expect(screen.getByText("What is the Champagnefestival?")).toBeInTheDocument();
     expect(screen.getByText("When does it take place?")).toBeInTheDocument();
     expect(screen.getByText("Where is it held?")).toBeInTheDocument();
     expect(screen.getByText("How much does it cost?")).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe("FAQ component", () => {
 
   it("renders only specified FAQ ids when ids prop provided", () => {
     render(<FAQ ids={[1, 3]} />);
-    expect(screen.getByText("What is the Champagne Festival?")).toBeInTheDocument();
+    expect(screen.getByText("What is the Champagnefestival?")).toBeInTheDocument();
     expect(screen.getByText("Where is it held?")).toBeInTheDocument();
     expect(screen.queryByText("When does it take place?")).not.toBeInTheDocument();
   });

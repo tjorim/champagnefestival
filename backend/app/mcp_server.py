@@ -1,4 +1,4 @@
-"""FastMCP v3 read-only MCP server for Champagne Festival event operations.
+"""FastMCP v3 read-only MCP server for Champagnefestival event operations.
 
 Exposes operational tools for answering:
 - Who sits where?
@@ -304,9 +304,9 @@ def create_mcp_server(
     backend = ChampagneFestivalMcpBackend(session_factory)
 
     mcp = FastMCP(
-        name="Champagne Festival",
+        name="Champagnefestival",
         instructions=(
-            "Read-only operational tools for Champagne Festival event staff. "
+            "Read-only operational tools for Champagnefestival event staff. "
             "Tools cover seating, orders, champagne delivery, and check-in status. "
             "Most tools require the 'volunteer' or 'admin' role."
         ),

@@ -1,6 +1,6 @@
-# Champagne Festival Website
+# Champagnefestival Website
 
-The official website for the Champagne Festival — a React/Vite frontend with a FastAPI backend.
+The official website for the Champagnefestival — a React/Vite frontend with a FastAPI backend.
 
 ## Project structure
 

@@ -68,6 +68,16 @@ val releaseApiBaseUrl =
         defaultValue = "https://release.placeholder.invalid/"
     )
 
+// Optional override for debug builds. Defaults to the emulator's host-loopback alias, which
+// only resolves for contributors running the backend locally (see android/README.md).
+val debugApiBaseUrl =
+    resolveConfigValue(
+        "ANDROID_DEBUG_API_BASE_URL",
+        "ANDROID_DEBUG_API_BASE_URL",
+        required = false,
+        defaultValue = "http://10.0.2.2:8000/"
+    )
+
 val releaseCertificatePinHost =
     resolveConfigValue(
         "ANDROID_CERTIFICATE_PIN_HOST",
@@ -184,7 +194,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable = true
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8000/\"")
+            buildConfigField("String", "API_BASE_URL", quoted(debugApiBaseUrl))
             buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))

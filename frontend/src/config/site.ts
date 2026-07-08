@@ -7,10 +7,10 @@ export const baseUrl = "https://champagnefestival.be";
 
 // Site metadata
 export const siteMetadata = {
-  title: "Champagne Festival",
+  title: "Champagnefestival",
   description:
     "Annual champagne festival featuring tastings, masterclasses, and gourmet food pairings",
-  author: "Champagne Festival Team",
+  author: "Champagnefestival Team",
   themeColor: "#1a1a1a",
   locale: "nl",
   locales: ["nl", "en", "fr"],

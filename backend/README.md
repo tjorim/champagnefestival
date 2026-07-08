@@ -1,4 +1,4 @@
-# Champagne Festival — Backend
+# Champagnefestival — Backend
 
 FastAPI + PostgreSQL backend for the VIP reservation and check-in system.
 Designed to run on a shared VPS alongside the [worktime](https://github.com/tjorim/worktime) backend.
@@ -155,7 +155,7 @@ uv sync --no-dev
 
 # Create /etc/systemd/system/champagne.service:
 # [Unit]
-# Description=Champagne Festival API
+# Description=Champagnefestival API
 # After=network.target
 #
 # [Service]

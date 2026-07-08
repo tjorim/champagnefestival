@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
-    festival_name: () => "Champagne Festival",
+    festival_name: () => "Champagnefestival",
     footer_rights: () => "All rights reserved.",
     footer_privacy: () => "Privacy Policy",
   },
@@ -24,7 +24,7 @@ describe("Footer component", () => {
     const currentYear = new Date().getFullYear().toString();
     const footer = screen.getByRole("contentinfo");
 
-    expect(footer).toHaveTextContent(`© ${currentYear} Champagne Festival. All rights reserved.`);
+    expect(footer).toHaveTextContent(`© ${currentYear} Champagnefestival. All rights reserved.`);
   });
 
   it("renders a link to the privacy policy page", () => {

@@ -64,6 +64,7 @@ describe("useActiveEdition", () => {
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
+    expect(result.current.hasEdition).toBe(true);
     expect(result.current.edition.id).toBe("2026-march");
     expect(result.current.edition.venue.venueName).toBe("Staf Versluys");
     expect(result.current.edition.dates.map(toNormalizedLocalDate)).toEqual([
@@ -135,6 +136,7 @@ describe("useActiveEdition", () => {
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
+    expect(result.current.hasEdition).toBe(false);
     expect(result.current.edition.events).toEqual([]);
     expect(result.current.edition.producers).toEqual([]);
     expect(result.current.edition.sponsors).toEqual([]);

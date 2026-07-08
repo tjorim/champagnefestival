@@ -1,6 +1,6 @@
 # Observability Contract
 
-This document describes the observability guarantees that apply to every HTTP request handled by the Champagne Festival backend. **Any new route must be added through the standard FastAPI router so it automatically inherits this contract.**
+This document describes the observability guarantees that apply to every HTTP request handled by the Champagnefestival backend. **Any new route must be added through the standard FastAPI router so it automatically inherits this contract.**
 
 ---
 

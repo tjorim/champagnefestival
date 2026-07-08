@@ -33,12 +33,12 @@ async def send_guest_access_email(
         return False
 
     message = EmailMessage()
-    message["Subject"] = "Your Champagne Festival registration access code"
+    message["Subject"] = "Your Champagnefestival registration access code"
     message["From"] = settings.smtp_from
     message["To"] = email
     message.set_content(
         "Hello,\n\n"
-        "Use the following access code to view your Champagne Festival registrations:\n\n"
+        "Use the following access code to view your Champagnefestival registrations:\n\n"
         f"{token}\n\n"
         f"This code expires at {expires_at.isoformat()}.\n"
         "If you did not request this email, you can ignore it.\n"

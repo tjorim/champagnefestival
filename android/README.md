@@ -30,10 +30,10 @@ be.champagnefestival.android/
 
 | Variant | API base URL | OIDC config |
 |---------|-------------|-------------|
-| `debug` | `http://10.0.2.2:8000/` (emulator → localhost) | `/api/auth/oidc-config` from the API |
+| `debug` | `http://10.0.2.2:8000/` (emulator → localhost) by default, or `ANDROID_DEBUG_API_BASE_URL` if set | `/api/auth/oidc-config` from the API |
 | `release` | `https://champagnefestival.tjor.im/` | `/api/auth/oidc-config` from the API |
 
-The API base URL can be overridden at runtime via **Settings → API base URL**.
+The API base URL can also be overridden at runtime via **Settings → API base URL**, without rebuilding.
 
 ### Release variant
 

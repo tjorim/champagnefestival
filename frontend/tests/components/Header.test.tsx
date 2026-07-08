@@ -4,9 +4,9 @@ import Header from "@/components/Header";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
-    festival_name: () => "Champagne Festival",
+    festival_name: () => "Champagnefestival",
     language_select: () => "Select language",
-    header_logo_alt: () => "Champagne Festival logo",
+    header_logo_alt: () => "Champagnefestival logo",
     admin_title: () => "Administration",
     nav_schedule: () => "Schedule",
     nav_community_events: () => "Community events",
@@ -34,19 +34,19 @@ vi.mock("@tanstack/react-router", () => ({
 describe("Header component", () => {
   it("renders the festival name", () => {
     render(<Header />);
-    expect(screen.getByText("Champagne Festival")).toBeInTheDocument();
+    expect(screen.getByText("Champagnefestival")).toBeInTheDocument();
   });
 
   it("renders the logo image", () => {
     render(<Header />);
-    const logo = screen.getByAltText("Champagne Festival logo");
+    const logo = screen.getByAltText("Champagnefestival logo");
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute("src", "/images/logo.svg");
   });
 
   it("accepts a custom logoSrc prop", () => {
     render(<Header logoSrc="/images/custom-logo.png" />);
-    expect(screen.getByAltText("Champagne Festival logo")).toHaveAttribute(
+    expect(screen.getByAltText("Champagnefestival logo")).toHaveAttribute(
       "src",
       "/images/custom-logo.png",
     );
@@ -59,7 +59,7 @@ describe("Header component", () => {
 
   it("logo links to #welcome", () => {
     render(<Header />);
-    const brand = screen.getByText("Champagne Festival").closest("a");
+    const brand = screen.getByText("Champagnefestival").closest("a");
     expect(brand).toHaveAttribute("href", "#welcome");
   });
 

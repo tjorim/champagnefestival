@@ -11,6 +11,7 @@
     <string name="error_network_unavailable">Unable to reach the server. Check your connection and try again.</string>
     <string name="error_certificate_untrusted">The server\'s certificate could not be verified. Please update the app.</string>
     <string name="error_unauthorized">The check-in token is no longer valid.</string>
+    <string name="error_no_active_edition">There\'s no active or upcoming festival edition right now.</string>
     <string name="error_server">The server rejected the request. Please try again.</string>
     <string name="error_unknown">Something went wrong. Please try again.</string>
 

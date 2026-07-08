@@ -1,4 +1,4 @@
-"""OIDC/JWT authentication for Champagne Festival backend.
+"""OIDC/JWT authentication for Champagnefestival backend.
 
 Validates Bearer JWTs issued by a configured OIDC provider (e.g. authentik,
 Keycloak) and provides token decoding for the admin endpoints.

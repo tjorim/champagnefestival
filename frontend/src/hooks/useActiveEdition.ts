@@ -9,6 +9,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates, type SliderItem } from "@/config/editions";
 import { apiToEvent, type Event } from "@/types/event";
+import { endOfDay } from "@/utils/dateUtils";
 import { queryKeys } from "@/utils/queryKeys";
 
 interface ActiveEditionVenue {
@@ -59,6 +60,8 @@ export interface ActiveEditionState {
   edition: ActiveEdition;
   /** True once the fetch has settled (success or failure). */
   isLoaded: boolean;
+  /** True only when a real edition was fetched — false while loading or when there's none/an error. */
+  hasEdition: boolean;
 }
 
 export const activeEditionQueryKey = queryKeys.activeEdition;
@@ -186,5 +189,14 @@ export function useActiveEdition(): ActiveEditionState {
   return {
     edition: query.data ?? createFallbackEdition(),
     isLoaded: query.status !== "pending",
+    hasEdition: query.isSuccess,
   };
+}
+
+/** Festival opens at 17:00 on the first day and runs through the end of the last day. */
+export function getFestivalDateRange(edition: ActiveEdition): { start: Date; end: Date } {
+  const start = new Date(edition.dates[0] ?? new Date());
+  start.setHours(17, 0, 0, 0);
+  const end = endOfDay(edition.dates[edition.dates.length - 1] ?? new Date());
+  return { start, end };
 }

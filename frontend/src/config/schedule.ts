@@ -1,5 +1,5 @@
 /**
- * Schedule configuration for the Champagne Festival.
+ * Schedule configuration for the Champagnefestival.
  *
  * This module now exposes only empty frontend fallbacks.
  * The live schedule is sourced from the active-edition API response.

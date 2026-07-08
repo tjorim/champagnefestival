@@ -65,7 +65,7 @@ if settings.sentry_dsn:
 async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("=" * 60)
-    logger.info("Champagne Festival API — starting up")
+    logger.info("Champagnefestival API — starting up")
     logger.info("=" * 60)
 
     settings.log_configuration()
@@ -84,13 +84,13 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # Shutdown
-    logger.info("Champagne Festival API shutting down...")
+    logger.info("Champagnefestival API shutting down...")
 
 
 lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan
 
 app = FastAPI(
-    title="Champagne Festival API",
+    title="Champagnefestival API",
     version="0.1.0",
     description=(
         "Backend for the VIP reservation and check-in system. "

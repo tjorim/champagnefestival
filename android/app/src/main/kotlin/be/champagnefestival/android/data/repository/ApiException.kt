@@ -10,6 +10,7 @@ enum class ApiErrorReason {
     NETWORK_UNAVAILABLE,
     CERTIFICATE_UNTRUSTED,
     UNAUTHORIZED,
+    NOT_FOUND,
     SERVER_ERROR,
     UNKNOWN
 }

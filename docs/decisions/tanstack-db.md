@@ -8,7 +8,7 @@
 
 ## Context
 
-Champagne Festival's frontend already uses TanStack Query, Form, Router, and Table.
+Champagnefestival's frontend already uses TanStack Query, Form, Router, and Table.
 TanStack DB (`@tanstack/db` + `@tanstack/react-db`) is a new reactive client-side
 collection store that complements TanStack Query for highly interactive, relational
 domains. The issue asks us to evaluate whether it would reduce complexity in the

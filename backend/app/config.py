@@ -188,7 +188,7 @@ class Settings(BaseSettings):
     def log_configuration(self) -> None:
         """Log all configuration at startup, masking sensitive values."""
         logger.info("=" * 60)
-        logger.info("Champagne Festival Backend Configuration")
+        logger.info("Champagnefestival Backend Configuration")
         logger.info("=" * 60)
         logger.info(f"Environment:   {self.environment}")
         logger.info(f"Database URL:  {self._mask_db_credentials(self.database_url)}")

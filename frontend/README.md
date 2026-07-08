@@ -1,6 +1,6 @@
-# Champagne Festival — Frontend
+# Champagnefestival — Frontend
 
-React + Vite SPA for the Champagne Festival website, with TypeScript, Bootstrap, and Paraglide i18n.
+React + Vite SPA for the Champagnefestival website, with TypeScript, Bootstrap, and Paraglide i18n.
 
 ## Quick start
 

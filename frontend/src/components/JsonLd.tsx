@@ -1,29 +1,28 @@
 import React from "react";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { festivalYear, festivalDate, festivalEndDate } from "@/config/dates";
-import { contactConfig } from "@/config/contact";
+import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
 import { baseUrl } from "@/config/site";
 
 /**
- * Component that renders JSON-LD structured data for an event
- * Uses Paraglide JS for translations and our configuration files
+ * Renders JSON-LD structured data for the active festival edition. Renders nothing
+ * when there's no active/upcoming edition, so it never advertises a fake event.
  */
 const EventStructuredData: React.FC = () => {
-  if (!festivalDate || !festivalEndDate) {
+  const { edition, hasEdition } = useActiveEdition();
+
+  if (!hasEdition) {
     return null;
   }
 
+  const { start: festivalDate, end: festivalEndDate } = getFestivalDateRange(edition);
   const festivalName = m.festival_name();
-
-  const venueAddress = contactConfig.location.address;
-  const venueName = contactConfig.location.venueName;
-  const { lat, lng } = contactConfig.location.coordinates;
+  const { venueName, address, city, postalCode, country, coordinates } = edition.venue;
 
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Event",
-    name: `${festivalName} ${festivalYear}`,
+    name: `${festivalName} ${edition.year}`,
     startDate: festivalDate.toISOString(),
     endDate: festivalEndDate.toISOString(),
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
@@ -33,15 +32,15 @@ const EventStructuredData: React.FC = () => {
       name: venueName,
       address: {
         "@type": "PostalAddress",
-        streetAddress: venueAddress,
-        addressLocality: contactConfig.location.city,
-        postalCode: contactConfig.location.postalCode,
-        addressCountry: contactConfig.location.country,
+        streetAddress: address,
+        addressLocality: city,
+        postalCode: postalCode,
+        addressCountry: country,
       },
       geo: {
         "@type": "GeoCoordinates",
-        latitude: lat,
-        longitude: lng,
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
       },
     },
     image: [`${baseUrl}/images/og-image.jpg`],

@@ -14,13 +14,14 @@ import { AuthProvider } from "./contexts/AuthContext";
 
 import Footer from "./components/Footer";
 import Header from "./components/Header";
+import EventStructuredData from "./components/JsonLd";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
 import RegistrationModal from "./components/RegistrationModal";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useLanguage } from "./hooks/useLanguage";
-import { useActiveEdition } from "./hooks/useActiveEdition";
+import { getFestivalDateRange, useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
@@ -185,19 +186,14 @@ function App() {
   useLanguage();
 
   // Fetch live edition data; keep an empty fallback shape on API errors.
-  const { edition } = useActiveEdition();
+  const { edition, hasEdition } = useActiveEdition();
   const { producers, sponsors } = edition;
 
   // Derive festival start/end dates from the active edition
-  const festivalDate = useMemo(() => {
-    const d = new Date(edition.dates[0] ?? new Date());
-    d.setHours(17, 0, 0, 0);
-    return d;
-  }, [edition]);
-
-  const festivalEndDate = useMemo(() => {
-    return endOfDay(edition.dates[edition.dates.length - 1] ?? new Date());
-  }, [edition]);
+  const { start: festivalDate, end: festivalEndDate } = useMemo(
+    () => getFestivalDateRange(edition),
+    [edition],
+  );
 
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
@@ -235,6 +231,7 @@ function App() {
 
       {/* Header & Navigation */}
       <Header />
+      <EventStructuredData />
 
       <main id="main-content">
         {/* Hero Section */}
@@ -280,12 +277,20 @@ function App() {
             <SectionHeading id="next-festival-heading" title={m.next_festival_title()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <AppSuspense errorFallbackText={m.error_countdown()}>
-                  <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
-                </AppSuspense>
-                <p className="mb-4" style={{ position: "relative", zIndex: 50 }}>
-                  {m.next_festival_description()}
-                </p>
+                {hasEdition ? (
+                  <>
+                    <AppSuspense errorFallbackText={m.error_countdown()}>
+                      <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
+                    </AppSuspense>
+                    <p className="mb-4" style={{ position: "relative", zIndex: 50 }}>
+                      {m.next_festival_description()}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mb-4" style={{ position: "relative", zIndex: 50 }}>
+                    {m.next_festival_none()}
+                  </p>
+                )}
               </div>
             </div>
           </div>

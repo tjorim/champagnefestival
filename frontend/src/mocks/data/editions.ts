@@ -19,7 +19,7 @@ export const seedEvents = [
     id: "event-01",
     edition_id: "march-2027",
     title: "Grand Opening",
-    description: "Join us for the grand opening of the Champagne Festival 2027!",
+    description: "Join us for the grand opening of the Champagnefestival 2027!",
     date: "2027-03-06",
     start_time: "18:00",
     end_time: "22:00",
