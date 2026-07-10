@@ -21,8 +21,8 @@ importers:
         specifier: ^0.1.92
         version: 0.1.92(react@19.2.7)(typescript@6.0.3)
       '@tanstack/react-form':
-        specifier: ^1.33.0
-        version: 1.33.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^1.33.1
+        version: 1.33.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@tanstack/react-query':
         specifier: ^5.101.2
         version: 5.101.2(react@19.2.7)
@@ -816,8 +816,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@tanstack/form-core@1.33.0':
-    resolution: {integrity: sha512-AV4Pw9Dk4orFsuPBcDssfWMJFs+yMYBae7zZ4oTqrCf4ftNGQKxvrQRZeqKHG6A4TkiLeSvf2kzIjcVkrW7E6w==}
+  '@tanstack/form-core@1.33.1':
+    resolution: {integrity: sha512-iSxLQIAz9vu+mo3Tnzlzo/I/5DC3L/jrQ1oc0ybXNbOJpeNGc4iKx/R3tp5d/Ra9y7JqONQBXiYtgz8/305yZA==}
 
   '@tanstack/history@1.162.0':
     resolution: {integrity: sha512-79pf/RkhteYZTRgcR4F9kbk84P2N8rugQJswxfIqovlbRiT3yI7eBE+5QorIrZaOKktsgzRlXh1l/du/xpl4iA==}
@@ -845,8 +845,8 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
 
-  '@tanstack/react-form@1.33.0':
-    resolution: {integrity: sha512-unaee+VS4MvKo+s1dmgGUXI4902VeAhuaUbKsQbhFe3MceOpB3JpAUGCDpyzjQPXVFkFY0COKfLrUNX2XZYW4g==}
+  '@tanstack/react-form@1.33.1':
+    resolution: {integrity: sha512-BF2fQtd0uEZxoki1cDlcG6KLkEthofmVRJMrpd5GWRtoRlxvm4iiLFRpoQR///qD16002+rKdH1kBBAUZDEQhw==}
     peerDependencies:
       '@tanstack/react-start': '*'
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -2646,7 +2646,7 @@ snapshots:
 
   '@tanstack/devtools-event-client@0.4.4': {}
 
-  '@tanstack/form-core@1.33.0':
+  '@tanstack/form-core@1.33.1':
     dependencies:
       '@tanstack/devtools-event-client': 0.4.4
       '@tanstack/pacer-lite': 0.1.1
@@ -2675,9 +2675,9 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@tanstack/react-form@1.33.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@tanstack/react-form@1.33.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@tanstack/form-core': 1.33.0
+      '@tanstack/form-core': 1.33.1
       '@tanstack/react-store': 0.11.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
     transitivePeerDependencies:
