@@ -19,10 +19,7 @@ import AnalyticsDashboard from "./AnalyticsDashboard";
 import AuditLogViewer from "./AuditLogViewer";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
-import type {
-  Registration,
-  RegistrationStatus,
-} from "@/types/registration";
+import type { Registration, RegistrationStatus } from "@/types/registration";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
 import { useAdminDashboardData } from "@/hooks/useAdminDashboardData";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
@@ -49,6 +46,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const isAuthenticated = auth.isAuthenticated;
+  const canManageAdminSections = auth.hasRole("admin");
   const [globalError, setGlobalError] = useState("");
   const [registrationError, setRegistrationError] = useState("");
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
@@ -62,6 +60,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     () => new Set(["events", "content", "venue", "people", "insights"]),
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (canManageAdminSections || activeKey === "registrations") return;
+    setActiveKey("registrations");
+  }, [activeKey, canManageAdminSections]);
 
   const toggleGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
@@ -387,6 +390,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             isAnyFetching={isAnyFetching}
             onLoadData={loadData}
             onLogout={handleLogout}
+            canManageAdminSections={canManageAdminSections}
           />
 
           {/* Main content */}
@@ -424,7 +428,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </button>
             )}
             {globalError && (
-              <Alert variant="danger" className="mb-4" dismissible onClose={() => setGlobalError("")}>
+              <Alert
+                variant="danger"
+                className="mb-4"
+                dismissible
+                onClose={() => setGlobalError("")}
+              >
                 {globalError}
               </Alert>
             )}
@@ -458,7 +467,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onClearSectionError={() => setRegistrationError("")}
                   />
                 )}
-                {activeKey === "exhibitors" && (
+                {canManageAdminSections && activeKey === "exhibitors" && (
                   <Card bg="dark" text="white" border="secondary" className="mb-3">
                     <Card.Body>
                       <ContentSection
@@ -471,7 +480,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     </Card.Body>
                   </Card>
                 )}
-                {activeKey === "editions" && (
+                {canManageAdminSections && activeKey === "editions" && (
                   <Card bg="dark" text="white" border="secondary" className="mb-3">
                     <Card.Body>
                       <EditionsSection
@@ -488,7 +497,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     </Card.Body>
                   </Card>
                 )}
-                {activeKey === "floor-plans" && (
+                {canManageAdminSections && activeKey === "floor-plans" && (
                   <LayoutEditor
                     dayOptions={layoutDayOptions}
                     tables={tables}
@@ -515,7 +524,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onResizeArea={handleResizeArea}
                   />
                 )}
-                {activeKey === "venues" && (
+                {canManageAdminSections && activeKey === "venues" && (
                   <VenueManagement
                     venues={venues}
                     rooms={rooms}
@@ -528,7 +537,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onRestoreRoom={handleRestoreRoom}
                   />
                 )}
-                {activeKey === "table-types" && (
+                {canManageAdminSections && activeKey === "table-types" && (
                   <TableTypeManagement
                     tableTypes={tableTypes}
                     onAdd={handleAddTableType}
@@ -537,7 +546,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onRestore={handleRestoreTableType}
                   />
                 )}
-                {activeKey === "directory" && (
+                {canManageAdminSections && activeKey === "directory" && (
                   <PeopleManagement
                     people={people}
                     registrationCountByPersonId={registrationCountByPersonId}
@@ -549,7 +558,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onDelete={handleDeletePerson}
                   />
                 )}
-                {activeKey === "members" && (
+                {canManageAdminSections && activeKey === "members" && (
                   <MembersManagement
                     members={members}
                     registrationCountByPersonId={registrationCountByPersonId}
@@ -559,7 +568,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onDelete={handleDeleteMember}
                   />
                 )}
-                {activeKey === "volunteers" && (
+                {canManageAdminSections && activeKey === "volunteers" && (
                   <VolunteersManagement
                     volunteers={volunteers}
                     isLoading={isAnyFetching}
@@ -569,8 +578,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onDelete={handleDeleteVolunteer}
                   />
                 )}
-                {activeKey === "analytics" && <AnalyticsDashboard authHeaders={authHeaders} />}
-                {activeKey === "audit-log" && <AuditLogViewer authHeaders={authHeaders} />}
+                {canManageAdminSections && activeKey === "analytics" && (
+                  <AnalyticsDashboard authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "audit-log" && (
+                  <AuditLogViewer authHeaders={authHeaders} />
+                )}
               </div>
             )}
           </div>
@@ -595,7 +608,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               setDetailRegistration(null);
             } catch (err) {
               devError("Failed to merge people", err);
-              setRegistrationError(err instanceof Error ? err.message : m.admin_people_merge_error());
+              setRegistrationError(
+                err instanceof Error ? err.message : m.admin_people_merge_error(),
+              );
             }
           }}
         />

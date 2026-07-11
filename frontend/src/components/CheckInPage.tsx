@@ -245,16 +245,13 @@ export default function CheckInPage() {
   const hasQrCredentials = Boolean(registrationId && checkInToken);
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
 
-  const authHeaders = useCallback(
-    (): Record<string, string> => {
-      const token = auth.getAccessToken();
-      return {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-    },
-    [auth],
-  );
+  const authHeaders = useCallback((): Record<string, string> => {
+    const token = auth.getAccessToken();
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, [auth]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -371,7 +368,7 @@ export default function CheckInPage() {
   const registration = manualRegistration ?? registrationQuery.data ?? null;
   const isLoading = hasQrCredentials ? registrationQuery.isPending : false;
   const isCheckingIn = checkInMutation.isPending || volunteerCheckInMutation.isPending;
-  const canManageEntranceActions = auth.isAuthenticated;
+  const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
   const isUpdatingRegistration = updateRegistrationMutation.isPending;
   const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
   const mutationError = checkInMutation.isError
@@ -387,7 +384,8 @@ export default function CheckInPage() {
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
-  const showSearchHint = !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
+  const showSearchHint =
+    !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
 
   const handleCheckIn = useCallback(() => {
     if (hasQrCredentials) {
