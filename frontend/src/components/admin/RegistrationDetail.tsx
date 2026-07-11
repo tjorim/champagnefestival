@@ -23,6 +23,8 @@ interface RegistrationDetailProps {
   onIssueStrap: (registrationId: string) => void;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
+  actionError?: string;
+  onClearActionError?: () => void;
 }
 
 function isSimpleRsvp(registration: Registration) {
@@ -41,6 +43,8 @@ export default function RegistrationDetail({
   onIssueStrap,
   onAssignTable,
   onMergeDuplicate,
+  actionError,
+  onClearActionError,
 }: RegistrationDetailProps) {
   const checkInUrl = registration
     ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}&token=${encodeURIComponent(registration.checkInToken ?? "")}`
@@ -98,6 +102,18 @@ export default function RegistrationDetail({
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
+        {actionError && (
+          <Alert
+            variant="danger"
+            dismissible={Boolean(onClearActionError)}
+            onClose={onClearActionError}
+            className="mb-3"
+            role="alert"
+          >
+            {actionError}
+          </Alert>
+        )}
+
         <div className="d-flex flex-wrap gap-2 mb-3">
           <Badge
             bg={

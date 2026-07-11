@@ -598,11 +598,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
           emailDuplicates={emailDuplicates}
           tables={tables}
-          onClose={() => setDetailRegistration(null)}
+          onClose={() => {
+            setDetailRegistration(null);
+            setRegistrationError("");
+          }}
           onToggleDelivered={handleToggleDelivered}
           onCheckIn={handleCheckIn}
           onIssueStrap={handleIssueStrap}
           onAssignTable={handleAssignTable}
+          actionError={registrationError}
+          onClearActionError={() => setRegistrationError("")}
           onMergeDuplicate={async (canonicalId, duplicateId) => {
             try {
               await handleMergePeople(canonicalId, duplicateId);
