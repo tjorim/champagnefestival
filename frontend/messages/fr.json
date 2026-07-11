@@ -658,5 +658,6 @@
   "admin_registrations_export_event_csv_for": "Exporter la liste des invités pour {event} au format CSV",
   "admin_registrations_export_event_csv_error": "Échec de l’export de la liste des invités.",
   "admin_volunteers_export_csv": "Exporter pour l’assurance (CSV)",
-  "admin_volunteers_export_csv_error": "Échec de l’export de la liste des bénévoles."
+  "admin_volunteers_export_csv_error": "Échec de l’export de la liste des bénévoles.",
+  "admin_error_network": "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez."
 }
