@@ -468,7 +468,7 @@ export default function RegistrationList({
             </>
           );
         },
-        meta: { tdClassName: "d-none d-xl-table-cell" },
+        meta: { tdClassName: "d-none d-md-table-cell" },
       }),
       columnHelper.display({
         id: "table",
