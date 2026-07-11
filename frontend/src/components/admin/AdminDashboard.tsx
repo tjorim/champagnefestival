@@ -603,6 +603,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           onCheckIn={handleCheckIn}
           onIssueStrap={handleIssueStrap}
           onAssignTable={handleAssignTable}
+          actionError={registrationError}
+          onClearActionError={() => setRegistrationError("")}
           onMergeDuplicate={async (canonicalId, duplicateId) => {
             try {
               await handleMergePeople(canonicalId, duplicateId);
