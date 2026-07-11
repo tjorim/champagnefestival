@@ -279,7 +279,7 @@ export default function CheckInPage() {
   const hasQrCredentials = Boolean(registrationId && checkInToken);
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
   const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
-  const returnTo = location.href;
+  const returnTo = location.pathname + location.searchStr;
 
   const authHeaders = useCallback((): Record<string, string> => {
     const token = auth.getAccessToken();
