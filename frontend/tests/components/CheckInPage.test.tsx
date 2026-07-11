@@ -54,6 +54,7 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_manual_not_checked_in: () => "Not checked in",
     checkin_search_error: () => "Could not search registrations.",
     admin_login_button: () => "Login",
+    admin_loading: () => "Loading…",
     admin_checked_in: () => "Checked in",
     admin_strap_issued: () => "Strap issued",
     admin_issue_strap: () => "Issue strap",
@@ -188,6 +189,24 @@ describe("CheckInPage", () => {
     expect(screen.getByText("Sign in as a volunteer or admin.")).toBeInTheDocument();
   });
 
+  it("shows an auth loading gate before rendering manual entrance controls", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue(null),
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    await renderPage("/check-in");
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    expect(screen.queryByText("Volunteer login required.")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Guest name or email")).not.toBeInTheDocument();
+  });
+
   it("returns volunteers to check-in after signing in for manual search", async () => {
     const login = vi.fn();
     vi.mocked(useAuth).mockReturnValue({
@@ -264,7 +283,9 @@ describe("CheckInPage", () => {
   it("updates delivered pre-order quantities from the numeric input", async () => {
     await renderPage();
 
-    const quantityInput = await screen.findByRole("spinbutton", { name: "Delivered Champagne Glass" });
+    const quantityInput = await screen.findByRole("spinbutton", {
+      name: "Delivered Champagne Glass",
+    });
 
     fireEvent.change(quantityInput, { target: { value: "4" } });
     fireEvent.blur(quantityInput);
