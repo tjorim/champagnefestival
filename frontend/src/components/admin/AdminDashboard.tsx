@@ -64,7 +64,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   useEffect(() => {
     if (canManageAdminSections || activeKey === "registrations") return;
     setActiveKey("registrations");
-  }, [activeKey, canManageAdminSections]);
+  }, [activeKey, canManageAdminSections, setActiveKey]);
 
   const toggleGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
@@ -110,6 +110,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   } = useAdminQueries({
     visible,
     isAuthenticated,
+    canManageAdminSections,
     authHeaders,
   });
 

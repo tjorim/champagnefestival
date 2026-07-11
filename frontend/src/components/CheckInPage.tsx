@@ -244,6 +244,7 @@ export default function CheckInPage() {
   const [manualRegistration, setManualRegistration] = useState<CheckInData | null>(null);
   const hasQrCredentials = Boolean(registrationId && checkInToken);
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
+  const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
 
   const authHeaders = useCallback((): Record<string, string> => {
     const token = auth.getAccessToken();
@@ -281,7 +282,7 @@ export default function CheckInPage() {
   const volunteerSearchQuery = useQuery({
     queryKey: queryKeys.volunteerRegistrationSearch(debouncedSearchTerm),
     queryFn: ({ signal }) => searchVolunteerRegistrations(debouncedSearchTerm, authHeaders, signal),
-    enabled: !hasQrCredentials && auth.isAuthenticated && debouncedSearchTerm.length >= 2,
+    enabled: !hasQrCredentials && canManageEntranceActions && debouncedSearchTerm.length >= 2,
     retry: false,
     staleTime: 15 * 1000,
   });
@@ -368,7 +369,6 @@ export default function CheckInPage() {
   const registration = manualRegistration ?? registrationQuery.data ?? null;
   const isLoading = hasQrCredentials ? registrationQuery.isPending : false;
   const isCheckingIn = checkInMutation.isPending || volunteerCheckInMutation.isPending;
-  const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
   const isUpdatingRegistration = updateRegistrationMutation.isPending;
   const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
   const mutationError = checkInMutation.isError
@@ -481,6 +481,9 @@ export default function CheckInPage() {
                           </Button>
                         </Alert>
                       )}
+                      {auth.isAuthenticated && !canManageEntranceActions && (
+                        <Alert variant="warning">{m.checkin_manual_search_unauthorized()}</Alert>
+                      )}
 
                       <Form.Group controlId="manual-checkin-query">
                         <Form.Label>{m.checkin_manual_search_label()}</Form.Label>
@@ -494,7 +497,7 @@ export default function CheckInPage() {
                             setAlreadyCheckedIn(false);
                           }}
                           placeholder={m.checkin_manual_search_placeholder()}
-                          disabled={!auth.isAuthenticated}
+                          disabled={!canManageEntranceActions}
                         />
                         <Form.Text className="text-secondary">
                           {m.checkin_manual_search_help()}
