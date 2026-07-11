@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { useSearch } from "@tanstack/react-router";
+import { useLocation, useSearch } from "@tanstack/react-router";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -269,6 +269,7 @@ export default function CheckInPage() {
   const { id: registrationId, token: checkInToken } = useSearch({
     from: "/admin-layout/check-in",
   });
+  const location = useLocation();
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
@@ -278,6 +279,7 @@ export default function CheckInPage() {
   const hasQrCredentials = Boolean(registrationId && checkInToken);
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
   const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
+  const returnTo = location.href;
 
   const authHeaders = useCallback((): Record<string, string> => {
     const token = auth.getAccessToken();
@@ -516,7 +518,7 @@ export default function CheckInPage() {
                           className="d-flex justify-content-between align-items-center gap-3 flex-wrap"
                         >
                           <span>{m.checkin_manual_search_login_required()}</span>
-                          <Button variant="outline-warning" size="sm" onClick={auth.login}>
+                          <Button variant="outline-warning" size="sm" onClick={() => auth.login(returnTo)}>
                             {m.admin_login_button()}
                           </Button>
                         </Alert>

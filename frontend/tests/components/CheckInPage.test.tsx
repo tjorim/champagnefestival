@@ -188,6 +188,25 @@ describe("CheckInPage", () => {
     expect(screen.getByText("Sign in as a volunteer or admin.")).toBeInTheDocument();
   });
 
+  it("returns volunteers to check-in after signing in for manual search", async () => {
+    const login = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue(null),
+      login,
+      logout: vi.fn(),
+    });
+
+    await renderPage("/check-in");
+
+    fireEvent.click(screen.getByRole("button", { name: /login/i }));
+
+    expect(login).toHaveBeenCalledWith("/check-in");
+  });
+
   it("submits manual check-in for a selected volunteer search result", async () => {
     await renderPage("/check-in");
 

@@ -10,7 +10,7 @@ export interface AuthContextType {
   hasRole: (role: string) => boolean;
   /** Returns the current OIDC access token, or null when not authenticated. */
   getAccessToken: () => string | null;
-  login: () => void;
+  login: (returnTo?: string) => void;
   logout: () => void;
 }
 
@@ -78,8 +78,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const hasRole = useCallback((role: string) => roles.includes(role), [roles]);
 
-  const login = useCallback(() => {
-    oidcAuth.signinRedirect({ state: { returnTo: "/admin" } }).catch((error: unknown) => {
+  const login = useCallback((returnTo = "/admin") => {
+    oidcAuth.signinRedirect({ state: { returnTo } }).catch((error: unknown) => {
       devError("signinRedirect failed:", error);
     });
   }, [oidcAuth]);
