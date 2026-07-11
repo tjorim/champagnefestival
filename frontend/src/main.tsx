@@ -9,7 +9,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "leaflet/dist/leaflet.css";
 import Spinner from "react-bootstrap/Spinner";
 
-import { oidcConfig } from "./config/oidc";
+import { createOidcConfig } from "./config/oidc";
 import { AuthProvider } from "./contexts/AuthContext";
 
 import Footer from "./components/Footer";
@@ -452,6 +452,10 @@ const router = createAppRouter({
   CheckInRoute,
   MyRegistrationsRoute,
   PrivacyPolicyRoute,
+});
+
+const oidcConfig = createOidcConfig({
+  navigateTo: (to) => router.navigate({ to }),
 });
 
 declare module "@tanstack/react-router" {
