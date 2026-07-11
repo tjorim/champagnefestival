@@ -158,18 +158,30 @@ function CheckInCard({
                         <span className="visually-hidden">{m.admin_mark_not_delivered()}</span>
                       </Button>
                       <Form.Control
+                        key={item.deliveredQuantity}
                         aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
                         className="text-center"
                         inputMode="numeric"
                         min={0}
                         max={item.quantity}
-                        onChange={(event) =>
-                          onSetPreOrderQuantity(item.productId, Number(event.currentTarget.value))
-                        }
+                        onBlur={(event) => {
+                          const deliveredQuantity = Number(event.currentTarget.value);
+                          if (
+                            Number.isFinite(deliveredQuantity) &&
+                            deliveredQuantity !== item.deliveredQuantity
+                          ) {
+                            onSetPreOrderQuantity(item.productId, deliveredQuantity);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.currentTarget.blur();
+                          }
+                        }}
                         size="sm"
                         style={{ width: "5rem" }}
                         type="number"
-                        value={item.deliveredQuantity}
+                        defaultValue={item.deliveredQuantity}
                         disabled={!canManageEntranceActions || isUpdatingRegistration}
                       />
                       <Button

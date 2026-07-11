@@ -248,6 +248,7 @@ describe("CheckInPage", () => {
     const quantityInput = await screen.findByRole("spinbutton", { name: "Delivered Champagne Glass" });
 
     fireEvent.change(quantityInput, { target: { value: "4" } });
+    fireEvent.blur(quantityInput);
 
     await waitFor(() => {
       expect(screen.getByText("Delivered: 4/4")).toBeInTheDocument();

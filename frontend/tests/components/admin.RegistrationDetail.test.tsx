@@ -175,9 +175,14 @@ describe("RegistrationDetail", () => {
   it("updates delivered pre-order quantities from the numeric input", () => {
     const { onToggleDelivered } = renderDetail();
 
-    fireEvent.change(screen.getByRole("spinbutton", { name: "admin_bottle_delivered Brut Reserve" }), {
+    const quantityInput = screen.getByRole("spinbutton", {
+      name: "admin_bottle_delivered Brut Reserve",
+    });
+
+    fireEvent.change(quantityInput, {
       target: { value: "3" },
     });
+    fireEvent.blur(quantityInput);
 
     expect(onToggleDelivered).toHaveBeenCalledWith(
       "reg-1",
