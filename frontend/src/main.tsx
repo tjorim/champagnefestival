@@ -27,7 +27,6 @@ import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import { endOfDay } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
-import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -115,7 +114,6 @@ function SuspendedMarqueeSlider({
 function AdminPage() {
   return (
     <div className="App">
-      <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
@@ -133,7 +131,6 @@ function AdminPage() {
 function CheckInRoute() {
   return (
     <div className="App">
-      <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>

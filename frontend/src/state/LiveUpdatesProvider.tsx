@@ -15,8 +15,9 @@ const ALL_LIVE_KEYS = [queryKeys.admin.registrations, queryKeys.admin.tables] as
 
 /**
  * Side-effect component — renders nothing.
- * Mount once inside QueryClientProvider on event-day operational routes
- * (/admin, /check-in).  Opens GET /api/live/stream when authenticated and
+ * Mount once inside a shared layout route for admin/check-in routes so route
+ * changes do not tear down the SSE connection. Opens GET /api/live/stream
+ * when authenticated and
  * incrementally patches the active admin registrations collection when possible,
  * and falls back to queryClient.invalidateQueries() for other keys or failures.
  */
