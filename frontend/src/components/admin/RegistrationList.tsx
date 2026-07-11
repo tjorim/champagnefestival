@@ -603,6 +603,24 @@ export default function RegistrationList({
     [selectColumn, dataColumns],
   );
 
+  const hasActiveRegistrationFilters =
+    q.trim().length > 0 ||
+    filter !== "all" ||
+    allocationFilter !== "" ||
+    activeEditionOnly ||
+    dateFilter !== "all" ||
+    editionFilter !== "all";
+
+  const handleClearRegistrationFilters = useCallback(() => {
+    setQ("");
+    setDebouncedQ("");
+    onFilterChange("all");
+    setAllocationFilter("");
+    setActiveEditionOnly(false);
+    setDateFilter("all");
+    setEditionFilter("all");
+  }, [onFilterChange]);
+
   const table = useAppTable(
     {
       data: preFiltered,
@@ -969,7 +987,20 @@ export default function RegistrationList({
           ) : registrationSearchQuery.isError ? (
             <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
           ) : table.getRowModel().rows.length === 0 ? (
-            <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
+            hasActiveRegistrationFilters ? (
+              <div className="text-secondary text-center py-4 px-3">
+                <p className="mb-2">{m.admin_no_registration_filter_matches()}</p>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={handleClearRegistrationFilters}
+                >
+                  {m.admin_content_clear_filters()}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
+            )
           ) : (
             <div className="table-responsive">
               <Table variant="dark" hover striped className="mb-0" size="sm">

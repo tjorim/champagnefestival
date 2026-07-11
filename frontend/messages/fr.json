@@ -189,6 +189,7 @@
   "admin_action_mark_paid": "Marquer comme payé",
   "admin_action_assign_table": "Assigner une table",
   "admin_no_registrations": "Aucune inscription trouvée",
+  "admin_no_registration_filter_matches": "Aucune inscription ne correspond aux filtres actuels.",
   "admin_filter_all": "Tous",
   "admin_filter_pending": "En attente",
   "admin_filter_confirmed": "Confirmé",
