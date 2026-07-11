@@ -1,12 +1,11 @@
-const NETWORK_ERROR_MESSAGE =
-  "We could not reach the server. Check your internet connection and try again.";
+import { m } from "@/paraglide/messages";
 
 export async function requestApi(url: string, options: RequestInit): Promise<Response> {
   try {
     return await fetch(url, options);
   } catch (error) {
     console.error("Admin API network request failed", { url, error });
-    throw new Error(NETWORK_ERROR_MESSAGE);
+    throw new Error(m.admin_error_network());
   }
 }
 
@@ -14,14 +13,12 @@ async function extractErrorMessage(response: Response, fallbackMessage: string):
   const requestId = response.headers.get("X-Request-ID");
   const data = await response.json().catch(() => ({}));
   const detail = (data as { detail?: string }).detail ?? fallbackMessage;
-  if (requestId) {
-    console.error("Admin API request failed", {
-      requestId,
-      status: response.status,
-      statusText: response.statusText,
-      detail,
-    });
-  }
+  console.error("Admin API request failed", {
+    requestId,
+    status: response.status,
+    statusText: response.statusText,
+    detail,
+  });
   return detail;
 }
 

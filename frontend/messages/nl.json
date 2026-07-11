@@ -658,5 +658,6 @@
   "admin_registrations_export_event_csv_for": "Gastenlijst voor {event} exporteren als CSV",
   "admin_registrations_export_event_csv_error": "Exporteren van de gastenlijst is mislukt.",
   "admin_volunteers_export_csv": "Exporteren voor verzekering (CSV)",
-  "admin_volunteers_export_csv_error": "Exporteren van de vrijwilligerslijst is mislukt."
+  "admin_volunteers_export_csv_error": "Exporteren van de vrijwilligerslijst is mislukt.",
+  "admin_error_network": "We konden de server niet bereiken. Controleer je internetverbinding en probeer opnieuw."
 }

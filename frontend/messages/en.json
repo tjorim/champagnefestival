@@ -658,5 +658,6 @@
   "admin_registrations_export_event_csv_for": "Export guest list for {event} as CSV",
   "admin_registrations_export_event_csv_error": "Failed to export guest list.",
   "admin_volunteers_export_csv": "Export for insurance (CSV)",
-  "admin_volunteers_export_csv_error": "Failed to export volunteer list."
+  "admin_volunteers_export_csv_error": "Failed to export volunteer list.",
+  "admin_error_network": "We could not reach the server. Check your internet connection and try again."
 }

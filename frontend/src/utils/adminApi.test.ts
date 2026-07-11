@@ -54,4 +54,27 @@ describe("adminApi", () => {
       detail: "Registration not found",
     });
   });
+
+  it("logs failed API responses even when no request ID is present", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ detail: "Bad request" }), {
+          status: 400,
+          statusText: "Bad Request",
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    await expect(fetchJsonOrThrow("/api/admin/registrations", {}, "Try again")).rejects.toThrow(
+      "Bad request",
+    );
+    expect(console.error).toHaveBeenCalledWith("Admin API request failed", {
+      requestId: null,
+      status: 400,
+      statusText: "Bad Request",
+      detail: "Bad request",
+    });
+  });
 });
