@@ -242,6 +242,19 @@ describe("CheckInPage", () => {
     });
   });
 
+  it("updates delivered pre-order quantities from the numeric input", async () => {
+    await renderPage();
+
+    const quantityInput = await screen.findByRole("spinbutton", { name: "Delivered Champagne Glass" });
+
+    fireEvent.change(quantityInput, { target: { value: "4" } });
+    fireEvent.blur(quantityInput);
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 4/4")).toBeInTheDocument();
+    });
+  });
+
   it("shows an error when the token is invalid", async () => {
     server.use(
       http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 401 })),

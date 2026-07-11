@@ -1,12 +1,25 @@
+import { m } from "@/paraglide/messages";
+
 export async function requestApi(url: string, options: RequestInit): Promise<Response> {
-  return fetch(url, options);
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    console.error("Admin API network request failed", { url, error });
+    throw new Error(m.admin_error_network());
+  }
 }
 
 async function extractErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
   const requestId = response.headers.get("X-Request-ID");
   const data = await response.json().catch(() => ({}));
   const detail = (data as { detail?: string }).detail ?? fallbackMessage;
-  return requestId ? `${detail} [request-id: ${requestId}]` : detail;
+  console.error("Admin API request failed", {
+    requestId,
+    status: response.status,
+    statusText: response.statusText,
+    detail,
+  });
+  return detail;
 }
 
 export async function fetchJsonOrThrow<T>(

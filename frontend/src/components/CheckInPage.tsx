@@ -35,6 +35,7 @@ interface CheckInCardProps {
   canManageEntranceActions: boolean;
   onCheckIn: () => void;
   onAdjustPreOrder: (productId: string, delta: number) => void;
+  onSetPreOrderQuantity: (productId: string, quantity: number) => void;
   onIssueStrap: () => void;
 }
 
@@ -47,6 +48,7 @@ function CheckInCard({
   canManageEntranceActions,
   onCheckIn,
   onAdjustPreOrder,
+  onSetPreOrderQuantity,
   onIssueStrap,
 }: CheckInCardProps) {
   return (
@@ -140,34 +142,63 @@ function CheckInCard({
                     <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
                       {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                     </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline-secondary"
-                      onClick={() => onAdjustPreOrder(item.productId, -1)}
-                      disabled={
-                        !canManageEntranceActions ||
-                        isUpdatingRegistration ||
-                        item.deliveredQuantity <= 0
-                      }
-                      title={m.admin_mark_not_delivered()}
-                    >
-                      <i className="bi bi-dash" aria-hidden="true" />
-                      <span className="visually-hidden">{m.admin_mark_not_delivered()}</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={item.delivered ? "success" : "outline-success"}
-                      onClick={() => onAdjustPreOrder(item.productId, 1)}
-                      disabled={
-                        !canManageEntranceActions ||
-                        isUpdatingRegistration ||
-                        item.deliveredQuantity >= item.quantity
-                      }
-                      title={m.admin_mark_delivered()}
-                    >
-                      <i className="bi bi-plus" aria-hidden="true" />
-                      <span className="visually-hidden">{m.admin_mark_delivered()}</span>
-                    </Button>
+                    <div className="d-flex align-items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => onAdjustPreOrder(item.productId, -1)}
+                        disabled={
+                          !canManageEntranceActions ||
+                          isUpdatingRegistration ||
+                          item.deliveredQuantity <= 0
+                        }
+                        title={m.admin_mark_not_delivered()}
+                      >
+                        <i className="bi bi-dash" aria-hidden="true" />
+                        <span className="visually-hidden">{m.admin_mark_not_delivered()}</span>
+                      </Button>
+                      <Form.Control
+                        key={item.deliveredQuantity}
+                        aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
+                        className="text-center"
+                        inputMode="numeric"
+                        min={0}
+                        max={item.quantity}
+                        onBlur={(event) => {
+                          const deliveredQuantity = Number(event.currentTarget.value);
+                          if (
+                            Number.isFinite(deliveredQuantity) &&
+                            deliveredQuantity !== item.deliveredQuantity
+                          ) {
+                            onSetPreOrderQuantity(item.productId, deliveredQuantity);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        size="sm"
+                        style={{ width: "5rem" }}
+                        type="number"
+                        defaultValue={item.deliveredQuantity}
+                        disabled={!canManageEntranceActions || isUpdatingRegistration}
+                      />
+                      <Button
+                        size="sm"
+                        variant={item.delivered ? "success" : "outline-success"}
+                        onClick={() => onAdjustPreOrder(item.productId, 1)}
+                        disabled={
+                          !canManageEntranceActions ||
+                          isUpdatingRegistration ||
+                          item.deliveredQuantity >= item.quantity
+                        }
+                        title={m.admin_mark_delivered()}
+                      >
+                        <i className="bi bi-plus" aria-hidden="true" />
+                        <span className="visually-hidden">{m.admin_mark_delivered()}</span>
+                      </Button>
+                    </div>
                   </div>
                 </ListGroup.Item>
               ))}
@@ -396,15 +427,12 @@ export default function CheckInPage() {
     volunteerCheckInMutation.mutate(manualRegistration.id);
   }, [checkInMutation, hasQrCredentials, manualRegistration, volunteerCheckInMutation]);
 
-  const handleAdjustPreOrder = useCallback(
-    (productId: string, delta: number) => {
-      if (!registration) return;
+  const handleSetPreOrderQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (!registration || !Number.isFinite(quantity)) return;
       const updatedOrders = registration.preOrders.map((item) => {
         if (item.productId !== productId) return item;
-        const deliveredQuantity = Math.max(
-          0,
-          Math.min(item.quantity, item.deliveredQuantity + delta),
-        );
+        const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
         return {
           ...item,
           deliveredQuantity,
@@ -418,6 +446,16 @@ export default function CheckInPage() {
       });
     },
     [registration, updateRegistrationMutation],
+  );
+
+  const handleAdjustPreOrder = useCallback(
+    (productId: string, delta: number) => {
+      if (!registration) return;
+      const item = registration.preOrders.find((order) => order.productId === productId);
+      if (!item) return;
+      handleSetPreOrderQuantity(productId, item.deliveredQuantity + delta);
+    },
+    [handleSetPreOrderQuantity, registration],
   );
 
   const handleIssueStrap = useCallback(() => {
@@ -600,6 +638,7 @@ export default function CheckInPage() {
                 canManageEntranceActions={canManageEntranceActions}
                 onCheckIn={handleCheckIn}
                 onAdjustPreOrder={handleAdjustPreOrder}
+                onSetPreOrderQuantity={handleSetPreOrderQuantity}
                 onIssueStrap={handleIssueStrap}
               />
             )}

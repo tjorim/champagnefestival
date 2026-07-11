@@ -58,28 +58,32 @@ export default function RegistrationDetail({
     [tables],
   );
 
-  const handleAdjustDeliveredQuantity = useCallback(
-    (productId: string, delta: number) => {
-      if (!registration) return;
-      const updatedOrders = registration.preOrders.map((item) =>
-        item.productId === productId
-          ? (() => {
-              const deliveredQuantity = Math.max(
-                0,
-                Math.min(item.quantity, item.deliveredQuantity + delta),
-              );
-              return {
-                ...item,
-                deliveredQuantity,
-                remainingQuantity: item.quantity - deliveredQuantity,
-                delivered: deliveredQuantity === item.quantity,
-              };
-            })()
-          : item,
-      );
+  const handleSetDeliveredQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (!registration || !Number.isFinite(quantity)) return;
+      const updatedOrders = registration.preOrders.map((item) => {
+        if (item.productId !== productId) return item;
+        const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
+        return {
+          ...item,
+          deliveredQuantity,
+          remainingQuantity: item.quantity - deliveredQuantity,
+          delivered: deliveredQuantity === item.quantity,
+        };
+      });
       onToggleDelivered(registration.id, updatedOrders);
     },
     [registration, onToggleDelivered],
+  );
+
+  const handleAdjustDeliveredQuantity = useCallback(
+    (productId: string, delta: number) => {
+      if (!registration) return;
+      const item = registration.preOrders.find((order) => order.productId === productId);
+      if (!item) return;
+      handleSetDeliveredQuantity(productId, item.deliveredQuantity + delta);
+    },
+    [handleSetDeliveredQuantity, registration],
   );
 
   if (!registration) return null;
@@ -287,24 +291,52 @@ export default function RegistrationDetail({
                     <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
                       {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                     </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline-secondary"
-                      onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
-                      disabled={item.deliveredQuantity <= 0}
-                      title={m.admin_mark_not_delivered()}
-                    >
-                      <i className="bi bi-dash" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={item.delivered ? "success" : "outline-success"}
-                      onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
-                      disabled={item.deliveredQuantity >= item.quantity}
-                      title={m.admin_mark_delivered()}
-                    >
-                      <i className="bi bi-plus" aria-hidden="true" />
-                    </Button>
+                    <div className="d-flex align-items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
+                        disabled={item.deliveredQuantity <= 0}
+                        title={m.admin_mark_not_delivered()}
+                      >
+                        <i className="bi bi-dash" aria-hidden="true" />
+                      </Button>
+                      <Form.Control
+                        key={item.deliveredQuantity}
+                        aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
+                        className="text-center"
+                        inputMode="numeric"
+                        min={0}
+                        max={item.quantity}
+                        onBlur={(event) => {
+                          const deliveredQuantity = Number(event.currentTarget.value);
+                          if (
+                            Number.isFinite(deliveredQuantity) &&
+                            deliveredQuantity !== item.deliveredQuantity
+                          ) {
+                            handleSetDeliveredQuantity(item.productId, deliveredQuantity);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        size="sm"
+                        style={{ width: "5rem" }}
+                        type="number"
+                        defaultValue={item.deliveredQuantity}
+                      />
+                      <Button
+                        size="sm"
+                        variant={item.delivered ? "success" : "outline-success"}
+                        onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
+                        disabled={item.deliveredQuantity >= item.quantity}
+                        title={m.admin_mark_delivered()}
+                      >
+                        <i className="bi bi-plus" aria-hidden="true" />
+                      </Button>
+                    </div>
                   </div>
                 </ListGroup.Item>
               ))}

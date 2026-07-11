@@ -169,6 +169,31 @@ describe("RegistrationDetail", () => {
     expect(screen.getByText("Brut Reserve")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_delivered: 1/3")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_not_delivered: 2")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "admin_bottle_delivered Brut Reserve" })).toHaveValue(1);
+  });
+
+  it("updates delivered pre-order quantities from the numeric input", () => {
+    const { onToggleDelivered } = renderDetail();
+
+    const quantityInput = screen.getByRole("spinbutton", {
+      name: "admin_bottle_delivered Brut Reserve",
+    });
+
+    fireEvent.change(quantityInput, {
+      target: { value: "3" },
+    });
+    fireEvent.blur(quantityInput);
+
+    expect(onToggleDelivered).toHaveBeenCalledWith(
+      "reg-1",
+      expect.arrayContaining([
+        expect.objectContaining({
+          deliveredQuantity: 3,
+          remainingQuantity: 0,
+          delivered: true,
+        }),
+      ]),
+    );
   });
 
   it("renders table assignment in the detail modal and updates it on change", () => {
