@@ -2,10 +2,12 @@ import { useCallback } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
+import type { FloorTable } from "@/types/admin";
 import type { OrderItem, Registration } from "@/types/registration";
 
 interface RegistrationDetailProps {
@@ -14,10 +16,12 @@ interface RegistrationDetailProps {
   baseUrl: string;
   /** Other people sharing the same email address, shown in the merge-duplicate alert. */
   emailDuplicates?: { id: string; name: string }[];
+  tables: FloorTable[];
   onClose: () => void;
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
+  onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
 }
 
@@ -30,10 +34,12 @@ export default function RegistrationDetail({
   registration,
   baseUrl,
   emailDuplicates = [],
+  tables,
   onClose,
   onToggleDelivered,
   onCheckIn,
   onIssueStrap,
+  onAssignTable,
   onMergeDuplicate,
 }: RegistrationDetailProps) {
   const checkInUrl = registration
@@ -192,6 +198,29 @@ export default function RegistrationDetail({
             <span className="text-secondary">{m.admin_guests_count()}</span>
             <span>{registration.guestCount}</span>
           </ListGroup.Item>
+          {!simpleRsvp && (
+            <ListGroup.Item className="bg-dark text-light border-secondary">
+              <Form.Group controlId={`registration-detail-table-${registration.id}`}>
+                <Form.Label className="text-secondary">{m.admin_action_assign_table()}</Form.Label>
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={registration.tableId ?? ""}
+                  onChange={(event) =>
+                    onAssignTable(registration.id, event.target.value || undefined)
+                  }
+                  aria-label={m.admin_action_assign_table()}
+                >
+                  <option value="">{m.admin_unassigned()}</option>
+                  {tables.map((table) => (
+                    <option key={table.id} value={table.id}>
+                      {table.name} ({table.capacity})
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </ListGroup.Item>
+          )}
           {registration.notes && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
               <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>

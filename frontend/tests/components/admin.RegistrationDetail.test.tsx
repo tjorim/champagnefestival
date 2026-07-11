@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
+import type { FloorTable } from "@/types/admin";
 import type { Registration } from "@/types/registration";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -10,6 +11,31 @@ vi.mock("@/paraglide/messages", () => ({
     },
   }),
 }));
+
+const tables: FloorTable[] = [
+  {
+    id: "table-1",
+    name: "Table 1",
+    capacity: 8,
+    x: 10,
+    y: 10,
+    tableTypeId: "type-1",
+    rotation: 0,
+    layoutId: "layout-1",
+    registrationIds: [],
+  },
+  {
+    id: "table-2",
+    name: "Table 2",
+    capacity: 6,
+    x: 20,
+    y: 20,
+    tableTypeId: "type-1",
+    rotation: 0,
+    layoutId: "layout-1",
+    registrationIds: ["reg-1"],
+  },
+];
 
 function buildRegistration(overrides: Partial<Registration> = {}): Registration {
   return {
@@ -74,6 +100,7 @@ function renderDetail(props: Partial<React.ComponentProps<typeof RegistrationDet
   const onCheckIn = vi.fn();
   const onIssueStrap = vi.fn();
   const onMergeDuplicate = vi.fn();
+  const onAssignTable = vi.fn();
 
   render(
     <RegistrationDetail
@@ -83,12 +110,14 @@ function renderDetail(props: Partial<React.ComponentProps<typeof RegistrationDet
       onToggleDelivered={onToggleDelivered}
       onCheckIn={onCheckIn}
       onIssueStrap={onIssueStrap}
+      tables={tables}
+      onAssignTable={onAssignTable}
       onMergeDuplicate={onMergeDuplicate}
       {...props}
     />,
   );
 
-  return { onClose, onToggleDelivered, onCheckIn, onIssueStrap, onMergeDuplicate };
+  return { onClose, onToggleDelivered, onCheckIn, onIssueStrap, onMergeDuplicate, onAssignTable };
 }
 
 describe("RegistrationDetail", () => {
@@ -101,6 +130,8 @@ describe("RegistrationDetail", () => {
         onToggleDelivered={vi.fn()}
         onCheckIn={vi.fn()}
         onIssueStrap={vi.fn()}
+        tables={[]}
+        onAssignTable={vi.fn()}
       />,
     );
 
@@ -138,6 +169,48 @@ describe("RegistrationDetail", () => {
     expect(screen.getByText("Brut Reserve")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_delivered: 1/3")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_not_delivered: 2")).toBeInTheDocument();
+  });
+
+  it("renders table assignment in the detail modal and updates it on change", () => {
+    const { onAssignTable } = renderDetail({
+      registration: buildRegistration({ tableId: "table-2" }),
+    });
+
+    const select = screen.getByRole("combobox", { name: "admin_action_assign_table" });
+    expect(select).toHaveValue("table-2");
+
+    fireEvent.change(select, { target: { value: "table-1" } });
+
+    expect(onAssignTable).toHaveBeenCalledWith("reg-1", "table-1");
+  });
+
+  it("hides table assignment for simple RSVP (non-festival) registrations", () => {
+    renderDetail({
+      registration: buildRegistration({
+        event: {
+          id: "event-2",
+          editionId: "edition-2",
+          title: "Bourse Meetup",
+          description: "",
+          date: "2026-05-01",
+          startTime: "18:00",
+          category: "bourse",
+          registrationRequired: true,
+          active: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          edition: {
+            id: "edition-2",
+            year: 2026,
+            month: "may",
+            editionType: "bourse",
+            active: true,
+          },
+        },
+      }),
+    });
+
+    expect(screen.queryByRole("combobox", { name: "admin_action_assign_table" })).not.toBeInTheDocument();
   });
 
   it("hides pre-orders and strap section for simple RSVP (non-festival) registrations", () => {

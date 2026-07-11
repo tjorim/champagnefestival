@@ -583,10 +583,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           registration={detailRegistration}
           baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
           emailDuplicates={emailDuplicates}
+          tables={tables}
           onClose={() => setDetailRegistration(null)}
           onToggleDelivered={handleToggleDelivered}
           onCheckIn={handleCheckIn}
           onIssueStrap={handleIssueStrap}
+          onAssignTable={handleAssignTable}
           onMergeDuplicate={async (canonicalId, duplicateId) => {
             try {
               await handleMergePeople(canonicalId, duplicateId);
