@@ -244,17 +244,15 @@ export default function CheckInPage() {
   const [manualRegistration, setManualRegistration] = useState<CheckInData | null>(null);
   const hasQrCredentials = Boolean(registrationId && checkInToken);
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
+  const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
 
-  const authHeaders = useCallback(
-    (): Record<string, string> => {
-      const token = auth.getAccessToken();
-      return {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-    },
-    [auth],
-  );
+  const authHeaders = useCallback((): Record<string, string> => {
+    const token = auth.getAccessToken();
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, [auth]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -284,7 +282,7 @@ export default function CheckInPage() {
   const volunteerSearchQuery = useQuery({
     queryKey: queryKeys.volunteerRegistrationSearch(debouncedSearchTerm),
     queryFn: ({ signal }) => searchVolunteerRegistrations(debouncedSearchTerm, authHeaders, signal),
-    enabled: !hasQrCredentials && auth.isAuthenticated && debouncedSearchTerm.length >= 2,
+    enabled: !hasQrCredentials && canManageEntranceActions && debouncedSearchTerm.length >= 2,
     retry: false,
     staleTime: 15 * 1000,
   });
@@ -371,7 +369,6 @@ export default function CheckInPage() {
   const registration = manualRegistration ?? registrationQuery.data ?? null;
   const isLoading = hasQrCredentials ? registrationQuery.isPending : false;
   const isCheckingIn = checkInMutation.isPending || volunteerCheckInMutation.isPending;
-  const canManageEntranceActions = auth.isAuthenticated;
   const isUpdatingRegistration = updateRegistrationMutation.isPending;
   const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
   const mutationError = checkInMutation.isError
@@ -387,7 +384,8 @@ export default function CheckInPage() {
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
-  const showSearchHint = !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
+  const showSearchHint =
+    !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
 
   const handleCheckIn = useCallback(() => {
     if (hasQrCredentials) {
@@ -483,6 +481,9 @@ export default function CheckInPage() {
                           </Button>
                         </Alert>
                       )}
+                      {auth.isAuthenticated && !canManageEntranceActions && (
+                        <Alert variant="warning">{m.checkin_manual_search_unauthorized()}</Alert>
+                      )}
 
                       <Form.Group controlId="manual-checkin-query">
                         <Form.Label>{m.checkin_manual_search_label()}</Form.Label>
@@ -496,7 +497,7 @@ export default function CheckInPage() {
                             setAlreadyCheckedIn(false);
                           }}
                           placeholder={m.checkin_manual_search_placeholder()}
-                          disabled={!auth.isAuthenticated}
+                          disabled={!canManageEntranceActions}
                         />
                         <Form.Text className="text-secondary">
                           {m.checkin_manual_search_help()}

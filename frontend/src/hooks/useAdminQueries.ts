@@ -22,6 +22,7 @@ import {
 interface UseAdminQueriesOptions {
   visible: boolean;
   isAuthenticated: boolean;
+  canManageAdminSections: boolean;
   authHeaders: () => Record<string, string>;
 }
 
@@ -38,18 +39,46 @@ export const ADMIN_RESOURCE_KEYS = [
   "members",
 ] as const;
 
-export function shouldRefetchAdminResourceQuery(queryKey: readonly unknown[]): boolean {
+export const ADMIN_ONLY_RESOURCE_KEYS = ADMIN_RESOURCE_KEYS.filter(
+  (resource) => resource !== "registrations",
+);
+
+interface ShouldRefetchAdminResourceQueryOptions {
+  includeAdminOnly?: boolean;
+}
+
+export function shouldRefetchAdminResourceQuery(
+  queryKey: readonly unknown[],
+  { includeAdminOnly = true }: ShouldRefetchAdminResourceQueryOptions = {},
+): boolean {
+  if (
+    !(
+      queryKey.length === 2 &&
+      queryKey[0] === "admin" &&
+      typeof queryKey[1] === "string" &&
+      (ADMIN_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
+    )
+  ) {
+    return false;
+  }
+
+  if (includeAdminOnly) return true;
+  return !(ADMIN_ONLY_RESOURCE_KEYS as readonly string[]).includes(queryKey[1]);
+}
+
+export function shouldRefetchAdminOnlyResourceQuery(queryKey: readonly unknown[]): boolean {
   return (
     queryKey.length === 2 &&
     queryKey[0] === "admin" &&
     typeof queryKey[1] === "string" &&
-    (ADMIN_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
+    (ADMIN_ONLY_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
   );
 }
 
 export function useAdminQueries({
   visible,
   isAuthenticated,
+  canManageAdminSections,
   authHeaders,
 }: UseAdminQueriesOptions) {
   const queryClient = useQueryClient();
@@ -66,10 +95,14 @@ export function useAdminQueries({
   const peopleQueryKey = queryKeys.admin.people;
   const membersQueryKey = queryKeys.admin.members;
 
-  const adminQueryOptions = {
+  const registrationsQueryOptions = {
     enabled: visible && isAuthenticated,
     staleTime: 60 * 1000,
     retry: false as const,
+  };
+  const adminQueryOptions = {
+    ...registrationsQueryOptions,
+    enabled: visible && isAuthenticated && canManageAdminSections,
   };
 
   const registrationsCollection = useMemo(
@@ -77,9 +110,9 @@ export function useAdminQueries({
       createAdminRegistrationsCollection({
         queryClient,
         authHeaders,
-        enabled: adminQueryOptions.enabled,
+        enabled: registrationsQueryOptions.enabled,
       }),
-    [adminQueryOptions.enabled, authHeaders, queryClient],
+    [registrationsQueryOptions.enabled, authHeaders, queryClient],
   );
   const registrationsLiveQuery = useLiveQuery(
     () => registrationsCollection,
@@ -153,22 +186,29 @@ export function useAdminQueries({
 
   const allQueries = [
     registrationsQuery,
-    tablesQuery,
-    venuesQuery,
-    roomsQuery,
-    tableTypesQuery,
-    layoutsQuery,
-    exhibitorsQuery,
-    areasQuery,
-    peopleQuery,
-    membersQuery,
+    ...(canManageAdminSections
+      ? [
+          tablesQuery,
+          venuesQuery,
+          roomsQuery,
+          tableTypesQuery,
+          layoutsQuery,
+          exhibitorsQuery,
+          areasQuery,
+          peopleQuery,
+          membersQuery,
+        ]
+      : []),
   ];
 
   const loadData = useCallback(async () => {
     await queryClient.refetchQueries({
-      predicate: (query) => shouldRefetchAdminResourceQuery(query.queryKey),
+      predicate: (query) =>
+        shouldRefetchAdminResourceQuery(query.queryKey, {
+          includeAdminOnly: canManageAdminSections,
+        }),
     });
-  }, [queryClient]);
+  }, [canManageAdminSections, queryClient]);
 
   return {
     // Query objects (for error/loading state access)

@@ -104,6 +104,7 @@ export interface AdminSidebarProps {
   isAnyFetching: boolean;
   onLoadData: () => void;
   onLogout: () => void;
+  canManageAdminSections: boolean;
 }
 
 export default function AdminSidebar({
@@ -122,6 +123,7 @@ export default function AdminSidebar({
   isAnyFetching,
   onLoadData,
   onLogout,
+  canManageAdminSections,
 }: AdminSidebarProps) {
   const itemProps = { activeKey, setActiveKey, setSidebarOpen };
   const groupProps = { activeKey, expandedGroups, toggleGroup };
@@ -151,103 +153,119 @@ export default function AdminSidebar({
             {...itemProps}
           />
 
-          <SidebarGroup
-            groupKey="events"
-            icon="bi-calendar-event"
-            label={m.admin_events_group()}
-            itemKeys={["editions"]}
-            {...groupProps}
-          >
-            <SidebarItem
-              itemKey="editions"
-              icon="bi-calendar3"
-              label={m.admin_content_editions_section()}
-              {...itemProps}
-            />
-          </SidebarGroup>
+          {canManageAdminSections && (
+            <>
+              <SidebarGroup
+                groupKey="events"
+                icon="bi-calendar-event"
+                label={m.admin_events_group()}
+                itemKeys={["editions"]}
+                {...groupProps}
+              >
+                <SidebarItem
+                  itemKey="editions"
+                  icon="bi-calendar3"
+                  label={m.admin_content_editions_section()}
+                  {...itemProps}
+                />
+              </SidebarGroup>
 
-          <SidebarGroup
-            groupKey="content"
-            icon="bi-collection"
-            label={m.admin_content_tab()}
-            itemKeys={["exhibitors"]}
-            {...groupProps}
-          >
-            <SidebarItem
-              itemKey="exhibitors"
-              icon="bi-shop"
-              label={m.admin_content_exhibitors_section()}
-              {...itemProps}
-            />
-          </SidebarGroup>
+              <SidebarGroup
+                groupKey="content"
+                icon="bi-collection"
+                label={m.admin_content_tab()}
+                itemKeys={["exhibitors"]}
+                {...groupProps}
+              >
+                <SidebarItem
+                  itemKey="exhibitors"
+                  icon="bi-shop"
+                  label={m.admin_content_exhibitors_section()}
+                  {...itemProps}
+                />
+              </SidebarGroup>
 
-          <SidebarGroup
-            groupKey="venue"
-            icon="bi-geo-alt"
-            label={m.admin_venue_group()}
-            itemKeys={["venues", "table-types", "floor-plans"]}
-            {...groupProps}
-          >
-            <SidebarItem itemKey="venues" icon="bi-building" label={m.admin_venues_rooms_tab()} {...itemProps} />
-            <SidebarItem itemKey="table-types" icon="bi-grid" label={m.admin_table_types_tab()} {...itemProps} />
-            <SidebarItem
-              itemKey="floor-plans"
-              icon="bi-grid-3x3-gap"
-              label={m.admin_floor_plans_tab()}
-              {...itemProps}
-            />
-          </SidebarGroup>
+              <SidebarGroup
+                groupKey="venue"
+                icon="bi-geo-alt"
+                label={m.admin_venue_group()}
+                itemKeys={["venues", "table-types", "floor-plans"]}
+                {...groupProps}
+              >
+                <SidebarItem
+                  itemKey="venues"
+                  icon="bi-building"
+                  label={m.admin_venues_rooms_tab()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="table-types"
+                  icon="bi-grid"
+                  label={m.admin_table_types_tab()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="floor-plans"
+                  icon="bi-grid-3x3-gap"
+                  label={m.admin_floor_plans_tab()}
+                  {...itemProps}
+                />
+              </SidebarGroup>
 
-          <SidebarGroup
-            groupKey="people"
-            icon="bi-people"
-            label={m.admin_people_tab()}
-            itemKeys={["directory", "members", "volunteers"]}
-            {...groupProps}
-          >
-            <SidebarItem
-              itemKey="directory"
-              icon="bi-person"
-              label={m.admin_directory_tab()}
-              count={peopleCount}
-              {...itemProps}
-            />
-            <SidebarItem
-              itemKey="members"
-              icon="bi-person-badge"
-              label={m.admin_members_tab()}
-              count={membersCount}
-              {...itemProps}
-            />
-            <SidebarItem
-              itemKey="volunteers"
-              icon="bi-hand-thumbs-up"
-              label={m.admin_volunteers_tab()}
-              count={volunteerCount}
-              {...itemProps}
-            />
-          </SidebarGroup>
+              <SidebarGroup
+                groupKey="people"
+                icon="bi-people"
+                label={m.admin_people_tab()}
+                itemKeys={["directory", "members", "volunteers"]}
+                {...groupProps}
+              >
+                <SidebarItem
+                  itemKey="directory"
+                  icon="bi-person"
+                  label={m.admin_directory_tab()}
+                  count={peopleCount}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="members"
+                  icon="bi-person-badge"
+                  label={m.admin_members_tab()}
+                  count={membersCount}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="volunteers"
+                  icon="bi-hand-thumbs-up"
+                  label={m.admin_volunteers_tab()}
+                  count={volunteerCount}
+                  {...itemProps}
+                />
+              </SidebarGroup>
+            </>
+          )}
 
-          <SidebarGroup
-            groupKey="insights"
-            icon="bi-graph-up"
-            label={m.admin_insights_group()}
-            itemKeys={["analytics", "audit-log"]}
-            {...groupProps}
-          >
-            <SidebarItem
-              itemKey="analytics"
-              icon="bi-bar-chart"
-              label={m.admin_analytics_tab()}
-              {...itemProps}
-            />
-            <SidebarItem
-              itemKey="audit-log"
-              icon="bi-journal-text"
-              label={m.admin_audit_log_tab()}
-              {...itemProps}
-            />
-          </SidebarGroup>
+          {canManageAdminSections && (
+            <SidebarGroup
+              groupKey="insights"
+              icon="bi-graph-up"
+              label={m.admin_insights_group()}
+              itemKeys={["analytics", "audit-log"]}
+              {...groupProps}
+            >
+              <SidebarItem
+                itemKey="analytics"
+                icon="bi-bar-chart"
+                label={m.admin_analytics_tab()}
+                {...itemProps}
+              />
+              <SidebarItem
+                itemKey="audit-log"
+                icon="bi-journal-text"
+                label={m.admin_audit_log_tab()}
+                {...itemProps}
+              />
+            </SidebarGroup>
+          )}
         </nav>
 
         {/* Footer: status + actions */}

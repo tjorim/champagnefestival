@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
 import CheckInPage from "@/components/CheckInPage";
+import { useAuth } from "@/contexts/AuthContext";
 import { server } from "@/mocks/server";
 import { seedRegistrations } from "@/mocks/data/registrations";
 import { validateCheckInSearch } from "@/router";
@@ -64,6 +65,18 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("CheckInPage", () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      roles: ["admin"],
+      hasRole: vi.fn((role: string) => role === "admin"),
+      getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+  });
+
   async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`) {
     const rootRoute = createRootRoute();
     const checkInRoute = createRoute({
@@ -155,6 +168,24 @@ describe("CheckInPage", () => {
     fireEvent.click(screen.getByText(SEED_REG_NAME));
 
     expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+  });
+
+  it("does not search manually for authenticated users without entrance roles", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    await renderPage("/check-in");
+
+    const searchInput = screen.getByLabelText("Guest name or email");
+    expect(searchInput).toBeDisabled();
+    expect(screen.getByText("Sign in as a volunteer or admin.")).toBeInTheDocument();
   });
 
   it("submits manual check-in for a selected volunteer search result", async () => {
