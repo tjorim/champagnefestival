@@ -115,7 +115,6 @@ function SuspendedMarqueeSlider({
 function AdminPage() {
   return (
     <div className="App">
-      <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
@@ -133,7 +132,6 @@ function AdminPage() {
 function CheckInRoute() {
   return (
     <div className="App">
-      <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
@@ -484,6 +482,7 @@ function renderApp(): void {
       <OidcAuthProvider {...oidcConfig}>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
+            <LiveUpdatesProvider />
             <RouterProvider router={router} />
           </QueryClientProvider>
         </AuthProvider>
