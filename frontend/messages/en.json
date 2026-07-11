@@ -189,6 +189,7 @@
   "admin_action_mark_paid": "Mark as Paid",
   "admin_action_assign_table": "Assign Table",
   "admin_no_registrations": "No registrations found",
+  "admin_no_registration_filter_matches": "No registrations match the current filters.",
   "admin_filter_all": "All",
   "admin_filter_pending": "Pending",
   "admin_filter_confirmed": "Confirmed",

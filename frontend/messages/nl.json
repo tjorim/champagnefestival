@@ -189,6 +189,7 @@
   "admin_action_mark_paid": "Betaald markeren",
   "admin_action_assign_table": "Tafel toewijzen",
   "admin_no_registrations": "Geen registraties gevonden",
+  "admin_no_registration_filter_matches": "Geen registraties komen overeen met de huidige filters.",
   "admin_filter_all": "Alle",
   "admin_filter_pending": "In behandeling",
   "admin_filter_confirmed": "Bevestigd",
