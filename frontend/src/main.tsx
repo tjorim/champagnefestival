@@ -27,7 +27,6 @@ import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import { endOfDay } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
-import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -482,7 +481,6 @@ function renderApp(): void {
       <OidcAuthProvider {...oidcConfig}>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
-            <LiveUpdatesProvider />
             <RouterProvider router={router} />
           </QueryClientProvider>
         </AuthProvider>

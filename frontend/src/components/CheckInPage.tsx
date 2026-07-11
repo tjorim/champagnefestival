@@ -266,7 +266,9 @@ function CheckInCard({
 export default function CheckInPage() {
   const queryClient = useQueryClient();
   const auth = useAuth();
-  const { id: registrationId, token: checkInToken } = useSearch({ from: "/check-in" });
+  const { id: registrationId, token: checkInToken } = useSearch({
+    from: "/admin-layout/check-in",
+  });
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
