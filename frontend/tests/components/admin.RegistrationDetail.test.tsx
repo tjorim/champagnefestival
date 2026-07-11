@@ -15,7 +15,7 @@ vi.mock("@/paraglide/messages", () => ({
 const tables: FloorTable[] = [
   {
     id: "table-1",
-    name: "Table 1",
+    name: "Table 10",
     capacity: 8,
     x: 10,
     y: 10,
@@ -178,6 +178,11 @@ describe("RegistrationDetail", () => {
 
     const select = screen.getByRole("combobox", { name: "admin_action_assign_table" });
     expect(select).toHaveValue("table-2");
+    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "admin_unassigned",
+      "Table 2 (6)",
+      "Table 10 (8)",
+    ]);
 
     fireEvent.change(select, { target: { value: "table-1" } });
 

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -16,7 +16,7 @@ interface RegistrationDetailProps {
   baseUrl: string;
   /** Other people sharing the same email address, shown in the merge-duplicate alert. */
   emailDuplicates?: { id: string; name: string }[];
-  tables: FloorTable[];
+  tables?: FloorTable[] | null;
   onClose: () => void;
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (registrationId: string) => void;
@@ -34,7 +34,7 @@ export default function RegistrationDetail({
   registration,
   baseUrl,
   emailDuplicates = [],
-  tables,
+  tables = [],
   onClose,
   onToggleDelivered,
   onCheckIn,
@@ -45,6 +45,14 @@ export default function RegistrationDetail({
   const checkInUrl = registration
     ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}&token=${encodeURIComponent(registration.checkInToken ?? "")}`
     : "";
+
+  const sortedTables = useMemo(
+    () =>
+      [...(tables ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
+      ),
+    [tables],
+  );
 
   const handleAdjustDeliveredQuantity = useCallback(
     (productId: string, delta: number) => {
@@ -212,7 +220,7 @@ export default function RegistrationDetail({
                   aria-label={m.admin_action_assign_table()}
                 >
                   <option value="">{m.admin_unassigned()}</option>
-                  {tables.map((table) => (
+                  {sortedTables.map((table) => (
                     <option key={table.id} value={table.id}>
                       {table.name} ({table.capacity})
                     </option>
