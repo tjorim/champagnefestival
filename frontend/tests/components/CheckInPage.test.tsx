@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  Outlet,
   createMemoryHistory,
   createRootRoute,
   createRoute,
@@ -79,13 +80,18 @@ describe("CheckInPage", () => {
 
   async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`) {
     const rootRoute = createRootRoute();
-    const checkInRoute = createRoute({
+    const adminLayoutRoute = createRoute({
       getParentRoute: () => rootRoute,
+      id: "admin-layout",
+      component: () => <Outlet />,
+    });
+    const checkInRoute = createRoute({
+      getParentRoute: () => adminLayoutRoute,
       path: "/check-in",
       validateSearch: validateCheckInSearch,
       component: CheckInPage,
     });
-    const routeTree = rootRoute.addChildren([checkInRoute]);
+    const routeTree = rootRoute.addChildren([adminLayoutRoute.addChildren([checkInRoute])]);
     const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
     const router = createRouter({ routeTree, history: memoryHistory });
     await router.load();
@@ -121,13 +127,18 @@ describe("CheckInPage", () => {
 
   it("invalidates the checked-in registration query after submitting", async () => {
     const rootRoute = createRootRoute();
-    const checkInRoute = createRoute({
+    const adminLayoutRoute = createRoute({
       getParentRoute: () => rootRoute,
+      id: "admin-layout",
+      component: () => <Outlet />,
+    });
+    const checkInRoute = createRoute({
+      getParentRoute: () => adminLayoutRoute,
       path: "/check-in",
       validateSearch: validateCheckInSearch,
       component: CheckInPage,
     });
-    const routeTree = rootRoute.addChildren([checkInRoute]);
+    const routeTree = rootRoute.addChildren([adminLayoutRoute.addChildren([checkInRoute])]);
     const memoryHistory = createMemoryHistory({
       initialEntries: [`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`],
     });
