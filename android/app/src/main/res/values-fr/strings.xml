@@ -11,6 +11,7 @@
     <string name="error_network_unavailable">Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.</string>
     <string name="error_certificate_untrusted">Le certificat du serveur n\'a pas pu être vérifié. Veuillez mettre à jour l\'application.</string>
     <string name="error_unauthorized">Le code d\'enregistrement n\'est plus valide.</string>
+    <string name="error_no_active_edition">Aucune édition du festival n\'est active ou à venir pour le moment.</string>
     <string name="error_server">Le serveur a rejeté la demande. Veuillez réessayer.</string>
     <string name="error_unknown">Une erreur s\'est produite. Veuillez réessayer.</string>
 
