@@ -9,9 +9,8 @@ interface RivieraHeroProps {
 const RivieraHero = ({ festivalName, title, subtitle, learnMoreLabel, scheduleLabel }: RivieraHeroProps) => {
   return (
     <section className="riviera-hero" id="welcome">
-      <div className="riviera-hero__poster" aria-hidden="true">
-        <span className="riviera-hero__poster-mark">CF</span>
-      </div>
+      {/* Content first: it takes the wide left grid column; the poster sits right.
+          On mobile the poster is hoisted back above the text via order: -1. */}
       <div className="riviera-hero__content">
         <span className="riviera-eyebrow">{festivalName}</span>
         <h1 className="riviera-hero__title">{title}</h1>
@@ -25,6 +24,9 @@ const RivieraHero = ({ festivalName, title, subtitle, learnMoreLabel, scheduleLa
             {scheduleLabel}
           </a>
         </div>
+      </div>
+      <div className="riviera-hero__poster" aria-hidden="true">
+        <span className="riviera-hero__poster-mark">CF</span>
       </div>
     </section>
   );

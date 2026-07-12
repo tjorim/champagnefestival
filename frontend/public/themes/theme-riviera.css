@@ -247,7 +247,8 @@ html[data-visual-theme="riviera"] .bubble-background {
   }
 
   html[data-visual-theme="riviera"] .site-header .container {
-    display: grid;
+    /* !important needed: the markup's d-flex utility is itself !important */
+    display: grid !important;
     gap: 1rem;
     width: 100%;
     padding: 0;
@@ -301,8 +302,8 @@ html[data-visual-theme="riviera"] .bubble-background {
   position: relative;
   min-height: min(900px, calc(100vh - 1rem));
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(18rem, 0.72fr);
-  gap: clamp(2rem, 6vw, 6rem);
+  grid-template-columns: minmax(0, 1.2fr) minmax(14rem, 0.6fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
   align-items: center;
   padding: clamp(6rem, 10vw, 9rem) clamp(1rem, 7vw, 7rem) clamp(4rem, 8vw, 8rem);
   overflow: hidden;
@@ -316,6 +317,7 @@ html[data-visual-theme="riviera"] .bubble-background {
 .riviera-hero__content {
   position: relative;
   z-index: 2;
+  min-width: 0;
   width: min(42rem, 100%);
   padding: clamp(1.25rem, 4vw, 3rem);
   background: rgba(255, 250, 240, 0.88);
@@ -339,12 +341,13 @@ html[data-visual-theme="riviera"] .bubble-background {
 }
 
 .riviera-hero__title {
-  max-width: 11ch;
   margin: 1rem 0 0;
   color: var(--ink);
-  font-size: clamp(4rem, 10vw, 8.75rem);
-  line-height: 0.82;
-  letter-spacing: -0.09em;
+  font-size: clamp(2.4rem, 3.2vw, 3.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  overflow-wrap: break-word;
+  hyphens: auto;
   text-shadow: 0.055em 0.055em 0 rgba(255, 209, 102, 0.8);
 }
 
@@ -777,7 +780,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   }
 
   .riviera-hero__title {
-    font-size: clamp(3.5rem, 19vw, 5.5rem);
+    font-size: clamp(1.85rem, 8.5vw, 2.25rem);
   }
 
   .content-section > .container,
