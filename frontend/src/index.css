@@ -920,8 +920,8 @@ a:focus {
 }
 
 @media (max-width: 767.98px) {
-  body {
-    padding-top: 3.75rem;
+  :root {
+    --header-height: 3.75rem;
   }
 
   .content-section {

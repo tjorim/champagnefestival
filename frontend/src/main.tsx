@@ -196,14 +196,22 @@ function App() {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showBubbles, setShowBubbles] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("champagnefestival:bubbles") === "true";
+    try {
+      return window.localStorage.getItem("champagnefestival:bubbles") === "true";
+    } catch {
+      return false;
+    }
   });
   const bubbleTapCountRef = useRef(0);
   const bubbleTapResetRef = useRef<number | null>(null);
   const bubbleKeyBufferRef = useRef("");
 
   useEffect(() => {
-    window.localStorage.setItem("champagnefestival:bubbles", String(showBubbles));
+    try {
+      window.localStorage.setItem("champagnefestival:bubbles", String(showBubbles));
+    } catch {
+      // Storage may be unavailable (disabled, sandboxed iframe, quota exceeded); bubble toggle just won't persist.
+    }
   }, [showBubbles]);
 
   useEffect(() => {
