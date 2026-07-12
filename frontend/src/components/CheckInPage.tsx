@@ -14,6 +14,7 @@ import Collapse from "react-bootstrap/Collapse";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryKeys } from "@/utils/queryKeys";
+import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/utils/adminApi";
 import {
   CheckInError,
   fetchCheckInRegistration,
@@ -25,6 +26,16 @@ import {
   submitVolunteerCheckIn,
   updateVolunteerRegistration,
 } from "@/utils/volunteerApi";
+
+function formatEntranceActionError(message: string): string {
+  if (message === SESSION_EXPIRED_ERROR) {
+    return m.checkin_actions_session_expired();
+  }
+  if (message === UNAUTHORIZED_ERROR) {
+    return m.checkin_actions_unauthorized();
+  }
+  return message;
+}
 
 interface CheckInCardProps {
   registration: CheckInData;
@@ -411,11 +422,9 @@ export default function CheckInPage() {
       ? checkInMutation.error.message
       : m.checkin_error()
     : volunteerCheckInMutation.isError
-      ? volunteerCheckInMutation.error.message
+      ? formatEntranceActionError(volunteerCheckInMutation.error.message)
       : updateRegistrationMutation.isError
-        ? updateRegistrationMutation.error.message === "unauthorized"
-          ? m.checkin_actions_unauthorized()
-          : updateRegistrationMutation.error.message
+        ? formatEntranceActionError(updateRegistrationMutation.error.message)
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
@@ -585,9 +594,11 @@ export default function CheckInPage() {
                               className="bi bi-exclamation-triangle-fill me-2"
                               aria-hidden="true"
                             />
-                            {volunteerSearchQuery.error.message === "unauthorized"
-                              ? m.checkin_manual_search_unauthorized()
-                              : volunteerSearchQuery.error.message}
+                            {volunteerSearchQuery.error.message === SESSION_EXPIRED_ERROR
+                              ? m.checkin_manual_search_session_expired()
+                              : volunteerSearchQuery.error.message === UNAUTHORIZED_ERROR
+                                ? m.checkin_manual_search_unauthorized()
+                                : volunteerSearchQuery.error.message}
                           </Alert>
                         )}
 
