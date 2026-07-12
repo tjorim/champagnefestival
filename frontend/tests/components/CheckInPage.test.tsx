@@ -337,6 +337,33 @@ describe("CheckInPage", () => {
     });
   });
 
+  it("shows an expired-session message when volunteer check-in returns 401", async () => {
+    server.use(
+      http.post("/api/volunteer/registrations/:id/check-in", () =>
+        HttpResponse.json(null, { status: 401 }),
+      ),
+    );
+
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Volunteer session expired for entrance actions."),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("shows an expired-session message when entrance action returns 401", async () => {
     server.use(
       http.put("/api/volunteer/registrations/:id", () => HttpResponse.json(null, { status: 401 })),
@@ -351,7 +378,9 @@ describe("CheckInPage", () => {
     fireEvent.click(screen.getByTitle("Mark as delivered"));
 
     await waitFor(() => {
-      expect(screen.getByText("Volunteer session expired for entrance actions.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Volunteer session expired for entrance actions."),
+      ).toBeInTheDocument();
     });
   });
 

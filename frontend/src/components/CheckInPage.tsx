@@ -27,6 +27,16 @@ import {
   updateVolunteerRegistration,
 } from "@/utils/volunteerApi";
 
+function formatEntranceActionError(message: string): string {
+  if (message === SESSION_EXPIRED_ERROR) {
+    return m.checkin_actions_session_expired();
+  }
+  if (message === UNAUTHORIZED_ERROR) {
+    return m.checkin_actions_unauthorized();
+  }
+  return message;
+}
+
 interface CheckInCardProps {
   registration: CheckInData;
   success: boolean;
@@ -412,13 +422,9 @@ export default function CheckInPage() {
       ? checkInMutation.error.message
       : m.checkin_error()
     : volunteerCheckInMutation.isError
-      ? volunteerCheckInMutation.error.message
+      ? formatEntranceActionError(volunteerCheckInMutation.error.message)
       : updateRegistrationMutation.isError
-        ? updateRegistrationMutation.error.message === SESSION_EXPIRED_ERROR
-          ? m.checkin_actions_session_expired()
-          : updateRegistrationMutation.error.message === UNAUTHORIZED_ERROR
-            ? m.checkin_actions_unauthorized()
-            : updateRegistrationMutation.error.message
+        ? formatEntranceActionError(updateRegistrationMutation.error.message)
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
