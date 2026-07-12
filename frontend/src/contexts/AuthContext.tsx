@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import { devError } from "@/utils/devLog";
 
@@ -75,6 +75,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const oidcAuth = useOidcAuth();
+  const { signinRedirect, signoutRedirect } = oidcAuth;
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [dismissedOidcError, setDismissedOidcError] = useState<string | null>(null);
 
@@ -92,6 +93,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const oidcError = oidcAuth.error
     ? formatAuthError(oidcAuth.error, "Authentication failed. Please try again.")
     : null;
+
+  useEffect(() => {
+    if (oidcError === null) {
+      setDismissedOidcError(null);
+    }
+  }, [oidcError]);
+
   const visibleOidcError = oidcError === dismissedOidcError ? null : oidcError;
   const authError = redirectError ?? visibleOidcError;
 
@@ -104,22 +112,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     (returnTo = "/admin") => {
       setRedirectError(null);
       setDismissedOidcError(null);
-      oidcAuth.signinRedirect({ state: { returnTo } }).catch((error: unknown) => {
+      signinRedirect({ state: { returnTo } }).catch((error: unknown) => {
         devError("signinRedirect failed:", error);
         setRedirectError(formatAuthError(error, "Could not start sign-in. Please try again."));
       });
     },
-    [oidcAuth],
+    [signinRedirect],
   );
 
   const logout = useCallback(() => {
     setRedirectError(null);
     setDismissedOidcError(null);
-    oidcAuth.signoutRedirect().catch((error: unknown) => {
+    signoutRedirect().catch((error: unknown) => {
       devError("signoutRedirect failed:", error);
       setRedirectError(formatAuthError(error, "Could not sign out. Please try again."));
     });
-  }, [oidcAuth]);
+  }, [signoutRedirect]);
 
   const contextValue = useMemo<AuthContextType>(
     () => ({
