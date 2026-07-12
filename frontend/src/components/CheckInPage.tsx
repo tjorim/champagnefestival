@@ -492,6 +492,15 @@ export default function CheckInPage() {
           {m.checkin_title()}
         </h2>
 
+        {auth.authError ? (
+          <Alert variant="danger" dismissible onClose={auth.clearAuthError}>
+            <Alert.Heading as="h3" className="h6">
+              {m.auth_error_title()}
+            </Alert.Heading>
+            <p className="mb-0">{auth.authError}</p>
+          </Alert>
+        ) : null}
+
         {shouldShowAuthLoadingGate ? (
           <div className="text-center py-4">
             <Spinner animation="border" variant="warning" role="status">

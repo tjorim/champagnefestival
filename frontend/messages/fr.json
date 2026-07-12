@@ -167,6 +167,7 @@
   "admin_token_placeholder": "Entrez votre jeton d'administration",
   "admin_login_button": "Se connecter",
   "admin_login_error": "Jeton d'administration invalide. Veuillez réessayer.",
+  "auth_error_title": "Problème d’authentification",
   "admin_logout": "Se déconnecter",
   "admin_registrations_tab": "Inscriptions",
   "admin_tables_tab": "Plan de salle",

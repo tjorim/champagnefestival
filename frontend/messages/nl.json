@@ -167,6 +167,7 @@
   "admin_token_placeholder": "Voer uw beheerderscode in",
   "admin_login_button": "Aanmelden",
   "admin_login_error": "Ongeldige beheerderscode. Probeer opnieuw.",
+  "auth_error_title": "Authenticatieprobleem",
   "admin_logout": "Afmelden",
   "admin_registrations_tab": "Registraties",
   "admin_tables_tab": "Zaalindeling",

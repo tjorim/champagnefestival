@@ -49,6 +49,8 @@ describe("LiveUpdatesProvider", () => {
       roles: ["admin"],
       hasRole: vi.fn((role: string) => role === "admin"),
       getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
     });
@@ -72,6 +74,8 @@ describe("LiveUpdatesProvider", () => {
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
     });
