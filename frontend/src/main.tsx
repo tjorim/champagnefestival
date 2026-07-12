@@ -17,6 +17,8 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import HeaderClassic from "./components/HeaderClassic";
 import ThemeSwitcher from "./components/ThemeSwitcher";
+import RivieraFeatureGrid from "./components/riviera/RivieraFeatureGrid";
+import RivieraHero from "./components/riviera/RivieraHero";
 import EventStructuredData from "./components/JsonLd";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
@@ -320,7 +322,15 @@ function App() {
 
       <main id="main-content">
         {/* Hero Section */}
-        {variant === "classic" ? (
+        {variant === "riviera" ? (
+          <RivieraHero
+            festivalName={m.festival_name()}
+            title={m.welcome_title()}
+            subtitle={m.welcome_subtitle()}
+            learnMoreLabel={m.welcome_learn_more()}
+            scheduleLabel={m.schedule_title()}
+          />
+        ) : variant === "classic" ? (
           <section className="hero" id="welcome">
             <h1 className="brand-title">{m.welcome_title()}</h1>
             <p className="hero-subtitle">{m.welcome_subtitle()}</p>
@@ -363,19 +373,30 @@ function App() {
               </div>
             </div>
             {/* Features in full width to display side by side */}
-            <div className="features">
-              {featureItems.map((feature) => (
-                <div key={feature.id} className="feature">
-                  {variant === "refresh" && (
-                    <span className="feature-icon" aria-hidden="true">
-                      <i className={FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars"} />
-                    </span>
-                  )}
-                  <h3>{feature.getTitle()}</h3>
-                  <p>{feature.getDesc()}</p>
-                </div>
-              ))}
-            </div>
+            {variant === "riviera" ? (
+              <RivieraFeatureGrid
+                items={featureItems.map((feature) => ({
+                  id: feature.id,
+                  title: feature.getTitle(),
+                  description: feature.getDesc(),
+                  iconClass: FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars",
+                }))}
+              />
+            ) : (
+              <div className="features">
+                {featureItems.map((feature) => (
+                  <div key={feature.id} className="feature">
+                    {variant !== "classic" && (
+                      <span className="feature-icon" aria-hidden="true">
+                        <i className={FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars"} />
+                      </span>
+                    )}
+                    <h3>{feature.getTitle()}</h3>
+                    <p>{feature.getDesc()}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

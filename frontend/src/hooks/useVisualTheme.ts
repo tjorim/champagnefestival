@@ -1,20 +1,24 @@
 import { useCallback, useState } from "react";
 
-export type VisualThemeVariant = "refresh" | "classic";
+export type VisualThemeVariant = "refresh" | "classic" | "riviera";
 
 const STORAGE_KEY = "champagnefestival:visualTheme";
 const STYLESHEET_ID = "visual-theme-stylesheet";
 
+function isVisualThemeVariant(value: string | null | undefined): value is VisualThemeVariant {
+  return value === "refresh" || value === "classic" || value === "riviera";
+}
+
 function readStoredVariant(): VisualThemeVariant {
   if (typeof document !== "undefined" && document.documentElement.dataset.visualTheme) {
     const current = document.documentElement.dataset.visualTheme;
-    if (current === "classic" || current === "refresh") return current;
+    if (isVisualThemeVariant(current)) return current;
   }
 
   if (typeof window === "undefined") return "refresh";
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "classic" || stored === "refresh") return stored;
+    if (isVisualThemeVariant(stored)) return stored;
   } catch {
     // Storage may be unavailable (disabled, sandboxed iframe); fall back to the default variant.
   }
@@ -41,6 +45,11 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
 
   if (variant === "classic") {
     document.documentElement.dataset.bsTheme = "dark";
+    return;
+  }
+
+  if (variant === "riviera") {
+    document.documentElement.dataset.bsTheme = "light";
     return;
   }
   const isLight =
