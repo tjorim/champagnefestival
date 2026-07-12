@@ -309,12 +309,18 @@ export default function RegistrationDetail({
                         min={0}
                         max={item.quantity}
                         onBlur={(event) => {
-                          const deliveredQuantity = Number(event.currentTarget.value);
-                          if (
-                            Number.isFinite(deliveredQuantity) &&
-                            deliveredQuantity !== item.deliveredQuantity
-                          ) {
-                            handleSetDeliveredQuantity(item.productId, deliveredQuantity);
+                          const value = Number(event.currentTarget.value);
+                          if (Number.isFinite(value)) {
+                            const bounded = Math.max(
+                              0,
+                              Math.min(item.quantity, Math.trunc(value)),
+                            );
+                            event.currentTarget.value = String(bounded);
+                            if (bounded !== item.deliveredQuantity) {
+                              handleSetDeliveredQuantity(item.productId, bounded);
+                            }
+                          } else {
+                            event.currentTarget.value = String(item.deliveredQuantity);
                           }
                         }}
                         onKeyDown={(event) => {

@@ -34,7 +34,9 @@ function decodeTokenClaims(token: string | undefined): TokenClaims | null {
   try {
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    return JSON.parse(atob(padded)) as TokenClaims;
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as TokenClaims;
   } catch {
     return null;
   }
