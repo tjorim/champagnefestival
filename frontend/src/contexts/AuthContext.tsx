@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import { devError } from "@/utils/devLog";
 
@@ -10,6 +10,9 @@ export interface AuthContextType {
   hasRole: (role: string) => boolean;
   /** Returns the current OIDC access token, or null when not authenticated. */
   getAccessToken: () => string | null;
+  /** Authentication error to show in the app instead of leaving it in the console/provider only. */
+  authError: string | null;
+  clearAuthError: () => void;
   login: (returnTo?: string) => void;
   logout: () => void;
 }
@@ -35,6 +38,12 @@ function decodeTokenClaims(token: string | undefined): TokenClaims | null {
   } catch {
     return null;
   }
+}
+
+function formatAuthError(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  return fallback;
 }
 
 function extractRealmRoles(...claims: Array<TokenClaims | null | undefined>): string[] {
@@ -66,6 +75,9 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const oidcAuth = useOidcAuth();
+  const { signinRedirect, signoutRedirect } = oidcAuth;
+  const [redirectError, setRedirectError] = useState<string | null>(null);
+  const [dismissedOidcError, setDismissedOidcError] = useState<string | null>(null);
 
   const getAccessToken = useCallback((): string | null => {
     return oidcAuth.user?.access_token ?? null;
@@ -78,17 +90,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const hasRole = useCallback((role: string) => roles.includes(role), [roles]);
 
-  const login = useCallback((returnTo = "/admin") => {
-    oidcAuth.signinRedirect({ state: { returnTo } }).catch((error: unknown) => {
-      devError("signinRedirect failed:", error);
-    });
-  }, [oidcAuth]);
+  const oidcError = oidcAuth.error
+    ? formatAuthError(oidcAuth.error, "Authentication failed. Please try again.")
+    : null;
+
+  useEffect(() => {
+    if (oidcError === null) {
+      setDismissedOidcError(null);
+    }
+  }, [oidcError]);
+
+  const visibleOidcError = oidcError === dismissedOidcError ? null : oidcError;
+  const authError = redirectError ?? visibleOidcError;
+
+  const clearAuthError = useCallback(() => {
+    setRedirectError(null);
+    setDismissedOidcError(oidcError);
+  }, [oidcError]);
+
+  const login = useCallback(
+    (returnTo = "/admin") => {
+      setRedirectError(null);
+      setDismissedOidcError(null);
+      signinRedirect({ state: { returnTo } }).catch((error: unknown) => {
+        devError("signinRedirect failed:", error);
+        setRedirectError(formatAuthError(error, "Could not start sign-in. Please try again."));
+      });
+    },
+    [signinRedirect],
+  );
 
   const logout = useCallback(() => {
-    oidcAuth.signoutRedirect().catch((error: unknown) => {
+    setRedirectError(null);
+    setDismissedOidcError(null);
+    signoutRedirect().catch((error: unknown) => {
       devError("signoutRedirect failed:", error);
+      setRedirectError(formatAuthError(error, "Could not sign out. Please try again."));
     });
-  }, [oidcAuth]);
+  }, [signoutRedirect]);
 
   const contextValue = useMemo<AuthContextType>(
     () => ({
@@ -97,10 +136,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       roles,
       hasRole,
       getAccessToken,
+      authError,
+      clearAuthError,
       login,
       logout,
     }),
-    [oidcAuth.isAuthenticated, oidcAuth.isLoading, roles, hasRole, getAccessToken, login, logout],
+    [
+      oidcAuth.isAuthenticated,
+      oidcAuth.isLoading,
+      roles,
+      hasRole,
+      getAccessToken,
+      authError,
+      clearAuthError,
+      login,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

@@ -167,6 +167,7 @@
   "admin_token_placeholder": "Enter your admin token",
   "admin_login_button": "Login",
   "admin_login_error": "Invalid admin token. Please try again.",
+  "auth_error_title": "Authentication problem",
   "admin_logout": "Logout",
   "admin_registrations_tab": "Registrations",
   "admin_tables_tab": "Hall Layout",

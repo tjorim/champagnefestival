@@ -56,6 +56,7 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_manual_not_checked_in: () => "Not checked in",
     checkin_search_error: () => "Could not search registrations.",
     admin_login_button: () => "Login",
+    auth_error_title: () => "Authentication problem",
     admin_loading: () => "Loading…",
     admin_checked_in: () => "Checked in",
     admin_strap_issued: () => "Strap issued",
@@ -95,6 +96,8 @@ describe("CheckInPage", () => {
       roles: ["admin"],
       hasRole: vi.fn((role: string) => role === "admin"),
       getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
     });
@@ -180,6 +183,8 @@ describe("CheckInPage", () => {
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
     });
@@ -198,6 +203,8 @@ describe("CheckInPage", () => {
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
     });
@@ -217,6 +224,8 @@ describe("CheckInPage", () => {
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
       login,
       logout: vi.fn(),
     });

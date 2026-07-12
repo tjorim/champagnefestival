@@ -38,6 +38,8 @@ vi.mock("@/contexts/AuthContext", () => ({
     roles: ["admin"],
     hasRole: vi.fn((role: string) => role === "admin"),
     getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+    authError: null,
+    clearAuthError: vi.fn(),
     login: vi.fn(),
     logout: vi.fn(),
   }),
