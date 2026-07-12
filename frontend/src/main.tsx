@@ -15,6 +15,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 
 import Footer from "./components/Footer";
 import Header from "./components/Header";
+import HeaderClassic from "./components/HeaderClassic";
+import ThemeSwitcher from "./components/ThemeSwitcher";
 import EventStructuredData from "./components/JsonLd";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
@@ -22,13 +24,17 @@ import RegistrationModal from "./components/RegistrationModal";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import { useLanguage } from "./hooks/useLanguage";
+import { initializeVisualTheme, useVisualTheme } from "./hooks/useVisualTheme";
 import { getFestivalDateRange, useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
 import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import { endOfDay } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
-import "./index.css";
+
+// Must come after the CSS imports above so our theme stylesheet lands later in the cascade —
+// otherwise same-specificity Bootstrap rules (e.g. .navbar-brand) can silently win over ours.
+initializeVisualTheme();
 
 // Components - Lazy loaded
 const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
@@ -182,6 +188,7 @@ function PrivacyPolicyRoute() {
 function App() {
   // Use custom hooks for language
   useLanguage();
+  const { variant, setVariant } = useVisualTheme();
 
   // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition, hasEdition, hasLoadError } = useActiveEdition();
@@ -298,27 +305,45 @@ function App() {
       )}
 
       {/* Header & Navigation */}
-      <Header onBrandClick={handleBrandClick} />
+      {variant === "classic" ? (
+        <HeaderClassic />
+      ) : (
+        <Header onBrandClick={handleBrandClick} />
+      )}
       <EventStructuredData />
 
       <main id="main-content">
         {/* Hero Section */}
-        <section className="hero" id="welcome">
-          <div className="hero-content">
-            <span className="hero-kicker">{m.festival_name()}</span>
+        {variant === "classic" ? (
+          <section className="hero" id="welcome">
             <h1 className="brand-title">{m.welcome_title()}</h1>
             <p className="hero-subtitle">{m.welcome_subtitle()}</p>
-            <div className="hero-actions">
-              <a href="#next-festival" className="btn btn-champagne btn-lg">
-                {m.welcome_learn_more()}
-                <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
-              </a>
-              <a href="#schedule" className="btn btn-outline-light btn-lg">
-                {m.schedule_title()}
-              </a>
+            <a
+              href="#next-festival"
+              className="btn bg-brand-gradient text-white rounded-pill border-0 py-2 px-4 fw-bold"
+            >
+              {m.welcome_learn_more()}
+              <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+            </a>
+          </section>
+        ) : (
+          <section className="hero" id="welcome">
+            <div className="hero-content">
+              <span className="hero-kicker">{m.festival_name()}</span>
+              <h1 className="brand-title">{m.welcome_title()}</h1>
+              <p className="hero-subtitle">{m.welcome_subtitle()}</p>
+              <div className="hero-actions">
+                <a href="#next-festival" className="btn btn-champagne btn-lg">
+                  {m.welcome_learn_more()}
+                  <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+                </a>
+                <a href="#schedule" className="btn btn-outline-light btn-lg">
+                  {m.schedule_title()}
+                </a>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* What we do */}
         <section id="what-we-do" className="content-section">
@@ -335,15 +360,17 @@ function App() {
             <div className="features">
               {featureItems.map((feature, index) => (
                 <div key={feature.id} className="feature">
-                  <span className="feature-icon" aria-hidden="true">
-                    <i
-                      className={
-                        ["bi bi-cup-straw", "bi bi-calendar2-event", "bi bi-people"][
-                          index
-                        ] ?? "bi bi-stars"
-                      }
-                    />
-                  </span>
+                  {variant === "refresh" && (
+                    <span className="feature-icon" aria-hidden="true">
+                      <i
+                        className={
+                          ["bi bi-cup-straw", "bi bi-calendar2-event", "bi bi-people"][
+                            index
+                          ] ?? "bi bi-stars"
+                        }
+                      />
+                    </span>
+                  )}
                   <h3>{feature.getTitle()}</h3>
                   <p>{feature.getDesc()}</p>
                 </div>
@@ -522,6 +549,9 @@ function App() {
         onHide={() => setShowRegistrationModal(false)}
         event={registrableEvents[0] ?? null}
       />
+
+      {/* Preview-only switcher between the classic and refreshed visual designs */}
+      <ThemeSwitcher variant={variant} onChange={setVariant} />
     </div>
   );
 }

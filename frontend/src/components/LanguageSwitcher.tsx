@@ -47,7 +47,7 @@ const LanguageSwitcher = () => {
         as={Button}
         variant="dark"
         size="sm"
-        className="text-secondary"
+        className="site-lang-toggle"
         aria-label={m.language_select()}
         title={m.language_select()}
       >

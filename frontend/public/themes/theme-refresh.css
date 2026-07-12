@@ -164,6 +164,25 @@ body {
   border-radius: 999px;
 }
 
+/* The shield-lock glyph's ink sits lower in its em-box than the box center, reading as
+   vertically off relative to neighboring controls; nudge it up to compensate optically. */
+.icon-link .bi-shield-lock {
+  transform: translateY(-2px);
+}
+
+/* Overrides Bootstrap's fixed btn-dark look so the language toggle follows the site theme instead of always looking dark. */
+.site-lang-toggle {
+  --bs-btn-color: rgba(251, 246, 236, 0.86);
+  --bs-btn-bg: rgba(255, 255, 255, 0.04);
+  --bs-btn-border-color: rgba(255, 255, 255, 0.08);
+  --bs-btn-hover-color: var(--champagne);
+  --bs-btn-hover-bg: rgba(242, 216, 148, 0.1);
+  --bs-btn-hover-border-color: rgba(242, 216, 148, 0.1);
+  --bs-btn-active-color: var(--champagne);
+  --bs-btn-active-bg: rgba(242, 216, 148, 0.1);
+  --bs-btn-active-border-color: rgba(242, 216, 148, 0.1);
+}
+
 .site-menu-button {
   font-size: 1.15rem;
 }
@@ -1088,6 +1107,18 @@ a:focus {
   .icon-link:focus-visible {
     color: var(--champagne);
     background: rgba(155, 111, 31, 0.1);
+  }
+
+  .site-lang-toggle {
+    --bs-btn-color: rgba(35, 29, 22, 0.86);
+    --bs-btn-bg: rgba(35, 29, 22, 0.04);
+    --bs-btn-border-color: rgba(35, 29, 22, 0.08);
+    --bs-btn-hover-color: var(--champagne);
+    --bs-btn-hover-bg: rgba(155, 111, 31, 0.1);
+    --bs-btn-hover-border-color: rgba(155, 111, 31, 0.1);
+    --bs-btn-active-color: var(--champagne);
+    --bs-btn-active-bg: rgba(155, 111, 31, 0.1);
+    --bs-btn-active-border-color: rgba(155, 111, 31, 0.1);
   }
 
   .site-mobile-menu-panel {
