@@ -161,13 +161,16 @@ body {
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
+  padding: 0;
+  line-height: 1;
   border-radius: 999px;
 }
 
-/* The shield-lock glyph's ink sits lower in its em-box than the box center, reading as
-   vertically off relative to neighboring controls; nudge it up to compensate optically. */
-.icon-link .bi-shield-lock {
-  transform: translateY(-2px);
+/* Bootstrap Icons sit -0.125em below the baseline for inline-text use; inside a
+   flex-centered circle that reads as off-center, while zero overshoots the other way.
+   -0.06em lands optically centered; replaces the old per-glyph translateY nudge. */
+.icon-link .bi::before {
+  vertical-align: -0.06em;
 }
 
 /* Overrides Bootstrap's fixed btn-dark look so the language toggle follows the site theme instead of always looking dark. */

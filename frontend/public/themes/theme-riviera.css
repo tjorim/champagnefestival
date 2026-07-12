@@ -176,7 +176,16 @@ html[data-visual-theme="riviera"] .bubble-background {
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
+  padding: 0;
+  line-height: 1;
   border-radius: 999px;
+}
+
+/* Bootstrap Icons sit -0.125em below the baseline for inline-text use; inside a
+   flex-centered circle that reads as off-center. Zero overshoots (glyph reads high),
+   so meet in the middle. */
+.icon-link .bi::before {
+  vertical-align: -0.06em;
 }
 
 .site-lang-toggle {
