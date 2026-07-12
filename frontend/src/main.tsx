@@ -32,6 +32,12 @@ import { faqIds } from "./config/faq";
 import { endOfDay } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
 
+const FEATURE_ICON_BY_ID: Record<number, string> = {
+  1: "bi bi-cup-straw",
+  2: "bi bi-calendar2-event",
+  3: "bi bi-people",
+};
+
 // Must come after the CSS imports above so our theme stylesheet lands later in the cascade —
 // otherwise same-specificity Bootstrap rules (e.g. .navbar-brand) can silently win over ours.
 initializeVisualTheme();
@@ -358,17 +364,11 @@ function App() {
             </div>
             {/* Features in full width to display side by side */}
             <div className="features">
-              {featureItems.map((feature, index) => (
+              {featureItems.map((feature) => (
                 <div key={feature.id} className="feature">
                   {variant === "refresh" && (
                     <span className="feature-icon" aria-hidden="true">
-                      <i
-                        className={
-                          ["bi bi-cup-straw", "bi bi-calendar2-event", "bi bi-people"][
-                            index
-                          ] ?? "bi bi-stars"
-                        }
-                      />
+                      <i className={FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars"} />
                     </span>
                   )}
                   <h3>{feature.getTitle()}</h3>

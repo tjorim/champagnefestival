@@ -43,7 +43,10 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
     document.documentElement.dataset.bsTheme = "dark";
     return;
   }
-  const isLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+  const isLight =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: light)").matches
+      : false;
   document.documentElement.dataset.bsTheme = isLight ? "light" : "dark";
 }
 
