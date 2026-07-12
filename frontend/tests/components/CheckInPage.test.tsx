@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  Outlet,
   createMemoryHistory,
   createRootRoute,
   createRoute,
@@ -10,6 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
 import CheckInPage from "@/components/CheckInPage";
+import { useAuth } from "@/contexts/AuthContext";
 import { server } from "@/mocks/server";
 import { seedRegistrations } from "@/mocks/data/registrations";
 import { validateCheckInSearch } from "@/router";
@@ -40,6 +42,7 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_do_checkin: () => "Check in now",
     checkin_actions_login_required: () => "Login for entrance actions.",
     checkin_actions_unauthorized: () => "Unauthorized entrance action.",
+    checkin_actions_session_expired: () => "Volunteer session expired for entrance actions.",
     checkin_manual_search_title: () => "Find guest manually",
     checkin_manual_search_login_required: () => "Volunteer login required.",
     checkin_manual_search_label: () => "Guest name or email",
@@ -49,9 +52,12 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_manual_search_loading: () => "Searching registrations…",
     checkin_manual_search_no_results: () => "No matching registrations found.",
     checkin_manual_search_unauthorized: () => "Sign in as a volunteer or admin.",
+    checkin_manual_search_session_expired: () => "Volunteer session expired for search.",
     checkin_manual_not_checked_in: () => "Not checked in",
     checkin_search_error: () => "Could not search registrations.",
     admin_login_button: () => "Login",
+    auth_error_title: () => "Authentication problem",
+    admin_loading: () => "Loading…",
     admin_checked_in: () => "Checked in",
     admin_strap_issued: () => "Strap issued",
     admin_issue_strap: () => "Issue strap",
@@ -63,18 +69,42 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
+function createCheckInTestRouter(initialEntry: string) {
+  const rootRoute = createRootRoute();
+  const adminLayoutRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    id: "admin-layout",
+    component: () => <Outlet />,
+  });
+  const checkInRoute = createRoute({
+    getParentRoute: () => adminLayoutRoute,
+    path: "/check-in",
+    validateSearch: validateCheckInSearch,
+    component: CheckInPage,
+  });
+  const routeTree = rootRoute.addChildren([adminLayoutRoute.addChildren([checkInRoute])]);
+  const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
+
+  return createRouter({ routeTree, history: memoryHistory });
+}
+
 describe("CheckInPage", () => {
-  async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`) {
-    const rootRoute = createRootRoute();
-    const checkInRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: "/check-in",
-      validateSearch: validateCheckInSearch,
-      component: CheckInPage,
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      roles: ["admin"],
+      hasRole: vi.fn((role: string) => role === "admin"),
+      getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
     });
-    const routeTree = rootRoute.addChildren([checkInRoute]);
-    const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
-    const router = createRouter({ routeTree, history: memoryHistory });
+  });
+
+  async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`) {
+    const router = createCheckInTestRouter(initialEntry);
     await router.load();
     const Wrapper = createTestQueryClientWrapper();
 
@@ -107,18 +137,7 @@ describe("CheckInPage", () => {
   });
 
   it("invalidates the checked-in registration query after submitting", async () => {
-    const rootRoute = createRootRoute();
-    const checkInRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: "/check-in",
-      validateSearch: validateCheckInSearch,
-      component: CheckInPage,
-    });
-    const routeTree = rootRoute.addChildren([checkInRoute]);
-    const memoryHistory = createMemoryHistory({
-      initialEntries: [`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`],
-    });
-    const router = createRouter({ routeTree, history: memoryHistory });
+    const router = createCheckInTestRouter(`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`);
     await router.load();
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
@@ -155,6 +174,67 @@ describe("CheckInPage", () => {
     fireEvent.click(screen.getByText(SEED_REG_NAME));
 
     expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+  });
+
+  it("does not search manually for authenticated users without entrance roles", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    await renderPage("/check-in");
+
+    const searchInput = screen.getByLabelText("Guest name or email");
+    expect(searchInput).toBeDisabled();
+    expect(screen.getByText("Sign in as a volunteer or admin.")).toBeInTheDocument();
+  });
+
+  it("shows an auth loading gate before rendering manual entrance controls", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    await renderPage("/check-in");
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    expect(screen.queryByText("Volunteer login required.")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Guest name or email")).not.toBeInTheDocument();
+  });
+
+  it("returns volunteers to check-in after signing in for manual search", async () => {
+    const login = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login,
+      logout: vi.fn(),
+    });
+
+    await renderPage("/check-in");
+
+    fireEvent.click(screen.getByRole("button", { name: /login/i }));
+
+    expect(login).toHaveBeenCalledWith("/check-in");
   });
 
   it("submits manual check-in for a selected volunteer search result", async () => {
@@ -211,6 +291,21 @@ describe("CheckInPage", () => {
     });
   });
 
+  it("updates delivered pre-order quantities from the numeric input", async () => {
+    await renderPage();
+
+    const quantityInput = await screen.findByRole("spinbutton", {
+      name: "Delivered Champagne Glass",
+    });
+
+    fireEvent.change(quantityInput, { target: { value: "4" } });
+    fireEvent.blur(quantityInput);
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 4/4")).toBeInTheDocument();
+    });
+  });
+
   it("shows an error when the token is invalid", async () => {
     server.use(
       http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 401 })),
@@ -232,6 +327,69 @@ describe("CheckInPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Registration not found.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an expired-session message when volunteer search returns 401", async () => {
+    server.use(
+      http.get("/api/volunteer/registrations", () => HttpResponse.json(null, { status: 401 })),
+    );
+
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Volunteer session expired for search.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an expired-session message when volunteer check-in returns 401", async () => {
+    server.use(
+      http.post("/api/volunteer/registrations/:id/check-in", () =>
+        HttpResponse.json(null, { status: 401 }),
+      ),
+    );
+
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Volunteer session expired for entrance actions."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows an expired-session message when entrance action returns 401", async () => {
+    server.use(
+      http.put("/api/volunteer/registrations/:id", () => HttpResponse.json(null, { status: 401 })),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 2/4")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Mark as delivered"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Volunteer session expired for entrance actions."),
+      ).toBeInTheDocument();
     });
   });
 

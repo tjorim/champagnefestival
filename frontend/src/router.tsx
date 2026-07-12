@@ -1,5 +1,7 @@
 import type { RouteComponent } from "@tanstack/react-router";
-import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { Outlet, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+
+import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
 
 export interface CheckInSearch {
   id?: string;
@@ -50,14 +52,25 @@ export function createAppRouter({
     component: App,
   });
 
-  const adminRoute = createRoute({
+  const adminLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
+    id: "admin-layout",
+    component: () => (
+      <>
+        <LiveUpdatesProvider />
+        <Outlet />
+      </>
+    ),
+  });
+
+  const adminRoute = createRoute({
+    getParentRoute: () => adminLayoutRoute,
     path: "/admin",
     component: AdminPage,
   });
 
   const checkInRoute = createRoute({
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => adminLayoutRoute,
     path: "/check-in",
     validateSearch: validateCheckInSearch,
     component: CheckInRoute,
@@ -78,8 +91,7 @@ export function createAppRouter({
 
   const routeTree = rootRoute.addChildren([
     indexRoute,
-    adminRoute,
-    checkInRoute,
+    adminLayoutRoute.addChildren([adminRoute, checkInRoute]),
     myRegistrationsRoute,
     privacyPolicyRoute,
   ]);

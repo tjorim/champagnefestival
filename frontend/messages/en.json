@@ -167,6 +167,7 @@
   "admin_token_placeholder": "Enter your admin token",
   "admin_login_button": "Login",
   "admin_login_error": "Invalid admin token. Please try again.",
+  "auth_error_title": "Authentication problem",
   "admin_logout": "Logout",
   "admin_registrations_tab": "Registrations",
   "admin_tables_tab": "Hall Layout",
@@ -189,6 +190,7 @@
   "admin_action_mark_paid": "Mark as Paid",
   "admin_action_assign_table": "Assign Table",
   "admin_no_registrations": "No registrations found",
+  "admin_no_registration_filter_matches": "No registrations match the current filters.",
   "admin_filter_all": "All",
   "admin_filter_pending": "Pending",
   "admin_filter_confirmed": "Confirmed",
@@ -616,11 +618,13 @@
   "checkin_manual_search_loading": "Searching registrations…",
   "checkin_manual_search_no_results": "No matching registrations found.",
   "checkin_manual_search_unauthorized": "Sign in as a volunteer or admin to search registrations.",
+  "checkin_manual_search_session_expired": "Your volunteer session expired. Sign in again to continue searching registrations.",
   "checkin_manual_not_checked_in": "Not checked in",
   "checkin_search_error": "Could not search registrations.",
   "checkin_table": "Table",
   "checkin_actions_login_required": "Sign in as a volunteer or admin to issue straps and update pre-orders.",
   "checkin_actions_unauthorized": "Sign in as a volunteer or admin to update entrance actions.",
+  "checkin_actions_session_expired": "Your volunteer session expired. Sign in again to continue updating entrance actions.",
   "admin_insights_group": "Insights",
   "admin_analytics_tab": "Analytics",
   "admin_audit_log_tab": "Audit Log",
@@ -658,5 +662,6 @@
   "admin_registrations_export_event_csv_for": "Export guest list for {event} as CSV",
   "admin_registrations_export_event_csv_error": "Failed to export guest list.",
   "admin_volunteers_export_csv": "Export for insurance (CSV)",
-  "admin_volunteers_export_csv_error": "Failed to export volunteer list."
+  "admin_volunteers_export_csv_error": "Failed to export volunteer list.",
+  "admin_error_network": "We could not reach the server. Check your internet connection and try again."
 }

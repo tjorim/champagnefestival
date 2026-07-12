@@ -1,12 +1,37 @@
+import { m } from "@/paraglide/messages";
+
+export const SESSION_EXPIRED_ERROR = "session_expired";
+export const UNAUTHORIZED_ERROR = "unauthorized";
+
+function throwAuthError(response: Response): void {
+  if (response.status === 401) {
+    throw new Error(SESSION_EXPIRED_ERROR);
+  }
+  if (response.status === 403) {
+    throw new Error(UNAUTHORIZED_ERROR);
+  }
+}
+
 export async function requestApi(url: string, options: RequestInit): Promise<Response> {
-  return fetch(url, options);
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    console.error("Admin API network request failed", { url, error });
+    throw new Error(m.admin_error_network());
+  }
 }
 
 async function extractErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
   const requestId = response.headers.get("X-Request-ID");
   const data = await response.json().catch(() => ({}));
   const detail = (data as { detail?: string }).detail ?? fallbackMessage;
-  return requestId ? `${detail} [request-id: ${requestId}]` : detail;
+  console.error("Admin API request failed", {
+    requestId,
+    status: response.status,
+    statusText: response.statusText,
+    detail,
+  });
+  return detail;
 }
 
 export async function fetchJsonOrThrow<T>(
@@ -40,9 +65,7 @@ export async function fetchArrayOrThrow<T>(
   mapper: (item: Record<string, unknown>) => T,
 ): Promise<T[]> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
@@ -59,9 +82,7 @@ export async function fetchJsonOrThrowWithUnauthorized<T>(
   fallbackMessage: string,
 ): Promise<T> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
@@ -75,9 +96,7 @@ export async function fetchVoidOrThrowWithUnauthorized(
   fallbackMessage: string,
 ): Promise<void> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
@@ -96,9 +115,7 @@ export async function downloadFileOrThrow(
   fallbackFilename: string,
 ): Promise<void> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }

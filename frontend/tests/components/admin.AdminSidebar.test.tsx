@@ -31,7 +31,7 @@ vi.mock("@/paraglide/messages", () => ({
 
 const expandedGroups = new Set(["events", "content", "venue", "people"]);
 
-function renderSidebar(setActiveKey = vi.fn()) {
+function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
   render(
     <AdminSidebar
       activeKey="registrations"
@@ -49,6 +49,7 @@ function renderSidebar(setActiveKey = vi.fn()) {
       isAnyFetching={false}
       onLoadData={vi.fn()}
       onLogout={vi.fn()}
+      canManageAdminSections={canManageAdminSections}
     />,
   );
 }
@@ -78,6 +79,17 @@ describe("AdminSidebar", () => {
       "Volunteers5",
       "Insights",
     ]);
+  });
+
+  it("shows only registrations to non-admin roles", () => {
+    renderSidebar(vi.fn(), false);
+
+    const navigation = screen.getByRole("navigation", { name: "Administration" });
+    expect(
+      within(navigation)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Registrations2"]);
   });
 
   it("selects a leaf destination directly from the sidebar", () => {

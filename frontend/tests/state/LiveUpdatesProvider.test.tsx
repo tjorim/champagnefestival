@@ -46,7 +46,11 @@ describe("LiveUpdatesProvider", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      roles: ["admin"],
+      hasRole: vi.fn((role: string) => role === "admin"),
       getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
     });
@@ -67,7 +71,11 @@ describe("LiveUpdatesProvider", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
     });
@@ -87,7 +95,12 @@ describe("LiveUpdatesProvider", () => {
     render(<LiveUpdatesProvider />, { wrapper: Wrapper });
     await waitFor(() => expect(capturedOptions).not.toBeNull());
 
-    const envelope = makeEnvelope({ keys: [["admin", "registrations"], ["admin", "tables"]] });
+    const envelope = makeEnvelope({
+      keys: [
+        ["admin", "registrations"],
+        ["admin", "tables"],
+      ],
+    });
     act(() => capturedOptions!.onInvalidate(envelope));
 
     expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });

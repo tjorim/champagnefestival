@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { useSearch } from "@tanstack/react-router";
+import { useLocation, useSearch } from "@tanstack/react-router";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -14,6 +14,7 @@ import Collapse from "react-bootstrap/Collapse";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryKeys } from "@/utils/queryKeys";
+import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/utils/adminApi";
 import {
   CheckInError,
   fetchCheckInRegistration,
@@ -26,6 +27,16 @@ import {
   updateVolunteerRegistration,
 } from "@/utils/volunteerApi";
 
+function formatEntranceActionError(message: string): string {
+  if (message === SESSION_EXPIRED_ERROR) {
+    return m.checkin_actions_session_expired();
+  }
+  if (message === UNAUTHORIZED_ERROR) {
+    return m.checkin_actions_unauthorized();
+  }
+  return message;
+}
+
 interface CheckInCardProps {
   registration: CheckInData;
   success: boolean;
@@ -35,6 +46,7 @@ interface CheckInCardProps {
   canManageEntranceActions: boolean;
   onCheckIn: () => void;
   onAdjustPreOrder: (productId: string, delta: number) => void;
+  onSetPreOrderQuantity: (productId: string, quantity: number) => void;
   onIssueStrap: () => void;
 }
 
@@ -47,6 +59,7 @@ function CheckInCard({
   canManageEntranceActions,
   onCheckIn,
   onAdjustPreOrder,
+  onSetPreOrderQuantity,
   onIssueStrap,
 }: CheckInCardProps) {
   return (
@@ -140,34 +153,69 @@ function CheckInCard({
                     <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
                       {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                     </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline-secondary"
-                      onClick={() => onAdjustPreOrder(item.productId, -1)}
-                      disabled={
-                        !canManageEntranceActions ||
-                        isUpdatingRegistration ||
-                        item.deliveredQuantity <= 0
-                      }
-                      title={m.admin_mark_not_delivered()}
-                    >
-                      <i className="bi bi-dash" aria-hidden="true" />
-                      <span className="visually-hidden">{m.admin_mark_not_delivered()}</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={item.delivered ? "success" : "outline-success"}
-                      onClick={() => onAdjustPreOrder(item.productId, 1)}
-                      disabled={
-                        !canManageEntranceActions ||
-                        isUpdatingRegistration ||
-                        item.deliveredQuantity >= item.quantity
-                      }
-                      title={m.admin_mark_delivered()}
-                    >
-                      <i className="bi bi-plus" aria-hidden="true" />
-                      <span className="visually-hidden">{m.admin_mark_delivered()}</span>
-                    </Button>
+                    <div className="d-flex align-items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => onAdjustPreOrder(item.productId, -1)}
+                        disabled={
+                          !canManageEntranceActions ||
+                          isUpdatingRegistration ||
+                          item.deliveredQuantity <= 0
+                        }
+                        title={m.admin_mark_not_delivered()}
+                      >
+                        <i className="bi bi-dash" aria-hidden="true" />
+                        <span className="visually-hidden">{m.admin_mark_not_delivered()}</span>
+                      </Button>
+                      <Form.Control
+                        key={item.deliveredQuantity}
+                        aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
+                        className="text-center"
+                        inputMode="numeric"
+                        min={0}
+                        max={item.quantity}
+                        onBlur={(event) => {
+                          const value = Number(event.currentTarget.value);
+                          if (Number.isFinite(value)) {
+                            const bounded = Math.max(
+                              0,
+                              Math.min(item.quantity, Math.trunc(value)),
+                            );
+                            event.currentTarget.value = String(bounded);
+                            if (bounded !== item.deliveredQuantity) {
+                              onSetPreOrderQuantity(item.productId, bounded);
+                            }
+                          } else {
+                            event.currentTarget.value = String(item.deliveredQuantity);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        size="sm"
+                        style={{ width: "5rem" }}
+                        type="number"
+                        defaultValue={item.deliveredQuantity}
+                        disabled={!canManageEntranceActions || isUpdatingRegistration}
+                      />
+                      <Button
+                        size="sm"
+                        variant={item.delivered ? "success" : "outline-success"}
+                        onClick={() => onAdjustPreOrder(item.productId, 1)}
+                        disabled={
+                          !canManageEntranceActions ||
+                          isUpdatingRegistration ||
+                          item.deliveredQuantity >= item.quantity
+                        }
+                        title={m.admin_mark_delivered()}
+                      >
+                        <i className="bi bi-plus" aria-hidden="true" />
+                        <span className="visually-hidden">{m.admin_mark_delivered()}</span>
+                      </Button>
+                    </div>
                   </div>
                 </ListGroup.Item>
               ))}
@@ -235,7 +283,10 @@ function CheckInCard({
 export default function CheckInPage() {
   const queryClient = useQueryClient();
   const auth = useAuth();
-  const { id: registrationId, token: checkInToken } = useSearch({ from: "/check-in" });
+  const { id: registrationId, token: checkInToken } = useSearch({
+    from: "/admin-layout/check-in",
+  });
+  const location = useLocation();
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
@@ -244,17 +295,16 @@ export default function CheckInPage() {
   const [manualRegistration, setManualRegistration] = useState<CheckInData | null>(null);
   const hasQrCredentials = Boolean(registrationId && checkInToken);
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
+  const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
+  const returnTo = location.pathname + location.searchStr;
 
-  const authHeaders = useCallback(
-    (): Record<string, string> => {
-      const token = auth.getAccessToken();
-      return {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-    },
-    [auth],
-  );
+  const authHeaders = useCallback((): Record<string, string> => {
+    const token = auth.getAccessToken();
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, [auth]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -284,7 +334,7 @@ export default function CheckInPage() {
   const volunteerSearchQuery = useQuery({
     queryKey: queryKeys.volunteerRegistrationSearch(debouncedSearchTerm),
     queryFn: ({ signal }) => searchVolunteerRegistrations(debouncedSearchTerm, authHeaders, signal),
-    enabled: !hasQrCredentials && auth.isAuthenticated && debouncedSearchTerm.length >= 2,
+    enabled: !hasQrCredentials && canManageEntranceActions && debouncedSearchTerm.length >= 2,
     retry: false,
     staleTime: 15 * 1000,
   });
@@ -371,7 +421,6 @@ export default function CheckInPage() {
   const registration = manualRegistration ?? registrationQuery.data ?? null;
   const isLoading = hasQrCredentials ? registrationQuery.isPending : false;
   const isCheckingIn = checkInMutation.isPending || volunteerCheckInMutation.isPending;
-  const canManageEntranceActions = auth.isAuthenticated;
   const isUpdatingRegistration = updateRegistrationMutation.isPending;
   const queryError = registrationQuery.isError ? registrationQuery.error.message : "";
   const mutationError = checkInMutation.isError
@@ -379,15 +428,15 @@ export default function CheckInPage() {
       ? checkInMutation.error.message
       : m.checkin_error()
     : volunteerCheckInMutation.isError
-      ? volunteerCheckInMutation.error.message
+      ? formatEntranceActionError(volunteerCheckInMutation.error.message)
       : updateRegistrationMutation.isError
-        ? updateRegistrationMutation.error.message === "unauthorized"
-          ? m.checkin_actions_unauthorized()
-          : updateRegistrationMutation.error.message
+        ? formatEntranceActionError(updateRegistrationMutation.error.message)
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
-  const showSearchHint = !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
+  const showSearchHint =
+    !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
+  const shouldShowAuthLoadingGate = !hasQrCredentials && auth.isLoading;
 
   const handleCheckIn = useCallback(() => {
     if (hasQrCredentials) {
@@ -398,15 +447,12 @@ export default function CheckInPage() {
     volunteerCheckInMutation.mutate(manualRegistration.id);
   }, [checkInMutation, hasQrCredentials, manualRegistration, volunteerCheckInMutation]);
 
-  const handleAdjustPreOrder = useCallback(
-    (productId: string, delta: number) => {
-      if (!registration) return;
+  const handleSetPreOrderQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (!registration || !Number.isFinite(quantity)) return;
       const updatedOrders = registration.preOrders.map((item) => {
         if (item.productId !== productId) return item;
-        const deliveredQuantity = Math.max(
-          0,
-          Math.min(item.quantity, item.deliveredQuantity + delta),
-        );
+        const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
         return {
           ...item,
           deliveredQuantity,
@@ -420,6 +466,16 @@ export default function CheckInPage() {
       });
     },
     [registration, updateRegistrationMutation],
+  );
+
+  const handleAdjustPreOrder = useCallback(
+    (productId: string, delta: number) => {
+      if (!registration) return;
+      const item = registration.preOrders.find((order) => order.productId === productId);
+      if (!item) return;
+      handleSetPreOrderQuantity(productId, item.deliveredQuantity + delta);
+    },
+    [handleSetPreOrderQuantity, registration],
   );
 
   const handleIssueStrap = useCallback(() => {
@@ -442,168 +498,199 @@ export default function CheckInPage() {
           {m.checkin_title()}
         </h2>
 
-        <div className="row justify-content-center">
-          <div className="col-12 col-sm-10 col-md-8 col-lg-6">
-            {!hasQrCredentials && (
-              <>
-                <Alert variant="warning" className="text-center">
-                  <i className="bi bi-info-circle me-2" aria-hidden="true" />
-                  {m.checkin_scan_prompt()}
-                </Alert>
+        {auth.authError ? (
+          <Alert variant="danger" dismissible onClose={auth.clearAuthError}>
+            <Alert.Heading as="h3" className="h6">
+              {m.auth_error_title()}
+            </Alert.Heading>
+            <p className="mb-0">{auth.authError}</p>
+          </Alert>
+        ) : null}
 
-                <Card bg="dark" text="white" border="secondary" className="mb-3">
-                  <Card.Header className="bg-dark border-secondary p-0">
-                    <Button
-                      variant="link"
-                      className="w-100 text-start text-warning text-decoration-none p-3 d-flex justify-content-between align-items-center"
-                      onClick={() => setSearchOpen((open) => !open)}
-                      aria-expanded={searchOpen}
-                      aria-controls="manual-checkin-search"
-                    >
-                      <span>
-                        <i className="bi bi-search me-2" aria-hidden="true" />
-                        {m.checkin_manual_search_title()}
-                      </span>
-                      <i
-                        className={clsx("bi", searchOpen ? "bi-chevron-up" : "bi-chevron-down")}
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </Card.Header>
-                  <Collapse in={searchOpen}>
-                    <Card.Body id="manual-checkin-search">
-                      {!auth.isAuthenticated && (
-                        <Alert
-                          variant="info"
-                          className="d-flex justify-content-between align-items-center gap-3 flex-wrap"
-                        >
-                          <span>{m.checkin_manual_search_login_required()}</span>
-                          <Button variant="outline-warning" size="sm" onClick={auth.login}>
-                            {m.admin_login_button()}
-                          </Button>
-                        </Alert>
-                      )}
+        {shouldShowAuthLoadingGate ? (
+          <div className="text-center py-4">
+            <Spinner animation="border" variant="warning" role="status">
+              <span className="visually-hidden">{m.admin_loading()}</span>
+            </Spinner>
+            <p className="mt-2 text-secondary">{m.admin_loading()}</p>
+          </div>
+        ) : (
+          <div className="row justify-content-center">
+            <div className="col-12 col-sm-10 col-md-8 col-lg-6">
+              {!hasQrCredentials && (
+                <>
+                  <Alert variant="warning" className="text-center">
+                    <i className="bi bi-info-circle me-2" aria-hidden="true" />
+                    {m.checkin_scan_prompt()}
+                  </Alert>
 
-                      <Form.Group controlId="manual-checkin-query">
-                        <Form.Label>{m.checkin_manual_search_label()}</Form.Label>
-                        <Form.Control
-                          type="search"
-                          value={searchTerm}
-                          onChange={(event) => {
-                            setSearchTerm(event.currentTarget.value);
-                            setManualRegistration(null);
-                            setSuccess(false);
-                            setAlreadyCheckedIn(false);
-                          }}
-                          placeholder={m.checkin_manual_search_placeholder()}
-                          disabled={!auth.isAuthenticated}
+                  <Card bg="dark" text="white" border="secondary" className="mb-3">
+                    <Card.Header className="bg-dark border-secondary p-0">
+                      <Button
+                        variant="link"
+                        className="w-100 text-start text-warning text-decoration-none p-3 d-flex justify-content-between align-items-center"
+                        onClick={() => setSearchOpen((open) => !open)}
+                        aria-expanded={searchOpen}
+                        aria-controls="manual-checkin-search"
+                      >
+                        <span>
+                          <i className="bi bi-search me-2" aria-hidden="true" />
+                          {m.checkin_manual_search_title()}
+                        </span>
+                        <i
+                          className={clsx("bi", searchOpen ? "bi-chevron-up" : "bi-chevron-down")}
+                          aria-hidden="true"
                         />
-                        <Form.Text className="text-secondary">
-                          {m.checkin_manual_search_help()}
-                        </Form.Text>
-                      </Form.Group>
+                      </Button>
+                    </Card.Header>
+                    <Collapse in={searchOpen}>
+                      <Card.Body id="manual-checkin-search">
+                        {!auth.isAuthenticated && (
+                          <Alert
+                            variant="info"
+                            className="d-flex justify-content-between align-items-center gap-3 flex-wrap"
+                          >
+                            <span>{m.checkin_manual_search_login_required()}</span>
+                            <Button
+                              variant="outline-warning"
+                              size="sm"
+                              onClick={() => auth.login(returnTo)}
+                            >
+                              {m.admin_login_button()}
+                            </Button>
+                          </Alert>
+                        )}
+                        {auth.isAuthenticated && !canManageEntranceActions && (
+                          <Alert variant="warning">{m.checkin_manual_search_unauthorized()}</Alert>
+                        )}
 
-                      {showSearchHint && (
-                        <div className="text-secondary mt-3">
-                          {m.checkin_manual_search_min_chars()}
-                        </div>
-                      )}
-
-                      {volunteerSearchQuery.isFetching && (
-                        <div className="text-secondary mt-3" role="status" aria-live="polite">
-                          <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            role="status"
-                            aria-hidden="true"
-                            className="me-2"
+                        <Form.Group controlId="manual-checkin-query">
+                          <Form.Label>{m.checkin_manual_search_label()}</Form.Label>
+                          <Form.Control
+                            type="search"
+                            value={searchTerm}
+                            onChange={(event) => {
+                              setSearchTerm(event.currentTarget.value);
+                              setManualRegistration(null);
+                              setSuccess(false);
+                              setAlreadyCheckedIn(false);
+                            }}
+                            placeholder={m.checkin_manual_search_placeholder()}
+                            disabled={!canManageEntranceActions}
                           />
-                          {m.checkin_manual_search_loading()}
-                        </div>
-                      )}
+                          <Form.Text className="text-secondary">
+                            {m.checkin_manual_search_help()}
+                          </Form.Text>
+                        </Form.Group>
 
-                      {volunteerSearchQuery.isError && (
-                        <Alert variant="danger" className="mt-3 mb-0" role="alert">
-                          <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                          {volunteerSearchQuery.error.message === "unauthorized"
-                            ? m.checkin_manual_search_unauthorized()
-                            : volunteerSearchQuery.error.message}
-                        </Alert>
-                      )}
-
-                      {!volunteerSearchQuery.isFetching &&
-                        debouncedSearchTerm.length >= 2 &&
-                        searchResults.length === 0 &&
-                        !volunteerSearchQuery.isError && (
+                        {showSearchHint && (
                           <div className="text-secondary mt-3">
-                            {m.checkin_manual_search_no_results()}
+                            {m.checkin_manual_search_min_chars()}
                           </div>
                         )}
 
-                      {searchResults.length > 0 && (
-                        <ListGroup className="mt-3">
-                          {searchResults.map((result) => (
-                            <ListGroup.Item
-                              key={result.id}
-                              action
-                              variant="dark"
-                              className="border-secondary d-flex justify-content-between align-items-center gap-3"
-                              onClick={() => handleSelectManualRegistration(result)}
-                            >
-                              <span>
-                                <span className="fw-semibold d-block">{result.name}</span>
-                                <span className="text-secondary small">
-                                  {result.eventTitle || result.eventId} · {m.checkin_guests()}:{" "}
-                                  {result.guestCount}
+                        {volunteerSearchQuery.isFetching && (
+                          <div className="text-secondary mt-3" role="status" aria-live="polite">
+                            <Spinner
+                              as="span"
+                              animation="border"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                              className="me-2"
+                            />
+                            {m.checkin_manual_search_loading()}
+                          </div>
+                        )}
+
+                        {volunteerSearchQuery.isError && (
+                          <Alert variant="danger" className="mt-3 mb-0" role="alert">
+                            <i
+                              className="bi bi-exclamation-triangle-fill me-2"
+                              aria-hidden="true"
+                            />
+                            {volunteerSearchQuery.error.message === SESSION_EXPIRED_ERROR
+                              ? m.checkin_manual_search_session_expired()
+                              : volunteerSearchQuery.error.message === UNAUTHORIZED_ERROR
+                                ? m.checkin_manual_search_unauthorized()
+                                : volunteerSearchQuery.error.message}
+                          </Alert>
+                        )}
+
+                        {!volunteerSearchQuery.isFetching &&
+                          debouncedSearchTerm.length >= 2 &&
+                          searchResults.length === 0 &&
+                          !volunteerSearchQuery.isError && (
+                            <div className="text-secondary mt-3">
+                              {m.checkin_manual_search_no_results()}
+                            </div>
+                          )}
+
+                        {searchResults.length > 0 && (
+                          <ListGroup className="mt-3">
+                            {searchResults.map((result) => (
+                              <ListGroup.Item
+                                key={result.id}
+                                action
+                                variant="dark"
+                                className="border-secondary d-flex justify-content-between align-items-center gap-3"
+                                onClick={() => handleSelectManualRegistration(result)}
+                              >
+                                <span>
+                                  <span className="fw-semibold d-block">{result.name}</span>
+                                  <span className="text-secondary small">
+                                    {result.eventTitle || result.eventId} · {m.checkin_guests()}:{" "}
+                                    {result.guestCount}
+                                  </span>
                                 </span>
-                              </span>
-                              <Badge bg={result.checkedIn ? "success" : "secondary"}>
-                                {result.checkedIn
-                                  ? m.admin_checked_in()
-                                  : m.checkin_manual_not_checked_in()}
-                              </Badge>
-                            </ListGroup.Item>
-                          ))}
-                        </ListGroup>
-                      )}
-                    </Card.Body>
-                  </Collapse>
-                </Card>
-              </>
-            )}
+                                <Badge bg={result.checkedIn ? "success" : "secondary"}>
+                                  {result.checkedIn
+                                    ? m.admin_checked_in()
+                                    : m.checkin_manual_not_checked_in()}
+                                </Badge>
+                              </ListGroup.Item>
+                            ))}
+                          </ListGroup>
+                        )}
+                      </Card.Body>
+                    </Collapse>
+                  </Card>
+                </>
+              )}
 
-            {isLoading && (
-              <div className="text-center py-4">
-                <Spinner animation="border" variant="warning" role="status">
-                  <span className="visually-hidden">{m.checkin_looking_up()}</span>
-                </Spinner>
-                <p className="mt-2 text-secondary">{m.checkin_looking_up()}</p>
-              </div>
-            )}
+              {isLoading && (
+                <div className="text-center py-4">
+                  <Spinner animation="border" variant="warning" role="status">
+                    <span className="visually-hidden">{m.checkin_looking_up()}</span>
+                  </Spinner>
+                  <p className="mt-2 text-secondary">{m.checkin_looking_up()}</p>
+                </div>
+              )}
 
-            {(mutationError || queryError) && (
-              <Alert variant="danger" role="alert">
-                <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                {mutationError || queryError}
-              </Alert>
-            )}
+              {(mutationError || queryError) && (
+                <Alert variant="danger" role="alert">
+                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  {mutationError || queryError}
+                </Alert>
+              )}
 
-            {registration && !isLoading && (
-              <CheckInCard
-                registration={registration}
-                success={success}
-                isAlreadyCheckedIn={isAlreadyCheckedIn}
-                isCheckingIn={isCheckingIn}
-                isUpdatingRegistration={isUpdatingRegistration}
-                canManageEntranceActions={canManageEntranceActions}
-                onCheckIn={handleCheckIn}
-                onAdjustPreOrder={handleAdjustPreOrder}
-                onIssueStrap={handleIssueStrap}
-              />
-            )}
+              {registration && !isLoading && (
+                <CheckInCard
+                  registration={registration}
+                  success={success}
+                  isAlreadyCheckedIn={isAlreadyCheckedIn}
+                  isCheckingIn={isCheckingIn}
+                  isUpdatingRegistration={isUpdatingRegistration}
+                  canManageEntranceActions={canManageEntranceActions}
+                  onCheckIn={handleCheckIn}
+                  onAdjustPreOrder={handleAdjustPreOrder}
+                  onSetPreOrderQuantity={handleSetPreOrderQuantity}
+                  onIssueStrap={handleIssueStrap}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </Container>
     </section>
   );
