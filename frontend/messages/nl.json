@@ -167,6 +167,7 @@
   "admin_token_placeholder": "Voer uw beheerderscode in",
   "admin_login_button": "Aanmelden",
   "admin_login_error": "Ongeldige beheerderscode. Probeer opnieuw.",
+  "auth_error_title": "Authenticatieprobleem",
   "admin_logout": "Afmelden",
   "admin_registrations_tab": "Registraties",
   "admin_tables_tab": "Zaalindeling",
@@ -189,6 +190,7 @@
   "admin_action_mark_paid": "Betaald markeren",
   "admin_action_assign_table": "Tafel toewijzen",
   "admin_no_registrations": "Geen registraties gevonden",
+  "admin_no_registration_filter_matches": "Geen registraties komen overeen met de huidige filters.",
   "admin_filter_all": "Alle",
   "admin_filter_pending": "In behandeling",
   "admin_filter_confirmed": "Bevestigd",
@@ -616,11 +618,13 @@
   "checkin_manual_search_loading": "Registraties zoeken…",
   "checkin_manual_search_no_results": "Geen overeenkomende registraties gevonden.",
   "checkin_manual_search_unauthorized": "Meld je aan als vrijwilliger of admin om registraties te zoeken.",
+  "checkin_manual_search_session_expired": "Je vrijwilligerssessie is verlopen. Meld je opnieuw aan om registraties te blijven zoeken.",
   "checkin_manual_not_checked_in": "Niet ingecheckt",
   "checkin_search_error": "Registraties zoeken is mislukt.",
   "checkin_table": "Tafel",
   "checkin_actions_login_required": "Meld je aan als vrijwilliger of admin om polsbanden uit te reiken en voorbestellingen bij te werken.",
   "checkin_actions_unauthorized": "Meld je aan als vrijwilliger of admin om acties aan de ingang bij te werken.",
+  "checkin_actions_session_expired": "Je vrijwilligerssessie is verlopen. Meld je opnieuw aan om acties aan de ingang te blijven bijwerken.",
   "admin_insights_group": "Inzichten",
   "admin_analytics_tab": "Statistieken",
   "admin_audit_log_tab": "Auditlogboek",
@@ -658,5 +662,6 @@
   "admin_registrations_export_event_csv_for": "Gastenlijst voor {event} exporteren als CSV",
   "admin_registrations_export_event_csv_error": "Exporteren van de gastenlijst is mislukt.",
   "admin_volunteers_export_csv": "Exporteren voor verzekering (CSV)",
-  "admin_volunteers_export_csv_error": "Exporteren van de vrijwilligerslijst is mislukt."
+  "admin_volunteers_export_csv_error": "Exporteren van de vrijwilligerslijst is mislukt.",
+  "admin_error_network": "We konden de server niet bereiken. Controleer je internetverbinding en probeer opnieuw."
 }

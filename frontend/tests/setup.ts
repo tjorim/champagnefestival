@@ -9,9 +9,7 @@ expect.extend(toHaveNoViolations);
 // Suppress non-critical axe rules that don't apply to dark-themed SPAs served
 // over HTTPS (color-contrast false positives from happy-dom's CSS support).
 configureAxe({
-  rules: [
-    { id: "color-contrast", enabled: false },
-  ],
+  rules: [{ id: "color-contrast", enabled: false }],
 });
 import { server } from "@/mocks/server";
 import { resetAdminStore } from "@/mocks/handlers/admin";
@@ -37,7 +35,11 @@ vi.mock("@/contexts/AuthContext", () => ({
   useAuth: vi.fn().mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
+    roles: ["admin"],
+    hasRole: vi.fn((role: string) => role === "admin"),
     getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+    authError: null,
+    clearAuthError: vi.fn(),
     login: vi.fn(),
     logout: vi.fn(),
   }),

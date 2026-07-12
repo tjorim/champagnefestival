@@ -10,7 +10,7 @@ import "leaflet/dist/leaflet.css";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 
-import { oidcConfig } from "./config/oidc";
+import { createOidcConfig } from "./config/oidc";
 import { AuthProvider } from "./contexts/AuthContext";
 
 import Footer from "./components/Footer";
@@ -28,7 +28,6 @@ import { featureItems } from "./config/features";
 import { faqIds } from "./config/faq";
 import { endOfDay } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
-import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
 import "./index.css";
 
 // Components - Lazy loaded
@@ -116,7 +115,6 @@ function SuspendedMarqueeSlider({
 function AdminPage() {
   return (
     <div className="App standalone-app">
-      <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
@@ -134,7 +132,6 @@ function AdminPage() {
 function CheckInRoute() {
   return (
     <div className="App standalone-app">
-      <LiveUpdatesProvider />
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
@@ -536,6 +533,10 @@ const router = createAppRouter({
   CheckInRoute,
   MyRegistrationsRoute,
   PrivacyPolicyRoute,
+});
+
+const oidcConfig = createOidcConfig({
+  navigateTo: (to) => router.navigate({ to }),
 });
 
 declare module "@tanstack/react-router" {

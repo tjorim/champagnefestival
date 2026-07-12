@@ -1,11 +1,13 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
+import type { FloorTable } from "@/types/admin";
 import type { OrderItem, Registration } from "@/types/registration";
 
 interface RegistrationDetailProps {
@@ -14,11 +16,15 @@ interface RegistrationDetailProps {
   baseUrl: string;
   /** Other people sharing the same email address, shown in the merge-duplicate alert. */
   emailDuplicates?: { id: string; name: string }[];
+  tables?: FloorTable[] | null;
   onClose: () => void;
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
+  onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
+  actionError?: string;
+  onClearActionError?: () => void;
 }
 
 function isSimpleRsvp(registration: Registration) {
@@ -30,38 +36,54 @@ export default function RegistrationDetail({
   registration,
   baseUrl,
   emailDuplicates = [],
+  tables = [],
   onClose,
   onToggleDelivered,
   onCheckIn,
   onIssueStrap,
+  onAssignTable,
   onMergeDuplicate,
+  actionError,
+  onClearActionError,
 }: RegistrationDetailProps) {
   const checkInUrl = registration
     ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}&token=${encodeURIComponent(registration.checkInToken ?? "")}`
     : "";
 
-  const handleAdjustDeliveredQuantity = useCallback(
-    (productId: string, delta: number) => {
-      if (!registration) return;
-      const updatedOrders = registration.preOrders.map((item) =>
-        item.productId === productId
-          ? (() => {
-              const deliveredQuantity = Math.max(
-                0,
-                Math.min(item.quantity, item.deliveredQuantity + delta),
-              );
-              return {
-                ...item,
-                deliveredQuantity,
-                remainingQuantity: item.quantity - deliveredQuantity,
-                delivered: deliveredQuantity === item.quantity,
-              };
-            })()
-          : item,
-      );
+  const sortedTables = useMemo(
+    () =>
+      [...(tables ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
+      ),
+    [tables],
+  );
+
+  const handleSetDeliveredQuantity = useCallback(
+    (productId: string, quantity: number) => {
+      if (!registration || !Number.isFinite(quantity)) return;
+      const updatedOrders = registration.preOrders.map((item) => {
+        if (item.productId !== productId) return item;
+        const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
+        return {
+          ...item,
+          deliveredQuantity,
+          remainingQuantity: item.quantity - deliveredQuantity,
+          delivered: deliveredQuantity === item.quantity,
+        };
+      });
       onToggleDelivered(registration.id, updatedOrders);
     },
     [registration, onToggleDelivered],
+  );
+
+  const handleAdjustDeliveredQuantity = useCallback(
+    (productId: string, delta: number) => {
+      if (!registration) return;
+      const item = registration.preOrders.find((order) => order.productId === productId);
+      if (!item) return;
+      handleSetDeliveredQuantity(productId, item.deliveredQuantity + delta);
+    },
+    [handleSetDeliveredQuantity, registration],
   );
 
   if (!registration) return null;
@@ -84,6 +106,18 @@ export default function RegistrationDetail({
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
+        {actionError && (
+          <Alert
+            variant="danger"
+            dismissible={Boolean(onClearActionError)}
+            onClose={onClearActionError}
+            className="mb-3"
+            role="alert"
+          >
+            {actionError}
+          </Alert>
+        )}
+
         <div className="d-flex flex-wrap gap-2 mb-3">
           <Badge
             bg={
@@ -192,6 +226,29 @@ export default function RegistrationDetail({
             <span className="text-secondary">{m.admin_guests_count()}</span>
             <span>{registration.guestCount}</span>
           </ListGroup.Item>
+          {!simpleRsvp && (
+            <ListGroup.Item className="bg-dark text-light border-secondary">
+              <Form.Group controlId={`registration-detail-table-${registration.id}`}>
+                <Form.Label className="text-secondary">{m.admin_action_assign_table()}</Form.Label>
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={registration.tableId ?? ""}
+                  onChange={(event) =>
+                    onAssignTable(registration.id, event.target.value || undefined)
+                  }
+                  aria-label={m.admin_action_assign_table()}
+                >
+                  <option value="">{m.admin_unassigned()}</option>
+                  {sortedTables.map((table) => (
+                    <option key={table.id} value={table.id}>
+                      {table.name} ({table.capacity})
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </ListGroup.Item>
+          )}
           {registration.notes && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
               <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
@@ -234,24 +291,58 @@ export default function RegistrationDetail({
                     <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
                       {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                     </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline-secondary"
-                      onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
-                      disabled={item.deliveredQuantity <= 0}
-                      title={m.admin_mark_not_delivered()}
-                    >
-                      <i className="bi bi-dash" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={item.delivered ? "success" : "outline-success"}
-                      onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
-                      disabled={item.deliveredQuantity >= item.quantity}
-                      title={m.admin_mark_delivered()}
-                    >
-                      <i className="bi bi-plus" aria-hidden="true" />
-                    </Button>
+                    <div className="d-flex align-items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
+                        disabled={item.deliveredQuantity <= 0}
+                        title={m.admin_mark_not_delivered()}
+                      >
+                        <i className="bi bi-dash" aria-hidden="true" />
+                      </Button>
+                      <Form.Control
+                        key={item.deliveredQuantity}
+                        aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
+                        className="text-center"
+                        inputMode="numeric"
+                        min={0}
+                        max={item.quantity}
+                        onBlur={(event) => {
+                          const value = Number(event.currentTarget.value);
+                          if (Number.isFinite(value)) {
+                            const bounded = Math.max(
+                              0,
+                              Math.min(item.quantity, Math.trunc(value)),
+                            );
+                            event.currentTarget.value = String(bounded);
+                            if (bounded !== item.deliveredQuantity) {
+                              handleSetDeliveredQuantity(item.productId, bounded);
+                            }
+                          } else {
+                            event.currentTarget.value = String(item.deliveredQuantity);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                        size="sm"
+                        style={{ width: "5rem" }}
+                        type="number"
+                        defaultValue={item.deliveredQuantity}
+                      />
+                      <Button
+                        size="sm"
+                        variant={item.delivered ? "success" : "outline-success"}
+                        onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
+                        disabled={item.deliveredQuantity >= item.quantity}
+                        title={m.admin_mark_delivered()}
+                      >
+                        <i className="bi bi-plus" aria-hidden="true" />
+                      </Button>
+                    </div>
                   </div>
                 </ListGroup.Item>
               ))}
