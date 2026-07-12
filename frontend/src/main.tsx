@@ -366,7 +366,7 @@ function App() {
             <div className="features">
               {featureItems.map((feature) => (
                 <div key={feature.id} className="feature">
-                  {variant === "refresh" && (
+                  {variant !== "classic" && (
                     <span className="feature-icon" aria-hidden="true">
                       <i className={FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars"} />
                     </span>
