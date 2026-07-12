@@ -8,10 +8,11 @@ interface ThemeSwitcherProps {
 const OPTIONS: Array<{ value: VisualThemeVariant; label: string }> = [
   { value: "refresh", label: "New" },
   { value: "classic", label: "Classic" },
+  { value: "riviera", label: "Riviera" },
 ];
 
 /**
- * Preview-only toggle between the two full visual designs. Styled with inline styles
+ * Preview-only toggle between the full visual designs. Styled with inline styles
  * (not the theme stylesheets) so it looks the same regardless of which design is active.
  */
 const ThemeSwitcher = ({ variant, onChange }: ThemeSwitcherProps) => {
