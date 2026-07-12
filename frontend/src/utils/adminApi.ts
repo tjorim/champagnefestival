@@ -1,5 +1,17 @@
 import { m } from "@/paraglide/messages";
 
+export const SESSION_EXPIRED_ERROR = "session_expired";
+export const UNAUTHORIZED_ERROR = "unauthorized";
+
+function throwAuthError(response: Response): void {
+  if (response.status === 401) {
+    throw new Error(SESSION_EXPIRED_ERROR);
+  }
+  if (response.status === 403) {
+    throw new Error(UNAUTHORIZED_ERROR);
+  }
+}
+
 export async function requestApi(url: string, options: RequestInit): Promise<Response> {
   try {
     return await fetch(url, options);
@@ -53,9 +65,7 @@ export async function fetchArrayOrThrow<T>(
   mapper: (item: Record<string, unknown>) => T,
 ): Promise<T[]> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
@@ -72,9 +82,7 @@ export async function fetchJsonOrThrowWithUnauthorized<T>(
   fallbackMessage: string,
 ): Promise<T> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
@@ -88,9 +96,7 @@ export async function fetchVoidOrThrowWithUnauthorized(
   fallbackMessage: string,
 ): Promise<void> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }
@@ -109,9 +115,7 @@ export async function downloadFileOrThrow(
   fallbackFilename: string,
 ): Promise<void> {
   const response = await requestApi(url, options);
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("unauthorized");
-  }
+  throwAuthError(response);
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, fallbackMessage));
   }

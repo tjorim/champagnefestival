@@ -42,6 +42,7 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_do_checkin: () => "Check in now",
     checkin_actions_login_required: () => "Login for entrance actions.",
     checkin_actions_unauthorized: () => "Unauthorized entrance action.",
+    checkin_actions_session_expired: () => "Volunteer session expired for entrance actions.",
     checkin_manual_search_title: () => "Find guest manually",
     checkin_manual_search_login_required: () => "Volunteer login required.",
     checkin_manual_search_label: () => "Guest name or email",
@@ -51,6 +52,7 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_manual_search_loading: () => "Searching registrations…",
     checkin_manual_search_no_results: () => "No matching registrations found.",
     checkin_manual_search_unauthorized: () => "Sign in as a volunteer or admin.",
+    checkin_manual_search_session_expired: () => "Volunteer session expired for search.",
     checkin_manual_not_checked_in: () => "Not checked in",
     checkin_search_error: () => "Could not search registrations.",
     admin_login_button: () => "Login",
@@ -316,6 +318,40 @@ describe("CheckInPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Registration not found.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an expired-session message when volunteer search returns 401", async () => {
+    server.use(
+      http.get("/api/volunteer/registrations", () => HttpResponse.json(null, { status: 401 })),
+    );
+
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Volunteer session expired for search.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an expired-session message when entrance action returns 401", async () => {
+    server.use(
+      http.put("/api/volunteer/registrations/:id", () => HttpResponse.json(null, { status: 401 })),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 2/4")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Mark as delivered"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Volunteer session expired for entrance actions.")).toBeInTheDocument();
     });
   });
 
