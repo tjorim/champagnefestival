@@ -9,6 +9,7 @@ const OPTIONS: Array<{ value: VisualThemeVariant; label: string }> = [
   { value: "refresh", label: "New" },
   { value: "classic", label: "Classic" },
   { value: "riviera", label: "Riviera" },
+  { value: "cuvee", label: "Cuvée" },
 ];
 
 /**

@@ -72,18 +72,25 @@
         // Sets data-bs-theme (Bootstrap's own dark/light component colors) before first paint,
         // to avoid a flash. The theme stylesheet itself (colors/layout) is loaded from main.tsx,
         // after the bootstrap CSS import, so it lands later in the cascade — see useVisualTheme.ts.
+        // Keep this list and the per-variant bs-theme mapping in sync with useVisualTheme.ts.
         const VISUAL_THEME_KEY = "champagnefestival:visualTheme";
+        const VARIANTS = ["refresh", "classic", "riviera", "cuvee"];
         let visualTheme = "refresh";
         try {
           const stored = window.localStorage.getItem(VISUAL_THEME_KEY);
-          if (stored === "classic" || stored === "refresh") visualTheme = stored;
+          if (VARIANTS.includes(stored)) visualTheme = stored;
         } catch {}
         document.documentElement.dataset.visualTheme = visualTheme;
 
         const query = window.matchMedia("(prefers-color-scheme: light)");
         const applyTheme = () => {
-          if (document.documentElement.dataset.visualTheme === "classic") {
+          const current = document.documentElement.dataset.visualTheme;
+          if (current === "classic") {
             document.documentElement.dataset.bsTheme = "dark";
+            return;
+          }
+          if (current === "riviera" || current === "cuvee") {
+            document.documentElement.dataset.bsTheme = "light";
             return;
           }
           document.documentElement.dataset.bsTheme = query.matches ? "light" : "dark";

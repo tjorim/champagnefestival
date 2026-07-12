@@ -19,6 +19,7 @@ import HeaderClassic from "./components/HeaderClassic";
 import ThemeSwitcher from "./components/ThemeSwitcher";
 import RivieraFeatureGrid from "./components/riviera/RivieraFeatureGrid";
 import RivieraHero from "./components/riviera/RivieraHero";
+import CuveeHero from "./components/cuvee/CuveeHero";
 import EventStructuredData from "./components/JsonLd";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
@@ -324,6 +325,14 @@ function App() {
         {/* Hero Section */}
         {variant === "riviera" ? (
           <RivieraHero
+            festivalName={m.festival_name()}
+            title={m.welcome_title()}
+            subtitle={m.welcome_subtitle()}
+            learnMoreLabel={m.welcome_learn_more()}
+            scheduleLabel={m.schedule_title()}
+          />
+        ) : variant === "cuvee" ? (
+          <CuveeHero
             festivalName={m.festival_name()}
             title={m.welcome_title()}
             subtitle={m.welcome_subtitle()}

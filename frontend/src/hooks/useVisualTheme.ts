@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
 
-export type VisualThemeVariant = "refresh" | "classic" | "riviera";
+export type VisualThemeVariant = "refresh" | "classic" | "riviera" | "cuvee";
 
 const STORAGE_KEY = "champagnefestival:visualTheme";
 const STYLESHEET_ID = "visual-theme-stylesheet";
 
 function isVisualThemeVariant(value: string | null | undefined): value is VisualThemeVariant {
-  return value === "refresh" || value === "classic" || value === "riviera";
+  return value === "refresh" || value === "classic" || value === "riviera" || value === "cuvee";
 }
 
 function readStoredVariant(): VisualThemeVariant {
@@ -49,6 +49,13 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
   }
 
   if (variant === "riviera") {
+    document.documentElement.dataset.bsTheme = "light";
+    return;
+  }
+
+  if (variant === "cuvee") {
+    // The page shell is dark bottle-green, but nearly all interactive content sits on
+    // ivory "label" cards, so Bootstrap components should use their light defaults.
     document.documentElement.dataset.bsTheme = "light";
     return;
   }

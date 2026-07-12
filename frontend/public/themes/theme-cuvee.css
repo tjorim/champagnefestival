@@ -1,0 +1,1264 @@
+/*
+ * Cuvée is the champagne-label theme: a dark bottle-glass green page on which
+ * every content section sits as an ivory label — square-cornered, framed by a
+ * double rule, accented with gold foil. Display type is Fraunces; body stays
+ * Inter (already loaded globally). Light-only by design, standalone like Riviera.
+ *
+ * Unlike the other variants, Cuvée also restyles the admin panel ("the cellar
+ * ledger"): a bottle-green sidebar with gold actives and an ivory ledger main
+ * area. admin.css is a lazy-loaded chunk that lands AFTER this stylesheet in
+ * the cascade, so every admin override below is prefixed with
+ * html[data-visual-theme="cuvee"] to win on specificity instead of order.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
+:root {
+  /* Palette: bottle glass, label stock, ink, gold foil */
+  --glass-deep: #081b16;
+  --glass: #0c231d;
+  --glass-soft: #12322a;
+  --label: #f6f0dd;
+  --label-bright: #faf5e6;
+  --label-soft: #efe6cd;
+  --ink: #241f14;
+  --ink-soft: #5f5844;
+  --foil: #b4892e;
+  --foil-deep: #8a6414;
+  --foil-bright: #e7c979;
+  --hairline: rgba(38, 33, 20, 0.22);
+  --hairline-strong: rgba(38, 33, 20, 0.4);
+  --gold-hairline: rgba(231, 201, 121, 0.32);
+
+  /* Shared app tokens consumed by components */
+  --primary-color: #8a6414;
+  --secondary-color: #12322a;
+  --text-color: #241f14;
+  --text-muted: #5f5844;
+  --background-color: #0c231d;
+  --card-background: #faf5e6;
+  --surface-color: rgba(250, 245, 230, 0.94);
+  --surface-color-strong: #efe6cd;
+  --border-color: rgba(38, 33, 20, 0.28);
+  --header-height: 4rem;
+  --champagne: #e7c979;
+  --champagne-deep: #8a6414;
+  --bubble-color: rgba(231, 201, 121, 0.2);
+  --shadow-sm: 0 1px 0 rgba(231, 201, 121, 0.16);
+  --shadow: 0 24px 50px rgba(3, 10, 8, 0.42), 0 2px 0 rgba(231, 201, 121, 0.14);
+  --shadow-lg: 0 34px 80px rgba(3, 10, 8, 0.55), 0 2px 0 rgba(231, 201, 121, 0.2);
+  --bs-primary: #8a6414;
+  --bs-primary-rgb: 138, 100, 20;
+  --focus-ring-color: rgba(231, 201, 121, 0.45);
+  --serif-display: "Fraunces", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html[data-visual-theme="cuvee"] body {
+  min-width: 320px;
+  margin: 0;
+  padding-top: var(--header-height);
+  color: #efe9d8;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background:
+    radial-gradient(circle at 50% -12%, rgba(231, 201, 121, 0.1), transparent 42rem),
+    radial-gradient(circle at 50% 118%, rgba(4, 14, 11, 0.9), transparent 55%),
+    linear-gradient(180deg, #0d241e 0%, #0b211b 55%, #091d17 100%);
+}
+
+/* Rising champagne bubbles in the dark glass: two offset dot grids, denser
+   toward the bottom of the viewport where a pour would fizz. */
+html[data-visual-theme="cuvee"] body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background-image:
+    radial-gradient(rgba(231, 201, 121, 0.13) 1px, transparent 1.6px),
+    radial-gradient(rgba(231, 201, 121, 0.08) 1px, transparent 1.6px);
+  background-size:
+    26px 34px,
+    34px 26px;
+  background-position:
+    0 0,
+    13px 17px;
+  mask-image: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.25) 55%, transparent 92%);
+}
+
+.App {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::selection {
+  color: var(--ink);
+  background: var(--foil-bright);
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 2001;
+  width: 1px;
+  height: 1px;
+  padding: 8px;
+  overflow: hidden;
+  color: var(--ink);
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--foil-bright);
+  border-radius: 0 0 4px 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+.skip-link:focus {
+  top: 0;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+}
+
+html[data-visual-theme="cuvee"] .bubble-background {
+  opacity: 0.3;
+  filter: sepia(1) hue-rotate(8deg) saturate(1.7) brightness(1.15);
+}
+
+/* ---------------------------------------------------------------- header */
+
+.site-header {
+  z-index: 1040;
+  min-height: var(--header-height);
+  background: rgba(9, 26, 21, 0.9);
+  border-bottom: 1px solid var(--gold-hairline);
+  /* double rule: hairline border + a second offset hairline */
+  box-shadow:
+    0 4px 0 -3px rgba(231, 201, 121, 0.18),
+    0 20px 44px rgba(3, 10, 8, 0.5);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  max-width: min(52vw, 18rem);
+  color: #f3edda;
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+.site-brand span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-nav {
+  column-gap: 1.6rem !important;
+}
+
+.site-nav-link,
+.icon-link {
+  color: rgba(238, 231, 212, 0.78);
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.site-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.3rem 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  border-bottom: 1px solid transparent;
+}
+
+/* Gold interpuncts between nav entries, like the type row on a label foot */
+.site-nav-link + .site-nav-link::before {
+  position: absolute;
+  left: -1rem;
+  color: rgba(231, 201, 121, 0.55);
+  content: "\00B7";
+}
+
+.site-nav-link:hover,
+.site-nav-link:focus-visible {
+  color: var(--foil-bright);
+  border-bottom-color: rgba(231, 201, 121, 0.65);
+}
+
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgba(231, 201, 121, 0.3);
+  border-radius: 999px;
+}
+
+.icon-link:hover,
+.icon-link:focus-visible {
+  color: var(--ink);
+  background: var(--foil-bright);
+  border-color: var(--foil-bright);
+}
+
+.site-lang-toggle {
+  --bs-btn-color: rgba(238, 231, 212, 0.85);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: rgba(231, 201, 121, 0.3);
+  --bs-btn-hover-color: #241f14;
+  --bs-btn-hover-bg: #e7c979;
+  --bs-btn-hover-border-color: #e7c979;
+  --bs-btn-active-color: #241f14;
+  --bs-btn-active-bg: #e7c979;
+  --bs-btn-active-border-color: #e7c979;
+}
+
+.dropdown-menu-dark {
+  --bs-dropdown-bg: #102b23;
+  --bs-dropdown-link-color: rgba(238, 231, 212, 0.85);
+  --bs-dropdown-link-hover-color: #e7c979;
+  --bs-dropdown-link-hover-bg: rgba(231, 201, 121, 0.1);
+  --bs-dropdown-link-active-color: #241f14;
+  --bs-dropdown-link-active-bg: #e7c979;
+  border: 1px solid var(--gold-hairline);
+  border-radius: 3px;
+}
+
+.site-mobile-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 1041;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.35rem);
+  transition:
+    opacity 0.18s ease,
+    visibility 0.18s ease,
+    transform 0.18s ease;
+}
+
+.site-mobile-menu.is-open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.site-mobile-menu-panel {
+  display: grid;
+  gap: 0;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #0f2a22;
+  border: 1px solid var(--gold-hairline);
+  border-radius: 3px;
+  box-shadow: var(--shadow);
+}
+
+.site-mobile-link {
+  padding: 0.7rem 0.25rem;
+  color: rgba(238, 231, 212, 0.85);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  border-top: 1px solid rgba(231, 201, 121, 0.14);
+}
+
+.site-mobile-link:first-child {
+  border-top: 0;
+}
+
+.site-mobile-link:hover,
+.site-mobile-link:focus-visible {
+  color: var(--foil-bright);
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.cuvee-hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - var(--header-height));
+  padding: clamp(5rem, 12vh, 8rem) 1.25rem clamp(3.5rem, 9vh, 6rem);
+}
+
+.cuvee-hero__label {
+  position: relative;
+  width: min(46rem, 100%);
+  padding: clamp(3.25rem, 7vw, 4.75rem) clamp(1.5rem, 5vw, 4rem) clamp(2.25rem, 5vw, 3.5rem);
+  color: var(--ink);
+  text-align: center;
+  background: linear-gradient(180deg, #faf5e6, #f1e9d2);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Inner gold rule — the label's second frame */
+.cuvee-hero__label::before {
+  position: absolute;
+  inset: 0.6rem;
+  pointer-events: none;
+  content: "";
+  border: 1px solid rgba(180, 137, 46, 0.55);
+  border-radius: 2px;
+}
+
+.cuvee-hero__seal {
+  position: absolute;
+  top: -2.1rem;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 4.4rem;
+  height: 4.4rem;
+  color: #3b2c09;
+  font-family: var(--serif-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: radial-gradient(circle at 32% 28%, #f2dc9d, #cfa74d 55%, #a37f24);
+  border: 1px solid rgba(138, 100, 20, 0.75);
+  border-radius: 50%;
+  outline: 1px dashed rgba(138, 100, 20, 0.55);
+  outline-offset: -5px;
+  box-shadow:
+    0 0 0 5px var(--label-bright),
+    0 0 0 6px rgba(138, 100, 20, 0.4),
+    0 14px 28px rgba(3, 10, 8, 0.45);
+  transform: translateX(-50%);
+}
+
+.cuvee-eyebrow {
+  display: inline-block;
+  margin-top: 1rem;
+  color: var(--foil-deep);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+}
+
+.cuvee-hero__title {
+  margin: 0.9rem auto 0;
+  max-width: 16ch;
+  color: var(--ink);
+  font-family: var(--serif-display);
+  font-size: clamp(2.6rem, 7vw, 4.6rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+}
+
+.cuvee-rule {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  width: min(22rem, 78%);
+  margin: 1.4rem auto;
+}
+
+.cuvee-rule::before,
+.cuvee-rule::after {
+  flex: 1;
+  height: 1px;
+  content: "";
+  background: var(--hairline-strong);
+}
+
+.cuvee-rule span {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--foil);
+  transform: rotate(45deg);
+}
+
+.cuvee-hero__subtitle {
+  max-width: 34rem;
+  margin: 0 auto;
+  color: var(--ink-soft);
+  font-family: var(--serif-display);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.cuvee-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+/* --------------------------------------------------------------- buttons */
+
+.btn {
+  border-radius: 2px;
+}
+
+.cuvee-button,
+.btn-primary,
+.btn-warning,
+.bg-brand-gradient {
+  color: #2a2107 !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: linear-gradient(180deg, #ecd28d, #cfa74d) !important;
+  border: 1px solid rgba(138, 100, 20, 0.8) !important;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.cuvee-button:hover,
+.cuvee-button:focus-visible,
+.btn-primary:hover,
+.btn-primary:focus-visible,
+.btn-warning:hover,
+.btn-warning:focus-visible,
+.bg-brand-gradient:hover,
+.bg-brand-gradient:focus-visible {
+  color: var(--foil-bright) !important;
+  background: #12322a !important;
+  border-color: #12322a !important;
+  box-shadow: none;
+}
+
+.cuvee-button--ghost,
+.btn-outline-light {
+  color: var(--ink) !important;
+  background: transparent !important;
+  border: 1px solid var(--hairline-strong) !important;
+  box-shadow: none;
+}
+
+.cuvee-button--ghost:hover,
+.cuvee-button--ghost:focus-visible,
+.btn-outline-light:hover,
+.btn-outline-light:focus-visible {
+  color: var(--foil-bright) !important;
+  background: #12322a !important;
+  border-color: #12322a !important;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------- sections as labels */
+
+.content-section {
+  position: relative;
+  padding: clamp(3.25rem, 7vw, 5.5rem) 0;
+}
+
+.content-section > .container {
+  position: relative;
+  max-width: 62rem;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  color: var(--ink);
+  background: linear-gradient(180deg, #f8f3e4, #f1e9d2);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  box-shadow: var(--shadow);
+}
+
+.content-section > .container::before {
+  position: absolute;
+  inset: 0.6rem;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  border: 1px solid rgba(180, 137, 46, 0.4);
+  border-radius: 2px;
+}
+
+/* Foil label for highlight sections: gold wash + stronger gold frame */
+.highlight-section > .container {
+  background: linear-gradient(180deg, #f7edcf, #efe0b4);
+  border-color: rgba(138, 100, 20, 0.5);
+}
+
+.highlight-section > .container::before {
+  border-color: rgba(138, 100, 20, 0.55);
+}
+
+.content-section .text-muted {
+  color: var(--ink-soft) !important;
+}
+
+/* Section headings: centered serif with flanking hairlines */
+h2.section-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.1rem;
+  align-items: center;
+  margin: 0 0 1.25rem;
+  color: var(--ink);
+  font-family: var(--serif-display);
+  font-size: clamp(1.9rem, 4.5vw, 2.9rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+h2.section-header::before,
+h2.section-header::after {
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, var(--hairline-strong));
+}
+
+h2.section-header::after {
+  background: linear-gradient(90deg, var(--hairline-strong), transparent);
+}
+
+.section-subtitle {
+  max-width: 38rem;
+  color: var(--ink-soft);
+  font-family: var(--serif-display);
+  font-size: 1.05rem;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------- features */
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 2.25rem;
+  text-align: center;
+}
+
+.feature {
+  padding: 0.5rem 1.5rem;
+  border-left: 1px solid var(--hairline);
+}
+
+.feature:first-child {
+  border-left: 0;
+}
+
+.feature-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.9rem;
+  color: var(--foil-deep);
+  font-size: 1.2rem;
+  background: radial-gradient(circle at 35% 30%, rgba(236, 210, 141, 0.7), rgba(207, 167, 77, 0.25));
+  border: 1px solid rgba(138, 100, 20, 0.5);
+  border-radius: 999px;
+}
+
+.feature h3 {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+  font-family: var(--serif-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.feature p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+/* --------------------------------------------------------------- countdown */
+
+.countdown-units {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+  gap: 0;
+  overflow: hidden;
+  background: var(--label-bright);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+}
+
+.countdown-unit {
+  padding: 1rem 0.5rem;
+  text-align: center;
+  border-left: 1px solid var(--hairline);
+}
+
+.countdown-unit:first-child {
+  border-left: 0;
+}
+
+.countdown-value {
+  display: block;
+  color: #12322a;
+  font-family: var(--serif-display);
+  font-size: clamp(1.8rem, 3.5vw, 2.7rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.countdown-label {
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+/* ---------------------------------------------------------------- schedule */
+
+.schedule-tabs {
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--hairline-strong);
+}
+
+.schedule-tabs .nav-link {
+  padding: 0.6rem 0.9rem;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.schedule-tabs .nav-link:hover,
+.schedule-tabs .nav-link:focus-visible {
+  color: var(--ink);
+  border-bottom-color: var(--hairline-strong);
+}
+
+.schedule-tabs .nav-link.active {
+  color: var(--ink);
+  background: transparent;
+  border-bottom-color: var(--foil-deep);
+}
+
+/* Events read as ledger rows separated by hairlines */
+.events-list {
+  display: grid;
+  gap: 0;
+}
+
+.event-card.card {
+  margin-bottom: 0 !important;
+  color: var(--ink);
+  background: transparent;
+  border: 0 !important;
+  border-top: 1px solid var(--hairline) !important;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.events-list .event-card.card:first-child {
+  border-top: 0 !important;
+}
+
+.event-time {
+  min-width: 5.5rem;
+  color: #12322a;
+  font-family: var(--serif-display);
+  font-weight: 700;
+}
+
+.event-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.badge {
+  color: var(--foil-deep);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: transparent !important;
+  border: 1px solid rgba(138, 100, 20, 0.5);
+  border-radius: 2px;
+}
+
+/* Keep the semantic status colors legible as tinted-outline stamps */
+.badge.bg-success {
+  color: #2f7d4f;
+  border-color: rgba(47, 125, 79, 0.55);
+}
+
+.badge.bg-danger {
+  color: #a33d2f;
+  border-color: rgba(163, 61, 47, 0.55);
+}
+
+.badge.bg-secondary {
+  color: var(--ink-soft);
+  border-color: rgba(95, 88, 68, 0.5);
+}
+
+.badge.bg-info {
+  color: #1d5f77;
+  border-color: rgba(29, 95, 119, 0.55);
+}
+
+/* --------------------------------------------------------------------- faq */
+
+.accordion-item {
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+
+.accordion-item:last-of-type {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.accordion-button {
+  color: var(--ink);
+  font-family: var(--serif-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  background: transparent;
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+
+.accordion-button:not(.collapsed) {
+  color: #12322a;
+  background: transparent;
+  box-shadow: none;
+}
+
+.accordion-button:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--focus-ring-color);
+}
+
+.accordion-body {
+  color: var(--ink-soft);
+}
+
+/* -------------------------------------------------------- cards & modals */
+
+.card,
+.marquee-card {
+  color: var(--ink);
+  background: var(--label-bright);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+}
+
+.modal-content {
+  position: relative;
+  color: var(--ink);
+  background: linear-gradient(180deg, #faf5e6, #f1e9d2);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-content::before {
+  position: absolute;
+  inset: 0.55rem;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  border: 1px solid rgba(180, 137, 46, 0.4);
+  border-radius: 2px;
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--hairline);
+}
+
+.modal-title {
+  color: var(--ink);
+  font-family: var(--serif-display);
+  font-weight: 600;
+}
+
+/* RegistrationModal and other content hard-coded to the dark palette */
+.modal-content .bg-dark {
+  background-color: transparent !important;
+}
+
+.modal-content .text-light {
+  color: var(--ink) !important;
+}
+
+.modal-content .border-secondary {
+  border-color: var(--hairline) !important;
+}
+
+/* ----------------------------------------------------------------- forms */
+
+.form-control,
+.form-select {
+  color: var(--ink);
+  background-color: #fffdf4;
+  border-color: var(--hairline-strong);
+  border-radius: 2px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  color: var(--ink);
+  background-color: #fffdf4;
+  border-color: var(--foil-deep);
+  box-shadow: 0 0 0 3px rgba(180, 137, 46, 0.25);
+}
+
+.form-control::placeholder {
+  color: rgba(95, 88, 68, 0.65);
+}
+
+.form-label,
+.form-check-label {
+  color: var(--ink);
+}
+
+.input-group-text {
+  color: var(--ink-soft);
+  background: var(--label-soft);
+  border-color: var(--hairline-strong);
+  border-radius: 2px;
+}
+
+/* --------------------------------------------------------- marquee & map */
+
+.marquee-slider {
+  max-width: none;
+  padding: 0.5rem 0;
+}
+
+.marquee-logo-frame {
+  background: #fffdf4;
+  border: 1px solid var(--hairline);
+  border-radius: 3px;
+}
+
+.carousel-loading,
+.carousel-error {
+  color: var(--ink-soft);
+}
+
+.leaflet-container,
+.map-loading,
+.map-error {
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------------------------------------------------------------- footer */
+
+.site-footer {
+  color: rgba(238, 231, 212, 0.82);
+  background: var(--glass-deep);
+  border-top: 1px solid var(--gold-hairline);
+  box-shadow: inset 0 4px 0 -3px rgba(231, 201, 121, 0.16);
+}
+
+.site-footer .footer-link,
+.site-footer .text-white {
+  color: var(--foil-bright) !important;
+}
+
+/* ------------------------------------------------------ standalone pages */
+
+.standalone-app {
+  color: #efe9d8;
+  background: transparent;
+}
+
+.standalone-navbar {
+  background: rgba(9, 26, 21, 0.92);
+  border-bottom: 1px solid var(--gold-hairline);
+  box-shadow:
+    0 4px 0 -3px rgba(231, 201, 121, 0.18),
+    0 20px 44px rgba(3, 10, 8, 0.5);
+}
+
+.standalone-navbar-brand {
+  color: #f3edda !important;
+  font-family: var(--serif-display);
+  font-weight: 600;
+}
+
+.standalone-navbar .btn-outline-secondary {
+  --bs-btn-color: rgba(238, 231, 212, 0.85);
+  --bs-btn-border-color: rgba(231, 201, 121, 0.3);
+  --bs-btn-hover-color: #241f14;
+  --bs-btn-hover-bg: #e7c979;
+  --bs-btn-hover-border-color: #e7c979;
+  --bs-btn-active-color: #241f14;
+  --bs-btn-active-bg: #e7c979;
+  --bs-btn-active-border-color: #e7c979;
+}
+
+.standalone-main .bg-dark,
+.standalone-document-main .bg-dark {
+  color: var(--ink);
+  background-color: var(--label-bright) !important;
+}
+
+.standalone-main .text-light,
+.standalone-document-main .text-light {
+  color: var(--ink) !important;
+}
+
+.standalone-main .border-secondary,
+.standalone-document-main .border-secondary {
+  border-color: var(--hairline) !important;
+}
+
+/* Bootstrap warning-yellow reads as foil gold on label stock */
+.standalone-main .text-warning,
+.standalone-document-main .text-warning,
+.content-section .text-warning,
+.modal-content .text-warning {
+  color: var(--foil-deep) !important;
+}
+
+.standalone-document-main #privacy-policy h1 {
+  font-family: var(--serif-display);
+  font-weight: 600;
+}
+
+.standalone-document-main #privacy-policy .col-lg-8 {
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  color: var(--ink);
+  background: linear-gradient(180deg, #f8f3e4, #f1e9d2);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  box-shadow: var(--shadow);
+}
+
+/* ==================================================================
+   ADMIN — "the cellar ledger"
+   admin.css consumes the --adm-* tokens below with its own !important
+   rules, so re-tinting the tokens restyles most of the panel. Direct
+   overrides follow for its hard-coded colors. All selectors carry the
+   html[data-visual-theme="cuvee"] prefix to beat admin.css, which is
+   lazy-loaded after this sheet.
+   ================================================================== */
+
+html[data-visual-theme="cuvee"] #admin,
+html[data-visual-theme="cuvee"] .admin-dialog {
+  --adm-primary: #8a6414;
+  --adm-secondary: #12322a;
+  --adm-primary-rgb: 138, 100, 20;
+  --adm-secondary-rgb: 18, 50, 42;
+  --adm-gradient: linear-gradient(135deg, #a37f24, #6d4f0f);
+
+  --adm-bg: #efe6cd;
+  --adm-surface: #f8f3e4;
+  --adm-surface-2: #fffdf4;
+  --adm-border: rgba(38, 33, 20, 0.22);
+  --adm-border-focus: rgba(138, 100, 20, 0.5);
+
+  --adm-text: #241f14;
+  --adm-text-muted: #57503f;
+  --adm-text-dim: #8d8471;
+
+  --adm-success: #2f7d4f;
+  --adm-danger: #a33d2f;
+
+  --adm-radius: 2px;
+  --adm-radius-lg: 3px;
+}
+
+/* Ledger surface on the section itself so the unauthenticated login view
+   is ink-on-parchment too, not ink on dark glass. */
+html[data-visual-theme="cuvee"] #admin {
+  color: var(--adm-text);
+  background: var(--adm-bg);
+}
+
+html[data-visual-theme="cuvee"] .admin-layout {
+  background: var(--adm-bg);
+}
+
+html[data-visual-theme="cuvee"] .admin-main {
+  background:
+    radial-gradient(circle at 50% -20%, rgba(231, 201, 121, 0.18), transparent 30rem),
+    var(--adm-bg);
+}
+
+/* ---- Sidebar: dark bottle green with gold actives ---- */
+html[data-visual-theme="cuvee"] .admin-sidebar {
+  background: linear-gradient(180deg, #0e2821, #0b211b);
+  border-right: 1px solid var(--gold-hairline);
+}
+
+html[data-visual-theme="cuvee"] .admin-sidebar-brand {
+  border-bottom-color: rgba(231, 201, 121, 0.22);
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-item {
+  color: rgba(238, 231, 212, 0.72);
+  border-left-color: transparent;
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-item:hover {
+  color: #f6f0dd;
+  background: rgba(231, 201, 121, 0.06);
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-item.is-active {
+  color: var(--foil-bright);
+  background: rgba(231, 201, 121, 0.1);
+  border-left-color: var(--foil-bright);
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-count {
+  color: rgba(238, 231, 212, 0.6);
+  background: rgba(238, 231, 212, 0.1);
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-item.is-active .admin-nav-count {
+  color: var(--foil-bright);
+  background: rgba(231, 201, 121, 0.16);
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-group-header {
+  color: rgba(238, 231, 212, 0.42);
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-group-header:hover {
+  color: rgba(238, 231, 212, 0.62);
+  background: rgba(231, 201, 121, 0.04);
+}
+
+html[data-visual-theme="cuvee"] .admin-nav-group-header.has-active {
+  color: #cdb877;
+}
+
+html[data-visual-theme="cuvee"] .admin-sidebar-footer {
+  border-top-color: rgba(231, 201, 121, 0.2);
+}
+
+html[data-visual-theme="cuvee"] .admin-auth-status {
+  color: rgba(238, 231, 212, 0.55);
+}
+
+html[data-visual-theme="cuvee"] .admin-sidebar-footer .btn-outline-secondary {
+  --bs-btn-color: rgba(238, 231, 212, 0.75);
+  --bs-btn-border-color: rgba(238, 231, 212, 0.3);
+  --bs-btn-hover-color: #241f14;
+  --bs-btn-hover-bg: #e7c979;
+  --bs-btn-hover-border-color: #e7c979;
+  --bs-btn-active-color: #241f14;
+  --bs-btn-active-bg: #e7c979;
+  --bs-btn-active-border-color: #e7c979;
+}
+
+html[data-visual-theme="cuvee"] .admin-sidebar-footer .btn-outline-danger {
+  --bs-btn-color: #e39182;
+  --bs-btn-border-color: rgba(227, 145, 130, 0.5);
+}
+
+html[data-visual-theme="cuvee"] .admin-mobile-toggle {
+  color: var(--foil-bright);
+  background: #0e2821;
+  border-color: rgba(231, 201, 121, 0.5);
+}
+
+html[data-visual-theme="cuvee"] .admin-mobile-toggle:hover {
+  background: #12322a;
+  box-shadow: 0 4px 20px rgba(231, 201, 121, 0.25);
+}
+
+/* ---- Ledger cards ---- */
+html[data-visual-theme="cuvee"] #admin .card {
+  border-radius: 3px;
+  box-shadow: 0 10px 24px rgba(38, 33, 20, 0.08);
+}
+
+html[data-visual-theme="cuvee"] #admin .card.border-warning {
+  box-shadow:
+    0 0 0 1px rgba(138, 100, 20, 0.2),
+    0 10px 24px rgba(38, 33, 20, 0.1);
+}
+
+html[data-visual-theme="cuvee"] #admin .card-header {
+  border-bottom: 1px solid rgba(138, 100, 20, 0.35);
+}
+
+/* ---- Ledger tables (markup uses variant="dark") ---- */
+html[data-visual-theme="cuvee"] #admin .table,
+html[data-visual-theme="cuvee"] #admin .table-dark {
+  --bs-table-bg: #f8f3e4;
+  --bs-table-color: #241f14;
+  --bs-table-border-color: rgba(38, 33, 20, 0.18);
+  --bs-table-striped-bg: #f1e9d2;
+  --bs-table-striped-color: #241f14;
+  --bs-table-hover-bg: #ece1c2;
+  --bs-table-hover-color: #241f14;
+  --bs-table-active-bg: #e7dbb6;
+  --bs-table-active-color: #241f14;
+  color: var(--bs-table-color);
+  border-color: var(--bs-table-border-color);
+}
+
+html[data-visual-theme="cuvee"] #admin .table thead th {
+  color: var(--adm-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid rgba(138, 100, 20, 0.45);
+}
+
+/* ---- Hard-coded dark utilities in admin markup ---- */
+html[data-visual-theme="cuvee"] #admin .bg-dark,
+html[data-visual-theme="cuvee"] .admin-dialog .bg-dark {
+  color: var(--adm-text);
+  background-color: var(--adm-surface) !important;
+}
+
+html[data-visual-theme="cuvee"] #admin .text-light,
+html[data-visual-theme="cuvee"] .admin-dialog .text-light {
+  color: var(--adm-text) !important;
+}
+
+html[data-visual-theme="cuvee"] #admin .border-secondary,
+html[data-visual-theme="cuvee"] .admin-dialog .border-secondary {
+  border-color: var(--adm-border) !important;
+}
+
+html[data-visual-theme="cuvee"] #admin .list-group-item,
+html[data-visual-theme="cuvee"] .admin-dialog .list-group-item {
+  color: var(--adm-text);
+  background-color: transparent;
+}
+
+html[data-visual-theme="cuvee"] #admin .dropdown-menu,
+html[data-visual-theme="cuvee"] .admin-dialog .dropdown-menu {
+  --bs-dropdown-bg: #fffdf4;
+  --bs-dropdown-link-color: #241f14;
+  --bs-dropdown-link-hover-bg: #f1e9d2;
+  border: 1px solid var(--adm-border);
+  border-radius: 3px;
+}
+
+/* ---- Analytics charts on the light ledger surface ---- */
+html[data-visual-theme="cuvee"] .viz-root {
+  --series-guests: #1d5fbf;
+  --series-checked-in: #0f7a55;
+  --viz-text-secondary: #57503f;
+  --viz-text-muted: #8d8471;
+  --viz-gridline: #e3d9bd;
+  --viz-axis: #c9bd9c;
+  --viz-surface: #fffdf4;
+}
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 991.98px) {
+  .cuvee-hero__title {
+    font-size: clamp(2.4rem, 9vw, 3.6rem);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .features {
+    grid-template-columns: 1fr;
+  }
+
+  .feature {
+    padding: 1.5rem 0.5rem;
+    border-left: 0;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .feature:first-child {
+    border-top: 0;
+  }
+
+  h2.section-header {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  h2.section-header::before,
+  h2.section-header::after {
+    display: none;
+  }
+
+  .cuvee-hero {
+    padding-top: 6rem;
+  }
+
+  .cuvee-hero__label {
+    padding-top: 3.5rem;
+  }
+
+  .event-card .d-flex {
+    flex-direction: column;
+  }
+
+  .event-time {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
