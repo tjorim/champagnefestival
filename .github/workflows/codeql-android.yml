@@ -37,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           kotlin_version="$(awk -F '"' '/^kotlin = / { print $2 }' android/gradle/libs.versions.toml)"
-          max_supported="2.3.29"
+          max_supported="2.4.0"
           if printf '%s\n%s\n' "${kotlin_version}" "${max_supported}" | sort -V -C; then
             echo "supported=true" >> "$GITHUB_OUTPUT"
           else
