@@ -42,7 +42,7 @@ jobs:
             echo "supported=true" >> "$GITHUB_OUTPUT"
           else
             echo "supported=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping CodeQL java-kotlin analysis: Kotlin ${kotlin_version} is newer than CodeQL's current Kotlin support."
+            echo "::warning::Skipping CodeQL java-kotlin analysis: Kotlin ${kotlin_version} is newer than CodeQL's current Kotlin support."
           fi
 
       - name: Initialize CodeQL
