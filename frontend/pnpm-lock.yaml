@@ -79,8 +79,8 @@ importers:
         version: 14.0.5
     devDependencies:
       '@inlang/paraglide-js':
-        specifier: ^2.21.0
-        version: 2.21.0(babel-plugin-macros@3.1.0)(typescript@7.0.2)
+        specifier: ^2.22.0
+        version: 2.22.0(babel-plugin-macros@3.1.0)(typescript@7.0.2)(vite@8.1.4(@types/node@26.1.1))
       '@inlang/plugin-m-function-matcher':
         specifier: ^2.2.7
         version: 2.2.9(babel-plugin-macros@3.1.0)
@@ -278,13 +278,16 @@ packages:
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
 
-  '@inlang/paraglide-js@2.21.0':
-    resolution: {integrity: sha512-t+OOui1i5p73zQ2Dk28yFzu6rZhh7hsDOCHjkXDmSwFFsUsS5HyUD4CvPJ+wf02qgmlCMu2z1qffJ5aWwgx1CA==}
+  '@inlang/paraglide-js@2.22.0':
+    resolution: {integrity: sha512-GSzG7KEKcYAhwuPNJczIPB+DzyndYxr4lsXAkkB7xh00jTrt80NF2KfgjEAkxuJvWcnscqXf7y7d1Q0SWtSu7A==}
     hasBin: true
     peerDependencies:
       typescript: '>=5.6'
+      vite: '>=5.0.0'
     peerDependenciesMeta:
       typescript:
+        optional: true
+      vite:
         optional: true
 
   '@inlang/plugin-m-function-matcher@2.2.9':
@@ -785,14 +788,14 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@sinclair/typebox@0.27.10':
-    resolution: {integrity: sha512-MTBk/3jGLNB2tVxv6uLlFh1iu64iYOQ2PbdOSK3NW8JZsmlaOh2q6sdtKowBhfw8QFLmYNzTW4/oK4uATIi6ZA==}
+  '@sinclair/typebox@0.27.12':
+    resolution: {integrity: sha512-hhyNJ+nbR6ZR7pToHvllEFun9TL0sbL+tk/ON75lo+Xas054uez98qRbsuNt7MBCyZKK4+8Yli/OAGZhmfBZ/g==}
 
-  '@sinclair/typebox@0.31.28':
-    resolution: {integrity: sha512-/s55Jujywdw/Jpan+vsy6JZs1z2ZTGxTmbZTPiuSL2wz9mfzA2gN1zzaqmvfi4pq+uOt7Du85fkiwv5ymW84aQ==}
+  '@sinclair/typebox@0.31.30':
+    resolution: {integrity: sha512-MGsM7bVmHg3sUKCphlu3SGQ+T+5JTbygZWYArfKQCW5anJeACHeqLhcnf+R7XlCWZ+QR3C8JTBx3kCKJTN69ow==}
 
-  '@sinclair/typebox@0.34.50':
-    resolution: {integrity: sha512-ydBWw0G6WFwWHzh9RK4B5c690UkreOG0llq0r+DaI7LgKgxigf8mhHzIPI3S0850g1BPkq/zpuCfrq4QFgUlTQ==}
+  '@sinclair/typebox@0.34.52':
+    resolution: {integrity: sha512-XiMQh7qqVlxZzcVD+kkGMNGMzcTrDMLWI7S4x7z1MkCkbDPrekpZXEUK0eZqZFMuHQg2a2DZOcDIh9o5v3Gonw==}
 
   '@sqlite.org/sqlite-wasm@3.48.0-build4':
     resolution: {integrity: sha512-hI6twvUkzOmyGZhQMza1gpfqErZxXRw6JEsiVjUbo7tFanVD+8Oil0Ih3l2nGzHdxPI41zFmfUQG7GHqhciKZQ==}
@@ -2380,7 +2383,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.11': {}
 
-  '@inlang/paraglide-js@2.21.0(babel-plugin-macros@3.1.0)(typescript@7.0.2)':
+  '@inlang/paraglide-js@2.22.0(babel-plugin-macros@3.1.0)(typescript@7.0.2)(vite@8.1.4(@types/node@26.1.1))':
     dependencies:
       '@inlang/recommend-sherlock': 0.2.1
       '@inlang/sdk': 2.10.2(babel-plugin-macros@3.1.0)
@@ -2391,6 +2394,7 @@ snapshots:
       urlpattern-polyfill: 10.1.0
     optionalDependencies:
       typescript: 7.0.2
+      vite: 8.1.4(@types/node@26.1.1)
     transitivePeerDependencies:
       - babel-plugin-macros
 
@@ -2411,7 +2415,7 @@ snapshots:
   '@inlang/sdk@2.10.2(babel-plugin-macros@3.1.0)':
     dependencies:
       '@lix-js/sdk': 0.4.10(babel-plugin-macros@3.1.0)
-      '@sinclair/typebox': 0.31.28
+      '@sinclair/typebox': 0.31.30
       kysely: 0.28.17
       sqlite-wasm-kysely: 0.3.0(kysely@0.28.17)
       uuid: 14.0.1
@@ -2460,11 +2464,11 @@ snapshots:
 
   '@jest/schemas@29.6.3':
     dependencies:
-      '@sinclair/typebox': 0.27.10
+      '@sinclair/typebox': 0.27.12
 
   '@jest/schemas@30.4.1':
     dependencies:
-      '@sinclair/typebox': 0.34.50
+      '@sinclair/typebox': 0.34.52
 
   '@jest/types@30.4.1':
     dependencies:
@@ -2737,11 +2741,11 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@sinclair/typebox@0.27.10': {}
+  '@sinclair/typebox@0.27.12': {}
 
-  '@sinclair/typebox@0.31.28': {}
+  '@sinclair/typebox@0.31.30': {}
 
-  '@sinclair/typebox@0.34.50': {}
+  '@sinclair/typebox@0.34.52': {}
 
   '@sqlite.org/sqlite-wasm@3.48.0-build4': {}
 
