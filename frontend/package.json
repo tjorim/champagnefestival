@@ -24,7 +24,7 @@
     "@tanstack/react-db": "^0.1.92",
     "@tanstack/react-form": "^1.33.1",
     "@tanstack/react-query": "^5.101.2",
-    "@tanstack/react-router": "^1.170.17",
+    "@tanstack/react-router": "^1.170.18",
     "@tanstack/react-table": "9.0.0-beta.53",
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
