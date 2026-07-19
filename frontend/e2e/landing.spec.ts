@@ -7,11 +7,10 @@ test.describe("Public landing page", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("hero section is visible", async ({ page }) => {
-    const hero = page.locator(".hero");
-    await expect(hero).toBeVisible();
-    // Brand title should be present
-    await expect(page.locator(".brand-title")).toBeVisible();
+  test("welcome section is visible", async ({ page }) => {
+    const welcome = page.locator("main#main-content #welcome");
+    await expect(welcome).toBeVisible();
+    await expect(welcome.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("header is rendered", async ({ page }) => {

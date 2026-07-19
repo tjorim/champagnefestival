@@ -20,6 +20,8 @@ import ThemeSwitcher from "./components/ThemeSwitcher";
 import RivieraFeatureGrid from "./components/riviera/RivieraFeatureGrid";
 import RivieraHero from "./components/riviera/RivieraHero";
 import CuveeHero from "./components/cuvee/CuveeHero";
+import RemuageFeatureRack from "./components/remuage/RemuageFeatureRack";
+import RemuageHero from "./components/remuage/RemuageHero";
 import EventStructuredData from "./components/JsonLd";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
@@ -323,7 +325,15 @@ function App() {
 
       <main id="main-content">
         {/* Hero Section */}
-        {variant === "riviera" ? (
+        {variant === "remuage" ? (
+          <RemuageHero
+            festivalName={m.festival_name()}
+            title={m.welcome_title()}
+            subtitle={m.welcome_subtitle()}
+            learnMoreLabel={m.welcome_learn_more()}
+            scheduleLabel={m.schedule_title()}
+          />
+        ) : variant === "riviera" ? (
           <RivieraHero
             festivalName={m.festival_name()}
             title={m.welcome_title()}
@@ -382,7 +392,16 @@ function App() {
               </div>
             </div>
             {/* Features in full width to display side by side */}
-            {variant === "riviera" ? (
+            {variant === "remuage" ? (
+              <RemuageFeatureRack
+                items={featureItems.map((feature) => ({
+                  id: feature.id,
+                  title: feature.getTitle(),
+                  description: feature.getDesc(),
+                  iconClass: FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars",
+                }))}
+              />
+            ) : variant === "riviera" ? (
               <RivieraFeatureGrid
                 items={featureItems.map((feature) => ({
                   id: feature.id,

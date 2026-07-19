@@ -72,9 +72,11 @@
         // Sets data-bs-theme (Bootstrap's own dark/light component colors) before first paint,
         // to avoid a flash. The theme stylesheet itself (colors/layout) is loaded from main.tsx,
         // after the bootstrap CSS import, so it lands later in the cascade — see useVisualTheme.ts.
-        // Keep this list and the per-variant bs-theme mapping in sync with useVisualTheme.ts.
+        // Keep this registry mirror synchronized with src/config/visualThemes.ts.
         const VISUAL_THEME_KEY = "champagnefestival:visualTheme";
-        const VARIANTS = ["refresh", "classic", "riviera", "cuvee"];
+        const VARIANTS = ["refresh","classic","riviera","cuvee","remuage"];
+        const THEME_MODES = {"refresh":"system","classic":"dark","riviera":"light","cuvee":"light","remuage":"light"};
+        const THEME_COLORS = {"refresh":{"dark":"#100f0d","light":"#fbf4e6"},"classic":{"dark":"#121212","light":"#121212"},"riviera":{"dark":"#f7ecd2","light":"#f7ecd2"},"cuvee":{"dark":"#0c231d","light":"#0c231d"},"remuage":{"dark":"#edf1f5","light":"#edf1f5"}};
         let visualTheme = "refresh";
         try {
           const stored = window.localStorage.getItem(VISUAL_THEME_KEY);
@@ -85,15 +87,16 @@
         const query = window.matchMedia("(prefers-color-scheme: light)");
         const applyTheme = () => {
           const current = document.documentElement.dataset.visualTheme;
-          if (current === "classic") {
-            document.documentElement.dataset.bsTheme = "dark";
-            return;
-          }
-          if (current === "riviera" || current === "cuvee") {
-            document.documentElement.dataset.bsTheme = "light";
-            return;
-          }
-          document.documentElement.dataset.bsTheme = query.matches ? "light" : "dark";
+          const mode = THEME_MODES[current] ?? "system";
+          const colors = THEME_COLORS[current] ?? THEME_COLORS.refresh;
+          document.documentElement.dataset.bsTheme =
+            mode === "system" ? (query.matches ? "light" : "dark") : mode;
+          document
+            .querySelector('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]')
+            ?.setAttribute("content", colors.dark);
+          document
+            .querySelector('meta[name="theme-color"][media="(prefers-color-scheme: light)"]')
+            ?.setAttribute("content", colors.light);
         };
         applyTheme();
         query.addEventListener?.("change", applyTheme);

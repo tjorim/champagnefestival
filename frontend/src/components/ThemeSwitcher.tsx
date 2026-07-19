@@ -1,16 +1,14 @@
-import type { VisualThemeVariant } from "@/hooks/useVisualTheme";
+import {
+  VISUAL_THEMES,
+  isVisualThemeVariant,
+  type VisualThemeVariant,
+} from "@/config/visualThemes";
+import "./ThemeSwitcher.css";
 
 interface ThemeSwitcherProps {
   variant: VisualThemeVariant;
   onChange: (variant: VisualThemeVariant) => void;
 }
-
-const OPTIONS: Array<{ value: VisualThemeVariant; label: string }> = [
-  { value: "refresh", label: "New" },
-  { value: "classic", label: "Classic" },
-  { value: "riviera", label: "Riviera" },
-  { value: "cuvee", label: "Cuvée" },
-];
 
 /**
  * Preview-only toggle between the full visual designs. Styled with inline styles
@@ -19,6 +17,7 @@ const OPTIONS: Array<{ value: VisualThemeVariant; label: string }> = [
 const ThemeSwitcher = ({ variant, onChange }: ThemeSwitcherProps) => {
   return (
     <div
+      className="theme-switcher"
       role="group"
       aria-label="Visual design preview switcher"
       style={{
@@ -27,6 +26,9 @@ const ThemeSwitcher = ({ variant, onChange }: ThemeSwitcherProps) => {
         bottom: "1rem",
         zIndex: 2000,
         display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "flex-end",
+        maxWidth: "min(34rem, calc(100vw - 2rem))",
         gap: "0.35rem",
         padding: "0.35rem",
         borderRadius: "999px",
@@ -35,11 +37,26 @@ const ThemeSwitcher = ({ variant, onChange }: ThemeSwitcherProps) => {
         fontFamily: "system-ui, sans-serif",
       }}
     >
-      {OPTIONS.map((option) => {
+      <select
+        className="theme-switcher__select"
+        aria-label="Visual design preview"
+        value={variant}
+        onChange={(event) => {
+          if (isVisualThemeVariant(event.target.value)) onChange(event.target.value);
+        }}
+      >
+        {VISUAL_THEMES.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {VISUAL_THEMES.map((option) => {
         const isActive = option.value === variant;
         return (
           <button
             key={option.value}
+            className="theme-switcher__option"
             type="button"
             onClick={() => onChange(option.value)}
             aria-pressed={isActive}

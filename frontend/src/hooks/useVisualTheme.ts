@@ -1,12 +1,19 @@
 import { useCallback, useState } from "react";
+import {
+  DEFAULT_VISUAL_THEME,
+  getVisualThemeDefinition,
+  isVisualThemeVariant,
+  type VisualThemeVariant,
+} from "@/config/visualThemes";
 
-export type VisualThemeVariant = "refresh" | "classic" | "riviera" | "cuvee";
+export type { VisualThemeVariant } from "@/config/visualThemes";
 
 const STORAGE_KEY = "champagnefestival:visualTheme";
 const STYLESHEET_ID = "visual-theme-stylesheet";
 
-function isVisualThemeVariant(value: string | null | undefined): value is VisualThemeVariant {
-  return value === "refresh" || value === "classic" || value === "riviera" || value === "cuvee";
+interface UseVisualThemeResult {
+  variant: VisualThemeVariant;
+  setVariant: (next: VisualThemeVariant) => void;
 }
 
 function readStoredVariant(): VisualThemeVariant {
@@ -15,14 +22,14 @@ function readStoredVariant(): VisualThemeVariant {
     if (isVisualThemeVariant(current)) return current;
   }
 
-  if (typeof window === "undefined") return "refresh";
+  if (typeof window === "undefined") return DEFAULT_VISUAL_THEME;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (isVisualThemeVariant(stored)) return stored;
   } catch {
     // Storage may be unavailable (disabled, sandboxed iframe); fall back to the default variant.
   }
-  return "refresh";
+  return DEFAULT_VISUAL_THEME;
 }
 
 /**
@@ -31,7 +38,21 @@ function readStoredVariant(): VisualThemeVariant {
  * this early would put it before Vite's bootstrap stylesheet in the cascade, letting Bootstrap's
  * same-specificity rules (e.g. `.navbar-brand`) silently win over our overrides.
  */
+function applyBrowserThemeColors(variant: VisualThemeVariant): void {
+  const { themeColors } = getVisualThemeDefinition(variant);
+  const darkMeta = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"][media="(prefers-color-scheme: dark)"]',
+  );
+  const lightMeta = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"][media="(prefers-color-scheme: light)"]',
+  );
+
+  darkMeta?.setAttribute("content", themeColors.dark);
+  lightMeta?.setAttribute("content", themeColors.light);
+}
+
 function applyVisualTheme(variant: VisualThemeVariant): void {
+  const definition = getVisualThemeDefinition(variant);
   document.documentElement.dataset.visualTheme = variant;
 
   let stylesheet = document.getElementById(STYLESHEET_ID) as HTMLLinkElement | null;
@@ -42,23 +63,13 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
     document.head.appendChild(stylesheet);
   }
   stylesheet.href = `/themes/theme-${variant}.css`;
+  applyBrowserThemeColors(variant);
 
-  if (variant === "classic") {
-    document.documentElement.dataset.bsTheme = "dark";
+  if (definition.bootstrapMode !== "system") {
+    document.documentElement.dataset.bsTheme = definition.bootstrapMode;
     return;
   }
 
-  if (variant === "riviera") {
-    document.documentElement.dataset.bsTheme = "light";
-    return;
-  }
-
-  if (variant === "cuvee") {
-    // The page shell is dark bottle-green, but nearly all interactive content sits on
-    // ivory "label" cards, so Bootstrap components should use their light defaults.
-    document.documentElement.dataset.bsTheme = "light";
-    return;
-  }
   const isLight =
     typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia("(prefers-color-scheme: light)").matches
@@ -71,7 +82,7 @@ export function initializeVisualTheme(): void {
   applyVisualTheme(readStoredVariant());
 }
 
-export function useVisualTheme() {
+export function useVisualTheme(): UseVisualThemeResult {
   const [variant, setVariantState] = useState<VisualThemeVariant>(readStoredVariant);
 
   const setVariant = useCallback((next: VisualThemeVariant) => {

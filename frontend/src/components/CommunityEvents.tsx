@@ -9,6 +9,7 @@ import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";
 import { apiToEvent } from "@/types/event";
 import { m } from "@/paraglide/messages";
+import { EMAIL_REGEX } from "@/config/constants";
 
 interface ApiUpcomingEdition {
   id: string;
@@ -16,9 +17,17 @@ interface ApiUpcomingEdition {
   external_partner?: string | null;
   external_contact_name?: string | null;
   external_contact_email?: string | null;
-  venue?: { name?: string };
-  events?: Record<string, unknown>[];
+  venue: { name: string };
+  events: Record<string, unknown>[];
 }
+
+const COMMUNITY_EDITION_TYPES = ["bourse", "capsule_exchange"] as const;
+type CommunityEditionType = (typeof COMMUNITY_EDITION_TYPES)[number];
+
+const EDITION_TYPES = new Set<ApiUpcomingEdition["edition_type"]>([
+  "festival",
+  ...COMMUNITY_EDITION_TYPES,
+]);
 
 interface CommunityEventCardData {
   id: string;
@@ -48,12 +57,123 @@ function formatDate(date: string): string {
     : d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 }
 
-async function fetchCommunityEditions(): Promise<ApiUpcomingEdition[]> {
-  const response = await fetch("/api/editions/upcoming?edition_type=bourse,capsule_exchange");
-  if (!response.ok) {
-    throw new Error(`Failed to load community events: ${response.status}`);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readOptionalString(
+  record: Record<string, unknown>,
+  key: string,
+  context: string,
+): string | undefined {
+  const value = record[key];
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== "string") {
+    throw new Error(`${context}.${key} must be a string or null.`);
   }
-  return (await response.json()) as ApiUpcomingEdition[];
+  return value;
+}
+
+function readOptionalEmail(
+  record: Record<string, unknown>,
+  key: string,
+  context: string,
+): string | undefined {
+  const value = readOptionalString(record, key, context);
+  if (value !== undefined && !EMAIL_REGEX.test(value)) {
+    throw new Error(`${context}.${key} must be a valid email address or null.`);
+  }
+  return value;
+}
+
+function isApiEvent(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value)) return false;
+  const requiredStrings = [
+    "id",
+    "edition_id",
+    "title",
+    "description",
+    "date",
+    "start_time",
+    "category",
+    "created_at",
+    "updated_at",
+  ];
+  const endTimeIsValid =
+    value.end_time === null || value.end_time === undefined || typeof value.end_time === "string";
+  const registrationsOpenFromIsValid =
+    value.registrations_open_from === null ||
+    value.registrations_open_from === undefined ||
+    typeof value.registrations_open_from === "string";
+  const maxCapacityIsValid =
+    value.max_capacity === null ||
+    value.max_capacity === undefined ||
+    typeof value.max_capacity === "number";
+
+  return (
+    requiredStrings.every((key) => typeof value[key] === "string") &&
+    typeof value.registration_required === "boolean" &&
+    typeof value.active === "boolean" &&
+    endTimeIsValid &&
+    registrationsOpenFromIsValid &&
+    maxCapacityIsValid
+  );
+}
+
+function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
+  if (!Array.isArray(payload)) {
+    throw new Error("Upcoming editions response must be an array.");
+  }
+
+  return payload.map((value, index) => {
+    const context = `upcoming editions[${index}]`;
+    if (!isRecord(value)) throw new Error(`${context} must be an object.`);
+    if (typeof value.id !== "string") throw new Error(`${context}.id must be a string.`);
+    if (!EDITION_TYPES.has(value.edition_type as ApiUpcomingEdition["edition_type"])) {
+      throw new Error(`${context}.edition_type is invalid.`);
+    }
+
+    const rawEvents = value.events;
+    if (
+      !Array.isArray(rawEvents) ||
+      !rawEvents.every(isApiEvent) ||
+      !rawEvents.every((event) => event.edition_id === value.id)
+    ) {
+      throw new Error(`${context}.events must contain valid events for this edition.`);
+    }
+
+    if (!isRecord(value.venue) || typeof value.venue.name !== "string") {
+      throw new Error(`${context}.venue must be an object with a name.`);
+    }
+    const venue = { name: value.venue.name };
+
+    return {
+      id: value.id,
+      edition_type: value.edition_type as ApiUpcomingEdition["edition_type"],
+      external_partner: readOptionalString(value, "external_partner", context),
+      external_contact_name: readOptionalString(value, "external_contact_name", context),
+      external_contact_email: readOptionalEmail(value, "external_contact_email", context),
+      venue,
+      events: rawEvents,
+    };
+  });
+}
+
+async function fetchCommunityEditionType(
+  editionType: CommunityEditionType,
+): Promise<ApiUpcomingEdition[]> {
+  const response = await fetch(`/api/editions/upcoming?edition_type=${editionType}`);
+  if (!response.ok) {
+    throw new Error(`Failed to load ${editionType} community events: ${response.status}`);
+  }
+
+  const editions = parseUpcomingEditions(await response.json());
+  return editions.filter((edition) => edition.edition_type === editionType);
+}
+
+async function fetchCommunityEditions(): Promise<ApiUpcomingEdition[]> {
+  const groupedEditions = await Promise.all(COMMUNITY_EDITION_TYPES.map(fetchCommunityEditionType));
+  return groupedEditions.flat();
 }
 
 export default function CommunityEvents() {
@@ -70,7 +190,7 @@ export default function CommunityEvents() {
   });
 
   const items = useMemo<CommunityEventCardData[]>(() => {
-    return data.flatMap((edition): CommunityEventCardData[] => {
+    const cards = data.flatMap((edition): CommunityEventCardData[] => {
       const event = (edition.events ?? []).map(apiToEvent)[0];
       if (!event) return [];
 
@@ -86,6 +206,12 @@ export default function CommunityEvents() {
         },
       ];
     });
+
+    return cards.sort(
+      (left, right) =>
+        left.event.date.localeCompare(right.event.date) ||
+        left.event.startTime.localeCompare(right.event.startTime),
+    );
   }, [data]);
 
   return (
@@ -134,7 +260,7 @@ export default function CommunityEvents() {
                           <Alert variant="warning" className="py-2 mb-0">
                             <strong>{m.community_events_table_reservations()}</strong>{" "}
                             {item.externalContactName} (
-                            <a href={`mailto:${item.externalContactEmail}`}>
+                            <a href={`mailto:${encodeURIComponent(item.externalContactEmail)}`}>
                               {item.externalContactEmail}
                             </a>
                             )

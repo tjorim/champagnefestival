@@ -1,0 +1,32 @@
+.theme-switcher__select {
+  display: none;
+}
+
+@media (max-width: 575.98px) {
+  .theme-switcher {
+    right: 0.5rem !important;
+    bottom: 0.5rem !important;
+    left: auto !important;
+    width: 10.5rem;
+    max-width: calc(100vw - 1rem) !important;
+    flex-wrap: nowrap !important;
+    padding: 0.3rem !important;
+    border-radius: 12px !important;
+  }
+
+  .theme-switcher__option {
+    display: none;
+  }
+
+  .theme-switcher__select {
+    display: block;
+    width: 100%;
+    min-height: 38px;
+    padding: 0.35rem 2rem 0.35rem 0.65rem;
+    color: #fbf6ec;
+    font: 700 0.78rem system-ui, sans-serif;
+    background: #201d18;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 8px;
+  }
+}

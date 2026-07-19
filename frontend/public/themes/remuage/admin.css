@@ -1,0 +1,268 @@
+/* ------------------------------------------------------------------ admin */
+
+html[data-visual-theme="remuage"] #admin,
+html[data-visual-theme="remuage"] .admin-dialog {
+  --adm-primary: #2144b2;
+  --adm-secondary: #48224d;
+  --adm-primary-rgb: 33, 68, 178;
+  --adm-secondary-rgb: 72, 34, 77;
+  --adm-gradient: linear-gradient(135deg, #2144b2, #48224d);
+  --adm-bg: #edf1f5;
+  --adm-surface: #fbfcfe;
+  --adm-surface-2: #f1f4f8;
+  --adm-border: rgba(23, 32, 51, 0.18);
+  --adm-border-focus: rgba(181, 47, 98, 0.4);
+  --adm-text: #172033;
+  --adm-text-muted: #586577;
+  --adm-text-dim: #778494;
+  --adm-success: #27724c;
+  --adm-danger: #a5323b;
+  --adm-radius: 8px;
+  --adm-radius-lg: 14px;
+}
+
+html[data-visual-theme="remuage"] #admin,
+html[data-visual-theme="remuage"] .admin-layout,
+html[data-visual-theme="remuage"] .admin-main {
+  color: var(--adm-text);
+  background: var(--adm-bg);
+}
+
+html[data-visual-theme="remuage"] #admin h2#admin-title {
+  color: var(--rem-grape) !important;
+  font-family: var(--rem-display);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .admin-sidebar {
+  background: var(--rem-grape);
+  border-right: 5px solid var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .admin-sidebar-brand {
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+
+html[data-visual-theme="remuage"] .admin-sidebar-brand h2#admin-title,
+html[data-visual-theme="remuage"] .admin-sidebar-brand h2#admin-title i {
+  color: #fff !important;
+}
+
+html[data-visual-theme="remuage"] .admin-nav-item,
+html[data-visual-theme="remuage"] .admin-nav-group-header {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+html[data-visual-theme="remuage"] .admin-nav-item:hover,
+html[data-visual-theme="remuage"] .admin-nav-group-header:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-visual-theme="remuage"] .admin-nav-item.is-active {
+  color: #fff;
+  background: var(--rem-blue);
+  border-left-color: var(--rem-rose);
+}
+
+html[data-visual-theme="remuage"] .admin-nav-item.is-active::after {
+  width: 0.48rem;
+  height: 0.48rem;
+  margin-left: auto;
+  content: "";
+  background: var(--rem-rose);
+  border: 2px solid #fff;
+  border-radius: 50%;
+}
+
+html[data-visual-theme="remuage"] .admin-nav-count {
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+html[data-visual-theme="remuage"] .admin-sidebar-footer {
+  border-top-color: rgba(255, 255, 255, 0.18);
+}
+
+html[data-visual-theme="remuage"] .admin-auth-status {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+html[data-visual-theme="remuage"] .admin-mobile-toggle {
+  color: #fff;
+  background: var(--rem-grape);
+  border-color: var(--rem-rose);
+}
+
+html[data-visual-theme="remuage"] #admin .card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-lg);
+  box-shadow: 0 10px 26px rgba(23, 32, 51, 0.07);
+}
+
+html[data-visual-theme="remuage"] #admin .card-header {
+  background: var(--adm-surface-2);
+  border-bottom: 3px solid rgba(var(--adm-primary-rgb), 0.25);
+}
+
+html[data-visual-theme="remuage"] #admin .table,
+html[data-visual-theme="remuage"] #admin .table-dark {
+  --bs-table-bg: #fbfcfe;
+  --bs-table-color: #172033;
+  --bs-table-border-color: rgba(23, 32, 51, 0.14);
+  --bs-table-striped-bg: #f1f4f8;
+  --bs-table-striped-color: #172033;
+  --bs-table-hover-bg: #e6ebf3;
+  --bs-table-hover-color: #172033;
+  --bs-table-active-bg: #dce4f1;
+  --bs-table-active-color: #172033;
+  color: var(--bs-table-color);
+}
+
+html[data-visual-theme="remuage"] #admin .table thead th {
+  color: var(--adm-text-muted);
+  font-family: var(--rem-data);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #e6ebf3;
+  border-bottom: 2px solid var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] #admin .bg-dark,
+html[data-visual-theme="remuage"] .admin-dialog .bg-dark,
+html[data-visual-theme="remuage"] #admin .text-light,
+html[data-visual-theme="remuage"] .admin-dialog .text-light {
+  color: var(--adm-text) !important;
+  background-color: var(--adm-surface) !important;
+}
+
+html[data-visual-theme="remuage"] #admin .border-secondary,
+html[data-visual-theme="remuage"] .admin-dialog .border-secondary {
+  border-color: var(--adm-border) !important;
+}
+
+html[data-visual-theme="remuage"] #admin .form-control,
+html[data-visual-theme="remuage"] #admin .form-select,
+html[data-visual-theme="remuage"] .admin-dialog .form-control,
+html[data-visual-theme="remuage"] .admin-dialog .form-select {
+  color: var(--adm-text) !important;
+  background: #fff !important;
+  border-color: var(--adm-border) !important;
+}
+
+html[data-visual-theme="remuage"] #admin .form-control:focus,
+html[data-visual-theme="remuage"] #admin .form-select:focus,
+html[data-visual-theme="remuage"] .admin-dialog .form-control:focus,
+html[data-visual-theme="remuage"] .admin-dialog .form-select:focus {
+  border-color: var(--rem-blue) !important;
+  box-shadow: 0 0 0 3px rgba(181, 47, 98, 0.2) !important;
+}
+
+html[data-visual-theme="remuage"] #admin .btn-warning,
+html[data-visual-theme="remuage"] .admin-dialog .btn-warning {
+  color: #fff !important;
+  background: var(--rem-blue) !important;
+  border-color: var(--rem-blue) !important;
+}
+
+html[data-visual-theme="remuage"] #admin .badge.bg-warning,
+html[data-visual-theme="remuage"] .admin-dialog .badge.bg-warning {
+  color: #513200 !important;
+  background: #ffe2a1 !important;
+  border: 1px solid #d39724 !important;
+}
+
+html[data-visual-theme="remuage"] #admin .list-group-item,
+html[data-visual-theme="remuage"] .admin-dialog .list-group-item,
+html[data-visual-theme="remuage"] #admin .dropdown-menu,
+html[data-visual-theme="remuage"] .admin-dialog .dropdown-menu {
+  color: var(--adm-text);
+  background: var(--adm-surface);
+  border-color: var(--adm-border);
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .modal-content {
+  color: var(--adm-text);
+  background: var(--adm-surface);
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .modal-header,
+html[data-visual-theme="remuage"] .admin-dialog .modal-footer {
+  color: #fff;
+  background: var(--rem-grape) !important;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .modal-title {
+  color: #fff;
+  background: none !important;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: currentColor;
+  background-clip: border-box;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .modal-title.text-warning {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__control,
+html[data-visual-theme="remuage"] .admin-dialog .rs__menu {
+  color: var(--adm-text);
+  background: #fff;
+  border-color: var(--adm-border);
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__control--is-focused {
+  border-color: var(--rem-blue);
+  box-shadow: 0 0 0 3px rgba(181, 47, 98, 0.2);
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__option {
+  color: var(--adm-text);
+  background: #fff;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__option--is-focused {
+  background: #e9edf5;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__option--is-selected {
+  color: #fff;
+  background: var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__multi-value {
+  color: var(--adm-text);
+  background-color: #e3e9f5 !important;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__multi-value__remove {
+  color: var(--adm-text-muted) !important;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__multi-value__remove:hover {
+  color: #fff !important;
+  background-color: var(--adm-danger) !important;
+}
+
+html[data-visual-theme="remuage"] .admin-dialog .rs__input-container,
+html[data-visual-theme="remuage"] .admin-dialog .rs__input,
+html[data-visual-theme="remuage"] .admin-dialog .rs__multi-value__label {
+  color: var(--adm-text) !important;
+}
+
+html[data-visual-theme="remuage"] .viz-root {
+  --series-guests: #2144b2;
+  --series-checked-in: #b52f62;
+  --viz-text-secondary: #586577;
+  --viz-text-muted: #778494;
+  --viz-gridline: #dce2ea;
+  --viz-axis: #bbc5d1;
+  --viz-surface: #fbfcfe;
+}

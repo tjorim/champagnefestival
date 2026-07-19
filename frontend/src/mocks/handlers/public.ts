@@ -1,12 +1,46 @@
 import { http, HttpResponse } from "msw";
-import { editions, events } from "../data/editionStore";
+import { editions, events, type SeedEdition } from "../data/editionStore";
 import { sharedStore, resetSharedStore } from "../data/registrations";
 import { seedTables } from "../data/venue";
+
+function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
+  const editionEvents = [...events.filter((event) => event.edition_id === edition.id)].sort(
+    (left, right) =>
+      left.date.localeCompare(right.date) ||
+      left.start_time.localeCompare(right.start_time) ||
+      left.created_at.localeCompare(right.created_at),
+  );
+  const dates = [...new Set(editionEvents.map((event) => event.date))].sort();
+
+  return {
+    ...edition,
+    dates,
+    events: editionEvents,
+  };
+}
+
+function isUpcomingEdition(edition: SeedEdition): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  const endDate = edition.dates.at(-1);
+  return Boolean(endDate && endDate >= today);
+}
 
 export const publicHandlers = [
   /** GET /api/editions/active — returns the active edition. */
   http.get("/api/editions/active", () => {
     return HttpResponse.json(editions.find((e) => e.active) ?? editions[0] ?? null);
+  }),
+
+  /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */
+  http.get("/api/editions/upcoming", ({ request }) => {
+    const editionType = new URL(request.url).searchParams.get("edition_type");
+    const result = editions
+      .filter(
+        (edition) => edition.active && (!editionType || edition.edition_type === editionType),
+      )
+      .map(hydrateEditionEvents)
+      .filter(isUpcomingEdition);
+    return HttpResponse.json(result);
   }),
 
   /** GET /api/editions — returns all editions (also used by admin with include_inactive). */
