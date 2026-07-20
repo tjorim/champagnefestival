@@ -77,15 +77,18 @@ function readOptionalString(
 /**
  * Unlike readOptionalString's siblings, an invalid value here is dropped rather
  * than thrown: a malformed contact address on one edition must not take down
- * the entire community events response and hide unrelated editions/events.
+ * the entire community events response and hide unrelated editions/events. This
+ * checks the type directly instead of delegating to readOptionalString, since
+ * that helper throws on a non-string value — which would defeat the point.
  */
 function readOptionalEmail(
   record: Record<string, unknown>,
   key: string,
   context: string,
 ): string | undefined {
-  const value = readOptionalString(record, key, context);
-  if (value !== undefined && !COMMUNITY_CONTACT_EMAIL_REGEX.test(value)) {
+  const value = record[key];
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== "string" || !COMMUNITY_CONTACT_EMAIL_REGEX.test(value)) {
     console.warn(`${context}.${key} is not a valid, safe email address; omitting it.`);
     return undefined;
   }

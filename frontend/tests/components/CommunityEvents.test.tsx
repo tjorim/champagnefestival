@@ -244,6 +244,31 @@ describe("CommunityEvents", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("drops a non-string contact email without hiding the edition", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            external_contact_name: "Organizer",
+            external_contact_email: 12345,
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
+          },
+        ]);
+      }),
+    );
+
+    renderCommunityEvents();
+
+    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("accepts legitimate edge-case addresses the backend can return", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
