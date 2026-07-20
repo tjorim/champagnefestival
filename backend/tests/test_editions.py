@@ -250,6 +250,132 @@ async def test_standalone_event_can_move_within_same_single_day(client):
 
 
 @pytest.mark.anyio
+async def test_community_edition_upcoming_lists_every_event_in_time_order(client):
+    """Community editions may hold multiple same-day events; the public payload lists them all,
+
+    in date/time order, regardless of each event's `active` flag. (Filtering to active-only
+    is a public-frontend concern, not a backend one — see CommunityEvents.tsx.)
+    """
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-bourse-multi-event",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    # Created out of chronological order to prove ordering is by time, not insertion order.
+    for payload in [
+        {
+            "edition_id": "edition-bourse-multi-event",
+            "title": "Bourse Auction",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "15:00",
+            "category": "exchange",
+            "registration_required": False,
+            "active": True,
+        },
+        {
+            "edition_id": "edition-bourse-multi-event",
+            "title": "Bourse Opening",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "10:00",
+            "category": "exchange",
+            "registration_required": False,
+            "active": True,
+        },
+        {
+            "edition_id": "edition-bourse-multi-event",
+            "title": "Draft Tasting",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "12:00",
+            "category": "exchange",
+            "registration_required": False,
+            "active": False,
+        },
+    ]:
+        event_response = await client.post("/api/events", json=payload, headers=ADMIN_HEADERS)
+        assert event_response.status_code == 201
+
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "bourse"})
+    assert r.status_code == 200
+    edition = next(e for e in r.json() if e["id"] == "edition-bourse-multi-event")
+    assert [event["title"] for event in edition["events"]] == [
+        "Bourse Opening",
+        "Draft Tasting",
+        "Bourse Auction",
+    ]
+
+
+@pytest.mark.anyio
+async def test_standalone_event_rejects_a_second_date(client):
+    """Community editions may only span a single calendar date."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    edition_response = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-bourse-two-dates",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition_response.status_code == 201
+
+    first_event = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "edition-bourse-two-dates",
+            "title": "Bourse Opening",
+            "description": "",
+            "date": "2099-03-21",
+            "start_time": "10:00",
+            "category": "exchange",
+            "registration_required": False,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert first_event.status_code == 201
+
+    second_event = await client.post(
+        "/api/events",
+        json={
+            "edition_id": "edition-bourse-two-dates",
+            "title": "Bourse Auction",
+            "description": "",
+            "date": "2099-03-22",
+            "start_time": "10:00",
+            "category": "exchange",
+            "registration_required": False,
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert second_event.status_code == 400
+    assert "single date" in second_event.json()["detail"].lower()
+
+
+@pytest.mark.anyio
 async def test_edition_rejects_vendor_exhibitors(client):
     """Vendor-type exhibitors must not be linked to editions."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)

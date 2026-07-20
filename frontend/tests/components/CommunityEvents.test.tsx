@@ -103,6 +103,58 @@ describe("CommunityEvents", () => {
     ]);
   });
 
+  it("renders every active event for an edition, ordered by date and start time", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            venue: { name: "Staf Versluys" },
+            events: [
+              { ...BASE_EVENT, id: "event-auction", title: "Bourse Auction", start_time: "15:00" },
+              { ...BASE_EVENT, id: "event-opening", title: "Bourse Opening", start_time: "10:00" },
+            ],
+          },
+        ]);
+      }),
+    );
+
+    renderCommunityEvents();
+
+    const titles = await screen.findAllByText(/^Bourse (Opening|Auction)$/);
+    expect(titles.map((title) => title.textContent)).toEqual(["Bourse Opening", "Bourse Auction"]);
+  });
+
+  it("omits inactive events from the public list", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            venue: { name: "Staf Versluys" },
+            events: [
+              { ...BASE_EVENT, id: "event-opening", title: "Bourse Opening", active: true },
+              { ...BASE_EVENT, id: "event-draft", title: "Draft Tasting", active: false },
+            ],
+          },
+        ]);
+      }),
+    );
+
+    renderCommunityEvents();
+
+    expect(await screen.findByText("Bourse Opening")).toBeInTheDocument();
+    expect(screen.queryByText("Draft Tasting")).not.toBeInTheDocument();
+  });
+
   it("shows an error for malformed successful API responses", async () => {
     server.use(
       http.get("/api/editions/upcoming", () =>
