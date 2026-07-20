@@ -90,6 +90,10 @@ class ChampagneFestivalMcpBackend:
     async def get_active_edition(self) -> dict:
         """Return the current or next upcoming active festival edition.
 
+        Only considers ``festival``-type editions — a nearer Bourse or capsule-exchange
+        edition never takes its place. Use ``list_editions`` to discover other edition
+        types and pass their ``edition_id`` to type-agnostic tools like ``get_event_schedule``.
+
         Returns a summary of the active edition including edition ID, year, month,
         type, event count, and scheduled dates. No PII is included.
 
@@ -111,7 +115,9 @@ class ChampagneFestivalMcpBackend:
         Parameters
         ----------
         edition_id:
-            The edition ID to fetch. When omitted, the active edition is used.
+            The edition ID to fetch. When omitted, the active festival edition is used —
+            pass an explicit ``edition_id`` (see ``list_editions``) to target a Bourse or
+            capsule-exchange edition instead.
 
         Returns a list of events with date, times, title, and category.
         No PII is included.
@@ -126,7 +132,9 @@ class ChampagneFestivalMcpBackend:
         Parameters
         ----------
         edition_id:
-            The edition ID. When omitted, the active edition is used.
+            The edition ID. When omitted, the active festival edition is used — pass an
+            explicit ``edition_id`` (see ``list_editions``) to target a Bourse or
+            capsule-exchange edition instead.
         """
         return await mcp_public.get_venue_plan_summary(self.session_factory, edition_id)
 
@@ -179,7 +187,8 @@ class ChampagneFestivalMcpBackend:
         Parameters
         ----------
         table_id:
-            Specific table ID. When omitted, all tables for the active edition are returned.
+            Specific table ID. When omitted, all tables for the active festival edition
+            are returned.
         """
         self._require_volunteer()
         return await mcp_seating.get_table_seating(self.session_factory, table_id)
@@ -240,7 +249,7 @@ class ChampagneFestivalMcpBackend:
         Parameters
         ----------
         edition_id:
-            The edition ID. When omitted, the active edition is used.
+            The edition ID. When omitted, the active festival edition is used.
         """
         self._require_volunteer()
         return await mcp_delivery.get_champagne_delivery_summary(self.session_factory, edition_id)
@@ -253,7 +262,7 @@ class ChampagneFestivalMcpBackend:
         Parameters
         ----------
         edition_id:
-            The edition ID. When omitted, the active edition is used.
+            The edition ID. When omitted, the active festival edition is used.
         """
         self._require_volunteer()
         return await mcp_delivery.get_undelivered_champagne_by_table(self.session_factory, edition_id)
@@ -268,7 +277,7 @@ class ChampagneFestivalMcpBackend:
         Parameters
         ----------
         edition_id:
-            The edition ID. When omitted, the active edition is used.
+            The edition ID. When omitted, the active festival edition is used.
         """
         self._require_volunteer()
         return await mcp_check_in.get_check_in_summary(self.session_factory, edition_id)
