@@ -260,7 +260,7 @@ export default function CommunityEvents() {
                           <Alert variant="warning" className="py-2 mb-0">
                             <strong>{m.community_events_table_reservations()}</strong>{" "}
                             {item.externalContactName} (
-                            <a href={`mailto:${encodeURIComponent(item.externalContactEmail)}`}>
+                            <a href={`mailto:${item.externalContactEmail}`}>
                               {item.externalContactEmail}
                             </a>
                             )
