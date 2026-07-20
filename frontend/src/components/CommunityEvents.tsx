@@ -190,22 +190,22 @@ export default function CommunityEvents() {
   });
 
   const items = useMemo<CommunityEventCardData[]>(() => {
-    const cards = data.flatMap((edition): CommunityEventCardData[] => {
-      const event = (edition.events ?? []).map(apiToEvent)[0];
-      if (!event) return [];
-
-      return [
-        {
-          id: edition.id,
+    // Community editions may hold multiple same-day events (opening, tasting, auction, ...).
+    // Every active event is rendered as its own card; inactive (draft) events stay hidden.
+    const cards = data.flatMap((edition): CommunityEventCardData[] =>
+      (edition.events ?? [])
+        .map(apiToEvent)
+        .filter((event) => event.active)
+        .map((event) => ({
+          id: event.id,
           editionType: edition.edition_type,
           event,
           venueName: edition.venue?.name ?? "",
           externalPartner: edition.external_partner ?? undefined,
           externalContactName: edition.external_contact_name ?? undefined,
           externalContactEmail: edition.external_contact_email ?? undefined,
-        },
-      ];
-    });
+        })),
+    );
 
     return cards.sort(
       (left, right) =>
@@ -240,6 +240,7 @@ export default function CommunityEvents() {
                     <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
                       <div>
                         <h5 className="mb-1">{getEditionTitle(item.editionType)}</h5>
+                        <p className="mb-1 fw-semibold">{item.event.title}</p>
                         <p className="mb-1 text-muted">
                           <i className="bi bi-calendar-event me-2" aria-hidden="true" />
                           {formatDate(item.event.date)} • {item.event.startTime}
