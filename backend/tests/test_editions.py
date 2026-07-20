@@ -250,8 +250,12 @@ async def test_standalone_event_can_move_within_same_single_day(client):
 
 
 @pytest.mark.anyio
-async def test_community_edition_upcoming_lists_every_active_event_in_time_order(client):
-    """Community editions may hold multiple same-day events; the public payload must list them all."""
+async def test_community_edition_upcoming_lists_every_event_in_time_order(client):
+    """Community editions may hold multiple same-day events; the public payload lists them all,
+
+    in date/time order, regardless of each event's `active` flag. (Filtering to active-only
+    is a public-frontend concern, not a backend one — see CommunityEvents.tsx.)
+    """
     venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     assert venue_response.status_code == 201
     venue_id = venue_response.json()["id"]
