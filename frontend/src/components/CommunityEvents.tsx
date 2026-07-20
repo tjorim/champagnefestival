@@ -9,7 +9,7 @@ import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";
 import { apiToEvent } from "@/types/event";
 import { m } from "@/paraglide/messages";
-import { EMAIL_REGEX } from "@/config/constants";
+import { COMMUNITY_CONTACT_EMAIL_REGEX } from "@/config/constants";
 
 interface ApiUpcomingEdition {
   id: string;
@@ -74,14 +74,20 @@ function readOptionalString(
   return value;
 }
 
+/**
+ * Unlike readOptionalString's siblings, an invalid value here is dropped rather
+ * than thrown: a malformed contact address on one edition must not take down
+ * the entire community events response and hide unrelated editions/events.
+ */
 function readOptionalEmail(
   record: Record<string, unknown>,
   key: string,
   context: string,
 ): string | undefined {
   const value = readOptionalString(record, key, context);
-  if (value !== undefined && !EMAIL_REGEX.test(value)) {
-    throw new Error(`${context}.${key} must be a valid email address or null.`);
+  if (value !== undefined && !COMMUNITY_CONTACT_EMAIL_REGEX.test(value)) {
+    console.warn(`${context}.${key} is not a valid, safe email address; omitting it.`);
+    return undefined;
   }
   return value;
 }
