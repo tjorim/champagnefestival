@@ -26,24 +26,29 @@ async def get_active_edition(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
 ) -> dict:
-    """Return the current or next upcoming active edition, optionally filtered by type."""
+    """Return the current or next upcoming active edition, optionally filtered by type.
+
+    Only the edition's *active* events are considered: an inactive (draft/cancelled)
+    event neither keeps an otherwise-finished edition classified as upcoming, nor
+    appears in the response.
+    """
     editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
     if not editions:
         raise HTTPException(status_code=404, detail="No active editions found.")
 
     today = datetime.now(UTC).date()
-    dated = _sorted_editions(editions)
+    dated = _sorted_editions(editions, active_only=True)
     active = next(
         (
             edition
             for edition in dated
-            if (edition_end_date := _edition_end_date(edition)) and edition_end_date >= today
+            if (edition_end_date := _edition_end_date(_active_events(edition))) and edition_end_date >= today
         ),
         None,
     )
     if active is None:
         raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
-    return await _edition_payload(db, active)
+    return await _edition_payload(db, active, active_only=True)
 
 
 @router.get("/upcoming", response_model=list[EditionOut])
@@ -51,11 +56,15 @@ async def list_upcoming_editions(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
 ) -> list[dict]:
-    """List upcoming active editions across all supported edition types."""
+    """List upcoming active editions across all supported edition types.
+
+    Only each edition's active events count toward its upcoming status, and only
+    active events are serialized in the response; see `get_active_edition`.
+    """
     today = datetime.now(UTC).date()
     editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
-    upcoming = [edition for edition in editions if (_edition_end_date(edition) or date.min) >= today]
-    return await _edition_payloads(db, _sorted_editions(upcoming))
+    upcoming = [edition for edition in editions if (_edition_end_date(_active_events(edition)) or date.min) >= today]
+    return await _edition_payloads(db, _sorted_editions(upcoming, active_only=True), active_only=True)
 
 
 @router.get("", response_model=list[EditionOut], dependencies=[Depends(require_admin)])
@@ -63,8 +72,9 @@ async def list_editions(
     db: AsyncSession = Depends(get_db),
     include_inactive: bool = Query(False),
 ) -> list[dict]:
+    """Admin listing: exposes every event (active or not) for management purposes."""
     editions = await _load_editions(db, include_inactive=include_inactive)
-    return await _edition_payloads(db, _sorted_editions(editions))
+    return await _edition_payloads(db, _sorted_editions(editions, active_only=False), active_only=False)
 
 
 @router.get("/stats", response_model=list[EditionAttendanceStats], dependencies=[Depends(require_admin)])
@@ -78,7 +88,7 @@ async def list_edition_attendance_stats(
     Registered but cancelled bookings are excluded from every count.
     """
     editions = await _load_editions(db, include_inactive=True, edition_type=edition_type)
-    editions = _sorted_editions(editions)
+    editions = _sorted_editions(editions, active_only=False)
 
     stmt = (
         select(
@@ -104,7 +114,7 @@ async def list_edition_attendance_stats(
                 "year": edition.year,
                 "month": edition.month,
                 "edition_type": edition.edition_type,
-                "start_date": _edition_start_date(edition),
+                "start_date": _edition_start_date(edition.events),
                 "events_count": len(edition.events),
                 "total_registrations": stats.total_registrations if stats else 0,
                 "total_guests": stats.total_guests if stats else 0,
@@ -117,7 +127,7 @@ async def list_edition_attendance_stats(
 @router.get("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     edition = await _get_edition_or_404(db, edition_id)
-    return await _edition_payload(db, edition)
+    return await _edition_payload(db, edition, active_only=False)
 
 
 @router.post(
@@ -165,7 +175,7 @@ async def create_edition(
     )
     await db.commit()
     edition = await _get_edition_or_404(db, edition.id)
-    return await _edition_payload(db, edition)
+    return await _edition_payload(db, edition, active_only=False)
 
 
 @router.put("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
@@ -215,7 +225,7 @@ async def update_edition(
     )
     await db.commit()
     edition = await _get_edition_or_404(db, edition.id)
-    return await _edition_payload(db, edition)
+    return await _edition_payload(db, edition, active_only=False)
 
 
 @router.delete(
@@ -311,7 +321,14 @@ async def _validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) ->
         )
 
 
-async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[dict]:
+async def _edition_payloads(db: AsyncSession, editions: list[Edition], *, active_only: bool) -> list[dict]:
+    """Build edition response payloads.
+
+    `active_only` controls whether inactive events are dropped from the serialized
+    `events`/`dates` fields. Public endpoints (`/active`, `/upcoming`) pass `True` so
+    inactive (draft/cancelled) events never appear in unauthenticated responses;
+    admin endpoints pass `False` so event management keeps seeing everything.
+    """
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
     exhibitor_map = await _load_exhibitors_by_ids(
         db,
@@ -327,18 +344,15 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
             )
             continue
         producers, sponsors, vendors = _resolve_exhibitors(edition, exhibitor_map)
+        # `Edition.events` is loaded pre-ordered by (date, start_time, created_at); filtering
+        # to active events preserves that order, so no re-sort is needed here.
+        events = _active_events(edition) if active_only else edition.events
         payloads.append(
             edition_to_dict(
                 edition,
                 venue=venues[edition.venue_id],
-                dates=_edition_dates(edition),
-                events=[
-                    event_to_summary_dict(event)
-                    for event in sorted(
-                        edition.events,
-                        key=lambda event: (event.date, event.start_time, event.created_at),
-                    )
-                ],
+                dates=_edition_dates(events),
+                events=[event_to_summary_dict(event) for event in events],
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
@@ -347,8 +361,8 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition]) -> list[d
     return payloads
 
 
-async def _edition_payload(db: AsyncSession, edition: Edition) -> dict:
-    payloads = await _edition_payloads(db, [edition])
+async def _edition_payload(db: AsyncSession, edition: Edition, *, active_only: bool) -> dict:
+    payloads = await _edition_payloads(db, [edition], active_only=active_only)
     if not payloads:
         raise HTTPException(status_code=404, detail="Edition not found.")
     return payloads[0]
@@ -371,29 +385,35 @@ def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tup
     return producers, sponsors, vendors
 
 
-def _edition_dates(edition: Edition) -> list[date]:
-    return sorted({event.date for event in edition.events})
+def _active_events(edition: Edition) -> list[Event]:
+    return [event for event in edition.events if event.active]
 
 
-def _edition_start_date(edition: Edition) -> date | None:
-    return min((event.date for event in edition.events), default=None)
+def _edition_dates(events: list[Event]) -> list[date]:
+    """Unique event dates in chronological order (relies on `events` being pre-sorted by date)."""
+    return list(dict.fromkeys(event.date for event in events))
 
 
-def _edition_end_date(edition: Edition) -> date | None:
-    return max((event.date for event in edition.events), default=None)
+def _edition_start_date(events: list[Event]) -> date | None:
+    return events[0].date if events else None
 
 
-def _sorted_editions(editions: list[Edition]) -> list[Edition]:
-    return sorted(
-        editions,
-        key=lambda edition: (
-            _edition_start_date(edition) or date.max,
-            _edition_end_date(edition) or date.max,
+def _edition_end_date(events: list[Event]) -> date | None:
+    return events[-1].date if events else None
+
+
+def _sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Edition]:
+    def sort_key(edition: Edition) -> tuple:
+        events = _active_events(edition) if active_only else edition.events
+        return (
+            _edition_start_date(events) or date.max,
+            _edition_end_date(events) or date.max,
             edition.year,
             edition.month,
             edition.created_at,
-        ),
-    )
+        )
+
+    return sorted(editions, key=sort_key)
 
 
 def _validate_exhibitors_allowed(edition_type: EditionType, exhibitors: list[int]) -> None:
