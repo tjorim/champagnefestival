@@ -1,0 +1,241 @@
+/* ------------------------------------------------------------------ optional easter egg */
+
+html[data-visual-theme="remuage"] .bubble-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+html[data-visual-theme="remuage"] .bubble {
+  position: absolute;
+  bottom: calc(-1 * var(--bubble-size));
+  left: var(--bubble-left);
+  width: var(--bubble-size);
+  height: var(--bubble-size);
+  border: 2px solid rgba(33, 68, 178, 0.18);
+  border-radius: 50%;
+  animation: rem-rack-rise var(--bubble-duration) linear var(--bubble-delay) infinite;
+}
+
+@keyframes rem-rack-rise {
+  to { transform: translateY(calc(-100vh - 4rem)) rotate(45deg); }
+}
+
+/* ------------------------------------------------------------------ responsive */
+
+@media (max-width: 1199.98px) {
+  html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content {
+    display: block;
+    padding: 0;
+  }
+
+  html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section,
+  html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > .remuage-hero {
+    margin: 0;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 0.75fr);
+    padding-inline: clamp(1.5rem, 5vw, 4rem);
+  }
+
+  html[data-visual-theme="remuage"] .remuage-feature-rack {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-feature + .remuage-feature {
+    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 991.98px) {
+  html[data-visual-theme="remuage"] .remuage-hero {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding-top: 8.5rem;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero__rack {
+    width: min(88vw, 560px);
+    justify-self: center;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero__title {
+    max-width: 14ch;
+  }
+}
+
+@media (max-width: 767.98px) {
+  html[data-visual-theme="remuage"] body {
+    background: var(--rem-rack);
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero {
+    padding: 7.5rem 1.15rem 3.5rem;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero__title {
+    font-size: clamp(3.1rem, 15vw, 5.8rem);
+    overflow-wrap: break-word;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero__actions {
+    display: grid;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-button {
+    width: 100%;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero__rack {
+    width: min(100%, 430px);
+    gap: 0.65rem;
+    padding: 1.25rem;
+    border-width: 8px;
+    border-radius: 18px;
+    box-shadow: 8px 8px 0 rgba(72, 34, 77, 0.12);
+    transform: none;
+  }
+
+  html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section:not(.remuage-hero) {
+    padding: 3.5rem 0;
+  }
+
+  html[data-visual-theme="remuage"] .section-header {
+    font-size: clamp(2.2rem, 11vw, 3.5rem);
+  }
+
+  html[data-visual-theme="remuage"] .countdown-units {
+    gap: 0.35rem;
+  }
+
+  html[data-visual-theme="remuage"] .countdown-unit {
+    border-width: 3px;
+  }
+
+  html[data-visual-theme="remuage"] .event-card .d-flex.justify-content-between {
+    align-items: flex-start !important;
+  }
+
+  html[data-visual-theme="remuage"] .event-time {
+    min-width: 3.9rem;
+    min-height: 3.9rem;
+  }
+
+  html[data-visual-theme="remuage"] .leaflet-container {
+    min-height: 340px;
+  }
+
+  html[data-visual-theme="remuage"] .standalone-navbar .container-fluid {
+    align-items: flex-start !important;
+    flex-wrap: wrap;
+  }
+
+  html[data-visual-theme="remuage"] .standalone-navbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 420px) {
+  html[data-visual-theme="remuage"] .site-brand {
+    max-width: 12rem;
+    font-size: 0.92rem;
+  }
+
+  html[data-visual-theme="remuage"] .site-brand img {
+    width: 30px;
+    height: 30px;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-feature {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-feature__aperture {
+    justify-self: center;
+  }
+
+  html[data-visual-theme="remuage"] .countdown-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.055em;
+  }
+}
+
+@media (max-width: 350px) {
+  html[data-visual-theme="remuage"] .site-brand {
+    max-width: none;
+    font-size: 0;
+  }
+
+  html[data-visual-theme="remuage"] .site-brand img {
+    margin-right: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-visual-theme="remuage"] {
+    scroll-behavior: auto;
+  }
+
+  html[data-visual-theme="remuage"] *,
+  html[data-visual-theme="remuage"] *::before,
+  html[data-visual-theme="remuage"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero:has(.remuage-button:is(:hover, :focus-visible)) .remuage-hero__disc {
+    transform: none !important;
+    box-shadow: 0 0 0 5px var(--rem-rose);
+  }
+
+  html[data-visual-theme="remuage"] .bubble {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  html[data-visual-theme="remuage"] :where(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+    box-shadow: none !important;
+  }
+
+  html[data-visual-theme="remuage"] .remuage-hero__cell,
+  html[data-visual-theme="remuage"] .remuage-hero__disc,
+  html[data-visual-theme="remuage"] .countdown-unit {
+    border: 2px solid CanvasText;
+  }
+}
+
+@media print {
+  html[data-visual-theme="remuage"] .site-header,
+  html[data-visual-theme="remuage"] .site-footer,
+  html[data-visual-theme="remuage"] .remuage-hero__rack,
+  html[data-visual-theme="remuage"] .swiper-button-prev,
+  html[data-visual-theme="remuage"] .swiper-button-next {
+    display: none !important;
+  }
+
+  html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content {
+    display: block;
+    padding: 0;
+  }
+
+  html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section {
+    break-inside: avoid;
+    border: 1px solid #666;
+    box-shadow: none;
+  }
+}

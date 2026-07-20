@@ -1,0 +1,453 @@
+/* ------------------------------------------------------------------ program */
+
+html[data-visual-theme="remuage"] .schedule-tabs {
+  gap: 0.45rem;
+  border: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+html[data-visual-theme="remuage"] .schedule-tabs .nav-link {
+  min-height: 46px;
+  color: var(--rem-muted);
+  font-family: var(--rem-data);
+  font-size: 0.78rem;
+  font-weight: 750;
+  background: var(--rem-rack);
+  border: 2px solid transparent !important;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+html[data-visual-theme="remuage"] .schedule-tabs .nav-link:hover {
+  color: var(--rem-blue);
+  border-color: var(--rem-blue) !important;
+}
+
+html[data-visual-theme="remuage"] .schedule-tabs .nav-link.active {
+  color: #fff;
+  background: var(--rem-blue);
+  border-color: var(--rem-blue) !important;
+}
+
+html[data-visual-theme="remuage"] .events-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+html[data-visual-theme="remuage"] .event-card {
+  position: relative;
+  margin: 0 !important;
+  color: var(--rem-ink);
+  background: var(--rem-paper);
+  border: 1px solid var(--rem-line) !important;
+  border-left: 8px solid var(--rem-blue) !important;
+  border-radius: 0 var(--rem-radius-small) var(--rem-radius-small) 0;
+  box-shadow: 0 7px 18px rgba(23, 32, 51, 0.07);
+}
+
+html[data-visual-theme="remuage"] .event-card .card-body {
+  padding: 1rem 1.1rem;
+}
+
+html[data-visual-theme="remuage"] .event-time {
+  display: grid;
+  min-width: 4.5rem;
+  min-height: 4.5rem;
+  place-content: center;
+  padding: 0.55rem;
+  color: #fff;
+  font-family: var(--rem-data);
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-align: center;
+  background: var(--rem-grape);
+  border-radius: 50%;
+}
+
+html[data-visual-theme="remuage"] .event-title,
+html[data-visual-theme="remuage"] .event-card h5 {
+  color: var(--rem-grape);
+  font-family: var(--rem-display);
+  font-weight: 850;
+}
+
+html[data-visual-theme="remuage"] .event-description,
+html[data-visual-theme="remuage"] .event-card .text-muted {
+  color: var(--rem-muted) !important;
+}
+
+html[data-visual-theme="remuage"] .badge {
+  font-weight: 750;
+  letter-spacing: 0.025em;
+  border-radius: 6px;
+}
+
+html[data-visual-theme="remuage"] .badge.bg-warning {
+  color: #4e3000 !important;
+  background: #ffe2a1 !important;
+  border: 1px solid #d39724;
+}
+
+/* ------------------------------------------------------------------ carousels, FAQ, map */
+
+html[data-visual-theme="remuage"] .marquee-slider,
+html[data-visual-theme="remuage"] .marquee-slider .swiper {
+  width: 100%;
+  max-width: 1300px;
+  overflow: clip;
+  contain: paint;
+}
+
+html[data-visual-theme="remuage"] .marquee-card {
+  padding: 0.5rem;
+  background: transparent;
+}
+
+html[data-visual-theme="remuage"] .marquee-logo-frame {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 1rem;
+  overflow: hidden;
+  background: var(--rem-paper);
+  border: 10px solid var(--rem-rack);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--rem-nickel), 0 8px 20px rgba(23, 32, 51, 0.08) !important;
+}
+
+html[data-visual-theme="remuage"] .marquee-logo-image {
+  padding: 0.25rem;
+}
+
+html[data-visual-theme="remuage"] .marquee-logo-title {
+  color: var(--rem-grape);
+  font-family: var(--rem-display);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .swiper-button-prev,
+html[data-visual-theme="remuage"] .swiper-button-next {
+  width: 42px;
+  height: 42px;
+  color: #fff;
+  background: var(--rem-blue);
+  border-radius: 50%;
+}
+
+html[data-visual-theme="remuage"] .swiper-button-prev::after,
+html[data-visual-theme="remuage"] .swiper-button-next::after {
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+html[data-visual-theme="remuage"] .swiper-pagination-bullet {
+  width: 10px;
+  height: 10px;
+  background: var(--rem-nickel);
+  opacity: 1;
+}
+
+html[data-visual-theme="remuage"] .swiper-pagination-bullet-active {
+  background: var(--rem-rose);
+  box-shadow: 0 0 0 3px var(--rem-rack), 0 0 0 5px var(--rem-rose);
+}
+
+html[data-visual-theme="remuage"] .accordion {
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: var(--rem-radius-small) !important;
+  box-shadow: none !important;
+}
+
+html[data-visual-theme="remuage"] .accordion-item {
+  margin-bottom: 0.65rem;
+  overflow: hidden;
+  background: var(--rem-paper);
+  border: 1px solid var(--rem-line) !important;
+  border-radius: var(--rem-radius-small) !important;
+}
+
+html[data-visual-theme="remuage"] .accordion-button {
+  min-height: 54px;
+  color: var(--rem-grape);
+  font-weight: 750;
+  background: var(--rem-rack);
+  box-shadow: none !important;
+}
+
+html[data-visual-theme="remuage"] .accordion-button:not(.collapsed) {
+  color: #fff;
+  background: var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .accordion-button::after {
+  padding: 0.55rem;
+  background-color: var(--rem-paper);
+  background-position: center;
+  border: 1px solid var(--rem-line-strong);
+  border-radius: 50%;
+}
+
+html[data-visual-theme="remuage"] .accordion-body {
+  color: var(--rem-muted);
+  background: var(--rem-paper);
+}
+
+html[data-visual-theme="remuage"] .accordion-body > div {
+  border-color: var(--rem-rose) !important;
+}
+
+html[data-visual-theme="remuage"] .leaflet-container {
+  min-height: 430px;
+  border: 8px solid var(--rem-rack);
+  border-radius: var(--rem-radius);
+  box-shadow: inset 0 0 0 1px var(--rem-line), var(--rem-shadow);
+}
+
+html[data-visual-theme="remuage"] .leaflet-control a:focus-visible {
+  outline: 3px solid var(--rem-rose);
+  outline-offset: 2px;
+}
+
+html[data-visual-theme="remuage"] .map-loading,
+html[data-visual-theme="remuage"] .map-error {
+  min-height: 320px;
+  color: var(--rem-muted);
+  background: var(--rem-rack);
+  border-radius: var(--rem-radius);
+}
+
+/* ------------------------------------------------------------------ forms + registration */
+
+html[data-visual-theme="remuage"] #contact .card {
+  color: var(--rem-ink);
+  background: var(--rem-paper);
+  border: 1px solid var(--rem-line) !important;
+  border-top: 8px solid var(--rem-blue) !important;
+  border-radius: var(--rem-radius);
+  box-shadow: var(--rem-shadow) !important;
+}
+
+html[data-visual-theme="remuage"] .form-label,
+html[data-visual-theme="remuage"] legend {
+  color: var(--rem-grape);
+  font-weight: 750;
+}
+
+html[data-visual-theme="remuage"] .form-control,
+html[data-visual-theme="remuage"] .form-select {
+  min-height: 46px;
+  color: var(--rem-ink);
+  background: #fff;
+  border: 1px solid var(--rem-line-strong);
+  border-radius: 8px;
+}
+
+html[data-visual-theme="remuage"] .form-control:focus,
+html[data-visual-theme="remuage"] .form-select:focus {
+  color: var(--rem-ink);
+  background: #fff;
+  border-color: var(--rem-blue);
+  box-shadow: 0 0 0 3px rgba(181, 47, 98, 0.24);
+}
+
+html[data-visual-theme="remuage"] .form-control::placeholder {
+  color: #7a8695;
+}
+
+html[data-visual-theme="remuage"] .bg-brand-gradient,
+html[data-visual-theme="remuage"] .btn-champagne,
+html[data-visual-theme="remuage"] #registrations .btn-warning {
+  color: #fff !important;
+  background: var(--rem-blue) !important;
+  border: 2px solid var(--rem-blue) !important;
+  border-radius: 9px !important;
+}
+
+html[data-visual-theme="remuage"] .bg-brand-gradient:hover,
+html[data-visual-theme="remuage"] .btn-champagne:hover,
+html[data-visual-theme="remuage"] #registrations .btn-warning:hover {
+  background: var(--rem-blue-deep) !important;
+  border-color: var(--rem-paper) !important;
+}
+
+html[data-visual-theme="remuage"] .modal-content {
+  color: var(--rem-ink);
+  background: var(--rem-paper);
+  border: 1px solid var(--rem-line-strong);
+  border-radius: 14px;
+  box-shadow: 0 28px 80px rgba(23, 32, 51, 0.25);
+}
+
+html[data-visual-theme="remuage"] .modal-header,
+html[data-visual-theme="remuage"] .modal-footer {
+  color: #fff !important;
+  background: var(--rem-grape) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+html[data-visual-theme="remuage"] .modal-header .modal-title {
+  color: #fff;
+}
+
+html[data-visual-theme="remuage"] .modal-body,
+html[data-visual-theme="remuage"] .modal-body.bg-dark {
+  color: var(--rem-ink) !important;
+  background: var(--rem-paper) !important;
+}
+
+html[data-visual-theme="remuage"] .modal-body .bg-dark {
+  color: var(--rem-ink) !important;
+  background-color: var(--rem-paper) !important;
+}
+
+html[data-visual-theme="remuage"] .modal-body .text-light {
+  color: var(--rem-ink) !important;
+}
+
+html[data-visual-theme="remuage"] .modal-content .border-secondary {
+  border-color: var(--rem-line) !important;
+}
+
+html[data-visual-theme="remuage"] .modal-content .btn-close {
+  filter: invert(1) grayscale(1) brightness(2);
+}
+
+/* ------------------------------------------------------------------ footer + standalone */
+
+html[data-visual-theme="remuage"] .site-footer {
+  position: relative;
+  padding: 3.5rem 0 6rem;
+  overflow: hidden;
+  color: var(--rem-rack);
+  background: var(--rem-grape);
+  border-top: 10px solid var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .footer-link {
+  position: relative;
+  z-index: 1;
+  color: #fff !important;
+  font-weight: 700;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 0.25rem;
+}
+
+html[data-visual-theme="remuage"] .standalone-app {
+  min-height: 100vh;
+  color: var(--rem-ink);
+  background: var(--rem-rack);
+}
+
+html[data-visual-theme="remuage"] .standalone-navbar {
+  min-height: 70px;
+  color: #fff;
+  background: var(--rem-grape);
+  border-bottom: 5px solid var(--rem-blue);
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.16);
+}
+
+html[data-visual-theme="remuage"] .standalone-navbar-brand {
+  color: #fff !important;
+  font-family: var(--rem-display);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .standalone-navbar .btn-outline-secondary {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+html[data-visual-theme="remuage"] .standalone-navbar .btn-outline-secondary:hover {
+  color: var(--rem-grape);
+  background: #fff;
+}
+
+html[data-visual-theme="remuage"] .standalone-main,
+html[data-visual-theme="remuage"] .standalone-document-main {
+  padding-top: 6rem !important;
+  color: var(--rem-ink);
+  background: var(--rem-rack);
+}
+
+html[data-visual-theme="remuage"] .standalone-app h1,
+html[data-visual-theme="remuage"] .standalone-app h2,
+html[data-visual-theme="remuage"] .standalone-app h3 {
+  color: var(--rem-grape) !important;
+  font-family: var(--rem-display);
+  font-weight: 850;
+}
+
+html[data-visual-theme="remuage"] .standalone-app .card {
+  color: var(--rem-ink) !important;
+  background: var(--rem-paper) !important;
+  border: 1px solid var(--rem-line) !important;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(23, 32, 51, 0.08);
+}
+
+html[data-visual-theme="remuage"] .standalone-app .card-header,
+html[data-visual-theme="remuage"] .standalone-app .card-footer {
+  color: var(--rem-ink) !important;
+  background: var(--rem-rack) !important;
+  border-color: var(--rem-line) !important;
+}
+
+html[data-visual-theme="remuage"] .standalone-app .bg-dark,
+html[data-visual-theme="remuage"] .standalone-app .text-light,
+html[data-visual-theme="remuage"] .standalone-app .list-group-item.bg-dark {
+  color: var(--rem-ink) !important;
+  background-color: var(--rem-paper) !important;
+}
+
+html[data-visual-theme="remuage"] .standalone-app .border-secondary,
+html[data-visual-theme="remuage"] .standalone-app .list-group-item {
+  border-color: var(--rem-line) !important;
+}
+
+html[data-visual-theme="remuage"] .standalone-app .text-secondary,
+html[data-visual-theme="remuage"] .standalone-app .text-muted {
+  color: var(--rem-muted) !important;
+}
+
+html[data-visual-theme="remuage"] .standalone-app .text-warning {
+  color: var(--rem-blue) !important;
+}
+
+html[data-visual-theme="remuage"] .standalone-app .btn-warning {
+  color: #fff !important;
+  background: var(--rem-blue) !important;
+  border-color: var(--rem-blue) !important;
+}
+
+html[data-visual-theme="remuage"] #my-registrations .card {
+  position: relative;
+  overflow: visible;
+  border-left: 7px solid var(--rem-blue) !important;
+}
+
+html[data-visual-theme="remuage"] #my-registrations .card::before,
+html[data-visual-theme="remuage"] #my-registrations .card::after {
+  position: absolute;
+  left: -0.75rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  content: "";
+  background: var(--rem-rack);
+  border-radius: 50%;
+}
+
+html[data-visual-theme="remuage"] #my-registrations .card::before { top: 22%; }
+html[data-visual-theme="remuage"] #my-registrations .card::after { bottom: 22%; }
+
+html[data-visual-theme="remuage"] .standalone-document-main #privacy-policy .col-lg-8 {
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  background: var(--rem-paper);
+  border-top: 8px solid var(--rem-blue);
+  border-radius: var(--rem-radius);
+  box-shadow: var(--rem-shadow);
+}

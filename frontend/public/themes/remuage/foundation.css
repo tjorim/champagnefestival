@@ -1,0 +1,618 @@
+/* ==================================================================
+   REMUAGE — a bright festival workspace inspired by riddling racks.
+   This is a complete standalone visual theme; it does not import any
+   other project stylesheet, font package, or decorative asset.
+   ================================================================== */
+
+:root {
+  --rem-rack: #edf1f5;
+  --rem-paper: #fbfcfe;
+  --rem-blue: #2144b2;
+  --rem-blue-deep: #18348d;
+  --rem-grape: #48224d;
+  --rem-rose: #b52f62;
+  --rem-nickel: #8794a3;
+  --rem-ink: #172033;
+  --rem-muted: #586577;
+  --rem-line: rgba(23, 32, 51, 0.16);
+  --rem-line-strong: rgba(23, 32, 51, 0.3);
+  --rem-success: #27724c;
+  --rem-warning: #8a5700;
+  --rem-danger: #a5323b;
+  --rem-display: "Aptos Narrow", "Arial Narrow", Inter, system-ui, sans-serif;
+  --rem-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rem-data: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --rem-radius: 18px;
+  --rem-radius-small: 10px;
+  --rem-shadow: 0 18px 44px rgba(29, 42, 72, 0.1);
+  --rem-focus: 0 0 0 3px var(--rem-rack), 0 0 0 6px var(--rem-rose);
+}
+
+html[data-visual-theme="remuage"] {
+  color-scheme: light;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+  background: var(--rem-rack);
+}
+
+html[data-visual-theme="remuage"] body {
+  min-width: 320px;
+  overflow-x: hidden;
+  color: var(--rem-ink);
+  font-family: var(--rem-body);
+  background:
+    linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), rgba(23, 32, 51, 0.035) calc(100% - 1px)) 0 0 / 8.333% 100%,
+    var(--rem-rack);
+}
+
+html[data-visual-theme="remuage"] .App {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+html[data-visual-theme="remuage"] ::selection {
+  color: #fff;
+  background: var(--rem-rose);
+}
+
+html[data-visual-theme="remuage"] :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--rem-focus) !important;
+}
+
+html[data-visual-theme="remuage"] .skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 5000;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  background: var(--rem-grape);
+  border-radius: var(--rem-radius-small);
+  transform: translateY(-180%);
+  transition: transform 160ms ease;
+}
+
+html[data-visual-theme="remuage"] .skip-link:focus {
+  transform: translateY(0);
+}
+
+/* ------------------------------------------------------------------ header */
+
+html[data-visual-theme="remuage"] .site-header {
+  min-height: 70px;
+  padding: 0.55rem 0;
+  color: var(--rem-ink);
+  background: rgba(251, 252, 254, 0.96) !important;
+  border-bottom: 5px solid var(--rem-grape);
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+html[data-visual-theme="remuage"] .site-header .container {
+  max-width: 1440px;
+}
+
+html[data-visual-theme="remuage"] .site-brand {
+  color: var(--rem-grape) !important;
+  font-family: var(--rem-display);
+  font-size: 1.18rem;
+  font-stretch: condensed;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .site-brand img {
+  filter: saturate(0.7) hue-rotate(175deg) contrast(1.1);
+}
+
+html[data-visual-theme="remuage"] .site-nav {
+  padding: 0.25rem;
+  background: var(--rem-rack);
+  border-radius: 12px;
+}
+
+html[data-visual-theme="remuage"] .site-nav-link {
+  position: relative;
+  min-height: 40px;
+  padding: 0.6rem 0.85rem 0.6rem 1.35rem;
+  color: var(--rem-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-decoration: none;
+  text-transform: uppercase;
+  border-radius: 8px;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+html[data-visual-theme="remuage"] .site-nav-link::before {
+  position: absolute;
+  top: 50%;
+  left: 0.58rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  content: "";
+  background: var(--rem-nickel);
+  border: 2px solid var(--rem-paper);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--rem-nickel);
+  transform: translateY(-50%);
+}
+
+html[data-visual-theme="remuage"] .site-nav-link:hover,
+html[data-visual-theme="remuage"] .site-nav-link:focus-visible {
+  color: #fff;
+  background: var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .site-nav-link:hover::before,
+html[data-visual-theme="remuage"] .site-nav-link:focus-visible::before {
+  background: var(--rem-rose);
+  box-shadow: 0 0 0 1px #fff;
+}
+
+html[data-visual-theme="remuage"] .icon-link {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: var(--rem-grape) !important;
+  background: var(--rem-rack);
+  border: 1px solid var(--rem-line-strong);
+  border-radius: 50%;
+}
+
+html[data-visual-theme="remuage"] .icon-link:hover {
+  color: #fff !important;
+  background: var(--rem-blue);
+  border-color: var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .site-mobile-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 1041;
+  visibility: hidden;
+  color: var(--rem-ink);
+  background: var(--rem-paper);
+  border-bottom: 5px solid var(--rem-grape);
+  box-shadow: var(--rem-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.4rem);
+  transition: opacity 160ms ease, visibility 160ms ease, transform 160ms ease;
+}
+
+html[data-visual-theme="remuage"] .site-mobile-menu.is-open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+html[data-visual-theme="remuage"] .site-mobile-menu-panel {
+  padding: 0.8rem 0 1rem;
+}
+
+html[data-visual-theme="remuage"] .site-mobile-link {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  color: var(--rem-ink);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px solid var(--rem-line);
+}
+
+html[data-visual-theme="remuage"] .site-mobile-link:hover {
+  color: var(--rem-blue);
+  background: var(--rem-rack);
+}
+
+/* ------------------------------------------------------------------ hero */
+
+html[data-visual-theme="remuage"] .remuage-hero {
+  position: relative;
+  display: grid;
+  min-height: min(760px, 86vh);
+  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+  align-items: stretch;
+  gap: clamp(2rem, 5vw, 5.5rem);
+  padding: clamp(8.5rem, 13vw, 11rem) max(5vw, calc((100vw - 1380px) / 2)) clamp(4rem, 7vw, 7rem);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 8% 18%, rgba(181, 47, 98, 0.12) 0 7rem, transparent 7.1rem),
+    var(--rem-rack);
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__content {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  align-self: center;
+  max-width: 760px;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+  color: var(--rem-blue);
+  font-family: var(--rem-data);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__eyebrow::before {
+  width: 1.8rem;
+  height: 0.65rem;
+  content: "";
+  background: var(--rem-rose);
+  border-radius: 999px 0 0 999px;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__title {
+  max-width: 12ch;
+  margin: 0;
+  color: var(--rem-grape);
+  font-family: var(--rem-display);
+  font-size: clamp(3.5rem, 4.2vw, 6rem);
+  font-stretch: condensed;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 0.88;
+  overflow-wrap: normal;
+  text-wrap: balance;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__subtitle {
+  max-width: 58ch;
+  margin: 1.75rem 0 0;
+  color: var(--rem-muted);
+  font-size: clamp(1rem, 1.3vw, 1.25rem);
+  line-height: 1.65;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 2rem;
+}
+
+html[data-visual-theme="remuage"] .remuage-button {
+  min-height: 48px;
+  padding: 0.78rem 1.25rem;
+  font-weight: 750;
+  border: 2px solid var(--rem-blue);
+  border-radius: 9px;
+  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+
+html[data-visual-theme="remuage"] .remuage-button:hover {
+  transform: translateY(-2px);
+}
+
+html[data-visual-theme="remuage"] .remuage-button--primary {
+  color: #fff;
+  background: var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .remuage-button--primary:hover {
+  color: #fff;
+  background: var(--rem-blue-deep);
+}
+
+html[data-visual-theme="remuage"] .remuage-button--secondary {
+  color: var(--rem-grape);
+  background: var(--rem-paper);
+  border-color: var(--rem-grape);
+}
+
+html[data-visual-theme="remuage"] .remuage-button--secondary:hover {
+  color: #fff;
+  background: var(--rem-grape);
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__rack {
+  position: relative;
+  display: grid;
+  width: min(100%, 600px);
+  aspect-ratio: 1 / 1.05;
+  align-self: center;
+  justify-self: end;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.9rem, 2vw, 1.5rem);
+  padding: clamp(1.7rem, 4vw, 3.5rem);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%),
+    var(--rem-blue);
+  border: 12px solid var(--rem-grape);
+  border-radius: 26px;
+  box-shadow: 22px 22px 0 rgba(72, 34, 77, 0.13);
+  transform: rotate(-4deg);
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__rack::after {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.8rem;
+  color: rgba(255, 255, 255, 0.58);
+  content: "⅛ TURN";
+  font-family: var(--rem-data);
+  font-size: clamp(0.55rem, 1vw, 0.72rem);
+  letter-spacing: 0.16em;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__cell {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  background: var(--rem-blue-deep);
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  box-shadow: inset 0 10px 20px rgba(5, 14, 55, 0.32);
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__cell:nth-child(3n + 2) {
+  transform: translateY(22%);
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__disc {
+  position: relative;
+  width: 72%;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at 40% 32%, rgba(255, 255, 255, 0.75) 0 7%, transparent 8%),
+    linear-gradient(145deg, #fff, #cad3de);
+  border: 5px solid var(--rem-paper);
+  border-radius: 50%;
+  box-shadow: 0 6px 18px rgba(5, 14, 55, 0.32);
+  transition: transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 180ms ease;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__mark {
+  position: absolute;
+  top: 9%;
+  left: 50%;
+  width: 0.44rem;
+  height: 25%;
+  background: var(--rem-rose);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  transform-origin: 50% 165%;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero:has(.remuage-button:is(:hover, :focus-visible)) .remuage-hero__cell:nth-child(even) .remuage-hero__disc {
+  transform: rotate(45deg);
+}
+
+html[data-visual-theme="remuage"] .remuage-hero:has(.remuage-button:is(:hover, :focus-visible)) .remuage-hero__cell:nth-child(odd) .remuage-hero__disc {
+  background: var(--rem-paper);
+  transform: rotate(-45deg);
+}
+
+/* ------------------------------------------------------------------ public layout */
+
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section:not(.remuage-hero) {
+  min-width: 0;
+  padding: clamp(3rem, 5vw, 5.5rem) 0;
+  background: var(--rem-paper);
+  border: 1px solid var(--rem-line);
+  border-radius: var(--rem-radius);
+  box-shadow: 0 10px 28px rgba(23, 32, 51, 0.055);
+}
+
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > .remuage-hero {
+  grid-column: 1 / -1;
+  margin: -1rem -1rem 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html[data-visual-theme="remuage"] #what-we-do { grid-column: 1 / 8; }
+html[data-visual-theme="remuage"] #next-festival { grid-column: 8 / -1; }
+html[data-visual-theme="remuage"] #schedule { grid-column: 1 / 9; }
+html[data-visual-theme="remuage"] #community-events { grid-column: 9 / -1; }
+html[data-visual-theme="remuage"] #producers { grid-column: 1 / -1; }
+html[data-visual-theme="remuage"] #faq { grid-column: 1 / 6; }
+html[data-visual-theme="remuage"] #map { grid-column: 6 / -1; }
+html[data-visual-theme="remuage"] #sponsors { grid-column: 1 / -1; }
+html[data-visual-theme="remuage"] #contact { grid-column: 1 / 8; }
+html[data-visual-theme="remuage"] #registrations { grid-column: 8 / -1; }
+
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > #next-festival,
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > #registrations {
+  color: #fff;
+  background: var(--rem-grape);
+  border-color: var(--rem-grape);
+}
+
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > #schedule,
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > #map {
+  border-top: 8px solid var(--rem-blue);
+}
+
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section > .container {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  padding-inline: clamp(1.25rem, 3vw, 3rem);
+}
+
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section .col-lg-8,
+html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section .col-md-10 {
+  width: 100%;
+  max-width: 100%;
+}
+
+html[data-visual-theme="remuage"] .section-header {
+  margin-bottom: 0.75rem;
+  color: var(--rem-grape);
+  font-family: var(--rem-display);
+  font-size: clamp(2.1rem, 4vw, 4.4rem);
+  font-stretch: condensed;
+  font-weight: 900;
+  hyphens: auto;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+html[data-visual-theme="remuage"] #community-events .section-header {
+  font-size: clamp(1.9rem, 3.2vw, 3rem);
+}
+
+html[data-visual-theme="remuage"] .section-header::after {
+  display: block;
+  width: 4.2rem;
+  height: 0.65rem;
+  margin: 0.85rem auto 0;
+  content: "";
+  background: var(--rem-blue);
+  border-radius: 999px 0 0 999px;
+}
+
+html[data-visual-theme="remuage"] .section-subtitle {
+  max-width: 60ch;
+  color: var(--rem-muted);
+  line-height: 1.65;
+}
+
+html[data-visual-theme="remuage"] #next-festival .section-header,
+html[data-visual-theme="remuage"] #next-festival .section-subtitle,
+html[data-visual-theme="remuage"] #registrations .section-header,
+html[data-visual-theme="remuage"] #registrations .section-subtitle {
+  color: #fff;
+}
+
+html[data-visual-theme="remuage"] #next-festival .section-header::after,
+html[data-visual-theme="remuage"] #registrations .section-header::after {
+  background: var(--rem-rose);
+}
+
+/* ------------------------------------------------------------------ features + countdown */
+
+html[data-visual-theme="remuage"] .remuage-feature-rack {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 2rem;
+  overflow: hidden;
+  color: #fff;
+  background: var(--rem-blue);
+  border: 8px solid var(--rem-blue-deep);
+  border-radius: var(--rem-radius);
+}
+
+html[data-visual-theme="remuage"] .remuage-feature {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.35rem;
+}
+
+html[data-visual-theme="remuage"] .remuage-feature + .remuage-feature {
+  border-left: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+html[data-visual-theme="remuage"] .remuage-feature__aperture {
+  display: grid;
+  width: 3.6rem;
+  height: 3.6rem;
+  place-items: center;
+  color: var(--rem-grape);
+  font-size: 1.3rem;
+  background: var(--rem-paper);
+  border: 4px solid rgba(255, 255, 255, 0.42);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px var(--rem-rack);
+}
+
+html[data-visual-theme="remuage"] .remuage-feature h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--rem-display);
+  font-size: 1.25rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .remuage-feature p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+html[data-visual-theme="remuage"] .countdown {
+  position: relative;
+  z-index: 1;
+  margin: 1.5rem 0;
+}
+
+html[data-visual-theme="remuage"] .countdown-units {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+html[data-visual-theme="remuage"] .countdown-unit {
+  display: grid;
+  aspect-ratio: 1;
+  place-content: center;
+  color: var(--rem-ink);
+  background: var(--rem-rack);
+  border: 6px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--rem-nickel);
+}
+
+html[data-visual-theme="remuage"] .countdown-value {
+  font-family: var(--rem-data);
+  font-size: clamp(1.8rem, 4vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+html[data-visual-theme="remuage"] .countdown-label {
+  margin-top: 0.35rem;
+  color: var(--rem-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+html[data-visual-theme="remuage"] .countdown-current,
+html[data-visual-theme="remuage"] .countdown-concluded,
+html[data-visual-theme="remuage"] .countdown-complete,
+html[data-visual-theme="remuage"] .countdown-loading {
+  display: block;
+  padding: 1rem;
+  color: var(--rem-ink);
+  background: var(--rem-rack);
+  border-radius: var(--rem-radius-small);
+}

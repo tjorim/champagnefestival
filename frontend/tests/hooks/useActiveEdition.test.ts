@@ -126,7 +126,7 @@ describe("useActiveEdition", () => {
     expect(result.current.edition.events).toHaveLength(3);
   });
 
-  it("keeps the fallback edition when the active-edition query fails", async () => {
+  it("keeps the fallback edition without flagging a load error when there's simply no active edition (404)", async () => {
     server.use(
       http.get("/api/editions/active", () => HttpResponse.json(null, { status: 404 })),
     );
@@ -137,8 +137,24 @@ describe("useActiveEdition", () => {
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
     expect(result.current.hasEdition).toBe(false);
+    expect(result.current.hasLoadError).toBe(false);
     expect(result.current.edition.events).toEqual([]);
     expect(result.current.edition.producers).toEqual([]);
     expect(result.current.edition.sponsors).toEqual([]);
+  });
+
+  it("flags a load error when the active-edition fetch genuinely fails (e.g. 500 or network error)", async () => {
+    server.use(
+      http.get("/api/editions/active", () => HttpResponse.json(null, { status: 500 })),
+    );
+
+    const wrapper = createTestQueryClientWrapper();
+    const { result } = renderHook(() => useActiveEdition(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+
+    expect(result.current.hasEdition).toBe(false);
+    expect(result.current.hasLoadError).toBe(true);
+    expect(result.current.edition.events).toEqual([]);
   });
 });

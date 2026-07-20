@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import Header from "@/components/Header";
+import HeaderClassic from "@/components/HeaderClassic";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -8,7 +8,6 @@ vi.mock("@/paraglide/messages", () => ({
     language_select: () => "Select language",
     header_logo_alt: () => "Champagnefestival logo",
     admin_title: () => "Administration",
-    admin_toggle_navigation: () => "Toggle navigation",
     nav_schedule: () => "Schedule",
     nav_community_events: () => "Community events",
     nav_faq: () => "FAQ",
@@ -32,21 +31,21 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-describe("Header component", () => {
+describe("HeaderClassic component", () => {
   it("renders the festival name", () => {
-    render(<Header />);
+    render(<HeaderClassic />);
     expect(screen.getByText("Champagnefestival")).toBeInTheDocument();
   });
 
   it("renders the logo image", () => {
-    render(<Header />);
+    render(<HeaderClassic />);
     const logo = screen.getByAltText("Champagnefestival logo");
     expect(logo).toBeInTheDocument();
     expect(logo).toHaveAttribute("src", "/images/logo.svg");
   });
 
   it("accepts a custom logoSrc prop", () => {
-    render(<Header logoSrc="/images/custom-logo.png" />);
+    render(<HeaderClassic logoSrc="/images/custom-logo.png" />);
     expect(screen.getByAltText("Champagnefestival logo")).toHaveAttribute(
       "src",
       "/images/custom-logo.png",
@@ -54,23 +53,25 @@ describe("Header component", () => {
   });
 
   it("renders the language switcher", () => {
-    render(<Header />);
+    render(<HeaderClassic />);
     expect(screen.getByTestId("language-switcher")).toBeInTheDocument();
   });
 
   it("logo links to #welcome", () => {
-    render(<Header />);
+    render(<HeaderClassic />);
     const brand = screen.getByText("Champagnefestival").closest("a");
     expect(brand).toHaveAttribute("href", "#welcome");
   });
 
   it("links to the administration page", () => {
-    render(<Header />);
-    const adminLinks = screen.getAllByRole("link", { name: "Administration" });
-    expect(adminLinks.length).toBeGreaterThan(0);
-    adminLinks.forEach((adminLink) => {
-      expect(adminLink).toHaveAttribute("href", "/admin");
-      expect(adminLink.querySelector(".bi-shield-lock")).toBeInTheDocument();
-    });
+    render(<HeaderClassic />);
+    const adminLink = screen.getByRole("link", { name: "Administration" });
+    expect(adminLink).toHaveAttribute("href", "/admin");
+    expect(adminLink.querySelector(".bi-shield-lock")).toBeInTheDocument();
+  });
+
+  it("does not render a mobile menu button", () => {
+    render(<HeaderClassic />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Admin dashboard", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/admin");
-    await page.waitForLoadState("networkidle");
+    await expect(page.locator("#admin-title")).toBeVisible();
   });
 
   test("admin page loads with title", async ({ page }) => {
@@ -19,7 +19,7 @@ test.describe("Admin dashboard", () => {
   test("shows login prompt when not authenticated", async ({ page }) => {
     // When unauthenticated, the admin dashboard shows a login button/form
     await expect(
-      page.getByRole("button", { name: /log.?in|sign.?in/i }).first(),
+      page.getByRole("button", { name: /log.?in|sign.?in|aanmelden/i }).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
