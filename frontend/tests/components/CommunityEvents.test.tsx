@@ -193,24 +193,150 @@ describe("CommunityEvents", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 
-  it("rejects unsafe external contact email values", async () => {
+  it("drops an unsafe external contact email without hiding the edition or other events", async () => {
     server.use(
-      http.get("/api/editions/upcoming", () =>
-        HttpResponse.json([
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+
+        return HttpResponse.json([
           {
             id: "edition-bourse",
             edition_type: "bourse",
+            external_contact_name: "Organizer",
             external_contact_email: "organizer@example.com?bcc=other@example.com",
             venue: { name: "Staf Versluys" },
             events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
           },
-        ]),
-      ),
+        ]);
+      }),
     );
 
     renderCommunityEvents();
 
-    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/organizer@example\.com/)).not.toBeInTheDocument();
+  });
+
+  it("drops a control-character contact email (header injection) without hiding the edition", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            external_contact_name: "Organizer",
+            external_contact_email: "organizer@example.com\r\nBcc:other@example.com",
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
+          },
+        ]);
+      }),
+    );
+
+    renderCommunityEvents();
+
+    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("drops a non-string contact email without hiding the edition", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            external_contact_name: "Organizer",
+            external_contact_email: 12345,
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
+          },
+        ]);
+      }),
+    );
+
+    renderCommunityEvents();
+
+    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("accepts legitimate edge-case addresses the backend can return", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            external_contact_name: "Organizer",
+            // Tag addressing (RFC 5321 atext) and an IDNA/punycode-encoded
+            // internationalized domain — both valid, ASCII-safe addresses.
+            external_contact_email: "bourse+events@xn--nxasmq6b.example",
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
+          },
+        ]);
+      }),
+    );
+
+    renderCommunityEvents();
+
+    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "bourse+events@xn--nxasmq6b.example" }),
+    ).toHaveAttribute("href", "mailto:bourse+events@xn--nxasmq6b.example");
+  });
+
+  it("does not hide unrelated community editions when a sibling edition has a malformed contact email", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType === "bourse") {
+          return HttpResponse.json([
+            {
+              id: "edition-bourse",
+              edition_type: "bourse",
+              external_contact_name: "Organizer",
+              external_contact_email: "organizer@example.com?bcc=other@example.com",
+              venue: { name: "Staf Versluys" },
+              events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
+            },
+          ]);
+        }
+        return HttpResponse.json([
+          {
+            id: "edition-capsule",
+            edition_type: "capsule_exchange",
+            venue: { name: "Staf Versluys" },
+            events: [
+              {
+                ...BASE_EVENT,
+                id: "event-capsule",
+                edition_id: "edition-capsule",
+                title: "Capsule swap",
+              },
+            ],
+          },
+        ]);
+      }),
+    );
+
+    renderCommunityEvents();
+
+    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
+    expect(screen.getByText("Capsule swap")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("rejects editions without an events array", async () => {

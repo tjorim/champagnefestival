@@ -571,3 +571,98 @@ async def test_edition_stats_includes_editions_with_no_registrations(client):
     assert entry["total_guests"] == 0
     assert entry["total_checked_in"] == 0
     assert entry["events_count"] == 0
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "email",
+    [
+        "organizer@example.com",
+        "first.last@example.co.uk",
+        "bourse+events@example.com",
+        # RFC 5321 atext characters beyond the common "safe" subset.
+        "bourse!#$%&'*=?^_`{|}~-tag@example.com",
+    ],
+)
+async def test_edition_accepts_legitimate_contact_emails(client, email):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-contact-valid",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "external_contact_email": email,
+        },
+        headers=ADMIN_HEADERS,
+    )
+
+    assert r.status_code == 201, r.text
+    assert r.json()["external_contact_email"] == email
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "email",
+    [
+        "organizer@example.com?bcc=other@example.com",
+        "organizer@example.com\r\nBcc:other@example.com",
+        "not-an-email",
+        '"quoted local part"@example.com',
+        # Unicode local part — SMTPUTF8 addresses are intentionally unsupported.
+        "örganizer@example.com",
+        # Unicode domain that has not been IDNA/punycode-encoded.
+        "organizer@münchen.example",
+        # Pydantic's EmailStr normalizes IDNA/punycode domains back to Unicode,
+        # so even an ASCII-on-the-wire internationalized domain is rejected.
+        "organizer@xn--nxasmq6b.example",
+    ],
+)
+async def test_edition_rejects_unsafe_or_unsupported_contact_emails(client, email):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-contact-invalid",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "external_contact_email": email,
+        },
+        headers=ADMIN_HEADERS,
+    )
+
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_edition_update_rejects_unsafe_contact_email(client):
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-contact-update",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(
+        "/api/editions/edition-contact-update",
+        json={"external_contact_email": "organizer@example.com?bcc=other@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422

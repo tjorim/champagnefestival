@@ -15,3 +15,14 @@ export const CAROUSEL_AUTOPLAY_DELAY_MS = 3000;
  * and rejects obvious invalid ones. Used consistently across all form components.
  */
 export const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+/**
+ * Canonical contract for community edition contact emails, shared with the
+ * backend's COMMUNITY_CONTACT_EMAIL_PATTERN (backend/app/schemas.py). ASCII-only
+ * RFC 5321 "dot-atom" local part plus a conventional domain — a superset of
+ * EMAIL_REGEX's character set that still excludes control/whitespace characters,
+ * so a matching value is always safe to render as a `mailto:` link. Keep both
+ * patterns in sync.
+ */
+export const COMMUNITY_CONTACT_EMAIL_REGEX =
+  /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;

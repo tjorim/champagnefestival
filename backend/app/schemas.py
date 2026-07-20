@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date as dt_date
 from datetime import datetime
 from typing import Literal, Self
@@ -810,6 +811,27 @@ class RoomOut(BaseModel):
 # Editions
 # ---------------------------------------------------------------------------
 
+# Canonical contract for community edition contact emails, shared with the
+# frontend's COMMUNITY_CONTACT_EMAIL_REGEX (frontend/src/config/constants.ts).
+# Deliberately narrower than Pydantic's EmailStr: ASCII-only RFC 5321 "dot-atom"
+# local part plus a conventional domain, so any address accepted here is
+# guaranteed renderable as a safe `mailto:` link and free of control/header
+# injection characters. Keep both patterns in sync.
+COMMUNITY_CONTACT_EMAIL_PATTERN = re.compile(
+    r"^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*"
+    r"@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,}$"
+)
+
+
+def _validate_community_contact_email(v: str | None) -> str | None:
+    if v is not None and not COMMUNITY_CONTACT_EMAIL_PATTERN.match(v):
+        raise ValueError(
+            "external_contact_email must be an ASCII email address "
+            "(internationalized/Unicode addresses are not supported)."
+        )
+    return v
+
 
 class EditionCreate(BaseModel):
     id: str = Field(min_length=1, max_length=100)
@@ -823,6 +845,11 @@ class EditionCreate(BaseModel):
     exhibitors: list[int] = Field(default_factory=list)
     active: bool = True
 
+    @field_validator("external_contact_email")
+    @classmethod
+    def validate_external_contact_email(cls, v: str | None) -> str | None:
+        return _validate_community_contact_email(v)
+
 
 class EditionUpdate(BaseModel):
     year: int | None = Field(default=None, ge=2020, le=2100)
@@ -834,6 +861,11 @@ class EditionUpdate(BaseModel):
     external_contact_email: EmailStr | None = None
     exhibitors: list[int] | None = None
     active: bool | None = None
+
+    @field_validator("external_contact_email")
+    @classmethod
+    def validate_external_contact_email(cls, v: str | None) -> str | None:
+        return _validate_community_contact_email(v)
 
 
 class EditionItemOut(BaseModel):
