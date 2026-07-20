@@ -211,6 +211,12 @@ async def update_edition(
         _validate_exhibitors_allowed(edition.edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
         await _validate_exhibitor_ids(db, body.exhibitors)
         edition.exhibitors = list(body.exhibitors)
+    elif edition.edition_type != "festival" and edition.exhibitors:
+        # The edition type changed away from festival without an explicit exhibitors
+        # payload. Community editions can't carry exhibitors, so clear the now-invalid
+        # associations as part of the same atomic transition instead of rejecting the
+        # update.
+        edition.exhibitors = []
 
     _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
 

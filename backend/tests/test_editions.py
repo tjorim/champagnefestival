@@ -570,6 +570,171 @@ async def test_edition_rejects_vendor_exhibitors(client):
     assert "vendor" in r.json()["detail"].lower()
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("target_type", ["bourse", "capsule_exchange"])
+async def test_converting_festival_to_community_edition_clears_exhibitors(client, target_type):
+    """Converting a festival with producers/sponsors to a community type must succeed
+    and atomically drop the now-invalid exhibitor associations, even if the caller
+    doesn't send an explicit `exhibitors` field alongside the type change.
+    """
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Bollinger", "type": "producer"},
+        headers=ADMIN_HEADERS,
+    )
+    producer_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Acme", "type": "sponsor"},
+        headers=ADMIN_HEADERS,
+    )
+    sponsor_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-convert-to-community",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "festival",
+            "exhibitors": [producer_id, sponsor_id],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    assert len(r.json()["producers"]) == 1
+    assert len(r.json()["sponsors"]) == 1
+
+    r = await client.put(
+        "/api/editions/edition-convert-to-community",
+        json={"edition_type": target_type},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["edition_type"] == target_type
+    assert data["producers"] == []
+    assert data["sponsors"] == []
+
+    r = await client.get("/api/editions/edition-convert-to-community", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["producers"] == []
+    assert r.json()["sponsors"] == []
+
+
+@pytest.mark.anyio
+async def test_converting_festival_to_community_edition_with_explicit_empty_exhibitors(client):
+    """The frontend contract sends an explicit `exhibitors: []` alongside the type
+    change; this must also succeed and clear associations (not just the implicit path).
+    """
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Bollinger", "type": "producer"},
+        headers=ADMIN_HEADERS,
+    )
+    producer_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-convert-explicit-empty",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "festival",
+            "exhibitors": [producer_id],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(
+        "/api/editions/edition-convert-explicit-empty",
+        json={"edition_type": "bourse", "exhibitors": []},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["producers"] == []
+
+
+@pytest.mark.anyio
+async def test_festival_to_festival_edit_preserves_exhibitors(client):
+    """Editing a festival edition without touching its type must not disturb exhibitors."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Bollinger", "type": "producer"},
+        headers=ADMIN_HEADERS,
+    )
+    producer_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-festival-preserve",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "festival",
+            "exhibitors": [producer_id],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(
+        "/api/editions/edition-festival-preserve",
+        json={"month": "april"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["month"] == "april"
+    assert len(r.json()["producers"]) == 1
+    assert r.json()["producers"][0]["id"] == producer_id
+
+
+@pytest.mark.anyio
+async def test_community_edition_update_still_rejects_explicit_exhibitors(client):
+    """Backend validation must still reject an explicit attempt to assign exhibitors
+    to a community edition, whether or not the type is changing in the same request.
+    """
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Bollinger", "type": "producer"},
+        headers=ADMIN_HEADERS,
+    )
+    producer_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-community-reject",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(
+        "/api/editions/edition-community-reject",
+        json={"exhibitors": [producer_id]},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+    assert "festival" in r.json()["detail"].lower()
+
+
 # ---------------------------------------------------------------------------
 # Edition attendance stats
 # ---------------------------------------------------------------------------
