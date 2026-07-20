@@ -178,7 +178,7 @@ function createFallbackEdition(): ActiveEdition {
 }
 
 export async function fetchActiveEdition(): Promise<ActiveEdition> {
-  const res = await fetch("/api/editions/active");
+  const res = await fetch("/api/editions/active?edition_type=festival");
   if (!res.ok) {
     throw new ActiveEditionFetchError(`Failed to load active edition: ${res.status}`, res.status);
   }

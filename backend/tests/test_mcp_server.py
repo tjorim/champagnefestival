@@ -22,7 +22,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import app.mcp_server as mcp_module
-from app.mcp.utils import person_dict
+from app.mcp.utils import get_active_edition_obj, person_dict
 from app.mcp_server import (
     ROLE_ADMIN,
     ROLE_PUBLIC,
@@ -30,6 +30,7 @@ from app.mcp_server import (
     ChampagneFestivalMcpBackend,
     create_mcp_server,
 )
+from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -447,6 +448,96 @@ class TestGetActiveEdition:
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
         result = await backend.get_active_edition()
         assert result["active_edition"] is None
+
+
+# ---------------------------------------------------------------------------
+# get_active_edition_obj — edition_type scoping against real mixed data
+# ---------------------------------------------------------------------------
+
+
+class TestGetActiveEditionObjEditionTypeScoping:
+    """Exercises `get_active_edition_obj` against a real DB session (not the MagicMock
+    fixtures used above) so the actual SQL `edition_type` filter is under test, using a
+    mix of active festival, Bourse, and capsule-exchange editions.
+    """
+
+    async def _seed_mixed_editions(self, client) -> None:
+        venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+        assert venue_response.status_code == 201
+        venue_id = venue_response.json()["id"]
+
+        editions = [
+            ("edition-bourse-nearest", "bourse", "2099-01-10"),
+            ("edition-capsule-exchange-mid", "capsule_exchange", "2099-02-15"),
+            ("edition-festival-farthest", "festival", "2099-03-21"),
+        ]
+        for edition_id, edition_type, event_date in editions:
+            edition_response = await client.post(
+                "/api/editions",
+                json={
+                    "id": edition_id,
+                    "year": 2099,
+                    "month": "march",
+                    "venue_id": venue_id,
+                    "edition_type": edition_type,
+                    "active": True,
+                },
+                headers=ADMIN_HEADERS,
+            )
+            assert edition_response.status_code == 201
+
+            event_response = await client.post(
+                "/api/events",
+                json={
+                    "edition_id": edition_id,
+                    "title": f"{edition_type} event",
+                    "description": "",
+                    "date": event_date,
+                    "start_time": "18:00",
+                    "end_time": "22:00",
+                    "category": edition_type,
+                    "registration_required": False,
+                    "active": True,
+                },
+                headers=ADMIN_HEADERS,
+            )
+            assert event_response.status_code == 201
+
+    @pytest.mark.anyio
+    async def test_default_selects_festival_over_nearer_bourse_and_capsule_exchange(self, client, db_session):
+        await self._seed_mixed_editions(client)
+
+        edition = await get_active_edition_obj(db_session)
+
+        assert edition is not None
+        assert edition.id == "edition-festival-farthest"
+
+    @pytest.mark.anyio
+    async def test_explicit_type_none_falls_back_to_nearest_ending_edition_of_any_type(self, client, db_session):
+        await self._seed_mixed_editions(client)
+
+        edition = await get_active_edition_obj(db_session, edition_type=None)
+
+        assert edition is not None
+        assert edition.id == "edition-bourse-nearest"
+
+    @pytest.mark.anyio
+    async def test_explicit_type_selects_that_type(self, client, db_session):
+        await self._seed_mixed_editions(client)
+
+        edition = await get_active_edition_obj(db_session, edition_type="capsule_exchange")
+
+        assert edition is not None
+        assert edition.id == "edition-capsule-exchange-mid"
+
+    @pytest.mark.anyio
+    async def test_mcp_get_active_edition_tool_never_returns_a_community_edition(self, client, db_session):
+        await self._seed_mixed_editions(client)
+
+        backend = ChampagneFestivalMcpBackend(_make_session_factory(db_session))
+        result = await backend.get_active_edition()
+
+        assert result["active_edition"]["id"] == "edition-festival-farthest"
 
 
 # ---------------------------------------------------------------------------

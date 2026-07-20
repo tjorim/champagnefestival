@@ -14,11 +14,19 @@ ROLE_VOLUNTEER = "volunteer"
 ROLE_PUBLIC = "public"
 
 
-async def get_active_edition_obj(db: Any) -> Edition | None:
-    """Return the current or next upcoming active edition, or None."""
+async def get_active_edition_obj(db: Any, edition_type: str | None = "festival") -> Edition | None:
+    """Return the current or next upcoming active edition, or None.
+
+    Defaults to festival editions only, so a nearer Bourse or capsule-exchange
+    edition can never stand in for the active festival in tools that omit an
+    explicit edition. Pass ``edition_type=None`` to search across all types.
+    """
     from sqlalchemy.orm import selectinload
 
-    result = await db.execute(select(Edition).options(selectinload(Edition.events)).where(Edition.active.is_(True)))
+    stmt = select(Edition).options(selectinload(Edition.events)).where(Edition.active.is_(True))
+    if edition_type is not None:
+        stmt = stmt.where(Edition.edition_type == edition_type)
+    result = await db.execute(stmt)
     editions: list[Edition] = list(result.scalars().all())
     if not editions:
         return None

@@ -202,6 +202,73 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
 
 
 @pytest.mark.anyio
+async def test_active_edition_type_filter_excludes_nearer_community_editions(client):
+    """A nearer-ending Bourse or capsule-exchange edition must never stand in for the
+    active festival when a festival-specific caller filters by `edition_type=festival`.
+    """
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert venue_response.status_code == 201
+    venue_id = venue_response.json()["id"]
+
+    editions = [
+        ("edition-bourse-nearest", "bourse", "2099-01-10"),
+        ("edition-capsule-exchange-mid", "capsule_exchange", "2099-02-15"),
+        ("edition-festival-farthest", "festival", "2099-03-21"),
+    ]
+    for edition_id, edition_type, event_date in editions:
+        edition_response = await client.post(
+            "/api/editions",
+            json={
+                "id": edition_id,
+                "year": 2099,
+                "month": "march",
+                "venue_id": venue_id,
+                "edition_type": edition_type,
+                "active": True,
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert edition_response.status_code == 201
+
+        event_response = await client.post(
+            "/api/events",
+            json={
+                "edition_id": edition_id,
+                "title": f"{edition_type} event",
+                "description": "",
+                "date": event_date,
+                "start_time": "18:00",
+                "end_time": "22:00",
+                "category": edition_type,
+                "registration_required": False,
+                "active": True,
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert event_response.status_code == 201
+
+    # Filtered: the festival edition wins even though it ends latest.
+    festival_response = await client.get("/api/editions/active", params={"edition_type": "festival"})
+    assert festival_response.status_code == 200
+    assert festival_response.json()["id"] == "edition-festival-farthest"
+
+    # Unfiltered: the nearest-ending edition (regardless of type) wins — this is the
+    # ambiguous default that festival-specific callers must avoid by filtering explicitly.
+    unfiltered_response = await client.get("/api/editions/active")
+    assert unfiltered_response.status_code == 200
+    assert unfiltered_response.json()["id"] == "edition-bourse-nearest"
+
+    # Other types remain independently selectable.
+    bourse_response = await client.get("/api/editions/active", params={"edition_type": "bourse"})
+    assert bourse_response.status_code == 200
+    assert bourse_response.json()["id"] == "edition-bourse-nearest"
+
+    capsule_response = await client.get("/api/editions/active", params={"edition_type": "capsule_exchange"})
+    assert capsule_response.status_code == 200
+    assert capsule_response.json()["id"] == "edition-capsule-exchange-mid"
+
+
+@pytest.mark.anyio
 async def test_standalone_event_can_move_within_same_single_day(client):
     venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     assert venue_response.status_code == 201

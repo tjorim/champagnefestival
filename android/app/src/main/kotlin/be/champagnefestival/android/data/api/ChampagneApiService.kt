@@ -16,7 +16,7 @@ import retrofit2.http.Query
 
 interface ChampagneApiService {
     @GET("api/editions/active")
-    suspend fun getActiveEdition(): EditionOut
+    suspend fun getActiveEdition(@Query("edition_type") editionType: String = "festival"): EditionOut
 
     @GET("api/events")
     suspend fun getEvents(
