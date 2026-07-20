@@ -63,9 +63,7 @@ async def list_upcoming_editions(
     """
     today = datetime.now(UTC).date()
     editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
-    upcoming = [
-        edition for edition in editions if (_edition_end_date(_active_events(edition)) or date.min) >= today
-    ]
+    upcoming = [edition for edition in editions if (_edition_end_date(_active_events(edition)) or date.min) >= today]
     return await _edition_payloads(db, _sorted_editions(upcoming, active_only=True), active_only=True)
 
 
@@ -346,19 +344,15 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition], *, active
             )
             continue
         producers, sponsors, vendors = _resolve_exhibitors(edition, exhibitor_map)
+        # `Edition.events` is loaded pre-ordered by (date, start_time, created_at); filtering
+        # to active events preserves that order, so no re-sort is needed here.
         events = _active_events(edition) if active_only else edition.events
         payloads.append(
             edition_to_dict(
                 edition,
                 venue=venues[edition.venue_id],
                 dates=_edition_dates(events),
-                events=[
-                    event_to_summary_dict(event)
-                    for event in sorted(
-                        events,
-                        key=lambda event: (event.date, event.start_time, event.created_at),
-                    )
-                ],
+                events=[event_to_summary_dict(event) for event in events],
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
@@ -396,15 +390,16 @@ def _active_events(edition: Edition) -> list[Event]:
 
 
 def _edition_dates(events: list[Event]) -> list[date]:
-    return sorted({event.date for event in events})
+    """Unique event dates in chronological order (relies on `events` being pre-sorted by date)."""
+    return list(dict.fromkeys(event.date for event in events))
 
 
 def _edition_start_date(events: list[Event]) -> date | None:
-    return min((event.date for event in events), default=None)
+    return events[0].date if events else None
 
 
 def _edition_end_date(events: list[Event]) -> date | None:
-    return max((event.date for event in events), default=None)
+    return events[-1].date if events else None
 
 
 def _sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Edition]:
