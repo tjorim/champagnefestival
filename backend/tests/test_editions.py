@@ -488,6 +488,213 @@ async def test_inactive_events_excluded_from_active_edition_response(client):
     assert admin_data["dates"] == ["2099-03-20", "2099-03-21"]
 
 
+# ---------------------------------------------------------------------------
+# GET /api/editions/upcoming — public contract
+# ---------------------------------------------------------------------------
+
+
+async def _create_upcoming_edition(
+    client,
+    *,
+    edition_id: str,
+    venue_id: str,
+    edition_type: str = "bourse",
+    active: bool = True,
+    external_partner: str | None = None,
+    external_contact_name: str | None = None,
+    external_contact_email: str | None = None,
+    year: int = 2099,
+):
+    payload: dict[str, object] = {
+        "id": edition_id,
+        "year": year,
+        "month": "march",
+        "venue_id": venue_id,
+        "edition_type": edition_type,
+        "active": active,
+    }
+    if external_partner is not None:
+        payload["external_partner"] = external_partner
+    if external_contact_name is not None:
+        payload["external_contact_name"] = external_contact_name
+    if external_contact_email is not None:
+        payload["external_contact_email"] = external_contact_email
+    r = await client.post("/api/editions", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+async def _create_upcoming_event(
+    client,
+    *,
+    edition_id: str,
+    date: str,
+    title: str = "Event",
+    start_time: str = "10:00",
+    active: bool = True,
+):
+    r = await client.post(
+        "/api/events",
+        json={
+            "edition_id": edition_id,
+            "title": title,
+            "description": "",
+            "date": date,
+            "start_time": start_time,
+            "category": "exchange",
+            "registration_required": False,
+            "active": active,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+@pytest.mark.anyio
+async def test_upcoming_filters_by_exact_single_edition_type(client):
+    """`edition_type` must be an exact match: a bourse/festival edition must never
+    leak into a `capsule_exchange`-filtered response, even though all three exist.
+    """
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    for edition_id, edition_type in [
+        ("edition-upcoming-festival", "festival"),
+        ("edition-upcoming-bourse", "bourse"),
+        ("edition-upcoming-capsule", "capsule_exchange"),
+    ]:
+        await _create_upcoming_edition(client, edition_id=edition_id, venue_id=venue_id, edition_type=edition_type)
+        await _create_upcoming_event(client, edition_id=edition_id, date="2099-05-01")
+
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "capsule_exchange"})
+    assert r.status_code == 200
+    ids = {edition["id"] for edition in r.json()}
+    assert ids == {"edition-upcoming-capsule"}
+
+
+@pytest.mark.anyio
+async def test_upcoming_returns_mixed_community_edition_types_when_unfiltered(client):
+    """Without a filter, editions of multiple types are returned together."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    await _create_upcoming_edition(client, edition_id="edition-mixed-bourse", venue_id=venue_id, edition_type="bourse")
+    await _create_upcoming_event(client, edition_id="edition-mixed-bourse", date="2099-05-01")
+    await _create_upcoming_edition(
+        client, edition_id="edition-mixed-capsule", venue_id=venue_id, edition_type="capsule_exchange"
+    )
+    await _create_upcoming_event(client, edition_id="edition-mixed-capsule", date="2099-06-01")
+
+    r = await client.get("/api/editions/upcoming")
+    assert r.status_code == 200
+    ids = {edition["id"] for edition in r.json()}
+    assert {"edition-mixed-bourse", "edition-mixed-capsule"}.issubset(ids)
+
+
+@pytest.mark.anyio
+async def test_upcoming_excludes_inactive_editions(client):
+    """An inactive edition must not appear even with a future event."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    await _create_upcoming_edition(client, edition_id="edition-upcoming-active", venue_id=venue_id, active=True)
+    await _create_upcoming_event(client, edition_id="edition-upcoming-active", date="2099-05-01")
+    await _create_upcoming_edition(client, edition_id="edition-upcoming-inactive", venue_id=venue_id, active=False)
+    await _create_upcoming_event(client, edition_id="edition-upcoming-inactive", date="2099-05-01")
+
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "bourse"})
+    assert r.status_code == 200
+    ids = {edition["id"] for edition in r.json()}
+    assert "edition-upcoming-active" in ids
+    assert "edition-upcoming-inactive" not in ids
+
+
+@pytest.mark.anyio
+async def test_upcoming_excludes_editions_whose_latest_event_is_in_the_past(client):
+    """An edition whose only (active) event already happened must not be reported upcoming."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    await _create_upcoming_edition(client, edition_id="edition-upcoming-past", venue_id=venue_id, year=2020)
+    await _create_upcoming_event(client, edition_id="edition-upcoming-past", date="2020-01-10")
+
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "bourse"})
+    assert r.status_code == 200
+    ids = {edition["id"] for edition in r.json()}
+    assert "edition-upcoming-past" not in ids
+
+
+@pytest.mark.anyio
+async def test_upcoming_excludes_editions_without_events(client):
+    """An edition with no events at all has no upcoming date and must be excluded."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    await _create_upcoming_edition(client, edition_id="edition-upcoming-no-events", venue_id=venue_id)
+
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "bourse"})
+    assert r.status_code == 200
+    ids = {edition["id"] for edition in r.json()}
+    assert "edition-upcoming-no-events" not in ids
+
+
+@pytest.mark.anyio
+async def test_upcoming_includes_embedded_venue_and_external_contact_fields(client):
+    """The public payload embeds the full venue and the community-edition contact fields
+    the frontend's `CommunityEvents` relies on.
+    """
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    await _create_upcoming_edition(
+        client,
+        edition_id="edition-upcoming-contact",
+        venue_id=venue_id,
+        external_partner="Local Wine Club",
+        external_contact_name="Jean Dupont",
+        external_contact_email="jean@example.com",
+    )
+    await _create_upcoming_event(client, edition_id="edition-upcoming-contact", date="2099-05-01")
+
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "bourse"})
+    assert r.status_code == 200
+    edition = next(e for e in r.json() if e["id"] == "edition-upcoming-contact")
+    assert edition["venue"]["name"] == "Test Venue"
+    assert edition["external_partner"] == "Local Wine Club"
+    assert edition["external_contact_name"] == "Jean Dupont"
+    assert edition["external_contact_email"] == "jean@example.com"
+
+
+@pytest.mark.anyio
+async def test_upcoming_editions_are_ordered_by_start_date(client):
+    """Editions in the response must be ordered chronologically by their earliest
+    active event, regardless of creation order.
+    """
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    # Created out of chronological order to prove ordering isn't insertion order.
+    await _create_upcoming_edition(client, edition_id="edition-order-latest", venue_id=venue_id)
+    await _create_upcoming_event(client, edition_id="edition-order-latest", date="2099-07-01")
+    await _create_upcoming_edition(client, edition_id="edition-order-earliest", venue_id=venue_id)
+    await _create_upcoming_event(client, edition_id="edition-order-earliest", date="2099-05-01")
+
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "bourse"})
+    assert r.status_code == 200
+    ordered_ids = [edition["id"] for edition in r.json() if edition["id"].startswith("edition-order-")]
+    assert ordered_ids == ["edition-order-earliest", "edition-order-latest"]
+
+
+@pytest.mark.anyio
+async def test_upcoming_rejects_unsupported_edition_type(client):
+    """A malformed/unsupported `edition_type` query parameter is rejected outright,
+    rather than silently ignored or matching every edition.
+    """
+    r = await client.get("/api/editions/upcoming", params={"edition_type": "not-a-real-type"})
+    assert r.status_code == 422
+
+
 @pytest.mark.anyio
 async def test_standalone_event_rejects_a_second_date(client):
     """Community editions may only span a single calendar date."""
