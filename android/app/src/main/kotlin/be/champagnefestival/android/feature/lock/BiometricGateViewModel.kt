@@ -62,6 +62,15 @@ class BiometricGateViewModel(
         val callback =
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    val cryptoObject = result.cryptoObject
+                    val hasCryptoPrimitive =
+                        cryptoObject?.cipher != null || cryptoObject?.signature != null || cryptoObject?.mac != null
+
+                    if (!hasCryptoPrimitive) {
+                        _uiState.value = LockUiState.Failed(strings.cryptoUnavailableMessage)
+                        return
+                    }
+
                     controller.markUnlocked()
                 }
 
@@ -93,7 +102,7 @@ class BiometricGateViewModel(
             }
             prompt.authenticate(promptInfo, cryptoObject)
         } else {
-            prompt.authenticate(promptInfo)
+            _uiState.value = LockUiState.Failed(strings.cryptoUnavailableMessage)
         }
     }
 }
