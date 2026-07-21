@@ -1,6 +1,5 @@
 package be.champagnefestival.android.feature.lock
 
-import android.os.Build
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -14,6 +13,19 @@ import kotlinx.coroutines.flow.asStateFlow
 
 private const val ALLOWED_AUTHENTICATORS =
     BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+/** Arbitrary single-byte input; only whether the cipher accepts it, not the output, matters. */
+private val CRYPTO_VERIFICATION_PAYLOAD = ByteArray(1)
+
+/**
+ * A successful [BiometricPrompt] callback only reflects a real keystore-verified unlock once we
+ * perform an operation through the returned cipher — a non-null [BiometricPrompt.CryptoObject]
+ * alone isn't proof the key was actually unlocked by the biometric hardware.
+ */
+internal fun BiometricPrompt.CryptoObject?.isVerifiedUnlock(): Boolean {
+    val cipher = this?.cipher ?: return false
+    return runCatching { cipher.doFinal(CRYPTO_VERIFICATION_PAYLOAD) }.isSuccess
+}
 
 sealed class LockUiState {
     data object Checking : LockUiState()
@@ -62,6 +74,11 @@ class BiometricGateViewModel(
         val callback =
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    if (!result.cryptoObject.isVerifiedUnlock()) {
+                        _uiState.value = LockUiState.Failed(strings.cryptoUnavailableMessage)
+                        return
+                    }
+
                     controller.markUnlocked()
                 }
 
@@ -83,17 +100,11 @@ class BiometricGateViewModel(
                 .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
                 .build()
 
-        // BiometricPrompt rejects a CryptoObject combined with DEVICE_CREDENTIAL below API 30
-        // (IllegalArgumentException), so only the keystore-verified path is available on R+.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val cryptoObject = cryptoProvider.createCryptoObject()
-            if (cryptoObject == null) {
-                _uiState.value = LockUiState.Failed(strings.cryptoUnavailableMessage)
-                return
-            }
-            prompt.authenticate(promptInfo, cryptoObject)
-        } else {
-            prompt.authenticate(promptInfo)
+        val cryptoObject = cryptoProvider.createCryptoObject()
+        if (cryptoObject == null) {
+            _uiState.value = LockUiState.Failed(strings.cryptoUnavailableMessage)
+            return
         }
+        prompt.authenticate(promptInfo, cryptoObject)
     }
 }
