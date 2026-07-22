@@ -28,6 +28,6 @@
 
   This app is intended for authorised Champagnefestival staff and volunteers only.
 
-- **App icon (512x512 PNG):** not produced — no image-generation tool available in this environment; supply your own or export from `android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`.
-- **Feature graphic (1024x500 PNG/JPEG):** not produced — needs a real design asset.
+- **App icon (512x512 PNG):** [`app-icon-512.png`](./app-icon-512.png) — brand gradient (`#6E8EFB` → `#A16EFA`) with the app's glyph, matching `android/app/src/main/res/drawable/ic_launcher_foreground.xml`.
+- **Feature graphic (1024x500 PNG/JPEG):** [`feature-graphic-1024x500.png`](./feature-graphic-1024x500.png) — same brand gradient, app name, and short tagline.
 - **Phone / 7-inch tablet / 10-inch tablet screenshots:** not produced — capturing these requires running the app on a device or emulator with a display, which isn't available on this headless host.
