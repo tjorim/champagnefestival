@@ -46,29 +46,10 @@ jobs:
             exit 1
           fi
 
-      - name: Validate Android versionName
-        env:
-          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
-        run: |
-          set -euo pipefail
-          FILE_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' android/app/build.gradle.kts)
-          if [[ "$FILE_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "::error::android/app/build.gradle.kts versionName '$FILE_VERSION' does not match '$EXPECTED_VERSION'"
-            exit 1
-          fi
-
-      - name: Validate Android versionCode
-        env:
-          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
-        run: |
-          set -euo pipefail
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$EXPECTED_VERSION"
-          EXPECTED_CODE=$(( MAJOR * 1000000 + MINOR * 1000 + PATCH ))
-          ACTUAL_CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' android/app/build.gradle.kts)
-          if [[ "$ACTUAL_CODE" != "$EXPECTED_CODE" ]]; then
-            echo "::error::android versionCode '$ACTUAL_CODE' does not match expected $EXPECTED_CODE (MAJOR×1000000 + MINOR×1000 + PATCH for v$EXPECTED_VERSION)"
-            exit 1
-          fi
+      # Android versionName/versionCode are no longer hand-maintained literals —
+      # android/app/build.gradle.kts computes both from frontend/package.json's
+      # version at build time (see versionCodeFor()), which is already validated
+      # above, so there's nothing left here that could independently drift.
 
       - name: Validate backend version metadata
         env:

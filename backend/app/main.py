@@ -91,7 +91,7 @@ lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is no
 
 app = FastAPI(
     title="Champagnefestival API",
-    version="0.1.0",
+    version="0.1.1",
     description=(
         "Backend for the VIP reservation and check-in system. "
         "See the /docs endpoint for the interactive OpenAPI explorer."
