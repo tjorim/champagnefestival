@@ -6,6 +6,8 @@ import logging
 
 import pytest
 
+from app.routers.health import build_metrics_token
+
 
 @pytest.mark.anyio
 async def test_response_includes_request_id_header(client):
@@ -51,8 +53,8 @@ async def test_request_id_present_on_error_response(client):
 
 @pytest.mark.anyio
 async def test_metrics_response_includes_request_id(client, monkeypatch):
-    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_secret": "secret"})())
-    r = await client.get("/api/metrics", headers={"X-Metrics-Secret": "secret"})
+    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "secret"})())
+    r = await client.get("/api/metrics", headers={"X-Metrics-Token": build_metrics_token("secret")})
     assert r.status_code == 200
     assert "x-request-id" in r.headers
 

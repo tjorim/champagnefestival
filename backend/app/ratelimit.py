@@ -1,10 +1,9 @@
 """Shared in-process rate-limiting helpers.
 
-NOTE: this limiter is process-local. In a multi-worker deployment each worker
-maintains its own bucket, so the effective limit is
-_RATE_LIMIT_MAX_REQUESTS × number_of_workers per client IP. Replace with a
-Redis-backed implementation if strict per-IP enforcement across workers is
-required.
+NOTE: these limiters are process-local. In a multi-worker deployment each worker
+maintains its own buckets, so the effective limit is
+max_requests × number_of_workers per client IP. Replace with a Redis-backed
+implementation if strict per-IP enforcement across workers is required.
 """
 
 from __future__ import annotations

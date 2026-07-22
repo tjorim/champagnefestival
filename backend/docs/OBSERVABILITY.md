@@ -54,17 +54,38 @@ Use `/api/health/readiness` for load-balancer health checks — not liveness.
 
 | Endpoint | Auth |
 |---|---|
-| `GET /api/metrics` | `X-Metrics-Secret` header (HMAC constant-time comparison) |
+| `GET /api/metrics` | `X-Metrics-Token` header: `<unix-timestamp>:<hex-hmac-sha256>`, HMAC computed over the timestamp with `METRICS_HMAC_SECRET` |
 
 Returns in-process counters: uptime, request total, error total, request rate, error rate, and latency percentiles (avg, p50, p99).
 
+Tokens older than `METRICS_TOKEN_MAX_AGE_SECONDS` (60s) are rejected, so a leaked token has a narrow window of use — unlike a static shared secret, which is valid forever once leaked. Build a token with `app.routers.health.build_metrics_token(secret)`, e.g.:
+
+```bash
+python -c "from app.routers.health import build_metrics_token; print(build_metrics_token('$METRICS_HMAC_SECRET'))"
+curl -H "X-Metrics-Token: $(python -c "from app.routers.health import build_metrics_token; print(build_metrics_token('$METRICS_HMAC_SECRET'))")" https://champagnefestival.tjor.im/api/metrics
+```
+
 **Important:** metrics are **process-local** and reset on every restart. Not aggregated across workers.
+
+---
+
+## Rate Limiting
+
+A general, configurable per-IP rate limiter (`RATE_LIMIT_ENABLED` / `RATE_LIMIT_DEFAULT`, via `slowapi`) applies to every `/api` route. The check-in and registration endpoints additionally enforce a stricter, hardcoded 5-req/600s limit (`app/ratelimit.py`) on top of the general default, as an override for that specific abuse vector.
+
+---
+
+## Host Header Validation
+
+`TRUSTED_HOSTS` (comma-separated) configures Starlette's `TrustedHostMiddleware`, rejecting requests whose `Host` header doesn't match. Required in production; disabled when empty (the development default).
 
 ---
 
 ## Error Tracking (Sentry)
 
 Sentry is initialised at startup if `SENTRY_DSN` is set. The SDK is an optional install (`sentry-sdk[fastapi]`). Unhandled exceptions are captured via `sentry_sdk.capture_exception()`. `send_default_pii` should be set to `False` to prevent capturing IP addresses and cookies.
+
+`SENTRY_TRACES_SAMPLE_RATE` (0.0-1.0, default `0.0`) controls performance transaction sampling; `0.0` disables performance tracing while leaving error tracking unaffected.
 
 ---
 

@@ -38,6 +38,12 @@ def reset_rate_limiter(monkeypatch):
     monkeypatch.setattr(ratelimit_module, "_rate_limit_buckets", {})
 
 
+@pytest.fixture(autouse=True)
+def reset_general_rate_limiter():
+    """Reset the general slowapi rate limiter's storage before every test for isolation."""
+    app.state.limiter.reset()
+
+
 def _assert_test_database_url(url: str) -> None:
     """Raise RuntimeError if *url* does not look like a safe test database.
 
