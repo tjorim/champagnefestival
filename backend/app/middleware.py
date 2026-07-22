@@ -81,5 +81,6 @@ def add_trusted_host_middleware(app: FastAPI, settings: Settings) -> None:
     if not trusted_hosts:
         logger.warning("No TRUSTED_HOSTS configured — Host header validation is disabled!")
         return
-    logger.info("Host header validation configured with allowed hosts: %s", trusted_hosts)
+    # Logs a count only, not the configured values themselves.
+    logger.info("Host header validation configured with %d allowed host pattern(s)", len(trusted_hosts))
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)

@@ -313,9 +313,12 @@ class Settings(BaseSettings):
         if not trusted_hosts:
             logger.warning("No TRUSTED_HOSTS configured — Host header validation is disabled!")
         else:
-            logger.info(f"Trusted Hosts: {', '.join(trusted_hosts)}")
+            # Logs a count only, not the configured values themselves.
+            logger.info(f"Trusted Hosts: {len(trusted_hosts)} allowed host pattern(s) configured")
 
-        logger.info(f"Rate limiting: {'enabled' if self.rate_limit_enabled else 'disabled'} ({self.rate_limit_default})")
+        logger.info(
+            f"Rate limiting: {'enabled' if self.rate_limit_enabled else 'disabled'} ({self.rate_limit_default})"
+        )
         logger.info(
             f"Sentry:        {'configured' if self.sentry_dsn else 'not configured'}"
             + (f" (traces_sample_rate={self.sentry_traces_sample_rate})" if self.sentry_dsn else "")
