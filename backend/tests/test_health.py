@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 from pydantic import ValidationError
 
 from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.observability import InMemoryRequestMetrics
+from app.routers.health import build_metrics_token
 
 # ---------------------------------------------------------------------------
 # Health endpoints
@@ -71,15 +74,44 @@ async def test_metrics_forbidden_without_secret(client):
 
 @pytest.mark.anyio
 async def test_metrics_forbidden_wrong_secret(client, monkeypatch):
-    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_secret": "correct"})())
-    r = await client.get("/api/metrics", headers={"X-Metrics-Secret": "wrong"})
+    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "correct"})())
+    r = await client.get("/api/metrics", headers={"X-Metrics-Token": build_metrics_token("wrong")})
+    assert r.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_metrics_forbidden_malformed_token(client, monkeypatch):
+    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "mysecret"})())
+    r = await client.get("/api/metrics", headers={"X-Metrics-Token": "not-a-valid-token"})
+    assert r.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_metrics_forbidden_stale_token(client, monkeypatch):
+    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "mysecret"})())
+    stale_timestamp = int(time.time()) - 61
+    r = await client.get(
+        "/api/metrics",
+        headers={"X-Metrics-Token": build_metrics_token("mysecret", timestamp=stale_timestamp)},
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_metrics_forbidden_future_token(client, monkeypatch):
+    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "mysecret"})())
+    future_timestamp = int(time.time()) + 5
+    r = await client.get(
+        "/api/metrics",
+        headers={"X-Metrics-Token": build_metrics_token("mysecret", timestamp=future_timestamp)},
+    )
     assert r.status_code == 403
 
 
 @pytest.mark.anyio
 async def test_metrics_ok_with_secret(client, monkeypatch):
-    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_secret": "mysecret"})())
-    r = await client.get("/api/metrics", headers={"X-Metrics-Secret": "mysecret"})
+    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "mysecret"})())
+    r = await client.get("/api/metrics", headers={"X-Metrics-Token": build_metrics_token("mysecret")})
     assert r.status_code == 200
     body = r.json()
     assert "uptime_seconds" in body
@@ -163,3 +195,77 @@ def test_settings_reject_excessive_guest_access_token_ttl():
 def test_settings_reject_production_without_qr_secret():
     with pytest.raises(ValidationError, match=r"QR_SIGNING_SECRET must be set in production\."):
         Settings(environment="production", oidc_issuer_url="https://auth.example.com", qr_signing_secret="")
+
+
+def test_settings_reject_production_without_trusted_hosts():
+    with pytest.raises(ValidationError, match=r"TRUSTED_HOSTS must be set in production\."):
+        Settings(
+            environment="production",
+            oidc_issuer_url="https://auth.example.com",
+            qr_signing_secret="secret",
+            trusted_hosts="",
+        )
+
+
+def test_settings_get_trusted_hosts_list_parses_comma_separated_values():
+    settings = Settings(trusted_hosts="champagnefestival.tjor.im, *.example.com")
+    assert settings.get_trusted_hosts_list() == ["champagnefestival.tjor.im", "*.example.com"]
+
+
+def test_settings_reject_sentry_traces_sample_rate_above_one():
+    with pytest.raises(ValidationError, match=r"SENTRY_TRACES_SAMPLE_RATE must be between 0.0 and 1.0\."):
+        Settings(sentry_traces_sample_rate=1.5)
+
+
+def test_settings_reject_sentry_traces_sample_rate_below_zero():
+    with pytest.raises(ValidationError, match=r"SENTRY_TRACES_SAMPLE_RATE must be between 0.0 and 1.0\."):
+        Settings(sentry_traces_sample_rate=-0.1)
+
+
+def test_settings_reject_invalid_rate_limit_default():
+    with pytest.raises(ValidationError, match=r"RATE_LIMIT_DEFAULT is not a valid rate limit string"):
+        Settings(rate_limit_default="not-a-rate-limit")
+
+
+def test_settings_builds_database_url_from_parts(tmp_path):
+    password_file = tmp_path / "db_password"
+    password_file.write_text("s3cr3t/p@ss\n")
+
+    settings = Settings(
+        database_url="",
+        db_host="postgres",
+        db_port=5544,
+        db_name="champagnefestival",
+        db_user="champagnefestival_user",
+        db_password_file=str(password_file),
+    )
+
+    assert settings.database_url == (
+        "postgresql+asyncpg://champagnefestival_user:s3cr3t%2Fp%40ss@postgres:5544/champagnefestival"
+    )
+
+
+def test_settings_database_url_override_wins_over_db_parts(tmp_path):
+    password_file = tmp_path / "db_password"
+    password_file.write_text("unused")
+
+    settings = Settings(
+        database_url="postgresql+asyncpg://explicit:pw@localhost:5432/explicit_db",
+        db_host="postgres",
+        db_name="champagnefestival",
+        db_user="champagnefestival_user",
+        db_password_file=str(password_file),
+    )
+
+    assert settings.database_url == "postgresql+asyncpg://explicit:pw@localhost:5432/explicit_db"
+
+
+def test_settings_missing_db_password_file_raises():
+    with pytest.raises(ValidationError, match=r"DB_PASSWORD_FILE could not be read"):
+        Settings(
+            database_url="",
+            db_host="postgres",
+            db_name="champagnefestival",
+            db_user="champagnefestival_user",
+            db_password_file="/nonexistent/path/to/secret",
+        )

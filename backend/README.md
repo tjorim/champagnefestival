@@ -192,14 +192,22 @@ location /api/ {
 | Variable           | Required | Default                                                | Description                                                          |
 | ------------------ | -------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
 | `ENVIRONMENT`      | no       | `development`                                          | `development` or `production` — gates startup safety checks          |
-| `DATABASE_URL`     | no       | `postgresql+asyncpg://localhost/champagne`             | Async SQLAlchemy URL                                                 |
+| `DATABASE_URL`     | no       | `postgresql+asyncpg://localhost/champagne`             | Async SQLAlchemy URL. Local-dev override — takes precedence over `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD_FILE` below |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` | no | `""` | Split connection parts, combined with `DB_PASSWORD_FILE` to build `DATABASE_URL` without a plaintext password |
+| `DB_PASSWORD_FILE` | no       | `""`                                                   | Path to a file (e.g. a Docker secret) containing the DB password     |
 | `OIDC_ISSUER_URL`  | yes in production | `""`                                          | OIDC provider base URL (e.g. Keycloak/authentik); admin endpoints return 401 until this is set |
 | `OIDC_AUDIENCE`    | no       | `""`                                                   | Expected `aud` claim in the JWT                                      |
 | `OIDC_JWKS_URI`    | no       | `""`                                                   | JWKS endpoint override; defaults to `{OIDC_ISSUER_URL}/.well-known/jwks.json` |
 | `OIDC_ALGORITHMS`  | no       | `RS256`                                                | Comma-separated accepted JWT signing algorithms                      |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
+| `TRUSTED_HOSTS`    | yes in production | `""`                                          | Comma-separated allowed `Host` header values; empty disables Host header validation |
+| `RATE_LIMIT_ENABLED` | no     | `true`                                                 | Toggles the general per-IP, per-route rate limiter applied to every `/api` route |
+| `RATE_LIMIT_DEFAULT` | no     | `60/minute`                                            | Default rate limit string (see [limits](https://limits.readthedocs.io/en/stable/quickstart.html#rate-limit-string-notation)) |
 | `MIN_FORM_SECONDS` | no       | `3`                                                    | Anti-spam: min seconds to fill the form                              |
 | `GUEST_ACCESS_TOKEN_TTL_MINUTES` | no | `30` | TTL in minutes for short-lived guest access tokens used by `/api/reservations/my/request` and `/api/reservations/my/access` |
+| `METRICS_HMAC_SECRET` | no    | `""`                                                   | Shared secret for the `X-Metrics-Token` HMAC on `GET /api/metrics`; empty disables the endpoint |
+| `SENTRY_DSN`       | no       | `""`                                                   | Sentry DSN for error tracking; empty disables Sentry                 |
+| `SENTRY_TRACES_SAMPLE_RATE` | no | `0.0`                                              | Fraction (0.0-1.0) of transactions sampled for Sentry performance monitoring |
 | `SMTP_HOST`        | no       | —                                                      | SMTP server (planned — see below)                                    |
 | `SMTP_PORT`        | no       | `587`                                                  | SMTP port (planned)                                                  |
 | `SMTP_USER`        | no       | —                                                      | SMTP username (planned)                                              |
@@ -262,7 +270,7 @@ See `.env.example` for a template.
 | `GET`    | `/api/health/liveness`          | public         | Fast alive check — no DB hit (for load-balancer liveness probes)           |
 | `GET`    | `/api/health/readiness`         | public         | DB connectivity check with 2 s timeout (for load-balancer readiness probes)|
 | `GET`    | `/api/health`                   | public         | Summary with links to liveness and readiness endpoints                     |
-| `GET`    | `/api/metrics`                  | `X-Metrics-Secret` header | Uptime, request rate, error rate, p50/p99 latency          |
+| `GET`    | `/api/metrics`                  | `X-Metrics-Token` header | Uptime, request rate, error rate, p50/p99 latency          |
 
 ---
 
@@ -382,23 +390,6 @@ offline use (e.g., printing guest lists, seating plans).
 1. Add `GET /api/reservations/export?format=csv` (admin) using Python's
    built-in `csv` module or `openpyxl` for Excel.
 2. Optionally add filtering query parameters (event, status, payment_status).
-
----
-
-### ⏱ Rate limiting
-
-**What:** Per-IP rate limiting on the public `POST /api/reservations` endpoint
-to prevent bulk submission attacks beyond what the honeypot + timing check
-catches.
-
-**Status:** Not implemented.
-
-**To implement:**
-
-1. Add `slowapi` (a FastAPI-native rate limiter built on `limits`) as a
-   dependency.
-2. Decorate `create_reservation` with `@limiter.limit("5/minute")`.
-3. Mount the `SlowAPI` middleware in `app/main.py`.
 
 ---
 

@@ -1,6 +1,7 @@
 """Health check and metrics endpoints."""
 
 import asyncio
+import hashlib
 import hmac
 import logging
 import time
@@ -19,14 +20,43 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["health"])
 
+METRICS_TOKEN_MAX_AGE_SECONDS = 60
+
+
+def build_metrics_token(secret: str, timestamp: int | None = None) -> str:
+    """Build a ``X-Metrics-Token`` value: ``<unix-timestamp>:<hex-hmac-sha256>``."""
+    ts = str(timestamp if timestamp is not None else int(time.time()))
+    mac = hmac.new(secret.encode(), ts.encode(), hashlib.sha256).hexdigest()
+    return f"{ts}:{mac}"
+
 
 def _require_metrics_access(request: Request) -> None:
-    """Verify HMAC secret for metrics endpoint access."""
-    secret = settings.metrics_secret
+    """Verify a timestamped HMAC token for metrics endpoint access.
+
+    Expects ``X-Metrics-Token: <unix-timestamp>:<hex-hmac-sha256>``, the HMAC
+    computed over the timestamp using METRICS_HMAC_SECRET. Rejecting tokens
+    older than METRICS_TOKEN_MAX_AGE_SECONDS bounds how long a leaked token
+    remains useful, unlike a static shared secret which is valid forever.
+    """
+    secret = settings.metrics_hmac_secret
     if not secret:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    provided = request.headers.get("X-Metrics-Secret", "")
-    if not hmac.compare_digest(provided, secret):
+
+    timestamp_str, _, provided_mac = request.headers.get("X-Metrics-Token", "").partition(":")
+    if not timestamp_str or not provided_mac:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    try:
+        timestamp = int(timestamp_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden") from None
+
+    now = int(time.time())
+    if timestamp > now or now - timestamp > METRICS_TOKEN_MAX_AGE_SECONDS:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    expected_mac = hmac.new(secret.encode(), timestamp_str.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(provided_mac, expected_mac):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
@@ -117,7 +147,9 @@ def metrics_endpoint(
 ) -> dict[str, float | int]:
     """HMAC-protected endpoint returning uptime, request rate, error rate and latency percentiles.
 
-    Pass the shared secret in the ``X-Metrics-Secret`` request header.
+    Pass a fresh ``<unix-timestamp>:<hex-hmac-sha256>`` token in the
+    ``X-Metrics-Token`` request header (see ``build_metrics_token``); tokens
+    older than ``METRICS_TOKEN_MAX_AGE_SECONDS`` are rejected.
     """
     snapshot = metrics.snapshot()
     return {

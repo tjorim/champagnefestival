@@ -13,6 +13,7 @@ dependencies = [
   "fastapi==0.139.2",
   "fastmcp==3.4.4",
   "httpx==0.28.1",
+  "limits==5.8.0",
   "phonenumbers==9.0.34",
   "psycopg[binary]==3.3.4",
   "pydantic[email]==2.13.4",
@@ -20,6 +21,7 @@ dependencies = [
   "PyJWT[crypto]==2.12.1",
   "python-dotenv==1.2.2",
   "python-multipart==0.0.32",
+  "slowapi==0.1.10",
   "sqlalchemy==2.0.51",
   "uvicorn[standard]==0.51.0",
 ]

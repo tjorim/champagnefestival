@@ -13,7 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.database import create_tables
 from app.mcp_server import build_keycloak_auth, create_mcp_server
-from app.middleware import add_cors_middleware
+from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
 from app.observability import request_metrics_middleware
 from app.routers import (
     areas,
@@ -55,8 +55,15 @@ if settings.sentry_dsn:
     try:
         import sentry_sdk  # ty: ignore[unresolved-import]
 
-        sentry_sdk.init(dsn=settings.sentry_dsn, environment=settings.environment)
-        logger.info("✓ Sentry error tracking initialized")
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.environment,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+        )
+        logger.info(
+            "✓ Sentry error tracking initialized (traces_sample_rate=%s)",
+            settings.sentry_traces_sample_rate,
+        )
     except ImportError:
         logger.warning("SENTRY_DSN configured but sentry-sdk is not installed — install sentry-sdk[fastapi]")
 
@@ -100,10 +107,16 @@ app = FastAPI(
 )
 
 add_cors_middleware(app, settings, mcp_enabled=_mcp_app is not None)
+add_rate_limit_middleware(app, settings)
 
-# Metrics middleware is registered last so it is outermost and captures every request,
-# including those short-circuited by CORS or OIDC auth.
+# Metrics middleware is registered next-to-last so it is close to outermost and
+# captures every request, including those short-circuited by CORS, rate
+# limiting, or OIDC auth.
 app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware)
+
+# Host header validation is registered last so it is outermost and rejects
+# requests with an unrecognised Host before any other middleware runs.
+add_trusted_host_middleware(app, settings)
 
 
 @app.exception_handler(IntegrityError)
