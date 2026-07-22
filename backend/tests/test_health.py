@@ -98,6 +98,17 @@ async def test_metrics_forbidden_stale_token(client, monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_metrics_forbidden_future_token(client, monkeypatch):
+    monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "mysecret"})())
+    future_timestamp = int(time.time()) + 5
+    r = await client.get(
+        "/api/metrics",
+        headers={"X-Metrics-Token": build_metrics_token("mysecret", timestamp=future_timestamp)},
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.anyio
 async def test_metrics_ok_with_secret(client, monkeypatch):
     monkeypatch.setattr("app.routers.health.settings", type("S", (), {"metrics_hmac_secret": "mysecret"})())
     r = await client.get("/api/metrics", headers={"X-Metrics-Token": build_metrics_token("mysecret")})

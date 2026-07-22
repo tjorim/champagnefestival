@@ -51,7 +51,8 @@ def _require_metrics_access(request: Request) -> None:
     except ValueError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden") from None
 
-    if abs(time.time() - timestamp) > METRICS_TOKEN_MAX_AGE_SECONDS:
+    now = int(time.time())
+    if timestamp > now or now - timestamp > METRICS_TOKEN_MAX_AGE_SECONDS:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     expected_mac = hmac.new(secret.encode(), timestamp_str.encode(), hashlib.sha256).hexdigest()
