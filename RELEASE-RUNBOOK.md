@@ -71,7 +71,7 @@ docker compose pull champagnefestival-api:<previous-version>
 docker compose up -d champagnefestival-api
 ```
 
-If images are tagged by SemVer, replace `<previous-version>` with the last known-good tag (e.g. `0.1.0`).
+Images are tagged by the app's CalVer version (see "Versioning" in `AGENTS.md`); replace `<previous-version>` with the last known-good tag (e.g. `2026.6.3`).
 
 ### 2. Roll back Alembic migrations (if schema changed)
 

@@ -22,52 +22,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Validate strict SemVer tag
+      - name: Validate CalVer tag
         id: semver
         env:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::Tag '$TAG' is invalid. Expected strict SemVer format: vX.Y.Z"
+            echo "::error::Tag '$TAG' is invalid. Expected CalVer format: vYYYY.MM.MICRO"
             exit 1
           fi
           VERSION="${TAG#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Validate frontend/package.json version
+      # The root VERSION file is the single source of truth for the app version
+      # (see app/version.py) — frontend/package.json is synced from it at build
+      # time (scripts/sync-version.mjs) and Android reads it directly
+      # (versionCodeFor() in android/app/build.gradle.kts), so there's nothing
+      # else left to independently validate here.
+      - name: Validate VERSION file matches tag
         env:
           EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
         run: |
           set -euo pipefail
-          FRONTEND_VERSION="$(node -p "require('./frontend/package.json').version")"
-          if [[ "$FRONTEND_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "::error::frontend/package.json version '$FRONTEND_VERSION' does not match '$EXPECTED_VERSION'"
-            exit 1
-          fi
-
-      # Android versionName/versionCode are no longer hand-maintained literals —
-      # android/app/build.gradle.kts computes both from frontend/package.json's
-      # version at build time (see versionCodeFor()), which is already validated
-      # above, so there's nothing left here that could independently drift.
-
-      - name: Validate backend version metadata
-        env:
-          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
-        run: |
-          set -euo pipefail
-          BACKEND_PROJECT_VERSION="$(grep -E '^version = "[^"]+"$' backend/pyproject.toml | head -n 1 | cut -d '"' -f 2)"
-          BACKEND_APP_VERSION="$(grep -Eo 'version="[^"]+"' backend/app/main.py | head -n 1 | cut -d '"' -f 2)"
-          if [[ -z "$BACKEND_PROJECT_VERSION" || -z "$BACKEND_APP_VERSION" ]]; then
-            echo "::error::Could not read backend version metadata."
-            exit 1
-          fi
-          if [[ "$BACKEND_PROJECT_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "::error::backend/pyproject.toml version '$BACKEND_PROJECT_VERSION' does not match '$EXPECTED_VERSION'"
-            exit 1
-          fi
-          if [[ "$BACKEND_APP_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "::error::backend/app/main.py version '$BACKEND_APP_VERSION' does not match '$EXPECTED_VERSION'"
+          FILE_VERSION="$(cat VERSION)"
+          if [[ "$FILE_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "::error::VERSION file '$FILE_VERSION' does not match tag '$EXPECTED_VERSION'"
             exit 1
           fi
 

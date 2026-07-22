@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "frontend/**"
+      - "VERSION"
       - ".github/workflows/frontend-ci.yml"
   push:
     branches: [main]
     paths:
       - "frontend/**"
+      - "VERSION"
       - ".github/workflows/frontend-ci.yml"
   workflow_dispatch:
 

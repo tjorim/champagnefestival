@@ -6,6 +6,9 @@ The release workflow requires entries in this format:
 
 - `## [X.Y.Z] - YYYY-MM-DD`
 
+Starting with the first `YYYY.MM.MICRO` release, `X.Y.Z` is CalVer rather than
+SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predate that switch.
+
 ## [0.1.1] - 2026-07-22
 
 ### Added
