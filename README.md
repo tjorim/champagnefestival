@@ -22,12 +22,10 @@ champagnefestival/
 
 ## Releases
 
-- Keep versions aligned across:
-  - `frontend/package.json`
-  - `backend/pyproject.toml`
-  - `backend/app/main.py`
-- Add a matching `CHANGELOG.md` entry header: `## [X.Y.Z] - YYYY-MM-DD`
-- Push tag `vX.Y.Z` to trigger the draft release workflow.
+- Bump the version in the root `VERSION` file (CalVer `YYYY.MM.MICRO`, e.g. `2026.7.1`)
+  — frontend, backend, and Android all derive from it; see "Versioning" in `AGENTS.md`.
+- Add a matching `CHANGELOG.md` entry header: `## [YYYY.MM.MICRO] - YYYY-MM-DD`
+- Push tag `vYYYY.MM.MICRO` to trigger the draft release workflow.
 - Publish the generated draft release to trigger the production deploy.
 
 ## Quick start

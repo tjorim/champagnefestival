@@ -15,6 +15,7 @@ from app.config import settings
 from app.database import get_db
 from app.observability import metrics
 from app.oidc_config import OIDCTokenError, _resolve_jwks_uri
+from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,7 @@ def health_check() -> dict[str, str]:
     """Summary health response with links to liveness and readiness probes."""
     return {
         "status": "ok",
+        "version": APP_VERSION,
         "liveness_endpoint": "/api/health/liveness",
         "readiness_endpoint": "/api/health/readiness",
     }

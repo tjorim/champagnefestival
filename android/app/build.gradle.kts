@@ -1,5 +1,4 @@
 import be.champagnefestival.buildlogic.CertPinning
-import groovy.json.JsonSlurper
 import java.util.Properties
 
 plugins {
@@ -103,34 +102,35 @@ if (isReleaseArtifactRequested()) {
     CertPinning.requireHostConfiguredForPins(releaseCertificatePinHost, releaseCertificatePins)
 }
 
-// Single source of truth for the app version: frontend/package.json, kept in
-// lockstep with the web release version instead of a hand-maintained literal here.
-// Read via providers.fileContents (not File.readText()) so the file is tracked
-// as a build configuration input and this stays Configuration Cache-compatible.
+// Single source of truth for the app version: the repo-root VERSION file
+// (CalVer YYYY.MM.MICRO), shared with the backend and frontend instead of a
+// hand-maintained literal here. Read via providers.fileContents (not
+// File.readText()) so the file is tracked as a build configuration input and
+// this stays Configuration Cache-compatible.
 val appVersion =
     providers
-        .fileContents(layout.projectDirectory.file("../../frontend/package.json"))
+        .fileContents(layout.projectDirectory.file("../../VERSION"))
         .asText
-        .map { jsonText ->
-            val json = JsonSlurper().parseText(jsonText) as Map<*, *>
-            json["version"] as? String
-                ?: error("Could not find a \"version\" field in frontend/package.json")
-        }.get()
+        .map { it.trim() }
+        .get()
 
 fun versionCodeFor(version: String): Int {
+    // CalVer YYYY.MM.MICRO: year/month/monthly-counter map onto the same
+    // MAJOR.MINOR.PATCH slots the versionCode formula below was built for.
     val parts = version.substringBefore("-").substringBefore("+").split(".")
-    check(parts.size == 3) { "Expected a MAJOR.MINOR.PATCH version, got \"$version\"" }
+    check(parts.size == 3) { "Expected a YYYY.MM.MICRO version, got \"$version\"" }
     val (major, minor, patch) =
         parts.map {
             it.toIntOrNull() ?: error("Invalid integer component \"$it\" in version \"$version\"")
         }
     // minor/patch must each fit in 3 digits or they'd overflow into the next digit
     // group and collide with a different version's computed code.
-    check(major >= 0) { "Major version must be non-negative, got $major" }
-    check(minor in 0..999) { "Minor version must be between 0 and 999 to avoid versionCode collision, got $minor" }
-    check(patch in 0..999) { "Patch version must be between 0 and 999 to avoid versionCode collision, got $patch" }
+    check(major >= 0) { "Year must be non-negative, got $major" }
+    check(minor in 0..999) { "Month must be between 0 and 999 to avoid versionCode collision, got $minor" }
+    check(patch in 0..999) { "Monthly counter must be between 0 and 999 to avoid versionCode collision, got $patch" }
     val versionCode = major * 1_000_000 + minor * 1_000 + patch
     check(versionCode <= 2_100_000_000) {
+        // With major = calendar year, this caps the scheme at year 2099.
         "versionCode $versionCode exceeds Google Play maximum of 2100000000"
     }
     return versionCode

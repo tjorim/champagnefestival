@@ -4,7 +4,7 @@ FROM python:3.14-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /usr/local/bin/uv
 
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
@@ -12,7 +12,10 @@ FROM python:3.14-slim
 
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
-COPY . .
+COPY backend/ .
+# Single source of truth for the app version (see app/version.py) — this build
+# needs repo-root context (not just backend/) to reach it.
+COPY VERSION ./VERSION
 
 ENV PATH="/app/.venv/bin:$PATH"
 

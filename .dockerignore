@@ -1,0 +1,9 @@
+# Backend Docker build context is now repo root (needed to reach VERSION);
+# exclude everything the backend image doesn't need to keep the build context small.
+.git/
+android/
+frontend/node_modules/
+frontend/dist/
+backend/.venv/
+**/__pycache__/
+**/*.pyc

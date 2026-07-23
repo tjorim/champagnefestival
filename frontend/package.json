@@ -1,12 +1,13 @@
 {
   "name": "champagnefestival",
-  "version": "0.1.1",
+  "version": "2026.7.1",
   "private": true,
   "description": "Champagnefestival website using React and Bootstrap",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "pnpm paraglide:compile && tsc -b && vite build",
+    "sync-version": "node scripts/sync-version.mjs",
+    "build": "pnpm sync-version && pnpm paraglide:compile && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "pnpm paraglide:compile && tsc -b --noEmit",
     "lint": "oxlint",

@@ -39,6 +39,7 @@ from app.routers import (
     volunteer_ops,
     volunteers,
 )
+from app.version import APP_VERSION
 
 # Configure logging before any other module uses a logger.
 logging.basicConfig(
@@ -98,7 +99,7 @@ lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is no
 
 app = FastAPI(
     title="Champagnefestival API",
-    version="0.1.1",
+    version=APP_VERSION,
     description=(
         "Backend for the VIP reservation and check-in system. "
         "See the /docs endpoint for the interactive OpenAPI explorer."

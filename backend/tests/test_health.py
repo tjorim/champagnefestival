@@ -57,6 +57,7 @@ async def test_health_summary(client):
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
+    assert body["version"]
     assert "liveness_endpoint" in body
     assert "readiness_endpoint" in body
 

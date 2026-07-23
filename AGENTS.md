@@ -39,14 +39,25 @@ uv run alembic upgrade head
 > dev user with the admin and volunteer realm roles. Refuses to start if set
 > outside `ENVIRONMENT=development`.
 
+## Versioning
+
+The app uses CalVer: `YYYY.MM.MICRO` (e.g. `2026.7.1`), where `MICRO` is a counter
+that resets to `1` at the start of each new month.
+
+The root `VERSION` file is the single source of truth. Everything else derives
+from it — nothing else should be hand-edited:
+
+- `backend/app/version.py` reads it at runtime (`APP_VERSION`), used by
+  `app/main.py` and the `/api/health` response.
+- `frontend/package.json`'s `version` field is synced from it automatically by
+  `frontend/scripts/sync-version.mjs`, run as part of `pnpm build`.
+- `android/app/build.gradle.kts` reads it directly to compute `versionName`/`versionCode`.
+
 ## Release process
 
-1. Update version metadata to the same `X.Y.Z` value in:
-   - `frontend/package.json`
-   - `backend/pyproject.toml`
-   - `backend/app/main.py`
-2. Add/update `CHANGELOG.md` entry header as `## [X.Y.Z] - YYYY-MM-DD`.
-3. Push tag `vX.Y.Z` to run `.github/workflows/release-draft.yml`.
+1. Update the version in the root `VERSION` file (e.g. `2026.7.1`).
+2. Add/update `CHANGELOG.md` entry header as `## [YYYY.MM.MICRO] - YYYY-MM-DD`.
+3. Push tag `vYYYY.MM.MICRO` to run `.github/workflows/release-draft.yml`.
 4. Wait for backend/frontend checks and metadata validation to pass.
 5. Publish the generated draft release to trigger the VPS deploy via the infra stack in `/opt/apps/infra`.
 
@@ -54,6 +65,7 @@ See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migrat
 
 ## Source Of Truth
 
+- `VERSION` (repo root) for the app version — see "Versioning" above
 - `frontend/src/config/navigation.ts` for site navigation
 - `frontend/messages/` for translation content
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior

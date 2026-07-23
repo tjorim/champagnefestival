@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "android/**"
+      - "VERSION"
       - ".github/workflows/android.yml"
   push:
     branches: [main]
     paths:
       - "android/**"
+      - "VERSION"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
