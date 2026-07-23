@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     oidc_algorithms: str = "RS256"
     """Comma-separated list of accepted JWT signing algorithms."""
 
+    dev_auth_bypass_token: str = ""
+    """Local-dev-only shortcut that skips real OIDC/JWKS verification entirely
+    — no Keycloak/IdP container needed. When set, a request bearing this exact
+    string as its Bearer token is treated as a fixed dev user (see
+    oidc_config._DEV_BYPASS_CLAIMS). Empty by default; validate_production_oidc()
+    refuses to start if this is ever set outside environment == "development"."""
+
     # --- Database ---
     database_url: str = "postgresql+asyncpg://localhost/champagne"
     """SQLAlchemy async database URL.
@@ -245,6 +252,17 @@ class Settings(BaseSettings):
                 raise ValueError("QR_SIGNING_SECRET must be set in production.")
             if not self.trusted_hosts.strip():
                 raise ValueError("TRUSTED_HOSTS must be set in production.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_no_dev_bypass(self) -> "Settings":
+        """Refuse to start with DEV_AUTH_BYPASS_TOKEN set outside development.
+
+        Makes it structurally impossible for the auth bypass to be both
+        configured and reachable in production at the same time.
+        """
+        if self.dev_auth_bypass_token and self.environment != "development":
+            raise ValueError("DEV_AUTH_BYPASS_TOKEN must not be set outside environment=development.")
         return self
 
     # ------------------------------------------------------------------

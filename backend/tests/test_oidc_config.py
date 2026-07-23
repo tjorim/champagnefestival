@@ -15,6 +15,36 @@ from app.routers import auth
 
 
 @pytest.mark.asyncio
+async def test_decode_token_dev_bypass_returns_fixed_claims(monkeypatch) -> None:
+    monkeypatch.setattr(oc.settings, "dev_auth_bypass_token", "test-bypass-token")
+
+    claims = await oc.decode_token("test-bypass-token")
+
+    assert claims == oc._DEV_BYPASS_CLAIMS
+    assert set(claims["realm_access"]["roles"]) == {"admin", "volunteer"}
+
+
+@pytest.mark.asyncio
+async def test_decode_token_wrong_token_does_not_trigger_bypass(monkeypatch) -> None:
+    monkeypatch.setattr(oc.settings, "dev_auth_bypass_token", "test-bypass-token")
+    monkeypatch.setattr(oc.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(oc.settings, "oidc_jwks_uri", "")
+
+    with pytest.raises(oc.OIDCTokenError):
+        await oc.decode_token("not-the-bypass-token")
+
+
+@pytest.mark.asyncio
+async def test_decode_token_bypass_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.setattr(oc.settings, "dev_auth_bypass_token", "")
+    monkeypatch.setattr(oc.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(oc.settings, "oidc_jwks_uri", "")
+
+    with pytest.raises(oc.OIDCTokenError):
+        await oc.decode_token("test-bypass-token")
+
+
+@pytest.mark.asyncio
 async def test_resolve_jwks_uri_requires_issuer_without_override(monkeypatch) -> None:
     monkeypatch.setattr(oc.settings, "oidc_jwks_uri", "")
     monkeypatch.setattr(oc.settings, "oidc_issuer_url", "")

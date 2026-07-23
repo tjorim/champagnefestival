@@ -33,6 +33,11 @@ uv run alembic upgrade head
 > Start one with `docker compose up db -d` from the repo root (uses `docker-compose.yml`).
 > Tests default to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`;
 > override via the `TEST_DATABASE_URL` environment variable.
+>
+> Auth doesn't require a local Keycloak/IdP — set `DEV_AUTH_BYPASS_TOKEN` to any
+> string and pass it as `Authorization: Bearer <value>`; it's treated as a fixed
+> dev user with the admin and volunteer realm roles. Refuses to start if set
+> outside `ENVIRONMENT=development`.
 
 ## Release process
 

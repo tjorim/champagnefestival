@@ -13,6 +13,7 @@ The provider is configured via environment variables:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import logging
 from typing import Any
 
@@ -24,6 +25,18 @@ from jwt.types import Options
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Fixed claims returned for DEV_AUTH_BYPASS_TOKEN (see decode_token below) —
+# shaped like a real Keycloak-issued token so downstream code (realm role
+# extraction in app.auth) needs no bypass-specific handling.
+_DEV_BYPASS_CLAIMS: dict[str, Any] = {
+    "sub": "dev-bypass-user",
+    "preferred_username": "devuser",
+    "name": "Dev User",
+    "email": "dev@localhost",
+    "email_verified": True,
+    "realm_access": {"roles": ["admin", "volunteer"]},
+}
 
 _OIDC_ALGORITHMS: list[str] = [a.strip() for a in settings.oidc_algorithms.split(",") if a.strip()]
 _OIDC_AUDIENCE: str | None = settings.oidc_audience or None
@@ -110,6 +123,9 @@ async def decode_token(token: str) -> dict[str, Any]:
 
     Tries cached JWKS first; on key-not-found, refreshes once to handle key rotation.
     """
+    if settings.dev_auth_bypass_token and hmac.compare_digest(token, settings.dev_auth_bypass_token):
+        return dict(_DEV_BYPASS_CLAIMS)
+
     options: Options = {
         "verify_aud": _OIDC_AUDIENCE is not None,
         "verify_iss": _OIDC_ISSUER is not None,
