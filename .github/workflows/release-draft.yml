@@ -36,10 +36,10 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # The root VERSION file is the single source of truth for the app version
-      # (see app/version.py) — frontend/package.json is synced from it at build
-      # time (scripts/sync-version.mjs) and Android reads it directly
-      # (versionCodeFor() in android/app/build.gradle.kts), so there's nothing
-      # else left to independently validate here.
+      # (see app/version.py). frontend/package.json is checked separately below
+      # since its sync step is silent; Android reads VERSION directly
+      # (versionCodeFor() in android/app/build.gradle.kts) so there's nothing
+      # further to validate for it.
       - name: Validate VERSION file matches tag
         env:
           EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
@@ -48,6 +48,24 @@ jobs:
           FILE_VERSION="$(cat VERSION)"
           if [[ "$FILE_VERSION" != "$EXPECTED_VERSION" ]]; then
             echo "::error::VERSION file '$FILE_VERSION' does not match tag '$EXPECTED_VERSION'"
+            exit 1
+          fi
+
+      # `pnpm build` auto-syncs frontend/package.json from VERSION
+      # (frontend/scripts/sync-version.mjs), so the built artifact is always
+      # correct — but that sync is silent, with no failure if the committed
+      # package.json had drifted. Check it explicitly here too, so a stale
+      # package.json fails the release the same way worktime's
+      # check-version-consistency and daynest's tag check do, instead of
+      # only ever being caught by an unrelated pnpm build side effect.
+      - name: Validate frontend/package.json matches VERSION
+        env:
+          EXPECTED_VERSION: ${{ steps.semver.outputs.version }}
+        run: |
+          set -euo pipefail
+          FRONTEND_VERSION="$(node -p "require('./frontend/package.json').version")"
+          if [[ "$FRONTEND_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "::error::frontend/package.json version '$FRONTEND_VERSION' does not match '$EXPECTED_VERSION' — run 'pnpm run sync-version' in frontend/ and commit the result"
             exit 1
           fi
 
