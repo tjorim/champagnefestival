@@ -213,7 +213,9 @@ def test_settings_get_trusted_hosts_list_parses_comma_separated_values():
 
 
 def test_settings_reject_dev_auth_bypass_token_in_production():
-    with pytest.raises(ValidationError, match=r"DEV_AUTH_BYPASS_TOKEN must not be set outside environment=development\."):
+    with pytest.raises(
+        ValidationError, match=r"DEV_AUTH_BYPASS_TOKEN must not be set outside environment=development\."
+    ):
         Settings(
             environment="production",
             oidc_issuer_url="https://auth.example.com",
