@@ -124,8 +124,8 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
       happy-dom:
-        specifier: ^20.10.1
-        version: 20.10.6
+        specifier: ^20.11.1
+        version: 20.11.1
       jest-axe:
         specifier: ^10.0.0
         version: 10.0.0
@@ -146,7 +146,7 @@ importers:
         version: 8.1.5(@types/node@26.1.1)
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.1.1)(@vitest/ui@4.1.10)(happy-dom@20.10.6)(msw@2.15.0(@types/node@26.1.1)(typescript@7.0.2))(vite@8.1.5(@types/node@26.1.1))
+        version: 4.1.10(@types/node@26.1.1)(@vitest/ui@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@26.1.1)(typescript@7.0.2))(vite@8.1.5(@types/node@26.1.1))
 
 packages:
 
@@ -1450,8 +1450,8 @@ packages:
     resolution: {integrity: sha512-Chq1s4CY7jmh8gO2qvLIJyfCDIN+EHLFW/9iShnp1z8FjBQMoodWP1kDC36VAMXXIvAjj4ARa7ntfAV2BrjsbA==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
 
-  happy-dom@20.10.6:
-    resolution: {integrity: sha512-6QD0ilzDDt93tX44y8tbmZdAcdTRYDhUP+Asgi6pC8Pp5IA3cvaZGyoVN/EGtlq9ziT65iPuBBn3ASLr6hCgVw==}
+  happy-dom@20.11.1:
+    resolution: {integrity: sha512-XSt8tMzbW9ymE7687xztkO1ckR7qJNQ3LywY9vlYGhGi3zXrGBHuUo2Cl1ztZaICW+1eAGdkLbj6iwVqDT33kg==}
     engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
@@ -1827,8 +1827,8 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
-  react-is@19.2.7:
-    resolution: {integrity: sha512-kZFnouyVv7eP/Phmrlo9FK+zcAdriZJvzxXHF1Sl1P377WSGe2G/JxVolhTrB/jeV47lKImhNUsijjHAAbcl/A==}
+  react-is@19.2.8:
+    resolution: {integrity: sha512-s5un28nYxKJw5gvUHyW5PCC28CvBqLu9r3cWgzHT4Vo/5fqqkFcdRYsGcKf50WMPpjjFZS5d76fn3YCo2njKwQ==}
 
   react-leaflet@5.0.0:
     resolution: {integrity: sha512-CWbTpr5vcHw5bt9i4zSlPEVQdTVcML390TjeDG0cK59z1ylexpqC6M1PJFjV8jD7CF+ACBFsLIDs6DRMoLEofw==}
@@ -2165,8 +2165,8 @@ packages:
     resolution: {integrity: sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==}
     engines: {node: '>=10'}
 
-  ws@8.21.0:
-    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+  ws@8.21.1:
+    resolution: {integrity: sha512-+0NTnW77fFN/DjQi6k/Sq/Yvk4Sgajw7urW8V+asjXnRgDs9gyGkdb7EzgfhA4goXsRIZKE28fzIXBHEzhuiWw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -3080,7 +3080,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vitest: 4.1.10(@types/node@26.1.1)(@vitest/ui@4.1.10)(happy-dom@20.10.6)(msw@2.15.0(@types/node@26.1.1)(typescript@7.0.2))(vite@8.1.5(@types/node@26.1.1))
+      vitest: 4.1.10(@types/node@26.1.1)(@vitest/ui@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@26.1.1)(typescript@7.0.2))(vite@8.1.5(@types/node@26.1.1))
 
   '@vitest/utils@4.1.10':
     dependencies:
@@ -3287,7 +3287,7 @@ snapshots:
 
   graphql@16.14.2: {}
 
-  happy-dom@20.10.6:
+  happy-dom@20.11.1:
     dependencies:
       '@types/node': 26.1.1
       '@types/whatwg-mimetype': 3.0.2
@@ -3295,7 +3295,7 @@ snapshots:
       buffer-image-size: 0.6.4
       entities: 7.0.1
       whatwg-mimetype: 3.0.0
-      ws: 8.21.0
+      ws: 8.21.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -3633,7 +3633,7 @@ snapshots:
       '@jest/schemas': 30.4.1
       ansi-styles: 5.2.0
       react-is-18: react-is@18.3.1
-      react-is-19: react-is@19.2.7
+      react-is-19: react-is@19.2.8
 
   prop-types@15.8.1:
     dependencies:
@@ -3677,7 +3677,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-is@19.2.7: {}
+  react-is@19.2.8: {}
 
   react-leaflet@5.0.0(leaflet@1.9.4)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
@@ -3923,7 +3923,7 @@ snapshots:
       '@types/node': 26.1.1
       fsevents: 2.3.3
 
-  vitest@4.1.10(@types/node@26.1.1)(@vitest/ui@4.1.10)(happy-dom@20.10.6)(msw@2.15.0(@types/node@26.1.1)(typescript@7.0.2))(vite@8.1.5(@types/node@26.1.1)):
+  vitest@4.1.10(@types/node@26.1.1)(@vitest/ui@4.1.10)(happy-dom@20.11.1)(msw@2.15.0(@types/node@26.1.1)(typescript@7.0.2))(vite@8.1.5(@types/node@26.1.1)):
     dependencies:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(msw@2.15.0(@types/node@26.1.1)(typescript@7.0.2))(vite@8.1.5(@types/node@26.1.1))
@@ -3948,7 +3948,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.1.1
       '@vitest/ui': 4.1.10(vitest@4.1.10)
-      happy-dom: 20.10.6
+      happy-dom: 20.11.1
     transitivePeerDependencies:
       - msw
 
@@ -3971,7 +3971,7 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
 
-  ws@8.21.0: {}
+  ws@8.21.1: {}
 
   y18n@5.0.8: {}
 
