@@ -1,4 +1,4 @@
-"""Initial schema.
+"""Initial schema — all tables at final state, including audit trail and operational search.
 
 Revision ID: 001
 Revises:
@@ -18,8 +18,49 @@ down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+# Frozen copy of the operational-search schema statements (originally from
+# the standalone 005 migration) — intentionally not imported from
+# app.operational_search_schema so this migration remains self-contained.
+_OPERATIONAL_SEARCH_STATEMENTS = (
+    "CREATE EXTENSION IF NOT EXISTS unaccent",
+    "CREATE EXTENSION IF NOT EXISTS pg_trgm",
+    "CREATE EXTENSION IF NOT EXISTS fuzzystrmatch",
+    """
+    CREATE OR REPLACE FUNCTION update_person_operational_search_values() RETURNS trigger
+    LANGUAGE plpgsql AS $$
+    BEGIN
+        NEW.search_name := trim(regexp_replace(lower(unaccent(NEW.name)), '[^[:alnum:]]+', ' ', 'g'));
+        NEW.search_name_alt := trim(regexp_replace(lower(unaccent(
+            replace(replace(replace(replace(lower(NEW.name), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'), 'ß', 'ss')
+        )), '[^[:alnum:]]+', ' ', 'g'));
+        NEW.search_email := lower(NEW.email);
+        RETURN NEW;
+    END;
+    $$;
+    """,
+    "DROP TRIGGER IF EXISTS people_operational_search_values ON people",
+    """
+    CREATE TRIGGER people_operational_search_values
+    BEFORE INSERT OR UPDATE OF name, email ON people
+    FOR EACH ROW EXECUTE FUNCTION update_person_operational_search_values()
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_people_search_name_trgm ON people USING gin (search_name gin_trgm_ops)",
+    "CREATE INDEX IF NOT EXISTS ix_people_search_name_alt_trgm ON people USING gin (search_name_alt gin_trgm_ops)",
+    "CREATE INDEX IF NOT EXISTS ix_people_search_email ON people (search_email)",
+    "CREATE INDEX IF NOT EXISTS ix_people_search_email_trgm ON people USING gin (search_email gin_trgm_ops)",
+)
+
 
 def upgrade() -> None:
+    op.create_table(
+        "users",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("oidc_subject", sa.String(255), unique=True, nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    op.create_index("ix_users_oidc_subject", "users", ["oidc_subject"], unique=True)
+
     op.create_table(
         "people",
         sa.Column("id", sa.String(64), primary_key=True),
@@ -36,6 +77,9 @@ def upgrade() -> None:
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("search_name", sa.String(200), nullable=False, server_default=""),
+        sa.Column("search_name_alt", sa.String(200), nullable=False, server_default=""),
+        sa.Column("search_email", sa.String(200), nullable=False, server_default=""),
     )
 
     op.create_table(
@@ -174,11 +218,18 @@ def upgrade() -> None:
         sa.Column("check_in_token", sa.String(64), unique=True, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "user_id",
+            sa.String(64),
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
     )
     op.create_index("ix_registrations_person_id", "registrations", ["person_id"])
     op.create_index("ix_registrations_event_id", "registrations", ["event_id"])
     op.create_index("ix_registrations_status", "registrations", ["status"])
     op.create_index("ix_registrations_table_id", "registrations", ["table_id"])
+    op.create_index("ix_registrations_user_id", "registrations", ["user_id"])
 
     op.create_table(
         "reservation_access_tokens",
@@ -216,25 +267,46 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
 
+    op.create_table(
+        "audit_entries",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("actor", sa.String(255), nullable=False),
+        sa.Column("action", sa.String(50), nullable=False),
+        sa.Column("resource_type", sa.String(50), nullable=False),
+        sa.Column("resource_id", sa.String(64), nullable=False),
+        sa.Column("request_id", sa.String(64), nullable=True),
+        sa.Column("details", sa.JSON, nullable=False, server_default=sa.text("'{}'")),
+    )
+    op.create_index("ix_audit_entries_timestamp", "audit_entries", ["timestamp"])
+    op.create_index("ix_audit_entries_actor", "audit_entries", ["actor"])
+    op.create_index("ix_audit_entries_action", "audit_entries", ["action"])
+    op.create_index("ix_audit_entries_resource_type", "audit_entries", ["resource_type"])
+    op.create_index("ix_audit_entries_resource_id", "audit_entries", ["resource_id"])
+
+    for statement in _OPERATIONAL_SEARCH_STATEMENTS:
+        op.execute(statement)
+
 
 def downgrade() -> None:
+    op.execute("DROP INDEX IF EXISTS ix_people_search_email_trgm")
+    op.execute("DROP INDEX IF EXISTS ix_people_search_email")
+    op.execute("DROP INDEX IF EXISTS ix_people_search_name_alt_trgm")
+    op.execute("DROP INDEX IF EXISTS ix_people_search_name_trgm")
+    op.execute("DROP TRIGGER IF EXISTS people_operational_search_values ON people")
+    op.execute("DROP FUNCTION IF EXISTS update_person_operational_search_values()")
+    op.drop_table("audit_entries")
     op.drop_table("volunteer_periods")
     op.drop_table("areas")
     op.drop_table("reservation_access_tokens")
-    op.drop_index("ix_registrations_table_id", table_name="registrations")
-    op.drop_index("ix_registrations_status", table_name="registrations")
-    op.drop_index("ix_registrations_event_id", table_name="registrations")
-    op.drop_index("ix_registrations_person_id", table_name="registrations")
     op.drop_table("registrations")
     op.drop_table("tables")
     op.drop_table("layouts")
     op.drop_table("table_types")
     op.drop_table("rooms")
-    op.drop_index("ix_events_active", table_name="events")
-    op.drop_index("ix_events_date", table_name="events")
-    op.drop_index("ix_events_edition_id", table_name="events")
     op.drop_table("events")
     op.drop_table("editions")
     op.drop_table("exhibitors")
     op.drop_table("venues")
     op.drop_table("people")
+    op.drop_table("users")
