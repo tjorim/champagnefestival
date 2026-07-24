@@ -1,22 +1,4 @@
-"""Initial schema — all tables at final state.
-
-Squashed from the original 001 (initial schema), 002 (users table + FK on
-registrations), 004 (audit_entries table), and 005 (operational search
-columns/extensions/trigger/indexes on people) into a single migration. The
-end schema is identical to running the full original chain; only the build
-path is simplified -- the users.id FK on registrations and the search_*
-columns on people are now part of each table's own CREATE TABLE instead of
-separate ALTER-based follow-up migrations.
-
-003 (normalize registration pre_orders with delivered_quantity) is a pure
-data migration -- it only rewrites existing rows' JSON content, with no
-schema effect at all -- so it has nothing to do on a fresh database and is
-correctly omitted here.
-
-IMPORTANT: an already-deployed database that has run the old 001-005 chain
-must be stamped at this migration's revision (not re-run), since its schema
-already matches this one exactly:
-    uv run alembic stamp 001
+"""Initial schema — all tables at final state, including audit trail and operational search.
 
 Revision ID: 001
 Revises:
