@@ -1,0 +1,14 @@
+{
+  "name": "champagnefestival-pebble",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Experimental Pebble (Alloy) companion app scaffold — see README.md. Not built by CI, not part of the release process.",
+  "pebble": {
+    "// TODO(verify)": "The fields below are placeholders. Confirm the real manifest shape against `pebble new-project --alloy` output before relying on this file.",
+    "uuid": "00000000-0000-0000-0000-000000000000",
+    "watchapp": {
+      "watchface": false
+    },
+    "targetPlatforms": ["emery", "gabbro"]
+  }
+}
