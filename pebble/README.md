@@ -1,72 +1,79 @@
-# Pebble companion app (experimental scaffold)
+# Pebble companion app
 
-Status: **exploratory scaffold, not shipped, not built by CI.** Tracks
-[issue #757](https://github.com/tjorim/champagnefestival/issues/757).
+Status: **not yet built or run against real hardware or the `pebble`
+emulator.** Tracks [issue #757](https://github.com/tjorim/champagnefestival/issues/757).
 
-This directory is an early skeleton for a Pebble Time 2 / Pebble Round 2
-companion app built with [Alloy](https://developer.repebble.com/guides/alloy/),
-Pebble's JS/TS SDK (announced Feb 2026, out of developer preview as of this
-writing). The idea: a glanceable watch view showing a visitor's check-in
-status and upcoming event day, sourced from the same `/api/me/registrations`
-endpoint the web frontend and Android app already use
-(`backend/app/routers/me.py`).
-
-## Why this exists as a scaffold rather than a finished app
-
-Alloy is a very new SDK. The public docs
-(https://developer.repebble.com/guides/alloy/,
-https://developer.repebble.com/docs/) confirm the project layout below and
-that TypeScript and `fetch()` are supported, but do **not** publish a
-canonical `package.json` manifest or concrete widget-rendering API in a form
-that could be copied verbatim. Rather than invent plausible-looking API calls
-that might be wrong, the watch-side code here is intentionally left as
-commented pseudocode with explicit `TODO(verify)` markers. Anyone picking this
-up should cross-check against the
-[Moddable Pebble Examples](https://github.com/Moddable-OpenSource) (e.g.
-`hellofetch`, `hellotypescript`, `hellopiu-text`) and/or
-`pebble new-project --alloy` output before relying on it.
+A glanceable watch app for Pebble Time 2 / Pebble Round 2, built with
+[Alloy](https://developer.repebble.com/guides/alloy/), Pebble's JS/TS SDK.
+Shows the visitor's check-in status and next event day, sourced from the same
+`GET /api/me/registrations` endpoint the web frontend and Android app already
+use (`backend/app/routers/me.py`) — no backend changes were needed for that
+part.
 
 ## Layout
 
 ```
 pebble/
-  package.json            # app manifest (fields marked TODO need verification)
+  package.json            # app manifest
   src/
-    embeddedjs/main.js     # watch-side code (pseudocode, unverified widget API)
-    pkjs/index.js          # phone-side code: fetches /api/me/registrations
+    embeddedjs/main.js     # watch-side: Piu UI, fetch(), pairing token storage
+    pkjs/index.js          # phone-side: network proxy + pairing handoff
   resources/               # icons/fonts (empty for now)
 ```
 
-Per Alloy's split model, `pkjs` runs on the phone and is the only side with
-network access; it proxies data to the watch. `embeddedjs` runs natively on
-the watch via Moddable's XS engine.
+Every API used in `src/` (Piu widgets, `pebble/message`, `fetch()`,
+`localStorage`, `watch.connected`, the classic PebbleKit JS
+`showConfiguration`/`Pebble.openURL`/`webviewclosed` flow, and the
+`package.json` manifest shape) was cross-checked against
+[developer.repebble.com/guides/alloy](https://developer.repebble.com/guides/alloy/)
+and the [Moddable Pebble Examples](https://github.com/Moddable-OpenSource/pebble-examples)
+(`hellofetch`, `hellomessage`). None of it has been run on a device or the
+emulator, so treat it as "should work per the docs," not "verified working."
 
-## Data source (already exists, no backend changes needed)
+## How it fits together
 
-`GET /api/me/registrations` (see `backend/app/routers/me.py`) already returns
-everything a glance view needs per registration: `event_title`, `event_date`,
-`checked_in`, `checked_in_at`, `status`. The phone-side script in
-`src/pkjs/index.js` calls this endpoint directly and picks the most relevant
-registration (today's event, else the next upcoming one).
+1. **Watch → phone → internet.** Per Alloy's networking model, `fetch()`
+   calls in `src/embeddedjs/main.js` run on the watch but are transparently
+   proxied through the phone by the `@moddable/pebbleproxy` package wired up
+   in `src/pkjs/index.js` — the phone-side file doesn't need custom fetch
+   logic of its own.
+2. **Data.** The watch calls `GET /api/me/registrations` with a Bearer token,
+   picks today's event (or the next upcoming one), and shows the title, date,
+   and check-in status via a small Piu UI.
+3. **Pairing (getting an OIDC token onto the watch).** This reuses the
+   classic Pebble app-configuration flow:
+   - The user taps "Settings" for the app in the phone's Pebble app, firing
+     `showConfiguration` in `src/pkjs/index.js`, which calls
+     `Pebble.openURL()` to open `frontend/src/components/PebblePairPage.tsx`
+     (route: `/pebble-pair`).
+   - That page signs the user in via the site's existing OIDC flow
+     (`AuthContext`/`react-oidc-context`), then closes the webview with
+     `pebblejs://close#<json>` carrying the access token.
+   - `webviewclosed` in `src/pkjs/index.js` relays the token to the watch via
+     `Pebble.sendAppMessage`; the watch stores it in `localStorage` and uses
+     it for subsequent `fetch()` calls.
 
-## Open design question: authentication
+## What's needed before this can actually run
 
-This is the biggest unresolved question and the main reason this stays a
-scaffold. `/api/me/*` requires an OIDC Bearer JWT (see `backend/app/auth.py`,
-`get_current_claims`). The Android app obtains this via a full Authorization
-Code + PKCE browser flow (`android/app/src/main/kotlin/.../core/auth/`). It's
-not yet clear whether Alloy's `pkjs` environment can drive a system-browser
-OAuth redirect the same way, or whether pairing needs a different mechanism
-(e.g. a short-lived pairing code displayed on the web portal and typed/scanned
-once). This needs to be resolved with real device testing before any of the
-auth code in `src/pkjs/index.js` can be written for real — it's currently a
-`TODO` stub.
+- **OIDC redirect URI.** The `champagnefestival` OIDC client's allowed
+  redirect URIs need `https://champagnefestival.tjor.im/pebble-pair` added.
+  That client is provisioned in the separate infra stack
+  (`/opt/apps/infra`), not this repo — an admin needs to add it there.
+- **Token refresh.** The watch only stores the access token it's handed at
+  pairing time; there's no refresh-token flow yet, so once the access token
+  expires the watch falls back to "Sign-in expired" and the user has to
+  re-open Settings to re-pair. Fine for a first cut, but a real refresh flow
+  would be needed for daily use.
+- **Device verification.** None of `src/embeddedjs/main.js` or
+  `src/pkjs/index.js` has been run through `pebble build` /
+  `pebble install --emulator emery` yet — do that before relying on it, in
+  case the docs missed something (Alloy is very new).
+- Not wired into `VERSION` sync, CI, or the release process — that happens
+  once/if the app graduates past this stage.
 
-## Not done yet
+## Building it (untested — see above)
 
-- No real widget/rendering code (unverified Alloy API surface).
-- No auth/token flow (open design question above).
-- Not wired into `VERSION` sync, CI, or the release process — this only
-  happens once/if the app graduates past scaffold status.
-- No Pebble hardware or `pebble` CLI available in this environment, so none
-  of this has been built or run.
+```
+pebble build
+pebble install --emulator emery   # or: pebble install --phone <phone-ip>
+```

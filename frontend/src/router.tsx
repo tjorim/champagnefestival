@@ -33,6 +33,7 @@ interface AppRouteComponents {
   CheckInRoute: RouteComponent;
   MyRegistrationsRoute: RouteComponent;
   PrivacyPolicyRoute: RouteComponent;
+  PebblePairRoute: RouteComponent;
 }
 
 export function createAppRouter({
@@ -41,6 +42,7 @@ export function createAppRouter({
   CheckInRoute,
   MyRegistrationsRoute,
   PrivacyPolicyRoute,
+  PebblePairRoute,
 }: AppRouteComponents) {
   const rootRoute = createRootRoute({
     notFoundComponent: App,
@@ -89,11 +91,18 @@ export function createAppRouter({
     component: PrivacyPolicyRoute,
   });
 
+  const pebblePairRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/pebble-pair",
+    component: PebblePairRoute,
+  });
+
   const routeTree = rootRoute.addChildren([
     indexRoute,
     adminLayoutRoute.addChildren([adminRoute, checkInRoute]),
     myRegistrationsRoute,
     privacyPolicyRoute,
+    pebblePairRoute,
   ]);
 
   return createRouter({

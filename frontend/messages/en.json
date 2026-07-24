@@ -663,5 +663,10 @@
   "admin_registrations_export_event_csv_error": "Failed to export guest list.",
   "admin_volunteers_export_csv": "Export for insurance (CSV)",
   "admin_volunteers_export_csv_error": "Failed to export volunteer list.",
-  "admin_error_network": "We could not reach the server. Check your internet connection and try again."
+  "admin_error_network": "We could not reach the server. Check your internet connection and try again.",
+  "pebble_pair_title": "Pair Pebble Watch",
+  "pebble_pair_description": "Sign in to link your Pebble companion app to your account.",
+  "pebble_pair_connecting": "Connecting your watch...",
+  "pebble_pair_error": "Could not complete pairing. Please try again from your watch's app settings.",
+  "pebble_pair_close_instruction": "You can close this window and return to your watch."
 }
