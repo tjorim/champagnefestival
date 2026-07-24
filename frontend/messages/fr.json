@@ -663,5 +663,10 @@
   "admin_registrations_export_event_csv_error": "Échec de l’export de la liste des invités.",
   "admin_volunteers_export_csv": "Exporter pour l’assurance (CSV)",
   "admin_volunteers_export_csv_error": "Échec de l’export de la liste des bénévoles.",
-  "admin_error_network": "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez."
+  "admin_error_network": "Impossible de joindre le serveur. Vérifiez votre connexion internet et réessayez.",
+  "pebble_pair_title": "Associer la montre Pebble",
+  "pebble_pair_description": "Connectez-vous pour associer l’application compagnon Pebble à votre compte.",
+  "pebble_pair_connecting": "Connexion de votre montre...",
+  "pebble_pair_error": "Impossible de terminer l’association. Veuillez réessayer depuis les réglages de l’application sur votre montre.",
+  "pebble_pair_close_instruction": "Vous pouvez fermer cette fenêtre et revenir à votre montre."
 }

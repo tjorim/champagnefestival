@@ -1,0 +1,25 @@
+{
+  "name": "Champagne Festival",
+  "author": "Champagne Festival",
+  "version": "0.0.1",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {
+    "@moddable/pebbleproxy": "^0.1.0"
+  },
+  "pebble": {
+    "displayName": "Champagne Festival",
+    "uuid": "b6f6e8f2-2f0e-4a9a-8f2e-1a6c9f5e7d3b",
+    "projectType": "moddable",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["emery", "gabbro"],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": ["AUTH_TOKEN"],
+    "resources": {
+      "media": []
+    }
+  }
+}

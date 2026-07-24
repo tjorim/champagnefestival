@@ -663,5 +663,10 @@
   "admin_registrations_export_event_csv_error": "Exporteren van de gastenlijst is mislukt.",
   "admin_volunteers_export_csv": "Exporteren voor verzekering (CSV)",
   "admin_volunteers_export_csv_error": "Exporteren van de vrijwilligerslijst is mislukt.",
-  "admin_error_network": "We konden de server niet bereiken. Controleer je internetverbinding en probeer opnieuw."
+  "admin_error_network": "We konden de server niet bereiken. Controleer je internetverbinding en probeer opnieuw.",
+  "pebble_pair_title": "Pebble-horloge koppelen",
+  "pebble_pair_description": "Meld je aan om de Pebble-companion-app aan je account te koppelen.",
+  "pebble_pair_connecting": "Je horloge wordt verbonden...",
+  "pebble_pair_error": "Koppelen is mislukt. Probeer het opnieuw via de instellingen van de app op je horloge.",
+  "pebble_pair_close_instruction": "Je kunt dit venster sluiten en teruggaan naar je horloge."
 }
