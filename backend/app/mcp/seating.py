@@ -159,10 +159,15 @@ async def get_table_seating(
         for table in tables:
             table_regs = table_reg_map.get(table.id, [])
             guests = []
+            guest_count = 0
+            checked_in_count = 0
             for reg in table_regs:
                 person = persons.get(reg.person_id)
                 if person is None:
                     continue
+                guest_count += reg.guest_count
+                if reg.checked_in:
+                    checked_in_count += 1
                 guests.append(
                     {
                         "registration_id": reg.id,
@@ -182,8 +187,8 @@ async def get_table_seating(
                     "capacity": table.capacity,
                     "layout_id": table.layout_id,
                     "guests": guests,
-                    "guest_count": sum(g["guest_count"] for g in guests),
-                    "checked_in_count": sum(1 for g in guests if g["checked_in"]),
+                    "guest_count": guest_count,
+                    "checked_in_count": checked_in_count,
                 }
             )
 
