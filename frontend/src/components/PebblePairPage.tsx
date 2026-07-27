@@ -20,7 +20,9 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function PebblePairPage() {
   const { isAuthenticated, isLoading, login, getAccessToken, authError } = useAuth();
   const [closed, setClosed] = useState(false);
+  const [pairingError, setPairingError] = useState("");
   const loginRequested = useRef(false);
+  const pairRequested = useRef(false);
 
   useEffect(() => {
     if (isLoading || isAuthenticated || authError || loginRequested.current) return;
@@ -29,13 +31,28 @@ export default function PebblePairPage() {
   }, [isLoading, isAuthenticated, authError, login]);
 
   useEffect(() => {
-    if (!isAuthenticated || closed) return;
+    if (!isAuthenticated || closed || pairRequested.current) return;
     const accessToken = getAccessToken();
     if (!accessToken) return;
+    pairRequested.current = true;
 
-    const payload = encodeURIComponent(JSON.stringify({ accessToken }));
-    window.location.href = `pebblejs://close#${payload}`;
-    setClosed(true);
+    const pair = async () => {
+      try {
+        const response = await fetch("/api/me/pebble-token", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!response.ok) throw new Error(`Pairing failed (${response.status})`);
+        const result = (await response.json()) as { token?: string };
+        if (!result.token) throw new Error("Pairing response did not include a token");
+        const payload = encodeURIComponent(JSON.stringify({ accessToken: result.token }));
+        window.location.href = `pebblejs://close#${payload}`;
+        setClosed(true);
+      } catch (error) {
+        setPairingError(error instanceof Error ? error.message : String(error));
+      }
+    };
+    void pair();
   }, [isAuthenticated, closed, getAccessToken]);
 
   return (
@@ -43,8 +60,8 @@ export default function PebblePairPage() {
       <h1 className="h4 mb-3">{m.pebble_pair_title()}</h1>
       <p className="text-secondary mb-4">{m.pebble_pair_description()}</p>
 
-      {authError ? (
-        <Alert variant="danger">{m.pebble_pair_error()}</Alert>
+      {authError || pairingError ? (
+        <Alert variant="danger">{pairingError || m.pebble_pair_error()}</Alert>
       ) : closed ? (
         <Alert variant="success">{m.pebble_pair_close_instruction()}</Alert>
       ) : (

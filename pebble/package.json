@@ -1,9 +1,12 @@
 {
-  "name": "Champagne Festival",
-  "author": "Champagne Festival",
-  "version": "0.0.1",
+  "name": "champagne-festival-pebble",
+  "author": "tjorim",
+  "version": "0.1.0",
   "keywords": ["pebble-app"],
   "private": true,
+  "scripts": {
+    "validate": "node scripts/validate.mjs"
+  },
   "dependencies": {
     "@moddable/pebbleproxy": "^0.1.0"
   },
@@ -17,7 +20,7 @@
     "watchapp": {
       "watchface": false
     },
-    "messageKeys": ["AUTH_TOKEN"],
+    "messageKeys": ["API_BASE_URL", "AUTH_TOKEN"],
     "resources": {
       "media": []
     }

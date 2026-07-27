@@ -42,7 +42,10 @@ Pebble.addEventListener("webviewclosed", function (e) {
   if (!payload.accessToken) return;
 
   Pebble.sendAppMessage(
-    { AUTH_TOKEN: payload.accessToken },
+    {
+      API_BASE_URL: "https://champagnefestival.tjor.im",
+      AUTH_TOKEN: payload.accessToken,
+    },
     function () {
       console.log("pebble-pair: token relayed to watch");
     },

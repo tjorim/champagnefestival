@@ -12,7 +12,7 @@
 import {} from "piu/MC";
 import Message from "pebble/message";
 
-const API_BASE = "https://champagnefestival.tjor.im";
+const DEFAULT_API_BASE_URL = "https://champagnefestival.tjor.im";
 
 const backgroundSkin = new Skin({ fill: "black" });
 const titleStyle = new Style({ font: "bold 20px Gothic", color: "white" });
@@ -67,9 +67,9 @@ function pickRelevantRegistration(registrations) {
   return upcoming[0] ?? null;
 }
 
-async function refreshGlance(token) {
+async function refreshGlance(apiBaseUrl, token) {
   try {
-    const response = await fetch(`${API_BASE}/api/me/registrations`, {
+    const response = await fetch(`${apiBaseUrl}/api/pebble/registrations`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
@@ -94,6 +94,7 @@ async function refreshGlance(token) {
 }
 
 let authToken = localStorage.getItem("authToken");
+let apiBaseUrl = localStorage.getItem("apiBaseUrl") || DEFAULT_API_BASE_URL;
 
 function maybeRefresh() {
   if (!authToken) {
@@ -101,16 +102,21 @@ function maybeRefresh() {
     return;
   }
   if (watch.connected.pebblekit) {
-    refreshGlance(authToken);
+    refreshGlance(apiBaseUrl, authToken);
   }
 }
 
 // eslint-disable-next-line no-unused-vars -- kept alive by the Message runtime, not read directly
 const message = new Message({
-  keys: ["AUTH_TOKEN"],
+  keys: ["API_BASE_URL", "AUTH_TOKEN"],
   onReadable() {
     const msg = this.read();
     const token = msg.get("AUTH_TOKEN");
+    const baseUrl = msg.get("API_BASE_URL");
+    if (baseUrl) {
+      apiBaseUrl = baseUrl.replace(/\/$/, "");
+      localStorage.setItem("apiBaseUrl", apiBaseUrl);
+    }
     if (!token) return;
     authToken = token;
     localStorage.setItem("authToken", token);

@@ -286,6 +286,10 @@ class MyQrOut(BaseModel):
     expires_at: datetime
 
 
+class PebbleAccessTokenOut(BaseModel):
+    token: str
+
+
 class RegistrationLookupRequest(BaseModel):
     email: EmailStr
 
