@@ -9,6 +9,8 @@ const requiredFiles = [
   "src/embeddedjs/main.js",
   "src/embeddedjs/manifest.json",
   "src/pkjs/index.js",
+  "scripts/mock-server.py",
+  "scripts/check-screenshot.py",
 ];
 
 for (const file of requiredFiles) {
@@ -38,8 +40,20 @@ if (!watchSource.includes("fetch(")) throw new Error("Watch code must use Alloy 
 if (!watchSource.includes("/api/pebble/registrations")) {
   throw new Error("Watch code must use the scoped Pebble registrations endpoint");
 }
+if (!watchSource.includes("localStorage.setItem(") || !watchSource.includes("loadSnapshot(")) {
+  throw new Error("Watch code must persist and restore the offline registration snapshot");
+}
+if (!watchSource.includes("runExclusive(")) {
+  throw new Error("Watch requests must use the exclusive-request guard");
+}
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
+}
+if (/,\s*[)\]]/.test(phoneSource)) {
+  throw new Error("Trailing comma in src/pkjs/index.js: the SDK's PKJS bundler cannot parse it");
+}
+if (/Pebble\.sendAppMessage\s*\(/.test(phoneSource)) {
+  throw new Error("Use moddableProxy.sendAppMessage() so sends are queued behind proxy traffic");
 }
 
 for (const file of ["src/embeddedjs/main.js", "src/pkjs/index.js"]) {

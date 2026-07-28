@@ -70,6 +70,17 @@ real device.
      `Pebble.sendAppMessage`; the watch stores it in `localStorage` and uses
      it for subsequent `fetch()` calls.
 
+## Offline behavior
+
+The last successful registration is cached for up to 12 hours. While the phone
+is disconnected or a request fails, the watch keeps that useful glance on
+screen and labels it with the reason and read time, for example
+`Phone offline · 08:12`. A changed pairing token or server URL clears the
+snapshot so one account or deployment can never see another's data.
+
+The watch is read-only, so there is no offline action queue or mutation-replay
+risk.
+
 ## What's needed before this can actually run
 
 - **Database migration.** Deploy Alembic revision `002` before pairing. A new
@@ -80,8 +91,9 @@ real device.
   the app builds and launches — the `fetch()`-dependent registration loading
   and error states are unverified until this runs on a real Pebble Time 2,
   since Alloy's `fetch()` never completes under the emulator.
-- Not wired into `VERSION` sync, CI, or the release process — that happens
-  once/if the app graduates past this stage.
+- Pebble CI validates the package and offline behavior, builds a `.pbw`, boots
+  it on Emery, and checks a screenshot for the rendered app. It is not wired
+  into `VERSION` sync or the release process.
 
 ## Building it
 

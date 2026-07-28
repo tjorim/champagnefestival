@@ -41,16 +41,18 @@ Pebble.addEventListener("webviewclosed", function (e) {
 
   if (!payload.accessToken) return;
 
-  Pebble.sendAppMessage(
+  // Share the proxy's queue with watch-side fetch traffic. Sending directly
+  // through Pebble can exceed PKJS's small in-flight AppMessage budget.
+  moddableProxy.sendAppMessage(
     {
       API_BASE_URL: "https://champagnefestival.tjor.im",
-      AUTH_TOKEN: payload.accessToken,
+      AUTH_TOKEN: payload.accessToken
     },
     function () {
       console.log("pebble-pair: token relayed to watch");
     },
     function () {
       console.log("pebble-pair: failed to relay token to watch");
-    },
+    }
   );
 });
