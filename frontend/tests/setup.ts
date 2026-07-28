@@ -45,6 +45,7 @@ vi.mock("@/contexts/AuthContext", () => ({
     clearAuthError: vi.fn(),
     login: vi.fn(),
     logout: vi.fn(),
+    renewSession: vi.fn().mockResolvedValue(false),
   }),
   AuthProvider: ({ children }: { children: ReactNode }) => children,
 }));

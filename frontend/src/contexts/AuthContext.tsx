@@ -25,6 +25,12 @@ export interface AuthContextType {
   clearAuthError: () => void;
   login: (returnTo?: string) => void;
   logout: () => void;
+  /**
+   * Attempts a silent token renewal against the IdP session, resolving true when
+   * a fresh token was obtained. Lets callers recover from a single 401 instead of
+   * throwing the user out to the login screen.
+   */
+  renewSession: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -101,7 +107,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const oidcAuth = useOidcAuth();
-  const { signinRedirect, signoutRedirect } = oidcAuth;
+  const { signinRedirect, signoutRedirect, signinSilent } = oidcAuth;
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [dismissedOidcError, setDismissedOidcError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -169,6 +175,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [oidcAuth.user],
   );
 
+  const renewSession = useCallback(async (): Promise<boolean> => {
+    try {
+      // Resolves null when the IdP session is genuinely gone, which is a normal
+      // outcome here rather than an error worth surfacing — the caller decides
+      // what to do next.
+      return (await signinSilent()) != null;
+    } catch (error: unknown) {
+      devError("signinSilent failed:", error);
+      return false;
+    }
+  }, [signinSilent]);
+
   const contextValue = useMemo<AuthContextType>(
     () => ({
       isAuthenticated: oidcAuth.isAuthenticated,
@@ -183,6 +201,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearAuthError,
       login,
       logout,
+      renewSession,
     }),
     [
       oidcAuth.isAuthenticated,
@@ -197,6 +216,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearAuthError,
       login,
       logout,
+      renewSession,
     ],
   );
 

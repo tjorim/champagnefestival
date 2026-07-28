@@ -17,6 +17,7 @@ const baseAuth = {
   clearAuthError: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  renewSession: vi.fn().mockResolvedValue(false),
 };
 
 vi.mock("@/paraglide/messages", () => ({
@@ -75,6 +76,7 @@ describe("AdminLoginForm", () => {
       clearAuthError,
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     render(<AdminLoginForm />);

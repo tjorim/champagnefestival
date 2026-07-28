@@ -103,6 +103,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
   });
 
@@ -193,6 +194,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     await renderPage("/check-in");
@@ -216,6 +218,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     await renderPage("/check-in");
@@ -240,6 +243,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login,
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     await renderPage("/check-in");

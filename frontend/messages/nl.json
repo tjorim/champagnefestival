@@ -673,5 +673,6 @@
   "auth_signing_in": "Bezig met aanmelden…",
   "auth_signing_out": "Bezig met afmelden…",
   "auth_session_expired_notice": "Je sessie is verlopen, daarom ben je afgemeld. Meld je opnieuw aan om verder te gaan.",
-  "pebble_pair_retry_sign_in": "Opnieuw aanmelden"
+  "pebble_pair_retry_sign_in": "Opnieuw aanmelden",
+  "admin_session_renewing": "Je sessie wordt hersteld…"
 }

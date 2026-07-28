@@ -56,6 +56,7 @@ describe("LiveUpdatesProvider", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
   });
 
@@ -84,6 +85,7 @@ describe("LiveUpdatesProvider", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     const { Wrapper } = createTestQueryClientHarness();

@@ -478,6 +478,87 @@
   color: #8f8f8f;
 }
 
+/* ---- Loading skeletons ---- */
+.admin-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-skeleton-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-skeleton-grow {
+  flex: 1 1 auto;
+}
+
+.admin-skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-lg);
+}
+
+.admin-skeleton-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.admin-skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.admin-skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.1rem;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-lg);
+}
+
+.admin-skeleton-bar {
+  height: 0.85rem;
+  border-radius: var(--adm-radius);
+  /* Sits just above the surface it covers, so the pane reads as "not ready"
+     rather than as empty content. */
+  background: linear-gradient(
+    90deg,
+    var(--adm-surface-2) 25%,
+    rgba(255, 255, 255, 0.07) 37%,
+    var(--adm-surface-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: admin-skeleton-shimmer 1.4s var(--adm-ease) infinite;
+}
+
+@keyframes admin-skeleton-shimmer {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-skeleton-bar {
+    animation: none;
+    background: var(--adm-surface-2);
+  }
+}
+
 /* ---- Main content area ---- */
 .admin-main {
   flex: 1;

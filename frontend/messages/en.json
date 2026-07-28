@@ -673,5 +673,6 @@
   "auth_signing_in": "Signing in…",
   "auth_signing_out": "Signing out…",
   "auth_session_expired_notice": "Your session expired, so you were signed out. Please sign in again to continue.",
-  "pebble_pair_retry_sign_in": "Try signing in again"
+  "pebble_pair_retry_sign_in": "Try signing in again",
+  "admin_session_renewing": "Reconnecting your session…"
 }

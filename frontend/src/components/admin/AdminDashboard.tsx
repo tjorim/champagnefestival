@@ -19,6 +19,7 @@ import AnalyticsDashboard from "./AnalyticsDashboard";
 import AuditLogViewer from "./AuditLogViewer";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
+import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
 import type { Registration, RegistrationStatus } from "@/types/registration";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
 import { useAdminDashboardData } from "@/hooks/useAdminDashboardData";
@@ -47,9 +48,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const isAuthenticated = auth.isAuthenticated;
+  const { renewSession } = auth;
   const canManageAdminSections = auth.hasRole("admin");
   const [globalError, setGlobalError] = useState("");
   const [registrationError, setRegistrationError] = useState("");
+  const [isRenewingSession, setIsRenewingSession] = useState(false);
+  /** Guards against renewing in a loop when the refreshed token is rejected too. */
+  const renewAttempted = useRef(false);
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   const [applyActiveEditionFilterRequest, setApplyActiveEditionFilterRequest] = useState(0);
   /** Full registration (with checkInToken) shown in the detail modal */
@@ -282,10 +287,30 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       (e) => e instanceof Error && e.message === "unauthorized",
     );
     if (unauthorizedError) {
-      // Forced sign-out: record why, so the login screen can explain the session
-      // ended instead of silently appearing mid-task.
-      recordSignOutReason("session-expired");
-      handleLogout();
+      // A 401 usually means the access token aged out while the IdP session is
+      // still good, so try a silent renewal before throwing the user out. One
+      // attempt per episode: if the refreshed token is rejected too, the session
+      // really is gone and looping would just stall the dashboard.
+      if (renewAttempted.current) {
+        recordSignOutReason("session-expired");
+        handleLogout();
+        return;
+      }
+      renewAttempted.current = true;
+      setIsRenewingSession(true);
+      void (async () => {
+        const renewed = await renewSession();
+        if (!renewed) {
+          // Record why, so the login screen explains the session ended instead
+          // of silently appearing mid-task.
+          setIsRenewingSession(false);
+          recordSignOutReason("session-expired");
+          handleLogout();
+          return;
+        }
+        await loadData();
+        setIsRenewingSession(false);
+      })();
       return;
     }
 
@@ -294,7 +319,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       devError("Failed to load dashboard data", firstError);
       setGlobalError(m.admin_error_load_data());
     } else {
-      // All queries succeeded or are still loading — clear any previous error.
+      // Everything loaded: re-arm the renewal so a later expiry gets its own attempt.
+      renewAttempted.current = false;
       setGlobalError("");
     }
   }, [
@@ -309,6 +335,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     peopleQuery.error,
     membersQuery.error,
     handleLogout,
+    loadData,
+    renewSession,
   ]);
 
   const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
@@ -434,6 +462,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
               </button>
             )}
+            {isRenewingSession && (
+              // Renewal is quick but not instant; without this the dashboard just
+              // sits there, which reads as a hang rather than as recovery.
+              <Alert variant="info" className="mb-4 d-flex align-items-center gap-2">
+                <Spinner animation="border" size="sm" aria-hidden="true" />
+                {m.admin_session_renewing()}
+              </Alert>
+            )}
             {globalError && (
               <Alert
                 variant="danger"
@@ -446,11 +482,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             )}
 
             {isAnyPending ? (
-              <div className="text-center py-5">
-                <Spinner animation="border" variant="primary" role="status">
-                  <span className="visually-hidden">{m.admin_loading()}</span>
-                </Spinner>
-              </div>
+              <AdminSkeleton variant={skeletonVariantForSection(activeKey)} />
             ) : (
               <div className="admin-content-pane" key={activeKey}>
                 {activeKey === "registrations" && (

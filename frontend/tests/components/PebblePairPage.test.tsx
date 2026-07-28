@@ -33,6 +33,7 @@ describe("PebblePairPage", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
   });
 
@@ -54,6 +55,7 @@ describe("PebblePairPage", () => {
       clearAuthError,
       login,
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     const user = userEvent.setup();
