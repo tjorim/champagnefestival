@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
+import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
@@ -21,6 +22,7 @@ export default function PebblePairPage() {
   const { isAuthenticated, isLoading, login, getAccessToken, authError } = useAuth();
   const [closed, setClosed] = useState(false);
   const [pairingError, setPairingError] = useState("");
+  const [pairAttempt, setPairAttempt] = useState(0);
   const loginRequested = useRef(false);
   const pairRequested = useRef(false);
 
@@ -49,11 +51,17 @@ export default function PebblePairPage() {
         window.location.href = `pebblejs://close#${payload}`;
         setClosed(true);
       } catch (error) {
+        pairRequested.current = false;
         setPairingError(error instanceof Error ? error.message : String(error));
       }
     };
     void pair();
-  }, [isAuthenticated, closed, getAccessToken]);
+  }, [isAuthenticated, closed, getAccessToken, pairAttempt]);
+
+  const retryPairing = () => {
+    setPairingError("");
+    setPairAttempt((attempt) => attempt + 1);
+  };
 
   return (
     <Container className="py-5 text-center">
@@ -61,7 +69,14 @@ export default function PebblePairPage() {
       <p className="text-secondary mb-4">{m.pebble_pair_description()}</p>
 
       {authError || pairingError ? (
-        <Alert variant="danger">{pairingError || m.pebble_pair_error()}</Alert>
+        <Alert variant="danger">
+          <div>{pairingError || m.pebble_pair_error()}</div>
+          {!authError && pairingError ? (
+            <Button className="mt-3" variant="outline-danger" size="sm" onClick={retryPairing}>
+              {m.pebble_pair_retry()}
+            </Button>
+          ) : null}
+        </Alert>
       ) : closed ? (
         <Alert variant="success">{m.pebble_pair_close_instruction()}</Alert>
       ) : (

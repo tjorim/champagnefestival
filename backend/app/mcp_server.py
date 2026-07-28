@@ -349,32 +349,24 @@ def build_keycloak_auth() -> Any:
     """Build a :class:`KeycloakAuthProvider` from application settings.
 
     Requires ``OIDC_ISSUER_URL`` and ``MCP_BASE_URL`` to be set.
-    Returns ``None`` when OIDC is not configured (development / stdio mode).
+    Returns ``None`` when the HTTP MCP server is not configured. Local stdio
+    mode passes ``auth=None`` directly and does not call this helper.
     """
-    if not settings.oidc_issuer_url:
-        logger.info("OIDC_ISSUER_URL not configured — MCP server running without auth enforcement.")
-        return None
-
     mcp_base_url = settings.mcp_base_url
     if not mcp_base_url:
-        logger.info(
-            "MCP_BASE_URL not configured — MCP server running without Keycloak auth. "
-            "Set MCP_BASE_URL to enable OIDC authentication."
-        )
         return None
 
-    try:
-        from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
+    if not settings.oidc_issuer_url:
+        raise RuntimeError("OIDC_ISSUER_URL is required when MCP_BASE_URL enables the HTTP MCP server")
 
-        return KeycloakAuthProvider(
-            realm_url=settings.oidc_issuer_url,
-            base_url=mcp_base_url,
-            audience=settings.oidc_audience or None,
-            required_scopes=[],
-        )
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Failed to build Keycloak auth provider: %s", exc)
-        return None
+    from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
+
+    return KeycloakAuthProvider(
+        realm_url=settings.oidc_issuer_url,
+        base_url=mcp_base_url,
+        audience=settings.oidc_audience or None,
+        required_scopes=["openid", "offline_access"],
+    )
 
 
 # ---------------------------------------------------------------------------
