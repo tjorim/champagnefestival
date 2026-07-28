@@ -96,9 +96,10 @@ risk.
   the app builds and launches — the `fetch()`-dependent registration loading
   and error states are unverified until this runs on a real Pebble Time 2,
   since Alloy's `fetch()` never completes under the emulator.
-- Pebble CI validates the package and offline behavior, builds a `.pbw`, boots
-  it on Emery, and checks a screenshot for the rendered app. It is not wired
-  into `VERSION` sync or the release process.
+- Pebble CI validates the package and offline behavior, drives the watch logic
+  over real HTTP against the mock backend, builds a `.pbw`, boots it on Emery,
+  and checks a screenshot for the rendered app. It is not wired into `VERSION`
+  sync or the release process.
 
 ## Building it
 
