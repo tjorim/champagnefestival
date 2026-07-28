@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import PebbleAccessToken, Registration, User
 from app.routers import me
+from app.services.pebble_access import rotate_pebble_token
 from tests.helpers import _post_registration
 
 ADMIN_HEADERS = {"Authorization": "Bearer admin-token"}
@@ -191,6 +192,21 @@ async def test_pebble_token_can_be_revoked(me_client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert glance.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_pebble_token_cannot_access_oidc_self_service(client, db_session):
+    user = User(id="usr-pebble-isolation", oidc_subject="pebble-isolation-sub")
+    db_session.add(user)
+    await db_session.commit()
+    token = await rotate_pebble_token(db_session, user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    glance = await client.get("/api/pebble/registrations", headers=headers)
+    self_service = await client.get("/api/me/registrations", headers=headers)
+
+    assert glance.status_code == 200
+    assert self_service.status_code == 401
 
 
 @pytest.mark.anyio
