@@ -37,6 +37,17 @@ if (manifest.modules?.["*"] !== "./main") throw new Error("Embedded main module 
 const watchSource = readFileSync(resolve(root, "src/embeddedjs/main.js"), "utf8");
 const phoneSource = readFileSync(resolve(root, "src/pkjs/index.js"), "utf8");
 if (!watchSource.includes("fetch(")) throw new Error("Watch code must use Alloy fetch()");
+// The SDK does not fall back to a nearby system-font size. An unsupported
+// combination throws while constructing the Style and leaves a blank watchapp.
+const gothicRegularSizes = new Set([9, 14, 18, 24, 28, 36]);
+for (const match of watchSource.matchAll(/font:\s*"(?:(bold)\s+)?(\d+)px Gothic"/g)) {
+  const [, weight, rawSize] = match;
+  const size = Number(rawSize);
+  const supported = weight ? size === 18 : gothicRegularSizes.has(size);
+  if (!supported) {
+    throw new Error(`Unsupported Pebble system font: ${weight ? "bold " : ""}${size}px Gothic`);
+  }
+}
 if (!watchSource.includes("/api/pebble/registrations")) {
   throw new Error("Watch code must use the scoped Pebble registrations endpoint");
 }
