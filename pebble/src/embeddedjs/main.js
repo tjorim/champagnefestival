@@ -17,8 +17,13 @@ const SNAPSHOT_VERSION = 1;
 const SNAPSHOT_MAX_AGE_SECONDS = 12 * 60 * 60;
 
 const backgroundSkin = new Skin({ fill: "black" });
-const titleStyle = new Style({ font: "bold 20px Gothic", color: "white" });
-const statusStyle = new Style({ font: "16px Gothic", color: "silver" });
+// Alloy's font lookup only matches the Pebble system font table exactly
+// (see modFindPebbleFont's gFonts list): Gothic-Bold exists at 18px only,
+// Gothic-Regular at 9/14/18/24/28/36px. Any other size throws an uncaught
+// "font not found" error during Style construction, which crashes the app
+// at startup with no diagnostic (see ../../EMULATOR.md).
+const titleStyle = new Style({ font: "bold 18px Gothic", color: "white" });
+const statusStyle = new Style({ font: "14px Gothic", color: "silver" });
 
 const titleLabel = new Label(null, {
   top: 20,

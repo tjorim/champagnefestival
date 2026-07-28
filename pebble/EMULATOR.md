@@ -67,8 +67,8 @@ normal way to restart it.
 
 **Watch-side `console.log` does not reach `pebble logs` in a release build.**
 Only PKJS output does. A watchapp that throws during startup therefore shows a
-blank screen and produces no diagnostic whatsoever — which is exactly how the
-font defect presented.
+blank white screen (`pebble screenshot` reports `rgb(255, 255, 255)`, 0% ink)
+and produces no diagnostic whatsoever.
 
 The technique that worked is to treat the screen as the console: render
 diagnostics into a Piu `Label` and take a screenshot. `src/embeddedjs/main.js`
@@ -76,10 +76,31 @@ already has `titleLabel`/`statusLabel` wired up for this — temporarily set
 `titleLabel.string` to whatever you want to inspect instead of adding a new
 element.
 
-From there, bisect. A minimal Piu app with a black fill renders, so Piu works;
-add a `Style` with the app's font and it dies, so the font is the problem. It is
-also worth swapping in the stock `pebble new-project --alloy` watchface as a
-control — if that renders inside your package, the toolchain and your
+From there, bisect: a minimal `Application`/`Skin` with no `Label` renders a
+solid black screen, so Piu itself works. A `Label` with no `style` also
+renders (just invisibly, since default text is black-on-black). Attaching a
+`Style` is where it broke — and it's not a soft failure, it can also wedge the
+whole emulator connection (`pebble screenshot` hanging with
+`libpebble2.exceptions.TimeoutError` even on `fetch_watch_info`), which is a
+second, more severe symptom of the same root cause.
+
+**The actual bug:** `piuFont.c`'s `PiuStyleLookupFont` resolves a `Style`'s
+`font` string against a fixed whitelist in the SDK
+(`modFindPebbleFont`/`gFonts` in `xs/platforms/pebble/xsHost.c`), keyed by
+exact `family-Weight` and `size`. It does not fall back to a nearby size — a
+miss throws an uncaught `xsURIError("font not found: %s", path)` during
+`Style` construction, crashing the app before it ever paints a frame. Gothic
+only ships as `Gothic-Bold` at **18px** and `Gothic-Regular` at
+**9/14/18/24/28/36px**; any other size (this package originally used
+`"bold 20px Gothic"` and `"16px Gothic"`) is silently invalid and fatal. A
+`Style` with no `font` at all fails the same way (`family` resolves to the
+literal string `"undefined"`), which is why the color-only `Style` above
+wedges instead of merely rendering blank. Use only the whitelisted
+family/weight/size combinations, or bundle a custom `.fnt` resource — there is
+no lenient fallback either way.
+
+It is also worth swapping in the stock `pebble new-project --alloy` watchface
+as a control — if that renders inside your package, the toolchain and your
 `package.json` are fine and the fault is in your own `main.js`.
 
 The alternative is `pebble build --debug` plus an xsbug session, which gives
