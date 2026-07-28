@@ -9,6 +9,28 @@ The release workflow requires entries in this format:
 Starting with the first `YYYY.MM.MICRO` release, `X.Y.Z` is CalVer rather than
 SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predate that switch.
 
+## [2026.7.2] - 2026-07-28
+
+### Added
+
+- A Pebble Time 2 companion app with an authenticated web pairing flow, revocable narrowly scoped credentials, offline display cache, event-day registration glance, and emulator/live HTTP validation coverage (#759, #779)
+- Google Play Store listing assets for the Android app
+
+### Changed
+
+- App versioning now uses CalVer (`YYYY.MM.MICRO`) from the repo-root `VERSION` file across the backend, frontend, and Android app (#756)
+- The initial Alembic migration history was consolidated for a clean deployment baseline (#758)
+
+### Fixed
+
+- Authenticated MCP requests now accept dedicated Keycloak service-account tokens as well as interactive user tokens
+- Pebble pairing and watch refresh handling now recover safely from transient failures, token rotation races, offline periods, and stale cached state (#779)
+
+### Security
+
+- Web, Android, Pebble, and MCP authorization now use distinct Keycloak clients or purpose-specific credentials, with RP-initiated logout and no compatibility fallback (#759)
+- Backend host validation, secret handling, Sentry sampling, and rate limiting were hardened (#755)
+
 ## [0.1.1] - 2026-07-22
 
 ### Added

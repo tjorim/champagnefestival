@@ -1,6 +1,6 @@
 {
   "name": "champagnefestival",
-  "version": "2026.7.1",
+  "version": "2026.7.2",
   "private": true,
   "description": "Champagnefestival website using React and Bootstrap",
   "type": "module",
