@@ -26,7 +26,7 @@ def _request() -> MagicMock:
 @pytest.mark.asyncio
 async def test_require_admin_accepts_admin_role(monkeypatch) -> None:
     async def fake_decode_token(_token: str) -> dict:
-        return {"realm_access": {"roles": ["admin", "user"]}}
+        return {"sub": "admin-user", "realm_access": {"roles": ["admin", "user"]}}
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
@@ -106,7 +106,7 @@ async def test_require_admin_rejects_string_roles_claim(monkeypatch) -> None:
 @pytest.mark.asyncio
 async def test_require_volunteer_accepts_volunteer_role(monkeypatch) -> None:
     async def fake_decode_token(_token: str) -> dict:
-        return {"realm_access": {"roles": ["volunteer"]}}
+        return {"sub": "volunteer-user", "realm_access": {"roles": ["volunteer"]}}
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
@@ -116,7 +116,7 @@ async def test_require_volunteer_accepts_volunteer_role(monkeypatch) -> None:
 @pytest.mark.asyncio
 async def test_require_volunteer_accepts_admin_role(monkeypatch) -> None:
     async def fake_decode_token(_token: str) -> dict:
-        return {"realm_access": {"roles": ["admin"]}}
+        return {"sub": "admin-user", "realm_access": {"roles": ["admin"]}}
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
@@ -126,7 +126,7 @@ async def test_require_volunteer_accepts_admin_role(monkeypatch) -> None:
 @pytest.mark.asyncio
 async def test_require_volunteer_accepts_both_roles(monkeypatch) -> None:
     async def fake_decode_token(_token: str) -> dict:
-        return {"realm_access": {"roles": ["admin", "volunteer"]}}
+        return {"sub": "admin-volunteer", "realm_access": {"roles": ["admin", "volunteer"]}}
 
     monkeypatch.setattr(auth, "decode_token", fake_decode_token)
 
@@ -190,3 +190,21 @@ async def test_get_current_claims_raises_401_on_invalid_token(monkeypatch) -> No
         await auth.get_current_claims(_request(), _credentials())
 
     assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_user_rest_auth_rejects_keycloak_service_account(monkeypatch) -> None:
+    async def fake_decode_token(_token: str) -> dict:
+        return {
+            "sub": "service-subject",
+            "preferred_username": "service-account-champagnefestival-mcp",
+            "azp": "champagnefestival-mcp",
+            "realm_access": {"roles": ["admin"]},
+        }
+
+    monkeypatch.setattr(auth, "decode_token", fake_decode_token)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await auth.get_current_claims(_request(), _credentials())
+
+    assert exc_info.value.status_code == 403

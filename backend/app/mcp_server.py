@@ -370,7 +370,7 @@ def build_keycloak_auth() -> Any:
             realm_url=settings.oidc_issuer_url,
             base_url=mcp_base_url,
             audience=settings.oidc_audience or None,
-            required_scopes=["openid", "offline_access"],
+            required_scopes=[],
         )
     except Exception as exc:  # pragma: no cover
         logger.warning("Failed to build Keycloak auth provider: %s", exc)

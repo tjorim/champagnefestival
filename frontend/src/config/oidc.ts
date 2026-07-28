@@ -33,6 +33,8 @@ export function createOidcConfig({ navigateTo }: OidcConfigOptions): AuthProvide
     post_logout_redirect_uri: window.location.origin,
     silent_redirect_uri: OIDC_SILENT_REDIRECT_URI,
     automaticSilentRenew: true,
+    monitorSession: true,
+    revokeTokensOnSignout: true,
     onSigninCallback: (user) => {
       const returnTo = (user?.state as { returnTo?: string } | undefined)?.returnTo ?? "/admin";
       return navigateTo(returnTo);
