@@ -10,8 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Registration, User
+from app.models import PebbleAccessToken, Registration, User
 from app.routers import me
+from app.services.pebble_access import rotate_pebble_token
 from tests.helpers import _post_registration
 
 ADMIN_HEADERS = {"Authorization": "Bearer admin-token"}
@@ -139,6 +140,73 @@ async def test_me_qr_idempotent_user(me_client, db_session):
     count_result = await db_session.execute(select(func.count()).where(User.oidc_subject == "visitor-sub"))
     count = count_result.scalar_one()
     assert count == 1
+
+
+@pytest.mark.anyio
+async def test_pebble_token_is_scoped_and_rotates(me_client, db_session):
+    first = await me_client.post("/api/me/pebble-token")
+    assert first.status_code == 200
+    assert first.headers["cache-control"] == "no-store"
+    first_token = first.json()["token"]
+    assert first_token.startswith("cfpat_")
+
+    glance = await me_client.get(
+        "/api/pebble/registrations",
+        headers={"Authorization": f"Bearer {first_token}"},
+    )
+    assert glance.status_code == 200
+    assert glance.json() == []
+
+    second = await me_client.post("/api/me/pebble-token")
+    assert second.status_code == 200
+    second_token = second.json()["token"]
+    assert second_token != first_token
+
+    revoked = await me_client.get(
+        "/api/pebble/registrations",
+        headers={"Authorization": f"Bearer {first_token}"},
+    )
+    assert revoked.status_code == 401
+
+    active = await me_client.get(
+        "/api/pebble/registrations",
+        headers={"Authorization": f"Bearer {second_token}"},
+    )
+    assert active.status_code == 200
+
+    rows = (await db_session.execute(select(PebbleAccessToken))).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].token_hash not in {first_token, second_token}
+
+
+@pytest.mark.anyio
+async def test_pebble_token_can_be_revoked(me_client):
+    created = await me_client.post("/api/me/pebble-token")
+    token = created.json()["token"]
+
+    response = await me_client.delete("/api/me/pebble-token")
+    assert response.status_code == 204
+
+    glance = await me_client.get(
+        "/api/pebble/registrations",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert glance.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_pebble_token_cannot_access_oidc_self_service(client, db_session):
+    user = User(id="usr-pebble-isolation", oidc_subject="pebble-isolation-sub")
+    db_session.add(user)
+    await db_session.commit()
+    token = await rotate_pebble_token(db_session, user.id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    glance = await client.get("/api/pebble/registrations", headers=headers)
+    self_service = await client.get("/api/me/registrations", headers=headers)
+
+    assert glance.status_code == 200
+    assert self_service.status_code == 401
 
 
 @pytest.mark.anyio

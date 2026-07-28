@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,7 @@ import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.AuthorizationServiceConfiguration
+import net.openid.appauth.EndSessionRequest
 import net.openid.appauth.ResponseTypeValues
 
 @Singleton
@@ -144,7 +146,24 @@ constructor(
 
     fun getAccessToken(): String? = authState.accessToken
 
-    fun logout() {
+    suspend fun logout() {
+        val stateToEnd = authState
+        runCatching {
+            val configuration = fetchConfiguration()
+            if (configuration.endSessionEndpoint == null) return@runCatching
+            val builder =
+                EndSessionRequest
+                    .Builder(configuration)
+                    .setPostLogoutRedirectUri(oidcConfig.redirectUri)
+            stateToEnd.idToken?.let(builder::setIdTokenHint)
+            val intent =
+                authService
+                    .getEndSessionRequestIntent(builder.build())
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        }.onFailure { exception ->
+            if (exception is CancellationException) throw exception
+        }
         clearState()
     }
 

@@ -28,6 +28,7 @@ from app.mcp_server import (
     ROLE_PUBLIC,
     ROLE_VOLUNTEER,
     ChampagneFestivalMcpBackend,
+    build_keycloak_auth,
     create_mcp_server,
 )
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD
@@ -241,6 +242,57 @@ def _make_db_execute(rows_by_call: list[Any]):
     db = MagicMock()
     db.execute = _execute
     return db
+
+
+# ---------------------------------------------------------------------------
+# Keycloak auth construction
+# ---------------------------------------------------------------------------
+
+
+def test_build_keycloak_auth_requires_default_scopes(monkeypatch):
+    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_module.settings, "oidc_audience", "champagnefestival")
+
+    with patch("fastmcp.server.auth.providers.keycloak.KeycloakAuthProvider") as provider:
+        auth = build_keycloak_auth()
+
+    assert auth is provider.return_value
+    provider.assert_called_once_with(
+        realm_url="https://auth.example/realms/champagnefestival",
+        base_url="https://api.example/mcp",
+        audience="champagnefestival",
+        required_scopes=["openid", "offline_access"],
+    )
+
+
+def test_build_keycloak_auth_rejects_http_mcp_without_oidc(monkeypatch):
+    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+
+    with pytest.raises(RuntimeError, match="OIDC_ISSUER_URL is required"):
+        build_keycloak_auth()
+
+
+def test_build_keycloak_auth_propagates_provider_failure(monkeypatch):
+    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+
+    with (
+        patch(
+            "fastmcp.server.auth.providers.keycloak.KeycloakAuthProvider",
+            side_effect=RuntimeError("provider setup failed"),
+        ),
+        pytest.raises(RuntimeError, match="provider setup failed"),
+    ):
+        build_keycloak_auth()
+
+
+def test_build_keycloak_auth_is_unused_without_http_mcp(monkeypatch):
+    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "")
+
+    assert build_keycloak_auth() is None
 
 
 # ---------------------------------------------------------------------------

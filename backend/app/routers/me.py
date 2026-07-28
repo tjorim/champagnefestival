@@ -6,7 +6,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,10 +17,23 @@ from app.auth import get_current_claims
 from app.config import settings
 from app.database import get_db
 from app.models import Event, Registration, User
-from app.schemas import MyQrOut, MyRegistrationOut, PaymentStatus, RegistrationStatus
+from app.schemas import (
+    MyQrOut,
+    MyRegistrationOut,
+    PaymentStatus,
+    PebbleAccessTokenOut,
+    RegistrationStatus,
+)
+from app.services.pebble_access import (
+    authenticate_pebble_token,
+    revoke_pebble_token,
+    rotate_pebble_token,
+)
 from app.utils import make_id
 
 router = APIRouter(prefix="/api/me", tags=["me"])
+pebble_router = APIRouter(prefix="/api/pebble", tags=["pebble"])
+_bearer_scheme = HTTPBearer(auto_error=True)
 
 _QR_TOKEN_TTL_MINUTES = 15
 _QR_ALGORITHM = "HS256"
@@ -49,29 +63,14 @@ async def _get_or_create_user(db: AsyncSession, oidc_subject: str) -> User:
     return user
 
 
-@router.get("/registrations", response_model=list[MyRegistrationOut])
-async def list_my_registrations(
-    claims: dict[str, Any] = Depends(get_current_claims),
-    db: AsyncSession = Depends(get_db),
-) -> list[MyRegistrationOut]:
-    """Return all registrations that have been claimed by the authenticated user.
-
-    Auto-provisions a portal ``User`` record on first call if one does not yet
-    exist for the caller's OIDC subject.
-    """
-    oidc_subject: str = claims.get("sub", "")
-    if not oidc_subject:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
-
-    user = await _get_or_create_user(db, oidc_subject)
-
+async def _registrations_for_user(db: AsyncSession, user_id: str) -> list[MyRegistrationOut]:
     result = await db.execute(
         select(Registration)
         .options(
             selectinload(Registration.person),
             selectinload(Registration.event).selectinload(Event.edition),
         )
-        .where(Registration.user_id == user.id)
+        .where(Registration.user_id == user_id)
         .order_by(Registration.created_at.desc())
     )
     registrations = result.scalars().all()
@@ -96,6 +95,62 @@ async def list_my_registrations(
             )
         )
     return payload
+
+
+@router.get("/registrations", response_model=list[MyRegistrationOut])
+async def list_my_registrations(
+    claims: dict[str, Any] = Depends(get_current_claims),
+    db: AsyncSession = Depends(get_db),
+) -> list[MyRegistrationOut]:
+    """Return registrations claimed by the authenticated portal user."""
+    oidc_subject: str = claims.get("sub", "")
+    if not oidc_subject:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
+    user = await _get_or_create_user(db, oidc_subject)
+    return await _registrations_for_user(db, user.id)
+
+
+@router.post("/pebble-token", response_model=PebbleAccessTokenOut)
+async def create_pebble_token(
+    response: Response,
+    claims: dict[str, Any] = Depends(get_current_claims),
+    db: AsyncSession = Depends(get_db),
+) -> PebbleAccessTokenOut:
+    """Rotate the caller's long-lived token scoped to the Pebble glance."""
+    response.headers["Cache-Control"] = "no-store"
+    oidc_subject: str = claims.get("sub", "")
+    if not oidc_subject:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
+    user = await _get_or_create_user(db, oidc_subject)
+    return PebbleAccessTokenOut(token=await rotate_pebble_token(db, user.id))
+
+
+@router.delete("/pebble-token", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_pebble_token(
+    claims: dict[str, Any] = Depends(get_current_claims),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    oidc_subject: str = claims.get("sub", "")
+    if not oidc_subject:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
+    user = await _get_or_create_user(db, oidc_subject)
+    await revoke_pebble_token(db, user.id)
+
+
+@pebble_router.get("/registrations", response_model=list[MyRegistrationOut])
+async def list_pebble_registrations(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> list[MyRegistrationOut]:
+    """Return registrations using a credential that cannot access other APIs."""
+    user_id = await authenticate_pebble_token(db, credentials.credentials)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or revoked Pebble token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return await _registrations_for_user(db, user_id)
 
 
 @router.get("/qr", response_model=MyQrOut)

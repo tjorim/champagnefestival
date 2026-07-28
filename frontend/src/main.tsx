@@ -59,6 +59,7 @@ const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
+const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -190,6 +191,23 @@ function PrivacyPolicyRoute() {
       <main id="main-content" className="standalone-main standalone-document-main">
         <AppSuspense errorFallbackText={m.error_loading_privacy()}>
           <PrivacyPolicyPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /pebble-pair */
+function PebblePairRoute() {
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-smartwatch" title={m.pebble_pair_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.pebble_pair_error()}>
+          <PebblePairPage />
         </AppSuspense>
       </main>
     </div>
@@ -620,6 +638,7 @@ const router = createAppRouter({
   CheckInRoute,
   MyRegistrationsRoute,
   PrivacyPolicyRoute,
+  PebblePairRoute,
 });
 
 const oidcConfig = createOidcConfig({

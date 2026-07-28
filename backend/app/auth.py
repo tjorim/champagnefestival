@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
@@ -13,6 +15,58 @@ from app.oidc_config import OIDCTokenError, decode_token
 logger = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
+
+
+class AuthType(StrEnum):
+    KEYCLOAK_USER = "keycloak_user"
+    KEYCLOAK_SERVICE = "keycloak_service"
+    DELEGATED = "delegated"
+
+
+@dataclass(frozen=True)
+class AuthorizationPrincipal:
+    """Provider-neutral identity and authorization context."""
+
+    subject: str
+    user_id: str | None
+    client_id: str | None
+    auth_type: AuthType
+    roles: frozenset[str] = frozenset()
+    scopes: frozenset[str] = frozenset()
+
+
+def _is_keycloak_service_account(claims: dict[str, Any]) -> bool:
+    username = claims.get("preferred_username")
+    return isinstance(username, str) and username.startswith("service-account-")
+
+
+def _principal_from_claims(claims: dict[str, Any]) -> AuthorizationPrincipal:
+    subject = claims.get("sub")
+    if not isinstance(subject, str) or not subject:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
+    if _is_keycloak_service_account(claims):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Keycloak service accounts cannot use the user REST API",
+        )
+    client_id = claims.get("azp")
+    scope = claims.get("scope")
+    return AuthorizationPrincipal(
+        subject=subject,
+        user_id=None,
+        client_id=client_id if isinstance(client_id, str) else None,
+        auth_type=AuthType.KEYCLOAK_USER,
+        roles=frozenset(role for role in _extract_roles(claims) if isinstance(role, str)),
+        scopes=frozenset(scope.split()) if isinstance(scope, str) else frozenset(),
+    )
+
+
+def _set_request_principal(request: Request, claims: dict[str, Any]) -> AuthorizationPrincipal:
+    principal = _principal_from_claims(claims)
+    request.state.principal = principal
+    request.state.user_id = principal.subject
+    request.state.auth_type = principal.auth_type
+    return principal
 
 
 async def _decode_or_401(credentials: HTTPAuthorizationCredentials) -> dict[str, Any]:
@@ -59,8 +113,7 @@ async def require_admin(
             detail="Forbidden",
         )
 
-    request.state.user_id = claims.get("sub")
-    request.state.auth_type = "oidc"
+    _set_request_principal(request, claims)
 
 
 async def require_volunteer(
@@ -81,8 +134,7 @@ async def require_volunteer(
             detail="Forbidden",
         )
 
-    request.state.user_id = claims.get("sub")
-    request.state.auth_type = "oidc"
+    _set_request_principal(request, claims)
 
 
 async def get_current_claims(
@@ -95,8 +147,7 @@ async def get_current_claims(
     that only require the caller to be authenticated.
     """
     claims = await _decode_or_401(credentials)
-    request.state.user_id = claims.get("sub")
-    request.state.auth_type = "oidc"
+    _set_request_principal(request, claims)
     return claims
 
 
