@@ -3,15 +3,20 @@ package be.champagnefestival.android.feature.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -59,8 +64,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut
     ) { padding ->
         when (val state = uiState) {
             UiState.Loading -> LoadingContent(modifier = Modifier.padding(padding))
-            is UiState.Error -> ErrorContent(message = stringResource(state.reason.toStringRes()), onRetry = {
-            }, modifier = Modifier.padding(padding))
+            is UiState.Error -> ErrorContent(
+                message = stringResource(state.reason.toStringRes()),
+                onRetry = viewModel::loadSettings,
+                modifier = Modifier.padding(padding)
+            )
             is UiState.Success -> SettingsContent(
                 viewModel = viewModel,
                 settings = state.data,
@@ -73,6 +81,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut
 @Composable
 private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiModel, modifier: Modifier = Modifier) {
     val uriHandler = LocalUriHandler.current
+    val isLoggingOut by viewModel.isLoggingOut.collectAsState()
 
     Column(
         modifier =
@@ -99,7 +108,15 @@ private fun SettingsContent(viewModel: SettingsViewModel, settings: SettingsUiMo
                 onCheckedChange = viewModel::setBiometricLockEnabled
             )
         }
-        Button(onClick = viewModel::logout) {
+        Button(onClick = viewModel::logout, enabled = !isLoggingOut) {
+            if (isLoggingOut) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = LocalContentColor.current
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             Text(stringResource(R.string.settings_logout_button))
         }
         Button(onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }) {

@@ -7,6 +7,7 @@ import be.champagnefestival.android.core.auth.AuthManager
 import be.champagnefestival.android.core.storage.ApiBaseUrlOverrideStore
 import be.champagnefestival.android.core.storage.BiometricLockPreferencesStore
 import be.champagnefestival.android.ui.UiState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,8 +26,25 @@ class SettingsViewModel(
     private val _loggedOut = MutableStateFlow(false)
     val loggedOut: StateFlow<Boolean> = _loggedOut.asStateFlow()
 
+    private val _isLoggingOut = MutableStateFlow(false)
+    val isLoggingOut: StateFlow<Boolean> = _isLoggingOut.asStateFlow()
+
+    private var loadSettingsJob: Job? = null
+
     init {
-        viewModelScope.launch {
+        loadSettings()
+    }
+
+    /**
+     * (Re)subscribes to the settings-backing preference flows. Also the target of the
+     * error screen's Retry button — that button must do something real rather than the
+     * no-op it started as, even though these flows only ever resolve to Success today.
+     * Cancels any prior collection first so a repeat call can't leak a second live
+     * collector alongside the first.
+     */
+    fun loadSettings() {
+        loadSettingsJob?.cancel()
+        loadSettingsJob = viewModelScope.launch {
             apiBaseUrlOverrideStore.override
                 .combine(biometricLockPreferencesStore.biometricLockEnabledFlow) { apiBaseUrl, biometricLockEnabled ->
                     // Null while the persisted lock setting is still loading; wait for it so the
@@ -72,7 +90,12 @@ class SettingsViewModel(
     }
 
     fun logout() {
+        // authManager.logout() round-trips to Keycloak (discovery, then launching the
+        // end-session browser activity) before clearing local state, so guard against a
+        // double-tap firing two end-session activities while the button still looks idle.
+        if (_isLoggingOut.value) return
         viewModelScope.launch {
+            _isLoggingOut.value = true
             authManager.logout()
             _loggedOut.value = true
         }
