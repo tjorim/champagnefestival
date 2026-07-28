@@ -24,6 +24,13 @@ interface OidcConfigOptions {
   navigateTo: (to: string) => void | Promise<void>;
 }
 
+export function resolvePostSigninReturnTo(state: unknown): string {
+  const returnTo = (state as { returnTo?: unknown } | undefined)?.returnTo;
+  return typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")
+    ? returnTo
+    : "/admin";
+}
+
 export function createOidcConfig({ navigateTo }: OidcConfigOptions): AuthProviderProps {
   return {
     authority: OIDC_AUTHORITY,
@@ -36,8 +43,7 @@ export function createOidcConfig({ navigateTo }: OidcConfigOptions): AuthProvide
     monitorSession: true,
     revokeTokensOnSignout: true,
     onSigninCallback: (user) => {
-      const returnTo = (user?.state as { returnTo?: string } | undefined)?.returnTo ?? "/admin";
-      return navigateTo(returnTo);
+      return navigateTo(resolvePostSigninReturnTo(user?.state));
     },
   };
 }

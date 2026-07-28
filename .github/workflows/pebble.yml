@@ -4,11 +4,27 @@ on:
   pull_request:
     paths:
       - "pebble/**"
+      - "frontend/src/components/PebblePairPage.tsx"
+      - "frontend/src/config/oidc.ts"
+      - "frontend/src/contexts/AuthContext.tsx"
+      - "frontend/src/main.tsx"
+      - "frontend/src/router.tsx"
+      - "backend/app/models.py"
+      - "backend/app/routers/me.py"
+      - "backend/app/services/pebble_access.py"
       - ".github/workflows/pebble.yml"
   push:
     branches: [main]
     paths:
       - "pebble/**"
+      - "frontend/src/components/PebblePairPage.tsx"
+      - "frontend/src/config/oidc.ts"
+      - "frontend/src/contexts/AuthContext.tsx"
+      - "frontend/src/main.tsx"
+      - "frontend/src/router.tsx"
+      - "backend/app/models.py"
+      - "backend/app/routers/me.py"
+      - "backend/app/services/pebble_access.py"
       - ".github/workflows/pebble.yml"
 
 permissions:
