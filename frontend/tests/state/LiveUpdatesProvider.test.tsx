@@ -46,6 +46,9 @@ describe("LiveUpdatesProvider", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
       roles: ["admin"],
       hasRole: vi.fn((role: string) => role === "admin"),
       getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
@@ -71,6 +74,9 @@ describe("LiveUpdatesProvider", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue(null),

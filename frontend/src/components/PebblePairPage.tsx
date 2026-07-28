@@ -19,7 +19,8 @@ import { useAuth } from "@/contexts/AuthContext";
  * not this repo. See pebble/README.md.
  */
 export default function PebblePairPage() {
-  const { isAuthenticated, isLoading, login, getAccessToken, authError } = useAuth();
+  const { isAuthenticated, isLoading, login, getAccessToken, authError, clearAuthError } =
+    useAuth();
   const [closed, setClosed] = useState(false);
   const [pairingError, setPairingError] = useState("");
   const [pairAttempt, setPairAttempt] = useState(0);
@@ -63,6 +64,22 @@ export default function PebblePairPage() {
     setPairAttempt((attempt) => attempt + 1);
   };
 
+  /**
+   * Recovery path for a failed sign-in. This page runs inside the Pebble config
+   * webview, which has no address bar, no back button, and no reload — without a
+   * control here, an auth error is a dead end that can only be escaped by closing
+   * the webview and starting again from the watch's app settings.
+   *
+   * The sign-in effect self-guards with `loginRequested`, so re-arm it explicitly
+   * rather than relying on the effect to fire a second time.
+   */
+  const retrySignIn = () => {
+    setPairingError("");
+    loginRequested.current = true;
+    clearAuthError();
+    login("/pebble-pair");
+  };
+
   return (
     <Container className="py-5 text-center">
       <h1 className="h4 mb-3">{m.pebble_pair_title()}</h1>
@@ -70,12 +87,16 @@ export default function PebblePairPage() {
 
       {authError || pairingError ? (
         <Alert variant="danger">
-          <div>{pairingError || m.pebble_pair_error()}</div>
-          {!authError && pairingError ? (
+          <div>{authError ?? pairingError ?? m.pebble_pair_error()}</div>
+          {authError ? (
+            <Button className="mt-3" variant="outline-danger" size="sm" onClick={retrySignIn}>
+              {m.pebble_pair_retry_sign_in()}
+            </Button>
+          ) : (
             <Button className="mt-3" variant="outline-danger" size="sm" onClick={retryPairing}>
               {m.pebble_pair_retry()}
             </Button>
-          ) : null}
+          )}
         </Alert>
       ) : closed ? (
         <Alert variant="success">{m.pebble_pair_close_instruction()}</Alert>

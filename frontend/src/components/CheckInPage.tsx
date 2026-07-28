@@ -555,8 +555,22 @@ export default function CheckInPage() {
                               variant="outline-warning"
                               size="sm"
                               onClick={() => auth.login(returnTo)}
+                              disabled={auth.isSigningIn}
                             >
-                              {m.admin_login_button()}
+                              {auth.isSigningIn ? (
+                                <>
+                                  <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    className="me-2"
+                                    aria-hidden="true"
+                                  />
+                                  {m.auth_signing_in()}
+                                </>
+                              ) : (
+                                m.admin_login_button()
+                              )}
                             </Button>
                           </Alert>
                         )}

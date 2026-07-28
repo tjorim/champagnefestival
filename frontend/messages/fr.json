@@ -669,5 +669,9 @@
   "pebble_pair_connecting": "Connexion de votre montre...",
   "pebble_pair_error": "Impossible de terminer l’association. Veuillez réessayer depuis les réglages de l’application sur votre montre.",
   "pebble_pair_retry": "Réessayer l’association",
-  "pebble_pair_close_instruction": "Vous pouvez fermer cette fenêtre et revenir à votre montre."
+  "pebble_pair_close_instruction": "Vous pouvez fermer cette fenêtre et revenir à votre montre.",
+  "auth_signing_in": "Connexion en cours…",
+  "auth_signing_out": "Déconnexion en cours…",
+  "auth_session_expired_notice": "Votre session a expiré, vous avez donc été déconnecté. Reconnectez-vous pour continuer.",
+  "pebble_pair_retry_sign_in": "Réessayer de se connecter"
 }

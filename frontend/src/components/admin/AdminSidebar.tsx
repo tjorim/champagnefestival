@@ -1,6 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 
 interface SidebarItemProps {
@@ -104,6 +105,8 @@ export interface AdminSidebarProps {
   isAnyFetching: boolean;
   onLoadData: () => void;
   onLogout: () => void;
+  accountLabel: string | null;
+  isSigningOut: boolean;
   canManageAdminSections: boolean;
 }
 
@@ -123,6 +126,8 @@ export default function AdminSidebar({
   isAnyFetching,
   onLoadData,
   onLogout,
+  accountLabel,
+  isSigningOut,
   canManageAdminSections,
 }: AdminSidebarProps) {
   const itemProps = { activeKey, setActiveKey, setSidebarOpen };
@@ -272,7 +277,14 @@ export default function AdminSidebar({
         <div className="admin-sidebar-footer">
           <div className="admin-auth-status">
             <i className="bi bi-check-circle-fill" aria-hidden="true" />
-            <span>{m.admin_authenticated()}</span>
+            {/* Which account is signed in matters here: role decides which sections
+                exist at all, so "why can't I see X" starts with "who am I?". */}
+            <span className="admin-auth-account" title={accountLabel ?? undefined}>
+              {accountLabel ?? m.admin_authenticated()}
+            </span>
+            <span className="admin-auth-role">
+              {canManageAdminSections ? m.admin_role_admin() : m.admin_role_volunteer()}
+            </span>
           </div>
           <div className="d-flex gap-2">
             <Button
@@ -288,14 +300,29 @@ export default function AdminSidebar({
                 aria-hidden="true"
               />
             </Button>
+            {/* Labeled, not icon-only: this sits next to Refresh and is destructive
+                (it ends the session and discards loaded work), so it must not be a
+                same-shaped icon its neighbor can be mistaken for. */}
             <Button
               variant="outline-danger"
               size="sm"
+              className="flex-grow-1"
               onClick={onLogout}
+              disabled={isSigningOut}
               title={m.admin_logout()}
-              aria-label={m.admin_logout()}
             >
-              <i className="bi bi-box-arrow-right" aria-hidden="true" />
+              {isSigningOut ? (
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  className="me-2"
+                  aria-hidden="true"
+                />
+              ) : (
+                <i className="bi bi-box-arrow-right me-2" aria-hidden="true" />
+              )}
+              {isSigningOut ? m.auth_signing_out() : m.admin_logout()}
             </Button>
           </div>
         </div>

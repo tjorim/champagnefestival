@@ -29,6 +29,7 @@ import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
+import { recordSignOutReason } from "@/utils/signOutReason";
 import Card from "react-bootstrap/Card";
 
 function activeEditionLabel(year: number): string {
@@ -281,6 +282,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       (e) => e instanceof Error && e.message === "unauthorized",
     );
     if (unauthorizedError) {
+      // Forced sign-out: record why, so the login screen can explain the session
+      // ended instead of silently appearing mid-task.
+      recordSignOutReason("session-expired");
       handleLogout();
       return;
     }
@@ -391,6 +395,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             isAnyFetching={isAnyFetching}
             onLoadData={loadData}
             onLogout={handleLogout}
+            accountLabel={auth.accountLabel}
+            isSigningOut={auth.isSigningOut}
             canManageAdminSections={canManageAdminSections}
           />
 

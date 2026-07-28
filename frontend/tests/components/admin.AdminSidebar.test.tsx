@@ -26,6 +26,9 @@ vi.mock("@/paraglide/messages", () => ({
     admin_refresh: () => "Refresh",
     admin_logout: () => "Log out",
     admin_toggle_navigation: () => "Toggle navigation",
+    admin_role_admin: () => "Admin",
+    admin_role_volunteer: () => "Volunteer",
+    auth_signing_out: () => "Signing out…",
   },
 }));
 
@@ -49,6 +52,8 @@ function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
       isAnyFetching={false}
       onLoadData={vi.fn()}
       onLogout={vi.fn()}
+      accountLabel="ada@example.org"
+      isSigningOut={false}
       canManageAdminSections={canManageAdminSections}
     />,
   );

@@ -457,6 +457,27 @@
   font-size: 0.7rem;
 }
 
+/* Account names are user data and can be long; truncate rather than let them
+   push the role badge out of the fixed-width sidebar. */
+.admin-auth-account {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.admin-auth-role {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.7rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #8f8f8f;
+}
+
 /* ---- Main content area ---- */
 .admin-main {
   flex: 1;
