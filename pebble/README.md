@@ -1,7 +1,14 @@
 # Pebble companion app
 
-Status: **not yet built or run against real hardware or the `pebble`
-emulator.** Tracks [issue #757](https://github.com/tjorim/champagnefestival/issues/757).
+Status: **builds and runs in the Pebble `emery` emulator; not yet run on real
+hardware.** The emulator proves the package builds, the watchapp launches and
+stays running, and Piu/`localStorage`/config-message plumbing work — it
+cannot prove anything that needs a live HTTP round-trip (loading
+registrations, or the sign-in-expired/retryable/network-error states), so
+that and the physical-watch smoke test are still open. See
+[`EMULATOR.md`](EMULATOR.md) for the runbook and its one hard limitation.
+Tracks [issue #757](https://github.com/tjorim/champagnefestival/issues/757)
+and validation issue [#778](https://github.com/tjorim/champagnefestival/issues/778).
 
 A glanceable watch app for Pebble Time 2 / Pebble Round 2, built with
 [Alloy](https://developer.repebble.com/guides/alloy/), Pebble's JS/TS SDK.
@@ -20,6 +27,9 @@ pebble/
     embeddedjs/manifest.json
     embeddedjs/main.js     # watch-side: Piu UI, fetch(), pairing token storage
     pkjs/index.js          # phone-side: network proxy + pairing handoff
+  scripts/
+    validate.mjs            # package-contract check, run in CI
+    mock-server.py           # stand-in backend for emulator testing
   resources/               # icons/fonts (empty for now)
 ```
 
@@ -29,8 +39,11 @@ Every API used in `src/` (Piu widgets, `pebble/message`, `fetch()`,
 `package.json` manifest shape) was cross-checked against
 [developer.repebble.com/guides/alloy](https://developer.repebble.com/guides/alloy/)
 and the [Moddable Pebble Examples](https://github.com/Moddable-OpenSource/pebble-examples)
-(`hellofetch`, `hellomessage`). None of it has been run on a device or the
-emulator, so treat it as "should work per the docs," not "verified working."
+(`hellofetch`, `hellomessage`). The build, launch, and UI/config paths are now
+verified against the `emery` emulator (see `EMULATOR.md`); the `fetch()` call
+in `main.js` and the resulting registration rendering are still unverified —
+Alloy's `fetch()` never completes under the emulator, so that path needs a
+real device.
 
 ## How it fits together
 
@@ -62,16 +75,22 @@ emulator, so treat it as "should work per the docs," not "verified working."
 - **Database migration.** Deploy Alembic revision `002` before pairing. A new
   pairing rotates the previous watch credential; deleting the portal account
   also deletes it.
-- **Device verification.** None of `src/embeddedjs/main.js` or
-  `src/pkjs/index.js` has been run through `pebble build` /
-  `pebble install --emulator emery` yet — do that before relying on it, in
-  case the docs missed something (Alloy is very new).
+- **Physical-device verification.** `pebble build` / `pebble install
+  --emulator emery` have been run (see `EMULATOR.md`), but that only proves
+  the app builds and launches — the `fetch()`-dependent registration loading
+  and error states are unverified until this runs on a real Pebble Time 2,
+  since Alloy's `fetch()` never completes under the emulator.
 - Not wired into `VERSION` sync, CI, or the release process — that happens
   once/if the app graduates past this stage.
 
-## Building it (untested — see above)
+## Building it
 
 ```sh
 pebble build
 pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 ```
+
+See [`EMULATOR.md`](EMULATOR.md) for the full emulator setup, a mock backend
+for exercising the watch's error states, and known gotchas (an IPv6-only
+pypkjs startup failure, a blank-screen font defect and how to debug it, and
+why `fetch()` doesn't work under the emulator at all).
