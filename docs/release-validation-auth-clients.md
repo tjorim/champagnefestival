@@ -57,9 +57,6 @@ curl -sf https://champagnefestival.tjor.im/api/health | jq '.version'
 - [ ] Keycloak presents a real credential prompt; complete it.
 - [ ] The callback returns to `/admin` (or the `returnTo` route if you started
       from a deep link) and the admin dashboard renders.
-- [ ] While the redirect is being prepared, **Login** disables and shows a
-      "Signing in…" spinner rather than staying idle-looking and clickable
-      for the full round trip to Keycloak.
 
 ### A3. Confirm authenticated app and API access
 
@@ -78,31 +75,10 @@ The SPA runs `automaticSilentRenew` and `monitorSession`.
       without a full-page redirect and without an interaction prompt.
 - [ ] No repeated silent-renew errors accumulate in the console.
 
-### A5. Recovering from a stale access token
-
-Separately from A4's proactive renewal, the dashboard now tries **one**
-silent renewal before signing out whenever an API call comes back `401`,
-rather than ejecting the user immediately (`useAdminSessionRecovery`).
-
-This is hard to trigger deliberately without letting a real token expire or
-revoking it out of band, so treat it as opportunistic — if a `401` surfaces
-during any other step in this run (a long-idle tab, a token revoked
-server-side while the Keycloak SSO session is still valid, etc.), confirm:
-
-- [ ] A **"Reconnecting your session…"** banner appears instead of an
-      immediate redirect to the login screen.
-- [ ] If the underlying Keycloak session is still valid, the dashboard
-      recovers on its own — the banner clears and data reloads — without
-      the user re-authenticating.
-- [ ] If the Keycloak session is genuinely gone, the app signs out exactly
-      once (no retry loop) and lands on A6's expired-session notice below.
-
-### A6. Sign out, and confirm the session is dead
+### A5. Sign out, and confirm the session is dead
 
 1. Sign out from the admin sidebar.
 
-- [ ] Clicking **Logout** disables the control and shows a "Signing out…"
-      spinner until the browser navigates away to Keycloak.
 - [ ] The browser visits the Keycloak end-session endpoint (RP-initiated
       sign-out) and lands back on the site origin.
 - [ ] Replay the token saved in A3 against an authenticated endpoint — it must
@@ -112,9 +88,7 @@ server-side while the Keycloak SSO session is still valid, etc.), confirm:
         -H "Authorization: Bearer <saved-token>" | head -1
       ```
       Expect `401`. A `200` here is a **failure** — file it.
-- [ ] Navigate back to `/admin`. The app treats you as signed out, and the
-      login screen does **not** show the expired-session notice from A5 —
-      that message is reserved for a forced sign-out, not this deliberate one.
+- [ ] Navigate back to `/admin`. The app treats you as signed out.
 - [ ] Click **Login** again: Keycloak prompts for credentials rather than
       silently re-authenticating from a surviving SSO cookie.
 
@@ -137,9 +111,6 @@ Requires a real device. An emulator does not validate the browser/app handoff.
       **Android** client ID (distinct from the web client ID in A2).
 - [ ] Completing the Keycloak prompt returns control to the app via the
       redirect URI, and the app shows a signed-in state.
-- [ ] While the round trip is in progress, **Login** shows a progress
-      indicator in place of the button rather than staying idle-looking and
-      re-tappable.
 
 ### B3. Confirm authenticated app and API access
 
@@ -151,9 +122,6 @@ Requires a real device. An emulator does not validate the browser/app handoff.
 
 Sign out from Settings.
 
-- [ ] Tapping **Logout** disables the button and shows a spinner until the
-      end-session leg completes. Tap it a second time immediately — the
-      second tap must be a no-op, not a second end-session browser launch.
 - [ ] The Keycloak end-session endpoint is opened before local state is cleared.
 - [ ] Encrypted local session state is cleared: relaunching the app (including
       after a force-stop) shows the signed-out state.
@@ -191,13 +159,6 @@ Requires a real phone with the Pebble app **and** a real watch.
 - [ ] The page completes sign-in through the site's real OIDC flow.
 - [ ] Pairing calls `POST /api/me/pebble-token` and the webview closes itself via
       `pebblejs://close#…`.
-- [ ] If sign-in itself fails (drop the phone's connection right before the
-      Keycloak redirect completes, or deny the credential prompt if your test
-      IdP allows that), the page shows the real error and a **Try signing in
-      again** button that restarts the redirect. This is the recovery path
-      that matters here: the config webview has no address bar, back button,
-      or reload, so confirm the button actually gets you out rather than
-      leaving you stranded until you close the webview and re-open Settings.
 
 ### C3. Confirm the handoff reaches the watch
 
