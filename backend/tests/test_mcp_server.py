@@ -249,7 +249,7 @@ def _make_db_execute(rows_by_call: list[Any]):
 # ---------------------------------------------------------------------------
 
 
-def test_build_keycloak_auth_requires_default_scopes(monkeypatch):
+def test_build_keycloak_auth_accepts_client_credentials_without_user_scopes(monkeypatch):
     monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
     monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
     monkeypatch.setattr(mcp_module.settings, "oidc_audience", "champagnefestival")
@@ -262,7 +262,7 @@ def test_build_keycloak_auth_requires_default_scopes(monkeypatch):
         realm_url="https://auth.example/realms/champagnefestival",
         base_url="https://api.example/mcp",
         audience="champagnefestival",
-        required_scopes=["openid", "offline_access"],
+        required_scopes=[],
     )
 
 
