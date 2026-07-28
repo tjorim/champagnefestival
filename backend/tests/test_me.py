@@ -145,6 +145,7 @@ async def test_me_qr_idempotent_user(me_client, db_session):
 async def test_pebble_token_is_scoped_and_rotates(me_client, db_session):
     first = await me_client.post("/api/me/pebble-token")
     assert first.status_code == 200
+    assert first.headers["cache-control"] == "no-store"
     first_token = first.json()["token"]
     assert first_token.startswith("cfpat_")
 

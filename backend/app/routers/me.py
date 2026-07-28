@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
@@ -112,10 +112,12 @@ async def list_my_registrations(
 
 @router.post("/pebble-token", response_model=PebbleAccessTokenOut)
 async def create_pebble_token(
+    response: Response,
     claims: dict[str, Any] = Depends(get_current_claims),
     db: AsyncSession = Depends(get_db),
 ) -> PebbleAccessTokenOut:
     """Rotate the caller's long-lived token scoped to the Pebble glance."""
+    response.headers["Cache-Control"] = "no-store"
     oidc_subject: str = claims.get("sub", "")
     if not oidc_subject:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")

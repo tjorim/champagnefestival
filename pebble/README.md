@@ -11,7 +11,7 @@ data used by the web frontend (`backend/app/routers/me.py`).
 
 ## Layout
 
-```
+```text
 pebble/
   package.json            # app manifest
   wscript                 # Pebble SDK build rules
@@ -71,7 +71,7 @@ emulator, so treat it as "should work per the docs," not "verified working."
 
 ## Building it (untested — see above)
 
-```
+```sh
 pebble build
 pebble install --emulator emery   # or: pebble install --phone <phone-ip>
 ```

@@ -57,7 +57,12 @@ function render(title, status) {
 // Picks the registration to show: today's event if there is one, otherwise
 // the soonest upcoming one. Returns null if there's nothing relevant.
 function pickRelevantRegistration(registrations) {
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const today = new Date();
+  const todayIso = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
   const todays = registrations.find((r) => r.event_date === todayIso);
   if (todays) return todays;
 
@@ -73,7 +78,13 @@ async function refreshGlance(apiBaseUrl, token) {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
-      render("Sign-in expired", "Reopen Settings on\nyour phone to re-pair");
+      if (response.status === 401 || response.status === 403) {
+        render("Sign-in expired", "Reopen Settings on\nyour phone to re-pair");
+      } else if (response.status === 429 || response.status >= 500) {
+        render("Try again later", `Temporary error (${response.status})`);
+      } else {
+        render("Request failed", `Error (${response.status})`);
+      }
       return;
     }
 
