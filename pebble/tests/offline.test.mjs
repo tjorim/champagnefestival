@@ -49,6 +49,21 @@ test("a cache older than 12 hours is discarded", async () => {
   assert.equal(harness.stored.lastRegistration, undefined);
 });
 
+test("a snapshot stamped in the future is discarded", async () => {
+  const harness = createHarness({
+    connected: false,
+    storage: {
+      ...TOKEN,
+      lastRegistration: snapshot(registration(), -600),
+    },
+  });
+
+  await harness.settle();
+
+  assert.equal(harness.title, "Phone offline");
+  assert.equal(harness.stored.lastRegistration, undefined);
+});
+
 test("retryable failures preserve the last useful glance", async () => {
   const harness = createHarness({
     storage: { ...TOKEN, lastRegistration: snapshot(registration()) },
@@ -90,4 +105,46 @@ test("a changed pairing clears data from the previous account", async () => {
 
   assert.equal(harness.stored.lastRegistration, undefined);
   assert.equal(harness.title, "Phone offline");
+});
+
+function heldResponder(body) {
+  let release;
+  return [
+    () => ({
+      status: 200,
+      body: new Promise((resolve) => {
+        release = () => resolve(body);
+      }),
+    }),
+    () => release(),
+  ];
+}
+
+test("a reconnect during another request is serviced", async () => {
+  const [held, release] = heldResponder([registration()]);
+  const harness = createHarness({ storage: TOKEN, responder: held });
+  await harness.settle();
+
+  harness.emit("connected");
+  release();
+  await harness.settle();
+
+  assert.equal(harness.requests.length, 2);
+});
+
+test("an old account response is discarded after pairing changes", async () => {
+  const [held, release] = heldResponder([
+    registration({ event_title: "Old account event" }),
+  ]);
+  const harness = createHarness({ storage: TOKEN, responder: held });
+  await harness.settle();
+
+  await harness.configure({ AUTH_TOKEN: "cfpat_other" });
+  harness.setResponder(() => ({ status: 503, body: {} }));
+  release();
+  await harness.settle();
+
+  assert.equal(harness.title, "Try again later (503)");
+  assert.equal(harness.stored.lastRegistration, undefined);
+  assert.equal(harness.requests.at(-1).headers.Authorization, "Bearer cfpat_other");
 });

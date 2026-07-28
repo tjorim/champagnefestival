@@ -105,6 +105,7 @@ function loadSnapshot() {
       snapshot.version !== SNAPSHOT_VERSION ||
       !snapshot.registration ||
       !snapshot.fetchedAt ||
+      age < 0 ||
       age > SNAPSHOT_MAX_AGE_SECONDS
     ) {
       clearSnapshot();
@@ -164,10 +165,12 @@ async function refreshGlance(apiBaseUrl, token) {
     showStale("Phone offline");
     return;
   }
+  const generation = identityGeneration;
   try {
     const response = await fetch(`${apiBaseUrl}/api/pebble/registrations`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (generation !== identityGeneration) return;
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
         showStale("Sign-in expired");
@@ -180,6 +183,7 @@ async function refreshGlance(apiBaseUrl, token) {
     }
 
     const registrations = await response.json();
+    if (generation !== identityGeneration) return;
     const registration = pickRelevantRegistration(registrations);
     if (!registration) {
       clearSnapshot();
@@ -190,6 +194,7 @@ async function refreshGlance(apiBaseUrl, token) {
     saveSnapshot(registration);
     renderRegistration(registration);
   } catch (err) {
+    if (generation !== identityGeneration) return;
     showStale("Network error");
   }
 }
@@ -198,15 +203,26 @@ let authToken = localStorage.getItem("authToken");
 let apiBaseUrl = localStorage.getItem("apiBaseUrl") || DEFAULT_API_BASE_URL;
 
 let busy = false;
+let identityGeneration = 0;
+let refreshOwed = false;
 
 async function runExclusive(action) {
   if (busy) return;
   busy = true;
   try {
     await action();
+    while (refreshOwed) {
+      refreshOwed = false;
+      await refreshGlance(apiBaseUrl, authToken);
+    }
   } finally {
     busy = false;
   }
+}
+
+function requestRefresh() {
+  if (busy) refreshOwed = true;
+  else runExclusive(() => refreshGlance(apiBaseUrl, authToken));
 }
 
 // eslint-disable-next-line no-unused-vars -- kept alive by the Message runtime, not read directly
@@ -218,6 +234,7 @@ const message = new Message({
     const baseUrl = msg.get("API_BASE_URL");
     const nextBaseUrl = baseUrl ? baseUrl.replace(/\/$/, "") : apiBaseUrl;
     if (nextBaseUrl !== apiBaseUrl || (token && token !== authToken)) {
+      identityGeneration += 1;
       clearSnapshot();
     }
     if (baseUrl) {
@@ -228,13 +245,11 @@ const message = new Message({
       authToken = token;
       localStorage.setItem("authToken", token);
     }
-    runExclusive(() => refreshGlance(apiBaseUrl, authToken));
+    requestRefresh();
   },
 });
 
-watch.addEventListener("connected", () =>
-  runExclusive(() => refreshGlance(apiBaseUrl, authToken)),
-);
-runExclusive(() => refreshGlance(apiBaseUrl, authToken));
+watch.addEventListener("connected", requestRefresh);
+requestRefresh();
 
 export {};

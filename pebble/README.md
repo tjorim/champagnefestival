@@ -72,11 +72,16 @@ real device.
 
 ## Offline behavior
 
-The last successful registration is cached for up to 12 hours. While the phone
-is disconnected or a request fails, the watch keeps that useful glance on
-screen and labels it with the reason and read time, for example
-`Phone offline · 08:12`. A changed pairing token or server URL clears the
-snapshot so one account or deployment can never see another's data.
+The last successful registration is cached for up to 12 hours. Future-stamped
+snapshots are also discarded after a watch-clock rollback. While the phone is
+disconnected or a request fails, the watch keeps that useful glance on screen
+and labels it with the reason and read time, for example
+`Phone offline · 08:12`.
+
+A changed pairing token or server URL clears the snapshot. Any response still
+in flight for the previous identity is discarded, and the new refresh is
+serviced after the active request, so one account or deployment can never see
+another's data.
 
 The watch is read-only, so there is no offline action queue or mutation-replay
 risk.
