@@ -5,6 +5,7 @@
   "keywords": ["pebble-app"],
   "private": true,
   "scripts": {
+    "test": "node --test tests/offline.test.mjs",
     "validate": "node scripts/validate.mjs"
   },
   "dependencies": {

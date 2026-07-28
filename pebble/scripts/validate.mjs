@@ -9,6 +9,8 @@ const requiredFiles = [
   "src/embeddedjs/main.js",
   "src/embeddedjs/manifest.json",
   "src/pkjs/index.js",
+  "scripts/mock-server.py",
+  "scripts/check-screenshot.py",
 ];
 
 for (const file of requiredFiles) {
@@ -35,11 +37,34 @@ if (manifest.modules?.["*"] !== "./main") throw new Error("Embedded main module 
 const watchSource = readFileSync(resolve(root, "src/embeddedjs/main.js"), "utf8");
 const phoneSource = readFileSync(resolve(root, "src/pkjs/index.js"), "utf8");
 if (!watchSource.includes("fetch(")) throw new Error("Watch code must use Alloy fetch()");
+// The SDK does not fall back to a nearby system-font size. An unsupported
+// combination throws while constructing the Style and leaves a blank watchapp.
+const gothicRegularSizes = new Set([9, 14, 18, 24, 28, 36]);
+for (const match of watchSource.matchAll(/font:\s*"(?:(bold)\s+)?(\d+)px Gothic"/g)) {
+  const [, weight, rawSize] = match;
+  const size = Number(rawSize);
+  const supported = weight ? size === 18 : gothicRegularSizes.has(size);
+  if (!supported) {
+    throw new Error(`Unsupported Pebble system font: ${weight ? "bold " : ""}${size}px Gothic`);
+  }
+}
 if (!watchSource.includes("/api/pebble/registrations")) {
   throw new Error("Watch code must use the scoped Pebble registrations endpoint");
 }
+if (!watchSource.includes("localStorage.setItem(") || !watchSource.includes("loadSnapshot(")) {
+  throw new Error("Watch code must persist and restore the offline registration snapshot");
+}
+if (!watchSource.includes("runExclusive(")) {
+  throw new Error("Watch requests must use the exclusive-request guard");
+}
 if (!phoneSource.includes("@moddable/pebbleproxy")) {
   throw new Error("Phone code must initialize the official Alloy network proxy");
+}
+if (/,\s*[)\]]/.test(phoneSource)) {
+  throw new Error("Trailing comma in src/pkjs/index.js: the SDK's PKJS bundler cannot parse it");
+}
+if (/Pebble\.sendAppMessage\s*\(/.test(phoneSource)) {
+  throw new Error("Use moddableProxy.sendAppMessage() so sends are queued behind proxy traffic");
 }
 
 for (const file of ["src/embeddedjs/main.js", "src/pkjs/index.js"]) {

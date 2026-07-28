@@ -4,11 +4,27 @@ on:
   pull_request:
     paths:
       - "pebble/**"
+      - "frontend/src/components/PebblePairPage.tsx"
+      - "frontend/src/config/oidc.ts"
+      - "frontend/src/contexts/AuthContext.tsx"
+      - "frontend/src/main.tsx"
+      - "frontend/src/router.tsx"
+      - "backend/app/models.py"
+      - "backend/app/routers/me.py"
+      - "backend/app/services/pebble_access.py"
       - ".github/workflows/pebble.yml"
   push:
     branches: [main]
     paths:
       - "pebble/**"
+      - "frontend/src/components/PebblePairPage.tsx"
+      - "frontend/src/config/oidc.ts"
+      - "frontend/src/contexts/AuthContext.tsx"
+      - "frontend/src/main.tsx"
+      - "frontend/src/router.tsx"
+      - "backend/app/models.py"
+      - "backend/app/routers/me.py"
+      - "backend/app/services/pebble_access.py"
       - ".github/workflows/pebble.yml"
 
 permissions:
@@ -27,3 +43,66 @@ jobs:
       - name: Validate Alloy package contract
         working-directory: pebble
         run: node scripts/validate.mjs
+      - name: Test watch app logic
+        working-directory: pebble
+        run: npm test
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - name: Install emulator runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libsdl2-2.0-0 libglib2.0-0 libpixman-1-0 zlib1g
+      - name: Install the Pebble SDK
+        run: |
+          uv tool install pebble-tool
+          pebble sdk install latest
+      - name: Build the Alloy package
+        working-directory: pebble
+        run: pebble build
+      - name: Upload the .pbw
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: champagnefestival-pebble-pbw
+          path: pebble/build/*.pbw
+          if-no-files-found: error
+      - name: Pin pypkjs to an IPv4 bind
+        run: |
+          runner=$(ls "$(uv tool dir)"/pebble-tool/lib/python*/site-packages/pypkjs/runner/websocket.py)
+          sed -i 's/pywsgi.WSGIServer(("", self.port)/pywsgi.WSGIServer(("127.0.0.1", self.port)/' "$runner"
+          grep -q '"127.0.0.1", self.port' "$runner"
+      - name: Install and run on the Emery emulator
+        working-directory: pebble
+        run: |
+          for attempt in 1 2; do
+            if pebble install --emulator emery; then
+              sleep 10
+              if pebble screenshot --emulator emery --no-open screenshot.png; then exit 0; fi
+            fi
+            pebble kill || true
+            sleep 5
+          done
+          exit 1
+      - name: Check the watchapp actually rendered
+        working-directory: pebble
+        run: python3 scripts/check-screenshot.py screenshot.png --background dark
+      - name: Upload the screenshot
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: champagnefestival-pebble-screenshot
+          path: pebble/screenshot.png
+          if-no-files-found: warn

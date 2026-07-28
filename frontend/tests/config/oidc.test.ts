@@ -32,4 +32,17 @@ describe("createOidcConfig", () => {
 
     expect(navigateTo).toHaveBeenCalledWith("/admin");
   });
+
+  it.each([
+    { returnTo: "https://example.com" },
+    { returnTo: "//example.com" },
+    { returnTo: null },
+  ])("rejects unsafe or invalid post-sign-in paths", (state) => {
+    const navigateTo = vi.fn();
+    const config = createOidcConfig({ navigateTo });
+
+    config.onSigninCallback?.({ state } as SigninUser);
+
+    expect(navigateTo).toHaveBeenCalledWith("/admin");
+  });
 });

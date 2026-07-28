@@ -1,7 +1,6 @@
 // Watch-side (embeddedjs) code — runs natively on the watch via Moddable's
-// XS engine. Not run against real hardware or the `pebble` emulator; built
-// from the documented Alloy APIs (piu/MC, pebble/message, fetch, localStorage,
-// watch.connected) at https://developer.repebble.com/guides/alloy/.
+// XS engine. The package builds and this screen renders in the `emery`
+// emulator; live fetches still require hardware (see ../../EMULATOR.md).
 //
 // Shows the visitor's most relevant registration (today's event, else the
 // next upcoming one) and whether they're checked in, sourced from
@@ -13,10 +12,18 @@ import {} from "piu/MC";
 import Message from "pebble/message";
 
 const DEFAULT_API_BASE_URL = "https://champagnefestival.tjor.im";
+const SNAPSHOT_KEY = "lastRegistration";
+const SNAPSHOT_VERSION = 1;
+const SNAPSHOT_MAX_AGE_SECONDS = 12 * 60 * 60;
 
 const backgroundSkin = new Skin({ fill: "black" });
-const titleStyle = new Style({ font: "bold 20px Gothic", color: "white" });
-const statusStyle = new Style({ font: "16px Gothic", color: "silver" });
+// Alloy's font lookup only matches the Pebble system font table exactly
+// (see modFindPebbleFont's gFonts list): Gothic-Bold exists at 18px only,
+// Gothic-Regular at 9/14/18/24/28/36px. Any other size throws an uncaught
+// "font not found" error during Style construction, which crashes the app
+// at startup with no diagnostic (see ../../EMULATOR.md).
+const titleStyle = new Style({ font: "bold 18px Gothic", color: "white" });
+const statusStyle = new Style({ font: "14px Gothic", color: "silver" });
 
 const titleLabel = new Label(null, {
   top: 20,
@@ -31,7 +38,7 @@ const statusLabel = new Label(null, {
   top: 70,
   left: 4,
   right: 4,
-  height: 30,
+  height: 60,
   style: statusStyle,
   string: "",
 });
@@ -54,6 +61,88 @@ function render(title, status) {
   statusLabel.string = status;
 }
 
+const pad = (value) => (value < 10 ? `0${value}` : String(value));
+
+function formatClock(epochSeconds) {
+  const date = new Date(epochSeconds * 1000);
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function clearSnapshot() {
+  try {
+    localStorage.removeItem(SNAPSHOT_KEY);
+  } catch (error) {
+    // A stale read-only glance is harmless if storage is unavailable.
+  }
+}
+
+function saveSnapshot(registration) {
+  if (!registration) {
+    clearSnapshot();
+    return;
+  }
+  try {
+    localStorage.setItem(
+      SNAPSHOT_KEY,
+      JSON.stringify({
+        version: SNAPSHOT_VERSION,
+        fetchedAt: Math.floor(Date.now() / 1000),
+        registration,
+      }),
+    );
+  } catch (error) {
+    // A full or unavailable store only costs the offline glance.
+  }
+}
+
+function loadSnapshot() {
+  let raw;
+  try {
+    raw = localStorage.getItem(SNAPSHOT_KEY);
+  } catch (error) {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const snapshot = JSON.parse(raw);
+    const age = Math.floor(Date.now() / 1000) - snapshot.fetchedAt;
+    if (
+      snapshot.version !== SNAPSHOT_VERSION ||
+      !snapshot.registration ||
+      !snapshot.fetchedAt ||
+      age < 0 ||
+      age > SNAPSHOT_MAX_AGE_SECONDS
+    ) {
+      clearSnapshot();
+      return null;
+    }
+    return snapshot;
+  } catch (error) {
+    clearSnapshot();
+    return null;
+  }
+}
+
+function renderRegistration(registration, staleReason = null, fetchedAt = null) {
+  const status = registration.checked_in ? "Checked in" : "Not checked in";
+  const stale = staleReason && fetchedAt
+    ? `\n${staleReason} · ${formatClock(fetchedAt)}`
+    : "";
+  render(
+    `${registration.event_title}\n${registration.event_date}`,
+    `${status}${stale}`,
+  );
+}
+
+function showStale(reason) {
+  const snapshot = loadSnapshot();
+  if (snapshot) {
+    renderRegistration(snapshot.registration, reason, snapshot.fetchedAt);
+    return;
+  }
+  render(reason, "");
+}
+
 // Picks the registration to show: today's event if there is one, otherwise
 // the soonest upcoming one. Returns null if there's nothing relevant.
 function pickRelevantRegistration(registrations) {
@@ -73,48 +162,72 @@ function pickRelevantRegistration(registrations) {
 }
 
 async function refreshGlance(apiBaseUrl, token) {
+  if (!token) {
+    render("Not configured", "Open Settings on your\nphone's Pebble app");
+    return;
+  }
+  if (!watch.connected.pebblekit) {
+    showStale("Phone offline");
+    return;
+  }
+  const generation = identityGeneration;
   try {
     const response = await fetch(`${apiBaseUrl}/api/pebble/registrations`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (generation !== identityGeneration) return;
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        render("Sign-in expired", "Reopen Settings on\nyour phone to re-pair");
+        showStale("Sign-in expired");
       } else if (response.status === 429 || response.status >= 500) {
-        render("Try again later", `Temporary error (${response.status})`);
+        showStale(`Try again later (${response.status})`);
       } else {
-        render("Request failed", `Error (${response.status})`);
+        showStale(`Request failed (${response.status})`);
       }
       return;
     }
 
     const registrations = await response.json();
+    if (generation !== identityGeneration) return;
     const registration = pickRelevantRegistration(registrations);
     if (!registration) {
+      clearSnapshot();
       render("No upcoming\nregistration", "");
       return;
     }
 
-    render(
-      `${registration.event_title}\n${registration.event_date}`,
-      registration.checked_in ? "Checked in" : "Not checked in",
-    );
+    saveSnapshot(registration);
+    renderRegistration(registration);
   } catch (err) {
-    render("Network error", String(err));
+    if (generation !== identityGeneration) return;
+    showStale("Network error");
   }
 }
 
 let authToken = localStorage.getItem("authToken");
 let apiBaseUrl = localStorage.getItem("apiBaseUrl") || DEFAULT_API_BASE_URL;
 
-function maybeRefresh() {
-  if (!authToken) {
-    render("Not paired", "Open Settings on your\nphone's Pebble app");
-    return;
+let busy = false;
+let identityGeneration = 0;
+let refreshOwed = false;
+
+async function runExclusive(action) {
+  if (busy) return;
+  busy = true;
+  try {
+    await action();
+    while (refreshOwed) {
+      refreshOwed = false;
+      await refreshGlance(apiBaseUrl, authToken);
+    }
+  } finally {
+    busy = false;
   }
-  if (watch.connected.pebblekit) {
-    refreshGlance(apiBaseUrl, authToken);
-  }
+}
+
+function requestRefresh() {
+  if (busy) refreshOwed = true;
+  else runExclusive(() => refreshGlance(apiBaseUrl, authToken));
 }
 
 // eslint-disable-next-line no-unused-vars -- kept alive by the Message runtime, not read directly
@@ -124,18 +237,24 @@ const message = new Message({
     const msg = this.read();
     const token = msg.get("AUTH_TOKEN");
     const baseUrl = msg.get("API_BASE_URL");
+    const nextBaseUrl = baseUrl ? baseUrl.replace(/\/$/, "") : apiBaseUrl;
+    if (nextBaseUrl !== apiBaseUrl || (token && token !== authToken)) {
+      identityGeneration += 1;
+      clearSnapshot();
+    }
     if (baseUrl) {
-      apiBaseUrl = baseUrl.replace(/\/$/, "");
+      apiBaseUrl = nextBaseUrl;
       localStorage.setItem("apiBaseUrl", apiBaseUrl);
     }
-    if (!token) return;
-    authToken = token;
-    localStorage.setItem("authToken", token);
-    maybeRefresh();
+    if (token) {
+      authToken = token;
+      localStorage.setItem("authToken", token);
+    }
+    requestRefresh();
   },
 });
 
-watch.addEventListener("connected", maybeRefresh);
-maybeRefresh();
+watch.addEventListener("connected", requestRefresh);
+requestRefresh();
 
 export {};
