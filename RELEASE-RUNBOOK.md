@@ -44,6 +44,12 @@ Run these checks after the production deploy completes (typically within ~2–3 
 
 If any check fails, proceed to the relevant rollback section below.
 
+The admin login check above is a smoke test only. For releases that touch
+authentication, also run the full interactive client validation in
+[`docs/release-validation-auth-clients.md`](docs/release-validation-auth-clients.md),
+which covers the real Keycloak sign-in/sign-out flow on web, the Android
+browser/app handoff, and the Pebble webview-to-watch handoff on physical devices.
+
 ## Rollback: frontend
 
 The frontend is served as static files from `/srv/champagnefestival` on the VPS, managed by the infra stack in `/opt/apps/infra`.
