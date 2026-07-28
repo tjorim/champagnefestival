@@ -26,6 +26,7 @@ import { useAdminDashboardData } from "@/hooks/useAdminDashboardData";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions";
+import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
@@ -52,9 +53,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const canManageAdminSections = auth.hasRole("admin");
   const [globalError, setGlobalError] = useState("");
   const [registrationError, setRegistrationError] = useState("");
-  const [isRenewingSession, setIsRenewingSession] = useState(false);
-  /** Guards against renewing in a loop when the refreshed token is rejected too. */
-  const renewAttempted = useRef(false);
   const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
   const [applyActiveEditionFilterRequest, setApplyActiveEditionFilterRequest] = useState(0);
   /** Full registration (with checkInToken) shown in the detail modal */
@@ -269,8 +267,25 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [exhibitorsQueryKey, queryClient],
   );
 
-  useEffect(() => {
-    const errors = [
+  // A stable array so the recovery hook's effect only re-runs when one of the
+  // underlying query errors actually changes, not on every render.
+  const dashboardQueryErrors = useMemo(
+    (): (Error | null)[] => [
+      // registrationsQuery.error comes from the tanstack-db collection's
+      // lastError, typed loosely by the library; the other queries are plain
+      // react-query errors. Both are Error instances or null at runtime.
+      registrationsQuery.error as Error | null,
+      tablesQuery.error,
+      venuesQuery.error,
+      roomsQuery.error,
+      tableTypesQuery.error,
+      layoutsQuery.error,
+      exhibitorsQuery.error,
+      areasQuery.error,
+      peopleQuery.error,
+      membersQuery.error,
+    ],
+    [
       registrationsQuery.error,
       tablesQuery.error,
       venuesQuery.error,
@@ -281,63 +296,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       areasQuery.error,
       peopleQuery.error,
       membersQuery.error,
-    ];
+    ],
+  );
 
-    const unauthorizedError = errors.find(
-      (e) => e instanceof Error && e.message === "unauthorized",
-    );
-    if (unauthorizedError) {
-      // A 401 usually means the access token aged out while the IdP session is
-      // still good, so try a silent renewal before throwing the user out. One
-      // attempt per episode: if the refreshed token is rejected too, the session
-      // really is gone and looping would just stall the dashboard.
-      if (renewAttempted.current) {
-        recordSignOutReason("session-expired");
-        handleLogout();
-        return;
-      }
-      renewAttempted.current = true;
-      setIsRenewingSession(true);
-      void (async () => {
-        const renewed = await renewSession();
-        if (!renewed) {
-          // Record why, so the login screen explains the session ended instead
-          // of silently appearing mid-task.
-          setIsRenewingSession(false);
-          recordSignOutReason("session-expired");
-          handleLogout();
-          return;
-        }
-        await loadData();
-        setIsRenewingSession(false);
-      })();
-      return;
-    }
+  const handleSessionExpired = useCallback(() => {
+    // Record why, so the login screen explains the session ended instead of
+    // silently appearing mid-task.
+    recordSignOutReason("session-expired");
+    handleLogout();
+  }, [handleLogout]);
 
-    const firstError = errors.find((e) => e !== null);
-    if (firstError) {
-      devError("Failed to load dashboard data", firstError);
+  const { isRenewingSession, loadError } = useAdminSessionRecovery({
+    errors: dashboardQueryErrors,
+    renewSession,
+    loadData,
+    onSignOut: handleSessionExpired,
+  });
+
+  useEffect(() => {
+    if (loadError) {
+      devError("Failed to load dashboard data", loadError);
       setGlobalError(m.admin_error_load_data());
     } else {
-      // Everything loaded: re-arm the renewal so a later expiry gets its own attempt.
-      renewAttempted.current = false;
       setGlobalError("");
     }
-  }, [
-    registrationsQuery.error,
-    tablesQuery.error,
-    venuesQuery.error,
-    roomsQuery.error,
-    tableTypesQuery.error,
-    layoutsQuery.error,
-    exhibitorsQuery.error,
-    areasQuery.error,
-    peopleQuery.error,
-    membersQuery.error,
-    handleLogout,
-    loadData,
-    renewSession,
-  ]);
+  }, [loadError]);
 
   const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
     if (!navRef.current) return;
