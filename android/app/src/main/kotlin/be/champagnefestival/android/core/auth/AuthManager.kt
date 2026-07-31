@@ -142,8 +142,6 @@ constructor(
         }
     }
 
-    fun isLoggedIn(): Boolean = !authState.accessToken.isNullOrBlank()
-
     fun getAccessToken(): String? = authState.accessToken
 
     /**

@@ -42,15 +42,6 @@ Run these checks after the production deploy completes (typically within ~2–3 
 - [ ] **Check-in token scan** — scan or manually enter a known check-in token; confirm guest lookup succeeds.
 - [ ] **Version visible** — `curl -sf https://champagnefestival.tjor.im/api/health | jq .version` returns the expected `X.Y.Z`.
 
-### Authentication flow validation
-
-The **Admin login** check above is a smoke test only — it doesn't exercise
-sign-out, token revocation, the Android browser/app handoff, or the Pebble
-webview-to-watch handoff. For any release that touches authentication (OIDC
-config, `AuthContext`, `AuthManager`, Pebble pairing, or the backend's
-Keycloak integration), also run the full interactive client validation in
-[`docs/release-validation-auth-clients.md`](docs/release-validation-auth-clients.md).
-
 If any check fails, proceed to the relevant rollback section below.
 
 ## Rollback: frontend
