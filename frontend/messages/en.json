@@ -669,5 +669,10 @@
   "pebble_pair_connecting": "Connecting your watch...",
   "pebble_pair_error": "Could not complete pairing. Please try again from your watch's app settings.",
   "pebble_pair_retry": "Retry pairing",
-  "pebble_pair_close_instruction": "You can close this window and return to your watch."
+  "pebble_pair_close_instruction": "You can close this window and return to your watch.",
+  "auth_signing_in": "Signing in…",
+  "auth_signing_out": "Signing out…",
+  "auth_session_expired_notice": "Your session expired, so you were signed out. Please sign in again to continue.",
+  "pebble_pair_retry_sign_in": "Try signing in again",
+  "admin_session_renewing": "Reconnecting your session…"
 }

@@ -19,16 +19,19 @@ import AnalyticsDashboard from "./AnalyticsDashboard";
 import AuditLogViewer from "./AuditLogViewer";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
+import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
 import type { Registration, RegistrationStatus } from "@/types/registration";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
 import { useAdminDashboardData } from "@/hooks/useAdminDashboardData";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions";
+import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
+import { recordSignOutReason } from "@/utils/signOutReason";
 import Card from "react-bootstrap/Card";
 
 function activeEditionLabel(year: number): string {
@@ -46,6 +49,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const navRef = useRef<HTMLElement>(null);
 
   const isAuthenticated = auth.isAuthenticated;
+  const { renewSession } = auth;
   const canManageAdminSections = auth.hasRole("admin");
   const [globalError, setGlobalError] = useState("");
   const [registrationError, setRegistrationError] = useState("");
@@ -263,8 +267,25 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     [exhibitorsQueryKey, queryClient],
   );
 
-  useEffect(() => {
-    const errors = [
+  // A stable array so the recovery hook's effect only re-runs when one of the
+  // underlying query errors actually changes, not on every render.
+  const dashboardQueryErrors = useMemo(
+    (): (Error | null)[] => [
+      // registrationsQuery.error comes from the tanstack-db collection's
+      // lastError, typed loosely by the library; the other queries are plain
+      // react-query errors. Both are Error instances or null at runtime.
+      registrationsQuery.error as Error | null,
+      tablesQuery.error,
+      venuesQuery.error,
+      roomsQuery.error,
+      tableTypesQuery.error,
+      layoutsQuery.error,
+      exhibitorsQuery.error,
+      areasQuery.error,
+      peopleQuery.error,
+      membersQuery.error,
+    ],
+    [
       registrationsQuery.error,
       tablesQuery.error,
       venuesQuery.error,
@@ -275,37 +296,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       areasQuery.error,
       peopleQuery.error,
       membersQuery.error,
-    ];
+    ],
+  );
 
-    const unauthorizedError = errors.find(
-      (e) => e instanceof Error && e.message === "unauthorized",
-    );
-    if (unauthorizedError) {
-      handleLogout();
-      return;
-    }
+  const handleSessionExpired = useCallback(() => {
+    // Record why, so the login screen explains the session ended instead of
+    // silently appearing mid-task.
+    recordSignOutReason("session-expired");
+    handleLogout();
+  }, [handleLogout]);
 
-    const firstError = errors.find((e) => e !== null);
-    if (firstError) {
-      devError("Failed to load dashboard data", firstError);
+  const { isRenewingSession, loadError } = useAdminSessionRecovery({
+    errors: dashboardQueryErrors,
+    renewSession,
+    loadData,
+    onSignOut: handleSessionExpired,
+  });
+
+  useEffect(() => {
+    if (loadError) {
+      devError("Failed to load dashboard data", loadError);
       setGlobalError(m.admin_error_load_data());
     } else {
-      // All queries succeeded or are still loading — clear any previous error.
       setGlobalError("");
     }
-  }, [
-    registrationsQuery.error,
-    tablesQuery.error,
-    venuesQuery.error,
-    roomsQuery.error,
-    tableTypesQuery.error,
-    layoutsQuery.error,
-    exhibitorsQuery.error,
-    areasQuery.error,
-    peopleQuery.error,
-    membersQuery.error,
-    handleLogout,
-  ]);
+  }, [loadError]);
 
   const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
     if (!navRef.current) return;
@@ -391,6 +406,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             isAnyFetching={isAnyFetching}
             onLoadData={loadData}
             onLogout={handleLogout}
+            accountLabel={auth.accountLabel}
+            isSigningOut={auth.isSigningOut}
             canManageAdminSections={canManageAdminSections}
           />
 
@@ -428,6 +445,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
               </button>
             )}
+            {isRenewingSession && (
+              // Renewal is quick but not instant; without this the dashboard just
+              // sits there, which reads as a hang rather than as recovery.
+              <Alert variant="info" className="mb-4 d-flex align-items-center gap-2">
+                <Spinner animation="border" size="sm" aria-hidden="true" />
+                {m.admin_session_renewing()}
+              </Alert>
+            )}
             {globalError && (
               <Alert
                 variant="danger"
@@ -440,11 +465,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             )}
 
             {isAnyPending ? (
-              <div className="text-center py-5">
-                <Spinner animation="border" variant="primary" role="status">
-                  <span className="visually-hidden">{m.admin_loading()}</span>
-                </Spinner>
-              </div>
+              <AdminSkeleton variant={skeletonVariantForSection(activeKey)} />
             ) : (
               <div className="admin-content-pane" key={activeKey}>
                 {activeKey === "registrations" && (

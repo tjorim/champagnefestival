@@ -35,6 +35,9 @@ vi.mock("@/contexts/AuthContext", () => ({
   useAuth: vi.fn().mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
+    isSigningIn: false,
+    isSigningOut: false,
+    accountLabel: "mock-user",
     roles: ["admin"],
     hasRole: vi.fn((role: string) => role === "admin"),
     getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
@@ -42,6 +45,7 @@ vi.mock("@/contexts/AuthContext", () => ({
     clearAuthError: vi.fn(),
     login: vi.fn(),
     logout: vi.fn(),
+    renewSession: vi.fn().mockResolvedValue(false),
   }),
   AuthProvider: ({ children }: { children: ReactNode }) => children,
 }));

@@ -93,6 +93,9 @@ describe("CheckInPage", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
       roles: ["admin"],
       hasRole: vi.fn((role: string) => role === "admin"),
       getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
@@ -100,6 +103,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
   });
 
@@ -180,6 +184,9 @@ describe("CheckInPage", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
@@ -187,6 +194,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     await renderPage("/check-in");
@@ -200,6 +208,9 @@ describe("CheckInPage", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: true,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue(null),
@@ -207,6 +218,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login: vi.fn(),
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     await renderPage("/check-in");
@@ -221,6 +233,9 @@ describe("CheckInPage", () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
       roles: [],
       hasRole: vi.fn().mockReturnValue(false),
       getAccessToken: vi.fn().mockReturnValue(null),
@@ -228,6 +243,7 @@ describe("CheckInPage", () => {
       clearAuthError: vi.fn(),
       login,
       logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
     });
 
     await renderPage("/check-in");

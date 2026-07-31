@@ -39,7 +39,8 @@ private object Routes {
 @Composable
 fun NavGraph(app: ChampagneFestivalApp, modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    val startDestination = if (app.authManager.isLoggedIn()) Routes.Edition else Routes.Login
+    val startDestination =
+        if (!app.authManager.getAccessToken().isNullOrBlank()) Routes.Edition else Routes.Login
 
     NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
         composable(Routes.Login) {
