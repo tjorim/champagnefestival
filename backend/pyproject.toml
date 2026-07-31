@@ -14,7 +14,7 @@ requires-python = ">=3.13"
 dependencies = [
   "alembic==1.18.5",
   "asyncpg==0.31.0",
-  "fastapi==0.139.2",
+  "fastapi==0.140.13",
   "fastmcp==3.4.5",
   "httpx==0.28.1",
   "limits==5.8.0",
