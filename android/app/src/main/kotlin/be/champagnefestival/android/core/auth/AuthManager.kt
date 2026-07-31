@@ -146,24 +146,41 @@ constructor(
 
     fun getAccessToken(): String? = authState.accessToken
 
-    suspend fun logout() {
+    /**
+     * Builds the provider end-session intent, or null when there is nothing to end
+     * remotely (no end-session endpoint, or discovery/build failed). Deliberately leaves
+     * local state intact: the caller launches this intent and only clears state via
+     * [completeLogout] once that launch has returned control to the app. Clearing state
+     * here (as the previous implementation did, immediately after `startActivity`, which
+     * returns as soon as the browser is merely requested to open) would report the app as
+     * signed out before the user has even seen the end-session screen — if that flow is
+     * then cancelled or fails, the provider session can stay alive while the app already
+     * believes it's logged out, and the next sign-in then silently succeeds via SSO.
+     */
+    suspend fun buildLogoutIntent(): Intent? {
         val stateToEnd = authState
-        runCatching {
+        return runCatching {
             val configuration = fetchConfiguration()
-            if (configuration.endSessionEndpoint == null) return@runCatching
+            if (configuration.endSessionEndpoint == null) return@runCatching null
             val builder =
                 EndSessionRequest
                     .Builder(configuration)
                     .setPostLogoutRedirectUri(oidcConfig.redirectUri)
             stateToEnd.idToken?.let(builder::setIdTokenHint)
-            val intent =
-                authService
-                    .getEndSessionRequestIntent(builder.build())
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
+            authService.getEndSessionRequestIntent(builder.build())
         }.onFailure { exception ->
             if (exception is CancellationException) throw exception
-        }
+        }.getOrNull()
+    }
+
+    /**
+     * Clears local session state. Call once the intent from [buildLogoutIntent] has been
+     * launched and returned control to the app — whatever the outcome, completed or
+     * cancelled — or immediately when [buildLogoutIntent] returned null and there was
+     * nothing to launch. Never call this before that round trip has had a chance to run;
+     * see [buildLogoutIntent] for why the ordering matters.
+     */
+    fun completeLogout() {
         clearState()
     }
 

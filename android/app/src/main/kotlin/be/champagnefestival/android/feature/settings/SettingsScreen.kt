@@ -1,5 +1,7 @@
 package be.champagnefestival.android.feature.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +42,19 @@ import be.champagnefestival.android.ui.components.toStringRes
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onLoggedOut: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val loggedOut by viewModel.loggedOut.collectAsState()
+
+    // Launches the Keycloak end-session intent built by viewModel.logout() and reports
+    // back via onLogoutFlowFinished() whenever that activity returns control to the app,
+    // whatever the outcome — see AuthManager.buildLogoutIntent for why local state must
+    // not be cleared until then.
+    val logoutLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { viewModel.onLogoutFlowFinished() }
+
+    LaunchedEffect(Unit) {
+        viewModel.logoutIntent.collect { intent -> logoutLauncher.launch(intent) }
+    }
 
     LaunchedEffect(loggedOut) {
         if (loggedOut) {

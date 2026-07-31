@@ -1,5 +1,6 @@
 package be.champagnefestival.android.feature.settings
 
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import be.champagnefestival.android.BuildConfig
@@ -8,8 +9,11 @@ import be.champagnefestival.android.core.storage.ApiBaseUrlOverrideStore
 import be.champagnefestival.android.core.storage.BiometricLockPreferencesStore
 import be.champagnefestival.android.ui.UiState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
@@ -28,6 +32,11 @@ class SettingsViewModel(
 
     private val _isLoggingOut = MutableStateFlow(false)
     val isLoggingOut: StateFlow<Boolean> = _isLoggingOut.asStateFlow()
+
+    // Buffered so an emission isn't dropped if the collecting composable's LaunchedEffect
+    // hasn't started yet when logout() fires.
+    private val _logoutIntent = MutableSharedFlow<Intent>(extraBufferCapacity = 1)
+    val logoutIntent: SharedFlow<Intent> = _logoutIntent.asSharedFlow()
 
     private var loadSettingsJob: Job? = null
 
@@ -89,16 +98,41 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Starts sign-out. This only builds the Keycloak end-session intent and hands it to
+     * the UI via [logoutIntent] to launch with an `ActivityResultLauncher` — it does not
+     * clear local state or flip [loggedOut] itself. That happens in [onLogoutFlowFinished],
+     * called once that launch returns control to the app, so the app never reports itself
+     * signed out before the end-session round trip has had a chance to run (see
+     * [AuthManager.buildLogoutIntent]). Guard against a double-tap firing two end-session
+     * activities while the button still looks idle.
+     */
     fun logout() {
-        // authManager.logout() round-trips to Keycloak (discovery, then launching the
-        // end-session browser activity) before clearing local state, so guard against a
-        // double-tap firing two end-session activities while the button still looks idle.
         if (_isLoggingOut.value) return
         viewModelScope.launch {
             _isLoggingOut.value = true
-            authManager.logout()
-            _loggedOut.value = true
+            val intent = authManager.buildLogoutIntent()
+            if (intent != null) {
+                _logoutIntent.emit(intent)
+            } else {
+                completeLogout()
+            }
         }
+    }
+
+    /**
+     * Finishes sign-out once the end-session activity launched from [logoutIntent] returns
+     * control to the app. Called for every outcome (completed or cancelled) — the point
+     * isn't to distinguish those, just to stop reporting "logged out" before the browser
+     * step has run at all.
+     */
+    fun onLogoutFlowFinished() {
+        completeLogout()
+    }
+
+    private fun completeLogout() {
+        authManager.completeLogout()
+        _loggedOut.value = true
     }
 }
 
