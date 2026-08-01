@@ -20,6 +20,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 - Web sign-in and sign-out now show pending states; expired access tokens attempt one silent renewal before signing out, and the reason survives the identity-provider round trip (#781)
 - Pebble pairing surfaces authentication failures and offers a working sign-in retry inside the configuration webview (#781)
 - Android Settings retry now reloads preferences, and interactive logout waits for the Keycloak end-session flow before clearing local state while preventing duplicate launches (#781)
+- PyJWT was updated to 2.13.0 to include the current upstream security fixes and restore resolvable dependency updates
 
 ## [2026.7.2] - 2026-07-28
 
