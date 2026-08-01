@@ -9,6 +9,18 @@ The release workflow requires entries in this format:
 Starting with the first `YYYY.MM.MICRO` release, `X.Y.Z` is CalVer rather than
 SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predate that switch.
 
+## [2026.8.1] - 2026-08-01
+
+### Changed
+
+- Admin loading uses stable skeleton layouts, and the sidebar identifies the signed-in account and role more clearly (#781)
+
+### Fixed
+
+- Web sign-in and sign-out now show pending states; expired access tokens attempt one silent renewal before signing out, and the reason survives the identity-provider round trip (#781)
+- Pebble pairing surfaces authentication failures and offers a working sign-in retry inside the configuration webview (#781)
+- Android Settings retry now reloads preferences, and interactive logout waits for the Keycloak end-session flow before clearing local state while preventing duplicate launches (#781)
+
 ## [2026.7.2] - 2026-07-28
 
 ### Added
