@@ -1,11 +1,12 @@
 /**
  * Regression coverage for how admin content saves are routed and shaped.
  *
- * Two bugs lived here: ItemModal minted a `Date.now()` id for brand-new items,
- * which `saveContentSectionItem` read as "existing" and sent as an update
- * against an id the server had never seen; and EditionModal submitted only the
- * producers and sponsors it manages, which the backend then applied as a full
- * replacement, unlinking the edition's vendors.
+ * ItemModal used to mint a `Date.now()` id for brand-new items, which
+ * `saveContentSectionItem` read as "existing" and sent as an update against an
+ * id the server had never seen.
+ *
+ * EditionModal's exhibitor payload is pinned here too: the API rejects vendor
+ * ids on an edition, so the form must submit producers and sponsors only.
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -69,8 +70,12 @@ describe("new content items are created, not updated", () => {
   });
 });
 
-describe("saving a festival edition preserves its vendors", () => {
-  it("submits the edition's vendor ids alongside the selected producers/sponsors", async () => {
+describe("saving a festival edition submits only programmable exhibitors", () => {
+  it("leaves vendor ids out of the payload", async () => {
+    // The API rejects vendor ids on an edition ("Vendor-type exhibitors may not
+    // be linked to editions"), so an edition that surfaces vendors is already in
+    // a state the backend considers invalid. Re-sending them would make the
+    // edition permanently unsaveable; omitting them lets the save clear it.
     let submitted: { exhibitors?: number[] } | null = null;
     server.use(
       http.put("/api/editions/:id", async ({ request }) => {
@@ -97,7 +102,7 @@ describe("saving a festival edition preserves its vendors", () => {
       dates: ["2027-03-06"],
       venue: { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },
       events: [],
-      producers: [{ id: 1, name: "Moët", image: "", website: "" }],
+      producers: [{ id: 1, name: "Mo\u00ebt", image: "", website: "" }],
       sponsors: [],
       vendors: [{ id: 5, name: "Glassware Co", image: "", website: "" }],
     } as unknown as Edition;
@@ -123,8 +128,7 @@ describe("saving a festival edition preserves its vendors", () => {
     fireEvent.click(screen.getByRole("button", { name: /admin_save/ }));
 
     await waitFor(() => expect(submitted).not.toBeNull());
-    // The vendor is not selectable in this form, but must survive the save.
-    expect(submitted!.exhibitors).toContain(5);
     expect(submitted!.exhibitors).toContain(1);
+    expect(submitted!.exhibitors).not.toContain(5);
   });
 });

@@ -86,8 +86,8 @@ export default function EditionModal({
       externalPartner: initial?.externalPartner ?? "",
       externalContactName: initial?.externalContactName ?? "",
       externalContactEmail: initial?.externalContactEmail ?? "",
-      // Only producers and sponsors are selectable here; vendors are preserved
-      // separately on submit so that saving an edition can't unlink them.
+      // Producers and sponsors only — the API rejects vendor ids on an edition,
+      // so vendors are deliberately not selectable and not submitted.
       selectedExhibitors: [
         ...(initial?.producers ?? []),
         ...(initial?.sponsors ?? []),
@@ -111,17 +111,14 @@ export default function EditionModal({
           editionType: value.editionType,
           venueId: value.venueId,
           active: value.active,
-          // The backend replaces an edition's whole exhibitor list with what we
-          // send, but this form only manages producers and sponsors. Re-attach
-          // the edition's vendors so saving doesn't silently unlink them.
+          // Producers and sponsors only, deliberately. The API rejects vendor ids
+          // on an edition outright ("Vendor-type exhibitors may not be linked to
+          // editions"), so an edition showing vendors is in a state the backend
+          // considers invalid — re-sending them would make it unsaveable. Leaving
+          // them out lets the next save clear the invalid link.
           exhibitorIds:
             value.editionType === "festival"
-              ? [
-                  ...new Set([
-                    ...value.selectedExhibitors.map((option: ItemOption) => option.value),
-                    ...(initial?.vendors ?? []).map((vendor) => vendor.id),
-                  ]),
-                ]
+              ? value.selectedExhibitors.map((option: ItemOption) => option.value)
               : [],
           externalPartner: value.externalPartner,
           externalContactName: value.externalContactName,
