@@ -27,6 +27,7 @@ import { downloadRegistrationsCsv, fetchRegistrations } from "@/utils/adminFetch
 import { toLocalDateKey } from "@/utils/dateUtils";
 import { isRegistrationInEdition } from "@/utils/adminUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
+import { useTodayKey } from "@/hooks/useTodayKey";
 import { devError } from "@/utils/devLog";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
@@ -161,7 +162,7 @@ export default function RegistrationList({
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [exportingEventId, setExportingEventId] = useState<string | null>(null);
   const [eventExportError, setEventExportError] = useState<string | null>(null);
-  const [todayKey] = useState(() => toLocalDateKey(new Date()));
+  const todayKey = useTodayKey();
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const filterDefaultsAppliedRef = useRef<string | null>(null);
   useEffect(() => {

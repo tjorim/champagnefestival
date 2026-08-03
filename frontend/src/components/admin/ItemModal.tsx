@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
@@ -51,17 +51,37 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EventModal for the details.
+  const defaultValues = useMemo(() => {
+    const cp = initial?.contactPerson;
+    return {
+      name: initial?.name ?? "",
+      image: initial?.image ?? "",
+      website: initial?.website ?? "",
+      type: initial?.type ?? "vendor",
+      contactOption: (cp
+        ? {
+            value: cp.id,
+            label: cp.name,
+            sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
+            name: cp.name,
+            email: cp.email ?? "",
+            phone: cp.phone ?? "",
+          }
+        : null) as SingleValue<PersonOption>,
+    };
+  }, [initial]);
+
   const form = useForm({
-    defaultValues: {
-      name: "",
-      image: "",
-      website: "",
-      type: "vendor",
-      contactOption: null as SingleValue<PersonOption>,
-    },
+    defaultValues,
     onSubmit: ({ value }) => {
       onSave({
-        id: initial?.id ?? Date.now(),
+        // 0 marks the item as new. A client-minted positive id (e.g. Date.now())
+        // reads as an existing record to saveContentSectionItem, which then sends
+        // an update against an id the server has never seen.
+        id: initial?.id ?? 0,
         name: value.name.trim(),
         image: value.image.trim(),
         website: value.website.trim(),
@@ -82,26 +102,10 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
 
   useEffect(() => {
     if (!show) return;
-    const cp = initial?.contactPerson;
-    form.reset({
-      name: initial?.name ?? "",
-      image: initial?.image ?? "",
-      website: initial?.website ?? "",
-      type: initial?.type ?? "vendor",
-      contactOption: cp
-        ? {
-            value: cp.id,
-            label: cp.name,
-            sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
-            name: cp.name,
-            email: cp.email ?? "",
-            phone: cp.phone ?? "",
-          }
-        : null,
-    });
+    form.reset(defaultValues);
     setPersonQuery("");
     setDebouncedPersonQuery("");
-  }, [show, initial, form]);
+  }, [defaultValues, form, show]);
 
   useEffect(() => {
     if (!show) return;
@@ -137,7 +141,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
         noValidate
       >
         <Modal.Body className="bg-dark">
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="item-name">
             <Form.Label className="text-secondary small">
               {m.admin_content_name_placeholder()}
             </Form.Label>
@@ -170,7 +174,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               }}
             </form.Field>
           </Form.Group>
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="item-image">
             <Form.Label className="text-secondary small">
               {m.admin_content_image_url_placeholder()}
             </Form.Label>
@@ -202,7 +206,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               }}
             </form.Field>
           </Form.Group>
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="item-website">
             <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
             <form.Field
               name="website"
@@ -234,7 +238,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               }}
             </form.Field>
           </Form.Group>
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="item-type">
             <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
             <form.Field name="type">
               {(field) => (
@@ -251,13 +255,14 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               )}
             </form.Field>
           </Form.Group>
-          <Form.Group>
+          <Form.Group controlId="item-contact-person">
             <Form.Label className="text-secondary small">
               {m.admin_item_contact_person()}
             </Form.Label>
             <form.Field name="contactOption">
               {(field) => (
                 <Select<PersonOption, false>
+                  inputId="item-contact-person"
                   isClearable
                   options={personOptions}
                   value={field.state.value}

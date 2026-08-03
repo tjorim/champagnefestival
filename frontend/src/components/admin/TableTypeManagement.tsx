@@ -75,14 +75,23 @@ export default function TableTypeManagement({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!form.name.trim() || form.maxCapacity < 1 || !Number.isInteger(form.maxCapacity)) return;
+    // Every rejected input needs to say why — bailing silently leaves the Save
+    // button looking broken.
+    if (!form.name.trim()) {
+      setError(m.admin_table_type_name_required());
+      return;
+    }
+    if (form.maxCapacity < 1 || !Number.isInteger(form.maxCapacity)) {
+      setError(m.admin_table_type_capacity_min());
+      return;
+    }
     if (
       !Number.isFinite(form.widthM) ||
       form.widthM <= 0 ||
       !Number.isFinite(form.lengthM) ||
       form.lengthM <= 0
     ) {
-      setError("Width and length must be positive numbers.");
+      setError(m.admin_table_type_dimensions_positive());
       return;
     }
     setSaving(true);

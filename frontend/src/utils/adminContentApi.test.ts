@@ -66,3 +66,56 @@ describe("saveEdition", () => {
     },
   );
 });
+
+describe("error handling", () => {
+  function mockErrorResponse(body: string) {
+    return vi.fn().mockResolvedValue(
+      new Response(body, {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
+
+  it("surfaces the server's detail message", async () => {
+    vi.stubGlobal("fetch", mockErrorResponse(JSON.stringify({ detail: "Edition not found." })));
+
+    await expect(
+      saveEdition(
+        {
+          id: "2026-march",
+          year: 2026,
+          month: "march",
+          editionType: "festival",
+          venueId: "venue-1",
+          active: true,
+          exhibitorIds: [],
+        },
+        authHeaders,
+        "2026-march",
+      ),
+    ).rejects.toThrow("Edition not found.");
+  });
+
+  it("falls back to the operation message when the error body is JSON null", async () => {
+    // `null` parses successfully, so reading `.detail` off it used to throw a
+    // TypeError that replaced the real failure in the admin's error alert.
+    vi.stubGlobal("fetch", mockErrorResponse("null"));
+
+    await expect(
+      saveEdition(
+        {
+          id: "2026-march",
+          year: 2026,
+          month: "march",
+          editionType: "festival",
+          venueId: "venue-1",
+          active: true,
+          exhibitorIds: [],
+        },
+        authHeaders,
+        "2026-march",
+      ),
+    ).rejects.toThrow("Failed to update edition");
+  });
+});

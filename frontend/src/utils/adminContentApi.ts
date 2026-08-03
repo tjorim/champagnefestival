@@ -16,7 +16,9 @@ async function safeFetch(
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
+      // A body of literal `null` parses successfully, so the catch never fires —
+      // coalesce it away rather than reading `.detail` off null.
+      const data = (await response.json().catch(() => null)) ?? {};
       const detail = (data as { detail?: string }).detail;
       const errorMsg = detail ?? (operation ? `Failed to ${operation}` : "Request failed");
       throw new Error(errorMsg);

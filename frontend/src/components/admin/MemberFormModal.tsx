@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -33,16 +33,35 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
   const isEdit = member != null;
   const [error, setError] = useState<string | null>(null);
 
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EventModal for the details.
+  const defaultValues = useMemo(
+    (): MemberFormData =>
+      member
+        ? {
+            name: member.name,
+            email: member.email ?? "",
+            phone: member.phone ?? "",
+            address: member.address ?? "",
+            clubName: member.clubName ?? "",
+            notes: member.notes ?? "",
+            active: member.active,
+          }
+        : {
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            clubName: "",
+            notes: "",
+            active: true,
+          },
+    [member],
+  );
+
   const form = useForm({
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      clubName: "",
-      notes: "",
-      active: true,
-    },
+    defaultValues,
     onSubmit: async ({ value }) => {
       setError(null);
       try {
@@ -75,29 +94,9 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
 
   useEffect(() => {
     if (!show) return;
-    form.reset(
-      member
-        ? {
-            name: member.name,
-            email: member.email ?? "",
-            phone: member.phone ?? "",
-            address: member.address ?? "",
-            clubName: member.clubName ?? "",
-            notes: member.notes ?? "",
-            active: member.active,
-          }
-        : {
-            name: "",
-            email: "",
-            phone: "",
-            address: "",
-            clubName: "",
-            notes: "",
-            active: true,
-          },
-    );
+    form.reset(defaultValues);
     setError(null);
-  }, [show, member, form]);
+  }, [defaultValues, form, show]);
 
   const nameValue = useStore(form.store, (s) => s.values.name);
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting);

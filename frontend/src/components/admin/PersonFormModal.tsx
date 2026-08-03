@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -84,17 +84,37 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
   const isEdit = person != null;
   const [error, setError] = useState<string | null>(null);
 
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EventModal for the details.
+  const defaultValues = useMemo(
+    () =>
+      person
+        ? {
+            name: person.name,
+            email: person.email ?? "",
+            phone: person.phone ?? "",
+            address: person.address ?? "",
+            rolesInput: person.roles.join(", "),
+            notes: person.notes ?? "",
+            clubName: person.clubName ?? "",
+            active: person.active,
+          }
+        : {
+            name: "",
+            email: "",
+            phone: "",
+            address: "",
+            rolesInput: "",
+            notes: "",
+            clubName: "",
+            active: true,
+          },
+    [person],
+  );
+
   const form = useForm({
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      rolesInput: "",
-      notes: "",
-      clubName: "",
-      active: true,
-    },
+    defaultValues,
     onSubmit: async ({ value }) => {
       setError(null);
       try {
@@ -123,31 +143,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
 
   useEffect(() => {
     if (!show) return;
-    form.reset(
-      person
-        ? {
-            name: person.name,
-            email: person.email ?? "",
-            phone: person.phone ?? "",
-            address: person.address ?? "",
-            rolesInput: person.roles.join(", "),
-            notes: person.notes ?? "",
-            clubName: person.clubName ?? "",
-            active: person.active,
-          }
-        : {
-            name: "",
-            email: "",
-            phone: "",
-            address: "",
-            rolesInput: "",
-            notes: "",
-            clubName: "",
-            active: true,
-          },
-    );
+    form.reset(defaultValues);
     setError(null);
-  }, [show, person, form]);
+  }, [defaultValues, form, show]);
 
   const nameValue = useStore(form.store, (s) => s.values.name);
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
@@ -315,7 +313,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             </form.Field>
           </Form.Group>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="person-roles">
             <Form.Label className="text-secondary small">{m.admin_people_roles_label()}</Form.Label>
             <div className="d-flex flex-wrap gap-2 mb-2">
               {KNOWN_ROLES.map((role) => (

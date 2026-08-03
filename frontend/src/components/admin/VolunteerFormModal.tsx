@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -51,15 +51,36 @@ export default function VolunteerFormModal({
   const isEdit = volunteer != null;
   const [error, setError] = useState<string | null>(null);
 
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EventModal for the details.
+  const defaultValues = useMemo(
+    (): VolunteerFormData =>
+      volunteer
+        ? {
+            name: volunteer.name,
+            address: volunteer.address ?? "",
+            nationalRegisterNumber: volunteer.nationalRegisterNumber ?? "",
+            eidDocumentNumber: volunteer.eidDocumentNumber ?? "",
+            active: volunteer.active,
+            helpPeriods:
+              volunteer.helpPeriods.length > 0
+                ? volunteer.helpPeriods.map(mapPeriod)
+                : [emptyPeriod()],
+          }
+        : {
+            name: "",
+            address: "",
+            nationalRegisterNumber: "",
+            eidDocumentNumber: "",
+            active: true,
+            helpPeriods: [emptyPeriod()],
+          },
+    [volunteer],
+  );
+
   const form = useForm({
-    defaultValues: {
-      name: "",
-      address: "",
-      nationalRegisterNumber: "",
-      eidDocumentNumber: "",
-      active: true,
-      helpPeriods: [emptyPeriod()],
-    } as VolunteerFormData,
+    defaultValues,
     onSubmit: async ({ value }) => {
       const normalized = value.helpPeriods.map((period) => ({
         firstHelpDay: period.firstHelpDay,
@@ -105,30 +126,9 @@ export default function VolunteerFormModal({
 
   useEffect(() => {
     if (!show) return;
-    form.reset(
-      volunteer
-        ? {
-            name: volunteer.name,
-            address: volunteer.address ?? "",
-            nationalRegisterNumber: volunteer.nationalRegisterNumber ?? "",
-            eidDocumentNumber: volunteer.eidDocumentNumber ?? "",
-            active: volunteer.active,
-            helpPeriods:
-              volunteer.helpPeriods.length > 0
-                ? volunteer.helpPeriods.map(mapPeriod)
-                : [emptyPeriod()],
-          }
-        : {
-            name: "",
-            address: "",
-            nationalRegisterNumber: "",
-            eidDocumentNumber: "",
-            active: true,
-            helpPeriods: [emptyPeriod()],
-          },
-    );
+    form.reset(defaultValues);
     setError(null);
-  }, [show, volunteer, form]);
+  }, [defaultValues, form, show]);
 
   const nameValue = useStore(form.store, (s) => s.values.name);
   const nationalRegisterNumberValue = useStore(form.store, (s) => s.values.nationalRegisterNumber);
