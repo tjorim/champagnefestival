@@ -62,9 +62,9 @@ const existingEvent = {
   startTime: "18:00",
   endTime: "22:00",
   category: "ceremony",
-  allowPreorders: false,
   registrationRequired: false,
   active: true,
+  products: [],
 } as unknown as Event;
 
 const existingPerson = {
@@ -226,7 +226,9 @@ describe("admin edit modals prefill from the record being edited", () => {
   });
 
   it("VolunteerFormModal keeps the volunteer's values", async () => {
-    render(<VolunteerFormModal show volunteer={existingPerson} onSave={vi.fn()} onHide={vi.fn()} />);
+    render(
+      <VolunteerFormModal show volunteer={existingPerson} onSave={vi.fn()} onHide={vi.fn()} />,
+    );
 
     await waitFor(() => {
       expect(screen.getByLabelText(/registration_name/)).toHaveValue("Alice Dupont");

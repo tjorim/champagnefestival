@@ -9,6 +9,7 @@ import logging
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select
@@ -25,10 +26,13 @@ from app.dependencies import Pagination, apply_pagination
 from app.email import send_guest_access_email
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.models import Edition, Event, Layout, Person, Registration, ReservationAccessToken, Table
+from app.models import Edition, Event, Layout, Person, Product, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.routers.people import parse_phone
 from app.schemas import (
+    OrderItemBase,
+    OrderItemCategory,
+    PreOrderRequest,
     RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
     RegistrationCreate,
@@ -76,6 +80,7 @@ async def create_registration(
 
     event = await _get_event_or_404(db, body.event_id)
     await _ensure_public_registration_allowed(db, event, body.guest_count)
+    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders)
 
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
@@ -106,7 +111,7 @@ async def create_registration(
         person_id=person.id,
         check_in_token=secrets.token_urlsafe(32),
     )
-    registration.pre_orders = [item.model_dump() for item in body.pre_orders]
+    registration.pre_orders = resolved_pre_orders
     db.add(registration)
     await db.commit()
 
@@ -139,6 +144,7 @@ async def admin_create_registration(
 ) -> dict:
     person = await _get_person_or_404(db, body.person_id)
     event = await _get_event_or_404(db, body.event_id)
+    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders)
 
     registration = Registration(
         id=make_id("reg"),
@@ -150,7 +156,7 @@ async def admin_create_registration(
         person_id=person.id,
         check_in_token=secrets.token_urlsafe(32),
     )
-    registration.pre_orders = [item.model_dump() for item in body.pre_orders]
+    registration.pre_orders = resolved_pre_orders
     db.add(registration)
     await write_audit_entry(
         db,
@@ -196,7 +202,10 @@ async def list_registrations(
 ) -> list[dict]:
     stmt = (
         select(Registration)
-        .options(selectinload(Registration.event).selectinload(Event.edition))
+        .options(
+            selectinload(Registration.event).selectinload(Event.edition),
+            selectinload(Registration.event).selectinload(Event.products),
+        )
         .order_by(Registration.created_at.desc(), Registration.id.desc())
     )
 
@@ -626,7 +635,10 @@ async def _load_guest_registrations_by_email(
         (
             await db.execute(
                 select(Registration)
-                .options(selectinload(Registration.event).selectinload(Event.edition))
+                .options(
+                    selectinload(Registration.event).selectinload(Event.edition),
+                    selectinload(Registration.event).selectinload(Event.products),
+                )
                 .where(Registration.person_id.in_(list(person_map.keys())))
                 .order_by(Registration.created_at.desc())
             )
@@ -640,7 +652,10 @@ async def _load_guest_registrations_by_email(
 async def _get_registration_or_404(db: AsyncSession, registration_id: str) -> Registration:
     result = await db.execute(
         select(Registration)
-        .options(selectinload(Registration.event).selectinload(Event.edition))
+        .options(
+            selectinload(Registration.event).selectinload(Event.edition),
+            selectinload(Registration.event).selectinload(Event.products),
+        )
         .where(Registration.id == registration_id)
     )
     registration = result.scalar_one_or_none()
@@ -658,11 +673,40 @@ async def _get_person_or_404(db: AsyncSession, person_id: str) -> Person:
 
 
 async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
-    result = await db.execute(select(Event).options(selectinload(Event.edition)).where(Event.id == event_id))
+    result = await db.execute(
+        select(Event).options(selectinload(Event.edition), selectinload(Event.products)).where(Event.id == event_id)
+    )
     event = result.scalar_one_or_none()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found.")
     return event
+
+
+def _resolve_pre_orders(event: Event, requests: list[PreOrderRequest]) -> list[dict]:
+    """Resolve client-supplied product_id/quantity pairs against the event's real,
+    active products, snapshotting name/price/category server-side (see Product's
+    docstring). Rejects any product_id that isn't an active product on this event,
+    so a client can never set an arbitrary price or order a nonexistent product.
+    """
+    products_by_id: dict[str, Product] = {p.id: p for p in event.products if p.active}
+    resolved: list[dict] = []
+    for req in requests:
+        product = products_by_id.get(req.product_id)
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Product '{req.product_id}' is not available for this event.",
+            )
+        resolved.append(
+            OrderItemBase(
+                product_id=product.id,
+                name=product.name,
+                quantity=req.quantity,
+                price=float(product.price),
+                category=cast(OrderItemCategory, product.category),
+            ).model_dump()
+        )
+    return resolved
 
 
 async def _ensure_public_registration_allowed(

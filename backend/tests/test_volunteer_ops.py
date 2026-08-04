@@ -94,7 +94,12 @@ async def test_volunteer_registrations_normalize_visible_table_reference_and_fil
     table_id = await _create_table(client, name="table-12")
     r = await client.put(
         f"/api/registrations/{registration_id}",
-        json={"table_id": table_id},
+        json={
+            "table_id": table_id,
+            "pre_orders": [
+                {"product_id": "prod-01", "name": "Bottle", "quantity": 1, "price": 65.0, "category": "champagne"}
+            ],
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200

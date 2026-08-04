@@ -30,6 +30,7 @@ from app.routers import (
     me,
     members,
     people,
+    products,
     registrations,
     rooms,
     table_types,
@@ -144,6 +145,7 @@ app.include_router(layouts.router)
 app.include_router(exhibitors.router)
 app.include_router(editions.router)
 app.include_router(people.router)
+app.include_router(products.router)
 app.include_router(volunteers.router)
 app.include_router(volunteer_ops.router)
 app.include_router(areas.router)

@@ -256,7 +256,7 @@ async def _load_editions(
     include_inactive: bool,
     edition_type: EditionType | None = None,
 ) -> list[Edition]:
-    stmt = select(Edition).options(selectinload(Edition.events))
+    stmt = select(Edition).options(selectinload(Edition.events).selectinload(Event.products))
     if not include_inactive:
         stmt = stmt.where(Edition.active.is_(True))
     if edition_type is not None:
@@ -270,7 +270,7 @@ async def _get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
         Edition,
         edition_id,
         "Edition not found.",
-        options=[selectinload(Edition.events)],
+        options=[selectinload(Edition.events).selectinload(Event.products)],
     )
 
 

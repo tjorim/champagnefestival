@@ -1,7 +1,14 @@
 import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
 import { m } from "@/paraglide/messages";
-import { apiToEvent, type Event, type EventFormData } from "@/types/event";
+import {
+  apiToEvent,
+  apiToProduct,
+  type Event,
+  type EventFormData,
+  type Product,
+} from "@/types/event";
+import type { OrderItemCategory } from "@/types/registration";
 
 /**
  * Safe fetch wrapper that handles network errors and non-ok responses
@@ -279,6 +286,61 @@ export async function deleteEditionEvent(
 ): Promise<void> {
   await safeFetch(
     `/api/events/${eventId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
+}
+
+export async function fetchEventProducts(
+  eventId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Product[]> {
+  const response = await safeFetch(
+    `/api/products?event_id=${encodeURIComponent(eventId)}`,
+    { headers: authHeaders() },
+    m.admin_content_error_load(),
+  );
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToProduct) : [];
+}
+
+export async function saveEventProduct(
+  payload: {
+    id?: string;
+    eventId: string;
+    name: string;
+    price: number;
+    category: OrderItemCategory;
+    active: boolean;
+  },
+  authHeaders: () => Record<string, string>,
+): Promise<Product> {
+  const isNew = !payload.id;
+  const response = await safeFetch(
+    isNew ? "/api/products" : `/api/products/${payload.id}`,
+    {
+      method: isNew ? "POST" : "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        ...(isNew ? { event_id: payload.eventId } : {}),
+        name: payload.name,
+        price: payload.price,
+        category: payload.category,
+        active: payload.active,
+      }),
+    },
+    m.admin_content_error_save(),
+  );
+
+  return apiToProduct((await response.json()) as Record<string, unknown>);
+}
+
+export async function deleteEventProduct(
+  productId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<void> {
+  await safeFetch(
+    `/api/products/${productId}`,
     { method: "DELETE", headers: authHeaders() },
     m.admin_content_error_save(),
   );

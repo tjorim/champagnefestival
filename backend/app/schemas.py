@@ -50,6 +50,19 @@ class OrderItemOut(OrderItemBase):
     pass
 
 
+class PreOrderRequest(BaseModel):
+    """What a registration request supplies for a pre-order line item.
+
+    Only `product_id` and `quantity` are client-supplied; `name`/`price`/`category`
+    are resolved server-side against the event's real products (see
+    `_resolve_pre_orders` in routers/registrations.py) so a client can never set an
+    arbitrary or zero price, or order a product that doesn't exist.
+    """
+
+    product_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1)
+
+
 # ---------------------------------------------------------------------------
 # People (output — defined early so registration schemas can reference it)
 # ---------------------------------------------------------------------------
@@ -112,7 +125,6 @@ class EventCreate(BaseModel):
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     category: str = Field(min_length=1, max_length=50)
-    allow_preorders: bool = False
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
@@ -127,7 +139,6 @@ class EventUpdate(BaseModel):
     start_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     category: str | None = Field(default=None, min_length=1, max_length=50)
-    allow_preorders: bool | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
@@ -143,12 +154,41 @@ class EventOut(BaseModel):
     start_time: str
     end_time: str | None
     category: str
-    allow_preorders: bool
     registration_required: bool
     registrations_open_from: datetime | None
     max_capacity: int | None
     active: bool
     edition: EditionSummaryOut | None = None
+    products: list[ProductOut] = Field(default_factory=list)
+    """Active products only — see ProductOut. Empty means nothing to order."""
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ProductCreate(BaseModel):
+    event_id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=200)
+    price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
+    category: OrderItemCategory
+    active: bool = True
+
+
+class ProductUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
+    category: OrderItemCategory | None = None
+    active: bool | None = None
+
+
+class ProductOut(BaseModel):
+    id: str
+    event_id: str
+    name: str
+    price: Decimal
+    category: OrderItemCategory
+    active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -172,7 +212,7 @@ class RegistrationCreate(BaseModel):
     phone: str = Field(min_length=1, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[OrderItemBase] = Field(default_factory=list)
+    pre_orders: list[PreOrderRequest] = Field(default_factory=list)
     notes: str = Field(default="", max_length=2000)
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
@@ -322,7 +362,7 @@ class RegistrationAdminCreate(BaseModel):
     person_id: str = Field(min_length=1, max_length=64)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[OrderItemBase] = Field(default_factory=list)
+    pre_orders: list[PreOrderRequest] = Field(default_factory=list)
     notes: str = Field(default="", max_length=2000)
     accessibility_note: str = Field(default="", max_length=2000)
     status: RegistrationStatus = "confirmed"

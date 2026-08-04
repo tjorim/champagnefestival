@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import RegistrationModal from "@/components/RegistrationModal";
 import { server } from "@/mocks/server";
+import type { Event, Product } from "@/types/event";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -28,11 +29,6 @@ vi.mock("@/paraglide/messages", () => ({
     registration_errors_guests_required: () => "Please enter the number of guests",
     registration_errors_guests_min: () => "Minimum 1 guest required",
     registration_errors_guests_max: () => "Maximum 20 guests per registration",
-    registration_product_champagne_standard: () => "Champagne Bottle (Standard) - EUR65",
-    registration_product_champagne_prestige: () => "Champagne Bottle (Prestige) - EUR120",
-    registration_product_champagne_glass: () => "Glass of Champagne - EUR12",
-    registration_product_food_cheese: () => "Cheese Platter - EUR25",
-    registration_product_food_charcuterie: () => "Charcuterie Board - EUR20",
     close: () => "Close",
   },
 }));
@@ -42,19 +38,30 @@ vi.mock("@/paraglide/runtime", () => ({
   setLocale: vi.fn(),
 }));
 
-const vipEvent = {
+const champagneProduct: Product = {
+  id: "champagne-standard",
+  eventId: "fri-vip",
+  name: "Champagne Bottle (Standard)",
+  price: 65,
+  category: "champagne",
+  active: true,
+  createdAt: "",
+  updatedAt: "",
+};
+
+const vipEvent: Event = {
   id: "fri-vip",
   editionId: "ed-1",
   title: "VIP Reception",
   startTime: "19:30",
   description: "VIP event",
   category: "vip" as const,
-  allowPreorders: true,
   date: "2025-10-03",
   registrationRequired: true,
   active: true,
   createdAt: "",
   updatedAt: "",
+  products: [champagneProduct],
 };
 
 describe("RegistrationModal component", () => {
@@ -111,27 +118,27 @@ describe("RegistrationModal component", () => {
     });
   });
 
-  it("shows pre-order products when the event allows pre-orders", () => {
+  it("shows pre-order products when the event has active products", () => {
     renderModal();
-    expect(screen.getByText("Champagne Bottle (Standard) - EUR65")).toBeInTheDocument();
+    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
   });
 
-  it("hides pre-order products when the event does not allow pre-orders", () => {
-    renderModal({ event: { ...vipEvent, allowPreorders: false } });
-    expect(screen.queryByText("Champagne Bottle (Standard) - EUR65")).not.toBeInTheDocument();
+  it("hides pre-order products when the event has no products", () => {
+    renderModal({ event: { ...vipEvent, products: [] } });
+    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
   });
 
-  it("shows pre-order products for a non-vip category, as long as allowPreorders is set", () => {
+  it("shows pre-order products for a non-vip category, as long as it has products", () => {
     // A Sunday-morning capsule exchange during the festival is not "vip", but can
     // still sell things — the category label must not gate this.
     renderModal({ event: { ...vipEvent, category: "exchange" } });
-    expect(screen.getByText("Champagne Bottle (Standard) - EUR65")).toBeInTheDocument();
+    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
   });
 
-  it("hides pre-order products for a vip-categorised event that does not allow them", () => {
+  it("hides pre-order products for a vip-categorised event with no products", () => {
     // The inverse: being labelled "vip" grants nothing by itself.
-    renderModal({ event: { ...vipEvent, category: "vip", allowPreorders: false } });
-    expect(screen.queryByText("Champagne Bottle (Standard) - EUR65")).not.toBeInTheDocument();
+    renderModal({ event: { ...vipEvent, category: "vip", products: [] } });
+    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
   });
 
   it("shows error message on submission failure (server error)", async () => {

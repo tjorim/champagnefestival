@@ -370,14 +370,11 @@ export async function submitRegistration(payload: RegistrationFormData): Promise
       phone: payload.phone,
       event_id: payload.eventId,
       guest_count: payload.guestCount,
+      // The server resolves name/price/category from the event's real products —
+      // see PreOrderRequest in the backend schema — so only these two are sent.
       pre_orders: payload.preOrders.map((order) => ({
         product_id: order.productId,
-        name: order.name,
         quantity: order.quantity,
-        delivered_quantity: order.deliveredQuantity,
-        price: order.price,
-        category: order.category,
-        delivered: order.delivered,
       })),
       notes: payload.notes,
       honeypot: payload.honeypot ?? "",

@@ -21,6 +21,7 @@ from app.models import (
     Exhibitor,
     Layout,
     Person,
+    Product,
     Registration,
     Room,
     Table,
@@ -80,7 +81,6 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
         "start_time": event.start_time,
         "end_time": event.end_time,
         "category": event.category,
-        "allow_preorders": event.allow_preorders,
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
         "max_capacity": event.max_capacity,
@@ -88,11 +88,28 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
         "created_at": event.created_at,
         "updated_at": event.updated_at,
         "edition": None,
+        # Active only: an archived product should stop being offered without
+        # rewriting the pre_orders already placed against it (a name/price/category
+        # snapshot, not a live reference — see Product's docstring).
+        "products": [product_to_dict(p) for p in event.products if p.active],
     }
     edition: Edition | None = getattr(event, "edition", None)
     if include_edition and edition is not None:
         data["edition"] = edition_summary_to_dict(edition)
     return data
+
+
+def product_to_dict(p: Product) -> dict:
+    return {
+        "id": p.id,
+        "event_id": p.event_id,
+        "name": p.name,
+        "price": p.price,
+        "category": p.category,
+        "active": p.active,
+        "created_at": p.created_at,
+        "updated_at": p.updated_at,
+    }
 
 
 def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:

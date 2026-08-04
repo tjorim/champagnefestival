@@ -10,15 +10,6 @@ export type RegistrationStatus = "pending" | "confirmed" | "cancelled";
 
 export type PaymentStatus = "unpaid" | "partial" | "paid";
 
-export interface Product {
-  id: string;
-  /** Product name (used as i18n key suffix) */
-  nameKey: string;
-  price: number;
-  category: OrderItemCategory;
-  available: boolean;
-}
-
 export interface OrderItem {
   productId: string;
   name: string;

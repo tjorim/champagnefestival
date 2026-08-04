@@ -1,13 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
+import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import type { Event } from "@/types/event";
@@ -29,23 +29,6 @@ interface RegistrationFields {
   formStartTime: string;
 }
 
-function getProductName(nameKey: string): string {
-  switch (nameKey) {
-    case "champagne_standard":
-      return m.registration_product_champagne_standard();
-    case "champagne_prestige":
-      return m.registration_product_champagne_prestige();
-    case "champagne_glass":
-      return m.registration_product_champagne_glass();
-    case "food_cheese":
-      return m.registration_product_food_cheese();
-    case "food_charcuterie":
-      return m.registration_product_food_charcuterie();
-    default:
-      return nameKey;
-  }
-}
-
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
   const [preOrders, setPreOrders] = useState<OrderItem[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -57,10 +40,10 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   });
 
   const isSubmitting = submitRegistrationMutation.isPending;
-  // Independent of category, which is just the public schedule's display
-  // label — a "vip" event is not automatically orderable, and other
-  // categories (e.g. a Sunday-morning capsule exchange) can be.
-  const showPreOrders = Boolean(event?.allowPreorders);
+  const products = useMemo(() => event?.products ?? [], [event]);
+  // Whether guests can order anything is answered by the event actually
+  // having products, not by a separate flag — see Event.products.
+  const showPreOrders = products.length > 0;
 
   const form = useForm({
     defaultValues: {
@@ -94,32 +77,35 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     },
   });
 
-  const handleQuantityChange = useCallback((productId: string, quantity: number) => {
-    setPreOrders((prev) => {
-      const existing = prev.find((o) => o.productId === productId);
-      if (quantity <= 0) {
-        return prev.filter((o) => o.productId !== productId);
-      }
-      const product = ALL_PRODUCTS.find((p) => p.id === productId);
-      if (!product) return prev;
+  const handleQuantityChange = useCallback(
+    (productId: string, quantity: number) => {
+      setPreOrders((prev) => {
+        const existing = prev.find((o) => o.productId === productId);
+        if (quantity <= 0) {
+          return prev.filter((o) => o.productId !== productId);
+        }
+        const product = products.find((p) => p.id === productId);
+        if (!product) return prev;
 
-      const item: OrderItem = {
-        productId,
-        name: getProductName(product.nameKey),
-        quantity,
-        deliveredQuantity: 0,
-        remainingQuantity: quantity,
-        price: product.price,
-        category: product.category,
-        delivered: false,
-      };
+        const item: OrderItem = {
+          productId,
+          name: product.name,
+          quantity,
+          deliveredQuantity: 0,
+          remainingQuantity: quantity,
+          price: product.price,
+          category: product.category,
+          delivered: false,
+        };
 
-      if (existing) {
-        return prev.map((o) => (o.productId === productId ? item : o));
-      }
-      return [...prev, item];
-    });
-  }, []);
+        if (existing) {
+          return prev.map((o) => (o.productId === productId ? item : o));
+        }
+        return [...prev, item];
+      });
+    },
+    [products],
+  );
 
   const handleClose = useCallback(() => {
     form.reset({
@@ -322,22 +308,23 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 <legend className="fs-6 fw-semibold mb-1">{m.registration_preorder_title()}</legend>
                 <p className="text-secondary small mb-2">{m.registration_preorder_description()}</p>
 
-                {ALL_PRODUCTS.filter((p) => p.available).map((product) => {
+                {products.map((product) => {
                   const currentItem = preOrders.find((o) => o.productId === product.id);
                   const qty = currentItem?.quantity ?? 0;
+                  const label = `${product.name} - €${product.price}`;
                   return (
                     <div
                       key={product.id}
                       className="d-flex align-items-center justify-content-between mb-2"
                     >
-                      <span className="text-light small">{getProductName(product.nameKey)}</span>
+                      <span className="text-light small">{label}</span>
                       <div className="d-flex align-items-center gap-2">
                         <Button
                           variant="outline-secondary"
                           size="sm"
                           onClick={() => handleQuantityChange(product.id, qty - 1)}
                           disabled={qty === 0}
-                          aria-label={`Decrease quantity of ${getProductName(product.nameKey)}`}
+                          aria-label={`Decrease quantity of ${label}`}
                         >
                           <i className="bi bi-dash" aria-hidden="true" />
                         </Button>
@@ -351,7 +338,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                           variant="outline-warning"
                           size="sm"
                           onClick={() => handleQuantityChange(product.id, qty + 1)}
-                          aria-label={`Increase quantity of ${getProductName(product.nameKey)}`}
+                          aria-label={`Increase quantity of ${label}`}
                         >
                           <i className="bi bi-plus" aria-hidden="true" />
                         </Button>

@@ -343,13 +343,9 @@ class Event(Base):
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
     """Free-text display label for the public schedule (e.g. "tasting", "vip",
-    "exchange") — purely cosmetic, not a behavior switch. See `allow_preorders`."""
-
-    allow_preorders: Mapped[bool] = mapped_column(Boolean, default=False)
-    """Whether guests can pre-order champagne/food when registering for this
-    event. Independent of `category`: a "vip" event is not automatically
-    orderable, and an "exchange" or "tasting" event can be if an admin enables
-    it — e.g. a Sunday-morning capsule exchange held during the festival."""
+    "exchange") — purely cosmetic, does not affect what guests can order.
+    Whether this event sells anything is answered by whether it *has*
+    products (see `Product`), not by a separate flag on the event."""
 
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -360,6 +356,34 @@ class Event(Base):
 
     edition: Mapped[Edition] = relationship(back_populates="events")
     registrations: Mapped[list[Registration]] = relationship(back_populates="event")
+    products: Mapped[list[Product]] = relationship(back_populates="event", cascade="all, delete-orphan")
+
+
+class Product(Base):
+    """Something guests can pre-order when registering for a specific event
+    (a bottle of champagne, a cheese platter, ...). Scoped to one event —
+    products are not a reusable catalogue, since what a VIP tasting sells has
+    nothing to do with what a different tasting or a bourse would.
+
+    The registration flow copies `name`/`price`/`category` onto the
+    registration's `pre_orders` at order time, so archiving or deleting a
+    product afterward does not alter orders already placed against it.
+    """
+
+    __tablename__ = "products"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200))
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    category: Mapped[str] = mapped_column(String(20))
+    """"champagne" | "food" | "other" — matches OrderItemCategory."""
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    event: Mapped[Event] = relationship(back_populates="products")
 
 
 class Person(Base):

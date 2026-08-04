@@ -22,6 +22,17 @@ interface SeedEventEditionSummary {
   active: boolean;
 }
 
+export interface SeedProduct {
+  id: string;
+  event_id: string;
+  name: string;
+  price: number;
+  category: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SeedEvent {
   id: string;
   edition_id: string;
@@ -37,6 +48,7 @@ export interface SeedEvent {
   sort_order: number;
   active: boolean;
   edition: SeedEventEditionSummary | null;
+  products: SeedProduct[];
   created_at: string;
   updated_at: string;
 }

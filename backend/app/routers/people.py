@@ -290,7 +290,10 @@ async def list_person_registrations(
 
     result = await db.execute(
         select(Registration)
-        .options(selectinload(Registration.event).selectinload(Event.edition))
+        .options(
+            selectinload(Registration.event).selectinload(Event.edition),
+            selectinload(Registration.event).selectinload(Event.products),
+        )
         .where(Registration.person_id == person.id)
         .order_by(Registration.created_at.desc())
     )

@@ -23,7 +23,6 @@ const EMPTY_FORM: EventFormData = {
   startTime: "",
   endTime: "",
   category: "other",
-  allowPreorders: false,
   registrationRequired: false,
   registrationsOpenFrom: "",
   maxCapacity: "",
@@ -55,7 +54,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             startTime: initial.startTime,
             endTime: initial.endTime ?? "",
             category: initial.category,
-            allowPreorders: initial.allowPreorders,
             registrationRequired: initial.registrationRequired,
             registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
             maxCapacity: initial.maxCapacity != null ? String(initial.maxCapacity) : "",
@@ -316,22 +314,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               )}
             </form.Field>
           </Form.Group>
-
-          <form.Field name="allowPreorders">
-            {(field) => (
-              <Form.Check
-                type="checkbox"
-                id="modal-event-allow-preorders"
-                label={m.admin_content_event_allow_preorders()}
-                checked={field.state.value}
-                onChange={(e) => field.handleChange(e.target.checked)}
-                className="text-light mb-2"
-              />
-            )}
-          </form.Field>
-          <div className="text-secondary small mb-3">
-            {m.admin_content_event_allow_preorders_help()}
-          </div>
 
           <form.Field name="registrationRequired">
             {(field) => (

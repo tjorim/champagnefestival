@@ -29,7 +29,11 @@ async def list_events(
     registration_required: bool | None = Query(default=None),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    stmt = select(Event).options(selectinload(Event.edition)).order_by(Event.date, Event.start_time, Event.created_at)
+    stmt = (
+        select(Event)
+        .options(selectinload(Event.edition), selectinload(Event.products))
+        .order_by(Event.date, Event.start_time, Event.created_at)
+    )
     if edition_id is not None:
         stmt = stmt.where(Event.edition_id == edition_id)
     if date_from is not None:
@@ -110,7 +114,6 @@ async def create_event(
         start_time=body.start_time,
         end_time=body.end_time,
         category=body.category,
-        allow_preorders=body.allow_preorders,
         registration_required=body.registration_required,
         registrations_open_from=body.registrations_open_from,
         max_capacity=body.max_capacity,
@@ -169,7 +172,6 @@ async def update_event(
         "start_time",
         "end_time",
         "category",
-        "allow_preorders",
         "registration_required",
         "registrations_open_from",
         "max_capacity",
@@ -219,7 +221,7 @@ async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
         Event,
         event_id,
         "Event not found.",
-        options=[selectinload(Event.edition)],
+        options=[selectinload(Event.edition), selectinload(Event.products)],
     )
 
 

@@ -56,7 +56,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
       date: "2026-05-01",
       startTime: "18:00",
       category: "tasting",
-      allowPreorders: false,
+      products: [],
       registrationRequired: true,
       active: true,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -170,7 +170,9 @@ describe("RegistrationDetail", () => {
     expect(screen.getByText("Brut Reserve")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_delivered: 1/3")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_not_delivered: 2")).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton", { name: "admin_bottle_delivered Brut Reserve" })).toHaveValue(1);
+    expect(
+      screen.getByRole("spinbutton", { name: "admin_bottle_delivered Brut Reserve" }),
+    ).toHaveValue(1);
   });
 
   it("updates delivered pre-order quantities from the numeric input", () => {
@@ -204,11 +206,11 @@ describe("RegistrationDetail", () => {
 
     const select = screen.getByRole("combobox", { name: "admin_action_assign_table" });
     expect(select).toHaveValue("table-2");
-    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "admin_unassigned",
-      "Table 2 (6)",
-      "Table 10 (8)",
-    ]);
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["admin_unassigned", "Table 2 (6)", "Table 10 (8)"]);
 
     fireEvent.change(select, { target: { value: "table-1" } });
 
@@ -226,7 +228,7 @@ describe("RegistrationDetail", () => {
           date: "2026-05-01",
           startTime: "18:00",
           category: "bourse",
-          allowPreorders: false,
+          products: [],
           registrationRequired: true,
           active: true,
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -242,7 +244,9 @@ describe("RegistrationDetail", () => {
       }),
     });
 
-    expect(screen.queryByRole("combobox", { name: "admin_action_assign_table" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "admin_action_assign_table" }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides pre-orders and strap section for simple RSVP (non-festival) registrations", () => {
@@ -256,7 +260,7 @@ describe("RegistrationDetail", () => {
           date: "2026-05-01",
           startTime: "18:00",
           category: "bourse",
-          allowPreorders: false,
+          products: [],
           registrationRequired: true,
           active: true,
           createdAt: "2026-01-01T00:00:00.000Z",
