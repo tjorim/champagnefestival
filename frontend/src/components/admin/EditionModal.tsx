@@ -82,6 +82,7 @@ export default function EditionModal({
       editionType: (initial?.editionType ?? "festival") as EditionType,
       venueId: initial?.venue?.id ?? fallbackVenueId,
       active: initial?.active ?? true,
+      coOrganiserId: initial?.coOrganiser?.id ? String(initial.coOrganiser.id) : "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
       selectedExhibitors: [
@@ -116,6 +117,8 @@ export default function EditionModal({
             value.editionType === "festival"
               ? value.selectedExhibitors.map((option: ItemOption) => option.value)
               : [],
+          // Any edition type may name one; it is not part of the lineup.
+          coOrganiserExhibitorId: value.coOrganiserId ? Number(value.coOrganiserId) : null,
         });
         onSaved(savedEdition);
       } catch (mutationError) {
@@ -153,6 +156,7 @@ export default function EditionModal({
       venueId: string;
       active: boolean;
       exhibitorIds: number[];
+      coOrganiserExhibitorId: number | null;
     }) => saveEdition(payload, authHeaders, initial?.id),
     retry: false,
   });
@@ -425,6 +429,32 @@ export default function EditionModal({
                 : m.admin_edition_create_first_then_events()}
             </div>
           </div>
+
+          <Form.Group className="mb-3" controlId="edition-co-organiser">
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_edition_co_organiser_label()}
+            </Form.Label>
+            <form.Field name="coOrganiserId">
+              {(field) => (
+                <Form.Select
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                >
+                  <option value="">{m.admin_edition_co_organiser_none()}</option>
+                  {allExhibitors
+                    .filter((exhibitor) => exhibitor.active !== false)
+                    .map((exhibitor) => (
+                      <option key={exhibitor.id} value={String(exhibitor.id)}>
+                        {exhibitor.name}
+                      </option>
+                    ))}
+                </Form.Select>
+              )}
+            </form.Field>
+            <div className="text-secondary small mt-1">{m.admin_edition_co_organiser_help()}</div>
+          </Form.Group>
 
           {isFestival && (
             <Form.Group className="mb-3" controlId="edition-exhibitors">

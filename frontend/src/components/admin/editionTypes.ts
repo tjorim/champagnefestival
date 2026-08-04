@@ -22,6 +22,8 @@ export interface Edition {
   producers?: { id: number; name: string; image: string; website: string }[];
   sponsors?: { id: number; name: string; image: string; website: string }[];
   vendors?: { id: number; name: string; image: string; website: string }[];
+  /** The exhibitor co-organising this edition with the vzw, if any. */
+  coOrganiser?: { id: number; name: string; image: string; website: string } | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -98,6 +100,15 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
             website: String(v.website ?? ""),
           }))
       : [],
+    coOrganiser:
+      typeof data.co_organiser === "object" && data.co_organiser !== null
+        ? {
+            id: Number((data.co_organiser as Record<string, unknown>).id ?? 0),
+            name: String((data.co_organiser as Record<string, unknown>).name ?? ""),
+            image: String((data.co_organiser as Record<string, unknown>).image ?? ""),
+            website: String((data.co_organiser as Record<string, unknown>).website ?? ""),
+          }
+        : null,
     active: data.active !== false,
     createdAt: String(data.created_at ?? ""),
     updatedAt: String(data.updated_at ?? ""),

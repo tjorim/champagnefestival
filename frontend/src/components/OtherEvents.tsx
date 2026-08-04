@@ -13,6 +13,7 @@ interface ApiUpcomingEdition {
   id: string;
   edition_type: "festival" | "bourse" | "capsule_exchange";
   venue: { name: string };
+  co_organiser?: { name: string; website?: string } | null;
   events: Record<string, unknown>[];
 }
 
@@ -29,6 +30,9 @@ interface OtherEventCardData {
   editionType: ApiUpcomingEdition["edition_type"];
   event: Event;
   venueName: string;
+  /** The exhibitor who ran this edition with the vzw, credited on the card. */
+  coOrganiserName?: string;
+  coOrganiserWebsite?: string;
 }
 
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
@@ -114,10 +118,25 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
     }
     const venue = { name: value.venue.name };
 
+    // Optional and non-critical: a malformed co-organiser is dropped rather than
+    // thrown, so one bad record can't hide every upcoming edition.
+    const rawCoOrganiser = value.co_organiser;
+    const coOrganiser =
+      isRecord(rawCoOrganiser) && typeof rawCoOrganiser.name === "string"
+        ? {
+            name: rawCoOrganiser.name,
+            website:
+              typeof rawCoOrganiser.website === "string" && /^https?:\/\//.test(rawCoOrganiser.website)
+                ? rawCoOrganiser.website
+                : undefined,
+          }
+        : null;
+
     return {
       id: value.id,
       edition_type: value.edition_type as ApiUpcomingEdition["edition_type"],
       venue,
+      co_organiser: coOrganiser,
       events: rawEvents,
     };
   });
@@ -180,6 +199,8 @@ export default function OtherEvents() {
           editionType: edition.edition_type,
           event,
           venueName: edition.venue?.name ?? "",
+          coOrganiserName: edition.co_organiser?.name || undefined,
+          coOrganiserWebsite: edition.co_organiser?.website || undefined,
         })),
     );
 
@@ -225,6 +246,23 @@ export default function OtherEvents() {
                           <i className="bi bi-geo-alt me-2" aria-hidden="true" />
                           {item.venueName}
                         </p>
+                        {item.coOrganiserName && (
+                          <p className="mb-1 text-muted">
+                            <i className="bi bi-people me-2" aria-hidden="true" />
+                            {m.other_events_co_organised_with()}{" "}
+                            {item.coOrganiserWebsite ? (
+                              <a
+                                href={item.coOrganiserWebsite}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {item.coOrganiserName}
+                              </a>
+                            ) : (
+                              item.coOrganiserName
+                            )}
+                          </p>
+                        )}
                         <p className="mb-2">{item.event.description}</p>
 
 

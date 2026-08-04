@@ -297,6 +297,7 @@ def edition_to_dict(
     producers: list[dict] | None = None,
     sponsors: list[dict] | None = None,
     vendors: list[dict] | None = None,
+    co_organiser: dict | None = None,
 ) -> dict:
     return {
         "id": e.id,
@@ -309,6 +310,7 @@ def edition_to_dict(
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],
         "vendors": vendors if vendors is not None else [],
+        "co_organiser": co_organiser,
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,

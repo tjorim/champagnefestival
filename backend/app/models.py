@@ -307,6 +307,17 @@ class Edition(Base):
     venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     edition_type: Mapped[str] = mapped_column(String(20), default="festival")
     exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
+    """The festival lineup — producers and sponsors programmed for this edition."""
+
+    co_organiser_exhibitor_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
+    )
+    """The exhibitor co-organising this edition with the vzw, if any.
+
+    Deliberately separate from `exhibitors`: co-organising is a different
+    relationship from being in the lineup, and it applies to editions (such as a
+    bourse) that carry no lineup at all. The vzw remains the organiser either way.
+    """
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 

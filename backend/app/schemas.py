@@ -827,6 +827,7 @@ class EditionCreate(BaseModel):
     venue_id: str
     edition_type: EditionType = "festival"
     exhibitors: list[int] = Field(default_factory=list)
+    co_organiser_exhibitor_id: int | None = None
     active: bool = True
 
 
@@ -836,6 +837,7 @@ class EditionUpdate(BaseModel):
     venue_id: str | None = None
     edition_type: EditionType | None = None
     exhibitors: list[int] | None = None
+    co_organiser_exhibitor_id: int | None = None
     active: bool | None = None
 
 
@@ -864,6 +866,7 @@ class EditionOut(BaseModel):
     producers: list[EditionItemOut]
     sponsors: list[EditionItemOut]
     vendors: list[EditionItemOut]
+    co_organiser: EditionItemOut | None = None
     active: bool
     created_at: datetime
     updated_at: datetime

@@ -307,4 +307,81 @@ describe("OtherEvents", () => {
     // No mailto anywhere on the card — reserving is the only route.
     expect(document.querySelector('a[href^="mailto:"]')).toBeNull();
   });
+
+  it("credits the co-organising producer, linking to them when a website is known", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            co_organiser: { name: "Champagne Comtesse", website: "https://comtesse.example" },
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    const link = await screen.findByRole("link", { name: "Champagne Comtesse" });
+    expect(link).toHaveAttribute("href", "https://comtesse.example");
+    // The label and the link are separate nodes, so match on the line as a whole.
+    expect(link.closest("p")?.textContent).toContain("Co-organised with");
+    // Opens off-site, so it must not hand the opener over.
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("omits the credit when an edition has no co-organiser", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            co_organiser: null,
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Solo bourse" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(await screen.findByText("Solo bourse")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Co-organised with");
+  });
+
+  it("drops a co-organiser with an unsafe website instead of linking to it", async () => {
+    // Rendered as an href, so anything that isn't plainly http(s) must not become
+    // a link — and one bad record must not hide the edition.
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            co_organiser: { name: "Champagne Comtesse", website: "javascript:alert(1)" },
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    // Still credited, just not linked.
+    expect(await screen.findByText(/Champagne Comtesse/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Champagne Comtesse" })).not.toBeInTheDocument();
+    expect(screen.getByText("Bourse De la Comtesse")).toBeInTheDocument();
+  });
 });
