@@ -400,7 +400,9 @@ async def _assert_table_matches_edition(db: AsyncSession, table_id: str, edition
     null edition_id and are left alone.
     """
     row = (
-        await db.execute(select(Layout.edition_id).join(Table, Table.layout_id == Layout.id).where(Table.id == table_id))
+        await db.execute(
+            select(Layout.edition_id).join(Table, Table.layout_id == Layout.id).where(Table.id == table_id)
+        )
     ).first()
     if row is None:
         raise HTTPException(status_code=404, detail=f"Table '{table_id}' not found.")

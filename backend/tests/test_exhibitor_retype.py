@@ -10,9 +10,7 @@ from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD
 async def _linked_producer(client) -> int:
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
-    r = await client.post(
-        "/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
     producer_id = r.json()["id"]
     r = await client.post(
         "/api/editions",

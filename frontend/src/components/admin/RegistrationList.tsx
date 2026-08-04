@@ -653,13 +653,15 @@ export default function RegistrationList({
   );
   preFilteredRef.current = visibleRegistrations;
 
+  // Built from every registration, not the filtered rows: capacity is a property
+  // of the event, so it must not shift when someone searches or filters by status.
   const eventCapacityStats = useMemo(() => {
     const statsByEvent = new Map<
       string,
       { checkedIn: number; total: number; title: string; maxCapacity?: number }
     >();
 
-    for (const registration of visibleRegistrations) {
+    for (const registration of registrations) {
       if (registration.status === "cancelled") continue;
       if (!registration.eventId) continue;
       const existing = statsByEvent.get(registration.eventId);
@@ -687,7 +689,7 @@ export default function RegistrationList({
     return [...statsByEvent.entries()]
       .map(([eventId, stats]) => ({ eventId, ...stats }))
       .sort((a, b) => a.title.localeCompare(b.title));
-  }, [visibleRegistrations]);
+  }, [registrations]);
 
   const handleExportCsv = useCallback(() => {
     const rows = table.getRowModel().rows.map(({ original: reg }) => ({

@@ -63,9 +63,7 @@ async def _registration_for(client, edition_id: str) -> str:
     assert r.status_code == 200, r.text
     event_id = r.json()[0]["id"]
 
-    r = await client.post(
-        "/api/people", json={"name": "Collector", "roles": ["visitor"]}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/people", json={"name": "Collector", "roles": ["visitor"]}, headers=ADMIN_HEADERS)
     person_id = r.json()["id"]
 
     r = await client.post(
@@ -105,9 +103,7 @@ async def test_table_from_another_edition_is_rejected(client):
     assert r.json()["table_id"] == bourse_table
 
     # Clearing the assignment stays allowed.
-    r = await client.put(
-        f"/api/registrations/{registration_id}", json={"table_id": None}, headers=ADMIN_HEADERS
-    )
+    r = await client.put(f"/api/registrations/{registration_id}", json={"table_id": None}, headers=ADMIN_HEADERS)
     assert r.status_code == 200, r.text
     assert r.json()["table_id"] is None
 
