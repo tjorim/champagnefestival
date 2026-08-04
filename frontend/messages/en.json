@@ -308,6 +308,8 @@
   "admin_content_event_end_time": "End time",
   "admin_content_event_category": "Category",
   "admin_content_event_description": "Description",
+  "admin_content_event_allow_preorders": "Allow pre-orders",
+  "admin_content_event_allow_preorders_help": "Lets guests order champagne and food when registering. Independent of category — enable this for any event that sells something, not just \\u201cvip\\u201d ones.",
   "admin_content_event_requires_registration": "Requires registration",
   "admin_table_types_tab": "Table Types",
   "admin_add_table_type": "Add table type",

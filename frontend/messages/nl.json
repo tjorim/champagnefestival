@@ -308,6 +308,8 @@
   "admin_content_event_end_time": "Eindtijd",
   "admin_content_event_category": "Categorie",
   "admin_content_event_description": "Beschrijving",
+  "admin_content_event_allow_preorders": "Voorbestellingen toestaan",
+  "admin_content_event_allow_preorders_help": "Laat gasten champagne en eten bestellen bij inschrijving. Los van de categorie \\u2014 schakel dit in voor elk evenement waar iets verkocht wordt, niet enkel \\u201cvip\\u201d.",
   "admin_content_event_requires_registration": "Registratie vereist",
   "admin_table_types_tab": "Tafeltypen",
   "admin_add_table_type": "Tafeltype toevoegen",

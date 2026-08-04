@@ -57,7 +57,10 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   });
 
   const isSubmitting = submitRegistrationMutation.isPending;
-  const showPreOrders = event?.category === "vip";
+  // Independent of category, which is just the public schedule's display
+  // label — a "vip" event is not automatically orderable, and other
+  // categories (e.g. a Sunday-morning capsule exchange) can be.
+  const showPreOrders = Boolean(event?.allowPreorders);
 
   const form = useForm({
     defaultValues: {

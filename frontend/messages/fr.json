@@ -308,6 +308,8 @@
   "admin_content_event_end_time": "Heure de fin",
   "admin_content_event_category": "Catégorie",
   "admin_content_event_description": "Description",
+  "admin_content_event_allow_preorders": "Autoriser les pr\\u00e9commandes",
+  "admin_content_event_allow_preorders_help": "Permet aux invit\\u00e9s de commander du champagne et de la nourriture lors de l'inscription. Ind\\u00e9pendant de la cat\\u00e9gorie \\u2014 activez ceci pour tout \\u00e9v\\u00e9nement qui vend quelque chose, pas seulement les \\u00e9v\\u00e9nements \\u00abvip\\u00bb.",
   "admin_content_event_requires_registration": "Inscription requise",
   "admin_table_types_tab": "Types de tables",
   "admin_add_table_type": "Ajouter un type de table",

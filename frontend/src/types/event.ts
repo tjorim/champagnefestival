@@ -15,6 +15,12 @@ export interface Event {
   startTime: string;
   endTime?: string;
   category: string;
+  /**
+   * Whether guests can pre-order champagne/food when registering for this
+   * event. Independent of `category` — that is a free-text display label for
+   * the public schedule, not a behavior switch.
+   */
+  allowPreorders: boolean;
   registrationRequired: boolean;
   registrationsOpenFrom?: string;
   maxCapacity?: number;
@@ -33,6 +39,7 @@ export interface EventFormData {
   startTime: string;
   endTime: string;
   category: string;
+  allowPreorders: boolean;
   registrationRequired: boolean;
   registrationsOpenFrom: string;
   maxCapacity: string;
@@ -55,6 +62,7 @@ export function apiToEvent(data: Record<string, unknown>): Event {
     startTime: String(data.start_time ?? ""),
     endTime: typeof data.end_time === "string" ? data.end_time : undefined,
     category: String(data.category ?? ""),
+    allowPreorders: Boolean(data.allow_preorders),
     registrationRequired: Boolean(data.registration_required),
     registrationsOpenFrom:
       typeof data.registrations_open_from === "string" ? data.registrations_open_from : undefined,

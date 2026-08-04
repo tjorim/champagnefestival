@@ -682,6 +682,7 @@ export const adminHandlers = [
       start_time: String(body.start_time ?? ""),
       end_time: typeof body.end_time === "string" ? body.end_time : null,
       category: String(body.category ?? ""),
+      allow_preorders: body.allow_preorders === true,
       registration_required: body.registration_required === true,
       registrations_open_from:
         typeof body.registrations_open_from === "string" ? body.registrations_open_from : null,

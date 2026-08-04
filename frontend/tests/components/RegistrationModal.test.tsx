@@ -49,6 +49,7 @@ const vipEvent = {
   startTime: "19:30",
   description: "VIP event",
   category: "vip" as const,
+  allowPreorders: true,
   date: "2025-10-03",
   registrationRequired: true,
   active: true,
@@ -110,13 +111,26 @@ describe("RegistrationModal component", () => {
     });
   });
 
-  it("shows pre-order products for VIP events", () => {
+  it("shows pre-order products when the event allows pre-orders", () => {
     renderModal();
     expect(screen.getByText("Champagne Bottle (Standard) - EUR65")).toBeInTheDocument();
   });
 
-  it("hides pre-order products for non-VIP events", () => {
-    renderModal({ event: { ...vipEvent, category: "general" } });
+  it("hides pre-order products when the event does not allow pre-orders", () => {
+    renderModal({ event: { ...vipEvent, allowPreorders: false } });
+    expect(screen.queryByText("Champagne Bottle (Standard) - EUR65")).not.toBeInTheDocument();
+  });
+
+  it("shows pre-order products for a non-vip category, as long as allowPreorders is set", () => {
+    // A Sunday-morning capsule exchange during the festival is not "vip", but can
+    // still sell things — the category label must not gate this.
+    renderModal({ event: { ...vipEvent, category: "exchange" } });
+    expect(screen.getByText("Champagne Bottle (Standard) - EUR65")).toBeInTheDocument();
+  });
+
+  it("hides pre-order products for a vip-categorised event that does not allow them", () => {
+    // The inverse: being labelled "vip" grants nothing by itself.
+    renderModal({ event: { ...vipEvent, category: "vip", allowPreorders: false } });
     expect(screen.queryByText("Champagne Bottle (Standard) - EUR65")).not.toBeInTheDocument();
   });
 

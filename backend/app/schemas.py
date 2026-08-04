@@ -112,6 +112,7 @@ class EventCreate(BaseModel):
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     category: str = Field(min_length=1, max_length=50)
+    allow_preorders: bool = False
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
@@ -126,6 +127,7 @@ class EventUpdate(BaseModel):
     start_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     category: str | None = Field(default=None, min_length=1, max_length=50)
+    allow_preorders: bool | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
@@ -141,6 +143,7 @@ class EventOut(BaseModel):
     start_time: str
     end_time: str | None
     category: str
+    allow_preorders: bool
     registration_required: bool
     registrations_open_from: datetime | None
     max_capacity: int | None

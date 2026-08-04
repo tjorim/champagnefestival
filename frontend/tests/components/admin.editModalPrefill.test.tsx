@@ -62,6 +62,7 @@ const existingEvent = {
   startTime: "18:00",
   endTime: "22:00",
   category: "ceremony",
+  allowPreorders: false,
   registrationRequired: false,
   active: true,
 } as unknown as Event;

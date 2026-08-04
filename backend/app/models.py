@@ -342,6 +342,15 @@ class Event(Base):
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
+    """Free-text display label for the public schedule (e.g. "tasting", "vip",
+    "exchange") — purely cosmetic, not a behavior switch. See `allow_preorders`."""
+
+    allow_preorders: Mapped[bool] = mapped_column(Boolean, default=False)
+    """Whether guests can pre-order champagne/food when registering for this
+    event. Independent of `category`: a "vip" event is not automatically
+    orderable, and an "exchange" or "tasting" event can be if an admin enables
+    it — e.g. a Sunday-morning capsule exchange held during the festival."""
+
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
