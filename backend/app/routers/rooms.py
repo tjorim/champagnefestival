@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Room, Venue
+from app.models import Layout, Room, Venue
 from app.schemas import RoomCreate, RoomOut, RoomUpdate
 from app.utils import get_or_404, make_id, room_to_dict
 
@@ -132,6 +132,15 @@ async def delete_room(
     actor: str = Depends(get_actor_id),
 ) -> None:
     r = await get_or_404(db, Room, room_id, "Room not found.")
+    # Layouts cascade from rooms, and tables/areas cascade from layouts, so an
+    # unguarded delete would silently destroy a whole floor plan. Mirror the
+    # venue endpoint and make the caller clear the layouts first.
+    layouts_in_use = await db.execute(select(Layout).where(Layout.room_id == room_id).limit(1))
+    if layouts_in_use.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete: layouts are still using this room.",
+        )
     await db.delete(r)
     await write_audit_entry(
         db,

@@ -31,6 +31,10 @@ function formatTimestamp(iso: string): string {
 export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
   const [resourceType, setResourceType] = useState("");
   const [resourceId, setResourceId] = useState("");
+  const [actor, setActor] = useState("");
+  const [action, setAction] = useState("");
+  const [since, setSince] = useState("");
+  const [until, setUntil] = useState("");
   const [page, setPage] = useState(1);
 
   const resourceTypesQuery = useQuery({
@@ -40,11 +44,24 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
   });
 
   const entriesQuery = useQuery({
-    queryKey: queryKeys.admin.auditEntries({ resourceType, resourceId, page }),
+    queryKey: queryKeys.admin.auditEntries({
+      resourceType,
+      resourceId,
+      actor,
+      action,
+      since,
+      until,
+      page,
+    }),
     queryFn: () =>
       fetchAuditEntries(authHeaders, {
         resourceType: resourceType || undefined,
         resourceId: resourceId.trim() || undefined,
+        actor: actor.trim() || undefined,
+        action: action.trim() || undefined,
+        // The API takes timestamps; a bare date means the whole local day.
+        since: since ? new Date(`${since}T00:00:00`).toISOString() : undefined,
+        until: until ? new Date(`${until}T23:59:59.999`).toISOString() : undefined,
         limit: PAGE_SIZE,
         page,
       }),
@@ -61,6 +78,38 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
     setPage(1);
   }, []);
 
+  const handleActorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setActor(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleActionChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAction(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleSinceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSince(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleUntilChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUntil(e.target.value);
+    setPage(1);
+  }, []);
+
+  const hasFilters = Boolean(resourceType || resourceId || actor || action || since || until);
+
+  const handleClearFilters = useCallback(() => {
+    setResourceType("");
+    setResourceId("");
+    setActor("");
+    setAction("");
+    setSince("");
+    setUntil("");
+    setPage(1);
+  }, []);
+
   const entries = entriesQuery.data ?? [];
 
   if (entriesQuery.error) {
@@ -74,7 +123,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
       </div>
 
       <Form className="d-flex flex-wrap gap-3 mb-3">
-        <Form.Group>
+        <Form.Group controlId="audit-resource-type">
           <Form.Label className="small text-secondary mb-1">
             {m.admin_audit_filter_resource_type()}
           </Form.Label>
@@ -92,7 +141,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             ))}
           </Form.Select>
         </Form.Group>
-        <Form.Group>
+        <Form.Group controlId="audit-resource-id">
           <Form.Label className="small text-secondary mb-1">
             {m.admin_audit_filter_resource_id()}
           </Form.Label>
@@ -105,6 +154,51 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             style={{ minWidth: 200 }}
           />
         </Form.Group>
+        <Form.Group controlId="audit-actor">
+          <Form.Label className="small text-secondary mb-1">
+            {m.admin_audit_filter_actor()}
+          </Form.Label>
+          <Form.Control
+            size="sm"
+            type="text"
+            value={actor}
+            onChange={handleActorChange}
+            placeholder={m.admin_audit_filter_actor_placeholder()}
+            style={{ minWidth: 200 }}
+          />
+        </Form.Group>
+        <Form.Group controlId="audit-action">
+          <Form.Label className="small text-secondary mb-1">
+            {m.admin_audit_filter_action()}
+          </Form.Label>
+          <Form.Control
+            size="sm"
+            type="text"
+            value={action}
+            onChange={handleActionChange}
+            placeholder={m.admin_audit_filter_action_placeholder()}
+            style={{ minWidth: 180 }}
+          />
+        </Form.Group>
+        <Form.Group controlId="audit-since">
+          <Form.Label className="small text-secondary mb-1">
+            {m.admin_audit_filter_since()}
+          </Form.Label>
+          <Form.Control size="sm" type="date" value={since} onChange={handleSinceChange} />
+        </Form.Group>
+        <Form.Group controlId="audit-until">
+          <Form.Label className="small text-secondary mb-1">
+            {m.admin_audit_filter_until()}
+          </Form.Label>
+          <Form.Control size="sm" type="date" value={until} onChange={handleUntilChange} />
+        </Form.Group>
+        {hasFilters && (
+          <Form.Group className="align-self-end">
+            <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
+              {m.admin_content_clear_filters()}
+            </Button>
+          </Form.Group>
+        )}
       </Form>
 
       {entriesQuery.error && (

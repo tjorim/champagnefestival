@@ -187,6 +187,10 @@ export interface AuditEntryFilters {
   resourceId?: string;
   actor?: string;
   action?: string;
+  /** Inclusive lower bound, ISO-8601. */
+  since?: string;
+  /** Inclusive upper bound, ISO-8601. */
+  until?: string;
   limit?: number;
   page?: number;
 }
@@ -200,6 +204,8 @@ export async function fetchAuditEntries(
   if (filters.resourceId) params.set("resource_id", filters.resourceId);
   if (filters.actor) params.set("actor", filters.actor);
   if (filters.action) params.set("action", filters.action);
+  if (filters.since) params.set("since", filters.since);
+  if (filters.until) params.set("until", filters.until);
   params.set("limit", String(filters.limit ?? 50));
   params.set("page", String(filters.page ?? 1));
 

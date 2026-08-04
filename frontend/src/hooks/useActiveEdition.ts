@@ -9,6 +9,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates, type SliderItem } from "@/config/editions";
 import { apiToEvent, type Event } from "@/types/event";
+import type { EditionType } from "@/components/admin/editionTypes";
 import { endOfDay } from "@/utils/dateUtils";
 import { queryKeys } from "@/utils/queryKeys";
 
@@ -27,6 +28,8 @@ interface ActiveEditionVenue {
 export interface ActiveEdition {
   id: string;
   year: number;
+  /** Needed by the admin views, which run non-festival editions too. */
+  editionType: EditionType;
   month: "march" | "october";
   dates: EditionDates;
   venue: ActiveEditionVenue;
@@ -48,6 +51,7 @@ interface ApiVenue {
 interface ApiEdition {
   id: string;
   year: number;
+  edition_type?: string;
   month: string;
   dates?: string[] | null;
   venue: ApiVenue;
@@ -150,6 +154,10 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
       events.map((event) => event.date),
       fallbackDates,
     ),
+    editionType:
+      api.edition_type === "bourse" || api.edition_type === "capsule_exchange"
+        ? api.edition_type
+        : "festival",
     venue: {
       venueName: api.venue.name,
       address: api.venue.address,
@@ -168,6 +176,7 @@ function createFallbackEdition(): ActiveEdition {
   return {
     id: EMPTY_EDITION.id,
     year: EMPTY_EDITION.year,
+    editionType: "festival",
     month: EMPTY_EDITION.month,
     dates: EMPTY_EDITION.dates,
     venue: EMPTY_EDITION.venue,
@@ -177,8 +186,22 @@ function createFallbackEdition(): ActiveEdition {
   };
 }
 
-export async function fetchActiveEdition(): Promise<ActiveEdition> {
-  const res = await fetch("/api/editions/active?edition_type=festival");
+/**
+ * Which editions a caller considers "active".
+ *
+ * The public site is a festival site — its countdown, marquees and structured
+ * data must never latch onto a bourse — so it stays pinned to `"festival"`.
+ * The admin dashboard runs whichever edition is next, whatever its type, so
+ * that floor plans and the event-day views work for a bourse or capsule
+ * exchange too.
+ */
+export type ActiveEditionScope = "festival" | "any";
+
+export async function fetchActiveEdition(
+  scope: ActiveEditionScope = "festival",
+): Promise<ActiveEdition> {
+  const query = scope === "festival" ? "?edition_type=festival" : "";
+  const res = await fetch(`/api/editions/active${query}`);
   if (!res.ok) {
     throw new ActiveEditionFetchError(`Failed to load active edition: ${res.status}`, res.status);
   }
@@ -187,17 +210,19 @@ export async function fetchActiveEdition(): Promise<ActiveEdition> {
   return mapApiEdition(api, EMPTY_EDITION.dates);
 }
 
-export function activeEditionQueryOptions() {
+export function activeEditionQueryOptions(scope: ActiveEditionScope = "festival") {
   return queryOptions({
-    queryKey: activeEditionQueryKey,
-    queryFn: fetchActiveEdition,
+    // Scoped key: the public and admin views resolve different editions and
+    // must not share a cache entry.
+    queryKey: scope === "festival" ? activeEditionQueryKey : queryKeys.admin.activeEdition,
+    queryFn: () => fetchActiveEdition(scope),
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
 }
 
-export function useActiveEdition(): ActiveEditionState {
-  const query = useQuery(activeEditionQueryOptions());
+export function useActiveEdition(scope: ActiveEditionScope = "festival"): ActiveEditionState {
+  const query = useQuery(activeEditionQueryOptions(scope));
   const isNotFound = query.error instanceof ActiveEditionFetchError && query.error.status === 404;
 
   return {

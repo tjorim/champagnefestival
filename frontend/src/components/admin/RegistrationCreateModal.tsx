@@ -107,6 +107,7 @@ export default function RegistrationCreateModal({
         queryClient.invalidateQueries({ queryKey: adminActiveEditionEventsQueryKey }),
         queryClient.invalidateQueries({ queryKey: queryKeys.admin.personOptionsRoot }),
         queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.activeEdition }),
       ]);
       onSaved(registration);
       onHide();

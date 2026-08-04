@@ -27,8 +27,12 @@ function isUpcomingEdition(edition: SeedEdition): boolean {
 
 export const publicHandlers = [
   /** GET /api/editions/active — returns the active edition. */
-  http.get("/api/editions/active", () => {
-    return HttpResponse.json(editions.find((e) => e.active) ?? editions[0] ?? null);
+  http.get("/api/editions/active", ({ request }) => {
+    const editionType = new URL(request.url).searchParams.get("edition_type");
+    const matching = editions.filter(
+      (e) => e.active && (!editionType || e.edition_type === editionType),
+    );
+    return HttpResponse.json(matching[0] ?? editions[0] ?? null);
   }),
 
   /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */

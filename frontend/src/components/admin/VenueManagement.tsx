@@ -40,6 +40,7 @@ interface VenueManagementProps {
   ) => Promise<void>;
   onArchiveRoom: (roomId: string) => Promise<void>;
   onRestoreRoom: (roomId: string) => Promise<void>;
+  onDeleteRoom: (roomId: string) => Promise<void>;
 }
 
 const emptyVenueForm = { name: "", address: "", city: "", postalCode: "", country: "" };
@@ -67,6 +68,7 @@ export default function VenueManagement({
   onAddRoom,
   onArchiveRoom,
   onRestoreRoom,
+  onDeleteRoom,
 }: VenueManagementProps) {
   // Venue add
   const [showVenueModal, setShowVenueModal] = useState(false);
@@ -187,6 +189,20 @@ export default function VenueManagement({
     [onRestoreRoom],
   );
 
+  const handleDeleteRoom = useCallback(
+    async (roomId: string) => {
+      setDeleteRoomError(null);
+      try {
+        await onDeleteRoom(roomId);
+      } catch (err) {
+        // The API refuses while layouts still reference the room; surface that
+        // rather than leaving the button looking inert.
+        setDeleteRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
+      }
+    },
+    [onDeleteRoom],
+  );
+
   const columns = useMemo(
     () =>
       columnHelper.columns([
@@ -272,15 +288,26 @@ export default function VenueManagement({
                         title={m.admin_content_archive()}
                       />
                     ) : (
-                      <button
-                        type="button"
-                        className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
-                        onClick={() => handleRestoreRoom(room.id)}
-                        aria-label={m.admin_content_restore()}
-                        title={m.admin_content_restore()}
-                      >
-                        <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
+                          onClick={() => handleRestoreRoom(room.id)}
+                          aria-label={m.admin_content_restore()}
+                          title={m.admin_content_restore()}
+                        >
+                          <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
+                          onClick={() => handleDeleteRoom(room.id)}
+                          aria-label={`${m.admin_delete()} ${room.name}`}
+                          title={m.admin_delete()}
+                        >
+                          <i className="bi bi-trash" aria-hidden="true" />
+                        </button>
+                      </>
                     )}
                   </Badge>
                 ))}
@@ -343,7 +370,7 @@ export default function VenueManagement({
           },
         }),
       ]),
-    [rooms, openAddRoom, handleArchiveRoom, handleRestoreRoom, handleArchiveVenue, handleRestoreVenue, handleDeleteVenue],
+    [rooms, openAddRoom, handleArchiveRoom, handleRestoreRoom, handleDeleteRoom, handleArchiveVenue, handleRestoreVenue, handleDeleteVenue],
   );
 
   const table = useAppTable(

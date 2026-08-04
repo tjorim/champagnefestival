@@ -44,6 +44,7 @@ export function useAdminVenueActions({
     createAreaMutation,
     createLayoutMutation,
     createRoomMutation,
+    deleteRoomMutation,
     createTableMutation,
     createTableTypeMutation,
     createVenueMutation,
@@ -225,6 +226,16 @@ export function useAdminVenueActions({
       );
     },
     [queryClient, roomsQueryKey, updateRoomMutation],
+  );
+
+  const handleDeleteRoom = useCallback(
+    async (roomId: string) => {
+      await deleteRoomMutation.mutateAsync(roomId);
+      queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
+        prev ? prev.filter((room) => room.id !== roomId) : prev,
+      );
+    },
+    [deleteRoomMutation, queryClient, roomsQueryKey],
   );
 
   const handleAddLayout = useCallback(
@@ -428,6 +439,7 @@ export function useAdminVenueActions({
     handleChangeTableType,
     handleDeleteArea,
     handleDeleteLayout,
+    handleDeleteRoom,
     handleDeleteTable,
     handleDeleteVenue,
     handleMoveArea,

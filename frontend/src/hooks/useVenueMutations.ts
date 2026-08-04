@@ -321,6 +321,19 @@ export function useVenueMutations({
     retry: false,
   });
 
+  const deleteRoomMutation = useMutation({
+    mutationFn: (roomId: string) =>
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/rooms/${roomId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_room(),
+      ),
+    onSettled: () => {
+      void invalidateAdmin(queryClient, [roomsQueryKey]);
+    },
+    retry: false,
+  });
+
   const createLayoutMutation = useMutation({
     mutationFn: ({ roomId, date, label }: { roomId: string; date: string; label?: string }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
@@ -617,6 +630,7 @@ export function useVenueMutations({
     updateVenueMutation,
     deleteVenueMutation,
     createRoomMutation,
+    deleteRoomMutation,
     updateRoomMutation,
     createLayoutMutation,
     deleteLayoutMutation,

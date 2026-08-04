@@ -5,6 +5,8 @@ export const queryKeys = {
     ["check-in", registrationId, checkInToken] as const,
   volunteerRegistrationSearch: (query: string) => ["volunteer", "registrations", query] as const,
   admin: {
+    /** The admin dashboard's active edition — any type, unlike the public one. */
+    activeEdition: ["admin", "active-edition"] as const,
     registrations: ["admin", "registrations"] as const,
     tables: ["admin", "tables"] as const,
     venues: ["admin", "venues"] as const,
@@ -24,8 +26,27 @@ export const queryKeys = {
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,
     auditResourceTypes: ["admin", "audit", "resource-types"] as const,
-    auditEntries: (filters: { resourceType: string; resourceId: string; page: number }) =>
-      ["admin", "audit", "entries", filters.resourceType, filters.resourceId, filters.page] as const,
+    auditEntries: (filters: {
+      resourceType: string;
+      resourceId: string;
+      actor: string;
+      action: string;
+      since: string;
+      until: string;
+      page: number;
+    }) =>
+      [
+        "admin",
+        "audit",
+        "entries",
+        filters.resourceType,
+        filters.resourceId,
+        filters.actor,
+        filters.action,
+        filters.since,
+        filters.until,
+        filters.page,
+      ] as const,
     editionStats: ["admin", "edition-stats"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
