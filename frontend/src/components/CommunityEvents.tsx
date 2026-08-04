@@ -42,11 +42,11 @@ interface CommunityEventCardData {
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
   switch (editionType) {
     case "bourse":
-      return "Community Bourse";
+      return m.community_events_type_bourse();
     case "capsule_exchange":
-      return "Capsule Exchange";
+      return m.community_events_type_capsule_exchange();
     default:
-      return "Community Event";
+      return m.community_events_type_other();
   }
 }
 
