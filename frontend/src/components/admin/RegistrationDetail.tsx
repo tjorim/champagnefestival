@@ -148,6 +148,13 @@ export default function RegistrationDetail({
               : registration.paymentStatus === "partial"
                 ? m.admin_payment_partial()
                 : m.admin_payment_unpaid()}
+            {registration.amountDue != null && (
+              <span className="ms-1 fw-normal">
+                {m.admin_registration_amount_due({
+                  amount: registration.amountDue.toFixed(2),
+                })}
+              </span>
+            )}
           </Badge>
           {registration.checkedIn ? (
             <Badge bg="success">

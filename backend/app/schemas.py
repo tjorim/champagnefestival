@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from datetime import date as dt_date
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -183,6 +184,7 @@ class RegistrationCreate(BaseModel):
 class RegistrationUpdate(BaseModel):
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
+    amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     table_id: str | None = None
     pre_orders: list[OrderItemBase] | None = None
     notes: str | None = None
@@ -205,6 +207,7 @@ class RegistrationOut(BaseModel):
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
+    amount_due: Decimal | None
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -236,6 +239,7 @@ class RegistrationListOut(BaseModel):
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
+    amount_due: Decimal | None
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -256,6 +260,7 @@ class RegistrationGuestOut(BaseModel):
     pre_orders: list[OrderItemOut]
     status: RegistrationStatus
     payment_status: PaymentStatus
+    amount_due: Decimal | None
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool

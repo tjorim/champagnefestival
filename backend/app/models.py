@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
 )
@@ -86,6 +88,13 @@ class Registration(Base):
 
     payment_status: Mapped[str] = mapped_column(String(20), default="unpaid")
     """unpaid | partial | paid"""
+
+    amount_due: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    """What this booking owes, in euro — e.g. a bourse table rental fee.
+
+    Recorded by an admin and settled offline; the platform tracks the figure and
+    `payment_status`, it does not take payments. Null means nothing is owed.
+    """
 
     checked_in: Mapped[bool] = mapped_column(Boolean, default=False)
     checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

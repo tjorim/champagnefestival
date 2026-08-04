@@ -281,21 +281,26 @@ export default function OtherEvents() {
                           </Badge>
                         )}
 
+                        {/* Reservations run through the app; the contact stays
+                            visible for questions rather than as the way to book. */}
                         {item.externalContactName && item.externalContactEmail && (
-                          <Alert variant="warning" className="py-2 mb-0">
-                            <strong>{m.other_events_table_reservations()}</strong>{" "}
-                            {item.externalContactName} (
+                          <p className="mb-0 text-muted small">
+                            <i className="bi bi-envelope me-2" aria-hidden="true" />
+                            {m.other_events_questions_contact()} {item.externalContactName} (
                             <a href={`mailto:${item.externalContactEmail}`}>
                               {item.externalContactEmail}
                             </a>
                             )
-                          </Alert>
+                          </p>
                         )}
                       </div>
 
                       {item.event.registrationRequired && (
                         <Button variant="warning" onClick={() => setSelectedEvent(item.event)}>
-                          {m.other_events_rsvp()}
+                          <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                          {item.editionType === "bourse"
+                            ? m.other_events_reserve_table()
+                            : m.other_events_rsvp()}
                         </Button>
                       )}
                     </div>

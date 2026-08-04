@@ -446,6 +446,8 @@ async def update_registration(
         registration.status = body.status
     if body.payment_status is not None:
         registration.payment_status = body.payment_status
+    if "amount_due" in body.model_fields_set:
+        registration.amount_due = body.amount_due
     if "table_id" in body.model_fields_set:
         if body.table_id is not None:
             await _assert_table_matches_edition(db, body.table_id, _edition_id)

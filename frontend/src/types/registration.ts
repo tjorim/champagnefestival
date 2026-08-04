@@ -52,6 +52,11 @@ export interface Registration {
   tableId?: string;
   status: RegistrationStatus;
   paymentStatus: PaymentStatus;
+  /**
+   * What this booking owes in euro — e.g. a bourse table rental fee.
+   * Recorded by an admin and settled offline; undefined means nothing is owed.
+   */
+  amountDue?: number;
   /** Whether the guest has physically checked in at the entrance */
   checkedIn: boolean;
   checkedInAt?: string;

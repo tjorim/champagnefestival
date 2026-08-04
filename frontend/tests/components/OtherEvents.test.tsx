@@ -423,4 +423,40 @@ describe("OtherEvents", () => {
     });
     expect(window.location.hash).toBe("#schedule");
   });
+
+  it("offers an in-app table reservation for a bourse, with the contact demoted to a question line", async () => {
+    // Bookings run through the app rather than the partner's inbox; the contact
+    // stays visible for questions, not as the way to reserve.
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            external_contact_name: "Nancy",
+            external_contact_email: "nancy@example.com",
+            venue: { name: "Staf Versluys" },
+            events: [
+              {
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Bourse De la Comtesse",
+                registration_required: true,
+              },
+            ],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(await screen.findByRole("button", { name: /Reserve a table/ })).toBeInTheDocument();
+    // The address is still reachable, but no longer presented as the booking route.
+    const contact = screen.getByRole("link", { name: "nancy@example.com" });
+    expect(contact).toHaveAttribute("href", "mailto:nancy@example.com");
+    expect(screen.queryByText(/Table reservations:/)).not.toBeInTheDocument();
+  });
 });
