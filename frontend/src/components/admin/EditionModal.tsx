@@ -8,7 +8,6 @@ import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type GroupBase, type MultiValue } from "react-select";
 import { m } from "@/paraglide/messages";
-import { EMAIL_REGEX } from "@/config/constants";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
@@ -83,9 +82,6 @@ export default function EditionModal({
       editionType: (initial?.editionType ?? "festival") as EditionType,
       venueId: initial?.venue?.id ?? fallbackVenueId,
       active: initial?.active ?? true,
-      externalPartner: initial?.externalPartner ?? "",
-      externalContactName: initial?.externalContactName ?? "",
-      externalContactEmail: initial?.externalContactEmail ?? "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
       selectedExhibitors: [
@@ -120,9 +116,6 @@ export default function EditionModal({
             value.editionType === "festival"
               ? value.selectedExhibitors.map((option: ItemOption) => option.value)
               : [],
-          externalPartner: value.externalPartner,
-          externalContactName: value.externalContactName,
-          externalContactEmail: value.externalContactEmail,
         });
         onSaved(savedEdition);
       } catch (mutationError) {
@@ -160,9 +153,6 @@ export default function EditionModal({
       venueId: string;
       active: boolean;
       exhibitorIds: number[];
-      externalPartner?: string;
-      externalContactName?: string;
-      externalContactEmail?: string;
     }) => saveEdition(payload, authHeaders, initial?.id),
     retry: false,
   });
@@ -435,85 +425,6 @@ export default function EditionModal({
                 : m.admin_edition_create_first_then_events()}
             </div>
           </div>
-
-          {!isFestival && (
-            <div className="border border-secondary rounded p-3 mb-3">
-              <div className="text-light small fw-semibold mb-2">
-                {m.admin_edition_external_partner()}
-              </div>
-              <div className="row g-2">
-                <div className="col-md-6">
-                  <Form.Label className="text-secondary small mb-1">
-                    {m.admin_edition_partner_label()}
-                  </Form.Label>
-                  <form.Field name="externalPartner">
-                    {(field) => (
-                      <Form.Control
-                        className="bg-dark text-light border-secondary"
-                        placeholder="Partner organisation"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                    )}
-                  </form.Field>
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="text-secondary small mb-1">
-                    {m.admin_edition_contact_name_label()}
-                  </Form.Label>
-                  <form.Field name="externalContactName">
-                    {(field) => (
-                      <Form.Control
-                        className="bg-dark text-light border-secondary"
-                        placeholder="Jane Doe"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                    )}
-                  </form.Field>
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="text-secondary small mb-1">
-                    {m.admin_edition_contact_email_label()}
-                  </Form.Label>
-                  <form.Field
-                    name="externalContactEmail"
-                    validators={{
-                      onChange: ({ value }) =>
-                        value && !EMAIL_REGEX.test(value)
-                          ? m.registration_errors_email_invalid()
-                          : undefined,
-                    }}
-                  >
-                    {(field) => {
-                      const showErr =
-                        field.state.meta.isTouched && field.state.meta.errors.length > 0;
-                      return (
-                        <>
-                          <Form.Control
-                            type="email"
-                            className="bg-dark text-light border-secondary"
-                            placeholder="jane@example.com"
-                            value={field.state.value}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            onBlur={field.handleBlur}
-                            isInvalid={showErr}
-                          />
-                          {showErr && (
-                            <Form.Control.Feedback type="invalid">
-                              {field.state.meta.errors[0]}
-                            </Form.Control.Feedback>
-                          )}
-                        </>
-                      );
-                    }}
-                  </form.Field>
-                </div>
-              </div>
-            </div>
-          )}
 
           {isFestival && (
             <Form.Group className="mb-3" controlId="edition-exhibitors">

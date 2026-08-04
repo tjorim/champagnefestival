@@ -263,23 +263,6 @@ export default function EditionCard({
             );
           })()}
 
-          {edition.editionType !== "festival" &&
-            (edition.externalPartner ||
-              edition.externalContactName ||
-              edition.externalContactEmail) && (
-              <div className="text-secondary small mb-3">
-                <div className="text-light mb-1">{m.admin_edition_external_partner()}</div>
-                <div>{edition.externalPartner || "—"}</div>
-                {(edition.externalContactName || edition.externalContactEmail) && (
-                  <div>
-                    {[edition.externalContactName, edition.externalContactEmail]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </div>
-                )}
-              </div>
-            )}
-
           <div className="d-flex justify-content-between align-items-center mb-1">
             <h6 className="text-warning mb-0 small">{m.admin_content_edition_schedule()}</h6>
             <Button size="sm" variant="outline-secondary" onClick={openAddEvent}>

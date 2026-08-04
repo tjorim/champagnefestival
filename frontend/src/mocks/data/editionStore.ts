@@ -46,9 +46,6 @@ export interface SeedEdition {
   year: number;
   month: string;
   edition_type: string;
-  external_partner: string | null;
-  external_contact_name: string | null;
-  external_contact_email: string | null;
   dates: string[];
   venue: SeedVenue | null;
   events: SeedEvent[];

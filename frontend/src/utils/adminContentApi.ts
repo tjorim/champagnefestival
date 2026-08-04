@@ -182,9 +182,6 @@ export async function saveEdition(
     venueId: string;
     active: boolean;
     exhibitorIds: number[];
-    externalPartner?: string;
-    externalContactName?: string;
-    externalContactEmail?: string;
   },
   authHeaders: () => Record<string, string>,
   initialId?: string,
@@ -201,9 +198,6 @@ export async function saveEdition(
         month: payload.month,
         venue_id: payload.venueId,
         edition_type: payload.editionType,
-        external_partner: payload.externalPartner?.trim() || null,
-        external_contact_name: payload.externalContactName?.trim() || null,
-        external_contact_email: payload.externalContactEmail?.trim() || null,
         active: payload.active,
         // Always send `exhibitors` explicitly (even `[]` for off-festival editions) so the
         // backend receives an intentional instruction rather than treating the omitted

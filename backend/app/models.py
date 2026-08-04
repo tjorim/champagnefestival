@@ -306,9 +306,6 @@ class Edition(Base):
 
     venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     edition_type: Mapped[str] = mapped_column(String(20), default="festival")
-    external_partner: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    external_contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    external_contact_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
     exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)

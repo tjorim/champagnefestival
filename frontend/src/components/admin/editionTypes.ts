@@ -9,9 +9,6 @@ export interface Edition {
   year: number;
   month: string;
   editionType: EditionType;
-  externalPartner?: string;
-  externalContactName?: string;
-  externalContactEmail?: string;
   dates: string[];
   venue: {
     id: string;
@@ -43,11 +40,6 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
       data.edition_type === "bourse" || data.edition_type === "capsule_exchange"
         ? data.edition_type
         : "festival",
-    externalPartner: typeof data.external_partner === "string" ? data.external_partner : undefined,
-    externalContactName:
-      typeof data.external_contact_name === "string" ? data.external_contact_name : undefined,
-    externalContactEmail:
-      typeof data.external_contact_email === "string" ? data.external_contact_email : undefined,
     dates: Array.isArray(data.dates)
       ? data.dates.filter((value): value is string => typeof value === "string")
       : [],

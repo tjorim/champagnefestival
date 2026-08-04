@@ -156,9 +156,6 @@ async def create_edition(
         month=body.month,
         venue_id=body.venue_id,
         edition_type=body.edition_type,
-        external_partner=body.external_partner,
-        external_contact_name=body.external_contact_name,
-        external_contact_email=(str(body.external_contact_email) if body.external_contact_email else None),
         exhibitors=list(body.exhibitors),
         active=body.active,
     )
@@ -188,20 +185,9 @@ async def update_edition(
 ) -> dict:
     edition = await _get_edition_or_404(db, edition_id)
 
-    for field in [
-        "year",
-        "month",
-        "active",
-        "edition_type",
-        "external_partner",
-        "external_contact_name",
-        "external_contact_email",
-    ]:
+    for field in ["year", "month", "active", "edition_type"]:
         if field in body.model_fields_set:
-            value = getattr(body, field)
-            if field == "external_contact_email" and value is not None:
-                value = str(value)
-            setattr(edition, field, value)
+            setattr(edition, field, getattr(body, field))
 
     if "venue_id" in body.model_fields_set and body.venue_id is not None:
         await _load_venue(db, body.venue_id)

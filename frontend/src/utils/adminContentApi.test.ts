@@ -29,9 +29,6 @@ describe("saveEdition", () => {
     month: "march",
     venueId: "venue-1",
     active: true,
-    externalPartner: "",
-    externalContactName: "",
-    externalContactEmail: "",
   };
 
   it("sends the selected exhibitor ids for a festival edition", async () => {

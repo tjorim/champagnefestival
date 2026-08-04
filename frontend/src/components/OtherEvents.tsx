@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Card from "react-bootstrap/Card";
-import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import SectionHeading from "@/components/SectionHeading";
@@ -9,14 +8,10 @@ import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";
 import { apiToEvent } from "@/types/event";
 import { m } from "@/paraglide/messages";
-import { EXTERNAL_CONTACT_EMAIL_REGEX } from "@/config/constants";
 
 interface ApiUpcomingEdition {
   id: string;
   edition_type: "festival" | "bourse" | "capsule_exchange";
-  external_partner?: string | null;
-  external_contact_name?: string | null;
-  external_contact_email?: string | null;
   venue: { name: string };
   events: Record<string, unknown>[];
 }
@@ -34,9 +29,6 @@ interface OtherEventCardData {
   editionType: ApiUpcomingEdition["edition_type"];
   event: Event;
   venueName: string;
-  externalPartner?: string;
-  externalContactName?: string;
-  externalContactEmail?: string;
 }
 
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
@@ -59,40 +51,6 @@ function formatDate(date: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readOptionalString(
-  record: Record<string, unknown>,
-  key: string,
-  context: string,
-): string | undefined {
-  const value = record[key];
-  if (value === null || value === undefined) return undefined;
-  if (typeof value !== "string") {
-    throw new Error(`${context}.${key} must be a string or null.`);
-  }
-  return value;
-}
-
-/**
- * Unlike readOptionalString's siblings, an invalid value here is dropped rather
- * than thrown: a malformed contact address on one edition must not take down
- * the entire other events response and hide unrelated editions/events. This
- * checks the type directly instead of delegating to readOptionalString, since
- * that helper throws on a non-string value — which would defeat the point.
- */
-function readOptionalEmail(
-  record: Record<string, unknown>,
-  key: string,
-  context: string,
-): string | undefined {
-  const value = record[key];
-  if (value === null || value === undefined) return undefined;
-  if (typeof value !== "string" || !EXTERNAL_CONTACT_EMAIL_REGEX.test(value)) {
-    console.warn(`${context}.${key} is not a valid, safe email address; omitting it.`);
-    return undefined;
-  }
-  return value;
 }
 
 function isApiEvent(value: unknown): value is Record<string, unknown> {
@@ -159,9 +117,6 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
     return {
       id: value.id,
       edition_type: value.edition_type as ApiUpcomingEdition["edition_type"],
-      external_partner: readOptionalString(value, "external_partner", context),
-      external_contact_name: readOptionalString(value, "external_contact_name", context),
-      external_contact_email: readOptionalEmail(value, "external_contact_email", context),
       venue,
       events: rawEvents,
     };
@@ -225,9 +180,6 @@ export default function OtherEvents() {
           editionType: edition.edition_type,
           event,
           venueName: edition.venue?.name ?? "",
-          externalPartner: edition.external_partner ?? undefined,
-          externalContactName: edition.external_contact_name ?? undefined,
-          externalContactEmail: edition.external_contact_email ?? undefined,
         })),
     );
 
@@ -275,24 +227,7 @@ export default function OtherEvents() {
                         </p>
                         <p className="mb-2">{item.event.description}</p>
 
-                        {item.externalPartner && (
-                          <Badge bg="secondary" className="mb-2">
-                            {m.other_events_partner({ partner: item.externalPartner })}
-                          </Badge>
-                        )}
 
-                        {/* Reservations run through the app; the contact stays
-                            visible for questions rather than as the way to book. */}
-                        {item.externalContactName && item.externalContactEmail && (
-                          <p className="mb-0 text-muted small">
-                            <i className="bi bi-envelope me-2" aria-hidden="true" />
-                            {m.other_events_questions_contact()} {item.externalContactName} (
-                            <a href={`mailto:${item.externalContactEmail}`}>
-                              {item.externalContactEmail}
-                            </a>
-                            )
-                          </p>
-                        )}
                       </div>
 
                       {item.event.registrationRequired && (
