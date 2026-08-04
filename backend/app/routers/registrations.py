@@ -25,7 +25,7 @@ from app.dependencies import Pagination, apply_pagination
 from app.email import send_guest_access_email
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
+from app.models import Edition, Event, Layout, Person, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.routers.people import parse_phone
 from app.schemas import (
@@ -392,6 +392,29 @@ async def get_registration(
     return registration_to_dict_with_token(registration, person_map[registration.person_id], registration.event)
 
 
+async def _assert_table_matches_edition(db: AsyncSession, table_id: str, edition_id: str | None) -> None:
+    """Reject seating a registration at a table belonging to another edition.
+
+    Layouts are per-edition, so a table only makes sense for registrations of the
+    edition its layout was drawn for. Layouts predating the edition link carry a
+    null edition_id and are left alone.
+    """
+    row = (
+        await db.execute(select(Layout.edition_id).join(Table, Table.layout_id == Layout.id).where(Table.id == table_id))
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Table '{table_id}' not found.")
+    table_edition_id = row[0]
+    if table_edition_id is not None and edition_id is not None and table_edition_id != edition_id:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Table '{table_id}' belongs to edition '{table_edition_id}', "
+                f"but this registration is for edition '{edition_id}'."
+            ),
+        )
+
+
 @router.put(
     "/{registration_id}",
     response_model=RegistrationOut,
@@ -422,6 +445,8 @@ async def update_registration(
     if body.payment_status is not None:
         registration.payment_status = body.payment_status
     if "table_id" in body.model_fields_set:
+        if body.table_id is not None:
+            await _assert_table_matches_edition(db, body.table_id, _edition_id)
         registration.table_id = body.table_id
     if body.notes is not None:
         registration.notes = body.notes
