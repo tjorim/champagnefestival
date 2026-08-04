@@ -9,7 +9,7 @@ vi.mock("@/paraglide/messages", () => ({
     header_logo_alt: () => "Champagnefestival logo",
     admin_title: () => "Administration",
     nav_schedule: () => "Schedule",
-    nav_community_events: () => "Community events",
+    nav_other_events: () => "Other events",
     nav_faq: () => "FAQ",
     nav_contact: () => "Contact",
   },

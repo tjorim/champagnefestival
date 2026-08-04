@@ -318,7 +318,7 @@ async def test_standalone_event_can_move_within_same_single_day(client):
 
 @pytest.mark.anyio
 async def test_community_edition_upcoming_lists_every_active_event_in_time_order(client):
-    """Community editions may hold multiple same-day events; the public payload lists every
+    """Off-festival editions may hold multiple same-day events; the public payload lists every
 
     active one in date/time order, and excludes inactive (draft/cancelled) events entirely.
     """
@@ -697,7 +697,7 @@ async def test_upcoming_rejects_unsupported_edition_type(client):
 
 @pytest.mark.anyio
 async def test_standalone_event_rejects_a_second_date(client):
-    """Community editions may only span a single calendar date."""
+    """Off-festival editions may only span a single calendar date."""
     venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     assert venue_response.status_code == 201
     venue_id = venue_response.json()["id"]
@@ -909,7 +909,7 @@ async def test_festival_to_festival_edit_preserves_exhibitors(client):
 @pytest.mark.anyio
 async def test_community_edition_update_still_rejects_explicit_exhibitors(client):
     """Backend validation must still reject an explicit attempt to assign exhibitors
-    to a community edition, whether or not the type is changing in the same request.
+    to a off-festival edition, whether or not the type is changing in the same request.
     """
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]

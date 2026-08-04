@@ -54,7 +54,7 @@ const Countdown = lazy(() => import("./components/Countdown"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
-const CommunityEvents = lazy(() => import("./components/CommunityEvents"));
+const OtherEvents = lazy(() => import("./components/OtherEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
@@ -497,9 +497,9 @@ function App() {
           </div>
         </section>
 
-        {/* Community Events */}
-        <AppSuspense errorFallbackText={m.community_events_error_load()}>
-          <CommunityEvents />
+        {/* Other Events */}
+        <AppSuspense errorFallbackText={m.other_events_error_load()}>
+          <OtherEvents />
         </AppSuspense>
 
         {/* Producers Carousel */}

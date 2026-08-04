@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Card from "react-bootstrap/Card";
 import Badge from "react-bootstrap/Badge";
@@ -9,7 +9,7 @@ import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";
 import { apiToEvent } from "@/types/event";
 import { m } from "@/paraglide/messages";
-import { COMMUNITY_CONTACT_EMAIL_REGEX } from "@/config/constants";
+import { EXTERNAL_CONTACT_EMAIL_REGEX } from "@/config/constants";
 
 interface ApiUpcomingEdition {
   id: string;
@@ -21,15 +21,15 @@ interface ApiUpcomingEdition {
   events: Record<string, unknown>[];
 }
 
-const COMMUNITY_EDITION_TYPES = ["bourse", "capsule_exchange"] as const;
-type CommunityEditionType = (typeof COMMUNITY_EDITION_TYPES)[number];
+const OTHER_EDITION_TYPES = ["bourse", "capsule_exchange"] as const;
+type OtherEditionType = (typeof OTHER_EDITION_TYPES)[number];
 
 const EDITION_TYPES = new Set<ApiUpcomingEdition["edition_type"]>([
   "festival",
-  ...COMMUNITY_EDITION_TYPES,
+  ...OTHER_EDITION_TYPES,
 ]);
 
-interface CommunityEventCardData {
+interface OtherEventCardData {
   id: string;
   editionType: ApiUpcomingEdition["edition_type"];
   event: Event;
@@ -42,11 +42,11 @@ interface CommunityEventCardData {
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
   switch (editionType) {
     case "bourse":
-      return m.community_events_type_bourse();
+      return m.other_events_type_bourse();
     case "capsule_exchange":
-      return m.community_events_type_capsule_exchange();
+      return m.other_events_type_capsule_exchange();
     default:
-      return m.community_events_type_other();
+      return m.other_events_type_other();
   }
 }
 
@@ -77,7 +77,7 @@ function readOptionalString(
 /**
  * Unlike readOptionalString's siblings, an invalid value here is dropped rather
  * than thrown: a malformed contact address on one edition must not take down
- * the entire community events response and hide unrelated editions/events. This
+ * the entire other events response and hide unrelated editions/events. This
  * checks the type directly instead of delegating to readOptionalString, since
  * that helper throws on a non-string value — which would defeat the point.
  */
@@ -88,7 +88,7 @@ function readOptionalEmail(
 ): string | undefined {
   const value = record[key];
   if (value === null || value === undefined) return undefined;
-  if (typeof value !== "string" || !COMMUNITY_CONTACT_EMAIL_REGEX.test(value)) {
+  if (typeof value !== "string" || !EXTERNAL_CONTACT_EMAIL_REGEX.test(value)) {
     console.warn(`${context}.${key} is not a valid, safe email address; omitting it.`);
     return undefined;
   }
@@ -168,24 +168,39 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
   });
 }
 
-async function fetchCommunityEditionType(
-  editionType: CommunityEditionType,
+async function fetchOtherEditionType(
+  editionType: OtherEditionType,
 ): Promise<ApiUpcomingEdition[]> {
   const response = await fetch(`/api/editions/upcoming?edition_type=${editionType}`);
   if (!response.ok) {
-    throw new Error(`Failed to load ${editionType} community events: ${response.status}`);
+    throw new Error(`Failed to load ${editionType} other events: ${response.status}`);
   }
 
   const editions = parseUpcomingEditions(await response.json());
   return editions.filter((edition) => edition.edition_type === editionType);
 }
 
-async function fetchCommunityEditions(): Promise<ApiUpcomingEdition[]> {
-  const groupedEditions = await Promise.all(COMMUNITY_EDITION_TYPES.map(fetchCommunityEditionType));
+async function fetchOtherEditions(): Promise<ApiUpcomingEdition[]> {
+  const groupedEditions = await Promise.all(OTHER_EDITION_TYPES.map(fetchOtherEditionType));
   return groupedEditions.flat();
 }
 
-export default function CommunityEvents() {
+/**
+ * The section used to live at `#community-events`. Existing bookmarks and any
+ * links already shared keep that fragment, so map it onto the new anchor rather
+ * than dropping people at the top of the page.
+ */
+function useLegacyAnchorRedirect() {
+  useEffect(() => {
+    if (window.location.hash !== "#community-events") return;
+    window.history.replaceState(null, "", "#other-events");
+    document.getElementById("other-events")?.scrollIntoView();
+  }, []);
+}
+
+export default function OtherEvents() {
+  useLegacyAnchorRedirect();
+
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const {
@@ -193,15 +208,15 @@ export default function CommunityEvents() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["community-events"],
-    queryFn: fetchCommunityEditions,
+    queryKey: ["other-events"],
+    queryFn: fetchOtherEditions,
     staleTime: 5 * 60 * 1000,
   });
 
-  const items = useMemo<CommunityEventCardData[]>(() => {
-    // Community editions may hold multiple same-day events (opening, tasting, auction, ...).
+  const items = useMemo<OtherEventCardData[]>(() => {
+    // Off-festival editions may hold multiple same-day events (opening, tasting, auction, ...).
     // Every active event is rendered as its own card; inactive (draft) events stay hidden.
-    const cards = data.flatMap((edition): CommunityEventCardData[] =>
+    const cards = data.flatMap((edition): OtherEventCardData[] =>
       (edition.events ?? [])
         .map(apiToEvent)
         .filter((event) => event.active)
@@ -225,22 +240,22 @@ export default function CommunityEvents() {
 
   return (
     <>
-      <section id="community-events" className="content-section">
+      <section id="other-events" className="content-section">
         <div className="container">
           <SectionHeading
-            id="community-events-heading"
-            title={m.community_events_title()}
-            subtitle={m.community_events_subtitle()}
+            id="other-events-heading"
+            title={m.other_events_title()}
+            subtitle={m.other_events_subtitle()}
           />
 
           <div className="row justify-content-center">
             <div className="col-md-10 col-lg-8">
-              {isLoading && <p className="text-center">{m.community_events_loading()}</p>}
+              {isLoading && <p className="text-center">{m.other_events_loading()}</p>}
 
-              {isError && <Alert variant="danger">{m.community_events_error()}</Alert>}
+              {isError && <Alert variant="danger">{m.other_events_error()}</Alert>}
 
               {!isLoading && !isError && items.length === 0 && (
-                <p className="text-center mb-0">{m.community_events_empty()}</p>
+                <p className="text-center mb-0">{m.other_events_empty()}</p>
               )}
 
               {items.map((item) => (
@@ -262,13 +277,13 @@ export default function CommunityEvents() {
 
                         {item.externalPartner && (
                           <Badge bg="secondary" className="mb-2">
-                            {m.community_events_partner({ partner: item.externalPartner })}
+                            {m.other_events_partner({ partner: item.externalPartner })}
                           </Badge>
                         )}
 
                         {item.externalContactName && item.externalContactEmail && (
                           <Alert variant="warning" className="py-2 mb-0">
-                            <strong>{m.community_events_table_reservations()}</strong>{" "}
+                            <strong>{m.other_events_table_reservations()}</strong>{" "}
                             {item.externalContactName} (
                             <a href={`mailto:${item.externalContactEmail}`}>
                               {item.externalContactEmail}
@@ -280,7 +295,7 @@ export default function CommunityEvents() {
 
                       {item.event.registrationRequired && (
                         <Button variant="warning" onClick={() => setSelectedEvent(item.event)}>
-                          {m.community_events_rsvp()}
+                          {m.other_events_rsvp()}
                         </Button>
                       )}
                     </div>

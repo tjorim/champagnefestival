@@ -205,7 +205,7 @@ export async function saveEdition(
         external_contact_name: payload.externalContactName?.trim() || null,
         external_contact_email: payload.externalContactEmail?.trim() || null,
         active: payload.active,
-        // Always send `exhibitors` explicitly (even `[]` for community editions) so the
+        // Always send `exhibitors` explicitly (even `[]` for off-festival editions) so the
         // backend receives an intentional instruction rather than treating the omitted
         // field as "leave existing associations alone".
         exhibitors: payload.editionType === "festival" ? payload.exhibitorIds : [],

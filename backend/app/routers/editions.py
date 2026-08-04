@@ -213,7 +213,7 @@ async def update_edition(
         edition.exhibitors = list(body.exhibitors)
     elif edition.edition_type != "festival" and edition.exhibitors:
         # The edition type changed away from festival without an explicit exhibitors
-        # payload. Community editions can't carry exhibitors, so clear the now-invalid
+        # payload. Off-festival editions can't carry exhibitors, so clear the now-invalid
         # associations as part of the same atomic transition instead of rejecting the
         # update.
         edition.exhibitors = []

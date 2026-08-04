@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
-import CommunityEvents from "@/components/CommunityEvents";
+import OtherEvents from "@/components/OtherEvents";
 import { server } from "@/mocks/server";
 
 const BASE_EVENT = {
@@ -20,19 +20,19 @@ const BASE_EVENT = {
   updated_at: "2026-01-01T00:00:00Z",
 };
 
-function renderCommunityEvents(): void {
+function renderOtherEvents(): void {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={queryClient}>
-      <CommunityEvents />
+      <OtherEvents />
     </QueryClientProvider>,
   );
 }
 
-describe("CommunityEvents", () => {
-  it("renders validated community editions and ignores unexpected festival results", async () => {
+describe("OtherEvents", () => {
+  it("renders validated off-festival editions and ignores unexpected festival results", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
         const editionType = new URL(request.url).searchParams.get("edition_type");
@@ -63,9 +63,9 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
-    expect(await screen.findByRole("heading", { name: "Community Bourse" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Bourse" })).toBeInTheDocument();
     expect(screen.getByText("Meet collectors from across Belgium.")).toBeInTheDocument();
     expect(screen.queryByText("Festival should be ignored")).not.toBeInTheDocument();
   });
@@ -94,12 +94,12 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     const headings = await screen.findAllByRole("heading", { level: 5 });
     expect(headings.map((heading) => heading.textContent)).toEqual([
       "Capsule Exchange",
-      "Community Bourse",
+      "Bourse",
     ]);
   });
 
@@ -123,7 +123,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     const titles = await screen.findAllByText(/^Bourse (Opening|Auction)$/);
     expect(titles.map((title) => title.textContent)).toEqual(["Bourse Opening", "Bourse Auction"]);
@@ -149,7 +149,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByText("Bourse Opening")).toBeInTheDocument();
     expect(screen.queryByText("Draft Tasting")).not.toBeInTheDocument();
@@ -162,7 +162,7 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -188,7 +188,7 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -212,7 +212,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -238,7 +238,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -263,7 +263,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -290,7 +290,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
     expect(
@@ -298,7 +298,7 @@ describe("CommunityEvents", () => {
     ).toHaveAttribute("href", "mailto:bourse+events@xn--nxasmq6b.example");
   });
 
-  it("does not hide unrelated community editions when a sibling edition has a malformed contact email", async () => {
+  it("does not hide unrelated off-festival editions when a sibling edition has a malformed contact email", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
         const editionType = new URL(request.url).searchParams.get("edition_type");
@@ -332,7 +332,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
     expect(screen.getByText("Capsule swap")).toBeInTheDocument();
@@ -352,7 +352,7 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -371,7 +371,7 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -397,8 +397,30 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("redirects the legacy #community-events anchor to the renamed section", async () => {
+    // The section moved from #community-events to #other-events; bookmarks and
+    // already-shared links must still land on it.
+    window.location.hash = "#community-events";
+    renderOtherEvents();
+
+    await waitFor(() => {
+      expect(window.location.hash).toBe("#other-events");
+    });
+    expect(document.getElementById("other-events")).toBeInTheDocument();
+  });
+
+  it("leaves an unrelated hash alone", async () => {
+    window.location.hash = "#schedule";
+    renderOtherEvents();
+
+    await waitFor(() => {
+      expect(document.getElementById("other-events")).toBeInTheDocument();
+    });
+    expect(window.location.hash).toBe("#schedule");
   });
 });

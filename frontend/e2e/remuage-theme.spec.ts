@@ -82,7 +82,7 @@ test.describe("Remuage visual theme", () => {
       "what-we-do",
       "next-festival",
       "schedule",
-      "community-events",
+      "other-events",
       "producers",
       "faq",
       "map",
@@ -102,7 +102,7 @@ test.describe("Remuage visual theme", () => {
 
     await expect(page.locator("#next-festival")).toHaveCSS("background-color", "rgb(72, 34, 77)");
     await expect(page.locator("#registrations")).toHaveCSS("background-color", "rgb(72, 34, 77)");
-    await expect(page.locator("#community-events .alert-danger")).toHaveCount(0);
+    await expect(page.locator("#other-events .alert-danger")).toHaveCount(0);
     await page.locator("#faq .accordion-button").first().click();
     await expect(page.locator("#faq .accordion-collapse.show")).toBeVisible();
 

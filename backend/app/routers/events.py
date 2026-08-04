@@ -235,9 +235,9 @@ async def _validate_standalone_event_date(
     event_date: date,
     exclude_event_id: str | None = None,
 ) -> None:
-    """Enforce the community-edition event cardinality contract.
+    """Enforce the off-festival edition event cardinality contract.
 
-    Community editions (`bourse`, `capsule_exchange`) may contain any number of events
+    Off-festival editions (`bourse`, `capsule_exchange`) may contain any number of events
     (e.g. separate opening, tasting, and auction entries), but every event on such an
     edition must share the same calendar date. Festival editions are unrestricted since
     they legitimately span multiple days. The public UI and admin UI both render every

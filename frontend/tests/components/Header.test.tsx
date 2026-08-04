@@ -10,7 +10,7 @@ vi.mock("@/paraglide/messages", () => ({
     admin_title: () => "Administration",
     admin_toggle_navigation: () => "Toggle navigation",
     nav_schedule: () => "Schedule",
-    nav_community_events: () => "Community events",
+    nav_other_events: () => "Other events",
     nav_faq: () => "FAQ",
     nav_contact: () => "Contact",
   },
