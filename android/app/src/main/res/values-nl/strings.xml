@@ -59,12 +59,12 @@
     <string name="registration_strap_not_issued_label">Polsband niet uitgereikt</string>
     <string name="registration_notes_format">Notities: %1$s</string>
     <string name="registration_check_in_button">Inchecken</string>
-    <string name="registration_no_preorders">Geen voorbestellingen voor deze gast.</string>
-    <string name="registration_preorders_title">Voorbestellingen</string>
-    <string name="registration_preorder_quantity_format">Aantal: %1$d</string>
-    <string name="registration_preorder_category_format">Categorie: %1$s</string>
-    <string name="registration_preorder_delivered_label">Levering: Geleverd</string>
-    <string name="registration_preorder_not_delivered_label">Levering: Niet geleverd</string>
+    <string name="registration_no_order_items">Geen bestelde items voor deze gast.</string>
+    <string name="registration_order_items_title">Bestelde items</string>
+    <string name="registration_order_item_quantity_format">Aantal: %1$d</string>
+    <string name="registration_order_item_category_format">Categorie: %1$s</string>
+    <string name="registration_order_item_delivered_label">Levering: Geleverd</string>
+    <string name="registration_order_item_not_delivered_label">Levering: Niet geleverd</string>
 
     <string name="lock_title">Champagnefestival is vergrendeld</string>
     <string name="lock_continue_button">Doorgaan</string>

@@ -147,7 +147,7 @@ The Android app consumes these backend endpoints:
 - **Active Edition** — current/upcoming edition overview with event list and live check-in progress
 - **QR Scan** — CameraX live scanner (torch toggle, tap-to-focus), parses `{registrationId}:{token}` QR payloads, manual entry fallback
 - **Guest Lookup** — debounced guest/table search with check-in + delivery summary
-- **Registration Detail** — guest info, table, pre-orders, delivery state, check-in action
+- **Registration Detail** — guest info, table, order items, delivery state, check-in action
 - **Check-in Confirmation** — success / already-checked-in / queued-for-sync result, auto-returns to the scanner
 - **Settings** — API URL override, OIDC info, app version, logout
 
