@@ -116,10 +116,12 @@ async def test_amount_due_change_is_audited(client, db_session):
     entries = (
         (
             await db_session.execute(
-                select(AuditEntry).where(
+                select(AuditEntry)
+                .where(
                     AuditEntry.resource_id == registration_id,
                     AuditEntry.action == "amount_due_updated",
                 )
+                .order_by(AuditEntry.timestamp)
             )
         )
         .scalars()
@@ -138,10 +140,12 @@ async def test_amount_due_change_is_audited(client, db_session):
     entries = (
         (
             await db_session.execute(
-                select(AuditEntry).where(
+                select(AuditEntry)
+                .where(
                     AuditEntry.resource_id == registration_id,
                     AuditEntry.action == "amount_due_updated",
                 )
+                .order_by(AuditEntry.timestamp)
             )
         )
         .scalars()
