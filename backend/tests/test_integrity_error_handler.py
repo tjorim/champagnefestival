@@ -33,7 +33,8 @@ def _request(path: str = "/api/people/per_1/merge/per_2") -> Request:
 async def _detail(pgcode: str | None) -> tuple[int, str]:
     exc = IntegrityError("UPDATE people SET ...", {}, _DriverError("boom", pgcode))
     response = await integrity_error_handler(_request(), exc)
-    return response.status_code, json.loads(response.body)["detail"]
+    # JSONResponse.body is typed bytes | memoryview; bytes() accepts either.
+    return response.status_code, json.loads(bytes(response.body))["detail"]
 
 
 @pytest.mark.anyio
