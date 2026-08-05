@@ -705,5 +705,13 @@
   "auth_signing_out": "Signing out…",
   "auth_session_expired_notice": "Your session expired, so you were signed out. Please sign in again to continue.",
   "pebble_pair_retry_sign_in": "Try signing in again",
-  "admin_session_renewing": "Reconnecting your session…"
+  "admin_session_renewing": "Reconnecting your session…",
+  "my_account_title": "My Account",
+  "my_account_signed_in_as": "Signed in as {account}",
+  "my_account_delete_heading": "Delete my account",
+  "my_account_delete_description": "Your registrations, pre-orders, payment status, and check-in history are festival records and are kept. Deleting your account only removes the sign-in link to it — you'd need to sign in again with a new account to manage them.",
+  "my_account_delete_button": "Delete my account",
+  "my_account_deleting": "Deleting…",
+  "my_account_delete_confirm": "Delete your account? This can't be undone. Your registrations and orders are kept, but you'll no longer be able to sign in to manage them with this account.",
+  "my_account_delete_error": "Could not delete your account. Please try again."
 }

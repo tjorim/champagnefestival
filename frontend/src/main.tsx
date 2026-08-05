@@ -60,6 +60,7 @@ const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
+const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -208,6 +209,23 @@ function PebblePairRoute() {
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.pebble_pair_error()}>
           <PebblePairPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /me — unlinked, direct-URL-only self-service account page. */
+function MyAccountRoute() {
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-person-circle" title={m.my_account_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.my_account_delete_error()}>
+          <MyAccountPage />
         </AppSuspense>
       </main>
     </div>
@@ -642,6 +660,7 @@ const router = createAppRouter({
   MyRegistrationsRoute,
   PrivacyPolicyRoute,
   PebblePairRoute,
+  MyAccountRoute,
 });
 
 const oidcConfig = createOidcConfig({

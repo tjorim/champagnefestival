@@ -705,5 +705,13 @@
   "auth_signing_out": "Bezig met afmelden…",
   "auth_session_expired_notice": "Je sessie is verlopen, daarom ben je afgemeld. Meld je opnieuw aan om verder te gaan.",
   "pebble_pair_retry_sign_in": "Opnieuw aanmelden",
-  "admin_session_renewing": "Je sessie wordt hersteld…"
+  "admin_session_renewing": "Je sessie wordt hersteld…",
+  "my_account_title": "Mijn account",
+  "my_account_signed_in_as": "Aangemeld als {account}",
+  "my_account_delete_heading": "Mijn account verwijderen",
+  "my_account_delete_description": "Je inschrijvingen, voorbestellingen, betaalstatus en check-in geschiedenis zijn festivalgegevens en blijven bewaard. Het verwijderen van je account verwijdert enkel de aanmeldkoppeling — je moet je opnieuw aanmelden met een nieuw account om ze te beheren.",
+  "my_account_delete_button": "Mijn account verwijderen",
+  "my_account_deleting": "Bezig met verwijderen…",
+  "my_account_delete_confirm": "Je account verwijderen? Dit kan niet ongedaan gemaakt worden. Je inschrijvingen en bestellingen blijven bewaard, maar je kan je niet meer met dit account aanmelden om ze te beheren.",
+  "my_account_delete_error": "Je account kon niet verwijderd worden. Probeer het opnieuw."
 }
