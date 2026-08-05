@@ -308,6 +308,10 @@ async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, 
 async def _validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) -> None:
     if not exhibitor_ids:
         return
+    # Lock the referenced exhibitor rows so a concurrent retype-to-vendor (see
+    # exhibitors.update_exhibitor, which locks the same rows) can't interleave
+    # with this check and leave a vendor exhibitor linked to an edition lineup.
+    await db.execute(select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids)).with_for_update())
     exhibitor_map = await _load_exhibitors_by_ids(db, set(exhibitor_ids))
     invalid = [eid for eid in exhibitor_ids if eid not in exhibitor_map]
     if invalid:

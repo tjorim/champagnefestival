@@ -56,6 +56,12 @@ async def create_layout(
     actor: str = Depends(get_actor_id),
 ) -> dict:
     resolved_day_id, resolved_date = await _resolve_layout_day(db, body)
+
+    # Lock the room row so a concurrent room deletion (which refuses to proceed
+    # while layouts reference the room) can't race this insert: whichever
+    # transaction locks the room first is the one the other serializes behind.
+    await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())
+
     existing_stmt = select(Layout).where(
         Layout.room_id == body.room_id,
         Layout.day_id == resolved_day_id,
@@ -104,6 +110,10 @@ async def copy_layout(
 ) -> dict:
     source = await get_or_404(db, Layout, source_layout_id, "Layout not found.")
     resolved_day_id, resolved_date = await _resolve_layout_day(db, body)
+
+    # See create_layout: lock the target room so it can't be deleted out from
+    # under this insert.
+    await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())
 
     existing_stmt = select(Layout).where(
         Layout.room_id == body.room_id,

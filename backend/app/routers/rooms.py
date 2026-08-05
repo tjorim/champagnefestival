@@ -132,6 +132,10 @@ async def delete_room(
     actor: str = Depends(get_actor_id),
 ) -> None:
     r = await get_or_404(db, Room, room_id, "Room not found.")
+    # Lock the room row so a concurrent layout creation (see layouts.create_layout
+    # and copy_layout) can't insert a new layout for this room between our check
+    # and the delete below, which would otherwise cascade-delete it silently.
+    await db.execute(select(Room.id).where(Room.id == room_id).with_for_update())
     # Layouts cascade from rooms, and tables/areas cascade from layouts, so an
     # unguarded delete would silently destroy a whole floor plan. Mirror the
     # venue endpoint and make the caller clear the layouts first.
