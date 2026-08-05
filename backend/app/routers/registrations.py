@@ -719,7 +719,11 @@ async def _ensure_public_registration_allowed(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Registrations are not available for this event.",
         )
-    if not event.registration_required:
+    # Registration is mandatory for events that require it (capacity-limited ones),
+    # and optional-but-offered for walk-in events that still have something to
+    # pre-order (e.g. a VIP package) — anyone else can just show up. An event with
+    # neither accepts no registrations at all.
+    if not event.registration_required and not any(p.active for p in event.products):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This event does not accept registrations.",

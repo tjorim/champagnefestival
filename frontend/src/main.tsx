@@ -308,7 +308,10 @@ function App() {
   const registrableEvents = useMemo(() => {
     const now = new Date();
     return edition.events
-      .filter((event) => event.registrationRequired)
+      // Registration is offered for events that require it (capacity-limited),
+      // and also for walk-in events that still have something to pre-order (e.g.
+      // a VIP package) — everyone else can just show up, no RSVP needed.
+      .filter((event) => event.registrationRequired || event.products.length > 0)
       .filter((event) => {
         const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
         return eventEnd >= now;

@@ -308,6 +308,71 @@ describe("OtherEvents", () => {
     expect(document.querySelector('a[href^="mailto:"]')).toBeNull();
   });
 
+  it("hides the reservation button for a walk-in event with nothing to pre-order", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Free walk-in tasting" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(await screen.findByText("Free walk-in tasting")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("offers an optional VIP-package reservation for a walk-in event with products", async () => {
+    // Not every event requires registration, but some still sell a VIP package —
+    // registration is optional there, offered rather than mandatory.
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            venue: { name: "Staf Versluys" },
+            events: [
+              {
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Free walk-in tasting",
+                products: [
+                  {
+                    id: "product-1",
+                    event_id: "event-bourse",
+                    name: "VIP Package",
+                    price: 50,
+                    category: "other",
+                    active: true,
+                    created_at: "2026-01-01T00:00:00Z",
+                    updated_at: "2026-01-01T00:00:00Z",
+                  },
+                ],
+              },
+            ],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(
+      await screen.findByRole("button", { name: /Reserve VIP package/ }),
+    ).toBeInTheDocument();
+  });
+
   it("credits the co-organising producer, linking to them when a website is known", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {

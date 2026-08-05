@@ -12,6 +12,7 @@ vi.mock("@/paraglide/messages", () => ({
     schedule_time_range: ({ start, end }: { start: string; end: string }) => `${start} - ${end}`,
     schedule_time: () => "Time",
     schedule_registration: () => "Registration required",
+    schedule_preorder_available: () => "VIP package available",
     schedule_no_events: () => "No events",
     schedule_categories_tasting: () => "Tasting",
     schedule_categories_vip: () => "VIP",
@@ -90,6 +91,35 @@ describe("Schedule component", () => {
   it("shows registration badge for events that require registration", () => {
     render(<Schedule events={mockEvents} />);
     expect(screen.getByText("Registration required")).toBeInTheDocument();
+  });
+
+  it("shows a pre-order badge instead, for a walk-in event with products", () => {
+    const eventsWithProduct = [
+      {
+        ...mockEvents[0]!,
+        products: [
+          {
+            id: "product-1",
+            eventId: "fri-tasting",
+            name: "VIP Package",
+            price: 50,
+            category: "other" as const,
+            active: true,
+            createdAt: "",
+            updatedAt: "",
+          },
+        ],
+      },
+    ];
+    render(<Schedule events={eventsWithProduct} />);
+    expect(screen.getByText("VIP package available")).toBeInTheDocument();
+    expect(screen.queryByText("Registration required")).not.toBeInTheDocument();
+  });
+
+  it("shows no registration-related badge for a plain walk-in event", () => {
+    render(<Schedule events={[mockEvents[0]!]} />);
+    expect(screen.queryByText("Registration required")).not.toBeInTheDocument();
+    expect(screen.queryByText("VIP package available")).not.toBeInTheDocument();
   });
 
   it("shows category badge", () => {

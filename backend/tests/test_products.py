@@ -243,6 +243,56 @@ async def test_admin_registration_creation_also_resolves_pre_orders(client):
 
 
 @pytest.mark.anyio
+async def test_registration_allowed_for_walkin_event_with_active_product(client):
+    """An event that doesn't require registration (walk-in) should still accept a
+    registration from someone who wants to pre-order — e.g. a VIP package — even
+    though showing up for the event itself needs no RSVP."""
+    event = await _create_event(client, registration_required=False)
+    product = await _create_product(client, event["id"])
+
+    r = await client.post(
+        "/api/registrations",
+        json={
+            "name": "Jean Dupont",
+            "email": "jean@example.com",
+            "phone": "+32499000000",
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [{"product_id": product["id"], "quantity": 1}],
+            "notes": "",
+            "honeypot": "",
+            "form_start_time": "",
+        },
+    )
+    assert r.status_code == 201, r.text
+
+
+@pytest.mark.anyio
+async def test_registration_rejected_for_walkin_event_with_only_archived_products(client):
+    """A walk-in event whose only products are archived has nothing left to offer,
+    so it should reject registration the same as one with no products at all."""
+    event = await _create_event(client, registration_required=False)
+    await _create_product(client, event["id"], active=False)
+
+    r = await client.post(
+        "/api/registrations",
+        json={
+            "name": "Jean Dupont",
+            "email": "jean@example.com",
+            "phone": "+32499000000",
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [],
+            "notes": "",
+            "honeypot": "",
+            "form_start_time": "",
+        },
+    )
+    assert r.status_code == 400
+    assert r.json()["detail"] == "This event does not accept registrations."
+
+
+@pytest.mark.anyio
 async def test_deleting_product_does_not_alter_existing_registration_pre_orders(client):
     """pre_orders is a snapshot taken at order time, not a live reference — deleting
     the product afterward must not corrupt registrations already placed against it."""

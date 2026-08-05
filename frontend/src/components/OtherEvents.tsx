@@ -268,12 +268,14 @@ export default function OtherEvents() {
 
                       </div>
 
-                      {item.event.registrationRequired && (
+                      {(item.event.registrationRequired || item.event.products.length > 0) && (
                         <Button variant="warning" onClick={() => setSelectedEvent(item.event)}>
                           <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                          {item.editionType === "bourse"
-                            ? m.other_events_reserve_table()
-                            : m.other_events_rsvp()}
+                          {item.event.registrationRequired
+                            ? item.editionType === "bourse"
+                              ? m.other_events_reserve_table()
+                              : m.other_events_rsvp()
+                            : m.other_events_preorder()}
                         </Button>
                       )}
                     </div>
