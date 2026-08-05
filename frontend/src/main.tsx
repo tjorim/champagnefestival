@@ -54,12 +54,13 @@ const Countdown = lazy(() => import("./components/Countdown"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const ContactForm = lazy(() => import("./components/ContactForm"));
 const Schedule = lazy(() => import("./components/Schedule"));
-const CommunityEvents = lazy(() => import("./components/CommunityEvents"));
+const OtherEvents = lazy(() => import("./components/OtherEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
+const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -214,6 +215,23 @@ function PebblePairRoute() {
   );
 }
 
+/** Route component for /me — unlinked, direct-URL-only self-service account page. */
+function MyAccountRoute() {
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-person-circle" title={m.my_account_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.my_account_delete_error()}>
+          <MyAccountPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   // Use custom hooks for language
   useLanguage();
@@ -308,7 +326,10 @@ function App() {
   const registrableEvents = useMemo(() => {
     const now = new Date();
     return edition.events
-      .filter((event) => event.registrationRequired)
+      // Registration is offered for events that require it (capacity-limited),
+      // and also for walk-in events that still have something to order (e.g.
+      // a VIP package) — everyone else can just show up, no RSVP needed.
+      .filter((event) => event.registrationRequired || event.products.length > 0)
       .filter((event) => {
         const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
         return eventEnd >= now;
@@ -497,9 +518,9 @@ function App() {
           </div>
         </section>
 
-        {/* Community Events */}
-        <AppSuspense errorFallbackText={m.community_events_error_load()}>
-          <CommunityEvents />
+        {/* Other Events */}
+        <AppSuspense errorFallbackText={m.other_events_error_load()}>
+          <OtherEvents />
         </AppSuspense>
 
         {/* Producers Carousel */}
@@ -639,6 +660,7 @@ const router = createAppRouter({
   MyRegistrationsRoute,
   PrivacyPolicyRoute,
   PebblePairRoute,
+  MyAccountRoute,
 });
 
 const oidcConfig = createOidcConfig({

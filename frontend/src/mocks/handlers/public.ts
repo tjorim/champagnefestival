@@ -27,8 +27,12 @@ function isUpcomingEdition(edition: SeedEdition): boolean {
 
 export const publicHandlers = [
   /** GET /api/editions/active — returns the active edition. */
-  http.get("/api/editions/active", () => {
-    return HttpResponse.json(editions.find((e) => e.active) ?? editions[0] ?? null);
+  http.get("/api/editions/active", ({ request }) => {
+    const editionType = new URL(request.url).searchParams.get("edition_type");
+    const matching = editions.filter(
+      (e) => e.active && (!editionType || e.edition_type === editionType),
+    );
+    return HttpResponse.json(matching[0] ?? null);
   }),
 
   /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */
@@ -94,7 +98,7 @@ export const publicHandlers = [
       event_id: String(body.event_id ?? ""),
       event: events.find((e) => e.id === body.event_id) ?? null,
       guest_count: Number(body.guest_count ?? 1),
-      pre_orders: Array.isArray(body.pre_orders) ? body.pre_orders : [],
+      order_items: Array.isArray(body.order_items) ? body.order_items : [],
       notes: String(body.notes ?? ""),
       accessibility_note: "",
       table_id: null,
@@ -157,7 +161,7 @@ export const publicHandlers = [
       checked_in_at: r.checked_in_at ?? null,
       strap_issued: r.strap_issued,
       created_at: r.created_at,
-      pre_orders: r.pre_orders,
+      order_items: r.order_items,
     }));
 
     return HttpResponse.json(myRegs);
@@ -193,7 +197,7 @@ export const publicHandlers = [
       event_title: regEvent?.title ?? "",
       table_name: regTable?.name ?? null,
       guest_count: reg.guest_count,
-      pre_orders: reg.pre_orders,
+      order_items: reg.order_items,
       notes: reg.notes,
       accessibility_note: reg.accessibility_note,
       status: reg.status,
@@ -248,7 +252,7 @@ export const publicHandlers = [
         event_title: regEvent2?.title ?? "",
         table_name: regTable2?.name ?? null,
         guest_count: updatedReg.guest_count,
-        pre_orders: updatedReg.pre_orders,
+        order_items: updatedReg.order_items,
         notes: updatedReg.notes,
         accessibility_note: updatedReg.accessibility_note,
         status: updatedReg.status,

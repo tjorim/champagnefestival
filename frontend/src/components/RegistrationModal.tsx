@@ -1,13 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
-import { useForm } from "@tanstack/react-form";
-import { useState, useCallback } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
+import { useState, useCallback, useMemo } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import { ALL_PRODUCTS, MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
+import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import type { Event } from "@/types/event";
@@ -29,25 +29,8 @@ interface RegistrationFields {
   formStartTime: string;
 }
 
-function getProductName(nameKey: string): string {
-  switch (nameKey) {
-    case "champagne_standard":
-      return m.registration_product_champagne_standard();
-    case "champagne_prestige":
-      return m.registration_product_champagne_prestige();
-    case "champagne_glass":
-      return m.registration_product_champagne_glass();
-    case "food_cheese":
-      return m.registration_product_food_cheese();
-    case "food_charcuterie":
-      return m.registration_product_food_charcuterie();
-    default:
-      return nameKey;
-  }
-}
-
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
-  const [preOrders, setPreOrders] = useState<OrderItem[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -57,7 +40,10 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   });
 
   const isSubmitting = submitRegistrationMutation.isPending;
-  const showPreOrders = event?.category === "vip";
+  const products = useMemo(() => event?.products ?? [], [event]);
+  // Whether guests can order anything is answered by the event actually
+  // having products, not by a separate flag — see Event.products.
+  const showOrderItems = products.length > 0;
 
   const form = useForm({
     defaultValues: {
@@ -80,7 +66,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         await submitRegistrationMutation.mutateAsync({
           ...value,
           eventId: event.id,
-          preOrders: showPreOrders ? preOrders : [],
+          orderItems: showOrderItems ? orderItems : [],
         });
         setSubmitSuccess(true);
       } catch (error) {
@@ -91,32 +77,65 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     },
   });
 
-  const handleQuantityChange = useCallback((productId: string, quantity: number) => {
-    setPreOrders((prev) => {
-      const existing = prev.find((o) => o.productId === productId);
-      if (quantity <= 0) {
-        return prev.filter((o) => o.productId !== productId);
-      }
-      const product = ALL_PRODUCTS.find((p) => p.id === productId);
-      if (!product) return prev;
+  const handleQuantityChange = useCallback(
+    (productId: string, quantity: number) => {
+      setOrderItems((prev) => {
+        const existing = prev.find((o) => o.productId === productId);
+        if (quantity <= 0) {
+          return prev.filter((o) => o.productId !== productId);
+        }
+        const product = products.find((p) => p.id === productId);
+        if (!product) return prev;
 
-      const item: OrderItem = {
-        productId,
-        name: getProductName(product.nameKey),
-        quantity,
-        deliveredQuantity: 0,
-        remainingQuantity: quantity,
-        price: product.price,
-        category: product.category,
-        delivered: false,
-      };
+        const item: OrderItem = {
+          productId,
+          name: product.name,
+          quantity,
+          deliveredQuantity: 0,
+          remainingQuantity: quantity,
+          price: product.price,
+          category: product.category,
+          delivered: false,
+          // The server computes and merges any bundle-included quantity on top
+          // of this — the client only ever asks for what's explicitly chosen.
+          includedQuantity: 0,
+        };
 
-      if (existing) {
-        return prev.map((o) => (o.productId === productId ? item : o));
-      }
-      return [...prev, item];
-    });
-  }, []);
+        if (existing) {
+          return prev.map((o) => (o.productId === productId ? item : o));
+        }
+        return [...prev, item];
+      });
+    },
+    [products],
+  );
+
+  const guestCount = useStore(form.store, (s) => s.values.guestCount);
+
+  const requiredProducts = useMemo(() => products.filter((p) => p.required), [products]);
+  const hasRequiredSelected = useMemo(
+    () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.productId)),
+    [orderItems, requiredProducts],
+  );
+
+  // product_id -> free quantity included by whichever bundling product is
+  // currently selected, computed the same way the server will (see
+  // _resolve_order_items): floor(guestCount / includedPerGuests).
+  const includedQuantities = useMemo(() => {
+    const included = new Map<string, { quantity: number; sourceName: string }>();
+    for (const order of orderItems) {
+      const source = products.find((p) => p.id === order.productId);
+      if (!source?.includedProductId || !source.includedPerGuests) continue;
+      const qty = Math.floor((guestCount || 0) / source.includedPerGuests);
+      if (qty <= 0) continue;
+      const existing = included.get(source.includedProductId);
+      included.set(source.includedProductId, {
+        quantity: (existing?.quantity ?? 0) + qty,
+        sourceName: existing ? `${existing.sourceName}, ${source.name}` : source.name,
+      });
+    }
+    return included;
+  }, [guestCount, orderItems, products]);
 
   const handleClose = useCallback(() => {
     form.reset({
@@ -128,7 +147,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       honeypot: "",
       formStartTime: new Date().toISOString(),
     });
-    setPreOrders([]);
+    setOrderItems([]);
     setSubmitSuccess(false);
     setSubmitError("");
     onHide();
@@ -314,45 +333,64 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               }}
             </form.Field>
 
-            {showPreOrders && (
+            {showOrderItems && (
               <fieldset className="mb-3">
-                <legend className="fs-6 fw-semibold mb-1">{m.registration_preorder_title()}</legend>
-                <p className="text-secondary small mb-2">{m.registration_preorder_description()}</p>
+                <legend className="fs-6 fw-semibold mb-1">{m.registration_order_title()}</legend>
+                <p className="text-secondary small mb-2">{m.registration_order_description()}</p>
+                {requiredProducts.length > 0 && !hasRequiredSelected && (
+                  <p className="text-warning small mb-2">
+                    {m.registration_order_required_hint({
+                      products: requiredProducts.map((p) => p.name).join(", "),
+                    })}
+                  </p>
+                )}
 
-                {ALL_PRODUCTS.filter((p) => p.available).map((product) => {
-                  const currentItem = preOrders.find((o) => o.productId === product.id);
+                {products.map((product) => {
+                  const currentItem = orderItems.find((o) => o.productId === product.id);
                   const qty = currentItem?.quantity ?? 0;
+                  const label = `${product.name} - €${product.price}`;
+                  const isLockedOptional =
+                    !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
+                  const included = includedQuantities.get(product.id);
                   return (
-                    <div
-                      key={product.id}
-                      className="d-flex align-items-center justify-content-between mb-2"
-                    >
-                      <span className="text-light small">{getProductName(product.nameKey)}</span>
-                      <div className="d-flex align-items-center gap-2">
-                        <Button
-                          variant="outline-secondary"
-                          size="sm"
-                          onClick={() => handleQuantityChange(product.id, qty - 1)}
-                          disabled={qty === 0}
-                          aria-label={`Decrease quantity of ${getProductName(product.nameKey)}`}
-                        >
-                          <i className="bi bi-dash" aria-hidden="true" />
-                        </Button>
-                        <span
-                          className="text-light"
-                          style={{ minWidth: "1.5rem", textAlign: "center" }}
-                        >
-                          {qty}
-                        </span>
-                        <Button
-                          variant="outline-warning"
-                          size="sm"
-                          onClick={() => handleQuantityChange(product.id, qty + 1)}
-                          aria-label={`Increase quantity of ${getProductName(product.nameKey)}`}
-                        >
-                          <i className="bi bi-plus" aria-hidden="true" />
-                        </Button>
+                    <div key={product.id} className="mb-2">
+                      <div className="d-flex align-items-center justify-content-between">
+                        <span className="text-light small">{label}</span>
+                        <div className="d-flex align-items-center gap-2">
+                          <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            onClick={() => handleQuantityChange(product.id, qty - 1)}
+                            disabled={qty === 0}
+                            aria-label={`Decrease quantity of ${label}`}
+                          >
+                            <i className="bi bi-dash" aria-hidden="true" />
+                          </Button>
+                          <span
+                            className="text-light"
+                            style={{ minWidth: "1.5rem", textAlign: "center" }}
+                          >
+                            {qty}
+                          </span>
+                          <Button
+                            variant="outline-warning"
+                            size="sm"
+                            onClick={() => handleQuantityChange(product.id, qty + 1)}
+                            disabled={isLockedOptional}
+                            aria-label={`Increase quantity of ${label}`}
+                          >
+                            <i className="bi bi-plus" aria-hidden="true" />
+                          </Button>
+                        </div>
                       </div>
+                      {included && (
+                        <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
+                          {m.registration_order_included_note({
+                            count: included.quantity,
+                            source: included.sourceName,
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -1,7 +1,14 @@
 import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
 import { m } from "@/paraglide/messages";
-import { apiToEvent, type Event, type EventFormData } from "@/types/event";
+import {
+  apiToEvent,
+  apiToProduct,
+  type Event,
+  type EventFormData,
+  type Product,
+} from "@/types/event";
+import type { OrderItemCategory } from "@/types/registration";
 
 /**
  * Safe fetch wrapper that handles network errors and non-ok responses
@@ -16,7 +23,9 @@ async function safeFetch(
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
+      // A body of literal `null` parses successfully, so the catch never fires —
+      // coalesce it away rather than reading `.detail` off null.
+      const data = (await response.json().catch(() => null)) ?? {};
       const detail = (data as { detail?: string }).detail;
       const errorMsg = detail ?? (operation ? `Failed to ${operation}` : "Request failed");
       throw new Error(errorMsg);
@@ -180,9 +189,11 @@ export async function saveEdition(
     venueId: string;
     active: boolean;
     exhibitorIds: number[];
-    externalPartner?: string;
-    externalContactName?: string;
-    externalContactEmail?: string;
+    /**
+     * Omit to leave an existing co-organizer untouched; pass `null` to clear it.
+     * The backend only acts on the field when it is present in the payload.
+     */
+    coOrganizerExhibitorId?: number | null;
   },
   authHeaders: () => Record<string, string>,
   initialId?: string,
@@ -199,14 +210,15 @@ export async function saveEdition(
         month: payload.month,
         venue_id: payload.venueId,
         edition_type: payload.editionType,
-        external_partner: payload.externalPartner?.trim() || null,
-        external_contact_name: payload.externalContactName?.trim() || null,
-        external_contact_email: payload.externalContactEmail?.trim() || null,
         active: payload.active,
-        // Always send `exhibitors` explicitly (even `[]` for community editions) so the
+        // Always send `exhibitors` explicitly (even `[]` for off-festival editions) so the
         // backend receives an intentional instruction rather than treating the omitted
         // field as "leave existing associations alone".
         exhibitors: payload.editionType === "festival" ? payload.exhibitorIds : [],
+        // Independent of the lineup: any edition type may name a co-organizer.
+        ...(payload.coOrganizerExhibitorId === undefined
+          ? {}
+          : { co_organizer_exhibitor_id: payload.coOrganizerExhibitorId }),
       }),
     },
     isEdit ? "update edition" : "create edition",
@@ -274,6 +286,68 @@ export async function deleteEditionEvent(
 ): Promise<void> {
   await safeFetch(
     `/api/events/${eventId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
+}
+
+export async function fetchEventProducts(
+  eventId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Product[]> {
+  const response = await safeFetch(
+    `/api/products?event_id=${encodeURIComponent(eventId)}`,
+    { headers: authHeaders() },
+    m.admin_content_error_load(),
+  );
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToProduct) : [];
+}
+
+export async function saveEventProduct(
+  payload: {
+    id?: string;
+    eventId: string;
+    name: string;
+    price: number;
+    category: OrderItemCategory;
+    active: boolean;
+    required: boolean;
+    /** Both or neither — a bundle needs a target product and a ratio. */
+    includedProductId?: string;
+    includedPerGuests?: number;
+  },
+  authHeaders: () => Record<string, string>,
+): Promise<Product> {
+  const isNew = !payload.id;
+  const response = await safeFetch(
+    isNew ? "/api/products" : `/api/products/${payload.id}`,
+    {
+      method: isNew ? "POST" : "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        ...(isNew ? { event_id: payload.eventId } : {}),
+        name: payload.name,
+        price: payload.price,
+        category: payload.category,
+        active: payload.active,
+        required: payload.required,
+        included_product_id: payload.includedProductId ?? null,
+        included_per_guests: payload.includedPerGuests ?? null,
+      }),
+    },
+    m.admin_content_error_save(),
+  );
+
+  return apiToProduct((await response.json()) as Record<string, unknown>);
+}
+
+export async function deleteEventProduct(
+  productId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<void> {
+  await safeFetch(
+    `/api/products/${productId}`,
     { method: "DELETE", headers: authHeaders() },
     m.admin_content_error_save(),
   );

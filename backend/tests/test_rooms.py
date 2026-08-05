@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
-import pytest
+import asyncio
 
+import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.models import Room
 from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, VENUE_PAYLOAD
 
 
@@ -57,3 +62,39 @@ async def test_room_invalid_color(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_deleting_a_room_locks_it_against_concurrent_layout_creation(client, engine):
+    """delete_room and create_layout both take a row lock on the room, so one
+    request's check-then-write can't be interleaved by the other's — otherwise
+    a layout created between the "no layouts" check and the delete would be
+    silently cascade-deleted along with any tables already drawn on it."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as holder:
+        # Simulate delete_room having already acquired its lock but not yet committed.
+        await holder.execute(select(Room.id).where(Room.id == room_id).with_for_update())
+
+        async with factory() as contender:
+            # Simulate create_layout's lock attempt on the same room: it must block
+            # while the holder's transaction is still open.
+            with pytest.raises(asyncio.TimeoutError):
+                await asyncio.wait_for(
+                    contender.execute(select(Room.id).where(Room.id == room_id).with_for_update()),
+                    timeout=0.5,
+                )
+            await contender.rollback()
+
+            await holder.commit()
+
+            # Once the holder releases the lock, the contender can proceed.
+            await asyncio.wait_for(
+                contender.execute(select(Room.id).where(Room.id == room_id).with_for_update()),
+                timeout=2,
+            )
+            await contender.rollback()

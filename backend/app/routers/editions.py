@@ -156,13 +156,12 @@ async def create_edition(
         month=body.month,
         venue_id=body.venue_id,
         edition_type=body.edition_type,
-        external_partner=body.external_partner,
-        external_contact_name=body.external_contact_name,
-        external_contact_email=(str(body.external_contact_email) if body.external_contact_email else None),
         exhibitors=list(body.exhibitors),
+        co_organizer_exhibitor_id=body.co_organizer_exhibitor_id,
         active=body.active,
     )
     await _validate_exhibitor_ids(db, edition.exhibitors)
+    await _validate_co_organizer(db, edition.co_organizer_exhibitor_id)
     db.add(edition)
     await write_audit_entry(
         db,
@@ -188,20 +187,13 @@ async def update_edition(
 ) -> dict:
     edition = await _get_edition_or_404(db, edition_id)
 
-    for field in [
-        "year",
-        "month",
-        "active",
-        "edition_type",
-        "external_partner",
-        "external_contact_name",
-        "external_contact_email",
-    ]:
+    if "co_organizer_exhibitor_id" in body.model_fields_set:
+        await _validate_co_organizer(db, body.co_organizer_exhibitor_id)
+        edition.co_organizer_exhibitor_id = body.co_organizer_exhibitor_id
+
+    for field in ["year", "month", "active", "edition_type"]:
         if field in body.model_fields_set:
-            value = getattr(body, field)
-            if field == "external_contact_email" and value is not None:
-                value = str(value)
-            setattr(edition, field, value)
+            setattr(edition, field, getattr(body, field))
 
     if "venue_id" in body.model_fields_set and body.venue_id is not None:
         await _load_venue(db, body.venue_id)
@@ -213,7 +205,7 @@ async def update_edition(
         edition.exhibitors = list(body.exhibitors)
     elif edition.edition_type != "festival" and edition.exhibitors:
         # The edition type changed away from festival without an explicit exhibitors
-        # payload. Community editions can't carry exhibitors, so clear the now-invalid
+        # payload. Off-festival editions can't carry exhibitors, so clear the now-invalid
         # associations as part of the same atomic transition instead of rejecting the
         # update.
         edition.exhibitors = []
@@ -264,7 +256,7 @@ async def _load_editions(
     include_inactive: bool,
     edition_type: EditionType | None = None,
 ) -> list[Edition]:
-    stmt = select(Edition).options(selectinload(Edition.events))
+    stmt = select(Edition).options(selectinload(Edition.events).selectinload(Event.products))
     if not include_inactive:
         stmt = stmt.where(Edition.active.is_(True))
     if edition_type is not None:
@@ -278,7 +270,7 @@ async def _get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
         Edition,
         edition_id,
         "Edition not found.",
-        options=[selectinload(Edition.events)],
+        options=[selectinload(Edition.events).selectinload(Event.products)],
     )
 
 
@@ -316,6 +308,10 @@ async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, 
 async def _validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) -> None:
     if not exhibitor_ids:
         return
+    # Lock the referenced exhibitor rows so a concurrent retype-to-vendor (see
+    # exhibitors.update_exhibitor, which locks the same rows) can't interleave
+    # with this check and leave a vendor exhibitor linked to an edition lineup.
+    await db.execute(select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids)).with_for_update())
     exhibitor_map = await _load_exhibitors_by_ids(db, set(exhibitor_ids))
     invalid = [eid for eid in exhibitor_ids if eid not in exhibitor_map]
     if invalid:
@@ -338,7 +334,8 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition], *, active
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
     exhibitor_map = await _load_exhibitors_by_ids(
         db,
-        {eid for edition in editions for eid in edition.exhibitors},
+        {eid for edition in editions for eid in edition.exhibitors}
+        | {edition.co_organizer_exhibitor_id for edition in editions if edition.co_organizer_exhibitor_id},
     )
     payloads = []
     for edition in editions:
@@ -362,6 +359,9 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition], *, active
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
+                co_organizer=exhibitor_map.get(edition.co_organizer_exhibitor_id)
+                if edition.co_organizer_exhibitor_id
+                else None,
             )
         )
     return payloads
@@ -420,6 +420,22 @@ def _sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Edit
         )
 
     return sorted(editions, key=sort_key)
+
+
+async def _validate_co_organizer(db: AsyncSession, exhibitor_id: int | None) -> None:
+    """A co-organizer must be an existing, active exhibitor.
+
+    Unlike the lineup, any exhibitor type is acceptable and any edition type may
+    have one — co-organizing says who ran the event with the vzw, not who was
+    programmed at it.
+    """
+    if exhibitor_id is None:
+        return
+    exhibitor = (
+        await db.execute(select(Exhibitor).where(Exhibitor.id == exhibitor_id, Exhibitor.active.is_(True)))
+    ).scalar_one_or_none()
+    if exhibitor is None:
+        raise HTTPException(status_code=400, detail=f"Invalid or inactive co-organizer exhibitor id: {exhibitor_id}")
 
 
 def _validate_exhibitors_allowed(edition_type: EditionType, exhibitors: list[int]) -> None:

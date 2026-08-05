@@ -5,7 +5,7 @@ a valid Bearer JWT with at least the ``volunteer`` or ``admin`` role.
 
 No PII (email, phone, address, national_register_number) is returned — only
 the fields volunteers need on-site: guest name, party size, event, check-in
-and strap status, pre-orders, and internal notes (arrival notes visible to
+and strap status, order items, and internal notes (arrival notes visible to
 staff).
 """
 
@@ -207,7 +207,7 @@ async def search_registrations(
                 Registration.id.ilike(q_like, escape="\\"),
                 Registration.event_id.ilike(q_like, escape="\\"),
                 func.unaccent(Event.title).ilike(func.unaccent(q_like), escape="\\"),
-                func.unaccent(cast(Registration.pre_orders, Text)).ilike(func.unaccent(q_like), escape="\\"),
+                func.unaccent(cast(Registration.order_items, Text)).ilike(func.unaccent(q_like), escape="\\"),
             ]
             if table_query:
                 table_query_escaped = table_query.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
@@ -226,7 +226,7 @@ async def search_registrations(
         if registration.person is None or registration.event is None:
             continue
         if not matches_order_filters(
-            registration.pre_orders,
+            registration.order_items,
             category=order_category,
             delivery_state=delivery_state,
         ):
@@ -241,7 +241,7 @@ async def search_registrations(
                 event_title=registration.event.title,
                 table_id=registration.table_id,
                 table_name=table_name,
-                pre_orders=registration.pre_orders,
+                order_items=registration.order_items,
             )
             if q_stripped
             else None
@@ -292,7 +292,7 @@ async def update_volunteer_registration(
     if registration.person is None or registration.event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
 
-    previous_orders = list(registration.pre_orders) if registration.pre_orders else []
+    previous_orders = list(registration.order_items) if registration.order_items else []
     previous_strap_issued = registration.strap_issued
     changed = False
     request_id = getattr(request.state, "request_id", None)
@@ -303,10 +303,10 @@ async def update_volunteer_registration(
         "request_id": request_id,
     }
 
-    if body.pre_orders is not None:
-        new_orders = [item.model_dump() for item in body.pre_orders]
+    if body.order_items is not None:
+        new_orders = [item.model_dump() for item in body.order_items]
         if new_orders != previous_orders:
-            registration.pre_orders = new_orders
+            registration.order_items = new_orders
             changed = True
             await write_audit_entry(
                 db,

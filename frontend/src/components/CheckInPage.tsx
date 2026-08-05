@@ -45,8 +45,8 @@ interface CheckInCardProps {
   isUpdatingRegistration: boolean;
   canManageEntranceActions: boolean;
   onCheckIn: () => void;
-  onAdjustPreOrder: (productId: string, delta: number) => void;
-  onSetPreOrderQuantity: (productId: string, quantity: number) => void;
+  onAdjustOrderItem: (productId: string, delta: number) => void;
+  onSetOrderItemQuantity: (productId: string, quantity: number) => void;
   onIssueStrap: () => void;
 }
 
@@ -58,8 +58,8 @@ function CheckInCard({
   isUpdatingRegistration,
   canManageEntranceActions,
   onCheckIn,
-  onAdjustPreOrder,
-  onSetPreOrderQuantity,
+  onAdjustOrderItem,
+  onSetOrderItemQuantity,
   onIssueStrap,
 }: CheckInCardProps) {
   return (
@@ -131,14 +131,14 @@ function CheckInCard({
           )}
         </ListGroup>
 
-        {registration.preOrders.length > 0 && (
+        {registration.orderItems.length > 0 && (
           <div className="mt-3">
             <p className="fw-semibold text-warning mb-2">
               <i className="bi bi-cart-fill me-2" aria-hidden="true" />
-              {m.checkin_pre_orders()}
+              {m.checkin_order_items()}
             </p>
             <ListGroup variant="flush">
-              {registration.preOrders.map((item, idx) => (
+              {registration.orderItems.map((item, idx) => (
                 <ListGroup.Item
                   key={`${item.productId}-${idx}`}
                   className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-3 flex-wrap"
@@ -157,7 +157,7 @@ function CheckInCard({
                       <Button
                         size="sm"
                         variant="outline-secondary"
-                        onClick={() => onAdjustPreOrder(item.productId, -1)}
+                        onClick={() => onAdjustOrderItem(item.productId, -1)}
                         disabled={
                           !canManageEntranceActions ||
                           isUpdatingRegistration ||
@@ -184,7 +184,7 @@ function CheckInCard({
                             );
                             event.currentTarget.value = String(bounded);
                             if (bounded !== item.deliveredQuantity) {
-                              onSetPreOrderQuantity(item.productId, bounded);
+                              onSetOrderItemQuantity(item.productId, bounded);
                             }
                           } else {
                             event.currentTarget.value = String(item.deliveredQuantity);
@@ -204,7 +204,7 @@ function CheckInCard({
                       <Button
                         size="sm"
                         variant={item.delivered ? "success" : "outline-success"}
-                        onClick={() => onAdjustPreOrder(item.productId, 1)}
+                        onClick={() => onAdjustOrderItem(item.productId, 1)}
                         disabled={
                           !canManageEntranceActions ||
                           isUpdatingRegistration ||
@@ -385,14 +385,14 @@ export default function CheckInPage() {
   const updateRegistrationMutation = useMutation({
     mutationFn: ({
       targetRegistration,
-      preOrders,
+      orderItems,
       strapIssued,
     }: {
       targetRegistration: CheckInData;
-      preOrders?: CheckInData["preOrders"];
+      orderItems?: CheckInData["orderItems"];
       strapIssued?: boolean;
     }) =>
-      updateVolunteerRegistration(targetRegistration.id, { preOrders, strapIssued }, authHeaders),
+      updateVolunteerRegistration(targetRegistration.id, { orderItems, strapIssued }, authHeaders),
     retry: false,
     onSuccess: (updatedRegistration) => {
       setManualRegistration((prev) =>
@@ -447,10 +447,10 @@ export default function CheckInPage() {
     volunteerCheckInMutation.mutate(manualRegistration.id);
   }, [checkInMutation, hasQrCredentials, manualRegistration, volunteerCheckInMutation]);
 
-  const handleSetPreOrderQuantity = useCallback(
+  const handleSetOrderItemQuantity = useCallback(
     (productId: string, quantity: number) => {
       if (!registration || !Number.isFinite(quantity)) return;
-      const updatedOrders = registration.preOrders.map((item) => {
+      const updatedOrders = registration.orderItems.map((item) => {
         if (item.productId !== productId) return item;
         const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
         return {
@@ -462,20 +462,20 @@ export default function CheckInPage() {
       });
       updateRegistrationMutation.mutate({
         targetRegistration: registration,
-        preOrders: updatedOrders,
+        orderItems: updatedOrders,
       });
     },
     [registration, updateRegistrationMutation],
   );
 
-  const handleAdjustPreOrder = useCallback(
+  const handleAdjustOrderItem = useCallback(
     (productId: string, delta: number) => {
       if (!registration) return;
-      const item = registration.preOrders.find((order) => order.productId === productId);
+      const item = registration.orderItems.find((order) => order.productId === productId);
       if (!item) return;
-      handleSetPreOrderQuantity(productId, item.deliveredQuantity + delta);
+      handleSetOrderItemQuantity(productId, item.deliveredQuantity + delta);
     },
-    [handleSetPreOrderQuantity, registration],
+    [handleSetOrderItemQuantity, registration],
   );
 
   const handleIssueStrap = useCallback(() => {
@@ -697,8 +697,8 @@ export default function CheckInPage() {
                   isUpdatingRegistration={isUpdatingRegistration}
                   canManageEntranceActions={canManageEntranceActions}
                   onCheckIn={handleCheckIn}
-                  onAdjustPreOrder={handleAdjustPreOrder}
-                  onSetPreOrderQuantity={handleSetPreOrderQuantity}
+                  onAdjustOrderItem={handleAdjustOrderItem}
+                  onSetOrderItemQuantity={handleSetOrderItemQuantity}
                   onIssueStrap={handleIssueStrap}
                 />
               )}

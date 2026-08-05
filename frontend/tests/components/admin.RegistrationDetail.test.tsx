@@ -56,6 +56,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
       date: "2026-05-01",
       startTime: "18:00",
       category: "tasting",
+      products: [],
       registrationRequired: true,
       active: true,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -69,7 +70,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
       },
     },
     guestCount: 2,
-    preOrders: [
+    orderItems: [
       {
         productId: "prod-1",
         name: "Brut Reserve",
@@ -79,6 +80,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
         price: 25,
         category: "champagne",
         delivered: false,
+        includedQuantity: 0,
       },
     ],
     notes: "Please seat near the window.",
@@ -163,16 +165,18 @@ describe("RegistrationDetail", () => {
     expect(screen.queryByText("Wheelchair access needed.")).not.toBeInTheDocument();
   });
 
-  it("renders pre-order rows with delivered/remaining badges for festival registrations", () => {
+  it("renders order-item rows with delivered/remaining badges for festival registrations", () => {
     renderDetail();
 
     expect(screen.getByText("Brut Reserve")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_delivered: 1/3")).toBeInTheDocument();
     expect(screen.getByText("admin_bottle_not_delivered: 2")).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton", { name: "admin_bottle_delivered Brut Reserve" })).toHaveValue(1);
+    expect(
+      screen.getByRole("spinbutton", { name: "admin_bottle_delivered Brut Reserve" }),
+    ).toHaveValue(1);
   });
 
-  it("updates delivered pre-order quantities from the numeric input", () => {
+  it("updates delivered order-item quantities from the numeric input", () => {
     const { onToggleDelivered } = renderDetail();
 
     const quantityInput = screen.getByRole("spinbutton", {
@@ -203,11 +207,11 @@ describe("RegistrationDetail", () => {
 
     const select = screen.getByRole("combobox", { name: "admin_action_assign_table" });
     expect(select).toHaveValue("table-2");
-    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "admin_unassigned",
-      "Table 2 (6)",
-      "Table 10 (8)",
-    ]);
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["admin_unassigned", "Table 2 (6)", "Table 10 (8)"]);
 
     fireEvent.change(select, { target: { value: "table-1" } });
 
@@ -225,6 +229,7 @@ describe("RegistrationDetail", () => {
           date: "2026-05-01",
           startTime: "18:00",
           category: "bourse",
+          products: [],
           registrationRequired: true,
           active: true,
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -240,10 +245,12 @@ describe("RegistrationDetail", () => {
       }),
     });
 
-    expect(screen.queryByRole("combobox", { name: "admin_action_assign_table" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "admin_action_assign_table" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("hides pre-orders and strap section for simple RSVP (non-festival) registrations", () => {
+  it("hides order items and strap section for simple RSVP (non-festival) registrations", () => {
     renderDetail({
       registration: buildRegistration({
         event: {
@@ -254,6 +261,7 @@ describe("RegistrationDetail", () => {
           date: "2026-05-01",
           startTime: "18:00",
           category: "bourse",
+          products: [],
           registrationRequired: true,
           active: true,
           createdAt: "2026-01-01T00:00:00.000Z",

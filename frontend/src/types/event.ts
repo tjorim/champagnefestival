@@ -1,9 +1,41 @@
+import type { OrderItemCategory } from "./registration";
+
 export interface EventEditionSummary {
   id: string;
   year: number;
   month: string;
   editionType: "festival" | "bourse" | "capsule_exchange";
   active: boolean;
+}
+
+/**
+ * Something guests can order when registering for this event (a bottle of
+ * champagne, a cheese platter, ...). Scoped to one event — there is no global
+ * catalog, since what a VIP tasting sells has nothing to do with what a
+ * different tasting or a bourse would.
+ */
+export interface Product {
+  id: string;
+  eventId: string;
+  name: string;
+  price: number;
+  category: OrderItemCategory;
+  active: boolean;
+  /**
+   * A prerequisite product for this event (e.g. an entry ticket). An order
+   * that includes any non-required product for an event with required
+   * products must also include at least one required one.
+   */
+  required: boolean;
+  /**
+   * Together, these bundle a free quantity of another product on this event
+   * into this one — e.g. one champagne bottle per two guests with a VIP
+   * table. Only meaningful as a pair.
+   */
+  includedProductId?: string;
+  includedPerGuests?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Event {
@@ -23,6 +55,11 @@ export interface Event {
   createdAt: string;
   updatedAt: string;
   edition?: EventEditionSummary | null;
+  /**
+   * Active products only. Whether guests can order anything for this event
+   * is answered by whether this list is non-empty, not by a separate flag.
+   */
+  products: Product[];
 }
 
 export interface EventFormData {
@@ -40,11 +77,34 @@ export interface EventFormData {
   active: boolean;
 }
 
+function isOrderItemCategory(value: unknown): value is OrderItemCategory {
+  return value === "champagne" || value === "food" || value === "other";
+}
+
+export function apiToProduct(data: Record<string, unknown>): Product {
+  return {
+    id: String(data.id ?? ""),
+    eventId: String(data.event_id ?? ""),
+    name: String(data.name ?? ""),
+    price: Number(data.price ?? 0),
+    category: isOrderItemCategory(data.category) ? data.category : "other",
+    active: Boolean(data.active),
+    required: Boolean(data.required),
+    includedProductId:
+      typeof data.included_product_id === "string" ? data.included_product_id : undefined,
+    includedPerGuests:
+      typeof data.included_per_guests === "number" ? data.included_per_guests : undefined,
+    createdAt: String(data.created_at ?? ""),
+    updatedAt: String(data.updated_at ?? ""),
+  };
+}
+
 export function apiToEvent(data: Record<string, unknown>): Event {
   const rawEdition =
     typeof data.edition === "object" && data.edition !== null
       ? (data.edition as Record<string, unknown>)
       : null;
+  const rawProducts = Array.isArray(data.products) ? data.products : [];
 
   return {
     id: String(data.id ?? ""),
@@ -63,6 +123,9 @@ export function apiToEvent(data: Record<string, unknown>): Event {
     active: Boolean(data.active),
     createdAt: String(data.created_at ?? ""),
     updatedAt: String(data.updated_at ?? ""),
+    products: rawProducts
+      .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+      .map(apiToProduct),
     edition: rawEdition
       ? {
           id: String(rawEdition.id ?? ""),

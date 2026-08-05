@@ -8,7 +8,6 @@ import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type GroupBase, type MultiValue } from "react-select";
 import { m } from "@/paraglide/messages";
-import { EMAIL_REGEX } from "@/config/constants";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
@@ -63,24 +62,39 @@ export default function EditionModal({
   onSaved,
   onHide,
 }: EditionModalProps) {
-  const venuesRef = useRef(venues);
-  venuesRef.current = venues;
   const hydratedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Keyed on the resolved id rather than the `venues` array: callers pass
+  // `query.data ?? []`, so a fresh empty array on every render would otherwise
+  // give `defaultValues` a new identity each time and drive the reset effect
+  // below into a loop. A string settles as soon as the venues load.
+  const fallbackVenueId = useMemo(() => venues.find((v) => v.active)?.id ?? "", [venues]);
+
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EventModal for the details.
+  const defaultValues = useMemo(
+    () => ({
+      id: initial?.id ?? "",
+      year: initial?.year ?? new Date().getFullYear(),
+      month: initial?.month ?? "",
+      editionType: (initial?.editionType ?? "festival") as EditionType,
+      venueId: initial?.venue?.id ?? fallbackVenueId,
+      active: initial?.active ?? true,
+      coOrganizerId: initial?.coOrganizer?.id ? String(initial.coOrganizer.id) : "",
+      // Producers and sponsors only — the API rejects vendor ids on an edition,
+      // so vendors are deliberately not selectable and not submitted.
+      selectedExhibitors: [
+        ...(initial?.producers ?? []),
+        ...(initial?.sponsors ?? []),
+      ].map((e) => ({ value: e.id, label: e.name, isArchived: false })) as MultiValue<ItemOption>,
+    }),
+    [fallbackVenueId, initial],
+  );
+
   const form = useForm({
-    defaultValues: {
-      id: "",
-      year: new Date().getFullYear(),
-      month: "",
-      editionType: "festival" as EditionType,
-      venueId: "",
-      active: true,
-      externalPartner: "",
-      externalContactName: "",
-      externalContactEmail: "",
-      selectedExhibitors: [] as MultiValue<ItemOption>,
-    },
+    defaultValues,
     onSubmit: async ({ value }) => {
       if (!initial && value.id.trim() === "") {
         setError(m.admin_edition_id_required());
@@ -94,13 +108,17 @@ export default function EditionModal({
           editionType: value.editionType,
           venueId: value.venueId,
           active: value.active,
+          // Producers and sponsors only, deliberately. The API rejects vendor ids
+          // on an edition outright ("Vendor-type exhibitors may not be linked to
+          // editions"), so an edition showing vendors is in a state the backend
+          // considers invalid — re-sending them would make it unsaveable. Leaving
+          // them out lets the next save clear the invalid link.
           exhibitorIds:
             value.editionType === "festival"
               ? value.selectedExhibitors.map((option: ItemOption) => option.value)
               : [],
-          externalPartner: value.externalPartner,
-          externalContactName: value.externalContactName,
-          externalContactEmail: value.externalContactEmail,
+          // Any edition type may name one; it is not part of the lineup.
+          coOrganizerExhibitorId: value.coOrganizerId ? Number(value.coOrganizerId) : null,
         });
         onSaved(savedEdition);
       } catch (mutationError) {
@@ -111,30 +129,15 @@ export default function EditionModal({
     },
   });
 
+  // Re-open should always start from the record again, discarding edits that were
+  // abandoned by closing the modal — `defaultValues` alone can't do that, because
+  // the library skips re-seeding a form the user has already touched.
   useEffect(() => {
     if (!show) return;
     hydratedRef.current = false;
-    const preseeded: MultiValue<ItemOption> = initial
-      ? [...(initial.producers ?? []), ...(initial.sponsors ?? []), ...(initial.vendors ?? [])].map((e) => ({
-          value: e.id,
-          label: e.name,
-          isArchived: false,
-        }))
-      : [];
-    form.reset({
-      id: initial?.id ?? "",
-      year: initial?.year ?? new Date().getFullYear(),
-      month: initial?.month ?? "",
-      editionType: initial?.editionType ?? "festival",
-      venueId: initial?.venue?.id ?? venuesRef.current.find((v) => v.active)?.id ?? "",
-      active: initial?.active ?? true,
-      externalPartner: initial?.externalPartner ?? "",
-      externalContactName: initial?.externalContactName ?? "",
-      externalContactEmail: initial?.externalContactEmail ?? "",
-      selectedExhibitors: preseeded,
-    });
+    form.reset(defaultValues);
     setError(null);
-  }, [show, initial, form]);
+  }, [defaultValues, form, show]);
 
   const exhibitorsQuery = useQuery({
     queryKey: editionModalExhibitorsQueryKey,
@@ -153,9 +156,7 @@ export default function EditionModal({
       venueId: string;
       active: boolean;
       exhibitorIds: number[];
-      externalPartner?: string;
-      externalContactName?: string;
-      externalContactEmail?: string;
+      coOrganizerExhibitorId: number | null;
     }) => saveEdition(payload, authHeaders, initial?.id),
     retry: false,
   });
@@ -169,8 +170,11 @@ export default function EditionModal({
     [allExhibitors],
   );
 
+  // Once the exhibitor list loads, re-derive the selected options from it so the
+  // archived ones pick up their styling. Same ids as `defaultValues` seeded —
+  // this only enriches them, so it must not run after the user starts editing.
   useEffect(() => {
-    if (allExhibitors.length === 0 || hydratedRef.current) return;
+    if (!show || allExhibitors.length === 0 || hydratedRef.current) return;
     const ids = new Set(
       [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
     );
@@ -180,7 +184,7 @@ export default function EditionModal({
       [...act, ...arch].filter((o) => ids.has(o.value)),
     );
     hydratedRef.current = true;
-  }, [allExhibitors, programmableExhibitors, initial, form]);
+  }, [allExhibitors, programmableExhibitors, initial, form, show]);
   const exhibitorGroups = useMemo(() => {
     const { active: act, archived: arch } = toOptions(programmableExhibitors);
     const groups: GroupBase<ItemOption>[] = [];
@@ -220,7 +224,7 @@ export default function EditionModal({
           )}
 
           {!isEdit && (
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" controlId="edition-id">
               <Form.Label className="text-secondary small mb-1">ID</Form.Label>
               <form.Field
                 name="id"
@@ -255,7 +259,7 @@ export default function EditionModal({
           )}
 
           <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group style={{ maxWidth: "100px" }}>
+            <Form.Group style={{ maxWidth: "100px" }} controlId="edition-year">
               <Form.Label className="text-secondary small mb-1">Year</Form.Label>
               <form.Field name="year">
                 {(field) => (
@@ -269,7 +273,7 @@ export default function EditionModal({
                 )}
               </form.Field>
             </Form.Group>
-            <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }}>
+            <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }} controlId="edition-month">
               <Form.Label className="text-secondary small mb-1">Month</Form.Label>
               <form.Field
                 name="month"
@@ -300,7 +304,7 @@ export default function EditionModal({
                 }}
               </form.Field>
             </Form.Group>
-            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
+            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }} controlId="edition-type">
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_edition_type_label()}
               </Form.Label>
@@ -340,7 +344,7 @@ export default function EditionModal({
             </form.Field>
           </div>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="edition-venue">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_edition_venue_label()}
             </Form.Label>
@@ -390,7 +394,12 @@ export default function EditionModal({
             {isFestival ? (
               <div className="row g-2">
                 {["Friday", "Saturday", "Sunday"].map((label, index) => (
-                  <div className="col-md-4" key={label}>
+                  <Form.Group
+                    as="div"
+                    className="col-md-4"
+                    key={label}
+                    controlId={`edition-date-${label.toLowerCase()}`}
+                  >
                     <Form.Label className="text-secondary small mb-1">{label}</Form.Label>
                     <Form.Control
                       type="date"
@@ -399,11 +408,11 @@ export default function EditionModal({
                       readOnly
                       disabled={!previewDates[index]}
                     />
-                  </div>
+                  </Form.Group>
                 ))}
               </div>
             ) : (
-              <Form.Group>
+              <Form.Group controlId="edition-standalone-date">
                 <Form.Label className="text-secondary small mb-1">Edition date</Form.Label>
                 <Form.Control
                   type="date"
@@ -421,87 +430,34 @@ export default function EditionModal({
             </div>
           </div>
 
-          {!isFestival && (
-            <div className="border border-secondary rounded p-3 mb-3">
-              <div className="text-light small fw-semibold mb-2">
-                {m.admin_edition_external_partner()}
-              </div>
-              <div className="row g-2">
-                <div className="col-md-6">
-                  <Form.Label className="text-secondary small mb-1">
-                    {m.admin_edition_partner_label()}
-                  </Form.Label>
-                  <form.Field name="externalPartner">
-                    {(field) => (
-                      <Form.Control
-                        className="bg-dark text-light border-secondary"
-                        placeholder="Partner organisation"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                    )}
-                  </form.Field>
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="text-secondary small mb-1">
-                    {m.admin_edition_contact_name_label()}
-                  </Form.Label>
-                  <form.Field name="externalContactName">
-                    {(field) => (
-                      <Form.Control
-                        className="bg-dark text-light border-secondary"
-                        placeholder="Jane Doe"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                    )}
-                  </form.Field>
-                </div>
-                <div className="col-md-3">
-                  <Form.Label className="text-secondary small mb-1">
-                    {m.admin_edition_contact_email_label()}
-                  </Form.Label>
-                  <form.Field
-                    name="externalContactEmail"
-                    validators={{
-                      onChange: ({ value }) =>
-                        value && !EMAIL_REGEX.test(value)
-                          ? m.registration_errors_email_invalid()
-                          : undefined,
-                    }}
-                  >
-                    {(field) => {
-                      const showErr =
-                        field.state.meta.isTouched && field.state.meta.errors.length > 0;
-                      return (
-                        <>
-                          <Form.Control
-                            type="email"
-                            className="bg-dark text-light border-secondary"
-                            placeholder="jane@example.com"
-                            value={field.state.value}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            onBlur={field.handleBlur}
-                            isInvalid={showErr}
-                          />
-                          {showErr && (
-                            <Form.Control.Feedback type="invalid">
-                              {field.state.meta.errors[0]}
-                            </Form.Control.Feedback>
-                          )}
-                        </>
-                      );
-                    }}
-                  </form.Field>
-                </div>
-              </div>
-            </div>
-          )}
+          <Form.Group className="mb-3" controlId="edition-co-organizer">
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_edition_co_organizer_label()}
+            </Form.Label>
+            <form.Field name="coOrganizerId">
+              {(field) => (
+                <Form.Select
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                >
+                  <option value="">{m.admin_edition_co_organizer_none()}</option>
+                  {allExhibitors
+                    .filter((exhibitor) => exhibitor.active !== false)
+                    .map((exhibitor) => (
+                      <option key={exhibitor.id} value={String(exhibitor.id)}>
+                        {exhibitor.name}
+                      </option>
+                    ))}
+                </Form.Select>
+              )}
+            </form.Field>
+            <div className="text-secondary small mt-1">{m.admin_edition_co_organizer_help()}</div>
+          </Form.Group>
 
           {isFestival && (
-            <Form.Group className="mb-3">
+            <Form.Group className="mb-3" controlId="edition-exhibitors">
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_edition_festival_exhibitors()}
               </Form.Label>
@@ -514,6 +470,7 @@ export default function EditionModal({
                 <form.Field name="selectedExhibitors">
                   {(field) => (
                     <Select<ItemOption, true>
+                      inputId="edition-exhibitors"
                       isMulti
                       closeMenuOnSelect={false}
                       options={exhibitorGroups}

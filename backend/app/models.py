@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
 )
@@ -69,7 +71,7 @@ class Registration(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="RESTRICT"), nullable=False)
     guest_count: Mapped[int] = mapped_column(Integer)
-    pre_orders: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    order_items: Mapped[list[dict]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     accessibility_note: Mapped[str] = mapped_column(Text, default="")
     """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
@@ -86,6 +88,13 @@ class Registration(Base):
 
     payment_status: Mapped[str] = mapped_column(String(20), default="unpaid")
     """unpaid | partial | paid"""
+
+    amount_due: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    """What this booking owes, in euro — e.g. a bourse table rental fee.
+
+    Recorded by an admin and settled offline; the platform tracks the figure and
+    `payment_status`, it does not take payments. Null means nothing is owed.
+    """
 
     checked_in: Mapped[bool] = mapped_column(Boolean, default=False)
     checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -297,10 +306,18 @@ class Edition(Base):
 
     venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     edition_type: Mapped[str] = mapped_column(String(20), default="festival")
-    external_partner: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    external_contact_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    external_contact_email: Mapped[str | None] = mapped_column(String(200), nullable=True)
     exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
+    """The festival lineup — producers and sponsors programmed for this edition."""
+
+    co_organizer_exhibitor_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
+    )
+    """The exhibitor co-organizing this edition with the vzw, if any.
+
+    Deliberately separate from `exhibitors`: co-organizing is a different
+    relationship from being in the lineup, and it applies to editions (such as a
+    bourse) that carry no lineup at all. The vzw remains the organizer either way.
+    """
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
@@ -325,6 +342,11 @@ class Event(Base):
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
+    """Free-text display label for the public schedule (e.g. "tasting", "vip",
+    "exchange") — purely cosmetic, does not affect what guests can order.
+    Whether this event sells anything is answered by whether it *has*
+    products (see `Product`), not by a separate flag on the event."""
+
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -334,6 +356,48 @@ class Event(Base):
 
     edition: Mapped[Edition] = relationship(back_populates="events")
     registrations: Mapped[list[Registration]] = relationship(back_populates="event")
+    products: Mapped[list[Product]] = relationship(back_populates="event", cascade="all, delete-orphan")
+
+
+class Product(Base):
+    """Something guests can order when registering for a specific event
+    (a bottle of champagne, a cheese platter, ...). Scoped to one event —
+    products are not a reusable catalog, since what a VIP tasting sells has
+    nothing to do with what a different tasting or a bourse would.
+
+    The registration flow copies `name`/`price`/`category` onto the
+    registration's `order_items` at order time, so archiving or deleting a
+    product afterward does not alter orders already placed against it.
+    """
+
+    __tablename__ = "products"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200))
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+    category: Mapped[str] = mapped_column(String(20))
+    """"champagne" | "food" | "other" — matches OrderItemCategory."""
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    required: Mapped[bool] = mapped_column(Boolean, default=False)
+    """A prerequisite product for this event (e.g. an entry ticket). An order
+    that includes any non-required product for an event with required products
+    must also include at least one required one — see _resolve_order_items."""
+    included_product_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("products.id", ondelete="SET NULL"), nullable=True
+    )
+    included_per_guests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    """Together, these bundle a free quantity of another product on this event
+    into this one — a VIP table might include one champagne bottle per two
+    guests. `included_per_guests` is only meaningful alongside
+    `included_product_id`; both or neither are set (see ProductCreate/Update).
+    Deleting the included product clears the link (ON DELETE SET NULL) rather
+    than blocking the delete or cascading into an unrelated product."""
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    event: Mapped[Event] = relationship(back_populates="products")
 
 
 class Person(Base):

@@ -22,6 +22,20 @@ interface SeedEventEditionSummary {
   active: boolean;
 }
 
+export interface SeedProduct {
+  id: string;
+  event_id: string;
+  name: string;
+  price: number;
+  category: string;
+  active: boolean;
+  required: boolean;
+  included_product_id: string | null;
+  included_per_guests: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SeedEvent {
   id: string;
   edition_id: string;
@@ -37,6 +51,7 @@ export interface SeedEvent {
   sort_order: number;
   active: boolean;
   edition: SeedEventEditionSummary | null;
+  products: SeedProduct[];
   created_at: string;
   updated_at: string;
 }
@@ -46,9 +61,6 @@ export interface SeedEdition {
   year: number;
   month: string;
   edition_type: string;
-  external_partner: string | null;
-  external_contact_name: string | null;
-  external_contact_email: string | null;
   dates: string[];
   venue: SeedVenue | null;
   events: SeedEvent[];

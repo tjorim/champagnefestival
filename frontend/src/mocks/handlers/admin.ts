@@ -5,6 +5,7 @@ import {
   resetEditionStore,
   type SeedEdition,
   type SeedEvent,
+  type SeedProduct,
 } from "../data/editionStore";
 import { seedExhibitors } from "../data/exhibitors";
 import { seedPeople } from "../data/people";
@@ -158,7 +159,7 @@ function registrationToCheckInResponse(
     table_id: registration.table_id ?? null,
     table_name: table?.name ?? null,
     guest_count: registration.guest_count,
-    pre_orders: registration.pre_orders,
+    order_items: registration.order_items,
     notes: registration.notes,
     status: registration.status,
     checked_in: registration.checked_in,
@@ -259,7 +260,7 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     sharedStore.registrations[idx] = {
       ...sharedStore.registrations[idx]!,
-      ...(Array.isArray(body.pre_orders) ? { pre_orders: body.pre_orders } : {}),
+      ...(Array.isArray(body.order_items) ? { order_items: body.order_items } : {}),
       ...(typeof body.strap_issued === "boolean" ? { strap_issued: body.strap_issued } : {}),
       updated_at: now(),
     };
@@ -323,7 +324,7 @@ export const adminHandlers = [
       event_id: String(body.event_id ?? ""),
       event: event ?? null,
       guest_count: Number(body.guest_count ?? 1),
-      pre_orders: [],
+      order_items: [],
       notes: String(body.notes ?? ""),
       accessibility_note: "",
       table_id: null,
@@ -624,9 +625,6 @@ export const adminHandlers = [
       year: Number(body.year ?? new Date().getFullYear()),
       month: String(body.month ?? "march"),
       edition_type: String(body.edition_type ?? "festival"),
-      external_partner: null,
-      external_contact_name: null,
-      external_contact_email: null,
       dates: Array.isArray(body.dates) ? (body.dates as string[]) : [],
       venue: body.venue ?? null,
       events: [],
@@ -663,6 +661,34 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Events (admin)
   // ──────────────────────────────────────────────────────────────
+
+  // Must stay ahead of "/api/events/:id", which would otherwise swallow it.
+  http.get("/api/events/checkin-stats", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const editionId = new URL(request.url).searchParams.get("edition_id");
+    const totals = new Map<string, { total: number; checked_in: number }>();
+
+    for (const registration of sharedStore.registrations) {
+      const eventId = registration.event_id;
+      if (typeof eventId !== "string" || eventId.length === 0) continue;
+      if (registration.status === "cancelled") continue;
+      if (editionId) {
+        const event = events.find((e) => e.id === eventId);
+        if (!event || event.edition_id !== editionId) continue;
+      }
+      const guests = typeof registration.guest_count === "number" ? registration.guest_count : 0;
+      const entry = totals.get(eventId) ?? { total: 0, checked_in: 0 };
+      entry.total += guests;
+      if (registration.checked_in === true) entry.checked_in += guests;
+      totals.set(eventId, entry);
+    }
+
+    return HttpResponse.json(
+      [...totals.entries()].map(([event_id, entry]) => ({ event_id, ...entry })),
+    );
+  }),
+
   http.get("/api/events/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
@@ -700,6 +726,7 @@ export const adminHandlers = [
             active: edition.active,
           }
         : null,
+      products: [],
       created_at: now(),
       updated_at: now(),
     };
@@ -724,6 +751,74 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     events.splice(idx, 1);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ──────────────────────────────────────────────────────────────
+  // Products (admin) — event-scoped, embedded on each SeedEvent
+  // ──────────────────────────────────────────────────────────────
+  http.get("/api/products", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const url = new URL(request.url);
+    const eventId = url.searchParams.get("event_id");
+    const all = events.flatMap((e) => e.products);
+    return HttpResponse.json(eventId ? all.filter((p) => p.event_id === eventId) : all);
+  }),
+
+  http.post("/api/products", async ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const body = (await request.json()) as Record<string, unknown>;
+    const event = events.find((e) => e.id === body.event_id);
+    if (!event) return HttpResponse.json({ detail: "Event not found." }, { status: 404 });
+    const newProduct: SeedProduct = {
+      id: uid(),
+      event_id: String(body.event_id ?? ""),
+      name: String(body.name ?? ""),
+      price: Number(body.price ?? 0),
+      category: String(body.category ?? "other"),
+      active: body.active !== false,
+      required: body.required === true,
+      included_product_id: typeof body.included_product_id === "string" ? body.included_product_id : null,
+      included_per_guests: typeof body.included_per_guests === "number" ? body.included_per_guests : null,
+      created_at: now(),
+      updated_at: now(),
+    };
+    event.products.push(newProduct);
+    return HttpResponse.json(newProduct, { status: 201 });
+  }),
+
+  http.put("/api/products/:id", async ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    for (const event of events) {
+      const idx = event.products.findIndex((p) => p.id === params.id);
+      if (idx !== -1) {
+        const body = (await request.json()) as Record<string, unknown>;
+        event.products[idx] = {
+          ...event.products[idx]!,
+          ...body,
+          id: String(params.id),
+          event_id: event.id,
+          updated_at: now(),
+        };
+        return HttpResponse.json(event.products[idx]);
+      }
+    }
+    return HttpResponse.json({ detail: "Product not found." }, { status: 404 });
+  }),
+
+  http.delete("/api/products/:id", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    for (const event of events) {
+      const idx = event.products.findIndex((p) => p.id === params.id);
+      if (idx !== -1) {
+        event.products.splice(idx, 1);
+        return new HttpResponse(null, { status: 204 });
+      }
+    }
+    return HttpResponse.json({ detail: "Product not found." }, { status: 404 });
   }),
 
   // ──────────────────────────────────────────────────────────────

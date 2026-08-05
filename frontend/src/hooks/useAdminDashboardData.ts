@@ -4,6 +4,7 @@ import type { Person } from "@/types/person";
 import type { Registration } from "@/types/registration";
 import { isRegistrationInEdition } from "@/utils/adminUtils";
 import { toLocalDateKey } from "@/utils/dateUtils";
+import { useTodayKey } from "@/hooks/useTodayKey";
 
 interface UseAdminDashboardDataOptions {
   activeEdition: ActiveEdition;
@@ -18,7 +19,7 @@ export function useAdminDashboardData({
   people,
   registrations,
 }: UseAdminDashboardDataOptions) {
-  const todayKey = useMemo(() => toLocalDateKey(new Date()), []);
+  const todayKey = useTodayKey();
   const activeEditionDateKeys = useMemo(
     () => activeEdition.dates.map((date) => toLocalDateKey(date)),
     [activeEdition.dates],

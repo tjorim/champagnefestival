@@ -61,7 +61,7 @@ export default function RegistrationDetail({
   const handleSetDeliveredQuantity = useCallback(
     (productId: string, quantity: number) => {
       if (!registration || !Number.isFinite(quantity)) return;
-      const updatedOrders = registration.preOrders.map((item) => {
+      const updatedOrders = registration.orderItems.map((item) => {
         if (item.productId !== productId) return item;
         const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
         return {
@@ -79,7 +79,7 @@ export default function RegistrationDetail({
   const handleAdjustDeliveredQuantity = useCallback(
     (productId: string, delta: number) => {
       if (!registration) return;
-      const item = registration.preOrders.find((order) => order.productId === productId);
+      const item = registration.orderItems.find((order) => order.productId === productId);
       if (!item) return;
       handleSetDeliveredQuantity(productId, item.deliveredQuantity + delta);
     },
@@ -148,6 +148,13 @@ export default function RegistrationDetail({
               : registration.paymentStatus === "partial"
                 ? m.admin_payment_partial()
                 : m.admin_payment_unpaid()}
+            {registration.amountDue != null && (
+              <span className="ms-1 fw-normal">
+                {m.admin_registration_amount_due({
+                  amount: registration.amountDue.toFixed(2),
+                })}
+              </span>
+            )}
           </Badge>
           {registration.checkedIn ? (
             <Badge bg="success">
@@ -266,14 +273,14 @@ export default function RegistrationDetail({
           )}
         </ListGroup>
 
-        {!simpleRsvp && registration.preOrders.length > 0 && (
+        {!simpleRsvp && registration.orderItems.length > 0 && (
           <div className="mb-4">
             <h6 className="text-warning mb-2">
               <i className="bi bi-basket-fill me-2" aria-hidden="true" />
               {m.admin_bottle_fulfillment()}
             </h6>
             <ListGroup>
-              {registration.preOrders.map((item) => (
+              {registration.orderItems.map((item) => (
                 <ListGroup.Item
                   key={item.productId}
                   className="bg-dark text-light border-secondary d-flex align-items-center justify-content-between"

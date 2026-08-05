@@ -16,6 +16,7 @@ vi.mock("@/paraglide/messages", () => ({
 const mockActiveEdition: ActiveEdition = {
   id: "test-edition",
   year: 2025,
+  editionType: "festival",
   month: "march",
   dates: [],
   venue: {

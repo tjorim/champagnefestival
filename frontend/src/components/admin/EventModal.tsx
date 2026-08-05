@@ -37,17 +37,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     [edition.dates, initial?.date],
   );
 
-  const form = useForm({
-    defaultValues: EMPTY_FORM,
-    onSubmit: ({ value }) => {
-      const submitDate = isFestival ? value.date : value.date || derivedStandaloneDate;
-      onSave({ ...value, date: submitDate });
-    },
-  });
-
-  useEffect(() => {
-    if (!show) return;
-    form.reset(
+  // `useForm` re-applies its `defaultValues` on every render (a layout effect in
+  // @tanstack/react-form with no dependency array). Feeding it a static template
+  // while hydrating through `form.reset(record)` makes the two fight: the reset
+  // rewrites the stored defaults, the next render sees them differ from the
+  // template and wipes the record back out. Deriving the defaults from `initial`
+  // keeps both sides in agreement, so the record survives.
+  const defaultValues = useMemo(
+    (): EventFormData =>
       initial
         ? {
             editionId: initial.editionId,
@@ -68,8 +65,24 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             editionId: edition.id,
             date: isFestival ? (edition.dates[0] ?? "") : derivedStandaloneDate,
           },
-    );
-  }, [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival, form, show]);
+    [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival],
+  );
+
+  const form = useForm({
+    defaultValues,
+    onSubmit: ({ value }) => {
+      const submitDate = isFestival ? value.date : value.date || derivedStandaloneDate;
+      onSave({ ...value, date: submitDate });
+    },
+  });
+
+  // Re-open should always start from the record again, discarding edits that were
+  // abandoned by closing the modal — `defaultValues` alone can't do that, because
+  // the library skips re-seeding a form the user has already touched.
+  useEffect(() => {
+    if (!show) return;
+    form.reset(defaultValues);
+  }, [defaultValues, form, show]);
 
   // Keep standalone date field in sync with derived date
   useEffect(() => {
@@ -315,7 +328,11 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             )}
           </form.Field>
           {registrationRequired && (
-            <Form.Group className="mb-2" style={{ maxWidth: "280px" }}>
+            <Form.Group
+              className="mb-2"
+              style={{ maxWidth: "280px" }}
+              controlId="event-registrations-open-from"
+            >
               <Form.Label className="text-secondary small mb-1">
                 {m.admin_content_edition_registration_opens()}
               </Form.Label>

@@ -108,7 +108,7 @@ private fun LookupResults(registrations: List<CheckInGuestOut>, padding: Padding
     val checkedInCount = registrations.count { it.checked_in }
     val undeliveredItems =
         registrations.sumOf { registration ->
-            registration.pre_orders.filter { !it.delivered }.sumOf { it.quantity }
+            registration.order_items.filter { !it.delivered }.sumOf { it.quantity }
         }
 
     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
@@ -140,8 +140,8 @@ private fun LookupResults(registrations: List<CheckInGuestOut>, padding: Padding
                             stringResource(R.string.registration_pending_checkin_label)
                         }
                     )
-                    if (registration.pre_orders.isNotEmpty()) {
-                        val pendingItems = registration.pre_orders.count { !it.delivered }
+                    if (registration.order_items.isNotEmpty()) {
+                        val pendingItems = registration.order_items.count { !it.delivered }
                         Text(
                             if (pendingItems == 0) {
                                 stringResource(R.string.registration_all_delivered_label)

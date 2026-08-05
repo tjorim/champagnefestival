@@ -15,6 +15,12 @@ from app.utils import exhibitor_to_dict, get_or_404
 router = APIRouter(prefix="/api/exhibitors", tags=["exhibitors"])
 
 
+async def _editions_linking(db: AsyncSession, exhibitor_id: int) -> list[str]:
+    """Ids of editions whose exhibitor list still contains this exhibitor."""
+    result = await db.execute(select(Edition))
+    return sorted(edition.id for edition in result.scalars().all() if exhibitor_id in edition.exhibitors)
+
+
 async def _load_contact(db: AsyncSession, person_id: str | None) -> Person | None:
     if not person_id:
         return None
@@ -105,6 +111,24 @@ async def update_exhibitor(
     if body.active is not None:
         e.active = body.active
     if body.type is not None:
+        if body.type == "vendor" and e.type != "vendor":
+            # Lock this exhibitor row so a concurrent edition update that's about
+            # to link it to a lineup (see _validate_exhibitor_ids in the editions
+            # router, which locks the same row) can't interleave with this retype
+            # and leave a vendor exhibitor linked to an edition.
+            await db.execute(select(Exhibitor.id).where(Exhibitor.id == exhibitor_id).with_for_update())
+            # Editions reject vendor ids (see _validate_exhibitor_ids in the
+            # editions router), so retyping an exhibitor that editions still link
+            # to would strand them in a state their own update endpoint refuses.
+            linked = await _editions_linking(db, exhibitor_id)
+            if linked:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        "Cannot change this exhibitor to a vendor while editions still link to it: "
+                        f"{', '.join(linked)}. Remove it from those editions first."
+                    ),
+                )
         e.type = body.type
     if "contact_person_id" in body.model_fields_set:
         if body.contact_person_id is not None:

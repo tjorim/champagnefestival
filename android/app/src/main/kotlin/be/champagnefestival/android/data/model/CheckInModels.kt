@@ -22,7 +22,7 @@ data class CheckInGuestOut(
     val table_id: String? = null,
     val table_name: String? = null,
     val guest_count: Int,
-    val pre_orders: List<OrderItem> = emptyList(),
+    val order_items: List<OrderItem> = emptyList(),
     val notes: String = "",
     val status: String,
     val checked_in: Boolean,

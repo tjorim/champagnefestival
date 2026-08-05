@@ -110,7 +110,7 @@ async def get_guest_registration(
             return {"registration": None, "message": "Person not found for this registration."}
 
         d = registration_base_dict(reg, person, role=role)
-        d["pre_orders"] = [order_item_dict(item) for item in (reg.pre_orders or [])]
+        d["order_items"] = [order_item_dict(item) for item in (reg.order_items or [])]
         return {"registration": d}
 
 

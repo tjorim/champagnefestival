@@ -10,15 +10,6 @@ export type RegistrationStatus = "pending" | "confirmed" | "cancelled";
 
 export type PaymentStatus = "unpaid" | "partial" | "paid";
 
-export interface Product {
-  id: string;
-  /** Product name (used as i18n key suffix) */
-  nameKey: string;
-  price: number;
-  category: OrderItemCategory;
-  available: boolean;
-}
-
 export interface OrderItem {
   productId: string;
   name: string;
@@ -29,6 +20,12 @@ export interface OrderItem {
   category: OrderItemCategory;
   /** Whether back-of-house has physically delivered/brought this item */
   delivered: boolean;
+  /**
+   * How many of `quantity` came free via a product bundle (e.g. bottles
+   * included with a VIP table) — only `quantity - includedQuantity` is
+   * billed at `price` per unit.
+   */
+  includedQuantity: number;
 }
 
 export interface PersonSummary {
@@ -45,13 +42,18 @@ export interface Registration {
   eventId: string;
   event?: Event | null;
   guestCount: number;
-  preOrders: OrderItem[];
+  orderItems: OrderItem[];
   notes: string;
   /** Optional accessibility requirements (wheelchair, crutches, low table needed, etc.) */
   accessibilityNote: string;
   tableId?: string;
   status: RegistrationStatus;
   paymentStatus: PaymentStatus;
+  /**
+   * What this booking owes in euro — e.g. a bourse table rental fee.
+   * Recorded by an admin and settled offline; undefined means nothing is owed.
+   */
+  amountDue?: number;
   /** Whether the guest has physically checked in at the entrance */
   checkedIn: boolean;
   checkedInAt?: string;
@@ -73,7 +75,7 @@ export interface RegistrationFormData {
   phone: string;
   eventId: string;
   guestCount: number;
-  preOrders: OrderItem[];
+  orderItems: OrderItem[];
   notes: string;
   honeypot?: string;
   formStartTime: string;

@@ -9,9 +9,6 @@ export interface Edition {
   year: number;
   month: string;
   editionType: EditionType;
-  externalPartner?: string;
-  externalContactName?: string;
-  externalContactEmail?: string;
   dates: string[];
   venue: {
     id: string;
@@ -25,6 +22,8 @@ export interface Edition {
   producers?: { id: number; name: string; image: string; website: string }[];
   sponsors?: { id: number; name: string; image: string; website: string }[];
   vendors?: { id: number; name: string; image: string; website: string }[];
+  /** The exhibitor co-organizing this edition with the vzw, if any. */
+  coOrganizer?: { id: number; name: string; image: string; website: string } | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -43,11 +42,6 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
       data.edition_type === "bourse" || data.edition_type === "capsule_exchange"
         ? data.edition_type
         : "festival",
-    externalPartner: typeof data.external_partner === "string" ? data.external_partner : undefined,
-    externalContactName:
-      typeof data.external_contact_name === "string" ? data.external_contact_name : undefined,
-    externalContactEmail:
-      typeof data.external_contact_email === "string" ? data.external_contact_email : undefined,
     dates: Array.isArray(data.dates)
       ? data.dates.filter((value): value is string => typeof value === "string")
       : [],
@@ -106,6 +100,15 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
             website: String(v.website ?? ""),
           }))
       : [],
+    coOrganizer:
+      typeof data.co_organizer === "object" && data.co_organizer !== null
+        ? {
+            id: Number((data.co_organizer as Record<string, unknown>).id ?? 0),
+            name: String((data.co_organizer as Record<string, unknown>).name ?? ""),
+            image: String((data.co_organizer as Record<string, unknown>).image ?? ""),
+            website: String((data.co_organizer as Record<string, unknown>).website ?? ""),
+          }
+        : null,
     active: data.active !== false,
     createdAt: String(data.created_at ?? ""),
     updatedAt: String(data.updated_at ?? ""),

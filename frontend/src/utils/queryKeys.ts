@@ -5,7 +5,15 @@ export const queryKeys = {
     ["check-in", registrationId, checkInToken] as const,
   volunteerRegistrationSearch: (query: string) => ["volunteer", "registrations", query] as const,
   admin: {
+    /** The admin dashboard's active edition — any type, unlike the public one. */
+    activeEdition: ["admin", "active-edition"] as const,
     registrations: ["admin", "registrations"] as const,
+    /**
+     * Nested under `registrations` on purpose: these counts are derived from
+     * registrations, so every invalidation of that key — mutations, live-stream
+     * events, reconnect recovery — refreshes them without a separate wiring.
+     */
+    eventCheckInStats: ["admin", "registrations", "checkin-stats"] as const,
     tables: ["admin", "tables"] as const,
     venues: ["admin", "venues"] as const,
     rooms: ["admin", "rooms"] as const,
@@ -19,13 +27,33 @@ export const queryKeys = {
     personOptions: (query: string) => ["admin", "person-options", query] as const,
     personOptionsRoot: ["admin", "person-options"] as const,
     editionEvents: (editionId: string) => ["admin", "edition-events", editionId] as const,
+    eventProducts: (eventId: string) => ["admin", "event-products", eventId] as const,
     editionModalExhibitors: ["admin", "edition-modal", "exhibitors"] as const,
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,
     auditResourceTypes: ["admin", "audit", "resource-types"] as const,
-    auditEntries: (filters: { resourceType: string; resourceId: string; page: number }) =>
-      ["admin", "audit", "entries", filters.resourceType, filters.resourceId, filters.page] as const,
+    auditEntries: (filters: {
+      resourceType: string;
+      resourceId: string;
+      actor: string;
+      action: string;
+      since: string;
+      until: string;
+      page: number;
+    }) =>
+      [
+        "admin",
+        "audit",
+        "entries",
+        filters.resourceType,
+        filters.resourceId,
+        filters.actor,
+        filters.action,
+        filters.since,
+        filters.until,
+        filters.page,
+      ] as const,
     editionStats: ["admin", "edition-stats"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,

@@ -15,7 +15,7 @@ from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.models import Event, Exhibitor, Person, Registration
+from app.models import Event, Exhibitor, Person, Registration, VolunteerPeriod
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
@@ -290,7 +290,10 @@ async def list_person_registrations(
 
     result = await db.execute(
         select(Registration)
-        .options(selectinload(Registration.event).selectinload(Event.edition))
+        .options(
+            selectinload(Registration.event).selectinload(Event.edition),
+            selectinload(Registration.event).selectinload(Event.products),
+        )
         .where(Registration.person_id == person.id)
         .order_by(Registration.created_at.desc())
     )
@@ -365,18 +368,35 @@ async def merge_people(
     # Adopt unique identity fields from duplicate if canonical lacks them.
     # Normalise the value from the duplicate before storing so the canonical
     # ends up with the same canonical form used by create/update_person.
-    # Clear from duplicate first to avoid unique constraint violation on delete.
-    for field in ("national_register_number", "eid_document_number"):
-        if not getattr(canonical, field) and getattr(duplicate, field):
-            setattr(canonical, field, _normalise_optional_identity(getattr(duplicate, field)))
+    adopted = {
+        field: _normalise_optional_identity(getattr(duplicate, field))
+        for field in ("national_register_number", "eid_document_number")
+        if not getattr(canonical, field) and getattr(duplicate, field)
+    }
+    if adopted:
+        # These columns are UNIQUE, so the duplicate has to release its value
+        # before the canonical can take it. A single flush does not guarantee
+        # that order — SQLAlchemy batches same-mapper UPDATEs by primary key, so
+        # whenever the canonical's id sorts first it would write the value while
+        # the duplicate still holds it. Clear and flush separately.
+        for field in adopted:
             setattr(duplicate, field, None)
+        await db.flush()
+        for field, value in adopted.items():
+            setattr(canonical, field, value)
 
     await db.flush()
 
-    # Re-point all reservations and exhibitor contacts.
+    # Re-point everything that references the duplicate. VolunteerPeriod matters
+    # most: its FK cascades on delete, so a period left pointing at the duplicate
+    # is destroyed below rather than transferred, leaving a person carrying the
+    # volunteer role with no help periods.
     await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=person_id))
     await db.execute(
         update(Exhibitor).where(Exhibitor.contact_person_id == duplicate_id).values(contact_person_id=person_id)
+    )
+    await db.execute(
+        update(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == duplicate_id).values(volunteer_id=person_id)
     )
 
     await db.delete(duplicate)

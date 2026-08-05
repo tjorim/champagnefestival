@@ -1,7 +1,7 @@
 import { m } from "@/paraglide/messages";
 import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import type { CheckInData } from "@/utils/publicRegistrationApi";
-import type { OrderItem, OrderItemCategory, RegistrationStatus } from "@/types/registration";
+import type { OrderItemCategory, RegistrationStatus } from "@/types/registration";
 
 interface VolunteerRegistrationResponse {
   id?: string;
@@ -11,7 +11,7 @@ interface VolunteerRegistrationResponse {
   table_id?: string | null;
   table_name?: string | null;
   guest_count?: number;
-  pre_orders?: Record<string, unknown>[];
+  order_items?: Record<string, unknown>[];
   notes?: string;
   status?: RegistrationStatus;
   checked_in?: boolean;
@@ -24,7 +24,7 @@ function isOrderItemCategory(value: unknown): value is OrderItemCategory {
 }
 
 function mapVolunteerRegistration(data: VolunteerRegistrationResponse): CheckInData {
-  const rawOrders = Array.isArray(data.pre_orders) ? data.pre_orders : [];
+  const rawOrders = Array.isArray(data.order_items) ? data.order_items : [];
 
   return {
     id: data.id ?? "",
@@ -33,7 +33,7 @@ function mapVolunteerRegistration(data: VolunteerRegistrationResponse): CheckInD
     eventTitle: data.event_title ?? "",
     guestCount: data.guest_count ?? 1,
     tableName: data.table_name ?? undefined,
-    preOrders: rawOrders.map((item) => {
+    orderItems: rawOrders.map((item) => {
       const quantityRaw = Number(item.quantity ?? 0);
       const quantity = Number.isFinite(quantityRaw) ? Math.max(0, quantityRaw) : 0;
       const deliveredQuantityRaw = Number(
@@ -102,12 +102,12 @@ export async function submitVolunteerCheckIn(
 
 export async function updateVolunteerRegistration(
   registrationId: string,
-  payload: { preOrders?: OrderItem[]; strapIssued?: boolean },
+  payload: { orderItems?: CheckInData["orderItems"]; strapIssued?: boolean },
   authHeaders: () => Record<string, string>,
 ): Promise<CheckInData> {
   const body: Record<string, unknown> = {};
-  if (payload.preOrders) {
-    body.pre_orders = payload.preOrders.map((order) => ({
+  if (payload.orderItems) {
+    body.order_items = payload.orderItems.map((order) => ({
       product_id: order.productId,
       name: order.name,
       quantity: order.quantity,

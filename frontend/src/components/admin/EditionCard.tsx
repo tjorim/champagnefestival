@@ -15,6 +15,7 @@ import {
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EventModal from "./EventModal";
+import EventProductsModal from "./EventProductsModal";
 import { parseEditionDate, type Edition } from "./editionTypes";
 import type { Venue } from "@/types/admin";
 import type { Event, EventFormData } from "@/types/event";
@@ -56,6 +57,8 @@ export default function EditionCard({
   const [editionModalOpen, setEditionModalOpen] = useState(false);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [productsModalOpen, setProductsModalOpen] = useState(false);
+  const [productsEvent, setProductsEvent] = useState<Event | null>(null);
   const editionEventsQueryKey = queryKeys.admin.editionEvents(edition.id);
 
   const eventsQuery = useQuery({
@@ -106,6 +109,11 @@ export default function EditionCard({
   function openEditEvent(event: Event) {
     setEditingEvent(event);
     setEventModalOpen(true);
+  }
+
+  function openProducts(event: Event) {
+    setProductsEvent(event);
+    setProductsModalOpen(true);
   }
 
   async function handleEventSaved(formData: EventFormData) {
@@ -191,11 +199,6 @@ export default function EditionCard({
             {edition.sponsors!.length} {m.admin_edition_sponsors()}
           </Badge>
         )}
-        {(edition.vendors?.length ?? 0) > 0 && (
-          <Badge bg="secondary">
-            {edition.vendors!.length} {m.admin_edition_vendors()}
-          </Badge>
-        )}
         {eventsQuery.isFetching && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
           <span className="text-danger small">
@@ -268,23 +271,6 @@ export default function EditionCard({
             );
           })()}
 
-          {edition.editionType !== "festival" &&
-            (edition.externalPartner ||
-              edition.externalContactName ||
-              edition.externalContactEmail) && (
-              <div className="text-secondary small mb-3">
-                <div className="text-light mb-1">{m.admin_edition_external_partner()}</div>
-                <div>{edition.externalPartner || "—"}</div>
-                {(edition.externalContactName || edition.externalContactEmail) && (
-                  <div>
-                    {[edition.externalContactName, edition.externalContactEmail]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </div>
-                )}
-              </div>
-            )}
-
           <div className="d-flex justify-content-between align-items-center mb-1">
             <h6 className="text-warning mb-0 small">{m.admin_content_edition_schedule()}</h6>
             <Button size="sm" variant="outline-secondary" onClick={openAddEvent}>
@@ -334,6 +320,15 @@ export default function EditionCard({
                     <Button
                       size="sm"
                       variant="outline-secondary"
+                      onClick={() => openProducts(event)}
+                      aria-label={`${m.admin_content_edition_manage_products()} ${event.title}`}
+                      title={m.admin_content_edition_manage_products()}
+                    >
+                      <i className="bi bi-basket" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline-secondary"
                       onClick={() => openEditEvent(event)}
                       aria-label={`Edit event ${event.title}`}
                     >
@@ -372,6 +367,13 @@ export default function EditionCard({
         initial={editingEvent}
         onSave={handleEventSaved}
         onHide={() => setEventModalOpen(false)}
+      />
+      <EventProductsModal
+        show={productsModalOpen}
+        event={productsEvent}
+        authHeaders={authHeaders}
+        onHide={() => setProductsModalOpen(false)}
+        onProductsChanged={() => queryClient.invalidateQueries({ queryKey: editionEventsQueryKey })}
       />
     </Card>
   );

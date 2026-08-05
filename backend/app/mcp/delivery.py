@@ -35,7 +35,7 @@ async def get_champagne_delivery_summary(session_factory: Any, edition_id: str |
 
         product_stats: dict[str, dict] = {}
         for reg in regs:
-            for item in reg.pre_orders or []:
+            for item in reg.order_items or []:
                 normalized_item = order_item_dict(item)
                 if normalized_item["category"] != "champagne":
                     continue
@@ -109,7 +109,7 @@ async def get_undelivered_champagne_by_table(session_factory: Any, edition_id: s
             if not reg.table_id:
                 continue
             pending_items = []
-            for item in reg.pre_orders or []:
+            for item in reg.order_items or []:
                 normalized_item = order_item_dict(item)
                 if normalized_item["category"] == "champagne" and normalized_item["remaining_quantity"] > 0:
                     pending_items.append(normalized_item)

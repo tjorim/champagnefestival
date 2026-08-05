@@ -318,7 +318,7 @@ async def test_standalone_event_can_move_within_same_single_day(client):
 
 @pytest.mark.anyio
 async def test_community_edition_upcoming_lists_every_active_event_in_time_order(client):
-    """Community editions may hold multiple same-day events; the public payload lists every
+    """Off-festival editions may hold multiple same-day events; the public payload lists every
 
     active one in date/time order, and excludes inactive (draft/cancelled) events entirely.
     """
@@ -500,9 +500,6 @@ async def _create_upcoming_edition(
     venue_id: str,
     edition_type: str = "bourse",
     active: bool = True,
-    external_partner: str | None = None,
-    external_contact_name: str | None = None,
-    external_contact_email: str | None = None,
     year: int = 2099,
 ):
     payload: dict[str, object] = {
@@ -513,12 +510,6 @@ async def _create_upcoming_edition(
         "edition_type": edition_type,
         "active": active,
     }
-    if external_partner is not None:
-        payload["external_partner"] = external_partner
-    if external_contact_name is not None:
-        payload["external_contact_name"] = external_contact_name
-    if external_contact_email is not None:
-        payload["external_contact_email"] = external_contact_email
     r = await client.post("/api/editions", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201, r.text
     return r.json()
@@ -640,10 +631,8 @@ async def test_upcoming_excludes_editions_without_events(client):
 
 
 @pytest.mark.anyio
-async def test_upcoming_includes_embedded_venue_and_external_contact_fields(client):
-    """The public payload embeds the full venue and the community-edition contact fields
-    the frontend's `CommunityEvents` relies on.
-    """
+async def test_upcoming_includes_embedded_venue(client):
+    """The public payload embeds the full venue the frontend's `OtherEvents` relies on."""
     venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = venue_response.json()["id"]
 
@@ -651,9 +640,6 @@ async def test_upcoming_includes_embedded_venue_and_external_contact_fields(clie
         client,
         edition_id="edition-upcoming-contact",
         venue_id=venue_id,
-        external_partner="Local Wine Club",
-        external_contact_name="Jean Dupont",
-        external_contact_email="jean@example.com",
     )
     await _create_upcoming_event(client, edition_id="edition-upcoming-contact", date="2099-05-01")
 
@@ -661,9 +647,7 @@ async def test_upcoming_includes_embedded_venue_and_external_contact_fields(clie
     assert r.status_code == 200
     edition = next(e for e in r.json() if e["id"] == "edition-upcoming-contact")
     assert edition["venue"]["name"] == "Test Venue"
-    assert edition["external_partner"] == "Local Wine Club"
-    assert edition["external_contact_name"] == "Jean Dupont"
-    assert edition["external_contact_email"] == "jean@example.com"
+    assert edition["venue"]["city"] == VENUE_PAYLOAD.get("city", "")
 
 
 @pytest.mark.anyio
@@ -697,7 +681,7 @@ async def test_upcoming_rejects_unsupported_edition_type(client):
 
 @pytest.mark.anyio
 async def test_standalone_event_rejects_a_second_date(client):
-    """Community editions may only span a single calendar date."""
+    """Off-festival editions may only span a single calendar date."""
     venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     assert venue_response.status_code == 201
     venue_id = venue_response.json()["id"]
@@ -909,7 +893,7 @@ async def test_festival_to_festival_edit_preserves_exhibitors(client):
 @pytest.mark.anyio
 async def test_community_edition_update_still_rejects_explicit_exhibitors(client):
     """Backend validation must still reject an explicit attempt to assign exhibitors
-    to a community edition, whether or not the type is changing in the same request.
+    to a off-festival edition, whether or not the type is changing in the same request.
     """
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
@@ -1010,98 +994,3 @@ async def test_edition_stats_includes_editions_with_no_registrations(client):
     assert entry["total_guests"] == 0
     assert entry["total_checked_in"] == 0
     assert entry["events_count"] == 0
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    "email",
-    [
-        "organizer@example.com",
-        "first.last@example.co.uk",
-        "bourse+events@example.com",
-        # RFC 5321 atext characters beyond the common "safe" subset.
-        "bourse!#$%&'*=?^_`{|}~-tag@example.com",
-    ],
-)
-async def test_edition_accepts_legitimate_contact_emails(client, email):
-    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
-    venue_id = venue_response.json()["id"]
-
-    r = await client.post(
-        "/api/editions",
-        json={
-            "id": "edition-contact-valid",
-            "year": 2099,
-            "month": "march",
-            "venue_id": venue_id,
-            "edition_type": "bourse",
-            "external_contact_email": email,
-        },
-        headers=ADMIN_HEADERS,
-    )
-
-    assert r.status_code == 201, r.text
-    assert r.json()["external_contact_email"] == email
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    "email",
-    [
-        "organizer@example.com?bcc=other@example.com",
-        "organizer@example.com\r\nBcc:other@example.com",
-        "not-an-email",
-        '"quoted local part"@example.com',
-        # Unicode local part — SMTPUTF8 addresses are intentionally unsupported.
-        "örganizer@example.com",
-        # Unicode domain that has not been IDNA/punycode-encoded.
-        "organizer@münchen.example",
-        # Pydantic's EmailStr normalizes IDNA/punycode domains back to Unicode,
-        # so even an ASCII-on-the-wire internationalized domain is rejected.
-        "organizer@xn--nxasmq6b.example",
-    ],
-)
-async def test_edition_rejects_unsafe_or_unsupported_contact_emails(client, email):
-    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
-    venue_id = venue_response.json()["id"]
-
-    r = await client.post(
-        "/api/editions",
-        json={
-            "id": "edition-contact-invalid",
-            "year": 2099,
-            "month": "march",
-            "venue_id": venue_id,
-            "edition_type": "bourse",
-            "external_contact_email": email,
-        },
-        headers=ADMIN_HEADERS,
-    )
-
-    assert r.status_code == 422
-
-
-@pytest.mark.anyio
-async def test_edition_update_rejects_unsafe_contact_email(client):
-    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
-    venue_id = venue_response.json()["id"]
-
-    r = await client.post(
-        "/api/editions",
-        json={
-            "id": "edition-contact-update",
-            "year": 2099,
-            "month": "march",
-            "venue_id": venue_id,
-            "edition_type": "bourse",
-        },
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 201
-
-    r = await client.put(
-        "/api/editions/edition-contact-update",
-        json={"external_contact_email": "organizer@example.com?bcc=other@example.com"},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 422

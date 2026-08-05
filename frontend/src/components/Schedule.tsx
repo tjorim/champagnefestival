@@ -136,10 +136,16 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                             <Badge bg={getCategoryColor(event.category)} className="mb-2">
                               {getCategoryLabel(event.category)}
                             </Badge>
-                            {event.registrationRequired && (
+                            {event.registrationRequired ? (
                               <Badge bg="warning" className="mb-2 ms-2">
                                 {m.schedule_registration()}
                               </Badge>
+                            ) : (
+                              event.products.length > 0 && (
+                                <Badge bg="info" text="dark" className="mb-2 ms-2">
+                                  {m.schedule_order_available()}
+                                </Badge>
+                              )
                             )}
                             <p className="event-description mb-1">{event.description}</p>
                           </div>

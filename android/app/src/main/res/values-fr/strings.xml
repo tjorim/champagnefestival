@@ -59,12 +59,12 @@
     <string name="registration_strap_not_issued_label">Bracelet non remis</string>
     <string name="registration_notes_format">Notes : %1$s</string>
     <string name="registration_check_in_button">Enregistrer</string>
-    <string name="registration_no_preorders">Aucune précommande pour cet invité.</string>
-    <string name="registration_preorders_title">Précommandes</string>
-    <string name="registration_preorder_quantity_format">Quantité : %1$d</string>
-    <string name="registration_preorder_category_format">Catégorie : %1$s</string>
-    <string name="registration_preorder_delivered_label">Livraison : Livré</string>
-    <string name="registration_preorder_not_delivered_label">Livraison : Non livré</string>
+    <string name="registration_no_order_items">Aucun article commandé pour cet invité.</string>
+    <string name="registration_order_items_title">Articles commandés</string>
+    <string name="registration_order_item_quantity_format">Quantité : %1$d</string>
+    <string name="registration_order_item_category_format">Catégorie : %1$s</string>
+    <string name="registration_order_item_delivered_label">Livraison : Livré</string>
+    <string name="registration_order_item_not_delivered_label">Livraison : Non livré</string>
 
     <string name="lock_title">Champagnefestival est verrouillé</string>
     <string name="lock_continue_button">Continuer</string>

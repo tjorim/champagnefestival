@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Card from "react-bootstrap/Card";
-import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import SectionHeading from "@/components/SectionHeading";
@@ -9,44 +8,41 @@ import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";
 import { apiToEvent } from "@/types/event";
 import { m } from "@/paraglide/messages";
-import { COMMUNITY_CONTACT_EMAIL_REGEX } from "@/config/constants";
 
 interface ApiUpcomingEdition {
   id: string;
   edition_type: "festival" | "bourse" | "capsule_exchange";
-  external_partner?: string | null;
-  external_contact_name?: string | null;
-  external_contact_email?: string | null;
   venue: { name: string };
+  co_organizer?: { name: string; website?: string } | null;
   events: Record<string, unknown>[];
 }
 
-const COMMUNITY_EDITION_TYPES = ["bourse", "capsule_exchange"] as const;
-type CommunityEditionType = (typeof COMMUNITY_EDITION_TYPES)[number];
+const OTHER_EDITION_TYPES = ["bourse", "capsule_exchange"] as const;
+type OtherEditionType = (typeof OTHER_EDITION_TYPES)[number];
 
 const EDITION_TYPES = new Set<ApiUpcomingEdition["edition_type"]>([
   "festival",
-  ...COMMUNITY_EDITION_TYPES,
+  ...OTHER_EDITION_TYPES,
 ]);
 
-interface CommunityEventCardData {
+interface OtherEventCardData {
   id: string;
   editionType: ApiUpcomingEdition["edition_type"];
   event: Event;
   venueName: string;
-  externalPartner?: string;
-  externalContactName?: string;
-  externalContactEmail?: string;
+  /** The exhibitor who ran this edition with the vzw, credited on the card. */
+  coOrganizerName?: string;
+  coOrganizerWebsite?: string;
 }
 
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
   switch (editionType) {
     case "bourse":
-      return "Community Bourse";
+      return m.other_events_type_bourse();
     case "capsule_exchange":
-      return "Capsule Exchange";
+      return m.other_events_type_capsule_exchange();
     default:
-      return "Community Event";
+      return m.other_events_type_other();
   }
 }
 
@@ -59,40 +55,6 @@ function formatDate(date: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readOptionalString(
-  record: Record<string, unknown>,
-  key: string,
-  context: string,
-): string | undefined {
-  const value = record[key];
-  if (value === null || value === undefined) return undefined;
-  if (typeof value !== "string") {
-    throw new Error(`${context}.${key} must be a string or null.`);
-  }
-  return value;
-}
-
-/**
- * Unlike readOptionalString's siblings, an invalid value here is dropped rather
- * than thrown: a malformed contact address on one edition must not take down
- * the entire community events response and hide unrelated editions/events. This
- * checks the type directly instead of delegating to readOptionalString, since
- * that helper throws on a non-string value — which would defeat the point.
- */
-function readOptionalEmail(
-  record: Record<string, unknown>,
-  key: string,
-  context: string,
-): string | undefined {
-  const value = record[key];
-  if (value === null || value === undefined) return undefined;
-  if (typeof value !== "string" || !COMMUNITY_CONTACT_EMAIL_REGEX.test(value)) {
-    console.warn(`${context}.${key} is not a valid, safe email address; omitting it.`);
-    return undefined;
-  }
-  return value;
 }
 
 function isApiEvent(value: unknown): value is Record<string, unknown> {
@@ -156,36 +118,63 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
     }
     const venue = { name: value.venue.name };
 
+    // Optional and non-critical: a malformed co-organizer is dropped rather than
+    // thrown, so one bad record can't hide every upcoming edition.
+    const rawCoOrganizer = value.co_organizer;
+    const coOrganizer =
+      isRecord(rawCoOrganizer) && typeof rawCoOrganizer.name === "string"
+        ? {
+            name: rawCoOrganizer.name,
+            website:
+              typeof rawCoOrganizer.website === "string" && /^https?:\/\//.test(rawCoOrganizer.website)
+                ? rawCoOrganizer.website
+                : undefined,
+          }
+        : null;
+
     return {
       id: value.id,
       edition_type: value.edition_type as ApiUpcomingEdition["edition_type"],
-      external_partner: readOptionalString(value, "external_partner", context),
-      external_contact_name: readOptionalString(value, "external_contact_name", context),
-      external_contact_email: readOptionalEmail(value, "external_contact_email", context),
       venue,
+      co_organizer: coOrganizer,
       events: rawEvents,
     };
   });
 }
 
-async function fetchCommunityEditionType(
-  editionType: CommunityEditionType,
+async function fetchOtherEditionType(
+  editionType: OtherEditionType,
 ): Promise<ApiUpcomingEdition[]> {
   const response = await fetch(`/api/editions/upcoming?edition_type=${editionType}`);
   if (!response.ok) {
-    throw new Error(`Failed to load ${editionType} community events: ${response.status}`);
+    throw new Error(`Failed to load ${editionType} other events: ${response.status}`);
   }
 
   const editions = parseUpcomingEditions(await response.json());
   return editions.filter((edition) => edition.edition_type === editionType);
 }
 
-async function fetchCommunityEditions(): Promise<ApiUpcomingEdition[]> {
-  const groupedEditions = await Promise.all(COMMUNITY_EDITION_TYPES.map(fetchCommunityEditionType));
+async function fetchOtherEditions(): Promise<ApiUpcomingEdition[]> {
+  const groupedEditions = await Promise.all(OTHER_EDITION_TYPES.map(fetchOtherEditionType));
   return groupedEditions.flat();
 }
 
-export default function CommunityEvents() {
+/**
+ * The section used to live at `#community-events`. Existing bookmarks and any
+ * links already shared keep that fragment, so map it onto the new anchor rather
+ * than dropping people at the top of the page.
+ */
+function useLegacyAnchorRedirect() {
+  useEffect(() => {
+    if (window.location.hash !== "#community-events") return;
+    window.history.replaceState(null, "", "#other-events");
+    document.getElementById("other-events")?.scrollIntoView();
+  }, []);
+}
+
+export default function OtherEvents() {
+  useLegacyAnchorRedirect();
+
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const {
@@ -193,15 +182,15 @@ export default function CommunityEvents() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["community-events"],
-    queryFn: fetchCommunityEditions,
+    queryKey: ["other-events"],
+    queryFn: fetchOtherEditions,
     staleTime: 5 * 60 * 1000,
   });
 
-  const items = useMemo<CommunityEventCardData[]>(() => {
-    // Community editions may hold multiple same-day events (opening, tasting, auction, ...).
+  const items = useMemo<OtherEventCardData[]>(() => {
+    // Off-festival editions may hold multiple same-day events (opening, tasting, auction, ...).
     // Every active event is rendered as its own card; inactive (draft) events stay hidden.
-    const cards = data.flatMap((edition): CommunityEventCardData[] =>
+    const cards = data.flatMap((edition): OtherEventCardData[] =>
       (edition.events ?? [])
         .map(apiToEvent)
         .filter((event) => event.active)
@@ -210,9 +199,8 @@ export default function CommunityEvents() {
           editionType: edition.edition_type,
           event,
           venueName: edition.venue?.name ?? "",
-          externalPartner: edition.external_partner ?? undefined,
-          externalContactName: edition.external_contact_name ?? undefined,
-          externalContactEmail: edition.external_contact_email ?? undefined,
+          coOrganizerName: edition.co_organizer?.name || undefined,
+          coOrganizerWebsite: edition.co_organizer?.website || undefined,
         })),
     );
 
@@ -225,22 +213,22 @@ export default function CommunityEvents() {
 
   return (
     <>
-      <section id="community-events" className="content-section">
+      <section id="other-events" className="content-section">
         <div className="container">
           <SectionHeading
-            id="community-events-heading"
-            title={m.community_events_title()}
-            subtitle={m.community_events_subtitle()}
+            id="other-events-heading"
+            title={m.other_events_title()}
+            subtitle={m.other_events_subtitle()}
           />
 
           <div className="row justify-content-center">
             <div className="col-md-10 col-lg-8">
-              {isLoading && <p className="text-center">{m.community_events_loading()}</p>}
+              {isLoading && <p className="text-center">{m.other_events_loading()}</p>}
 
-              {isError && <Alert variant="danger">{m.community_events_error()}</Alert>}
+              {isError && <Alert variant="danger">{m.other_events_error()}</Alert>}
 
               {!isLoading && !isError && items.length === 0 && (
-                <p className="text-center mb-0">{m.community_events_empty()}</p>
+                <p className="text-center mb-0">{m.other_events_empty()}</p>
               )}
 
               {items.map((item) => (
@@ -258,29 +246,36 @@ export default function CommunityEvents() {
                           <i className="bi bi-geo-alt me-2" aria-hidden="true" />
                           {item.venueName}
                         </p>
+                        {item.coOrganizerName && (
+                          <p className="mb-1 text-muted">
+                            <i className="bi bi-people me-2" aria-hidden="true" />
+                            {m.other_events_co_organized_with()}{" "}
+                            {item.coOrganizerWebsite ? (
+                              <a
+                                href={item.coOrganizerWebsite}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {item.coOrganizerName}
+                              </a>
+                            ) : (
+                              item.coOrganizerName
+                            )}
+                          </p>
+                        )}
                         <p className="mb-2">{item.event.description}</p>
 
-                        {item.externalPartner && (
-                          <Badge bg="secondary" className="mb-2">
-                            {m.community_events_partner({ partner: item.externalPartner })}
-                          </Badge>
-                        )}
 
-                        {item.externalContactName && item.externalContactEmail && (
-                          <Alert variant="warning" className="py-2 mb-0">
-                            <strong>{m.community_events_table_reservations()}</strong>{" "}
-                            {item.externalContactName} (
-                            <a href={`mailto:${item.externalContactEmail}`}>
-                              {item.externalContactEmail}
-                            </a>
-                            )
-                          </Alert>
-                        )}
                       </div>
 
-                      {item.event.registrationRequired && (
+                      {(item.event.registrationRequired || item.event.products.length > 0) && (
                         <Button variant="warning" onClick={() => setSelectedEvent(item.event)}>
-                          {m.community_events_rsvp()}
+                          <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                          {item.event.registrationRequired
+                            ? item.editionType === "bourse"
+                              ? m.other_events_reserve_table()
+                              : m.other_events_rsvp()
+                            : m.other_events_order()}
                         </Button>
                       )}
                     </div>

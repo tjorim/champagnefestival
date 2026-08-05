@@ -107,6 +107,7 @@ export default function RegistrationCreateModal({
         queryClient.invalidateQueries({ queryKey: adminActiveEditionEventsQueryKey }),
         queryClient.invalidateQueries({ queryKey: queryKeys.admin.personOptionsRoot }),
         queryClient.invalidateQueries({ queryKey: activeEditionQueryKey }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.activeEdition }),
       ]);
       onSaved(registration);
       onHide();
@@ -193,7 +194,7 @@ export default function RegistrationCreateModal({
             </Alert>
           )}
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="registration-event">
             <Form.Label className="text-secondary small">{m.admin_event_label()}</Form.Label>
             {loadingEvents ? (
               <div className="text-secondary small">
@@ -250,11 +251,12 @@ export default function RegistrationCreateModal({
             )}
           </Form.Group>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="registration-person">
             <Form.Label className="text-secondary small">{m.admin_person_label()} *</Form.Label>
             <form.Field name="personOption">
               {(field) => (
                 <Select<PersonOption, false>
+                  inputId="registration-person"
                   isClearable
                   options={personOptions}
                   value={field.state.value}
@@ -279,7 +281,7 @@ export default function RegistrationCreateModal({
 
           <form.Field name="guestCount">
             {(field) => (
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" controlId="registration-guest-count">
                 <Form.Label className="text-secondary small">{m.admin_guests_count()}</Form.Label>
                 <Form.Control
                   type="number"
@@ -296,7 +298,7 @@ export default function RegistrationCreateModal({
 
           <form.Field name="notes">
             {(field) => (
-              <Form.Group>
+              <Form.Group controlId="registration-notes">
                 <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
                 <Form.Control
                   as="textarea"

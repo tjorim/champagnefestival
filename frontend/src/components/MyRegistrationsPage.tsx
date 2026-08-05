@@ -249,9 +249,9 @@ export default function MyRegistrationsPage() {
                                 <i className="bi bi-people me-1" aria-hidden="true" />
                                 {registration.guestCount} {m.my_registrations_guests_label()}
                               </div>
-                              {registration.preOrders.length > 0 && (
+                              {registration.orderItems.length > 0 && (
                                 <ListGroup variant="flush" className="mt-2">
-                                  {registration.preOrders.map((item, idx) => (
+                                  {registration.orderItems.map((item, idx) => (
                                     <ListGroup.Item
                                       key={`${item.productId}-${idx}`}
                                       className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center px-0 py-1"

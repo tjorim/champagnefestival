@@ -144,7 +144,7 @@ export async function createAdminRegistration(
       person_id: payload.personId,
       event_id: payload.eventId,
       guest_count: payload.guestCount,
-      pre_orders: [],
+      order_items: [],
       notes: payload.notes,
       accessibility_note: "",
       status: "confirmed",

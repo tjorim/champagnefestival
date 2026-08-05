@@ -197,7 +197,7 @@ export function useAdminRegistrationActions({
           await updateRegistrationMutation.mutateAsync({
             id: registrationId,
             payload: {
-              pre_orders: updatedOrders.map((order) => ({
+              order_items: updatedOrders.map((order) => ({
                 product_id: order.productId,
                 name: order.name,
                 quantity: order.quantity,

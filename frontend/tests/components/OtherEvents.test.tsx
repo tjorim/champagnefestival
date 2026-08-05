@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
-import CommunityEvents from "@/components/CommunityEvents";
+import OtherEvents from "@/components/OtherEvents";
 import { server } from "@/mocks/server";
 
 const BASE_EVENT = {
@@ -20,19 +20,19 @@ const BASE_EVENT = {
   updated_at: "2026-01-01T00:00:00Z",
 };
 
-function renderCommunityEvents(): void {
+function renderOtherEvents(): void {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={queryClient}>
-      <CommunityEvents />
+      <OtherEvents />
     </QueryClientProvider>,
   );
 }
 
-describe("CommunityEvents", () => {
-  it("renders validated community editions and ignores unexpected festival results", async () => {
+describe("OtherEvents", () => {
+  it("renders validated off-festival editions and ignores unexpected festival results", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
         const editionType = new URL(request.url).searchParams.get("edition_type");
@@ -55,7 +55,6 @@ describe("CommunityEvents", () => {
           {
             id: "edition-bourse",
             edition_type: "bourse",
-            external_partner: "Collector Club",
             venue: { name: "Staf Versluys" },
             events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
           },
@@ -63,9 +62,9 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
-    expect(await screen.findByRole("heading", { name: "Community Bourse" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Bourse" })).toBeInTheDocument();
     expect(screen.getByText("Meet collectors from across Belgium.")).toBeInTheDocument();
     expect(screen.queryByText("Festival should be ignored")).not.toBeInTheDocument();
   });
@@ -94,12 +93,12 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     const headings = await screen.findAllByRole("heading", { level: 5 });
     expect(headings.map((heading) => heading.textContent)).toEqual([
       "Capsule Exchange",
-      "Community Bourse",
+      "Bourse",
     ]);
   });
 
@@ -123,7 +122,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     const titles = await screen.findAllByText(/^Bourse (Opening|Auction)$/);
     expect(titles.map((title) => title.textContent)).toEqual(["Bourse Opening", "Bourse Auction"]);
@@ -149,7 +148,7 @@ describe("CommunityEvents", () => {
       }),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByText("Bourse Opening")).toBeInTheDocument();
     expect(screen.queryByText("Draft Tasting")).not.toBeInTheDocument();
@@ -162,7 +161,7 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -188,155 +187,9 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
-  });
-
-  it("drops an unsafe external contact email without hiding the edition or other events", async () => {
-    server.use(
-      http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-
-        return HttpResponse.json([
-          {
-            id: "edition-bourse",
-            edition_type: "bourse",
-            external_contact_name: "Organizer",
-            external_contact_email: "organizer@example.com?bcc=other@example.com",
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
-          },
-        ]);
-      }),
-    );
-
-    renderCommunityEvents();
-
-    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.queryByText(/organizer@example\.com/)).not.toBeInTheDocument();
-  });
-
-  it("drops a control-character contact email (header injection) without hiding the edition", async () => {
-    server.use(
-      http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-
-        return HttpResponse.json([
-          {
-            id: "edition-bourse",
-            edition_type: "bourse",
-            external_contact_name: "Organizer",
-            external_contact_email: "organizer@example.com\r\nBcc:other@example.com",
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
-          },
-        ]);
-      }),
-    );
-
-    renderCommunityEvents();
-
-    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-
-  it("drops a non-string contact email without hiding the edition", async () => {
-    server.use(
-      http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-
-        return HttpResponse.json([
-          {
-            id: "edition-bourse",
-            edition_type: "bourse",
-            external_contact_name: "Organizer",
-            external_contact_email: 12345,
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
-          },
-        ]);
-      }),
-    );
-
-    renderCommunityEvents();
-
-    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-
-  it("accepts legitimate edge-case addresses the backend can return", async () => {
-    server.use(
-      http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-
-        return HttpResponse.json([
-          {
-            id: "edition-bourse",
-            edition_type: "bourse",
-            external_contact_name: "Organizer",
-            // Tag addressing (RFC 5321 atext) and an IDNA/punycode-encoded
-            // internationalized domain — both valid, ASCII-safe addresses.
-            external_contact_email: "bourse+events@xn--nxasmq6b.example",
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
-          },
-        ]);
-      }),
-    );
-
-    renderCommunityEvents();
-
-    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "bourse+events@xn--nxasmq6b.example" }),
-    ).toHaveAttribute("href", "mailto:bourse+events@xn--nxasmq6b.example");
-  });
-
-  it("does not hide unrelated community editions when a sibling edition has a malformed contact email", async () => {
-    server.use(
-      http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType === "bourse") {
-          return HttpResponse.json([
-            {
-              id: "edition-bourse",
-              edition_type: "bourse",
-              external_contact_name: "Organizer",
-              external_contact_email: "organizer@example.com?bcc=other@example.com",
-              venue: { name: "Staf Versluys" },
-              events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
-            },
-          ]);
-        }
-        return HttpResponse.json([
-          {
-            id: "edition-capsule",
-            edition_type: "capsule_exchange",
-            venue: { name: "Staf Versluys" },
-            events: [
-              {
-                ...BASE_EVENT,
-                id: "event-capsule",
-                edition_id: "edition-capsule",
-                title: "Capsule swap",
-              },
-            ],
-          },
-        ]);
-      }),
-    );
-
-    renderCommunityEvents();
-
-    expect(await screen.findByText("Bourse tasting")).toBeInTheDocument();
-    expect(screen.getByText("Capsule swap")).toBeInTheDocument();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("rejects editions without an events array", async () => {
@@ -352,7 +205,7 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -371,7 +224,7 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
@@ -397,8 +250,203 @@ describe("CommunityEvents", () => {
       ),
     );
 
-    renderCommunityEvents();
+    renderOtherEvents();
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("redirects the legacy #community-events anchor to the renamed section", async () => {
+    // The section moved from #community-events to #other-events; bookmarks and
+    // already-shared links must still land on it.
+    window.location.hash = "#community-events";
+    renderOtherEvents();
+
+    await waitFor(() => {
+      expect(window.location.hash).toBe("#other-events");
+    });
+    expect(document.getElementById("other-events")).toBeInTheDocument();
+  });
+
+  it("leaves an unrelated hash alone", async () => {
+    window.location.hash = "#schedule";
+    renderOtherEvents();
+
+    await waitFor(() => {
+      expect(document.getElementById("other-events")).toBeInTheDocument();
+    });
+    expect(window.location.hash).toBe("#schedule");
+  });
+
+  it("offers an in-app table reservation for a bourse", async () => {
+    // Bookings run through the app; there is no partner inbox to fall back to.
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            venue: { name: "Staf Versluys" },
+            events: [
+              {
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Bourse De la Comtesse",
+                registration_required: true,
+              },
+            ],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(await screen.findByRole("button", { name: /Reserve a table/ })).toBeInTheDocument();
+    // No mailto anywhere on the card — reserving is the only route.
+    expect(document.querySelector('a[href^="mailto:"]')).toBeNull();
+  });
+
+  it("hides the reservation button for a walk-in event with nothing to order", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Free walk-in tasting" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(await screen.findByText("Free walk-in tasting")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("offers an optional VIP-package reservation for a walk-in event with products", async () => {
+    // Not every event requires registration, but some still sell a VIP package —
+    // registration is optional there, offered rather than mandatory.
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            venue: { name: "Staf Versluys" },
+            events: [
+              {
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Free walk-in tasting",
+                products: [
+                  {
+                    id: "product-1",
+                    event_id: "event-bourse",
+                    name: "VIP Package",
+                    price: 50,
+                    category: "other",
+                    active: true,
+                    created_at: "2026-01-01T00:00:00Z",
+                    updated_at: "2026-01-01T00:00:00Z",
+                  },
+                ],
+              },
+            ],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(
+      await screen.findByRole("button", { name: /Reserve VIP package/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("credits the co-organizing producer, linking to them when a website is known", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            co_organizer: { name: "Champagne Comtesse", website: "https://comtesse.example" },
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    const link = await screen.findByRole("link", { name: "Champagne Comtesse" });
+    expect(link).toHaveAttribute("href", "https://comtesse.example");
+    // The label and the link are separate nodes, so match on the line as a whole.
+    expect(link.closest("p")?.textContent).toContain("Co-organised with");
+    // Opens off-site, so it must not hand the opener over.
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("omits the credit when an edition has no co-organizer", async () => {
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            co_organizer: null,
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Solo bourse" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    expect(await screen.findByText("Solo bourse")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Co-organised with");
+  });
+
+  it("drops a co-organizer with an unsafe website instead of linking to it", async () => {
+    // Rendered as an href, so anything that isn't plainly http(s) must not become
+    // a link — and one bad record must not hide the edition.
+    server.use(
+      http.get("/api/editions/upcoming", ({ request }) => {
+        const editionType = new URL(request.url).searchParams.get("edition_type");
+        if (editionType !== "bourse") return HttpResponse.json([]);
+        return HttpResponse.json([
+          {
+            id: "edition-bourse",
+            edition_type: "bourse",
+            co_organizer: { name: "Champagne Comtesse", website: "javascript:alert(1)" },
+            venue: { name: "Staf Versluys" },
+            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
+          },
+        ]);
+      }),
+    );
+
+    renderOtherEvents();
+
+    // Still credited, just not linked.
+    expect(await screen.findByText(/Champagne Comtesse/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Champagne Comtesse" })).not.toBeInTheDocument();
+    expect(screen.getByText("Bourse De la Comtesse")).toBeInTheDocument();
   });
 });

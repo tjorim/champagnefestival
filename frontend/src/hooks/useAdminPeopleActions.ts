@@ -58,17 +58,15 @@ export function useAdminPeopleActions({
     async (canonicalId: string, duplicateId: string) => {
       const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
-      const duplicate = people.find((person) => person.id === duplicateId);
       const existingCanonical = people.find((person) => person.id === canonicalId);
-      const shouldPreserveVolunteerData =
-        canonicalPerson.roles.includes("volunteer") ||
-        existingCanonical?.roles.includes("volunteer") ||
-        duplicate?.roles.includes("volunteer");
-      const mergedCanonical = shouldPreserveVolunteerData
-        ? mergeVolunteerPerson(existingCanonical, {
-            ...canonicalPerson,
-            helpPeriods: existingCanonical?.helpPeriods ?? duplicate?.helpPeriods ?? [],
-          })
+      // The merge response is a PersonOut, which carries no help periods, so
+      // taking it verbatim would blank them out of the cache. Keep the ones the
+      // survivor already had — the merge does not touch its own rows — but do
+      // not copy the duplicate's across. The server re-points those now, and
+      // showing them here regardless is what hid the cascade delete last time.
+      // The refetch queued in the mutation's onSettled brings back the real set.
+      const mergedCanonical = canonicalPerson.roles.includes("volunteer")
+        ? { ...canonicalPerson, helpPeriods: existingCanonical?.helpPeriods ?? [] }
         : canonicalPerson;
 
       queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>

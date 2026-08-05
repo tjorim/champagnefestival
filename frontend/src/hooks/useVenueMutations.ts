@@ -321,6 +321,19 @@ export function useVenueMutations({
     retry: false,
   });
 
+  const deleteRoomMutation = useMutation({
+    mutationFn: (roomId: string) =>
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/rooms/${roomId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_room(),
+      ),
+    onSettled: () => {
+      void invalidateAdmin(queryClient, [roomsQueryKey]);
+    },
+    retry: false,
+  });
+
   const createLayoutMutation = useMutation({
     mutationFn: ({ roomId, date, label }: { roomId: string; date: string; label?: string }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
@@ -606,6 +619,19 @@ export function useVenueMutations({
     retry: false,
   });
 
+  const deleteTableTypeMutation = useMutation({
+    mutationFn: (typeId: string) =>
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/table-types/${typeId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_table_type(),
+      ),
+    onSettled: () => {
+      void invalidateAdmin(queryClient, [tableTypesQueryKey]);
+    },
+    retry: false,
+  });
+
   return {
     createTableMutation,
     changeTableTypeMutation,
@@ -617,6 +643,7 @@ export function useVenueMutations({
     updateVenueMutation,
     deleteVenueMutation,
     createRoomMutation,
+    deleteRoomMutation,
     updateRoomMutation,
     createLayoutMutation,
     deleteLayoutMutation,
@@ -629,5 +656,6 @@ export function useVenueMutations({
     deleteAreaMutation,
     createTableTypeMutation,
     updateTableTypeMutation,
+    deleteTableTypeMutation,
   };
 }

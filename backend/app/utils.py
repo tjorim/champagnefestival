@@ -21,6 +21,7 @@ from app.models import (
     Exhibitor,
     Layout,
     Person,
+    Product,
     Registration,
     Room,
     Table,
@@ -87,11 +88,31 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
         "created_at": event.created_at,
         "updated_at": event.updated_at,
         "edition": None,
+        # Active only: an archived product should stop being offered without
+        # rewriting the order_items already placed against it (a name/price/category
+        # snapshot, not a live reference — see Product's docstring).
+        "products": [product_to_dict(p) for p in event.products if p.active],
     }
     edition: Edition | None = getattr(event, "edition", None)
     if include_edition and edition is not None:
         data["edition"] = edition_summary_to_dict(edition)
     return data
+
+
+def product_to_dict(p: Product) -> dict:
+    return {
+        "id": p.id,
+        "event_id": p.event_id,
+        "name": p.name,
+        "price": p.price,
+        "category": p.category,
+        "active": p.active,
+        "required": p.required,
+        "included_product_id": p.included_product_id,
+        "included_per_guests": p.included_per_guests,
+        "created_at": p.created_at,
+        "updated_at": p.updated_at,
+    }
 
 
 def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
@@ -103,12 +124,13 @@ def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
         "event_id": r.event_id,
         "event": event_to_summary_dict(event, include_edition=True),
         "guest_count": r.guest_count,
-        "pre_orders": r.pre_orders,
+        "order_items": r.order_items,
         "notes": r.notes,
         "accessibility_note": r.accessibility_note,
         "table_id": r.table_id,
         "status": r.status,
         "payment_status": r.payment_status,
+        "amount_due": r.amount_due,
         "checked_in": r.checked_in,
         "checked_in_at": r.checked_in_at,
         "strap_issued": r.strap_issued,
@@ -132,7 +154,7 @@ def registration_to_checkin_dict(
         "table_id": r.table_id,
         "table_name": table_name,
         "guest_count": r.guest_count,
-        "pre_orders": r.pre_orders,
+        "order_items": r.order_items,
         "notes": r.notes,
         "status": r.status,
         "checked_in": r.checked_in,
@@ -161,9 +183,10 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "event_id": r.event_id,
         "event_title": event.title,
         "guest_count": r.guest_count,
-        "pre_orders": r.pre_orders,
+        "order_items": r.order_items,
         "status": r.status,
         "payment_status": r.payment_status,
+        "amount_due": r.amount_due,
         "checked_in": r.checked_in,
         "checked_in_at": r.checked_in_at,
         "strap_issued": r.strap_issued,
@@ -295,21 +318,20 @@ def edition_to_dict(
     producers: list[dict] | None = None,
     sponsors: list[dict] | None = None,
     vendors: list[dict] | None = None,
+    co_organizer: dict | None = None,
 ) -> dict:
     return {
         "id": e.id,
         "year": e.year,
         "month": e.month,
         "edition_type": e.edition_type,
-        "external_partner": e.external_partner,
-        "external_contact_name": e.external_contact_name,
-        "external_contact_email": e.external_contact_email,
         "dates": dates if dates is not None else [],
         "venue": venue,
         "events": events if events is not None else [],
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],
         "vendors": vendors if vendors is not None else [],
+        "co_organizer": co_organizer,
         "active": e.active,
         "created_at": e.created_at,
         "updated_at": e.updated_at,

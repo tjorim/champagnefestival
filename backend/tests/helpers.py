@@ -26,16 +26,12 @@ VALID_RESERVATION = {
     "event_id": "event-fri",
     "event_title": "Vrijdagavond",
     "guest_count": 2,
-    "pre_orders": [
-        {
-            "product_id": "champagne-standard",
-            "name": "Champagne Bottle (Standard)",
-            "quantity": 1,
-            "price": 65.0,
-            "category": "champagne",
-            "delivered": False,
-        }
-    ],
+    # Registration creation now resolves order_items against the event's real
+    # products server-side (see _resolve_order_items in routers/registrations.py),
+    # so a fixture product_id with no matching Product would be rejected. Tests
+    # that care about order contents on creation create a real product first
+    # and override this field; everyone else gets an order-free registration.
+    "order_items": [],
     "notes": "",
     "honeypot": "",
     "form_start_time": "",

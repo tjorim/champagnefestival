@@ -28,7 +28,7 @@ export const seedRegistrations = [
       updated_at: "2024-01-01T00:00:00Z",
     },
     guest_count: 2,
-    pre_orders: [
+    order_items: [
       {
         product_id: "prod-01",
         name: "Champagne Glass",
@@ -78,7 +78,7 @@ export const seedRegistrations = [
       updated_at: "2024-01-01T00:00:00Z",
     },
     guest_count: 1,
-    pre_orders: [
+    order_items: [
       {
         product_id: "prod-03",
         name: "Prestige Cuvée Flight",
@@ -128,7 +128,7 @@ export const seedRegistrations = [
       updated_at: "2024-01-01T00:00:00Z",
     },
     guest_count: 2,
-    pre_orders: [
+    order_items: [
       {
         product_id: "prod-04",
         name: "Rosé Pairing Menu",
@@ -178,7 +178,7 @@ export const seedRegistrations = [
       updated_at: "2024-01-01T00:00:00Z",
     },
     guest_count: 3,
-    pre_orders: [
+    order_items: [
       {
         product_id: "prod-02",
         name: "Cheese Platter",

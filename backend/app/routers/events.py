@@ -29,7 +29,11 @@ async def list_events(
     registration_required: bool | None = Query(default=None),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
-    stmt = select(Event).options(selectinload(Event.edition)).order_by(Event.date, Event.start_time, Event.created_at)
+    stmt = (
+        select(Event)
+        .options(selectinload(Event.edition), selectinload(Event.products))
+        .order_by(Event.date, Event.start_time, Event.created_at)
+    )
     if edition_id is not None:
         stmt = stmt.where(Event.edition_id == edition_id)
     if date_from is not None:
@@ -55,8 +59,11 @@ async def get_checkin_stats(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None),
 ) -> list[dict]:
-    """Per-event registration/check-in counts, for a live progress display at the entrance.
+    """Per-event guest counts, checked-in vs. total, for a live progress display at the entrance.
 
+    Counts guests (`sum(guest_count)`), not bookings, matching the admin's own capacity panel
+    (`RegistrationList.tsx`'s `eventCapacityStats`) — a booking can carry several guests, and a
+    headcount is what a live entrance display and a capacity limit both actually care about.
     Registered but cancelled bookings are excluded from both counts, since they were never
     going to show up. Kept separate from the public `/api/editions/active` payload (and from
     `EventOut`) since check-in progress is volunteer/admin-only information.
@@ -64,8 +71,10 @@ async def get_checkin_stats(
     stmt = (
         select(
             Registration.event_id,
-            func.count(Registration.id).label("total"),
-            func.count(Registration.id).filter(Registration.checked_in.is_(True)).label("checked_in"),
+            func.coalesce(func.sum(Registration.guest_count), 0).label("total"),
+            func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in.is_(True)), 0).label(
+                "checked_in"
+            ),
         )
         .where(Registration.status != "cancelled")
         .group_by(Registration.event_id)
@@ -217,7 +226,7 @@ async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
         Event,
         event_id,
         "Event not found.",
-        options=[selectinload(Event.edition)],
+        options=[selectinload(Event.edition), selectinload(Event.products)],
     )
 
 
@@ -235,9 +244,9 @@ async def _validate_standalone_event_date(
     event_date: date,
     exclude_event_id: str | None = None,
 ) -> None:
-    """Enforce the community-edition event cardinality contract.
+    """Enforce the off-festival edition event cardinality contract.
 
-    Community editions (`bourse`, `capsule_exchange`) may contain any number of events
+    Off-festival editions (`bourse`, `capsule_exchange`) may contain any number of events
     (e.g. separate opening, tasting, and auction entries), but every event on such an
     edition must share the same calendar date. Festival editions are unrestricted since
     they legitimately span multiple days. The public UI and admin UI both render every

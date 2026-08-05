@@ -30,6 +30,7 @@ from app.routers import (
     me,
     members,
     people,
+    products,
     registrations,
     rooms,
     table_types,
@@ -120,12 +121,27 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware)
 add_trusted_host_middleware(app, settings)
 
 
+# Postgres SQLSTATE codes worth naming. The catch-all used to describe every
+# constraint failure as a foreign-key problem, which sent admins looking for
+# related records after what was really a duplicate value.
+_INTEGRITY_DETAILS = {
+    "23502": "Cannot complete this operation because a required field is missing.",
+    "23503": "Cannot complete this operation because related records exist.",
+    "23505": "Cannot complete this operation because another record already uses one of these values.",
+    "23514": "Cannot complete this operation because a value fails a database constraint.",
+}
+_INTEGRITY_FALLBACK = "Cannot complete this operation because it violates a database constraint."
+
+
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
-    logger.warning("IntegrityError on %s: %s", request.url.path, exc.orig)
+    # The asyncpg dialect copies the driver's SQLSTATE onto the wrapped error as
+    # both pgcode and sqlstate; psycopg only sets pgcode.
+    sqlstate = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
+    logger.warning("IntegrityError (%s) on %s: %s", sqlstate or "no sqlstate", request.url.path, exc.orig)
     return JSONResponse(
         status_code=409,
-        content={"detail": "Cannot complete this operation because related records exist."},
+        content={"detail": _INTEGRITY_DETAILS.get(sqlstate or "", _INTEGRITY_FALLBACK)},
     )
 
 
@@ -144,6 +160,7 @@ app.include_router(layouts.router)
 app.include_router(exhibitors.router)
 app.include_router(editions.router)
 app.include_router(people.router)
+app.include_router(products.router)
 app.include_router(volunteers.router)
 app.include_router(volunteer_ops.router)
 app.include_router(areas.router)

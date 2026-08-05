@@ -1,4 +1,6 @@
 import { act, render, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuth } from "@/contexts/AuthContext";
 import { LiveUpdatesProvider } from "@/state/LiveUpdatesProvider";
@@ -19,6 +21,16 @@ vi.mock("@/utils/liveStream", () => ({
       options.signal.addEventListener("abort", () => resolve(), { once: true });
     });
   }),
+}));
+
+// Patching needs a registered collection, which these tests don't stand up —
+// so it's mocked, defaulting to "cannot patch" (the real behaviour here) and
+// flipped on for the one test that exercises the patch branch.
+let canPatch = false;
+
+vi.mock("@/state/adminRegistrationsCollection", () => ({
+  canPatchAdminRegistrationLiveEvent: () => canPatch,
+  patchAdminRegistrationLiveEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ---------------------------------------------------------------------------
@@ -43,6 +55,7 @@ function makeEnvelope(overrides: Partial<LiveEnvelope> = {}): LiveEnvelope {
 
 describe("LiveUpdatesProvider", () => {
   beforeEach(() => {
+    canPatch = false;
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -113,6 +126,30 @@ describe("LiveUpdatesProvider", () => {
 
     expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "tables"] });
+  });
+
+  it("refreshes the check-in stats when a registration event is patched instead of invalidated", async () => {
+    capturedOptions = null;
+    canPatch = true;
+    // Own client rather than the shared harness: that one sets gcTime to 0, so
+    // an observer-less cache entry is collected before the event arrives.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    // The patch path only runs once the registrations query has succeeded.
+    queryClient.setQueryData(["admin", "registrations"], []);
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+
+    render(<LiveUpdatesProvider />, { wrapper: Wrapper });
+    await waitFor(() => expect(capturedOptions).not.toBeNull());
+
+    act(() => capturedOptions!.onInvalidate(makeEnvelope({ topic: "check_in" })));
+
+    expect(spy).not.toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["admin", "registrations", "checkin-stats"],
+    });
   });
 
   it("calls invalidateQueries for all live keys on reconnect", async () => {

@@ -125,31 +125,31 @@ private fun RegistrationContent(registration: CheckInGuestOut, modifier: Modifie
                 }
             }
         }
-        if (registration.pre_orders.isEmpty()) {
+        if (registration.order_items.isEmpty()) {
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    Text(stringResource(R.string.registration_no_preorders), modifier = Modifier.padding(16.dp))
+                    Text(stringResource(R.string.registration_no_order_items), modifier = Modifier.padding(16.dp))
                 }
             }
         } else {
             item {
                 Text(
-                    text = stringResource(R.string.registration_preorders_title),
+                    text = stringResource(R.string.registration_order_items_title),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
-            items(registration.pre_orders, key = { it.product_id }) { item ->
+            items(registration.order_items, key = { it.product_id }) { item ->
                 Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(item.name)
-                        Text(stringResource(R.string.registration_preorder_quantity_format, item.quantity))
-                        Text(stringResource(R.string.registration_preorder_category_format, item.category))
+                        Text(stringResource(R.string.registration_order_item_quantity_format, item.quantity))
+                        Text(stringResource(R.string.registration_order_item_category_format, item.category))
                         Text(
                             if (item.delivered) {
-                                stringResource(R.string.registration_preorder_delivered_label)
+                                stringResource(R.string.registration_order_item_delivered_label)
                             } else {
-                                stringResource(R.string.registration_preorder_not_delivered_label)
+                                stringResource(R.string.registration_order_item_not_delivered_label)
                             }
                         )
                     }

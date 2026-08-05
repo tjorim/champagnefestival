@@ -8,7 +8,7 @@ import type {
 
 /** Map a FastAPI snake_case registration response to the frontend camelCase Registration type. */
 export function apiToRegistration(d: Record<string, unknown>): Registration {
-  const rawOrders = Array.isArray(d.pre_orders) ? (d.pre_orders as Record<string, unknown>[]) : [];
+  const rawOrders = Array.isArray(d.order_items) ? (d.order_items as Record<string, unknown>[]) : [];
   const rawPerson =
     typeof d.person === "object" && d.person !== null ? (d.person as Record<string, unknown>) : {};
   const rawEvent =
@@ -26,7 +26,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
     eventId: (d.event_id ?? "") as string,
     event: rawEvent ? apiToEvent(rawEvent) : null,
     guestCount: (d.guest_count ?? 1) as number,
-    preOrders: rawOrders.map((item) => {
+    orderItems: rawOrders.map((item) => {
       const quantity = Number(item.quantity ?? 1);
       const quantitySafe = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
       const deliveredQuantityRaw =
@@ -35,6 +35,11 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
       const deliveredQuantity = Number(deliveredQuantityRaw);
       const deliveredQuantitySafe = Number.isFinite(deliveredQuantity)
         ? Math.max(0, Math.min(quantitySafe, deliveredQuantity))
+        : 0;
+
+      const includedQuantityRaw = Number(item.included_quantity ?? 0);
+      const includedQuantity = Number.isFinite(includedQuantityRaw)
+        ? Math.max(0, Math.min(quantitySafe, includedQuantityRaw))
         : 0;
 
       return {
@@ -46,6 +51,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
         price: (item.price ?? 0) as number,
         category: (item.category ?? "other") as OrderItemCategory,
         delivered: deliveredQuantitySafe === quantitySafe,
+        includedQuantity,
       };
     }),
     notes: (d.notes ?? "") as string,
@@ -53,6 +59,8 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
     tableId: (d.table_id as string | undefined) ?? undefined,
     status: (d.status ?? "pending") as RegistrationStatus,
     paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
+    // Serialized as a decimal string by the API to avoid float drift on money.
+    amountDue: d.amount_due == null ? undefined : Number(d.amount_due),
     checkedIn: (d.checked_in ?? false) as boolean,
     checkedInAt: (d.checked_in_at as string | undefined) ?? undefined,
     strapIssued: (d.strap_issued ?? false) as boolean,

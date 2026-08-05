@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 import app.ratelimit as ratelimit_module
 from app.models import ReservationAccessToken
 from tests.helpers import (
+    ADMIN_HEADERS,
     _create_event,
     _post_registration,
     _registration_body,
@@ -119,6 +120,34 @@ async def test_my_reservations_access_token_flow(client, db_session, monkeypatch
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=UTC)
     assert expires_at <= datetime.now(UTC)
+
+
+@pytest.mark.anyio
+async def test_my_reservations_access_includes_amount_due(client, monkeypatch):
+    """The guest self-lookup response surfaces amount_due so a visitor can see
+    what they still owe (e.g. a bourse table fee settled on arrival)."""
+    token = "guest-access-token-amount-due"
+    monkeypatch.setattr("app.routers.registrations.secrets.token_urlsafe", lambda _: token)
+
+    r = await _post_registration(client, path="/api/registrations", email="Jean@Example.com")
+    assert r.status_code == 201
+    registration_id = r.json()["id"]
+
+    r = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"amount_due": "25.00"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+
+    r = await client.post("/api/registrations/my/request", json={"email": "jean@example.com"})
+    assert r.status_code == 202
+
+    r = await client.post("/api/registrations/my/access", json={"token": token})
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert float(items[0]["amount_due"]) == 25.0
 
 
 @pytest.mark.anyio

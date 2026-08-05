@@ -34,8 +34,16 @@ import { devError } from "@/utils/devLog";
 import { recordSignOutReason } from "@/utils/signOutReason";
 import Card from "react-bootstrap/Card";
 
-function activeEditionLabel(year: number): string {
-  return `${m.festival_name()} ${year}`;
+function activeEditionLabel(edition: { editionType: string; year: number }): string {
+  // The admin strip follows whichever edition is next, so it can't assume festival.
+  switch (edition.editionType) {
+    case "bourse":
+      return `${m.admin_edition_type_bourse()} ${edition.year}`;
+    case "capsule_exchange":
+      return `${m.admin_edition_type_capsule_exchange()} ${edition.year}`;
+    default:
+      return `${m.festival_name()} ${edition.year}`;
+  }
 }
 
 interface AdminDashboardProps {
@@ -43,7 +51,9 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
-  const { edition: activeEdition } = useActiveEdition();
+  // "any" rather than the public festival scope: floor plans and the event-day
+  // views have to follow whichever edition is next, including a bourse.
+  const { edition: activeEdition } = useActiveEdition("any");
   const queryClient = useQueryClient();
   const auth = useAuth();
   const navRef = useRef<HTMLElement>(null);
@@ -203,7 +213,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleChangeTableType,
     handleDeleteArea,
     handleDeleteLayout,
+    handleDeleteRoom,
     handleDeleteTable,
+    handleDeleteTableType,
     handleDeleteVenue,
     handleMoveArea,
     handleMoveTable,
@@ -423,7 +435,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 }}
                 aria-label={m.admin_active_edition_apply_filter()}
               >
-                <span className="fw-semibold">{activeEditionLabel(activeEdition.year)}</span>
+                <span className="fw-semibold">{activeEditionLabel(activeEdition)}</span>
                 {isActiveEditionDay && (
                   <span className="text-warning">
                     {m.admin_active_edition_day_progress({
@@ -512,6 +524,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                           void loadData();
                           void invalidateAdmin(queryClient, [
                             activeEditionQueryKey,
+                            queryKeys.admin.activeEdition,
                             queryKeys.admin.activeEditionEvents,
                           ]);
                         }}
@@ -557,6 +570,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onAddRoom={handleAddRoom}
                     onArchiveRoom={handleArchiveRoom}
                     onRestoreRoom={handleRestoreRoom}
+                    onDeleteRoom={handleDeleteRoom}
                   />
                 )}
                 {canManageAdminSections && activeKey === "table-types" && (
@@ -566,6 +580,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onUpdate={handleUpdateTableType}
                     onArchive={handleArchiveTableType}
                     onRestore={handleRestoreTableType}
+                    onDelete={handleDeleteTableType}
                   />
                 )}
                 {canManageAdminSections && activeKey === "directory" && (

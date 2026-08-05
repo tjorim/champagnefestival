@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import re
 from datetime import date as dt_date
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -32,6 +32,10 @@ class OrderItemBase(BaseModel):
     category: OrderItemCategory
     delivered_quantity: int | None = Field(default=None, ge=0)
     delivered: bool = False
+    included_quantity: int = Field(default=0, ge=0)
+    """How many of `quantity` came free via a product bundle (see
+    Product.included_product_id) — only `quantity - included_quantity` is
+    billed at `price` per unit."""
 
     @model_validator(mode="after")
     def validate_delivery_quantities(self) -> Self:
@@ -40,6 +44,8 @@ class OrderItemBase(BaseModel):
             delivered_quantity = self.quantity if self.delivered else 0
         if delivered_quantity > self.quantity:
             raise ValueError("delivered_quantity cannot exceed quantity.")
+        if self.included_quantity > self.quantity:
+            raise ValueError("included_quantity cannot exceed quantity.")
 
         self.delivered_quantity = delivered_quantity
         self.delivered = delivered_quantity == self.quantity
@@ -48,6 +54,19 @@ class OrderItemBase(BaseModel):
 
 class OrderItemOut(OrderItemBase):
     pass
+
+
+class OrderItemRequest(BaseModel):
+    """What a registration request supplies for an order line item.
+
+    Only `product_id` and `quantity` are client-supplied; `name`/`price`/`category`
+    are resolved server-side against the event's real products (see
+    `_resolve_order_items` in routers/registrations.py) so a client can never set an
+    arbitrary or zero price, or order a product that doesn't exist.
+    """
+
+    product_id: str = Field(min_length=1)
+    quantity: int = Field(ge=1, le=100)
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +165,54 @@ class EventOut(BaseModel):
     max_capacity: int | None
     active: bool
     edition: EditionSummaryOut | None = None
+    products: list[ProductOut] = Field(default_factory=list)
+    """Active products only — see ProductOut. Empty means nothing to order."""
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ProductCreate(BaseModel):
+    event_id: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=200)
+    price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
+    category: OrderItemCategory
+    active: bool = True
+    required: bool = False
+    included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
+    included_per_guests: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_inclusion_pair(self) -> Self:
+        if (self.included_product_id is None) != (self.included_per_guests is None):
+            raise ValueError("included_product_id and included_per_guests must be set together.")
+        return self
+
+
+class ProductUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
+    category: OrderItemCategory | None = None
+    active: bool | None = None
+    required: bool | None = None
+    # Nullable and independently settable, so the router (not this schema) decides
+    # what "both or neither" means against the product's *resulting* state —
+    # a PATCH may touch only one field while leaving the other as already stored.
+    included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
+    included_per_guests: int | None = Field(default=None, ge=1)
+
+
+class ProductOut(BaseModel):
+    id: str
+    event_id: str
+    name: str
+    price: Decimal
+    category: OrderItemCategory
+    active: bool
+    required: bool
+    included_product_id: str | None
+    included_per_guests: int | None
     created_at: datetime
     updated_at: datetime
 
@@ -153,6 +220,9 @@ class EventOut(BaseModel):
 
 
 class EventCheckInStats(BaseModel):
+    """Guest counts for an event's live entrance display. `total`/`checked_in`
+    are guest headcounts (sum of `guest_count`), not booking counts."""
+
     event_id: str
     total: int
     checked_in: int
@@ -169,7 +239,7 @@ class RegistrationCreate(BaseModel):
     phone: str = Field(min_length=1, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[OrderItemBase] = Field(default_factory=list)
+    order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
@@ -183,8 +253,9 @@ class RegistrationCreate(BaseModel):
 class RegistrationUpdate(BaseModel):
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
+    amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     table_id: str | None = None
-    pre_orders: list[OrderItemBase] | None = None
+    order_items: list[OrderItemBase] | None = None
     notes: str | None = None
     accessibility_note: str | None = None
     person_id: str | None = Field(default=None, min_length=1)
@@ -199,12 +270,13 @@ class RegistrationOut(BaseModel):
     event_id: str
     event: EventOut
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     notes: str
     accessibility_note: str
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
+    amount_due: Decimal | None
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -231,11 +303,12 @@ class RegistrationListOut(BaseModel):
     event_id: str
     event: EventOut
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     accessibility_note: str
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
+    amount_due: Decimal | None
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -253,9 +326,10 @@ class RegistrationGuestOut(BaseModel):
     event_id: str
     event_title: str
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     status: RegistrationStatus
     payment_status: PaymentStatus
+    amount_due: Decimal | None
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -279,11 +353,6 @@ class MyRegistrationOut(BaseModel):
     checked_in_at: datetime | None
     person_name: str
     created_at: datetime
-
-
-class MyQrOut(BaseModel):
-    token: str
-    expires_at: datetime
 
 
 class PebbleAccessTokenOut(BaseModel):
@@ -315,7 +384,7 @@ class RegistrationAdminCreate(BaseModel):
     person_id: str = Field(min_length=1, max_length=64)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[OrderItemBase] = Field(default_factory=list)
+    order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
     accessibility_note: str = Field(default="", max_length=2000)
     status: RegistrationStatus = "confirmed"
@@ -399,7 +468,7 @@ class CheckInGuestOut(BaseModel):
     """Minimal registration data returned by the public check-in GET endpoint.
 
     Only exposes fields needed on the volunteer tablet — guest name, party size,
-    event info, pre-orders, arrival notes, and check-in/strap status.
+    event info, order items, arrival notes, and check-in/strap status.
     PII fields (email, phone) and internal-only fields (payment_status, table_id,
     timestamps) are omitted.
     """
@@ -411,7 +480,7 @@ class CheckInGuestOut(BaseModel):
     table_id: str | None = None
     table_name: str | None = None
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     notes: str
     status: RegistrationStatus
     checked_in: bool
@@ -440,7 +509,7 @@ class VolunteerCheckInRequest(BaseModel):
 
 
 class VolunteerRegistrationUpdate(BaseModel):
-    pre_orders: list[OrderItemBase] | None = None
+    order_items: list[OrderItemBase] | None = None
     strap_issued: bool | None = None
 
 
@@ -815,27 +884,6 @@ class RoomOut(BaseModel):
 # Editions
 # ---------------------------------------------------------------------------
 
-# Canonical contract for community edition contact emails, shared with the
-# frontend's COMMUNITY_CONTACT_EMAIL_REGEX (frontend/src/config/constants.ts).
-# Deliberately narrower than Pydantic's EmailStr: ASCII-only RFC 5321 "dot-atom"
-# local part plus a conventional domain, so any address accepted here is
-# guaranteed renderable as a safe `mailto:` link and free of control/header
-# injection characters. Keep both patterns in sync.
-COMMUNITY_CONTACT_EMAIL_PATTERN = re.compile(
-    r"^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*"
-    r"@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
-    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,}$"
-)
-
-
-def _validate_community_contact_email(v: str | None) -> str | None:
-    if v is not None and not COMMUNITY_CONTACT_EMAIL_PATTERN.match(v):
-        raise ValueError(
-            "external_contact_email must be an ASCII email address "
-            "(internationalized/Unicode addresses are not supported)."
-        )
-    return v
-
 
 class EditionCreate(BaseModel):
     id: str = Field(min_length=1, max_length=100)
@@ -843,16 +891,9 @@ class EditionCreate(BaseModel):
     month: str
     venue_id: str
     edition_type: EditionType = "festival"
-    external_partner: str | None = Field(default=None, max_length=200)
-    external_contact_name: str | None = Field(default=None, max_length=200)
-    external_contact_email: EmailStr | None = None
     exhibitors: list[int] = Field(default_factory=list)
+    co_organizer_exhibitor_id: int | None = None
     active: bool = True
-
-    @field_validator("external_contact_email")
-    @classmethod
-    def validate_external_contact_email(cls, v: str | None) -> str | None:
-        return _validate_community_contact_email(v)
 
 
 class EditionUpdate(BaseModel):
@@ -860,16 +901,9 @@ class EditionUpdate(BaseModel):
     month: str | None = None
     venue_id: str | None = None
     edition_type: EditionType | None = None
-    external_partner: str | None = Field(default=None, max_length=200)
-    external_contact_name: str | None = Field(default=None, max_length=200)
-    external_contact_email: EmailStr | None = None
     exhibitors: list[int] | None = None
+    co_organizer_exhibitor_id: int | None = None
     active: bool | None = None
-
-    @field_validator("external_contact_email")
-    @classmethod
-    def validate_external_contact_email(cls, v: str | None) -> str | None:
-        return _validate_community_contact_email(v)
 
 
 class EditionItemOut(BaseModel):
@@ -891,15 +925,13 @@ class EditionOut(BaseModel):
     year: int
     month: str
     edition_type: EditionType
-    external_partner: str | None
-    external_contact_name: str | None
-    external_contact_email: EmailStr | None
     dates: list[dt_date] = Field(default_factory=list)
     venue: VenueOut
     events: list[EventOut]
     producers: list[EditionItemOut]
     sponsors: list[EditionItemOut]
     vendors: list[EditionItemOut]
+    co_organizer: EditionItemOut | None = None
     active: bool
     created_at: datetime
     updated_at: datetime

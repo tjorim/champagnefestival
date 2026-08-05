@@ -62,7 +62,7 @@ def test_registration_lookup_supports_order_product_without_fuzzy_identifiers():
         event_title="Friday tasting",
         table_id="tbl-12",
         table_name="Table 12",
-        pre_orders=[{"name": "Brut Réserve", "category": "champagne"}],
+        order_items=[{"name": "Brut Réserve", "category": "champagne"}],
     )
     assert match is not None
     assert match.field == "order"

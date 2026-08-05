@@ -141,7 +141,7 @@ def _make_registration(
     strap_issued: bool = False,
     status: str = "confirmed",
     payment_status: str = "paid",
-    pre_orders: list | None = None,
+    order_items: list | None = None,
     accessibility_note: str = "",
 ) -> Any:
     r = MagicMock()
@@ -156,9 +156,9 @@ def _make_registration(
     r.status = status
     r.payment_status = payment_status
     r.accessibility_note = accessibility_note
-    r.pre_orders = (
-        pre_orders
-        if pre_orders is not None
+    r.order_items = (
+        order_items
+        if order_items is not None
         else [
             {
                 "product_id": "champ-std",
@@ -739,8 +739,8 @@ class TestGetGuestRegistration:
         r = result["registration"]
         assert r["id"] == "reg-1"
         assert r["person"]["name"] == "Jean Dupont"
-        assert len(r["pre_orders"]) == 1
-        order = r["pre_orders"][0]
+        assert len(r["order_items"]) == 1
+        order = r["order_items"][0]
         assert order["category"] == "champagne"
         assert order["delivered"] is False
 
@@ -865,7 +865,7 @@ class TestGetTableOrderSummary:
     async def test_returns_order_summary(self):
         table = _make_table()
         reg = _make_registration(
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "champ-std",
                     "name": "Standard",
@@ -903,7 +903,7 @@ class TestGetTableOrderSummary:
     async def test_all_delivered_true_when_all_orders_delivered(self):
         table = _make_table()
         reg = _make_registration(
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "champ-std",
                     "name": "Standard",
@@ -971,7 +971,7 @@ class TestGetGuestOrderStatus:
     @pytest.mark.anyio
     async def test_returns_delivery_state(self):
         reg = _make_registration(
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "champ-std",
                     "name": "Standard",
@@ -1006,7 +1006,7 @@ class TestGetGuestOrderStatus:
     @pytest.mark.anyio
     async def test_non_champagne_orders_excluded_from_champagne_counts(self):
         reg = _make_registration(
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "food-1",
                     "name": "Cheese Board",
@@ -1054,7 +1054,7 @@ class TestGetChampagneDeliverySummary:
         edition = _make_edition(events=[ev])
         reg1 = _make_registration(
             reg_id="reg-1",
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "champ-std",
                     "name": "Standard",
@@ -1067,7 +1067,7 @@ class TestGetChampagneDeliverySummary:
         )
         reg2 = _make_registration(
             reg_id="reg-2",
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "champ-std",
                     "name": "Standard",
@@ -1101,7 +1101,7 @@ class TestGetChampagneDeliverySummary:
         ev = _make_event(event_date=date(2099, 3, 21))
         edition = _make_edition(events=[ev])
         reg = _make_registration(
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "food-1",
                     "name": "Cheese",
@@ -1146,7 +1146,7 @@ class TestGetUndeliveredChampagneByTable:
         ev = _make_event(event_date=date(2099, 3, 21))
         edition = _make_edition(events=[ev])
         reg = _make_registration(
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "champ-std",
                     "name": "Standard",
@@ -1171,7 +1171,7 @@ class TestGetUndeliveredChampagneByTable:
         edition = _make_edition(events=[ev])
         reg = _make_registration(
             table_id="tbl-1",
-            pre_orders=[
+            order_items=[
                 {
                     "product_id": "champ-std",
                     "name": "Standard",

@@ -253,7 +253,7 @@ def best_registration_match(
     event_title: str,
     table_id: str | None,
     table_name: str | None,
-    pre_orders: list[dict] | None,
+    order_items: list[dict] | None,
 ) -> RankedMatch | None:
     """Rank an operational query across supported registration fields."""
 
@@ -275,14 +275,14 @@ def best_registration_match(
             product_name=str(item.get("name", "")),
             category=str(item.get("category", "")),
         )
-        for item in (pre_orders or [])
+        for item in (order_items or [])
         if isinstance(item, dict)
     )
     return min((match for match in matches if match is not None), default=None)
 
 
 def matches_order_filters(
-    pre_orders: list[dict] | None,
+    order_items: list[dict] | None,
     *,
     category: str | None,
     delivery_state: Literal["pending", "delivered"] | None,
@@ -291,7 +291,7 @@ def matches_order_filters(
 
     if category is None and delivery_state is None:
         return True
-    for item in pre_orders or []:
+    for item in order_items or []:
         if not isinstance(item, dict):
             continue
         if category is not None and normalize_text(str(item.get("category", ""))) != normalize_text(category):

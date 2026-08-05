@@ -73,6 +73,7 @@ interface RenderOverrides {
   onAddRoom?: (...args: unknown[]) => Promise<void>;
   onArchiveRoom?: (...args: unknown[]) => Promise<void>;
   onRestoreRoom?: (...args: unknown[]) => Promise<void>;
+  onDeleteRoom?: (...args: unknown[]) => Promise<void>;
 }
 
 function renderVenueManagement(overrides: RenderOverrides = {}) {
@@ -83,6 +84,7 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
   const onAddRoom = overrides.onAddRoom ?? vi.fn().mockResolvedValue(undefined);
   const onArchiveRoom = overrides.onArchiveRoom ?? vi.fn().mockResolvedValue(undefined);
   const onRestoreRoom = overrides.onRestoreRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onDeleteRoom = overrides.onDeleteRoom ?? vi.fn().mockResolvedValue(undefined);
 
   render(
     <VenueManagement
@@ -95,10 +97,11 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
       onAddRoom={onAddRoom}
       onArchiveRoom={onArchiveRoom}
       onRestoreRoom={onRestoreRoom}
+      onDeleteRoom={onDeleteRoom}
     />,
   );
 
-  return { onAdd, onArchive, onRestore, onDelete, onAddRoom, onArchiveRoom, onRestoreRoom };
+  return { onAdd, onArchive, onRestore, onDelete, onAddRoom, onArchiveRoom, onRestoreRoom, onDeleteRoom };
 }
 
 describe("VenueManagement", () => {
@@ -235,5 +238,26 @@ describe("VenueManagement", () => {
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
     expect(onAddRoom).toHaveBeenCalledWith("venue-1", "New Room", 12, 8, "#ffc107");
+  });
+
+  it("deletes an archived room and surfaces the API's refusal", async () => {
+    // DELETE /api/rooms/{id} 409s while layouts still reference the room, so a
+    // failed delete has to explain itself rather than look inert.
+    const onDeleteRoom = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Cannot delete: layouts are still using this room."))
+      .mockResolvedValueOnce(undefined);
+    renderVenueManagement({ onDeleteRoom });
+
+    const deleteButton = screen.getByRole("button", { name: /admin_delete Room B/ });
+
+    fireEvent.click(deleteButton);
+    expect(
+      await screen.findByText("Cannot delete: layouts are still using this room."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(deleteButton);
+    await waitFor(() => expect(onDeleteRoom).toHaveBeenCalledTimes(2));
+    expect(onDeleteRoom).toHaveBeenLastCalledWith("room-2");
   });
 });

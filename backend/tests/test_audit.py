@@ -45,7 +45,7 @@ async def _create_admin_registration(client, *, event=None):
             "notes": "",
             "accessibility_note": "",
             "status": "confirmed",
-            "pre_orders": [],
+            "order_items": [],
         },
         headers=ADMIN_HEADERS,
     )

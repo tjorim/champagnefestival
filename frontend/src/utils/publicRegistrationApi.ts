@@ -13,7 +13,7 @@ export interface CheckInData {
   eventTitle: string;
   guestCount: number;
   tableName?: string;
-  preOrders: {
+  orderItems: {
     productId: string;
     name: string;
     quantity: number;
@@ -38,7 +38,7 @@ interface CheckInResponseRegistration {
   event_title?: string;
   guest_count?: number;
   table_name?: string | null;
-  pre_orders?: Record<string, unknown>[];
+  order_items?: Record<string, unknown>[];
   notes?: string;
   accessibility_note?: string;
   status?: RegistrationStatus;
@@ -84,7 +84,7 @@ function normalizeDeliveredQuantities(item: {
 }
 
 function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
-  const rawOrders: unknown[] = data.pre_orders ?? [];
+  const rawOrders: unknown[] = data.order_items ?? [];
 
   return {
     id: data.id ?? "",
@@ -93,7 +93,7 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
     eventTitle: data.event_title ?? "",
     guestCount: data.guest_count ?? 1,
     tableName: data.table_name ?? undefined,
-    preOrders: rawOrders.filter(isGuestOrderItemResponse).map((item) => ({
+    orderItems: rawOrders.filter(isGuestOrderItemResponse).map((item) => ({
       ...normalizeDeliveredQuantities(item),
       productId: item.product_id,
       name: item.name,
@@ -170,7 +170,7 @@ export interface GuestRegistration {
   checkedInAt?: string;
   strapIssued: boolean;
   createdAt: string;
-  preOrders: {
+  orderItems: {
     productId: string;
     name: string;
     quantity: number;
@@ -202,7 +202,7 @@ interface GuestRegistrationResponse {
   checked_in_at?: string | null;
   strap_issued: boolean;
   created_at: string;
-  pre_orders: GuestOrderItemResponse[];
+  order_items: GuestOrderItemResponse[];
 }
 
 export interface RegistrationLookupRequestAcceptedResponse {
@@ -265,8 +265,8 @@ function isGuestRegistrationResponse(value: unknown): value is GuestRegistration
       typeof value.checked_in_at === "string") &&
     typeof value.strap_issued === "boolean" &&
     typeof value.created_at === "string" &&
-    Array.isArray(value.pre_orders) &&
-    value.pre_orders.every(isGuestOrderItemResponse)
+    Array.isArray(value.order_items) &&
+    value.order_items.every(isGuestOrderItemResponse)
   );
 }
 
@@ -306,7 +306,7 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
     checkedInAt: registration.checked_in_at ?? undefined,
     strapIssued: registration.strap_issued,
     createdAt: registration.created_at,
-    preOrders: registration.pre_orders.map((item) => ({
+    orderItems: registration.order_items.map((item) => ({
       ...normalizeDeliveredQuantities(item),
       productId: item.product_id,
       name: item.name,
@@ -370,14 +370,11 @@ export async function submitRegistration(payload: RegistrationFormData): Promise
       phone: payload.phone,
       event_id: payload.eventId,
       guest_count: payload.guestCount,
-      pre_orders: payload.preOrders.map((order) => ({
+      // The server resolves name/price/category from the event's real products —
+      // see OrderItemRequest in the backend schema — so only these two are sent.
+      order_items: payload.orderItems.map((order) => ({
         product_id: order.productId,
-        name: order.name,
         quantity: order.quantity,
-        delivered_quantity: order.deliveredQuantity,
-        price: order.price,
-        category: order.category,
-        delivered: order.delivered,
       })),
       notes: payload.notes,
       honeypot: payload.honeypot ?? "",

@@ -54,7 +54,7 @@ async def test_volunteer_registrations_support_table_lookup_and_hide_pii(client)
     assert row["table_id"] == table_id
     assert row["table_name"] == "Table A"
     assert row["notes"] == "No sugar"
-    assert "pre_orders" in row
+    assert "order_items" in row
     assert "address" not in row
     assert "national_register_number" not in row
     assert "eid_document_number" not in row
@@ -94,7 +94,12 @@ async def test_volunteer_registrations_normalize_visible_table_reference_and_fil
     table_id = await _create_table(client, name="table-12")
     r = await client.put(
         f"/api/registrations/{registration_id}",
-        json={"table_id": table_id},
+        json={
+            "table_id": table_id,
+            "order_items": [
+                {"product_id": "prod-01", "name": "Bottle", "quantity": 1, "price": 65.0, "category": "champagne"}
+            ],
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -156,7 +161,7 @@ async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(
         f"/api/volunteer/registrations/{registration_id}",
         json={
             "strap_issued": True,
-            "pre_orders": [
+            "order_items": [
                 {
                     "product_id": "prod-01",
                     "name": "Champagne bottle",
@@ -174,7 +179,7 @@ async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(
     payload = r.json()
     assert payload["id"] == registration_id
     assert payload["strap_issued"] is True
-    assert payload["pre_orders"][0]["delivered_quantity"] == 1
+    assert payload["order_items"][0]["delivered_quantity"] == 1
     assert "email" not in payload
     assert "phone" not in payload
 
