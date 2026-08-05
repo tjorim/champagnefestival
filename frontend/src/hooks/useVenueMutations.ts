@@ -619,6 +619,19 @@ export function useVenueMutations({
     retry: false,
   });
 
+  const deleteTableTypeMutation = useMutation({
+    mutationFn: (typeId: string) =>
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/table-types/${typeId}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_table_type(),
+      ),
+    onSettled: () => {
+      void invalidateAdmin(queryClient, [tableTypesQueryKey]);
+    },
+    retry: false,
+  });
+
   return {
     createTableMutation,
     changeTableTypeMutation,
@@ -643,5 +656,6 @@ export function useVenueMutations({
     deleteAreaMutation,
     createTableTypeMutation,
     updateTableTypeMutation,
+    deleteTableTypeMutation,
   };
 }

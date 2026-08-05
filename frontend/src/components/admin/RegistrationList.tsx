@@ -23,7 +23,12 @@ import { exportToCsv } from "@/utils/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
-import { downloadRegistrationsCsv, fetchRegistrations } from "@/utils/adminFetch";
+import {
+  downloadRegistrationsCsv,
+  fetchEventCheckInStats,
+  fetchRegistrations,
+} from "@/utils/adminFetch";
+import { queryKeys } from "@/utils/queryKeys";
 import { toLocalDateKey } from "@/utils/dateUtils";
 import { isRegistrationInEdition } from "@/utils/adminUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
@@ -173,6 +178,12 @@ export default function RegistrationList({
     queryKey: ["admin", "registrations", "search", debouncedQ],
     queryFn: () => fetchRegistrations(authHeaders, debouncedQ),
     enabled: debouncedQ.length > 0,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+  const checkInStatsQuery = useQuery({
+    queryKey: queryKeys.admin.eventCheckInStats,
+    queryFn: () => fetchEventCheckInStats(authHeaders),
     staleTime: 30 * 1000,
     retry: false,
   });
@@ -655,6 +666,14 @@ export default function RegistrationList({
 
   // Built from every registration, not the filtered rows: capacity is a property
   // of the event, so it must not shift when someone searches or filters by status.
+  //
+  // The counts themselves come from GET /api/events/checkin-stats — the endpoint
+  // built for exactly this, and the one the Android entrance display reads — so
+  // both surfaces report the same numbers, counted server-side over every
+  // registration rather than over whatever this client happens to hold. The
+  // local tally below still supplies each event's title and capacity, which the
+  // stats endpoint doesn't carry, and stands in for the counts until the query
+  // settles (or if it fails), since it measures the same thing.
   const eventCapacityStats = useMemo(() => {
     const statsByEvent = new Map<
       string,
@@ -686,10 +705,20 @@ export default function RegistrationList({
       }
     }
 
+    for (const serverStats of checkInStatsQuery.data ?? []) {
+      const existing = statsByEvent.get(serverStats.eventId);
+      statsByEvent.set(serverStats.eventId, {
+        checkedIn: serverStats.checkedIn,
+        total: serverStats.total,
+        title: existing?.title ?? serverStats.eventId,
+        maxCapacity: existing?.maxCapacity,
+      });
+    }
+
     return [...statsByEvent.entries()]
       .map(([eventId, stats]) => ({ eventId, ...stats }))
       .sort((a, b) => a.title.localeCompare(b.title));
-  }, [registrations]);
+  }, [registrations, checkInStatsQuery.data]);
 
   const handleExportCsv = useCallback(() => {
     const rows = table.getRowModel().rows.map(({ original: reg }) => ({

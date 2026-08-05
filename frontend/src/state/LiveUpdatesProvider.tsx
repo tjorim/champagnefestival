@@ -47,6 +47,11 @@ export function LiveUpdatesProvider(): null {
 
           if (!canPatchRegistration || !isAdminRegistrationsKey) {
             queryClient.invalidateQueries({ queryKey: key });
+          } else {
+            // Patching keeps the collection's rows fresh, but the server-counted
+            // check-in stats nested under this key are skipped along with it —
+            // a check-in changes them, so refetch them explicitly.
+            queryClient.invalidateQueries({ queryKey: queryKeys.admin.eventCheckInStats });
           }
         }
 

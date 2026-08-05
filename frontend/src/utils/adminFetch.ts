@@ -7,6 +7,7 @@ import type {
   Venue,
   AuditEntry,
   EditionAttendanceStats,
+  EventCheckInStats,
 } from "@/types/admin";
 import { apiToRegistration } from "@/types/registrationMapper";
 import type { Registration } from "@/types/registration";
@@ -26,6 +27,7 @@ import {
   apiAreaToArea,
   apiAuditEntryToAuditEntry,
   apiEditionStatsToEditionAttendanceStats,
+  apiEventCheckInStatsToEventCheckInStats,
   mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
@@ -226,6 +228,23 @@ export async function fetchAuditResourceTypes(
     m.admin_error_load_data(),
   );
   return Array.isArray(payload) ? payload : [];
+}
+
+/**
+ * Per-event check-in progress, counted by the backend rather than from whatever
+ * registrations the client happens to hold. Optionally scoped to one edition.
+ */
+export async function fetchEventCheckInStats(
+  authHeaders: () => Record<string, string>,
+  editionId?: string,
+): Promise<EventCheckInStats[]> {
+  const suffix = editionId ? `?edition_id=${encodeURIComponent(editionId)}` : "";
+  return fetchArrayOrThrow(
+    `/api/events/checkin-stats${suffix}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiEventCheckInStatsToEventCheckInStats,
+  );
 }
 
 export async function fetchEditionStats(

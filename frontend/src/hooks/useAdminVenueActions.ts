@@ -51,6 +51,7 @@ export function useAdminVenueActions({
     deleteAreaMutation,
     deleteLayoutMutation,
     deleteTableMutation,
+    deleteTableTypeMutation,
     deleteVenueMutation,
     moveAreaMutation,
     moveTableMutation,
@@ -425,6 +426,16 @@ export function useAdminVenueActions({
     [handleUpdateTableType],
   );
 
+  const handleDeleteTableType = useCallback(
+    async (id: string) => {
+      await deleteTableTypeMutation.mutateAsync(id);
+      queryClient.setQueryData<TableType[]>(tableTypesQueryKey, (prev) =>
+        prev ? prev.filter((tt) => tt.id !== id) : prev,
+      );
+    },
+    [deleteTableTypeMutation, queryClient, tableTypesQueryKey],
+  );
+
   return {
     handleAddArea,
     handleAddLayout,
@@ -441,6 +452,7 @@ export function useAdminVenueActions({
     handleDeleteLayout,
     handleDeleteRoom,
     handleDeleteTable,
+    handleDeleteTableType,
     handleDeleteVenue,
     handleMoveArea,
     handleMoveTable,

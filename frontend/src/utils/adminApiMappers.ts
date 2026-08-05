@@ -7,6 +7,7 @@ import type {
   Venue,
   AuditEntry,
   EditionAttendanceStats,
+  EventCheckInStats,
 } from "@/types/admin";
 import type { Person } from "@/types/person";
 
@@ -21,6 +22,17 @@ export function apiAuditEntryToAuditEntry(d: Record<string, unknown>): AuditEntr
     resourceId: d.resource_id as string,
     requestId: (d.request_id ?? null) as string | null,
     details: (d.details ?? {}) as Record<string, unknown>,
+  };
+}
+
+/** Map FastAPI snake_case per-event check-in stats response to frontend camelCase type */
+export function apiEventCheckInStatsToEventCheckInStats(
+  d: Record<string, unknown>,
+): EventCheckInStats {
+  return {
+    eventId: d.event_id as string,
+    total: d.total as number,
+    checkedIn: d.checked_in as number,
   };
 }
 

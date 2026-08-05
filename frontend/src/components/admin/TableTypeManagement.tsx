@@ -24,6 +24,7 @@ interface TableTypeManagementProps {
   onUpdate: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
   onArchive: (id: string) => Promise<void>;
   onRestore: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 const emptyForm = {
@@ -44,6 +45,7 @@ export default function TableTypeManagement({
   onUpdate,
   onArchive,
   onRestore,
+  onDelete,
 }: TableTypeManagementProps) {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,6 +135,21 @@ export default function TableTypeManagement({
       }
     },
     [onRestore],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      if (!window.confirm(m.admin_table_type_delete_confirm())) return;
+      setDeleteError(null);
+      try {
+        await onDelete(id);
+      } catch (err) {
+        // The API refuses while tables still use the type; surface that instead
+        // of leaving the button looking inert.
+        setDeleteError(err instanceof Error ? err.message : m.admin_content_error_save());
+      }
+    },
+    [onDelete],
   );
 
   const columns = useMemo(
@@ -227,22 +244,33 @@ export default function TableTypeManagement({
                     <i className="bi bi-archive" aria-hidden="true" />
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline-success"
-                    onClick={() => handleRestore(tt.id)}
-                    aria-label={m.admin_content_restore()}
-                    title={m.admin_content_restore()}
-                  >
-                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline-success"
+                      onClick={() => handleRestore(tt.id)}
+                      aria-label={m.admin_content_restore()}
+                      title={m.admin_content_restore()}
+                    >
+                      <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline-danger"
+                      onClick={() => handleDelete(tt.id)}
+                      aria-label={`${m.admin_delete()} ${tt.name}`}
+                      title={m.admin_delete()}
+                    >
+                      <i className="bi bi-trash" aria-hidden="true" />
+                    </Button>
+                  </>
                 )}
               </div>
             );
           },
         }),
       ]),
-    [openEdit, handleArchive, handleRestore],
+    [openEdit, handleArchive, handleRestore, handleDelete],
   );
 
   const table = useAppTable(
