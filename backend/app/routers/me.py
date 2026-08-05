@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
-import jwt
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import delete, select
@@ -14,11 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import get_current_claims
-from app.config import settings
 from app.database import get_db
 from app.models import Event, Registration, User
 from app.schemas import (
-    MyQrOut,
     MyRegistrationOut,
     PaymentStatus,
     PebbleAccessTokenOut,
@@ -34,14 +30,6 @@ from app.utils import make_id
 router = APIRouter(prefix="/api/me", tags=["me"])
 pebble_router = APIRouter(prefix="/api/pebble", tags=["pebble"])
 _bearer_scheme = HTTPBearer(auto_error=True)
-
-_QR_TOKEN_TTL_MINUTES = 15
-_QR_ALGORITHM = "HS256"
-_QR_FALLBACK_SECRET = "dev-insecure-qr-secret"  # noqa: S105 — only used when no secret is configured
-
-
-def _qr_secret() -> str:
-    return settings.qr_signing_secret or _QR_FALLBACK_SECRET
 
 
 async def _get_or_create_user(db: AsyncSession, oidc_subject: str) -> User:
@@ -151,37 +139,6 @@ async def list_pebble_registrations(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return await _registrations_for_user(db, user_id)
-
-
-@router.get("/qr", response_model=MyQrOut)
-async def get_my_qr(
-    claims: dict[str, Any] = Depends(get_current_claims),
-    db: AsyncSession = Depends(get_db),
-) -> MyQrOut:
-    """Return a short-lived signed QR token for VIP entry.
-
-    The token is a compact JWT signed with HMAC-SHA256.  The check-in tablet
-    can verify it offline using the same shared secret without a database round-trip.
-    """
-    oidc_subject: str = claims.get("sub", "")
-    if not oidc_subject:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
-
-    user = await _get_or_create_user(db, oidc_subject)
-
-    now = datetime.now(UTC)
-    expires_at = now + timedelta(minutes=_QR_TOKEN_TTL_MINUTES)
-
-    token_payload = {
-        "sub": user.id,
-        "oidc_sub": oidc_subject,
-        "iat": int(now.timestamp()),
-        "exp": int(expires_at.timestamp()),
-    }
-
-    token = jwt.encode(token_payload, _qr_secret(), algorithm=_QR_ALGORITHM)
-
-    return MyQrOut(token=token, expires_at=expires_at)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)

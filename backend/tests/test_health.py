@@ -193,17 +193,11 @@ def test_settings_reject_excessive_guest_access_token_ttl():
         Settings(guest_access_token_ttl_minutes=GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES + 1)
 
 
-def test_settings_reject_production_without_qr_secret():
-    with pytest.raises(ValidationError, match=r"QR_SIGNING_SECRET must be set in production\."):
-        Settings(environment="production", oidc_issuer_url="https://auth.example.com", qr_signing_secret="")
-
-
 def test_settings_reject_production_without_trusted_hosts():
     with pytest.raises(ValidationError, match=r"TRUSTED_HOSTS must be set in production\."):
         Settings(
             environment="production",
             oidc_issuer_url="https://auth.example.com",
-            qr_signing_secret="secret",
             trusted_hosts="",
         )
 
@@ -220,7 +214,6 @@ def test_settings_reject_dev_auth_bypass_token_in_production():
         Settings(
             environment="production",
             oidc_issuer_url="https://auth.example.com",
-            qr_signing_secret="secret",
             trusted_hosts="champagnefestival.tjor.im",
             dev_auth_bypass_token="some-token",
         )

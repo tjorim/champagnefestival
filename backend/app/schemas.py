@@ -355,11 +355,6 @@ class MyRegistrationOut(BaseModel):
     created_at: datetime
 
 
-class MyQrOut(BaseModel):
-    token: str
-    expires_at: datetime
-
-
 class PebbleAccessTokenOut(BaseModel):
     token: str
 

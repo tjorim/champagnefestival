@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import cast
 
-import jwt
 import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -86,60 +85,6 @@ async def test_me_registrations_auto_provisions_user(me_client, db_session):
     user = result.scalar_one_or_none()
     assert user is not None
     assert user.oidc_subject == "visitor-sub"
-
-
-@pytest.mark.anyio
-async def test_me_qr_returns_token(me_client):
-    """GET /api/me/qr returns a signed JWT with an expiry."""
-    r = await me_client.get("/api/me/qr")
-    assert r.status_code == 200
-    data = r.json()
-    assert "token" in data
-    assert "expires_at" in data
-
-
-@pytest.mark.anyio
-async def test_me_qr_token_contains_expected_claims(me_client):
-    """The QR token payload contains the user's portal ID and oidc_sub."""
-    r = await me_client.get("/api/me/qr")
-    assert r.status_code == 200
-    token = r.json()["token"]
-
-    # Decode without verification to inspect claims (secret not available in test)
-    claims = jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256"])
-    assert claims["oidc_sub"] == "visitor-sub"
-    assert "sub" in claims
-    assert "exp" in claims
-    assert "iat" in claims
-
-
-@pytest.mark.anyio
-async def test_me_qr_token_is_short_lived(me_client):
-    """The QR token should expire within 20 minutes."""
-    from datetime import UTC, datetime
-
-    r = await me_client.get("/api/me/qr")
-    token = r.json()["token"]
-    claims = jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256"])
-
-    now = datetime.now(UTC).timestamp()
-    ttl_seconds = claims["exp"] - now
-    assert 0 < ttl_seconds <= 20 * 60
-
-
-@pytest.mark.anyio
-async def test_me_qr_idempotent_user(me_client, db_session):
-    """Calling /api/me/qr twice does not create duplicate User records."""
-    from sqlalchemy import func, select
-
-    from app.models import User
-
-    await me_client.get("/api/me/qr")
-    await me_client.get("/api/me/qr")
-
-    count_result = await db_session.execute(select(func.count()).where(User.oidc_subject == "visitor-sub"))
-    count = count_result.scalar_one()
-    assert count == 1
 
 
 @pytest.mark.anyio
