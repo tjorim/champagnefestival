@@ -91,6 +91,6 @@ Future workflow additions should follow these conventions:
 
 ## Conventions
 
-- Use American English in code, comments, and UI text
+- Use British English in code, comments, and UI text
 - Prefer targeted tests first, then broader checks before handoff
 - Do not commit automatically unless explicitly asked
