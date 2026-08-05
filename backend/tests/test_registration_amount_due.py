@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 
+from app.models import AuditEntry
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD
 
 
@@ -98,3 +100,78 @@ async def test_amount_due_can_be_cleared_and_rejects_negatives(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 422, r.text
+
+
+@pytest.mark.anyio
+async def test_amount_due_change_is_audited(client, db_session):
+    registration_id = await _registration(client)
+
+    r = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"amount_due": "25.00"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+
+    entries = (
+        (
+            await db_session.execute(
+                select(AuditEntry).where(
+                    AuditEntry.resource_id == registration_id,
+                    AuditEntry.action == "amount_due_updated",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(entries) == 1
+    assert entries[0].details == {"amount_due": 25.0, "previous_amount_due": None}
+
+    r = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"amount_due": None},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+
+    entries = (
+        (
+            await db_session.execute(
+                select(AuditEntry).where(
+                    AuditEntry.resource_id == registration_id,
+                    AuditEntry.action == "amount_due_updated",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(entries) == 2
+    assert entries[1].details == {"amount_due": None, "previous_amount_due": 25.0}
+
+
+@pytest.mark.anyio
+async def test_amount_due_unchanged_is_not_audited(client, db_session):
+    registration_id = await _registration(client)
+
+    r = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"notes": "unrelated update"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+
+    entries = (
+        (
+            await db_session.execute(
+                select(AuditEntry).where(
+                    AuditEntry.resource_id == registration_id,
+                    AuditEntry.action == "amount_due_updated",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert entries == []

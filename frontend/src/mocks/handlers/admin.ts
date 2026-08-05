@@ -771,6 +771,7 @@ export const adminHandlers = [
           ...event.products[idx]!,
           ...body,
           id: String(params.id),
+          event_id: event.id,
           updated_at: now(),
         };
         return HttpResponse.json(event.products[idx]);

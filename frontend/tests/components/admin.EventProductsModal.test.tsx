@@ -197,4 +197,43 @@ describe("EventProductsModal", () => {
     const optionLabels = Array.from(select.options).map((o) => o.textContent);
     expect(optionLabels).not.toContain("Champagne Bottle");
   });
+
+  it("rejects a blank price instead of silently saving it as free", async () => {
+    renderModal([]);
+    await screen.findByText("admin_products_empty");
+
+    let postCalled = false;
+    server.use(
+      http.post("/api/products", () => {
+        postCalled = true;
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
+    fireEvent.change(screen.getByLabelText("admin_products_name"), {
+      target: { value: "Free Sample" },
+    });
+    fireEvent.change(screen.getByLabelText("admin_products_price"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await screen.findByText("admin_products_price_invalid");
+    expect(postCalled).toBe(false);
+  });
+
+  it("shows an error state and disables adding when the products query fails", async () => {
+    server.use(http.get("/api/products", () => HttpResponse.json({ detail: "boom" }, { status: 500 })));
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EventProductsModal show event={event} authHeaders={authHeaders} onHide={() => {}} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText("admin_content_error_load");
+    expect(screen.queryByText("admin_products_empty")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "admin_products_add" })).toBeDisabled();
+  });
 });

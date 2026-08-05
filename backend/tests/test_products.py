@@ -597,3 +597,99 @@ async def test_deleting_product_does_not_alter_existing_registration_pre_orders(
     pre_orders = r.json()["pre_orders"]
     assert pre_orders[0]["name"] == "Bottle"
     assert pre_orders[0]["price"] == 12.0
+
+
+@pytest.mark.anyio
+async def test_deleting_bundled_product_clears_bundle_on_referencing_product(client):
+    """ON DELETE SET NULL clears included_product_id on any product that bundles
+    the deleted one; included_per_guests must be cleared alongside it so the
+    "both or neither" invariant still holds after the delete."""
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Bottle")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        included_product_id=bottle["id"],
+        included_per_guests=2,
+    )
+
+    r = await client.delete(f"/api/products/{bottle['id']}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+
+    r = await client.get(f"/api/products/{table['id']}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["included_product_id"] is None
+    assert body["included_per_guests"] is None
+
+
+@pytest.mark.anyio
+async def test_product_bundle_rejects_reverse_chaining(client):
+    """Only single-level bundles are supported: a product that is already
+    bundled by another product cannot itself bundle a third product."""
+    event = await _create_event(client)
+    base = await _create_product(client, event["id"], name="Base")
+    middle = await _create_product(
+        client,
+        event["id"],
+        name="Middle",
+        included_product_id=base["id"],
+        included_per_guests=1,
+    )
+    other = await _create_product(client, event["id"], name="Other")
+
+    r = await client.put(
+        f"/api/products/{base['id']}",
+        json={"included_product_id": other["id"], "included_per_guests": 1},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+    # sanity: middle's bundle is unaffected by the rejected attempt
+    r = await client.get(f"/api/products/{middle['id']}", headers=ADMIN_HEADERS)
+    assert r.json()["included_product_id"] == base["id"]
+
+
+@pytest.mark.anyio
+async def test_registration_rejects_pre_order_quantity_over_limit(client):
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"])
+
+    r = await client.post(
+        "/api/registrations",
+        json={
+            "name": "Jean Dupont",
+            "email": "jean@example.com",
+            "phone": "+32499000000",
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [{"product_id": product["id"], "quantity": 101}],
+            "notes": "",
+            "honeypot": "",
+            "form_start_time": "",
+        },
+    )
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_registration_rejects_too_many_pre_order_lines(client):
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"])
+
+    r = await client.post(
+        "/api/registrations",
+        json={
+            "name": "Jean Dupont",
+            "email": "jean@example.com",
+            "phone": "+32499000000",
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [{"product_id": product["id"], "quantity": 1} for _ in range(51)],
+            "notes": "",
+            "honeypot": "",
+            "form_start_time": "",
+        },
+    )
+    assert r.status_code == 422

@@ -362,7 +362,7 @@ class Event(Base):
 class Product(Base):
     """Something guests can pre-order when registering for a specific event
     (a bottle of champagne, a cheese platter, ...). Scoped to one event —
-    products are not a reusable catalogue, since what a VIP tasting sells has
+    products are not a reusable catalog, since what a VIP tasting sells has
     nothing to do with what a different tasting or a bourse would.
 
     The registration flow copies `name`/`price`/`category` onto the

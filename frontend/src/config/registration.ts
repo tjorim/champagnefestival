@@ -1,7 +1,7 @@
 /**
  * Constants for the VIP registration and ordering system.
  *
- * Products used to be a hardcoded catalogue here; they are now real,
+ * Products used to be a hardcoded catalog here; they are now real,
  * event-scoped `Product` records read from `event.products` (see
  * `@/types/event`) and managed per-event in the admin dashboard.
  */

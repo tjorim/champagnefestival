@@ -11,7 +11,7 @@ export interface EventEditionSummary {
 /**
  * Something guests can pre-order when registering for this event (a bottle of
  * champagne, a cheese platter, ...). Scoped to one event — there is no global
- * catalogue, since what a VIP tasting sells has nothing to do with what a
+ * catalog, since what a VIP tasting sells has nothing to do with what a
  * different tasting or a bourse would.
  */
 export interface Product {

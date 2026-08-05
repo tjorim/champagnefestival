@@ -32,7 +32,7 @@ export const publicHandlers = [
     const matching = editions.filter(
       (e) => e.active && (!editionType || e.edition_type === editionType),
     );
-    return HttpResponse.json(matching[0] ?? editions[0] ?? null);
+    return HttpResponse.json(matching[0] ?? null);
   }),
 
   /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */

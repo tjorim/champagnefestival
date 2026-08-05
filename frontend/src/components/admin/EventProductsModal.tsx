@@ -150,8 +150,9 @@ export default function EventProductsModal({
       setError(m.admin_products_name_required());
       return;
     }
-    const price = Number(form.price);
-    if (!Number.isFinite(price) || price < 0) {
+    const priceText = form.price.trim();
+    const price = Number(priceText);
+    if (!priceText || !Number.isFinite(price) || price < 0) {
       setError(m.admin_products_price_invalid());
       return;
     }
@@ -321,6 +322,10 @@ export default function EventProductsModal({
           <div className="text-center py-3">
             <Spinner animation="border" size="sm" variant="warning" />
           </div>
+        ) : productsQuery.isError ? (
+          <Alert variant="danger" className="py-1 mb-2">
+            {m.admin_content_error_load()}
+          </Alert>
         ) : (
           <>
             {activeProducts.length === 0 && archivedProducts.length === 0 ? (
@@ -458,7 +463,12 @@ export default function EventProductsModal({
             </div>
           </Form>
         ) : (
-          <Button variant="outline-secondary" size="sm" onClick={openAdd}>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            onClick={openAdd}
+            disabled={productsQuery.isPending || productsQuery.isError}
+          >
             <i className="bi bi-plus-lg me-1" aria-hidden="true" />
             {m.admin_products_add()}
           </Button>

@@ -448,6 +448,7 @@ async def update_registration(
     _pre_strap_issued = registration.strap_issued
     _pre_status = registration.status
     _pre_payment_status = registration.payment_status
+    _pre_amount_due = registration.amount_due
     _event_id = registration.event_id
     _edition_id = registration.event.edition_id
 
@@ -524,6 +525,17 @@ async def update_registration(
             },
             **_audit_base,
         )
+    if registration.amount_due != _pre_amount_due:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="amount_due_updated",
+            details={
+                "amount_due": float(registration.amount_due) if registration.amount_due is not None else None,
+                "previous_amount_due": float(_pre_amount_due) if _pre_amount_due is not None else None,
+            },
+            **_audit_base,
+        )
 
     await db.commit()
     registration = await _get_registration_or_404(db, registration.id)
@@ -541,7 +553,7 @@ async def update_registration(
                 await live_bus.publish(live_mapping.order_changed(**_scope))
         if registration.checked_in != _pre_checked_in or registration.strap_issued != _pre_strap_issued:
             await live_bus.publish(live_mapping.check_in_changed(**_scope))
-        _metadata = {"status", "payment_status", "notes", "accessibility_note", "person_id"}
+        _metadata = {"status", "payment_status", "amount_due", "notes", "accessibility_note", "person_id"}
         if any(f in body.model_fields_set for f in _metadata):
             await live_bus.publish(live_mapping.registration_changed(action="updated", **_scope))
     except Exception:

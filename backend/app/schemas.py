@@ -66,7 +66,7 @@ class PreOrderRequest(BaseModel):
     """
 
     product_id: str = Field(min_length=1)
-    quantity: int = Field(ge=1)
+    quantity: int = Field(ge=1, le=100)
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +236,7 @@ class RegistrationCreate(BaseModel):
     phone: str = Field(min_length=1, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[PreOrderRequest] = Field(default_factory=list)
+    pre_orders: list[PreOrderRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
@@ -386,7 +386,7 @@ class RegistrationAdminCreate(BaseModel):
     person_id: str = Field(min_length=1, max_length=64)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[PreOrderRequest] = Field(default_factory=list)
+    pre_orders: list[PreOrderRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
     accessibility_note: str = Field(default="", max_length=2000)
     status: RegistrationStatus = "confirmed"

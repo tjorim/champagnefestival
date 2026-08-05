@@ -1,12 +1,12 @@
 """Event-scoped product management endpoints (admin only).
 
 Products are what registration.pre_orders line items resolve against — see
-`Product`'s docstring in app.models. There is no global catalogue: every
+`Product`'s docstring in app.models. There is no global catalog: every
 product belongs to exactly one event.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
@@ -28,6 +28,15 @@ async def _validate_inclusion_target(
 ) -> None:
     if included_product_id == self_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A product cannot include itself.")
+    if self_id is not None:
+        # Single-level bundles only: this product cannot bundle another product
+        # while some other product already bundles it.
+        includer = (await db.execute(select(Product.id).where(Product.included_product_id == self_id))).first()
+        if includer is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This product is already bundled by another product and cannot bundle one itself.",
+            )
     result = await db.execute(select(Product).where(Product.id == included_product_id))
     target = result.scalar_one_or_none()
     if target is None:
@@ -156,6 +165,13 @@ async def delete_product(
     actor: str = Depends(get_actor_id),
 ) -> None:
     product = await get_or_404(db, Product, product_id, "Product not found.")
+    # ON DELETE SET NULL clears included_product_id on any product that bundles
+    # this one; clear its paired quantity too so the "both or neither" invariant holds.
+    await db.execute(
+        update(Product)
+        .where(Product.included_product_id == product_id)
+        .values(included_product_id=None, included_per_guests=None)
+    )
     await db.delete(product)
     await write_audit_entry(
         db,
