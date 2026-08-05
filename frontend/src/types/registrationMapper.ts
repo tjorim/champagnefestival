@@ -59,7 +59,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
     tableId: (d.table_id as string | undefined) ?? undefined,
     status: (d.status ?? "pending") as RegistrationStatus,
     paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
-    // Serialised as a decimal string by the API to avoid float drift on money.
+    // Serialized as a decimal string by the API to avoid float drift on money.
     amountDue: d.amount_due == null ? undefined : Number(d.amount_due),
     checkedIn: (d.checked_in ?? false) as boolean,
     checkedInAt: (d.checked_in_at as string | undefined) ?? undefined,

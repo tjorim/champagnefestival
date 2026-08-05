@@ -13,7 +13,7 @@ interface ApiUpcomingEdition {
   id: string;
   edition_type: "festival" | "bourse" | "capsule_exchange";
   venue: { name: string };
-  co_organiser?: { name: string; website?: string } | null;
+  co_organizer?: { name: string; website?: string } | null;
   events: Record<string, unknown>[];
 }
 
@@ -31,8 +31,8 @@ interface OtherEventCardData {
   event: Event;
   venueName: string;
   /** The exhibitor who ran this edition with the vzw, credited on the card. */
-  coOrganiserName?: string;
-  coOrganiserWebsite?: string;
+  coOrganizerName?: string;
+  coOrganizerWebsite?: string;
 }
 
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
@@ -118,16 +118,16 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
     }
     const venue = { name: value.venue.name };
 
-    // Optional and non-critical: a malformed co-organiser is dropped rather than
+    // Optional and non-critical: a malformed co-organizer is dropped rather than
     // thrown, so one bad record can't hide every upcoming edition.
-    const rawCoOrganiser = value.co_organiser;
-    const coOrganiser =
-      isRecord(rawCoOrganiser) && typeof rawCoOrganiser.name === "string"
+    const rawCoOrganizer = value.co_organizer;
+    const coOrganizer =
+      isRecord(rawCoOrganizer) && typeof rawCoOrganizer.name === "string"
         ? {
-            name: rawCoOrganiser.name,
+            name: rawCoOrganizer.name,
             website:
-              typeof rawCoOrganiser.website === "string" && /^https?:\/\//.test(rawCoOrganiser.website)
-                ? rawCoOrganiser.website
+              typeof rawCoOrganizer.website === "string" && /^https?:\/\//.test(rawCoOrganizer.website)
+                ? rawCoOrganizer.website
                 : undefined,
           }
         : null;
@@ -136,7 +136,7 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
       id: value.id,
       edition_type: value.edition_type as ApiUpcomingEdition["edition_type"],
       venue,
-      co_organiser: coOrganiser,
+      co_organizer: coOrganizer,
       events: rawEvents,
     };
   });
@@ -199,8 +199,8 @@ export default function OtherEvents() {
           editionType: edition.edition_type,
           event,
           venueName: edition.venue?.name ?? "",
-          coOrganiserName: edition.co_organiser?.name || undefined,
-          coOrganiserWebsite: edition.co_organiser?.website || undefined,
+          coOrganizerName: edition.co_organizer?.name || undefined,
+          coOrganizerWebsite: edition.co_organizer?.website || undefined,
         })),
     );
 
@@ -246,20 +246,20 @@ export default function OtherEvents() {
                           <i className="bi bi-geo-alt me-2" aria-hidden="true" />
                           {item.venueName}
                         </p>
-                        {item.coOrganiserName && (
+                        {item.coOrganizerName && (
                           <p className="mb-1 text-muted">
                             <i className="bi bi-people me-2" aria-hidden="true" />
-                            {m.other_events_co_organised_with()}{" "}
-                            {item.coOrganiserWebsite ? (
+                            {m.other_events_co_organized_with()}{" "}
+                            {item.coOrganizerWebsite ? (
                               <a
-                                href={item.coOrganiserWebsite}
+                                href={item.coOrganizerWebsite}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                {item.coOrganiserName}
+                                {item.coOrganizerName}
                               </a>
                             ) : (
-                              item.coOrganiserName
+                              item.coOrganizerName
                             )}
                           </p>
                         )}

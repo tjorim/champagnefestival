@@ -373,7 +373,7 @@ describe("OtherEvents", () => {
     ).toBeInTheDocument();
   });
 
-  it("credits the co-organising producer, linking to them when a website is known", async () => {
+  it("credits the co-organizing producer, linking to them when a website is known", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
         const editionType = new URL(request.url).searchParams.get("edition_type");
@@ -382,7 +382,7 @@ describe("OtherEvents", () => {
           {
             id: "edition-bourse",
             edition_type: "bourse",
-            co_organiser: { name: "Champagne Comtesse", website: "https://comtesse.example" },
+            co_organizer: { name: "Champagne Comtesse", website: "https://comtesse.example" },
             venue: { name: "Staf Versluys" },
             events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
           },
@@ -400,7 +400,7 @@ describe("OtherEvents", () => {
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
   });
 
-  it("omits the credit when an edition has no co-organiser", async () => {
+  it("omits the credit when an edition has no co-organizer", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
         const editionType = new URL(request.url).searchParams.get("edition_type");
@@ -409,7 +409,7 @@ describe("OtherEvents", () => {
           {
             id: "edition-bourse",
             edition_type: "bourse",
-            co_organiser: null,
+            co_organizer: null,
             venue: { name: "Staf Versluys" },
             events: [{ ...BASE_EVENT, id: "event-bourse", title: "Solo bourse" }],
           },
@@ -423,7 +423,7 @@ describe("OtherEvents", () => {
     expect(document.body.textContent).not.toContain("Co-organised with");
   });
 
-  it("drops a co-organiser with an unsafe website instead of linking to it", async () => {
+  it("drops a co-organizer with an unsafe website instead of linking to it", async () => {
     // Rendered as an href, so anything that isn't plainly http(s) must not become
     // a link — and one bad record must not hide the edition.
     server.use(
@@ -434,7 +434,7 @@ describe("OtherEvents", () => {
           {
             id: "edition-bourse",
             edition_type: "bourse",
-            co_organiser: { name: "Champagne Comtesse", website: "javascript:alert(1)" },
+            co_organizer: { name: "Champagne Comtesse", website: "javascript:alert(1)" },
             venue: { name: "Staf Versluys" },
             events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
           },

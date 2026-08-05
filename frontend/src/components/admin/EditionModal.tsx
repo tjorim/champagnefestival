@@ -82,7 +82,7 @@ export default function EditionModal({
       editionType: (initial?.editionType ?? "festival") as EditionType,
       venueId: initial?.venue?.id ?? fallbackVenueId,
       active: initial?.active ?? true,
-      coOrganiserId: initial?.coOrganiser?.id ? String(initial.coOrganiser.id) : "",
+      coOrganizerId: initial?.coOrganizer?.id ? String(initial.coOrganizer.id) : "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
       selectedExhibitors: [
@@ -118,7 +118,7 @@ export default function EditionModal({
               ? value.selectedExhibitors.map((option: ItemOption) => option.value)
               : [],
           // Any edition type may name one; it is not part of the lineup.
-          coOrganiserExhibitorId: value.coOrganiserId ? Number(value.coOrganiserId) : null,
+          coOrganizerExhibitorId: value.coOrganizerId ? Number(value.coOrganizerId) : null,
         });
         onSaved(savedEdition);
       } catch (mutationError) {
@@ -156,7 +156,7 @@ export default function EditionModal({
       venueId: string;
       active: boolean;
       exhibitorIds: number[];
-      coOrganiserExhibitorId: number | null;
+      coOrganizerExhibitorId: number | null;
     }) => saveEdition(payload, authHeaders, initial?.id),
     retry: false,
   });
@@ -430,11 +430,11 @@ export default function EditionModal({
             </div>
           </div>
 
-          <Form.Group className="mb-3" controlId="edition-co-organiser">
+          <Form.Group className="mb-3" controlId="edition-co-organizer">
             <Form.Label className="text-secondary small mb-1">
-              {m.admin_edition_co_organiser_label()}
+              {m.admin_edition_co_organizer_label()}
             </Form.Label>
-            <form.Field name="coOrganiserId">
+            <form.Field name="coOrganizerId">
               {(field) => (
                 <Form.Select
                   className="bg-dark text-light border-secondary"
@@ -442,7 +442,7 @@ export default function EditionModal({
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 >
-                  <option value="">{m.admin_edition_co_organiser_none()}</option>
+                  <option value="">{m.admin_edition_co_organizer_none()}</option>
                   {allExhibitors
                     .filter((exhibitor) => exhibitor.active !== false)
                     .map((exhibitor) => (
@@ -453,7 +453,7 @@ export default function EditionModal({
                 </Form.Select>
               )}
             </form.Field>
-            <div className="text-secondary small mt-1">{m.admin_edition_co_organiser_help()}</div>
+            <div className="text-secondary small mt-1">{m.admin_edition_co_organizer_help()}</div>
           </Form.Group>
 
           {isFestival && (

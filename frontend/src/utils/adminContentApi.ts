@@ -190,10 +190,10 @@ export async function saveEdition(
     active: boolean;
     exhibitorIds: number[];
     /**
-     * Omit to leave an existing co-organiser untouched; pass `null` to clear it.
+     * Omit to leave an existing co-organizer untouched; pass `null` to clear it.
      * The backend only acts on the field when it is present in the payload.
      */
-    coOrganiserExhibitorId?: number | null;
+    coOrganizerExhibitorId?: number | null;
   },
   authHeaders: () => Record<string, string>,
   initialId?: string,
@@ -215,10 +215,10 @@ export async function saveEdition(
         // backend receives an intentional instruction rather than treating the omitted
         // field as "leave existing associations alone".
         exhibitors: payload.editionType === "festival" ? payload.exhibitorIds : [],
-        // Independent of the lineup: any edition type may name a co-organiser.
-        ...(payload.coOrganiserExhibitorId === undefined
+        // Independent of the lineup: any edition type may name a co-organizer.
+        ...(payload.coOrganizerExhibitorId === undefined
           ? {}
-          : { co_organiser_exhibitor_id: payload.coOrganiserExhibitorId }),
+          : { co_organizer_exhibitor_id: payload.coOrganizerExhibitorId }),
       }),
     },
     isEdit ? "update edition" : "create edition",

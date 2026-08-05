@@ -157,11 +157,11 @@ async def create_edition(
         venue_id=body.venue_id,
         edition_type=body.edition_type,
         exhibitors=list(body.exhibitors),
-        co_organiser_exhibitor_id=body.co_organiser_exhibitor_id,
+        co_organizer_exhibitor_id=body.co_organizer_exhibitor_id,
         active=body.active,
     )
     await _validate_exhibitor_ids(db, edition.exhibitors)
-    await _validate_co_organiser(db, edition.co_organiser_exhibitor_id)
+    await _validate_co_organizer(db, edition.co_organizer_exhibitor_id)
     db.add(edition)
     await write_audit_entry(
         db,
@@ -187,9 +187,9 @@ async def update_edition(
 ) -> dict:
     edition = await _get_edition_or_404(db, edition_id)
 
-    if "co_organiser_exhibitor_id" in body.model_fields_set:
-        await _validate_co_organiser(db, body.co_organiser_exhibitor_id)
-        edition.co_organiser_exhibitor_id = body.co_organiser_exhibitor_id
+    if "co_organizer_exhibitor_id" in body.model_fields_set:
+        await _validate_co_organizer(db, body.co_organizer_exhibitor_id)
+        edition.co_organizer_exhibitor_id = body.co_organizer_exhibitor_id
 
     for field in ["year", "month", "active", "edition_type"]:
         if field in body.model_fields_set:
@@ -335,7 +335,7 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition], *, active
     exhibitor_map = await _load_exhibitors_by_ids(
         db,
         {eid for edition in editions for eid in edition.exhibitors}
-        | {edition.co_organiser_exhibitor_id for edition in editions if edition.co_organiser_exhibitor_id},
+        | {edition.co_organizer_exhibitor_id for edition in editions if edition.co_organizer_exhibitor_id},
     )
     payloads = []
     for edition in editions:
@@ -359,8 +359,8 @@ async def _edition_payloads(db: AsyncSession, editions: list[Edition], *, active
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
-                co_organiser=exhibitor_map.get(edition.co_organiser_exhibitor_id)
-                if edition.co_organiser_exhibitor_id
+                co_organizer=exhibitor_map.get(edition.co_organizer_exhibitor_id)
+                if edition.co_organizer_exhibitor_id
                 else None,
             )
         )
@@ -422,11 +422,11 @@ def _sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Edit
     return sorted(editions, key=sort_key)
 
 
-async def _validate_co_organiser(db: AsyncSession, exhibitor_id: int | None) -> None:
-    """A co-organiser must be an existing, active exhibitor.
+async def _validate_co_organizer(db: AsyncSession, exhibitor_id: int | None) -> None:
+    """A co-organizer must be an existing, active exhibitor.
 
     Unlike the lineup, any exhibitor type is acceptable and any edition type may
-    have one — co-organising says who ran the event with the vzw, not who was
+    have one — co-organizing says who ran the event with the vzw, not who was
     programmed at it.
     """
     if exhibitor_id is None:
@@ -435,7 +435,7 @@ async def _validate_co_organiser(db: AsyncSession, exhibitor_id: int | None) -> 
         await db.execute(select(Exhibitor).where(Exhibitor.id == exhibitor_id, Exhibitor.active.is_(True)))
     ).scalar_one_or_none()
     if exhibitor is None:
-        raise HTTPException(status_code=400, detail=f"Invalid or inactive co-organiser exhibitor id: {exhibitor_id}")
+        raise HTTPException(status_code=400, detail=f"Invalid or inactive co-organizer exhibitor id: {exhibitor_id}")
 
 
 def _validate_exhibitors_allowed(edition_type: EditionType, exhibitors: list[int]) -> None:

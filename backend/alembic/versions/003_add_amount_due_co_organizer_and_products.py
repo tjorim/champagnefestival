@@ -1,10 +1,10 @@
-"""Add registrations.amount_due, edition co-organiser, and event-scoped products.
+"""Add registrations.amount_due, edition co-organizer, and event-scoped products.
 
 Consolidates what shipped as seven incremental migrations during development
 of this PR into one step, since none of the intermediate states were ever
 applied to a real database: bourse table fees (`amount_due`), dropping the
 never-actually-used edition external-partner fields in favor of linking a
-real co-organising `Exhibitor`, and event-scoped `Product`s with required and
+real co-organizing `Exhibitor`, and event-scoped `Product`s with required and
 bundled variants. `events.allow_preorders` — added and then dropped again
 within that same development window, superseded by "does this event have any
 active products" — never appears here at all.
@@ -32,17 +32,17 @@ def upgrade() -> None:
     # --- Bourse table fees, settled offline -----------------------------------
     op.add_column("registrations", sa.Column("amount_due", sa.Numeric(10, 2), nullable=True))
 
-    # --- Edition co-organiser, replacing the unused external-partner fields ---
+    # --- Edition co-organizer, replacing the unused external-partner fields ---
     op.drop_column("editions", "external_contact_email")
     op.drop_column("editions", "external_contact_name")
     op.drop_column("editions", "external_partner")
 
-    op.add_column("editions", sa.Column("co_organiser_exhibitor_id", sa.Integer(), nullable=True))
+    op.add_column("editions", sa.Column("co_organizer_exhibitor_id", sa.Integer(), nullable=True))
     op.create_foreign_key(
-        "fk_editions_co_organiser_exhibitor_id",
+        "fk_editions_co_organizer_exhibitor_id",
         "editions",
         "exhibitors",
-        ["co_organiser_exhibitor_id"],
+        ["co_organizer_exhibitor_id"],
         ["id"],
         ondelete="SET NULL",
     )
@@ -75,8 +75,8 @@ def downgrade() -> None:
     op.drop_index("ix_products_event_id", table_name="products")
     op.drop_table("products")
 
-    op.drop_constraint("fk_editions_co_organiser_exhibitor_id", "editions", type_="foreignkey")
-    op.drop_column("editions", "co_organiser_exhibitor_id")
+    op.drop_constraint("fk_editions_co_organizer_exhibitor_id", "editions", type_="foreignkey")
+    op.drop_column("editions", "co_organizer_exhibitor_id")
 
     # Recreates the columns, but not the values they held.
     op.add_column("editions", sa.Column("external_partner", sa.String(200), nullable=True))
