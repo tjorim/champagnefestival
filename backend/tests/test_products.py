@@ -1,4 +1,4 @@
-"""Tests for the event-scoped products API and their use in registration pre-orders."""
+"""Tests for the event-scoped products API and their use in registration order items."""
 
 from __future__ import annotations
 
@@ -105,7 +105,7 @@ async def test_event_out_embeds_only_active_products(client):
 
 
 @pytest.mark.anyio
-async def test_registration_resolves_pre_order_against_real_product(client):
+async def test_registration_resolves_order_item_against_real_product(client):
     """The server must snapshot name/price/category from the real product, ignoring
     whatever the client sends for those fields — a client can only choose product_id
     and quantity."""
@@ -120,7 +120,7 @@ async def test_registration_resolves_pre_order_against_real_product(client):
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [
+            "order_items": [
                 {
                     "product_id": product["id"],
                     "quantity": 2,
@@ -138,13 +138,13 @@ async def test_registration_resolves_pre_order_against_real_product(client):
         },
     )
     assert r.status_code == 201, r.text
-    pre_orders = r.json()["pre_orders"]
-    assert len(pre_orders) == 1
-    assert pre_orders[0]["product_id"] == product["id"]
-    assert pre_orders[0]["name"] == "Bottle of Champagne"
-    assert pre_orders[0]["price"] == 25.0
-    assert pre_orders[0]["category"] == "champagne"
-    assert pre_orders[0]["quantity"] == 2
+    order_items = r.json()["order_items"]
+    assert len(order_items) == 1
+    assert order_items[0]["product_id"] == product["id"]
+    assert order_items[0]["name"] == "Bottle of Champagne"
+    assert order_items[0]["price"] == 25.0
+    assert order_items[0]["category"] == "champagne"
+    assert order_items[0]["quantity"] == 2
 
 
 @pytest.mark.anyio
@@ -159,7 +159,7 @@ async def test_registration_rejects_unknown_product_id(client):
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": "does-not-exist", "quantity": 1}],
+            "order_items": [{"product_id": "does-not-exist", "quantity": 1}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -181,7 +181,7 @@ async def test_registration_rejects_archived_product(client):
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": product["id"], "quantity": 1}],
+            "order_items": [{"product_id": product["id"], "quantity": 1}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -204,7 +204,7 @@ async def test_registration_rejects_product_from_a_different_event(client):
             "phone": "+32499000000",
             "event_id": event_a["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": product_on_b["id"], "quantity": 1}],
+            "order_items": [{"product_id": product_on_b["id"], "quantity": 1}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -214,7 +214,7 @@ async def test_registration_rejects_product_from_a_different_event(client):
 
 
 @pytest.mark.anyio
-async def test_admin_registration_creation_also_resolves_pre_orders(client):
+async def test_admin_registration_creation_also_resolves_order_items(client):
     event = await _create_event(client)
     product = await _create_product(client, event["id"], price="10.50")
 
@@ -232,21 +232,21 @@ async def test_admin_registration_creation_also_resolves_pre_orders(client):
             "person_id": person_id,
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": product["id"], "quantity": 3, "price": 999}],
+            "order_items": [{"product_id": product["id"], "quantity": 3, "price": 999}],
         },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
-    pre_orders = r.json()["pre_orders"]
-    assert pre_orders[0]["price"] == 10.5
-    assert pre_orders[0]["quantity"] == 3
+    order_items = r.json()["order_items"]
+    assert order_items[0]["price"] == 10.5
+    assert order_items[0]["quantity"] == 3
 
 
 @pytest.mark.anyio
 async def test_registration_allowed_for_walkin_event_with_active_product(client):
     """An event that doesn't require registration (walk-in) should still accept a
-    registration from someone who wants to pre-order — e.g. a VIP package — even
-    though showing up for the event itself needs no RSVP."""
+    registration from someone who wants to order something — e.g. a VIP package —
+    even though showing up for the event itself needs no RSVP."""
     event = await _create_event(client, registration_required=False)
     product = await _create_product(client, event["id"])
 
@@ -258,7 +258,7 @@ async def test_registration_allowed_for_walkin_event_with_active_product(client)
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": product["id"], "quantity": 1}],
+            "order_items": [{"product_id": product["id"], "quantity": 1}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -282,7 +282,7 @@ async def test_registration_rejected_for_walkin_event_with_only_archived_product
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [],
+            "order_items": [],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -292,14 +292,14 @@ async def test_registration_rejected_for_walkin_event_with_only_archived_product
     assert r.json()["detail"] == "This event does not accept registrations."
 
 
-async def _register(client, event_id: str, pre_orders: list[dict], **overrides):
+async def _register(client, event_id: str, order_items: list[dict], **overrides):
     body = {
         "name": "Jean Dupont",
         "email": "jean@example.com",
         "phone": "+32499000000",
         "event_id": event_id,
         "guest_count": 1,
-        "pre_orders": pre_orders,
+        "order_items": order_items,
         "notes": "",
         "honeypot": "",
         "form_start_time": "",
@@ -347,8 +347,8 @@ async def test_registration_allows_optional_product_alongside_required_one(clien
         ],
     )
     assert r.status_code == 201, r.text
-    pre_orders = r.json()["pre_orders"]
-    assert {item["product_id"] for item in pre_orders} == {entry["id"], extra_bottle["id"]}
+    order_items = r.json()["order_items"]
+    assert {item["product_id"] for item in order_items} == {entry["id"], extra_bottle["id"]}
 
 
 @pytest.mark.anyio
@@ -392,7 +392,7 @@ async def test_admin_registration_creation_also_enforces_required_product(client
             "person_id": person_id,
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": extra_bottle["id"], "quantity": 1}],
+            "order_items": [{"product_id": extra_bottle["id"], "quantity": 1}],
         },
         headers=ADMIN_HEADERS,
     )
@@ -503,8 +503,8 @@ async def test_registration_computes_included_bundle_quantity(client):
         guest_count=6,
     )
     assert r.status_code == 201, r.text
-    pre_orders = r.json()["pre_orders"]
-    bottle_item = next(item for item in pre_orders if item["product_id"] == bottle["id"])
+    order_items = r.json()["order_items"]
+    bottle_item = next(item for item in order_items if item["product_id"] == bottle["id"])
     assert bottle_item["quantity"] == 3
     assert bottle_item["included_quantity"] == 3
 
@@ -533,8 +533,8 @@ async def test_registration_merges_explicit_extra_with_included_bundle_quantity(
         guest_count=6,
     )
     assert r.status_code == 201, r.text
-    pre_orders = r.json()["pre_orders"]
-    bottle_item = next(item for item in pre_orders if item["product_id"] == bottle["id"])
+    order_items = r.json()["order_items"]
+    bottle_item = next(item for item in order_items if item["product_id"] == bottle["id"])
     # 3 included (6 guests / 2) + 2 explicitly requested extra = 5 total, 3 free.
     assert bottle_item["quantity"] == 5
     assert bottle_item["included_quantity"] == 3
@@ -561,13 +561,13 @@ async def test_registration_bundle_below_ratio_includes_nothing(client):
         guest_count=1,
     )
     assert r.status_code == 201, r.text
-    pre_orders = r.json()["pre_orders"]
-    assert all(item["product_id"] != bottle["id"] for item in pre_orders)
+    order_items = r.json()["order_items"]
+    assert all(item["product_id"] != bottle["id"] for item in order_items)
 
 
 @pytest.mark.anyio
-async def test_deleting_product_does_not_alter_existing_registration_pre_orders(client):
-    """pre_orders is a snapshot taken at order time, not a live reference — deleting
+async def test_deleting_product_does_not_alter_existing_registration_order_items(client):
+    """order_items is a snapshot taken at order time, not a live reference — deleting
     the product afterward must not corrupt registrations already placed against it."""
     event = await _create_event(client)
     product = await _create_product(client, event["id"], name="Bottle", price="12.00")
@@ -580,7 +580,7 @@ async def test_deleting_product_does_not_alter_existing_registration_pre_orders(
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": product["id"], "quantity": 1}],
+            "order_items": [{"product_id": product["id"], "quantity": 1}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -594,9 +594,9 @@ async def test_deleting_product_does_not_alter_existing_registration_pre_orders(
 
     r = await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    pre_orders = r.json()["pre_orders"]
-    assert pre_orders[0]["name"] == "Bottle"
-    assert pre_orders[0]["price"] == 12.0
+    order_items = r.json()["order_items"]
+    assert order_items[0]["name"] == "Bottle"
+    assert order_items[0]["price"] == 12.0
 
 
 @pytest.mark.anyio
@@ -652,7 +652,7 @@ async def test_product_bundle_rejects_reverse_chaining(client):
 
 
 @pytest.mark.anyio
-async def test_registration_rejects_pre_order_quantity_over_limit(client):
+async def test_registration_rejects_order_item_quantity_over_limit(client):
     event = await _create_event(client)
     product = await _create_product(client, event["id"])
 
@@ -664,7 +664,7 @@ async def test_registration_rejects_pre_order_quantity_over_limit(client):
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": product["id"], "quantity": 101}],
+            "order_items": [{"product_id": product["id"], "quantity": 101}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -674,7 +674,7 @@ async def test_registration_rejects_pre_order_quantity_over_limit(client):
 
 
 @pytest.mark.anyio
-async def test_registration_rejects_too_many_pre_order_lines(client):
+async def test_registration_rejects_too_many_order_item_lines(client):
     event = await _create_event(client)
     product = await _create_product(client, event["id"])
 
@@ -686,7 +686,7 @@ async def test_registration_rejects_too_many_pre_order_lines(client):
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "pre_orders": [{"product_id": product["id"], "quantity": 1} for _ in range(51)],
+            "order_items": [{"product_id": product["id"], "quantity": 1} for _ in range(51)],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",

@@ -71,7 +71,7 @@ class Registration(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="RESTRICT"), nullable=False)
     guest_count: Mapped[int] = mapped_column(Integer)
-    pre_orders: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    order_items: Mapped[list[dict]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     accessibility_note: Mapped[str] = mapped_column(Text, default="")
     """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
@@ -360,13 +360,13 @@ class Event(Base):
 
 
 class Product(Base):
-    """Something guests can pre-order when registering for a specific event
+    """Something guests can order when registering for a specific event
     (a bottle of champagne, a cheese platter, ...). Scoped to one event —
     products are not a reusable catalog, since what a VIP tasting sells has
     nothing to do with what a different tasting or a bourse would.
 
     The registration flow copies `name`/`price`/`category` onto the
-    registration's `pre_orders` at order time, so archiving or deleting a
+    registration's `order_items` at order time, so archiving or deleting a
     product afterward does not alter orders already placed against it.
     """
 
@@ -382,7 +382,7 @@ class Product(Base):
     required: Mapped[bool] = mapped_column(Boolean, default=False)
     """A prerequisite product for this event (e.g. an entry ticket). An order
     that includes any non-required product for an event with required products
-    must also include at least one required one — see _resolve_pre_orders."""
+    must also include at least one required one — see _resolve_order_items."""
     included_product_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("products.id", ondelete="SET NULL"), nullable=True
     )

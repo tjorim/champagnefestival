@@ -1,6 +1,6 @@
 """Event-scoped product management endpoints (admin only).
 
-Products are what registration.pre_orders line items resolve against — see
+Products are what registration.order_items line items resolve against — see
 `Product`'s docstring in app.models. There is no global catalog: every
 product belongs to exactly one event.
 """

@@ -56,12 +56,12 @@ class OrderItemOut(OrderItemBase):
     pass
 
 
-class PreOrderRequest(BaseModel):
-    """What a registration request supplies for a pre-order line item.
+class OrderItemRequest(BaseModel):
+    """What a registration request supplies for an order line item.
 
     Only `product_id` and `quantity` are client-supplied; `name`/`price`/`category`
     are resolved server-side against the event's real products (see
-    `_resolve_pre_orders` in routers/registrations.py) so a client can never set an
+    `_resolve_order_items` in routers/registrations.py) so a client can never set an
     arbitrary or zero price, or order a product that doesn't exist.
     """
 
@@ -239,7 +239,7 @@ class RegistrationCreate(BaseModel):
     phone: str = Field(min_length=1, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[PreOrderRequest] = Field(default_factory=list, max_length=50)
+    order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
@@ -255,7 +255,7 @@ class RegistrationUpdate(BaseModel):
     payment_status: PaymentStatus | None = None
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     table_id: str | None = None
-    pre_orders: list[OrderItemBase] | None = None
+    order_items: list[OrderItemBase] | None = None
     notes: str | None = None
     accessibility_note: str | None = None
     person_id: str | None = Field(default=None, min_length=1)
@@ -270,7 +270,7 @@ class RegistrationOut(BaseModel):
     event_id: str
     event: EventOut
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     notes: str
     accessibility_note: str
     table_id: str | None
@@ -303,7 +303,7 @@ class RegistrationListOut(BaseModel):
     event_id: str
     event: EventOut
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     accessibility_note: str
     table_id: str | None
     status: RegistrationStatus
@@ -326,7 +326,7 @@ class RegistrationGuestOut(BaseModel):
     event_id: str
     event_title: str
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
@@ -384,7 +384,7 @@ class RegistrationAdminCreate(BaseModel):
     person_id: str = Field(min_length=1, max_length=64)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
-    pre_orders: list[PreOrderRequest] = Field(default_factory=list, max_length=50)
+    order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
     accessibility_note: str = Field(default="", max_length=2000)
     status: RegistrationStatus = "confirmed"
@@ -468,7 +468,7 @@ class CheckInGuestOut(BaseModel):
     """Minimal registration data returned by the public check-in GET endpoint.
 
     Only exposes fields needed on the volunteer tablet — guest name, party size,
-    event info, pre-orders, arrival notes, and check-in/strap status.
+    event info, order items, arrival notes, and check-in/strap status.
     PII fields (email, phone) and internal-only fields (payment_status, table_id,
     timestamps) are omitted.
     """
@@ -480,7 +480,7 @@ class CheckInGuestOut(BaseModel):
     table_id: str | None = None
     table_name: str | None = None
     guest_count: int
-    pre_orders: list[OrderItemOut]
+    order_items: list[OrderItemOut]
     notes: str
     status: RegistrationStatus
     checked_in: bool
@@ -509,7 +509,7 @@ class VolunteerCheckInRequest(BaseModel):
 
 
 class VolunteerRegistrationUpdate(BaseModel):
-    pre_orders: list[OrderItemBase] | None = None
+    order_items: list[OrderItemBase] | None = None
     strap_issued: bool | None = None
 
 

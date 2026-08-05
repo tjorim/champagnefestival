@@ -62,7 +62,7 @@ async def get_table_order_summary(
         reg_summaries = []
         for reg in regs:
             person = persons.get(reg.person_id)
-            orders = [order_item_dict(item) for item in (reg.pre_orders or [])]
+            orders = [order_item_dict(item) for item in (reg.order_items or [])]
             ordered_quantity_total = sum(o["quantity"] for o in orders)
             delivered_quantity_total = sum(o["delivered_quantity"] for o in orders)
             remaining_quantity_total = sum(o["remaining_quantity"] for o in orders)
@@ -104,7 +104,7 @@ async def get_guest_order_status(session_factory: Any, registration_id: str) -> 
         person_result = await db.execute(select(Person).where(Person.id == reg.person_id))
         person: Person | None = person_result.scalar_one_or_none()
 
-        orders = [order_item_dict(item) for item in (reg.pre_orders or [])]
+        orders = [order_item_dict(item) for item in (reg.order_items or [])]
         champagne_orders = [o for o in orders if o["category"] == "champagne"]
         delivered = [o for o in champagne_orders if o["delivered"]]
         pending = [o for o in champagne_orders if not o["delivered"]]

@@ -148,7 +148,7 @@ async def delete_my_account(
 ) -> None:
     """Delete the caller's portal account while preserving festival records.
 
-    Registrations, pre-orders, payment state, check-in state, and audit history
+    Registrations, order items, payment state, check-in state, and audit history
     are operational festival records.  Deleting the portal account only removes
     the OIDC-backed account link so those records can still be fulfilled and
     retained for event/accounting purposes.

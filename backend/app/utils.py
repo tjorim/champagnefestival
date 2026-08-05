@@ -89,7 +89,7 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
         "updated_at": event.updated_at,
         "edition": None,
         # Active only: an archived product should stop being offered without
-        # rewriting the pre_orders already placed against it (a name/price/category
+        # rewriting the order_items already placed against it (a name/price/category
         # snapshot, not a live reference — see Product's docstring).
         "products": [product_to_dict(p) for p in event.products if p.active],
     }
@@ -124,7 +124,7 @@ def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
         "event_id": r.event_id,
         "event": event_to_summary_dict(event, include_edition=True),
         "guest_count": r.guest_count,
-        "pre_orders": r.pre_orders,
+        "order_items": r.order_items,
         "notes": r.notes,
         "accessibility_note": r.accessibility_note,
         "table_id": r.table_id,
@@ -154,7 +154,7 @@ def registration_to_checkin_dict(
         "table_id": r.table_id,
         "table_name": table_name,
         "guest_count": r.guest_count,
-        "pre_orders": r.pre_orders,
+        "order_items": r.order_items,
         "notes": r.notes,
         "status": r.status,
         "checked_in": r.checked_in,
@@ -183,7 +183,7 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "event_id": r.event_id,
         "event_title": event.title,
         "guest_count": r.guest_count,
-        "pre_orders": r.pre_orders,
+        "order_items": r.order_items,
         "status": r.status,
         "payment_status": r.payment_status,
         "amount_due": r.amount_due,

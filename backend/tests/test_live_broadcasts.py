@@ -112,7 +112,7 @@ async def test_admin_create_registration_publishes_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.post(
             "/api/registrations/admin",
-            json={"person_id": person_id, "event_id": evt["id"], "guest_count": 1, "pre_orders": []},
+            json={"person_id": person_id, "event_id": evt["id"], "guest_count": 1, "order_items": []},
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 201
@@ -161,14 +161,14 @@ async def test_update_status_publishes_registration_event(client):
     assert event.action == "updated"
 
 
-async def test_update_pre_orders_quantity_publishes_order_event(client):
+async def test_update_order_items_quantity_publishes_order_event(client):
     reg_id, _ = await _registration_with_token(client)
 
     async with live_bus.subscribe() as queue:
         r = await client.put(
             f"/api/registrations/{reg_id}",
             json={
-                "pre_orders": [
+                "order_items": [
                     {"product_id": "p1", "name": "Bottle", "quantity": 2, "price": 65.0, "category": "champagne"}
                 ]
             },
@@ -180,14 +180,14 @@ async def test_update_pre_orders_quantity_publishes_order_event(client):
     assert event.topic == "order"
 
 
-async def test_update_pre_orders_delivery_publishes_delivery_event(client):
+async def test_update_order_items_delivery_publishes_delivery_event(client):
     reg_id, _ = await _registration_with_token(client)
 
-    # First set a pre-order.
+    # First set an order.
     await client.put(
         f"/api/registrations/{reg_id}",
         json={
-            "pre_orders": [
+            "order_items": [
                 {"product_id": "p1", "name": "Bottle", "quantity": 2, "price": 65.0, "category": "champagne"}
             ]
         },
@@ -198,7 +198,7 @@ async def test_update_pre_orders_delivery_publishes_delivery_event(client):
         r = await client.put(
             f"/api/registrations/{reg_id}",
             json={
-                "pre_orders": [
+                "order_items": [
                     {
                         "product_id": "p1",
                         "name": "Bottle",

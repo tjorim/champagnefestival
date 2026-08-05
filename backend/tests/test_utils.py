@@ -13,7 +13,7 @@ def _make_registration():
         person_id="per_test",
         event_id="evt_test",
         guest_count=2,
-        pre_orders=[],
+        order_items=[],
         status="confirmed",
         payment_status="paid",
         amount_due=None,

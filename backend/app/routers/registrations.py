@@ -32,7 +32,7 @@ from app.routers.people import parse_phone
 from app.schemas import (
     OrderItemBase,
     OrderItemCategory,
-    PreOrderRequest,
+    OrderItemRequest,
     RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
     RegistrationCreate,
@@ -80,7 +80,7 @@ async def create_registration(
 
     event = await _get_event_or_404(db, body.event_id)
     await _ensure_public_registration_allowed(db, event, body.guest_count)
-    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders, body.guest_count)
+    resolved_order_items = _resolve_order_items(event, body.order_items, body.guest_count)
 
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
@@ -111,7 +111,7 @@ async def create_registration(
         person_id=person.id,
         check_in_token=secrets.token_urlsafe(32),
     )
-    registration.pre_orders = resolved_pre_orders
+    registration.order_items = resolved_order_items
     db.add(registration)
     await db.commit()
 
@@ -144,7 +144,7 @@ async def admin_create_registration(
 ) -> dict:
     person = await _get_person_or_404(db, body.person_id)
     event = await _get_event_or_404(db, body.event_id)
-    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders, body.guest_count)
+    resolved_order_items = _resolve_order_items(event, body.order_items, body.guest_count)
 
     registration = Registration(
         id=make_id("reg"),
@@ -156,7 +156,7 @@ async def admin_create_registration(
         person_id=person.id,
         check_in_token=secrets.token_urlsafe(32),
     )
-    registration.pre_orders = resolved_pre_orders
+    registration.order_items = resolved_order_items
     db.add(registration)
     await write_audit_entry(
         db,
@@ -442,8 +442,8 @@ async def update_registration(
 
     # Capture pre-state for live-update topic detection.
     _pre_table_id = registration.table_id
-    _pre_pre_orders = list(registration.pre_orders) if registration.pre_orders else []
-    _pre_delivery_sum = _sum_delivered(registration.pre_orders)
+    _pre_order_items = list(registration.order_items) if registration.order_items else []
+    _pre_delivery_sum = _sum_delivered(registration.order_items)
     _pre_checked_in = registration.checked_in
     _pre_strap_issued = registration.strap_issued
     _pre_status = registration.status
@@ -473,8 +473,8 @@ async def update_registration(
             )
         await _get_person_or_404(db, body.person_id)
         registration.person_id = body.person_id
-    if body.pre_orders is not None:
-        registration.pre_orders = [item.model_dump() for item in body.pre_orders]
+    if body.order_items is not None:
+        registration.order_items = [item.model_dump() for item in body.order_items]
     if body.checked_in is not None:
         if body.checked_in and not registration.checked_in:
             registration.checked_in_at = datetime.now(UTC)
@@ -495,8 +495,10 @@ async def update_registration(
             details={"table_id": body.table_id, "previous_table_id": _pre_table_id},
             **_audit_base,
         )
-    if body.pre_orders is not None and registration.pre_orders != _pre_pre_orders:
-        action = "delivery_updated" if _sum_delivered(registration.pre_orders) != _pre_delivery_sum else "order_updated"
+    if body.order_items is not None and registration.order_items != _pre_order_items:
+        action = (
+            "delivery_updated" if _sum_delivered(registration.order_items) != _pre_delivery_sum else "order_updated"
+        )
         await write_audit_entry(db, actor=actor, action=action, details={}, **_audit_base)
     if body.checked_in is not None and registration.checked_in != _pre_checked_in:
         await write_audit_entry(
@@ -546,8 +548,8 @@ async def update_registration(
         _scope = {"registration_id": registration.id, "event_id": _event_id, "edition_id": _edition_id}
         if registration.table_id != _pre_table_id:
             await live_bus.publish(live_mapping.seating_changed(table_id=registration.table_id, **_scope))
-        if body.pre_orders is not None and registration.pre_orders != _pre_pre_orders:
-            if _sum_delivered(registration.pre_orders) != _pre_delivery_sum:
+        if body.order_items is not None and registration.order_items != _pre_order_items:
+            if _sum_delivered(registration.order_items) != _pre_delivery_sum:
                 await live_bus.publish(live_mapping.delivery_changed(**_scope))
             else:
                 await live_bus.publish(live_mapping.order_changed(**_scope))
@@ -601,10 +603,10 @@ async def delete_registration(
         logger.warning("live_bus.publish failed for deleted registration %s", _reg_id, exc_info=True)
 
 
-def _sum_delivered(pre_orders: list[dict] | None) -> int:
-    if not pre_orders:
+def _sum_delivered(order_items: list[dict] | None) -> int:
+    if not order_items:
         return 0
-    return sum(int(item.get("delivered_quantity") or 0) for item in pre_orders)
+    return sum(int(item.get("delivered_quantity") or 0) for item in order_items)
 
 
 def _hash_guest_access_token(token: str) -> str:
@@ -694,7 +696,7 @@ async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
     return event
 
 
-def _resolve_pre_orders(event: Event, requests: list[PreOrderRequest], guest_count: int) -> list[dict]:
+def _resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_count: int) -> list[dict]:
     """Resolve client-supplied product_id/quantity pairs against the event's real,
     active products, snapshotting name/price/category server-side (see Product's
     docstring). Rejects any product_id that isn't an active product on this event,
@@ -771,7 +773,7 @@ async def _ensure_public_registration_allowed(
         )
     # Registration is mandatory for events that require it (capacity-limited ones),
     # and optional-but-offered for walk-in events that still have something to
-    # pre-order (e.g. a VIP package) — anyone else can just show up. An event with
+    # order (e.g. a VIP package) — anyone else can just show up. An event with
     # neither accepts no registrations at all.
     if not event.registration_required and not any(p.active for p in event.products):
         raise HTTPException(

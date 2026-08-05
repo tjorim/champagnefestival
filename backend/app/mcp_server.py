@@ -167,7 +167,7 @@ class ChampagneFestivalMcpBackend:
     async def get_guest_registration(self, registration_id: str) -> dict:
         """Return full registration details for a specific registration ID.
 
-        Includes guest info, event, table assignment, check-in status, and pre-orders.
+        Includes guest info, event, table assignment, check-in status, and order items.
         Requires the ``volunteer`` or ``admin`` role.
 
         Parameters

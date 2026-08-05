@@ -39,7 +39,7 @@ async def lookup_check_in(
     Called by the register-side tablet to display guest info before check-in.
     Token is sent in the request body (not the query string) to keep it out of
     server access logs, browser history, and Referer headers.
-    Only exposes fields needed on the tablet (name, party size, event, pre-orders,
+    Only exposes fields needed on the tablet (name, party size, event, order items,
     check-in/strap status). PII fields (email, phone) are not included.
     """
     client_ip = get_client_ip(request)

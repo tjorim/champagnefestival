@@ -178,4 +178,4 @@ async def test_delete_me_unlinks_account_without_deleting_registration(me_client
     assert retained_registration is not None
     await db_session.refresh(retained_registration)
     assert retained_registration.user_id is None
-    assert isinstance(retained_registration.pre_orders, list)
+    assert isinstance(retained_registration.order_items, list)
