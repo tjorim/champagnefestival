@@ -42,7 +42,7 @@ export interface Registration {
   eventId: string;
   event?: Event | null;
   guestCount: number;
-  preOrders: OrderItem[];
+  orderItems: OrderItem[];
   notes: string;
   /** Optional accessibility requirements (wheelchair, crutches, low table needed, etc.) */
   accessibilityNote: string;
@@ -75,7 +75,7 @@ export interface RegistrationFormData {
   phone: string;
   eventId: string;
   guestCount: number;
-  preOrders: OrderItem[];
+  orderItems: OrderItem[];
   notes: string;
   honeypot?: string;
   formStartTime: string;

@@ -155,7 +155,7 @@ For venue, seating, order, and delivery screenshots, open `/admin` and use the s
 
 - Venue/Layout views read `/api/venues`, `/api/rooms`, `/api/layouts`, `/api/tables`, `/api/areas`
 - Seating is visible via `table.registration_ids`
-- Orders and delivery are visible in each registration `pre_orders` entry
+- Orders and delivery are visible in each registration `order_items` entry
 - Switch to `event-day` when you need a “live operations” state snapshot
 
 ### Structure

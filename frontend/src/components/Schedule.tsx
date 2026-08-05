@@ -143,7 +143,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                             ) : (
                               event.products.length > 0 && (
                                 <Badge bg="info" text="dark" className="mb-2 ms-2">
-                                  {m.schedule_preorder_available()}
+                                  {m.schedule_order_available()}
                                 </Badge>
                               )
                             )}

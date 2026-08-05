@@ -159,7 +159,7 @@ function registrationToCheckInResponse(
     table_id: registration.table_id ?? null,
     table_name: table?.name ?? null,
     guest_count: registration.guest_count,
-    pre_orders: registration.pre_orders,
+    order_items: registration.order_items,
     notes: registration.notes,
     status: registration.status,
     checked_in: registration.checked_in,
@@ -260,7 +260,7 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     sharedStore.registrations[idx] = {
       ...sharedStore.registrations[idx]!,
-      ...(Array.isArray(body.pre_orders) ? { pre_orders: body.pre_orders } : {}),
+      ...(Array.isArray(body.order_items) ? { order_items: body.order_items } : {}),
       ...(typeof body.strap_issued === "boolean" ? { strap_issued: body.strap_issued } : {}),
       updated_at: now(),
     };
@@ -324,7 +324,7 @@ export const adminHandlers = [
       event_id: String(body.event_id ?? ""),
       event: event ?? null,
       guest_count: Number(body.guest_count ?? 1),
-      pre_orders: [],
+      order_items: [],
       notes: String(body.notes ?? ""),
       accessibility_note: "",
       table_id: null,

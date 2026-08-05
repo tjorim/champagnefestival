@@ -12,7 +12,7 @@ vi.mock("@/paraglide/messages", () => ({
     schedule_time_range: ({ start, end }: { start: string; end: string }) => `${start} - ${end}`,
     schedule_time: () => "Time",
     schedule_registration: () => "Registration required",
-    schedule_preorder_available: () => "VIP package available",
+    schedule_order_available: () => "VIP package available",
     schedule_no_events: () => "No events",
     schedule_categories_tasting: () => "Tasting",
     schedule_categories_vip: () => "VIP",
@@ -93,7 +93,7 @@ describe("Schedule component", () => {
     expect(screen.getByText("Registration required")).toBeInTheDocument();
   });
 
-  it("shows a pre-order badge instead, for a walk-in event with products", () => {
+  it("shows an order badge instead, for a walk-in event with products", () => {
     const eventsWithProduct = [
       {
         ...mockEvents[0]!,

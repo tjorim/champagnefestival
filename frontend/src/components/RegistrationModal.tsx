@@ -30,7 +30,7 @@ interface RegistrationFields {
 }
 
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
-  const [preOrders, setPreOrders] = useState<OrderItem[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -43,7 +43,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   const products = useMemo(() => event?.products ?? [], [event]);
   // Whether guests can order anything is answered by the event actually
   // having products, not by a separate flag — see Event.products.
-  const showPreOrders = products.length > 0;
+  const showOrderItems = products.length > 0;
 
   const form = useForm({
     defaultValues: {
@@ -66,7 +66,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         await submitRegistrationMutation.mutateAsync({
           ...value,
           eventId: event.id,
-          preOrders: showPreOrders ? preOrders : [],
+          orderItems: showOrderItems ? orderItems : [],
         });
         setSubmitSuccess(true);
       } catch (error) {
@@ -79,7 +79,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
   const handleQuantityChange = useCallback(
     (productId: string, quantity: number) => {
-      setPreOrders((prev) => {
+      setOrderItems((prev) => {
         const existing = prev.find((o) => o.productId === productId);
         if (quantity <= 0) {
           return prev.filter((o) => o.productId !== productId);
@@ -114,16 +114,16 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
   const requiredProducts = useMemo(() => products.filter((p) => p.required), [products]);
   const hasRequiredSelected = useMemo(
-    () => preOrders.some((o) => requiredProducts.some((rp) => rp.id === o.productId)),
-    [preOrders, requiredProducts],
+    () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.productId)),
+    [orderItems, requiredProducts],
   );
 
   // product_id -> free quantity included by whichever bundling product is
   // currently selected, computed the same way the server will (see
-  // _resolve_pre_orders): floor(guestCount / includedPerGuests).
+  // _resolve_order_items): floor(guestCount / includedPerGuests).
   const includedQuantities = useMemo(() => {
     const included = new Map<string, { quantity: number; sourceName: string }>();
-    for (const order of preOrders) {
+    for (const order of orderItems) {
       const source = products.find((p) => p.id === order.productId);
       if (!source?.includedProductId || !source.includedPerGuests) continue;
       const qty = Math.floor((guestCount || 0) / source.includedPerGuests);
@@ -135,7 +135,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       });
     }
     return included;
-  }, [guestCount, preOrders, products]);
+  }, [guestCount, orderItems, products]);
 
   const handleClose = useCallback(() => {
     form.reset({
@@ -147,7 +147,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       honeypot: "",
       formStartTime: new Date().toISOString(),
     });
-    setPreOrders([]);
+    setOrderItems([]);
     setSubmitSuccess(false);
     setSubmitError("");
     onHide();
@@ -333,20 +333,20 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               }}
             </form.Field>
 
-            {showPreOrders && (
+            {showOrderItems && (
               <fieldset className="mb-3">
-                <legend className="fs-6 fw-semibold mb-1">{m.registration_preorder_title()}</legend>
-                <p className="text-secondary small mb-2">{m.registration_preorder_description()}</p>
+                <legend className="fs-6 fw-semibold mb-1">{m.registration_order_title()}</legend>
+                <p className="text-secondary small mb-2">{m.registration_order_description()}</p>
                 {requiredProducts.length > 0 && !hasRequiredSelected && (
                   <p className="text-warning small mb-2">
-                    {m.registration_preorder_required_hint({
+                    {m.registration_order_required_hint({
                       products: requiredProducts.map((p) => p.name).join(", "),
                     })}
                   </p>
                 )}
 
                 {products.map((product) => {
-                  const currentItem = preOrders.find((o) => o.productId === product.id);
+                  const currentItem = orderItems.find((o) => o.productId === product.id);
                   const qty = currentItem?.quantity ?? 0;
                   const label = `${product.name} - €${product.price}`;
                   const isLockedOptional =
@@ -385,7 +385,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       </div>
                       {included && (
                         <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
-                          {m.registration_preorder_included_note({
+                          {m.registration_order_included_note({
                             count: included.quantity,
                             source: included.sourceName,
                           })}

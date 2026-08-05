@@ -9,7 +9,7 @@ export interface EventEditionSummary {
 }
 
 /**
- * Something guests can pre-order when registering for this event (a bottle of
+ * Something guests can order when registering for this event (a bottle of
  * champagne, a cheese platter, ...). Scoped to one event — there is no global
  * catalog, since what a VIP tasting sells has nothing to do with what a
  * different tasting or a bourse would.
@@ -56,7 +56,7 @@ export interface Event {
   updatedAt: string;
   edition?: EventEditionSummary | null;
   /**
-   * Active products only. Whether guests can pre-order anything for this event
+   * Active products only. Whether guests can order anything for this event
    * is answered by whether this list is non-empty, not by a separate flag.
    */
   products: Product[];

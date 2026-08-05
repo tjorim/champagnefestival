@@ -105,7 +105,7 @@ function makeRegistration(overrides: Partial<Registration> = {}): Registration {
     person: { id: "person-1", name: "Jane Doe", email: "jane@example.com", phone: "+32000" },
     eventId: "event-1",
     guestCount: 2,
-    preOrders: [],
+    orderItems: [],
     notes: "",
     accessibilityNote: "",
     status: "confirmed",

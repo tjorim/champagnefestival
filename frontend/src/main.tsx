@@ -327,7 +327,7 @@ function App() {
     const now = new Date();
     return edition.events
       // Registration is offered for events that require it (capacity-limited),
-      // and also for walk-in events that still have something to pre-order (e.g.
+      // and also for walk-in events that still have something to order (e.g.
       // a VIP package) — everyone else can just show up, no RSVP needed.
       .filter((event) => event.registrationRequired || event.products.length > 0)
       .filter((event) => {

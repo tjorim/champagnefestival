@@ -409,11 +409,11 @@ export default function RegistrationList({
                 </Badge>
               </div>
               <div className="text-secondary small">{reg.person.email}</div>
-              {!isStandalone && reg.preOrders.length > 0 && (
+              {!isStandalone && reg.orderItems.length > 0 && (
                 <div className="text-warning small">
                   <i className="bi bi-cart-fill me-1" aria-hidden="true" />
-                  {reg.preOrders.filter((o) => o.delivered).length}/{reg.preOrders.length}{" "}
-                  {m.admin_pre_orders()}
+                  {reg.orderItems.filter((o) => o.delivered).length}/{reg.orderItems.length}{" "}
+                  {m.admin_order_items()}
                 </div>
               )}
             </>

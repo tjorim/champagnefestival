@@ -10,7 +10,7 @@ import { deleteMyAccount } from "@/utils/meApi";
 /**
  * Self-service account page, reachable only by direct link (no site nav entry) —
  * mirrors the auth pattern used by PebblePairPage. Currently offers account
- * deletion (DELETE /api/me); registrations/pre-orders/payment/check-in history
+ * deletion (DELETE /api/me); registrations/order items/payment/check-in history
  * are festival records and are kept, per the endpoint's own contract.
  */
 export default function MyAccountPage() {

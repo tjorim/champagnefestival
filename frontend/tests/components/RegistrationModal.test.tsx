@@ -13,11 +13,11 @@ vi.mock("@/paraglide/messages", () => ({
     registration_email: () => "Email",
     registration_phone: () => "Phone Number",
     registration_guests: () => "Number of Guests",
-    registration_preorder_title: () => "Pre-order",
-    registration_preorder_description: () => "Order champagne or snacks in advance",
-    registration_preorder_required_hint: ({ products }: { products: string }) =>
+    registration_order_title: () => "Order",
+    registration_order_description: () => "Order champagne or snacks with your registration",
+    registration_order_required_hint: ({ products }: { products: string }) =>
       `Add ${products} first to unlock the optional items below.`,
-    registration_preorder_included_note: ({ count, source }: { count: number; source: string }) =>
+    registration_order_included_note: ({ count, source }: { count: number; source: string }) =>
       `Includes ${count} free with your ${source}`,
     registration_notes: () => "Notes",
     registration_notes_placeholder: () => "Any special requests...",
@@ -123,24 +123,24 @@ describe("RegistrationModal component", () => {
     });
   });
 
-  it("shows pre-order products when the event has active products", () => {
+  it("shows order products when the event has active products", () => {
     renderModal();
     expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
   });
 
-  it("hides pre-order products when the event has no products", () => {
+  it("hides order products when the event has no products", () => {
     renderModal({ event: { ...vipEvent, products: [] } });
     expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
   });
 
-  it("shows pre-order products for a non-vip category, as long as it has products", () => {
+  it("shows order products for a non-vip category, as long as it has products", () => {
     // A Sunday-morning capsule exchange during the festival is not "vip", but can
     // still sell things — the category label must not gate this.
     renderModal({ event: { ...vipEvent, category: "exchange" } });
     expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
   });
 
-  it("hides pre-order products for a vip-categorised event with no products", () => {
+  it("hides order products for a vip-categorised event with no products", () => {
     // The inverse: being labelled "vip" grants nothing by itself.
     renderModal({ event: { ...vipEvent, category: "vip", products: [] } });
     expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
@@ -192,7 +192,7 @@ describe("RegistrationModal component", () => {
     expect(screen.queryByLabelText(/Name \*/i)).not.toBeInTheDocument();
   });
 
-  it("increments pre-order quantity when + button is clicked", () => {
+  it("increments order quantity when + button is clicked", () => {
     renderModal();
 
     const increaseButton = screen.getByRole("button", {
@@ -204,7 +204,7 @@ describe("RegistrationModal component", () => {
     expect(within(controlsContainer).getByText("1")).toBeInTheDocument();
   });
 
-  it("decrements pre-order quantity when - button is clicked", () => {
+  it("decrements order quantity when - button is clicked", () => {
     renderModal();
 
     const increaseButton = screen.getByRole("button", {
@@ -222,7 +222,7 @@ describe("RegistrationModal component", () => {
     expect(within(controlsContainer).getByText("1")).toBeInTheDocument();
   });
 
-  it("does not decrement pre-order quantity below zero", () => {
+  it("does not decrement order quantity below zero", () => {
     renderModal();
 
     const decreaseButton = screen.getByRole("button", {

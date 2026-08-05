@@ -38,7 +38,7 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_event: () => "Event",
     checkin_guests: () => "Guests",
     checkin_table: () => "Table",
-    checkin_pre_orders: () => "Pre-orders",
+    checkin_order_items: () => "Order items",
     checkin_do_checkin: () => "Check in now",
     checkin_actions_login_required: () => "Login for entrance actions.",
     checkin_actions_unauthorized: () => "Unauthorized entrance action.",
@@ -293,7 +293,7 @@ describe("CheckInPage", () => {
     });
   });
 
-  it("updates delivered pre-order quantities from the check-in card", async () => {
+  it("updates delivered order-item quantities from the check-in card", async () => {
     await renderPage();
 
     await waitFor(() => {
@@ -307,7 +307,7 @@ describe("CheckInPage", () => {
     });
   });
 
-  it("updates delivered pre-order quantities from the numeric input", async () => {
+  it("updates delivered order-item quantities from the numeric input", async () => {
     await renderPage();
 
     const quantityInput = await screen.findByRole("spinbutton", {

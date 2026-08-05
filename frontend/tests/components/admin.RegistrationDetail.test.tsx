@@ -70,7 +70,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
       },
     },
     guestCount: 2,
-    preOrders: [
+    orderItems: [
       {
         productId: "prod-1",
         name: "Brut Reserve",
@@ -165,7 +165,7 @@ describe("RegistrationDetail", () => {
     expect(screen.queryByText("Wheelchair access needed.")).not.toBeInTheDocument();
   });
 
-  it("renders pre-order rows with delivered/remaining badges for festival registrations", () => {
+  it("renders order-item rows with delivered/remaining badges for festival registrations", () => {
     renderDetail();
 
     expect(screen.getByText("Brut Reserve")).toBeInTheDocument();
@@ -176,7 +176,7 @@ describe("RegistrationDetail", () => {
     ).toHaveValue(1);
   });
 
-  it("updates delivered pre-order quantities from the numeric input", () => {
+  it("updates delivered order-item quantities from the numeric input", () => {
     const { onToggleDelivered } = renderDetail();
 
     const quantityInput = screen.getByRole("spinbutton", {
@@ -250,7 +250,7 @@ describe("RegistrationDetail", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("hides pre-orders and strap section for simple RSVP (non-festival) registrations", () => {
+  it("hides order items and strap section for simple RSVP (non-festival) registrations", () => {
     renderDetail({
       registration: buildRegistration({
         event: {

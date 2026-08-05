@@ -308,7 +308,7 @@ describe("OtherEvents", () => {
     expect(document.querySelector('a[href^="mailto:"]')).toBeNull();
   });
 
-  it("hides the reservation button for a walk-in event with nothing to pre-order", async () => {
+  it("hides the reservation button for a walk-in event with nothing to order", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
         const editionType = new URL(request.url).searchParams.get("edition_type");

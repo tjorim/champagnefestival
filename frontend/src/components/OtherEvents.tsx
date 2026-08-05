@@ -275,7 +275,7 @@ export default function OtherEvents() {
                             ? item.editionType === "bourse"
                               ? m.other_events_reserve_table()
                               : m.other_events_rsvp()
-                            : m.other_events_preorder()}
+                            : m.other_events_order()}
                         </Button>
                       )}
                     </div>
