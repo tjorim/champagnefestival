@@ -220,6 +220,9 @@ class ProductOut(BaseModel):
 
 
 class EventCheckInStats(BaseModel):
+    """Guest counts for an event's live entrance display. `total`/`checked_in`
+    are guest headcounts (sum of `guest_count`), not booking counts."""
+
     event_id: str
     total: int
     checked_in: int

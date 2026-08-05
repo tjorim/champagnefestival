@@ -59,8 +59,11 @@ async def get_checkin_stats(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None),
 ) -> list[dict]:
-    """Per-event registration/check-in counts, for a live progress display at the entrance.
+    """Per-event guest counts, checked-in vs. total, for a live progress display at the entrance.
 
+    Counts guests (`sum(guest_count)`), not bookings, matching the admin's own capacity panel
+    (`RegistrationList.tsx`'s `eventCapacityStats`) — a booking can carry several guests, and a
+    headcount is what a live entrance display and a capacity limit both actually care about.
     Registered but cancelled bookings are excluded from both counts, since they were never
     going to show up. Kept separate from the public `/api/editions/active` payload (and from
     `EventOut`) since check-in progress is volunteer/admin-only information.
@@ -68,8 +71,10 @@ async def get_checkin_stats(
     stmt = (
         select(
             Registration.event_id,
-            func.count(Registration.id).label("total"),
-            func.count(Registration.id).filter(Registration.checked_in.is_(True)).label("checked_in"),
+            func.coalesce(func.sum(Registration.guest_count), 0).label("total"),
+            func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in.is_(True)), 0).label(
+                "checked_in"
+            ),
         )
         .where(Registration.status != "cancelled")
         .group_by(Registration.event_id)
