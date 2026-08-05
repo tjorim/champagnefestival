@@ -93,6 +93,19 @@ export interface AuditEntry {
   details: Record<string, unknown>;
 }
 
+/**
+ * Per-event check-in progress, as counted by the backend.
+ *
+ * Guest counts, not booking counts — a booking can carry several guests, and a
+ * headcount is what a capacity limit and an entrance display both care about.
+ * Cancelled bookings are excluded on both sides.
+ */
+export interface EventCheckInStats {
+  eventId: string;
+  total: number;
+  checkedIn: number;
+}
+
 export interface EditionAttendanceStats {
   editionId: string;
   year: number;

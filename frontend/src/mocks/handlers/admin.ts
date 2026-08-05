@@ -661,6 +661,34 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Events (admin)
   // ──────────────────────────────────────────────────────────────
+
+  // Must stay ahead of "/api/events/:id", which would otherwise swallow it.
+  http.get("/api/events/checkin-stats", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const editionId = new URL(request.url).searchParams.get("edition_id");
+    const totals = new Map<string, { total: number; checked_in: number }>();
+
+    for (const registration of sharedStore.registrations) {
+      const eventId = registration.event_id;
+      if (typeof eventId !== "string" || eventId.length === 0) continue;
+      if (registration.status === "cancelled") continue;
+      if (editionId) {
+        const event = events.find((e) => e.id === eventId);
+        if (!event || event.edition_id !== editionId) continue;
+      }
+      const guests = typeof registration.guest_count === "number" ? registration.guest_count : 0;
+      const entry = totals.get(eventId) ?? { total: 0, checked_in: 0 };
+      entry.total += guests;
+      if (registration.checked_in === true) entry.checked_in += guests;
+      totals.set(eventId, entry);
+    }
+
+    return HttpResponse.json(
+      [...totals.entries()].map(([event_id, entry]) => ({ event_id, ...entry })),
+    );
+  }),
+
   http.get("/api/events/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;

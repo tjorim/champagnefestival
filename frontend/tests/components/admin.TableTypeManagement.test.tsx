@@ -39,6 +39,7 @@ interface RenderOverrides {
   onUpdate?: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
   onArchive?: (id: string) => Promise<void>;
   onRestore?: (id: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 function renderTableTypeManagement(overrides: RenderOverrides = {}) {
@@ -46,6 +47,7 @@ function renderTableTypeManagement(overrides: RenderOverrides = {}) {
   const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(undefined);
   const onArchive = overrides.onArchive ?? vi.fn().mockResolvedValue(undefined);
   const onRestore = overrides.onRestore ?? vi.fn().mockResolvedValue(undefined);
+  const onDelete = overrides.onDelete ?? vi.fn().mockResolvedValue(undefined);
 
   render(
     <TableTypeManagement
@@ -54,10 +56,11 @@ function renderTableTypeManagement(overrides: RenderOverrides = {}) {
       onUpdate={onUpdate}
       onArchive={onArchive}
       onRestore={onRestore}
+      onDelete={onDelete}
     />,
   );
 
-  return { onAdd, onUpdate, onArchive, onRestore };
+  return { onAdd, onUpdate, onArchive, onRestore, onDelete };
 }
 
 describe("TableTypeManagement", () => {
@@ -190,5 +193,53 @@ describe("TableTypeManagement", () => {
 
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onRestore).toHaveBeenCalledWith("tt-2");
+  });
+
+  it("offers delete on archived rows only, and asks for confirmation first", () => {
+    const confirmSpy = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onDelete } = renderTableTypeManagement();
+
+    const activeRow = screen.getByText("Standard Rectangle").closest("tr") as HTMLElement;
+    expect(
+      within(activeRow).queryByRole("button", { name: /admin_delete/ }),
+    ).not.toBeInTheDocument();
+
+    const archivedRow = screen.getByText("Retired Round").closest("tr") as HTMLElement;
+    fireEvent.click(
+      within(archivedRow).getByRole("button", { name: "admin_delete Retired Round" }),
+    );
+
+    expect(confirmSpy).toHaveBeenCalledWith("admin_table_type_delete_confirm");
+    expect(onDelete).toHaveBeenCalledWith("tt-2");
+  });
+
+  it("does not delete when the confirmation is declined", () => {
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(false));
+    const { onDelete } = renderTableTypeManagement();
+
+    const archivedRow = screen.getByText("Retired Round").closest("tr") as HTMLElement;
+    fireEvent.click(
+      within(archivedRow).getByRole("button", { name: "admin_delete Retired Round" }),
+    );
+
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the API's refusal when tables still use the type", async () => {
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(true));
+    const onDelete = vi
+      .fn()
+      .mockRejectedValue(new Error("Cannot delete: tables are still using this type."));
+    renderTableTypeManagement({ onDelete });
+
+    const archivedRow = screen.getByText("Retired Round").closest("tr") as HTMLElement;
+    fireEvent.click(
+      within(archivedRow).getByRole("button", { name: "admin_delete Retired Round" }),
+    );
+
+    expect(
+      await screen.findByText("Cannot delete: tables are still using this type."),
+    ).toBeInTheDocument();
   });
 });

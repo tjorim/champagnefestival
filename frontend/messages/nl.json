@@ -337,6 +337,8 @@
   "admin_table_type_name_required": "Naam is verplicht",
   "admin_table_type_capacity_min": "Max. capaciteit moet een geheel getal van 1 of meer zijn",
   "admin_table_type_dimensions_positive": "Breedte en lengte moeten positieve getallen zijn",
+  "admin_table_type_delete_confirm": "Dit tafeltype definitief verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "admin_error_delete_table_type": "Tafeltype verwijderen mislukt.",
   "admin_no_table_types": "Nog geen tafeltypen gedefinieerd.",
   "admin_venue_add": "Locatie toevoegen",
   "admin_venue_name_label": "Naam locatie",

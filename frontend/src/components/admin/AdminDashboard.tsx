@@ -215,6 +215,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleDeleteLayout,
     handleDeleteRoom,
     handleDeleteTable,
+    handleDeleteTableType,
     handleDeleteVenue,
     handleMoveArea,
     handleMoveTable,
@@ -579,6 +580,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onUpdate={handleUpdateTableType}
                     onArchive={handleArchiveTableType}
                     onRestore={handleRestoreTableType}
+                    onDelete={handleDeleteTableType}
                   />
                 )}
                 {canManageAdminSections && activeKey === "directory" && (
