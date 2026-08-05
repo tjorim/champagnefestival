@@ -29,6 +29,9 @@ export interface SeedProduct {
   price: number;
   category: string;
   active: boolean;
+  required: boolean;
+  included_product_id: string | null;
+  included_per_guests: number | null;
   created_at: string;
   updated_at: string;
 }

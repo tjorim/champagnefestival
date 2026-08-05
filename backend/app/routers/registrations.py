@@ -80,7 +80,7 @@ async def create_registration(
 
     event = await _get_event_or_404(db, body.event_id)
     await _ensure_public_registration_allowed(db, event, body.guest_count)
-    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders)
+    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders, body.guest_count)
 
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
@@ -144,7 +144,7 @@ async def admin_create_registration(
 ) -> dict:
     person = await _get_person_or_404(db, body.person_id)
     event = await _get_event_or_404(db, body.event_id)
-    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders)
+    resolved_pre_orders = _resolve_pre_orders(event, body.pre_orders, body.guest_count)
 
     registration = Registration(
         id=make_id("reg"),
@@ -682,14 +682,24 @@ async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
     return event
 
 
-def _resolve_pre_orders(event: Event, requests: list[PreOrderRequest]) -> list[dict]:
+def _resolve_pre_orders(event: Event, requests: list[PreOrderRequest], guest_count: int) -> list[dict]:
     """Resolve client-supplied product_id/quantity pairs against the event's real,
     active products, snapshotting name/price/category server-side (see Product's
     docstring). Rejects any product_id that isn't an active product on this event,
     so a client can never set an arbitrary price or order a nonexistent product.
+
+    Also enforces that a required product (e.g. an entry ticket) is present
+    whenever an optional one is ordered — an event with required products
+    configured rejects an order for optional add-ons alone — and applies each
+    ordered product's bundle (Product.included_product_id/included_per_guests):
+    a free quantity of the bundled product, scaled to guest_count, is merged
+    into that product's line item on top of anything explicitly requested.
     """
     products_by_id: dict[str, Product] = {p.id: p for p in event.products if p.active}
-    resolved: list[dict] = []
+
+    # product_id -> (quantity, included_quantity)
+    line_items: dict[str, tuple[int, int]] = {}
+    ordered_ids: set[str] = set()
     for req in requests:
         product = products_by_id.get(req.product_id)
         if product is None:
@@ -697,13 +707,41 @@ def _resolve_pre_orders(event: Event, requests: list[PreOrderRequest]) -> list[d
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Product '{req.product_id}' is not available for this event.",
             )
+        ordered_ids.add(product.id)
+        quantity, included_quantity = line_items.get(product.id, (0, 0))
+        line_items[product.id] = (quantity + req.quantity, included_quantity)
+
+    required_ids = {p.id for p in products_by_id.values() if p.required}
+    if required_ids and (ordered_ids - required_ids) and not (ordered_ids & required_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This event requires a required product (e.g. an entry ticket) before any optional products can be ordered.",
+        )
+
+    for product_id in list(ordered_ids):
+        product = products_by_id[product_id]
+        if product.included_product_id is None or product.included_per_guests is None:
+            continue
+        target = products_by_id.get(product.included_product_id)
+        if target is None:
+            continue  # bundled product archived since — inclusion silently no longer applies
+        included_qty = guest_count // product.included_per_guests
+        if included_qty <= 0:
+            continue
+        quantity, included_quantity = line_items.get(target.id, (0, 0))
+        line_items[target.id] = (quantity + included_qty, included_quantity + included_qty)
+
+    resolved: list[dict] = []
+    for product_id, (quantity, included_quantity) in line_items.items():
+        product = products_by_id[product_id]
         resolved.append(
             OrderItemBase(
                 product_id=product.id,
                 name=product.name,
-                quantity=req.quantity,
+                quantity=quantity,
                 price=float(product.price),
                 category=cast(OrderItemCategory, product.category),
+                included_quantity=included_quantity,
             ).model_dump()
         )
     return resolved

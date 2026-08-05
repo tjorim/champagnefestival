@@ -750,6 +750,9 @@ export const adminHandlers = [
       price: Number(body.price ?? 0),
       category: String(body.category ?? "other"),
       active: body.active !== false,
+      required: body.required === true,
+      included_product_id: typeof body.included_product_id === "string" ? body.included_product_id : null,
+      included_per_guests: typeof body.included_per_guests === "number" ? body.included_per_guests : null,
       created_at: now(),
       updated_at: now(),
     };

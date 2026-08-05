@@ -37,6 +37,11 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
         ? Math.max(0, Math.min(quantitySafe, deliveredQuantity))
         : 0;
 
+      const includedQuantityRaw = Number(item.included_quantity ?? 0);
+      const includedQuantity = Number.isFinite(includedQuantityRaw)
+        ? Math.max(0, Math.min(quantitySafe, includedQuantityRaw))
+        : 0;
+
       return {
         productId: (item.product_id ?? "") as string,
         name: (item.name ?? "") as string,
@@ -46,6 +51,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
         price: (item.price ?? 0) as number,
         category: (item.category ?? "other") as OrderItemCategory,
         delivered: deliveredQuantitySafe === quantitySafe,
+        includedQuantity,
       };
     }),
     notes: (d.notes ?? "") as string,

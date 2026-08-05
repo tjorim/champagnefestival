@@ -5,7 +5,7 @@ Products are what registration.pre_orders line items resolve against — see
 product belongs to exactly one event.
 """
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +23,27 @@ router = APIRouter(
 )
 
 
+async def _validate_inclusion_target(
+    db: AsyncSession, event_id: str, self_id: str | None, included_product_id: str
+) -> None:
+    if included_product_id == self_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A product cannot include itself.")
+    result = await db.execute(select(Product).where(Product.id == included_product_id))
+    target = result.scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="Included product not found.")
+    if target.event_id != event_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Included product must belong to the same event.",
+        )
+    if target.included_product_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Included product cannot itself bundle another product.",
+        )
+
+
 @router.post("", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
 async def create_product(
     body: ProductCreate,
@@ -31,6 +52,8 @@ async def create_product(
     actor: str = Depends(get_actor_id),
 ) -> dict:
     await get_or_404(db, Event, body.event_id, "Event not found.")
+    if body.included_product_id is not None:
+        await _validate_inclusion_target(db, body.event_id, None, body.included_product_id)
     product = Product(
         id=make_id("prod"),
         event_id=body.event_id,
@@ -38,6 +61,9 @@ async def create_product(
         price=body.price,
         category=body.category,
         active=body.active,
+        required=body.required,
+        included_product_id=body.included_product_id,
+        included_per_guests=body.included_per_guests,
     )
     db.add(product)
     await write_audit_entry(
@@ -88,6 +114,26 @@ async def update_product(
         product.category = body.category
     if body.active is not None:
         product.active = body.active
+    if body.required is not None:
+        product.required = body.required
+
+    if "included_product_id" in body.model_fields_set or "included_per_guests" in body.model_fields_set:
+        resulting_included_product_id = (
+            body.included_product_id if "included_product_id" in body.model_fields_set else product.included_product_id
+        )
+        resulting_included_per_guests = (
+            body.included_per_guests if "included_per_guests" in body.model_fields_set else product.included_per_guests
+        )
+        if (resulting_included_product_id is None) != (resulting_included_per_guests is None):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="included_product_id and included_per_guests must be set together.",
+            )
+        if resulting_included_product_id is not None:
+            await _validate_inclusion_target(db, product.event_id, product.id, resulting_included_product_id)
+        product.included_product_id = resulting_included_product_id
+        product.included_per_guests = resulting_included_per_guests
+
     await write_audit_entry(
         db,
         actor=actor,

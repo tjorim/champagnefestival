@@ -379,6 +379,20 @@ class Product(Base):
     category: Mapped[str] = mapped_column(String(20))
     """"champagne" | "food" | "other" — matches OrderItemCategory."""
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    required: Mapped[bool] = mapped_column(Boolean, default=False)
+    """A prerequisite product for this event (e.g. an entry ticket). An order
+    that includes any non-required product for an event with required products
+    must also include at least one required one — see _resolve_pre_orders."""
+    included_product_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("products.id", ondelete="SET NULL"), nullable=True
+    )
+    included_per_guests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    """Together, these bundle a free quantity of another product on this event
+    into this one — a VIP table might include one champagne bottle per two
+    guests. `included_per_guests` is only meaningful alongside
+    `included_product_id`; both or neither are set (see ProductCreate/Update).
+    Deleting the included product clears the link (ON DELETE SET NULL) rather
+    than blocking the delete or cascading into an unrelated product."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

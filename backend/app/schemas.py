@@ -32,6 +32,10 @@ class OrderItemBase(BaseModel):
     category: OrderItemCategory
     delivered_quantity: int | None = Field(default=None, ge=0)
     delivered: bool = False
+    included_quantity: int = Field(default=0, ge=0)
+    """How many of `quantity` came free via a product bundle (see
+    Product.included_product_id) — only `quantity - included_quantity` is
+    billed at `price` per unit."""
 
     @model_validator(mode="after")
     def validate_delivery_quantities(self) -> Self:
@@ -40,6 +44,8 @@ class OrderItemBase(BaseModel):
             delivered_quantity = self.quantity if self.delivered else 0
         if delivered_quantity > self.quantity:
             raise ValueError("delivered_quantity cannot exceed quantity.")
+        if self.included_quantity > self.quantity:
+            raise ValueError("included_quantity cannot exceed quantity.")
 
         self.delivered_quantity = delivered_quantity
         self.delivered = delivered_quantity == self.quantity
@@ -173,6 +179,15 @@ class ProductCreate(BaseModel):
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory
     active: bool = True
+    required: bool = False
+    included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
+    included_per_guests: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_inclusion_pair(self) -> Self:
+        if (self.included_product_id is None) != (self.included_per_guests is None):
+            raise ValueError("included_product_id and included_per_guests must be set together.")
+        return self
 
 
 class ProductUpdate(BaseModel):
@@ -180,6 +195,12 @@ class ProductUpdate(BaseModel):
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
     active: bool | None = None
+    required: bool | None = None
+    # Nullable and independently settable, so the router (not this schema) decides
+    # what "both or neither" means against the product's *resulting* state —
+    # a PATCH may touch only one field while leaving the other as already stored.
+    included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
+    included_per_guests: int | None = Field(default=None, ge=1)
 
 
 class ProductOut(BaseModel):
@@ -189,6 +210,9 @@ class ProductOut(BaseModel):
     price: Decimal
     category: OrderItemCategory
     active: bool
+    required: bool
+    included_product_id: str | None
+    included_per_guests: int | None
     created_at: datetime
     updated_at: datetime
 

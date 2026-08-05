@@ -20,6 +20,12 @@ export interface OrderItem {
   category: OrderItemCategory;
   /** Whether back-of-house has physically delivered/brought this item */
   delivered: boolean;
+  /**
+   * How many of `quantity` came free via a product bundle (e.g. bottles
+   * included with a VIP table) — only `quantity - includedQuantity` is
+   * billed at `price` per unit.
+   */
+  includedQuantity: number;
 }
 
 export interface PersonSummary {

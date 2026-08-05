@@ -292,6 +292,279 @@ async def test_registration_rejected_for_walkin_event_with_only_archived_product
     assert r.json()["detail"] == "This event does not accept registrations."
 
 
+async def _register(client, event_id: str, pre_orders: list[dict], **overrides):
+    body = {
+        "name": "Jean Dupont",
+        "email": "jean@example.com",
+        "phone": "+32499000000",
+        "event_id": event_id,
+        "guest_count": 1,
+        "pre_orders": pre_orders,
+        "notes": "",
+        "honeypot": "",
+        "form_start_time": "",
+        **overrides,
+    }
+    return await client.post("/api/registrations", json=body)
+
+
+@pytest.mark.anyio
+async def test_product_can_be_marked_required(client):
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"], required=True)
+    assert product["required"] is True
+
+    r = await client.put(f"/api/products/{product['id']}", json={"required": False}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["required"] is False
+
+
+@pytest.mark.anyio
+async def test_registration_rejects_optional_product_without_required_one(client):
+    """A VIP entry ticket (required) must be in the order before an optional
+    add-on (an extra bottle of champagne) can be."""
+    event = await _create_event(client)
+    await _create_product(client, event["id"], name="VIP Entry", price="50.00", required=True)
+    extra_bottle = await _create_product(client, event["id"], name="Extra Bottle", price="30.00")
+
+    r = await _register(client, event["id"], [{"product_id": extra_bottle["id"], "quantity": 1}])
+    assert r.status_code == 400
+    assert "required product" in r.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_registration_allows_optional_product_alongside_required_one(client):
+    event = await _create_event(client)
+    entry = await _create_product(client, event["id"], name="VIP Entry", price="50.00", required=True)
+    extra_bottle = await _create_product(client, event["id"], name="Extra Bottle", price="30.00")
+
+    r = await _register(
+        client,
+        event["id"],
+        [
+            {"product_id": entry["id"], "quantity": 1},
+            {"product_id": extra_bottle["id"], "quantity": 2},
+        ],
+    )
+    assert r.status_code == 201, r.text
+    pre_orders = r.json()["pre_orders"]
+    assert {item["product_id"] for item in pre_orders} == {entry["id"], extra_bottle["id"]}
+
+
+@pytest.mark.anyio
+async def test_registration_allows_required_product_alone(client):
+    event = await _create_event(client)
+    entry = await _create_product(client, event["id"], name="VIP Entry", price="50.00", required=True)
+
+    r = await _register(client, event["id"], [{"product_id": entry["id"], "quantity": 1}])
+    assert r.status_code == 201, r.text
+
+
+@pytest.mark.anyio
+async def test_events_without_required_products_are_unaffected(client):
+    """An event with only optional products (e.g. a plain VIP package) keeps working
+    exactly as before — the required-product rule only kicks in once an event
+    actually has a required product configured."""
+    event = await _create_event(client)
+    vip_package = await _create_product(client, event["id"], name="VIP Package")
+
+    r = await _register(client, event["id"], [{"product_id": vip_package["id"], "quantity": 1}])
+    assert r.status_code == 201, r.text
+
+
+@pytest.mark.anyio
+async def test_admin_registration_creation_also_enforces_required_product(client):
+    event = await _create_event(client)
+    await _create_product(client, event["id"], name="VIP Entry", price="50.00", required=True)
+    extra_bottle = await _create_product(client, event["id"], name="Extra Bottle", price="30.00")
+
+    r = await client.post(
+        "/api/people",
+        json={"name": "Admin Person", "email": "ap2@example.com", "phone": "+32499111112"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    person_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/registrations/admin",
+        json={
+            "person_id": person_id,
+            "event_id": event["id"],
+            "guest_count": 1,
+            "pre_orders": [{"product_id": extra_bottle["id"], "quantity": 1}],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_product_bundle_requires_both_fields_together(client):
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Bottle")
+
+    r = await client.post(
+        "/api/products",
+        json={**PRODUCT_PAYLOAD, "event_id": event["id"], "included_product_id": bottle["id"]},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422  # included_per_guests missing
+
+    r = await client.post(
+        "/api/products",
+        json={**PRODUCT_PAYLOAD, "event_id": event["id"], "included_per_guests": 2},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422  # included_product_id missing
+
+
+@pytest.mark.anyio
+async def test_product_bundle_rejects_self_reference(client):
+    event = await _create_event(client)
+    table = await _create_product(client, event["id"], name="VIP Table")
+
+    r = await client.put(
+        f"/api/products/{table['id']}",
+        json={"included_product_id": table["id"], "included_per_guests": 2},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_product_bundle_rejects_cross_event_target(client):
+    event_a = await _create_event(client, edition_id="edition-bundle-a", title="Event A")
+    event_b = await _create_event(client, edition_id="edition-bundle-b", title="Event B")
+    bottle_on_b = await _create_product(client, event_b["id"], name="Bottle")
+
+    r = await client.post(
+        "/api/products",
+        json={
+            **PRODUCT_PAYLOAD,
+            "event_id": event_a["id"],
+            "name": "VIP Table",
+            "included_product_id": bottle_on_b["id"],
+            "included_per_guests": 2,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_product_bundle_rejects_chaining(client):
+    """Only single-level bundles are supported: the included product cannot
+    itself bundle another product."""
+    event = await _create_event(client)
+    base = await _create_product(client, event["id"], name="Base")
+    middle = await _create_product(
+        client,
+        event["id"],
+        name="Middle",
+        included_product_id=base["id"],
+        included_per_guests=1,
+    )
+
+    r = await client.post(
+        "/api/products",
+        json={
+            **PRODUCT_PAYLOAD,
+            "event_id": event["id"],
+            "name": "Top",
+            "included_product_id": middle["id"],
+            "included_per_guests": 1,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_registration_computes_included_bundle_quantity(client):
+    """A VIP table (required) includes one bottle of champagne per two guests,
+    computed automatically from the registration's guest count."""
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Champagne Bottle", price="65.00")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        price="200.00",
+        required=True,
+        included_product_id=bottle["id"],
+        included_per_guests=2,
+    )
+
+    r = await _register(
+        client,
+        event["id"],
+        [{"product_id": table["id"], "quantity": 1}],
+        guest_count=6,
+    )
+    assert r.status_code == 201, r.text
+    pre_orders = r.json()["pre_orders"]
+    bottle_item = next(item for item in pre_orders if item["product_id"] == bottle["id"])
+    assert bottle_item["quantity"] == 3
+    assert bottle_item["included_quantity"] == 3
+
+
+@pytest.mark.anyio
+async def test_registration_merges_explicit_extra_with_included_bundle_quantity(client):
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Champagne Bottle", price="65.00")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        price="200.00",
+        required=True,
+        included_product_id=bottle["id"],
+        included_per_guests=2,
+    )
+
+    r = await _register(
+        client,
+        event["id"],
+        [
+            {"product_id": table["id"], "quantity": 1},
+            {"product_id": bottle["id"], "quantity": 2},
+        ],
+        guest_count=6,
+    )
+    assert r.status_code == 201, r.text
+    pre_orders = r.json()["pre_orders"]
+    bottle_item = next(item for item in pre_orders if item["product_id"] == bottle["id"])
+    # 3 included (6 guests / 2) + 2 explicitly requested extra = 5 total, 3 free.
+    assert bottle_item["quantity"] == 5
+    assert bottle_item["included_quantity"] == 3
+
+
+@pytest.mark.anyio
+async def test_registration_bundle_below_ratio_includes_nothing(client):
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Champagne Bottle", price="65.00")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        price="200.00",
+        required=True,
+        included_product_id=bottle["id"],
+        included_per_guests=10,
+    )
+
+    r = await _register(
+        client,
+        event["id"],
+        [{"product_id": table["id"], "quantity": 1}],
+        guest_count=1,
+    )
+    assert r.status_code == 201, r.text
+    pre_orders = r.json()["pre_orders"]
+    assert all(item["product_id"] != bottle["id"] for item in pre_orders)
+
+
 @pytest.mark.anyio
 async def test_deleting_product_does_not_alter_existing_registration_pre_orders(client):
     """pre_orders is a snapshot taken at order time, not a live reference — deleting

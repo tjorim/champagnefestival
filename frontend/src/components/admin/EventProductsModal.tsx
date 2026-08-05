@@ -25,9 +25,20 @@ interface ProductFormState {
   name: string;
   price: string;
   category: OrderItemCategory;
+  required: boolean;
+  /** Empty string means "no bundle". */
+  includedProductId: string;
+  includedPerGuests: string;
 }
 
-const EMPTY_FORM: ProductFormState = { name: "", price: "", category: "champagne" };
+const EMPTY_FORM: ProductFormState = {
+  name: "",
+  price: "",
+  category: "champagne",
+  required: false,
+  includedProductId: "",
+  includedPerGuests: "",
+};
 
 function categoryLabel(category: OrderItemCategory): string {
   switch (category) {
@@ -79,6 +90,9 @@ export default function EventProductsModal({
       price: number;
       category: OrderItemCategory;
       active: boolean;
+      required: boolean;
+      includedProductId?: string;
+      includedPerGuests?: number;
     }) => saveEventProduct({ eventId, ...payload }, authHeaders),
     retry: false,
   });
@@ -94,6 +108,12 @@ export default function EventProductsModal({
   );
   const activeProducts = products.filter((p) => p.active);
   const archivedProducts = products.filter((p) => !p.active);
+  // A product can bundle any other active product on this event, except
+  // itself and one that already bundles another (no chaining — see the
+  // backend's _validate_inclusion_target).
+  const bundleCandidates = activeProducts.filter(
+    (p) => p.id !== editingId && !p.includedProductId,
+  );
 
   function openAdd() {
     setEditingId(null);
@@ -104,7 +124,14 @@ export default function EventProductsModal({
 
   function openEdit(product: Product) {
     setEditingId(product.id);
-    setForm({ name: product.name, price: String(product.price), category: product.category });
+    setForm({
+      name: product.name,
+      price: String(product.price),
+      category: product.category,
+      required: product.required,
+      includedProductId: product.includedProductId ?? "",
+      includedPerGuests: product.includedPerGuests != null ? String(product.includedPerGuests) : "",
+    });
     setFormOpen(true);
     setError("");
   }
@@ -128,6 +155,11 @@ export default function EventProductsModal({
       setError(m.admin_products_price_invalid());
       return;
     }
+    const includedPerGuests = form.includedProductId ? Number(form.includedPerGuests) : undefined;
+    if (form.includedProductId && (!Number.isFinite(includedPerGuests) || (includedPerGuests ?? 0) < 1)) {
+      setError(m.admin_products_bundle_ratio_invalid());
+      return;
+    }
     const existing = editingId ? activeProducts.find((p) => p.id === editingId) : undefined;
     try {
       const saved = await saveMutation.mutateAsync({
@@ -136,6 +168,9 @@ export default function EventProductsModal({
         price,
         category: form.category,
         active: existing?.active ?? true,
+        required: form.required,
+        includedProductId: form.includedProductId || undefined,
+        includedPerGuests,
       });
       updateQueryData(saved);
       setFormOpen(false);
@@ -155,6 +190,9 @@ export default function EventProductsModal({
         price: product.price,
         category: product.category,
         active: !product.active,
+        required: product.required,
+        includedProductId: product.includedProductId,
+        includedPerGuests: product.includedPerGuests,
       });
       updateQueryData(saved);
       onProductsChanged?.();
@@ -177,63 +215,81 @@ export default function EventProductsModal({
   }
 
   function renderRow(product: Product, isArchived: boolean) {
+    const includedTarget = product.includedProductId
+      ? products.find((p) => p.id === product.includedProductId)
+      : undefined;
     return (
       <ListGroup.Item
         key={product.id}
-        className={`bg-dark border-secondary d-flex justify-content-between align-items-center gap-2 py-1 px-0 ${
+        className={`bg-dark border-secondary d-flex flex-column gap-1 py-1 px-0 ${
           isArchived ? "opacity-50" : "text-light"
         }`}
       >
-        <span className="d-flex align-items-center gap-2 text-truncate">
-          <span className={isArchived ? "text-secondary" : "text-light"}>{product.name}</span>
-          <Badge bg="secondary" className="fs-3xs text-capitalize">
-            {categoryLabel(product.category)}
-          </Badge>
-          <span className="text-secondary small">€{product.price.toFixed(2)}</span>
-        </span>
-        <span className="d-flex gap-1 flex-shrink-0">
-          {!isArchived && (
-            <Button
-              size="sm"
-              variant="outline-secondary"
-              onClick={() => openEdit(product)}
-              aria-label={`Edit ${product.name}`}
-            >
-              <i className="bi bi-pencil" aria-hidden="true" />
-            </Button>
-          )}
-          {isArchived ? (
-            <>
+        <div className="d-flex justify-content-between align-items-center gap-2">
+          <span className="d-flex align-items-center gap-2 text-truncate">
+            <span className={isArchived ? "text-secondary" : "text-light"}>{product.name}</span>
+            <Badge bg="secondary" className="fs-3xs text-capitalize">
+              {categoryLabel(product.category)}
+            </Badge>
+            {product.required && (
+              <Badge bg="warning" text="dark" className="fs-3xs">
+                {m.admin_products_required_badge()}
+              </Badge>
+            )}
+            <span className="text-secondary small">€{product.price.toFixed(2)}</span>
+          </span>
+          <span className="d-flex gap-1 flex-shrink-0">
+            {!isArchived && (
               <Button
                 size="sm"
-                variant="outline-success"
+                variant="outline-secondary"
+                onClick={() => openEdit(product)}
+                aria-label={`Edit ${product.name}`}
+              >
+                <i className="bi bi-pencil" aria-hidden="true" />
+              </Button>
+            )}
+            {isArchived ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline-success"
+                  onClick={() => handleToggleActive(product)}
+                  aria-label={`${m.admin_content_restore()} ${product.name}`}
+                  title={m.admin_content_restore()}
+                >
+                  <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  onClick={() => handleDelete(product.id)}
+                  aria-label={`${m.admin_delete()} ${product.name}`}
+                >
+                  <i className="bi bi-trash" aria-hidden="true" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline-secondary"
                 onClick={() => handleToggleActive(product)}
-                aria-label={`${m.admin_content_restore()} ${product.name}`}
-                title={m.admin_content_restore()}
+                aria-label={`${m.admin_content_archive()} ${product.name}`}
+                title={m.admin_content_archive()}
               >
-                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                <i className="bi bi-archive" aria-hidden="true" />
               </Button>
-              <Button
-                size="sm"
-                variant="outline-danger"
-                onClick={() => handleDelete(product.id)}
-                aria-label={`${m.admin_delete()} ${product.name}`}
-              >
-                <i className="bi bi-trash" aria-hidden="true" />
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline-secondary"
-              onClick={() => handleToggleActive(product)}
-              aria-label={`${m.admin_content_archive()} ${product.name}`}
-              title={m.admin_content_archive()}
-            >
-              <i className="bi bi-archive" aria-hidden="true" />
-            </Button>
-          )}
-        </span>
+            )}
+          </span>
+        </div>
+        {includedTarget && product.includedPerGuests && (
+          <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
+            {m.admin_products_bundle_note({
+              target: includedTarget.name,
+              ratio: product.includedPerGuests,
+            })}
+          </div>
+        )}
       </ListGroup.Item>
     );
   }
@@ -289,7 +345,11 @@ export default function EventProductsModal({
         )}
 
         {formOpen ? (
-          <Form onSubmit={handleSubmit} className="border-top border-secondary pt-3 mt-2">
+          <Form
+            onSubmit={handleSubmit}
+            noValidate
+            className="border-top border-secondary pt-3 mt-2"
+          >
             <div className="d-flex gap-2 flex-wrap mb-2">
               <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-name">
                 <Form.Label className="text-secondary small mb-1">
@@ -335,6 +395,58 @@ export default function EventProductsModal({
                 </Form.Select>
               </Form.Group>
             </div>
+
+            <Form.Check
+              type="checkbox"
+              id="product-required"
+              className="mb-2"
+              label={m.admin_products_required_label()}
+              checked={form.required}
+              onChange={(e) => setForm((f) => ({ ...f, required: e.target.checked }))}
+            />
+            <div className="text-secondary small mb-2">{m.admin_products_required_help()}</div>
+
+            <div className="d-flex gap-2 flex-wrap mb-2">
+              <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-bundle-target">
+                <Form.Label className="text-secondary small mb-1">
+                  {m.admin_products_bundle_target()}
+                </Form.Label>
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={form.includedProductId}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, includedProductId: e.target.value }))
+                  }
+                >
+                  <option value="">{m.admin_products_bundle_none()}</option>
+                  {bundleCandidates.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+              {form.includedProductId && (
+                <Form.Group style={{ maxWidth: "160px" }} controlId="product-bundle-ratio">
+                  <Form.Label className="text-secondary small mb-1">
+                    {m.admin_products_bundle_ratio()}
+                  </Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={1}
+                    step="1"
+                    size="sm"
+                    className="bg-dark text-light border-secondary"
+                    value={form.includedPerGuests}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, includedPerGuests: e.target.value }))
+                    }
+                  />
+                </Form.Group>
+              )}
+            </div>
+
             <div className="d-flex gap-2 justify-content-end">
               <Button variant="outline-secondary" size="sm" onClick={() => setFormOpen(false)}>
                 {m.close()}

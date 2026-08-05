@@ -80,6 +80,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
         price: 25,
         category: "champagne",
         delivered: false,
+        includedQuantity: 0,
       },
     ],
     notes: "Please seat near the window.",

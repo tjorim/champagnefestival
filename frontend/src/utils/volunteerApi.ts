@@ -1,7 +1,7 @@
 import { m } from "@/paraglide/messages";
 import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import type { CheckInData } from "@/utils/publicRegistrationApi";
-import type { OrderItem, OrderItemCategory, RegistrationStatus } from "@/types/registration";
+import type { OrderItemCategory, RegistrationStatus } from "@/types/registration";
 
 interface VolunteerRegistrationResponse {
   id?: string;
@@ -102,7 +102,7 @@ export async function submitVolunteerCheckIn(
 
 export async function updateVolunteerRegistration(
   registrationId: string,
-  payload: { preOrders?: OrderItem[]; strapIssued?: boolean },
+  payload: { preOrders?: CheckInData["preOrders"]; strapIssued?: boolean },
   authHeaders: () => Record<string, string>,
 ): Promise<CheckInData> {
   const body: Record<string, unknown> = {};

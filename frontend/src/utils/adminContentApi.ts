@@ -312,6 +312,10 @@ export async function saveEventProduct(
     price: number;
     category: OrderItemCategory;
     active: boolean;
+    required: boolean;
+    /** Both or neither — a bundle needs a target product and a ratio. */
+    includedProductId?: string;
+    includedPerGuests?: number;
   },
   authHeaders: () => Record<string, string>,
 ): Promise<Product> {
@@ -327,6 +331,9 @@ export async function saveEventProduct(
         price: payload.price,
         category: payload.category,
         active: payload.active,
+        required: payload.required,
+        included_product_id: payload.includedProductId ?? null,
+        included_per_guests: payload.includedPerGuests ?? null,
       }),
     },
     m.admin_content_error_save(),

@@ -15,6 +15,10 @@ vi.mock("@/paraglide/messages", () => ({
     registration_guests: () => "Number of Guests",
     registration_preorder_title: () => "Pre-order",
     registration_preorder_description: () => "Order champagne or snacks in advance",
+    registration_preorder_required_hint: ({ products }: { products: string }) =>
+      `Add ${products} first to unlock the optional items below.`,
+    registration_preorder_included_note: ({ count, source }: { count: number; source: string }) =>
+      `Includes ${count} free with your ${source}`,
     registration_notes: () => "Notes",
     registration_notes_placeholder: () => "Any special requests...",
     registration_submit: () => "Place Registration",
@@ -45,6 +49,7 @@ const champagneProduct: Product = {
   price: 65,
   category: "champagne",
   active: true,
+  required: false,
   createdAt: "",
   updatedAt: "",
 };
@@ -225,5 +230,122 @@ describe("RegistrationModal component", () => {
     });
 
     expect(decreaseButton).toBeDisabled();
+  });
+
+  describe("required products", () => {
+    const vipEntry: Product = {
+      id: "vip-entry",
+      eventId: "fri-vip",
+      name: "VIP Entry",
+      price: 50,
+      category: "other",
+      active: true,
+      required: true,
+      createdAt: "",
+      updatedAt: "",
+    };
+    const eventWithRequiredProduct: Event = {
+      ...vipEvent,
+      products: [vipEntry, champagneProduct],
+    };
+
+    it("disables an optional product's increase button until the required one is added", () => {
+      renderModal({ event: eventWithRequiredProduct });
+
+      const increaseBottle = screen.getByRole("button", {
+        name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+      });
+      expect(increaseBottle).toBeDisabled();
+      expect(
+        screen.getByText("Add VIP Entry first to unlock the optional items below."),
+      ).toBeInTheDocument();
+    });
+
+    it("enables the optional product once the required one is selected", () => {
+      renderModal({ event: eventWithRequiredProduct });
+
+      fireEvent.click(screen.getByRole("button", { name: /Increase quantity of VIP Entry/i }));
+
+      const increaseBottle = screen.getByRole("button", {
+        name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+      });
+      expect(increaseBottle).not.toBeDisabled();
+      expect(
+        screen.queryByText("Add VIP Entry first to unlock the optional items below."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not lock the required product itself", () => {
+      renderModal({ event: eventWithRequiredProduct });
+
+      const increaseEntry = screen.getByRole("button", {
+        name: /Increase quantity of VIP Entry/i,
+      });
+      expect(increaseEntry).not.toBeDisabled();
+    });
+  });
+
+  describe("bundled products", () => {
+    const bottle: Product = {
+      id: "bottle",
+      eventId: "fri-vip",
+      name: "Champagne Bottle",
+      price: 65,
+      category: "champagne",
+      active: true,
+      required: false,
+      createdAt: "",
+      updatedAt: "",
+    };
+    const vipTable: Product = {
+      id: "vip-table",
+      eventId: "fri-vip",
+      name: "VIP Table",
+      price: 200,
+      category: "other",
+      active: true,
+      required: true,
+      includedProductId: "bottle",
+      includedPerGuests: 2,
+      createdAt: "",
+      updatedAt: "",
+    };
+    const eventWithBundle: Event = {
+      ...vipEvent,
+      products: [vipTable, bottle],
+    };
+
+    it("shows no included-quantity note before the bundling product is selected", () => {
+      renderModal({ event: eventWithBundle });
+      expect(screen.queryByText(/Includes .* free with your/)).not.toBeInTheDocument();
+    });
+
+    it("shows the computed included quantity once the bundling product is selected", async () => {
+      renderModal({ event: eventWithBundle });
+
+      fireEvent.change(screen.getByLabelText(/Number of Guests/i), { target: { value: "4" } });
+      fireEvent.click(screen.getByRole("button", { name: /Increase quantity of VIP Table/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Includes 2 free with your VIP Table")).toBeInTheDocument();
+      });
+    });
+
+    it("recomputes the included quantity as guest count changes", async () => {
+      renderModal({ event: eventWithBundle });
+
+      fireEvent.change(screen.getByLabelText(/Number of Guests/i), { target: { value: "6" } });
+      fireEvent.click(screen.getByRole("button", { name: /Increase quantity of VIP Table/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Includes 3 free with your VIP Table")).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText(/Number of Guests/i), { target: { value: "1" } });
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Includes .* free with your/)).not.toBeInTheDocument();
+      });
+    });
   });
 });

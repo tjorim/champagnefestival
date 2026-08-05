@@ -107,6 +107,9 @@ def product_to_dict(p: Product) -> dict:
         "price": p.price,
         "category": p.category,
         "active": p.active,
+        "required": p.required,
+        "included_product_id": p.included_product_id,
+        "included_per_guests": p.included_per_guests,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }

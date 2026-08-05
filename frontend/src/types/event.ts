@@ -21,6 +21,19 @@ export interface Product {
   price: number;
   category: OrderItemCategory;
   active: boolean;
+  /**
+   * A prerequisite product for this event (e.g. an entry ticket). An order
+   * that includes any non-required product for an event with required
+   * products must also include at least one required one.
+   */
+  required: boolean;
+  /**
+   * Together, these bundle a free quantity of another product on this event
+   * into this one — e.g. one champagne bottle per two guests with a VIP
+   * table. Only meaningful as a pair.
+   */
+  includedProductId?: string;
+  includedPerGuests?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,6 +89,11 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     price: Number(data.price ?? 0),
     category: isOrderItemCategory(data.category) ? data.category : "other",
     active: Boolean(data.active),
+    required: Boolean(data.required),
+    includedProductId:
+      typeof data.included_product_id === "string" ? data.included_product_id : undefined,
+    includedPerGuests:
+      typeof data.included_per_guests === "number" ? data.included_per_guests : undefined,
     createdAt: String(data.created_at ?? ""),
     updatedAt: String(data.updated_at ?? ""),
   };
