@@ -2,9 +2,13 @@
  * useMaintenanceMode — whether the public site should show the maintenance
  * placeholder instead of the full marketing page.
  *
- * Fails open: while loading or on error, treats the site as not in
- * maintenance, consistent with how the rest of the public site treats a
- * fetch failure (fall back to something visible rather than blocking).
+ * Fails closed on a genuine backend outage: the rest of the public site
+ * (editions, schedule, registration) all depend on the same API, so if
+ * `/api/settings` itself can't be reached, showing the static placeholder
+ * is a better experience than a half-broken page — this is the one hook
+ * in the app that intentionally does NOT fall back to "business as usual"
+ * on error. A couple of retries first, so one dropped request doesn't flip
+ * the whole site over.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -28,11 +32,11 @@ export function useMaintenanceMode(): { isMaintenanceMode: boolean; isLoaded: bo
     queryKey: queryKeys.maintenanceMode,
     queryFn: fetchMaintenanceMode,
     staleTime: 60 * 1000,
-    retry: false,
+    retry: 2,
   });
 
   return {
-    isMaintenanceMode: query.data ?? false,
+    isMaintenanceMode: query.data ?? query.isError,
     isLoaded: query.status !== "pending",
   };
 }
