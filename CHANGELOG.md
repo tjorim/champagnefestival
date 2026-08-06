@@ -9,6 +9,12 @@ The release workflow requires entries in this format:
 Starting with the first `YYYY.MM.MICRO` release, `X.Y.Z` is CalVer rather than
 SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predate that switch.
 
+## [2026.8.2] - 2026-08-01
+
+### Fixed
+
+- Android authentication now uses the dedicated native Keycloak client, restoring sign-in with the app's custom redirect scheme (#793)
+
 ## [2026.8.1] - 2026-08-01
 
 ### Changed

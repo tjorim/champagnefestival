@@ -195,7 +195,7 @@ android {
             applicationIdSuffix = ".debug"
             isDebuggable = true
             buildConfigField("String", "API_BASE_URL", quoted(debugApiBaseUrl))
-            buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
+            buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival-android\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "false")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(""))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(""))
@@ -209,7 +209,7 @@ android {
             }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "API_BASE_URL", quoted(releaseApiBaseUrl))
-            buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival\"")
+            buildConfigField("String", "OIDC_CLIENT_ID", "\"champagnefestival-android\"")
             buildConfigField("Boolean", "CERTIFICATE_PINNING_ENABLED", "true")
             buildConfigField("String", "CERTIFICATE_PIN_HOST", quoted(releaseCertificatePinHost))
             buildConfigField("String", "CERTIFICATE_PINS", quoted(releaseCertificatePins.joinToString(",")))
