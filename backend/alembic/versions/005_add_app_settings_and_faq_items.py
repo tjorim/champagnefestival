@@ -33,12 +33,8 @@ def upgrade() -> None:
         "app_settings",
         sa.Column("id", sa.String(64), primary_key=True),
         sa.Column("maintenance_mode", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
     op.create_table(
         "faq_items",
@@ -47,12 +43,8 @@ def upgrade() -> None:
         sa.Column("answer", sa.Text(), nullable=False),
         sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
-        ),
-        sa.Column(
-            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
 
 
