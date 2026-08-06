@@ -73,8 +73,12 @@ export function apiVenueToVenue(d: Record<string, unknown>): Venue {
 export function apiFaqItemToFaqItem(d: Record<string, unknown>): FaqItem {
   return {
     id: d.id as string,
-    question: d.question as string,
-    answer: d.answer as string,
+    questionNl: d.question_nl as string,
+    answerNl: d.answer_nl as string,
+    questionEn: (d.question_en ?? null) as string | null,
+    answerEn: (d.answer_en ?? null) as string | null,
+    questionFr: (d.question_fr ?? null) as string | null,
+    answerFr: (d.answer_fr ?? null) as string | null,
     sortOrder: (d.sort_order ?? 0) as number,
     active: (d.active ?? true) as boolean,
   };

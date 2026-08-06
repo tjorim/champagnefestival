@@ -1,10 +1,13 @@
 /**
  * useFaq — active FAQ items for the public FAQ section, sourced from the
  * admin-editable /api/faq/active endpoint rather than hardcoded per-locale
- * translation strings.
+ * translation strings. Each item is resolved server-side to the current
+ * locale; an item with no translation for this locale is simply absent from
+ * the response, not filled in from another language.
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { getLocale } from "@/paraglide/runtime";
 import { queryKeys } from "@/utils/queryKeys";
 
 export interface PublicFaqItem {
@@ -13,21 +16,12 @@ export interface PublicFaqItem {
   answer: string;
 }
 
-interface ApiFaqItem {
-  id: string;
-  question: string;
-  answer: string;
-  sort_order: number;
-  active: boolean;
-}
-
-export async function fetchFaqItems(): Promise<PublicFaqItem[]> {
-  const res = await fetch("/api/faq/active");
+export async function fetchFaqItems(locale: string): Promise<PublicFaqItem[]> {
+  const res = await fetch(`/api/faq/active?locale=${encodeURIComponent(locale)}`);
   if (!res.ok) {
     throw new Error(`Failed to load FAQ: ${res.status}`);
   }
-  const api = (await res.json()) as ApiFaqItem[];
-  return api.map(({ id, question, answer }) => ({ id, question, answer }));
+  return (await res.json()) as PublicFaqItem[];
 }
 
 export interface FaqState {
@@ -39,9 +33,10 @@ export interface FaqState {
 }
 
 export function useFaq(): FaqState {
+  const locale = getLocale();
   const query = useQuery({
-    queryKey: queryKeys.faq,
-    queryFn: fetchFaqItems,
+    queryKey: queryKeys.faq(locale),
+    queryFn: () => fetchFaqItems(locale),
     staleTime: 5 * 60 * 1000,
     retry: false,
   });

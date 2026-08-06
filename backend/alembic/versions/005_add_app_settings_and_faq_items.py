@@ -39,8 +39,15 @@ def upgrade() -> None:
     op.create_table(
         "faq_items",
         sa.Column("id", sa.String(64), primary_key=True),
-        sa.Column("question", sa.String(500), nullable=False),
-        sa.Column("answer", sa.Text(), nullable=False),
+        # Dutch is the required, primary-language content; English/French are
+        # optional per item — a blank translation hides that item on that
+        # locale's public FAQ rather than falling back to Dutch text.
+        sa.Column("question_nl", sa.String(500), nullable=False),
+        sa.Column("answer_nl", sa.Text(), nullable=False),
+        sa.Column("question_en", sa.String(500), nullable=True),
+        sa.Column("answer_en", sa.Text(), nullable=True),
+        sa.Column("question_fr", sa.String(500), nullable=True),
+        sa.Column("answer_fr", sa.Text(), nullable=True),
         sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),

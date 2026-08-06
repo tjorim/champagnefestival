@@ -474,13 +474,21 @@ class AppSettings(Base):
 
 
 class FaqItem(Base):
-    """A single question/answer pair shown on the public FAQ section."""
+    """A single question/answer pair shown on the public FAQ section.
+
+    Dutch is required; English/French are optional per item — a blank
+    translation hides that item on that locale's public FAQ.
+    """
 
     __tablename__ = "faq_items"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    question: Mapped[str] = mapped_column(String(500))
-    answer: Mapped[str] = mapped_column(Text)
+    question_nl: Mapped[str] = mapped_column(String(500))
+    answer_nl: Mapped[str] = mapped_column(Text)
+    question_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    answer_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    question_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    answer_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 

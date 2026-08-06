@@ -4,6 +4,11 @@
  * Self-contained (own query + mutations, like AuditLogViewer/EditionsSection)
  * rather than wired through the central useAdminQueries/useAdminVenueActions
  * stack, since it's a single flat resource with no cross-entity dependencies.
+ *
+ * Each item carries three locales: Dutch is required (the primary content),
+ * English/French are optional per item — leaving a language's fields empty
+ * hides that item from that locale's public FAQ rather than falling back to
+ * Dutch text.
  */
 
 import { useCallback, useMemo, useState } from "react";
@@ -30,7 +35,41 @@ interface FaqManagementProps {
   authHeaders: () => Record<string, string>;
 }
 
-const emptyForm = { question: "", answer: "" };
+interface FaqFormState {
+  questionNl: string;
+  answerNl: string;
+  questionEn: string;
+  answerEn: string;
+  questionFr: string;
+  answerFr: string;
+}
+
+const emptyForm: FaqFormState = {
+  questionNl: "",
+  answerNl: "",
+  questionEn: "",
+  answerEn: "",
+  questionFr: "",
+  answerFr: "",
+};
+
+interface FaqLocaleData {
+  question: string;
+  answer: string;
+  sortOrder: number;
+}
+
+function faqPayload(data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) {
+  return {
+    question_nl: data.question,
+    answer_nl: data.answer,
+    question_en: data.questionEn,
+    answer_en: data.answerEn,
+    question_fr: data.questionFr,
+    answer_fr: data.answerFr,
+    sort_order: data.sortOrder,
+  };
+}
 
 export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   const queryClient = useQueryClient();
@@ -44,26 +83,22 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<FaqFormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: (data: { question: string; answer: string; sortOrder: number }) =>
+    mutationFn: (data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/faq",
         {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({
-            question: data.question,
-            answer: data.answer,
-            sort_order: data.sortOrder,
-          }),
+          body: JSON.stringify(faqPayload(data)),
         },
         m.admin_error_add_faq_item(),
       ),
-    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, queryKeys.faq]),
+    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
     retry: false,
   });
 
@@ -75,15 +110,19 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({
-            ...(data.question !== undefined && { question: data.question }),
-            ...(data.answer !== undefined && { answer: data.answer }),
+            ...(data.questionNl !== undefined && { question_nl: data.questionNl }),
+            ...(data.answerNl !== undefined && { answer_nl: data.answerNl }),
+            ...(data.questionEn !== undefined && { question_en: data.questionEn ?? "" }),
+            ...(data.answerEn !== undefined && { answer_en: data.answerEn ?? "" }),
+            ...(data.questionFr !== undefined && { question_fr: data.questionFr ?? "" }),
+            ...(data.answerFr !== undefined && { answer_fr: data.answerFr ?? "" }),
             ...(data.sortOrder !== undefined && { sort_order: data.sortOrder }),
             ...(data.active !== undefined && { active: data.active }),
           }),
         },
         m.admin_error_update_faq_item(),
       ),
-    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, queryKeys.faq]),
+    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
     retry: false,
   });
 
@@ -94,7 +133,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
         { method: "DELETE", headers: authHeaders() },
         m.admin_error_delete_faq_item(),
       ),
-    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, queryKeys.faq]),
+    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
     retry: false,
   });
 
@@ -107,33 +146,54 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const openEdit = useCallback((item: FaqItem) => {
     setEditingId(item.id);
-    setForm({ question: item.question, answer: item.answer });
+    setForm({
+      questionNl: item.questionNl,
+      answerNl: item.answerNl,
+      questionEn: item.questionEn ?? "",
+      answerEn: item.answerEn ?? "",
+      questionFr: item.questionFr ?? "",
+      answerFr: item.answerFr ?? "",
+    });
     setError(null);
     setShowModal(true);
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!form.question.trim()) {
+    if (!form.questionNl.trim()) {
       setError(m.admin_faq_question_required());
       return;
     }
-    if (!form.answer.trim()) {
+    if (!form.answerNl.trim()) {
       setError(m.admin_faq_answer_required());
       return;
     }
     setError(null);
+    const locales = {
+      questionEn: form.questionEn.trim(),
+      answerEn: form.answerEn.trim(),
+      questionFr: form.questionFr.trim(),
+      answerFr: form.answerFr.trim(),
+    };
     try {
       if (editingId) {
         await updateMutation.mutateAsync({
           id: editingId,
-          data: { question: form.question.trim(), answer: form.answer.trim() },
+          data: {
+            questionNl: form.questionNl.trim(),
+            answerNl: form.answerNl.trim(),
+            questionEn: locales.questionEn,
+            answerEn: locales.answerEn,
+            questionFr: locales.questionFr,
+            answerFr: locales.answerFr,
+          },
         });
       } else {
         const nextSortOrder = faqItems.reduce((max, i) => Math.max(max, i.sortOrder), -1) + 1;
         await createMutation.mutateAsync({
-          question: form.question.trim(),
-          answer: form.answer.trim(),
+          question: form.questionNl.trim(),
+          answer: form.answerNl.trim(),
           sortOrder: nextSortOrder,
+          ...locales,
         });
       }
       setShowModal(false);
@@ -201,6 +261,17 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const isMutating = updateMutation.isPending || deleteMutation.isPending;
 
+  const localeBadge = (label: string, translated: boolean) => (
+    <Badge
+      key={label}
+      bg={translated ? "success" : "secondary"}
+      className={`ms-1 fs-2xs ${translated ? "" : "opacity-50"}`}
+      title={translated ? undefined : m.admin_faq_locale_missing_title({ locale: label })}
+    >
+      {label}
+    </Badge>
+  );
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
@@ -263,14 +334,16 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                       </td>
                       <td>
                         <div className="fw-semibold">
-                          {item.question}
+                          {item.questionNl}
                           {!item.active && (
                             <Badge bg="secondary" className="ms-2 fs-2xs">
                               {m.admin_venue_archived_badge()}
                             </Badge>
                           )}
+                          {localeBadge("EN", Boolean(item.questionEn && item.answerEn))}
+                          {localeBadge("FR", Boolean(item.questionFr && item.answerFr))}
                         </div>
-                        <div className="text-secondary small">{item.answer}</div>
+                        <div className="text-secondary small">{item.answerNl}</div>
                       </td>
                       <td style={{ width: "1%", whiteSpace: "nowrap" }}>
                         <div className="d-flex gap-1">
@@ -318,7 +391,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
         </Card.Body>
       </Card>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
         <Modal.Header closeButton className="bg-dark text-light border-secondary">
           <Modal.Title>{editingId ? m.admin_edit_faq_item() : m.admin_add_faq_item()}</Modal.Title>
         </Modal.Header>
@@ -328,25 +401,83 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               {error}
             </Alert>
           )}
-          <Form.Group className="mb-3" controlId="faq-question">
-            <Form.Label>{m.admin_faq_question_label()}</Form.Label>
-            <Form.Control
-              type="text"
-              value={form.question}
-              onChange={(e) => setForm((p) => ({ ...p, question: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-            />
-          </Form.Group>
-          <Form.Group controlId="faq-answer">
-            <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={4}
-              value={form.answer}
-              onChange={(e) => setForm((p) => ({ ...p, answer: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-            />
-          </Form.Group>
+
+          <div className="mb-4">
+            <div className="text-warning small fw-semibold mb-2">
+              {m.admin_faq_locale_nl_label()}
+            </div>
+            <Form.Group className="mb-3" controlId="faq-question-nl">
+              <Form.Label>{m.admin_faq_question_label()}</Form.Label>
+              <Form.Control
+                type="text"
+                value={form.questionNl}
+                onChange={(e) => setForm((p) => ({ ...p, questionNl: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+            <Form.Group controlId="faq-answer-nl">
+              <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={form.answerNl}
+                onChange={(e) => setForm((p) => ({ ...p, answerNl: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-secondary small fw-semibold mb-1">
+              {m.admin_faq_locale_en_label()}
+            </div>
+            <div className="text-secondary small mb-2">{m.admin_faq_locale_optional_hint()}</div>
+            <Form.Group className="mb-3" controlId="faq-question-en">
+              <Form.Label>{m.admin_faq_question_label()}</Form.Label>
+              <Form.Control
+                type="text"
+                value={form.questionEn}
+                onChange={(e) => setForm((p) => ({ ...p, questionEn: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+            <Form.Group controlId="faq-answer-en">
+              <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={form.answerEn}
+                onChange={(e) => setForm((p) => ({ ...p, answerEn: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+          </div>
+
+          <div>
+            <div className="text-secondary small fw-semibold mb-1">
+              {m.admin_faq_locale_fr_label()}
+            </div>
+            <div className="text-secondary small mb-2">{m.admin_faq_locale_optional_hint()}</div>
+            <Form.Group className="mb-3" controlId="faq-question-fr">
+              <Form.Label>{m.admin_faq_question_label()}</Form.Label>
+              <Form.Control
+                type="text"
+                value={form.questionFr}
+                onChange={(e) => setForm((p) => ({ ...p, questionFr: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+            <Form.Group controlId="faq-answer-fr">
+              <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={form.answerFr}
+                onChange={(e) => setForm((p) => ({ ...p, answerFr: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              />
+            </Form.Group>
+          </div>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="secondary" onClick={() => setShowModal(false)}>
@@ -358,8 +489,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
             disabled={
               createMutation.isPending ||
               updateMutation.isPending ||
-              !form.question.trim() ||
-              !form.answer.trim()
+              !form.questionNl.trim() ||
+              !form.answerNl.trim()
             }
           >
             {m.admin_save()}

@@ -358,15 +358,33 @@ def app_settings_to_dict(s: AppSettings) -> dict:
 
 
 def faq_item_to_dict(f: FaqItem) -> dict:
+    """Admin shape: every locale's content, for the FAQ editor."""
     return {
         "id": f.id,
-        "question": f.question,
-        "answer": f.answer,
+        "question_nl": f.question_nl,
+        "answer_nl": f.answer_nl,
+        "question_en": f.question_en,
+        "answer_en": f.answer_en,
+        "question_fr": f.question_fr,
+        "answer_fr": f.answer_fr,
         "sort_order": f.sort_order,
         "active": f.active,
         "created_at": f.created_at,
         "updated_at": f.updated_at,
     }
+
+
+def faq_item_to_public_dict(f: FaqItem, locale: str) -> dict | None:
+    """Public shape: one locale's question/answer, or None if that locale is blank.
+
+    A blank translation hides the item on that locale's FAQ rather than
+    falling back to another language's text.
+    """
+    question = getattr(f, f"question_{locale}", None)
+    answer = getattr(f, f"answer_{locale}", None)
+    if not question or not answer:
+        return None
+    return {"id": f.id, "question": question, "answer": answer}
 
 
 def person_to_dict(p: Person) -> dict:

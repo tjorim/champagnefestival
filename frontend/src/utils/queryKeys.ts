@@ -1,6 +1,6 @@
 export const queryKeys = {
   activeEdition: ["active-edition"] as const,
-  faq: ["faq"] as const,
+  faq: (locale: string) => ["faq", locale] as const,
   maintenanceMode: ["maintenance-mode"] as const,
   myRegistrations: (token: string) => ["my-registrations", token] as const,
   checkInRegistration: (registrationId: string, checkInToken: string) =>

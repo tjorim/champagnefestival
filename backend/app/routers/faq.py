@@ -1,6 +1,6 @@
 """FAQ item management endpoints."""
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,8 +8,8 @@ from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import FaqItem
-from app.schemas import FaqItemCreate, FaqItemOut, FaqItemUpdate
-from app.utils import faq_item_to_dict, get_or_404, make_id
+from app.schemas import FaqItemCreate, FaqItemOut, FaqItemPublicOut, FaqItemUpdate, FaqLocale
+from app.utils import faq_item_to_dict, faq_item_to_public_dict, get_or_404, make_id
 
 router = APIRouter(
     prefix="/api/faq",
@@ -17,17 +17,31 @@ router = APIRouter(
 )
 
 
-@router.get("/active", response_model=list[FaqItemOut])
-async def list_active_faq_items(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    """Public: active FAQ items, in display order."""
-    stmt = select(FaqItem).where(FaqItem.active.is_(True)).order_by(FaqItem.sort_order)
+@router.get("/active", response_model=list[FaqItemPublicOut])
+async def list_active_faq_items(
+    locale: FaqLocale = Query(default="nl"),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Public: active FAQ items with a translation for `locale`, in display order.
+
+    An item with a blank translation for this locale is omitted rather than
+    falling back to another language's text.
+    """
+    question_column = getattr(FaqItem, f"question_{locale}")
+    answer_column = getattr(FaqItem, f"answer_{locale}")
+    stmt = (
+        select(FaqItem)
+        .where(FaqItem.active.is_(True), question_column.isnot(None), answer_column.isnot(None))
+        .order_by(FaqItem.sort_order)
+    )
     result = await db.execute(stmt)
-    return [faq_item_to_dict(f) for f in result.scalars().all()]
+    items = [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
+    return [item for item in items if item is not None]
 
 
 @router.get("", response_model=list[FaqItemOut], dependencies=[Depends(require_admin)])
 async def list_faq_items(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    """Admin: every FAQ item, active or not, in display order."""
+    """Admin: every FAQ item and every locale, active or not, in display order."""
     stmt = select(FaqItem).order_by(FaqItem.sort_order)
     result = await db.execute(stmt)
     return [faq_item_to_dict(f) for f in result.scalars().all()]
@@ -43,8 +57,12 @@ async def create_faq_item(
 ) -> dict:
     f = FaqItem(
         id=make_id("faq"),
-        question=body.question,
-        answer=body.answer,
+        question_nl=body.question_nl,
+        answer_nl=body.answer_nl,
+        question_en=body.question_en or None,
+        answer_en=body.answer_en or None,
+        question_fr=body.question_fr or None,
+        answer_fr=body.answer_fr or None,
         sort_order=body.sort_order,
         active=body.active,
     )
@@ -56,7 +74,7 @@ async def create_faq_item(
         resource_type="faq_item",
         resource_id=f.id,
         request_id=getattr(request.state, "request_id", None),
-        details={"question": f.question},
+        details={"question_nl": f.question_nl},
     )
     await db.commit()
     await db.refresh(f)
@@ -73,10 +91,22 @@ async def update_faq_item(
     actor: str = Depends(get_actor_id),
 ) -> dict:
     f = await get_or_404(db, FaqItem, faq_item_id, "FAQ item not found.")
-    if body.question is not None:
-        f.question = body.question
-    if body.answer is not None:
-        f.answer = body.answer
+    if body.question_nl is not None:
+        f.question_nl = body.question_nl
+    if body.answer_nl is not None:
+        f.answer_nl = body.answer_nl
+    # Optional locales: presence, not None-ness, distinguishes "omitted" from
+    # "sent as '', clear it" — an empty string normalizes to NULL, hiding the
+    # item on that locale's FAQ.
+    fields_set = body.model_fields_set
+    if "question_en" in fields_set:
+        f.question_en = body.question_en or None
+    if "answer_en" in fields_set:
+        f.answer_en = body.answer_en or None
+    if "question_fr" in fields_set:
+        f.question_fr = body.question_fr or None
+    if "answer_fr" in fields_set:
+        f.answer_fr = body.answer_fr or None
     if body.sort_order is not None:
         f.sort_order = body.sort_order
     if body.active is not None:
@@ -88,7 +118,7 @@ async def update_faq_item(
         resource_type="faq_item",
         resource_id=f.id,
         request_id=getattr(request.state, "request_id", None),
-        details={"fields_changed": sorted(body.model_fields_set)},
+        details={"fields_changed": sorted(fields_set)},
     )
     await db.commit()
     await db.refresh(f)
