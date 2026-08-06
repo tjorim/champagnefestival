@@ -14,6 +14,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FaqItem } from "@/types/admin";
@@ -174,12 +175,19 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
       const swapWith = sorted[swapIndex];
       if (!swapWith) return;
       setRowError(null);
+      // Sequential, not Promise.all: if the second write fails after the
+      // first succeeds, both rows would otherwise share one sort_order
+      // (ambiguous order, and the next move on either item becomes a no-op
+      // since they compare equal). Roll the first write back instead.
+      await updateMutation.mutateAsync({ id: item.id, data: { sortOrder: swapWith.sortOrder } });
       try {
-        await Promise.all([
-          updateMutation.mutateAsync({ id: item.id, data: { sortOrder: swapWith.sortOrder } }),
-          updateMutation.mutateAsync({ id: swapWith.id, data: { sortOrder: item.sortOrder } }),
-        ]);
+        await updateMutation.mutateAsync({ id: swapWith.id, data: { sortOrder: item.sortOrder } });
       } catch (err) {
+        try {
+          await updateMutation.mutateAsync({ id: item.id, data: { sortOrder: item.sortOrder } });
+        } catch {
+          // Rollback failure doesn't get to hide the original error.
+        }
         setRowError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
@@ -190,6 +198,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     () => [...faqItems].sort((a, b) => a.sortOrder - b.sortOrder),
     [faqItems],
   );
+
+  const isMutating = updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <>
@@ -207,8 +217,16 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               {rowError}
             </Alert>
           )}
-          {faqItemsQuery.isPending ? (
-            <p className="text-secondary text-center py-4 mb-0">…</p>
+          {faqItemsQuery.isError ? (
+            <Alert variant="danger" className="m-3 py-1 small">
+              {m.admin_error_load_data()}
+            </Alert>
+          ) : faqItemsQuery.isPending ? (
+            <div className="text-center py-5">
+              <Spinner animation="border" size="sm" role="status">
+                <span className="visually-hidden">{m.admin_loading()}</span>
+              </Spinner>
+            </div>
           ) : sortedItems.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_no_faq_items()}</p>
           ) : (
@@ -223,7 +241,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                             size="sm"
                             variant="link"
                             className="p-0 text-light"
-                            disabled={index === 0}
+                            disabled={index === 0 || isMutating}
                             onClick={() => handleMove(item, "up")}
                             aria-label={m.admin_faq_move_up()}
                             title={m.admin_faq_move_up()}
@@ -234,7 +252,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                             size="sm"
                             variant="link"
                             className="p-0 text-light"
-                            disabled={index === sortedItems.length - 1}
+                            disabled={index === sortedItems.length - 1 || isMutating}
                             onClick={() => handleMove(item, "down")}
                             aria-label={m.admin_faq_move_down()}
                             title={m.admin_faq_move_down()}
@@ -259,6 +277,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                           <Button
                             size="sm"
                             variant="outline-secondary"
+                            disabled={isMutating}
                             onClick={() => openEdit(item)}
                             aria-label={m.admin_edit()}
                             title={m.admin_edit()}
@@ -268,6 +287,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                           <Button
                             size="sm"
                             variant="outline-secondary"
+                            disabled={isMutating}
                             onClick={() => handleToggleActive(item)}
                             aria-label={item.active ? m.admin_content_archive() : m.admin_content_restore()}
                             title={item.active ? m.admin_content_archive() : m.admin_content_restore()}
@@ -280,6 +300,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                           <Button
                             size="sm"
                             variant="outline-danger"
+                            disabled={isMutating}
                             onClick={() => handleDelete(item)}
                             aria-label={m.admin_delete()}
                             title={m.admin_delete()}

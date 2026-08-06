@@ -50,7 +50,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
     retry: false,
   });
 
-  const maintenanceMode = settingsQuery.data?.maintenance_mode ?? false;
+  const maintenanceMode = settingsQuery.data?.maintenance_mode;
 
   return (
     <Card bg="dark" text="white" border="secondary">
@@ -63,21 +63,27 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
               : m.admin_error_update_settings()}
           </Alert>
         )}
-        {settingsQuery.isPending ? (
+        {settingsQuery.isError ? (
+          <Alert variant="danger" className="py-1 mb-0 small">
+            {m.admin_error_load_settings()}
+          </Alert>
+        ) : settingsQuery.isPending ? (
           <Spinner animation="border" size="sm" />
         ) : (
-          <Form.Check
-            type="switch"
-            id="maintenance-mode-switch"
-            label={m.admin_settings_maintenance_mode_label()}
-            checked={maintenanceMode}
-            disabled={updateMutation.isPending}
-            onChange={(e) => updateMutation.mutate(e.target.checked)}
-          />
+          <>
+            <Form.Check
+              type="switch"
+              id="maintenance-mode-switch"
+              label={m.admin_settings_maintenance_mode_label()}
+              checked={maintenanceMode ?? false}
+              disabled={updateMutation.isPending}
+              onChange={(e) => updateMutation.mutate(e.target.checked)}
+            />
+            <div className="text-secondary small mt-2">
+              {m.admin_settings_maintenance_mode_help()}
+            </div>
+          </>
         )}
-        <div className="text-secondary small mt-2">
-          {m.admin_settings_maintenance_mode_help()}
-        </div>
       </Card.Body>
     </Card>
   );

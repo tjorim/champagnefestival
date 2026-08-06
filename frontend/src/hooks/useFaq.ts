@@ -30,7 +30,15 @@ export async function fetchFaqItems(): Promise<PublicFaqItem[]> {
   return api.map(({ id, question, answer }) => ({ id, question, answer }));
 }
 
-export function useFaq(): { items: PublicFaqItem[]; isLoaded: boolean } {
+export interface FaqState {
+  items: PublicFaqItem[];
+  /** True once the fetch has settled (success or failure). */
+  isLoaded: boolean;
+  /** True when the fetch itself failed — false while loading or once genuinely empty. */
+  hasLoadError: boolean;
+}
+
+export function useFaq(): FaqState {
   const query = useQuery({
     queryKey: queryKeys.faq,
     queryFn: fetchFaqItems,
@@ -41,5 +49,6 @@ export function useFaq(): { items: PublicFaqItem[]; isLoaded: boolean } {
   return {
     items: query.data ?? [],
     isLoaded: query.status !== "pending",
+    hasLoadError: query.isError,
   };
 }

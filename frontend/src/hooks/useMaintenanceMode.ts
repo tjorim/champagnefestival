@@ -9,6 +9,11 @@
  * in the app that intentionally does NOT fall back to "business as usual"
  * on error. A couple of retries first, so one dropped request doesn't flip
  * the whole site over.
+ *
+ * An already-open tab should also notice reasonably soon when an admin
+ * flips the switch, so — unlike every other query in the app — this one
+ * opts back into refetch-on-window-focus (the QueryClient default disables
+ * it globally) and polls on an interval, on top of a short staleTime.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -31,7 +36,9 @@ export function useMaintenanceMode(): { isMaintenanceMode: boolean; isLoaded: bo
   const query = useQuery({
     queryKey: queryKeys.maintenanceMode,
     queryFn: fetchMaintenanceMode,
-    staleTime: 60 * 1000,
+    staleTime: 15 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
     retry: 2,
   });
 

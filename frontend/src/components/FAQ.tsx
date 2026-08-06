@@ -1,5 +1,6 @@
 import React from "react";
 import Accordion from "react-bootstrap/Accordion";
+import Alert from "react-bootstrap/Alert";
 
 import { useFaq } from "@/hooks/useFaq";
 import { m } from "@/paraglide/messages";
@@ -12,7 +13,15 @@ import { m } from "@/paraglide/messages";
  * locale, since answers like festival dates change every edition.
  */
 const FAQ: React.FC = () => {
-  const { items, isLoaded } = useFaq();
+  const { items, isLoaded, hasLoadError } = useFaq();
+
+  if (hasLoadError) {
+    return (
+      <Alert variant="danger" className="text-center mb-0">
+        {m.error_faq()}
+      </Alert>
+    );
+  }
 
   if (isLoaded && items.length === 0) {
     return <p className="text-secondary text-center mb-0">{m.faq_empty()}</p>;

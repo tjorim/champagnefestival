@@ -58,4 +58,13 @@ describe("FAQ component", () => {
 
     expect(await screen.findByText(/no frequently asked questions/i)).toBeInTheDocument();
   });
+
+  it("shows an error state instead of the empty state when the request fails", async () => {
+    server.use(http.get("/api/faq/active", () => HttpResponse.json(null, { status: 500 })));
+
+    renderFaq();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText(/no frequently asked questions/i)).not.toBeInTheDocument();
+  });
 });

@@ -5,7 +5,7 @@ single row with a fixed id, so the admin dashboard can flip maintenance mode
 live without a redeploy.
 
 faq_items replaces the previously-hardcoded, per-locale FAQ text in the
-frontend translation catalogues with admin-editable content, so festival
+frontend translation catalogs with admin-editable content, so festival
 details (dates, arrangements, house rules) don't need a code change every
 edition.
 
