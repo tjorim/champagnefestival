@@ -11,6 +11,8 @@ import LayoutEditor from "./LayoutEditor";
 import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
+import FaqManagement from "./FaqManagement";
+import SettingsManagement from "./SettingsManagement";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
@@ -620,6 +622,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "audit-log" && (
                   <AuditLogViewer authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "faq" && (
+                  <FaqManagement authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "settings" && (
+                  <SettingsManagement authHeaders={authHeaders} />
                 )}
               </div>
             )}

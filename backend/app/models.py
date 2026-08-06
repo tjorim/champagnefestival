@@ -459,3 +459,30 @@ class AuditEntry(Base):
     resource_id: Mapped[str] = mapped_column(String(64), index=True)
     request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     details: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class AppSettings(Base):
+    """Site-wide settings. Always exactly one row, with a fixed id."""
+
+    __tablename__ = "app_settings"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    maintenance_mode: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class FaqItem(Base):
+    """A single question/answer pair shown on the public FAQ section."""
+
+    __tablename__ = "faq_items"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    question: Mapped[str] = mapped_column(String(500))
+    answer: Mapped[str] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

@@ -1,5 +1,7 @@
 export const queryKeys = {
   activeEdition: ["active-edition"] as const,
+  faq: ["faq"] as const,
+  maintenanceMode: ["maintenance-mode"] as const,
   myRegistrations: (token: string) => ["my-registrations", token] as const,
   checkInRegistration: (registrationId: string, checkInToken: string) =>
     ["check-in", registrationId, checkInToken] as const,
@@ -55,6 +57,8 @@ export const queryKeys = {
         filters.page,
       ] as const,
     editionStats: ["admin", "edition-stats"] as const,
+    faqItems: ["admin", "faq-items"] as const,
+    settings: ["admin", "settings"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
       editions: ["admin", "content-management", "editions"] as const,

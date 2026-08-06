@@ -15,10 +15,12 @@ from sqlalchemy.orm.interfaces import ORMOption
 
 from app.database import Base
 from app.models import (
+    AppSettings,
     Area,
     Edition,
     Event,
     Exhibitor,
+    FaqItem,
     Layout,
     Person,
     Product,
@@ -345,6 +347,25 @@ def person_summary_to_dict(p: Person) -> dict:
         "name": p.name,
         "email": p.email,
         "phone": p.phone,
+    }
+
+
+def app_settings_to_dict(s: AppSettings) -> dict:
+    return {
+        "maintenance_mode": s.maintenance_mode,
+        "updated_at": s.updated_at,
+    }
+
+
+def faq_item_to_dict(f: FaqItem) -> dict:
+    return {
+        "id": f.id,
+        "question": f.question,
+        "answer": f.answer,
+        "sort_order": f.sort_order,
+        "active": f.active,
+        "created_at": f.created_at,
+        "updated_at": f.updated_at,
     }
 
 

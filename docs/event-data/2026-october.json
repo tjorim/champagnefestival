@@ -1,0 +1,209 @@
+{
+  "_readme": [
+    "Content payload for the 2026 October festival edition, matching the admin API's",
+    "request schemas (backend/app/schemas.py: VenueCreate, EditionCreate, EventCreate,",
+    "FaqItemCreate). Everything here is DB-driven, editable through the admin dashboard -",
+    "this file exists only because the dashboard needs the venue/edition/events/FAQ typed",
+    "in by hand once, and it's easier to prepare that text ahead of time than live in the UI.",
+    "",
+    "Suggested order, since each step needs an id produced by the previous one:",
+    "  1. POST /api/venues        with `venue`          -> note the returned `id`",
+    "  2. POST /api/editions      with `edition`, after setting venue_id to that id",
+    "  3. POST /api/events        once per item in `events`",
+    "  4. POST /api/faq           once per item in `faq_items` (independent of the edition)",
+    "The same shapes work if you'd rather paste field-by-field into the admin dashboard",
+    "(Locations & Rooms -> add venue; Events -> Editions -> add edition -> add each",
+    "schedule item; Content -> FAQ -> add each question).",
+    "",
+    "Skip whichever parts already exist (e.g. a Staf Versluys venue, or evergreen FAQ",
+    "entries) rather than creating duplicates - reuse those ids/rows instead.",
+    "",
+    "This file won't need a sibling next year for the parts of the site that read live",
+    "edition data automatically (dates, schedule, venue address, countdown) - only the",
+    "content itself changes, via the admin dashboard, not this file's shape."
+  ],
+
+  "venue": {
+    "name": "Meeting- en Eventcentrum Staf Versluys",
+    "address": "Kapelstraat 76",
+    "city": "Bredene",
+    "postal_code": "8450",
+    "country": "Belgium",
+    "lat": 51.2372,
+    "lng": 2.9767,
+    "active": true,
+    "_note": "lat/lng are an approximate Bredene town-center fix, not the exact venue pin - adjust by dropping a pin on the venue in the admin map picker if precision matters for the location widget."
+  },
+
+  "edition": {
+    "id": "2026-october",
+    "year": 2026,
+    "month": "october",
+    "venue_id": "<fill in with the id returned from creating the venue above>",
+    "edition_type": "festival",
+    "exhibitors": [],
+    "co_organizer_exhibitor_id": null,
+    "active": true,
+    "_note": "exhibitors (producers/sponsors) weren't on the poster - add exhibitor ids once known, or leave empty and fill in later via the edition modal."
+  },
+
+  "events": [
+    {
+      "edition_id": "2026-october",
+      "title": "Doorlopende degustatie",
+      "description": "Proef een breed scala aan champagnes van gerenommeerde producenten.",
+      "date": "2026-10-02",
+      "start_time": "17:00",
+      "end_time": "23:00",
+      "category": "tasting",
+      "registration_required": false,
+      "registrations_open_from": null,
+      "max_capacity": null,
+      "active": true
+    },
+    {
+      "edition_id": "2026-october",
+      "title": "VIP-arrangement",
+      "description": "Exclusieve VIP-receptie. Enkel toegankelijk op reservatie.",
+      "date": "2026-10-02",
+      "start_time": "19:30",
+      "end_time": "21:30",
+      "category": "vip",
+      "registration_required": true,
+      "registrations_open_from": null,
+      "max_capacity": null,
+      "active": true
+    },
+    {
+      "edition_id": "2026-october",
+      "title": "Opening ruilbeurs champagnecapsules",
+      "description": "Ruilbeurs voor champagnecapsules. Enkel op reservatie.",
+      "date": "2026-10-03",
+      "start_time": "09:30",
+      "end_time": null,
+      "category": "exchange",
+      "registration_required": true,
+      "registrations_open_from": null,
+      "max_capacity": null,
+      "active": true,
+      "_note": "poster gives no end time for the ruilbeurs - left null, set one if you have it."
+    },
+    {
+      "edition_id": "2026-october",
+      "title": "Doorlopende degustatie",
+      "description": "Doorlopende degustatie de hele dag.",
+      "date": "2026-10-03",
+      "start_time": "10:00",
+      "end_time": "23:59",
+      "category": "tasting",
+      "registration_required": false,
+      "registrations_open_from": null,
+      "max_capacity": null,
+      "active": true,
+      "_note": "poster says festival + party run until 24.00 (midnight); end_time is capped at 23:59 since the field only accepts HH:MM within one day."
+    },
+    {
+      "edition_id": "2026-october",
+      "title": "Champagneparty met huis DJ \"Moustache\"",
+      "description": "Champagneparty met huis DJ \"Moustache\".",
+      "date": "2026-10-03",
+      "start_time": "20:00",
+      "end_time": "23:59",
+      "category": "party",
+      "registration_required": false,
+      "registrations_open_from": null,
+      "max_capacity": null,
+      "active": true
+    },
+    {
+      "edition_id": "2026-october",
+      "title": "Champagneontbijt",
+      "description": "Champagneontbijt ten voordele van een lokaal goed doel. Enkel op reservatie.",
+      "date": "2026-10-04",
+      "start_time": "09:00",
+      "end_time": null,
+      "category": "breakfast",
+      "registration_required": true,
+      "registrations_open_from": null,
+      "max_capacity": null,
+      "active": true,
+      "_note": "poster gives no end time for the champagneontbijt - left null, set one if you have it."
+    },
+    {
+      "edition_id": "2026-october",
+      "title": "Doorlopende degustatie",
+      "description": "Doorlopende degustatie tot einde festival.",
+      "date": "2026-10-04",
+      "start_time": "10:00",
+      "end_time": "18:00",
+      "category": "tasting",
+      "registration_required": false,
+      "registrations_open_from": null,
+      "max_capacity": null,
+      "active": true
+    }
+  ],
+
+  "faq_items": [
+    {
+      "question": "Waar gaat het Champagnefestival over?",
+      "answer": "Het Champagnefestival is een viering van fijne champagne, dat producenten, liefhebbers en de gemeenschap samenbrengt voor proeverijen en gezelligheid.",
+      "sort_order": 0,
+      "active": true
+    },
+    {
+      "question": "Wanneer en waar is het volgende festival?",
+      "answer": "Het festival vindt plaats van 2 tot 4 oktober 2026 in het Meeting- en Eventcentrum Staf Versluys, Kapelstraat 76, 8450 Bredene.",
+      "sort_order": 1,
+      "active": true
+    },
+    {
+      "question": "Wat is het VIP-arrangement?",
+      "answer": "Op vrijdagavond, van 19.30 tot 21.30 uur, is er een exclusieve VIP-receptie. Enkel toegankelijk op reservatie.",
+      "sort_order": 2,
+      "active": true
+    },
+    {
+      "question": "Wat is de ruilbeurs champagnecapsules?",
+      "answer": "Op zaterdagochtend vanaf 9.30 uur kunnen verzamelaars champagnecapsules ruilen. Enkel toegankelijk op reservatie.",
+      "sort_order": 3,
+      "active": true
+    },
+    {
+      "question": "Is er ook een feestje?",
+      "answer": "Zaterdagavond vanaf 20.00 uur is er een champagneparty met huis-DJ \"Moustache\".",
+      "sort_order": 4,
+      "active": true
+    },
+    {
+      "question": "Wat is het champagneontbijt?",
+      "answer": "Zondagochtend vanaf 9.00 uur is er een champagneontbijt ten voordele van een lokaal goed doel. Enkel toegankelijk op reservatie.",
+      "sort_order": 5,
+      "active": true
+    },
+    {
+      "question": "Mag ik mijn huisdier meenemen?",
+      "answer": "Nee, het Champagnefestival in het meeting- en eventcentrum is niet toegankelijk voor huisdieren.",
+      "sort_order": 6,
+      "active": true
+    },
+    {
+      "question": "Mag ik eigen eten of drank meebrengen?",
+      "answer": "Champagne degusteren kan enkel met glazen voorzien van het logo \"Champagnefestival\". Voor een hapje mag u geen eigen voeding meebrengen - er is voldoende lekkers verkrijgbaar bij geselecteerde standhouders.",
+      "sort_order": 7,
+      "active": true
+    },
+    {
+      "question": "Zijn kaarten al beschikbaar?",
+      "answer": "Neem contact op via nancy.cattrysse@telenet.be voor meer informatie over tickets en reservaties.",
+      "sort_order": 8,
+      "active": true
+    },
+    {
+      "question": "Kan ik sponsor of verkoper worden?",
+      "answer": "Ja! We verwelkomen partnerships met bedrijven gerelateerd aan champagne, voeding en luxe lifestyle. Gebruik ons contactformulier om je interesse kenbaar te maken.",
+      "sort_order": 9,
+      "active": true
+    }
+  ]
+}

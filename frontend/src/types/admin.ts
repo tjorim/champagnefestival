@@ -82,6 +82,14 @@ export interface Room {
   active: boolean;
 }
 
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  sortOrder: number;
+  active: boolean;
+}
+
 export interface AuditEntry {
   id: string;
   timestamp: string;

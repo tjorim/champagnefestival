@@ -952,6 +952,43 @@ class AuditEntryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AppSettingsUpdate(BaseModel):
+    maintenance_mode: bool | None = None
+
+
+class AppSettingsOut(BaseModel):
+    maintenance_mode: bool
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FaqItemCreate(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    answer: str = Field(min_length=1, max_length=10000)
+    sort_order: int = 0
+    active: bool = True
+
+
+class FaqItemUpdate(BaseModel):
+    question: str | None = Field(default=None, min_length=1, max_length=500)
+    answer: str | None = Field(default=None, min_length=1, max_length=10000)
+    sort_order: int | None = None
+    active: bool | None = None
+
+
+class FaqItemOut(BaseModel):
+    id: str
+    question: str
+    answer: str
+    sort_order: int
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class EditionAttendanceStats(BaseModel):
     edition_id: str
     year: int

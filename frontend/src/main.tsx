@@ -28,13 +28,15 @@ import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
 import RegistrationModal from "./components/RegistrationModal";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
+import MaintenancePage from "./components/MaintenancePage";
 import { useLanguage } from "./hooks/useLanguage";
+import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
 import { initializeVisualTheme, useVisualTheme } from "./hooks/useVisualTheme";
 import { getFestivalDateRange, useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
+import { getLocale } from "./paraglide/runtime";
 import { featureItems } from "./config/features";
-import { faqIds } from "./config/faq";
-import { endOfDay } from "./utils/dateUtils";
+import { endOfDay, formatDateRange } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
 
 const FEATURE_ICON_BY_ID: Record<number, string> = {
@@ -236,6 +238,7 @@ function App() {
   // Use custom hooks for language
   useLanguage();
   const { variant, setVariant } = useVisualTheme();
+  const { isMaintenanceMode } = useMaintenanceMode();
 
   // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition, hasEdition, hasLoadError } = useActiveEdition();
@@ -339,6 +342,10 @@ function App() {
       );
   }, [edition.events]);
 
+  if (isMaintenanceMode) {
+    return <MaintenancePage />;
+  }
+
   // --- Main marketing page ---
 
   return (
@@ -426,7 +433,13 @@ function App() {
             <SectionHeading id="what-we-do-heading" title={m.what_we_do_title()} />
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
-                <p>{m.what_we_do_description()}</p>
+                <p>
+                  {m.what_we_do_description({
+                    dateRange: formatDateRange(edition.dates, getLocale() as "en" | "fr" | "nl"),
+                    venueName: edition.venue.venueName,
+                    city: edition.venue.city,
+                  })}
+                </p>
                 <p>{m.what_we_do_for_everyone()}</p>
               </div>
             </div>
@@ -541,7 +554,7 @@ function App() {
             <div className="row justify-content-center">
               <div className="col-md-10 col-lg-8">
                 <AppSuspense errorFallbackText={m.error_faq()}>
-                  <FAQ ids={faqIds} />
+                  <FAQ />
                 </AppSuspense>
               </div>
             </div>

@@ -26,6 +26,12 @@ function isUpcomingEdition(edition: SeedEdition): boolean {
 }
 
 export const publicHandlers = [
+  /** GET /api/settings — site-wide settings; maintenance mode off by default. */
+  http.get("/api/settings", () => HttpResponse.json({ maintenance_mode: false })),
+
+  /** GET /api/faq/active — active FAQ items; empty by default. */
+  http.get("/api/faq/active", () => HttpResponse.json([])),
+
   /** GET /api/editions/active — returns the active edition. */
   http.get("/api/editions/active", ({ request }) => {
     const editionType = new URL(request.url).searchParams.get("edition_type");
