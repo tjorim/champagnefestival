@@ -1,48 +1,70 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import { describe, it, expect } from "vitest";
 import FAQ from "@/components/FAQ";
+import { server } from "@/mocks/server";
 
-vi.mock("@/paraglide/messages", () => ({
-  m: {
-    faq_q1: () => "What is the Champagnefestival?",
-    faq_a1: () => "An annual celebration of champagne.",
-    faq_q2: () => "When does it take place?",
-    faq_a2: () => "First full weekend of October.",
-    faq_q3: () => "Where is it held?",
-    faq_a3: () => "At the event center.",
-    faq_q4: () => "How much does it cost?",
-    faq_a4: () => "Entry is free.",
-    faq_q5: () => "Is registration required?",
-    faq_a5: () => "Only for VIP events.",
+const ITEMS = [
+  {
+    id: "faq-1",
+    question: "What is the Champagnefestival?",
+    answer: "An annual celebration of champagne.",
+    sort_order: 0,
+    active: true,
   },
-}));
+  {
+    id: "faq-2",
+    question: "When does it take place?",
+    answer: "First full weekend of October.",
+    sort_order: 1,
+    active: true,
+  },
+];
+
+function renderFaq(): void {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <FAQ />
+    </QueryClientProvider>,
+  );
+}
 
 describe("FAQ component", () => {
-  it("renders all 5 FAQ items by default", () => {
-    render(<FAQ />);
-    expect(screen.getByText("What is the Champagnefestival?")).toBeInTheDocument();
+  it("renders active FAQ items from the API", async () => {
+    server.use(http.get("/api/faq/active", () => HttpResponse.json(ITEMS)));
+
+    renderFaq();
+
+    expect(await screen.findByText("What is the Champagnefestival?")).toBeInTheDocument();
     expect(screen.getByText("When does it take place?")).toBeInTheDocument();
-    expect(screen.getByText("Where is it held?")).toBeInTheDocument();
-    expect(screen.getByText("How much does it cost?")).toBeInTheDocument();
-    expect(screen.getByText("Is registration required?")).toBeInTheDocument();
-  });
-
-  it("renders only specified FAQ ids when ids prop provided", () => {
-    render(<FAQ ids={[1, 3]} />);
-    expect(screen.getByText("What is the Champagnefestival?")).toBeInTheDocument();
-    expect(screen.getByText("Where is it held?")).toBeInTheDocument();
-    expect(screen.queryByText("When does it take place?")).not.toBeInTheDocument();
-  });
-
-  it("renders an Accordion component", () => {
-    render(<FAQ />);
-    // Accordion items have buttons as headers
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBeGreaterThanOrEqual(5);
-  });
-
-  it("renders answers in the FAQ body", () => {
-    render(<FAQ />);
     expect(screen.getByText("An annual celebration of champagne.")).toBeInTheDocument();
+  });
+
+  it("renders an Accordion item per FAQ entry", async () => {
+    server.use(http.get("/api/faq/active", () => HttpResponse.json(ITEMS)));
+
+    renderFaq();
+
+    const buttons = await screen.findAllByRole("button");
+    expect(buttons.length).toBe(ITEMS.length);
+  });
+
+  it("shows an empty state when there are no FAQ items", async () => {
+    server.use(http.get("/api/faq/active", () => HttpResponse.json([])));
+
+    renderFaq();
+
+    expect(await screen.findByText(/no frequently asked questions/i)).toBeInTheDocument();
+  });
+
+  it("shows an error state instead of the empty state when the request fails", async () => {
+    server.use(http.get("/api/faq/active", () => HttpResponse.json(null, { status: 500 })));
+
+    renderFaq();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText(/no frequently asked questions/i)).not.toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import type {
   AuditEntry,
   EditionAttendanceStats,
   EventCheckInStats,
+  FaqItem,
 } from "@/types/admin";
 import { apiToRegistration } from "@/types/registrationMapper";
 import type { Registration } from "@/types/registration";
@@ -28,6 +29,7 @@ import {
   apiAuditEntryToAuditEntry,
   apiEditionStatsToEditionAttendanceStats,
   apiEventCheckInStatsToEventCheckInStats,
+  apiFaqItemToFaqItem,
   mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
@@ -255,6 +257,17 @@ export async function fetchEditionStats(
     { headers: authHeaders() },
     m.admin_error_load_data(),
     apiEditionStatsToEditionAttendanceStats,
+  );
+}
+
+export async function fetchFaqItemsAdmin(
+  authHeaders: () => Record<string, string>,
+): Promise<FaqItem[]> {
+  return fetchArrayOrThrow(
+    "/api/faq",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiFaqItemToFaqItem,
   );
 }
 

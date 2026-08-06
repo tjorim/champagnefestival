@@ -24,6 +24,7 @@ from app.routers import (
     editions,
     events,
     exhibitors,
+    faq,
     health,
     layouts,
     live,
@@ -39,6 +40,9 @@ from app.routers import (
     venues,
     volunteer_ops,
     volunteers,
+)
+from app.routers import (
+    settings as settings_router,
 )
 from app.version import APP_VERSION
 
@@ -169,6 +173,8 @@ app.include_router(me.router)
 app.include_router(me.pebble_router)
 app.include_router(live.router)
 app.include_router(health.router)
+app.include_router(faq.router)
+app.include_router(settings_router.router)
 
 if _mcp_app is not None:
     app.mount("/mcp", _mcp_app)

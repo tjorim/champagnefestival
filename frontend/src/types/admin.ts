@@ -82,6 +82,23 @@ export interface Room {
   active: boolean;
 }
 
+/**
+ * A FAQ item's admin-facing shape: every locale's content. Dutch is
+ * required; English/French are optional per item — a blank translation
+ * hides that item on that locale's public FAQ.
+ */
+export interface FaqItem {
+  id: string;
+  questionNl: string;
+  answerNl: string;
+  questionEn: string | null;
+  answerEn: string | null;
+  questionFr: string | null;
+  answerFr: string | null;
+  sortOrder: number;
+  active: boolean;
+}
+
 export interface AuditEntry {
   id: string;
   timestamp: string;

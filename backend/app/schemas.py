@@ -17,6 +17,7 @@ OrderItemCategory = Literal["champagne", "food", "other"]
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
+FaqLocale = Literal["nl", "en", "fr"]
 
 
 # ---------------------------------------------------------------------------
@@ -950,6 +951,69 @@ class AuditEntryOut(BaseModel):
     details: dict
 
     model_config = {"from_attributes": True}
+
+
+class AppSettingsUpdate(BaseModel):
+    maintenance_mode: bool | None = None
+
+
+class AppSettingsOut(BaseModel):
+    maintenance_mode: bool
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FaqItemCreate(BaseModel):
+    question_nl: str = Field(min_length=1, max_length=500)
+    answer_nl: str = Field(min_length=1, max_length=10000)
+    question_en: str | None = Field(default=None, max_length=500)
+    answer_en: str | None = Field(default=None, max_length=10000)
+    question_fr: str | None = Field(default=None, max_length=500)
+    answer_fr: str | None = Field(default=None, max_length=10000)
+    sort_order: int = 0
+    active: bool = True
+
+
+class FaqItemUpdate(BaseModel):
+    question_nl: str | None = Field(default=None, min_length=1, max_length=500)
+    answer_nl: str | None = Field(default=None, min_length=1, max_length=10000)
+    # Optional locales use presence (model_fields_set), not None-ness, to tell
+    # "omitted, leave unchanged" apart from "included as '', clear it" — see
+    # update_faq_item in routers/faq.py. An empty string clears the
+    # translation (stored as NULL), hiding that item on that locale's FAQ.
+    question_en: str | None = Field(default=None, max_length=500)
+    answer_en: str | None = Field(default=None, max_length=10000)
+    question_fr: str | None = Field(default=None, max_length=500)
+    answer_fr: str | None = Field(default=None, max_length=10000)
+    sort_order: int | None = None
+    active: bool | None = None
+
+
+class FaqItemOut(BaseModel):
+    """Admin shape: every locale's content, for the FAQ editor."""
+
+    id: str
+    question_nl: str
+    answer_nl: str
+    question_en: str | None
+    answer_en: str | None
+    question_fr: str | None
+    answer_fr: str | None
+    sort_order: int
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FaqItemPublicOut(BaseModel):
+    """Public shape: one locale's question/answer, already resolved server-side."""
+
+    id: str
+    question: str
+    answer: str
 
 
 class EditionAttendanceStats(BaseModel):

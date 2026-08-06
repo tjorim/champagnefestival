@@ -8,6 +8,7 @@ import type {
   AuditEntry,
   EditionAttendanceStats,
   EventCheckInStats,
+  FaqItem,
 } from "@/types/admin";
 import type { Person } from "@/types/person";
 
@@ -64,6 +65,21 @@ export function apiVenueToVenue(d: Record<string, unknown>): Venue {
     country: (d.country ?? "") as string,
     lat: (d.lat ?? 0) as number,
     lng: (d.lng ?? 0) as number,
+    active: (d.active ?? true) as boolean,
+  };
+}
+
+/** Map FastAPI snake_case FAQ item response to frontend camelCase FaqItem type */
+export function apiFaqItemToFaqItem(d: Record<string, unknown>): FaqItem {
+  return {
+    id: d.id as string,
+    questionNl: d.question_nl as string,
+    answerNl: d.answer_nl as string,
+    questionEn: (d.question_en ?? null) as string | null,
+    answerEn: (d.answer_en ?? null) as string | null,
+    questionFr: (d.question_fr ?? null) as string | null,
+    answerFr: (d.answer_fr ?? null) as string | null,
+    sortOrder: (d.sort_order ?? 0) as number,
     active: (d.active ?? true) as boolean,
   };
 }
