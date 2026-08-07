@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from app.audit import write_audit_entry
 from app.mcp.utils import as_value_error, get_or_error, validate_with_schema
-from app.models import Area, Layout, Room, Table, TableType
+from app.models import Area, Exhibitor, Layout, Room, Table, TableType
 from app.routers.layouts import _layout_payloads, _resolve_layout_day, _table_in_any_area
 from app.schemas import LayoutCopyCreate, LayoutCreate
 from app.utils import layout_to_dict, make_id
@@ -203,6 +203,22 @@ async def copy_layout(
             )
 
         if body.copy_areas:
+            # An area whose exhibitor was deactivated after the source area was
+            # created (or last updated) must not be silently carried into the copy —
+            # create_area/update_area both refuse to assign an inactive exhibitor,
+            # so the copy path can't create areas those tools would reject.
+            exhibitor_ids = {area.exhibitor_id for area in source_areas if area.exhibitor_id is not None}
+            if exhibitor_ids:
+                active_result = await db.execute(
+                    select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids), Exhibitor.active.is_(True))
+                )
+                active_ids = set(active_result.scalars().all())
+                inactive_ids = sorted(exhibitor_ids - active_ids)
+                if inactive_ids:
+                    raise ValueError(
+                        "Cannot copy: the following areas reference an inactive or "
+                        f"deleted exhibitor: {inactive_ids}. Update those areas first."
+                    )
             for area in source_areas:
                 db.add(
                     Area(
@@ -249,6 +265,10 @@ async def get_layout(session_factory: Any, layout_id: str) -> dict:
 async def delete_layout(session_factory: Any, actor: str, layout_id: str) -> dict:
     async with session_factory() as db:
         lay = await get_or_error(db, Layout, layout_id, f"Layout '{layout_id}' not found.")
+        # Lock the layout row so a concurrent table creation/copy (which validates
+        # the layout exists before inserting) can't race this delete: whichever
+        # transaction locks the layout first is the one the other serializes behind.
+        await db.execute(select(Layout.id).where(Layout.id == layout_id).with_for_update())
         tables_in_use = await db.execute(select(Table).where(Table.layout_id == layout_id).limit(1))
         if tables_in_use.scalars().first() is not None:
             raise ValueError("Cannot delete: tables are still assigned to this layout.")

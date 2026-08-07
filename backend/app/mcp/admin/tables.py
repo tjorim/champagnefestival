@@ -168,7 +168,7 @@ async def update_table(
             action="table_updated",
             resource_type="table",
             resource_id=table_id,
-            details={"fields": list(body.model_fields_set)},
+            details={"fields_changed": sorted(body.model_fields_set)},
         )
         await db.commit()
         await db.refresh(t)

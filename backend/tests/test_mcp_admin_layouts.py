@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from app.mcp.admin import layouts as mcp_layouts
-from app.models import Area, Room, Table, TableType, Venue
+from app.models import Area, Exhibitor, Room, Table, TableType, Venue
 from tests.helpers import mcp_session_factory
 
 
@@ -176,6 +176,27 @@ async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
     assert set(new_tables) == {"InArea", "Outside"}
     assert new_tables["InArea"].id != "tbl-inside"
     assert new_tables["Outside"].id != "tbl-outside"
+
+
+async def test_copy_layout_rejects_area_with_inactive_exhibitor(db_session):
+    """An area whose exhibitor was deactivated after the area was created must not
+    be silently carried into the copy — create_area/update_area both refuse to
+    assign an inactive exhibitor, so the copy path can't create areas those tools
+    would reject."""
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session)
+    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+
+    exhibitor = Exhibitor(name="Bollinger", type="producer", active=False)
+    db_session.add(exhibitor)
+    await db_session.flush()
+    db_session.add(Area(id="area-1", layout_id=source["id"], label="Zone A", exhibitor_id=exhibitor.id))
+    await db_session.commit()
+
+    with pytest.raises(ValueError, match="inactive"):
+        await mcp_layouts.copy_layout(
+            factory, "admin-1", source["id"], room_id="room-1", day_id=2, copy_tables=False, copy_areas=True
+        )
 
 
 async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):

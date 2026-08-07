@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 
+from app.models import AuditEntry
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, _create_event, _post_registration
 
 
@@ -814,6 +816,82 @@ async def test_converting_festival_to_community_edition_clears_exhibitors(client
     assert r.status_code == 200
     assert r.json()["producers"] == []
     assert r.json()["sponsors"] == []
+
+
+@pytest.mark.anyio
+async def test_implicit_exhibitor_clearing_is_recorded_in_audit_details(client, db_session):
+    """An implicit (not explicitly requested) destructive change — dropping the
+    exhibitor lineup because the edition type moved off festival — must be visible
+    in the audit trail, not just folded silently into `fields_changed`.
+    """
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/exhibitors",
+        json={"name": "Bollinger", "type": "producer"},
+        headers=ADMIN_HEADERS,
+    )
+    producer_id = r.json()["id"]
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-audit-implicit-clear",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "festival",
+            "exhibitors": [producer_id],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(
+        "/api/editions/edition-audit-implicit-clear",
+        json={"edition_type": "bourse"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+
+    entries = (
+        (
+            await db_session.execute(
+                select(AuditEntry).where(
+                    AuditEntry.resource_type == "edition",
+                    AuditEntry.resource_id == "edition-audit-implicit-clear",
+                    AuditEntry.action == "edition_updated",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(entries) == 1
+    assert entries[0].details.get("exhibitors_cleared") is True
+
+    # A second update to an already-non-festival edition, changing an unrelated
+    # field, must NOT claim exhibitors were cleared again (there's nothing left).
+    r = await client.put(
+        "/api/editions/edition-audit-implicit-clear",
+        json={"active": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    entries = (
+        (
+            await db_session.execute(
+                select(AuditEntry).where(
+                    AuditEntry.resource_type == "edition",
+                    AuditEntry.resource_id == "edition-audit-implicit-clear",
+                    AuditEntry.action == "edition_updated",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(entries) == 2
+    assert "exhibitors_cleared" not in entries[1].details
 
 
 @pytest.mark.anyio

@@ -17,6 +17,7 @@ from app.dependencies import Pagination, apply_pagination
 from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Person, Registration
+from app.routers.people import parse_phone
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.utils import get_or_404, make_id, person_to_dict, roles_contains
 
@@ -97,7 +98,7 @@ async def create_member(
         id=make_id("per"),
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
-        phone=body.phone,
+        phone=parse_phone(body.phone),
         address=body.address,
         national_register_number=nrr,
         eid_document_number=eid,
@@ -176,7 +177,6 @@ async def update_member(
 
     for field in (
         "name",
-        "phone",
         "address",
         "visits_per_month",
         "club_name",
@@ -185,6 +185,9 @@ async def update_member(
     ):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
+
+    if "phone" in body.model_fields_set:
+        person.phone = parse_phone(body.phone)
 
     if "email" in body.model_fields_set:
         person.email = str(body.email).lower().strip() if body.email else ""

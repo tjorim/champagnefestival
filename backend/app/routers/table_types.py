@@ -119,6 +119,10 @@ async def delete_table_type(
     actor: str = Depends(get_actor_id),
 ) -> None:
     tt = await get_or_404(db, TableType, type_id, "Table type not found.")
+    # Lock the table type row so a concurrent table creation (which validates the
+    # type exists before inserting) can't race this delete: whichever transaction
+    # locks the type first is the one the other serializes behind.
+    await db.execute(select(TableType.id).where(TableType.id == type_id).with_for_update())
     in_use = await db.execute(select(Table).where(Table.table_type_id == type_id).limit(1))
     if in_use.scalars().first() is not None:
         raise HTTPException(

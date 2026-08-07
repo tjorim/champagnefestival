@@ -25,6 +25,7 @@ from app.routers.members import _ensure_member_role, _get_member_or_404
 from app.routers.members import _ensure_unique_fields as _member_ensure_unique_fields
 from app.routers.members import _normalise_optional_identity as _member_normalise_optional_identity
 from app.routers.members import _normalise_roles as _member_normalise_roles
+from app.routers.people import parse_phone
 from app.schemas import PersonCreate, PersonUpdate
 from app.utils import make_id, person_to_dict, roles_contains
 
@@ -67,6 +68,7 @@ async def create_member(
     async with session_factory() as db:
         try:
             await _member_ensure_unique_fields(db, national_register_number=nrr, eid_document_number=eid)
+            phone_value = parse_phone(body.phone)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -74,7 +76,7 @@ async def create_member(
             id=make_id("per"),
             name=body.name,
             email=str(body.email).lower().strip() if body.email else "",
-            phone=body.phone,
+            phone=phone_value,
             address=body.address,
             national_register_number=nrr,
             eid_document_number=eid,
@@ -187,7 +189,10 @@ async def update_member(
         if body.name is not None:
             person.name = body.name
         if body.phone is not None:
-            person.phone = body.phone
+            try:
+                person.phone = parse_phone(body.phone)
+            except HTTPException as exc:
+                raise as_value_error(exc) from exc
         if body.address is not None:
             person.address = body.address
         if body.visits_per_month is not None:

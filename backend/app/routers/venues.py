@@ -118,6 +118,10 @@ async def delete_venue(
     actor: str = Depends(get_actor_id),
 ) -> None:
     v = await get_or_404(db, Venue, venue_id, "Venue not found.")
+    # Lock the venue row so a concurrent edition/room creation (which validates
+    # the venue exists before inserting) can't race this delete: whichever
+    # transaction locks the venue first is the one the other serializes behind.
+    await db.execute(select(Venue.id).where(Venue.id == venue_id).with_for_update())
     in_use = await db.execute(select(Edition).where(Edition.venue_id == venue_id).limit(1))
     if in_use.scalars().first() is not None:
         raise HTTPException(

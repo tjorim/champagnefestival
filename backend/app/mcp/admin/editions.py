@@ -177,6 +177,7 @@ async def update_edition(
                 raise as_value_error(exc) from exc
             edition.venue_id = body.venue_id
 
+        exhibitors_implicitly_cleared = False
         if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
             try:
                 _validate_exhibitors_allowed(edition.edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
@@ -189,19 +190,23 @@ async def update_edition(
             # payload — clear the now-invalid associations as part of the same update
             # instead of rejecting it, mirroring the router.
             edition.exhibitors = []
+            exhibitors_implicitly_cleared = True
 
         try:
             _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
+        details: dict = {"fields_changed": sorted(body.model_fields_set)}
+        if exhibitors_implicitly_cleared:
+            details["exhibitors_cleared"] = True
         await write_audit_entry(
             db,
             actor=actor,
             action="edition_updated",
             resource_type="edition",
             resource_id=edition.id,
-            details={"fields_changed": sorted(body.model_fields_set)},
+            details=details,
         )
         await db.commit()
         try:

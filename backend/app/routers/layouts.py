@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Area, Edition, Layout, Room, Table, TableType
+from app.models import Area, Edition, Exhibitor, Layout, Room, Table, TableType
 from app.schemas import LayoutCopyCreate, LayoutCreate, LayoutOut
 from app.utils import get_or_404, layout_to_dict, make_id
 
@@ -189,6 +189,25 @@ async def copy_layout(
         )
 
     if body.copy_areas:
+        # An area whose exhibitor was deactivated after the source area was created
+        # (or last updated) must not be silently carried into the copy — create_area
+        # and update_area both refuse to assign an inactive exhibitor, so the copy
+        # path can't create areas those tools would reject.
+        exhibitor_ids = {area.exhibitor_id for area in source_areas if area.exhibitor_id is not None}
+        if exhibitor_ids:
+            active_result = await db.execute(
+                select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids), Exhibitor.active.is_(True))
+            )
+            active_ids = set(active_result.scalars().all())
+            inactive_ids = sorted(exhibitor_ids - active_ids)
+            if inactive_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        "Cannot copy: the following areas reference an inactive or "
+                        f"deleted exhibitor: {inactive_ids}. Update those areas first."
+                    ),
+                )
         for area in source_areas:
             db.add(
                 Area(
@@ -262,6 +281,10 @@ async def delete_layout(
     actor: str = Depends(get_actor_id),
 ) -> None:
     lay = await get_or_404(db, Layout, layout_id, "Layout not found.")
+    # Lock the layout row so a concurrent table creation/copy (which validates the
+    # layout exists before inserting) can't race this delete: whichever
+    # transaction locks the layout first is the one the other serializes behind.
+    await db.execute(select(Layout.id).where(Layout.id == layout_id).with_for_update())
     tables_in_use = await db.execute(select(Table).where(Table.layout_id == layout_id).limit(1))
     if tables_in_use.scalars().first() is not None:
         raise HTTPException(

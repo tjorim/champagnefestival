@@ -631,6 +631,37 @@ async def test_members_crud(client):
 
 
 @pytest.mark.anyio
+async def test_member_phone_is_normalised_to_e164(client):
+    """Phone numbers submitted in local format are normalised the same way people.py does."""
+    r = await client.post(
+        "/api/members",
+        json={"name": "Local Format", "phone": "0475555111"},  # BE local format, no country code
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    person = r.json()
+    assert person["phone"] == "+32475555111"
+
+    r = await client.put(
+        f"/api/members/{person['id']}",
+        json={"phone": "0499000000"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["phone"] == "+32499000000"
+
+
+@pytest.mark.anyio
+async def test_member_invalid_phone_rejected(client):
+    r = await client.post(
+        "/api/members",
+        json={"name": "Bad Phone", "phone": "not-a-phone-number"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
 async def test_delete_member_removes_existing_registrations(client):
     """Deleting a member with existing registrations must not hit the registrations FK RESTRICT."""
     member = await client.post(

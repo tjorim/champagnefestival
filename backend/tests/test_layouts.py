@@ -173,6 +173,40 @@ async def test_copy_layout_copies_areas(client):
 
 
 @pytest.mark.anyio
+async def test_copy_layout_rejects_area_with_inactive_exhibitor(client):
+    """An area whose exhibitor was deactivated after the area was created must not
+    be silently carried into the copy — create_area/update_area both refuse to
+    assign an inactive exhibitor, so the copy path can't create areas those tools
+    would reject."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    source_id = r.json()["id"]
+
+    r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
+    exhibitor_id = r.json()["id"]
+    r = await client.post(
+        "/api/areas",
+        json={"layout_id": source_id, "label": "Zone A", "exhibitor_id": exhibitor_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(f"/api/exhibitors/{exhibitor_id}", json={"active": False}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    r = await client.post(
+        f"/api/layouts/{source_id}/copy",
+        json={"room_id": room_id, "day_id": 2, "copy_tables": False, "copy_areas": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+    assert "inactive" in r.json()["detail"].lower()
+
+
+@pytest.mark.anyio
 async def test_copy_layout_no_tables_when_flags_false(client):
     """When both copy_tables and copy_areas are False, no tables are copied."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)

@@ -156,7 +156,7 @@ async def update_table(
         resource_type="table",
         resource_id=table_id,
         request_id=getattr(request.state, "request_id", None),
-        details={"fields": list(body.model_fields_set)},
+        details={"fields_changed": sorted(body.model_fields_set)},
     )
     await db.commit()
     await db.refresh(t)

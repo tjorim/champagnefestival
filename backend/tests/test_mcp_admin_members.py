@@ -64,6 +64,23 @@ async def test_update_member_not_found(db_session):
         await mcp_members.update_member(factory, "admin-1", "nonexistent", club_name="New Club")
 
 
+async def test_member_phone_is_normalised_to_e164(db_session):
+    """Phone numbers submitted in local format are normalised the same way people.py does."""
+    factory = mcp_session_factory(db_session)
+
+    created = await mcp_members.create_member(factory, "admin-1", name="Local Format", phone="0475555111")
+    assert created["phone"] == "+32475555111"
+
+    updated = await mcp_members.update_member(factory, "admin-1", created["id"], phone="0499000000")
+    assert updated["phone"] == "+32499000000"
+
+
+async def test_create_member_invalid_phone_rejected(db_session):
+    factory = mcp_session_factory(db_session)
+    with pytest.raises(ValueError, match="[Pp]hone"):
+        await mcp_members.create_member(factory, "admin-1", name="Bad Phone", phone="not-a-phone-number")
+
+
 async def test_create_member_national_register_number_conflict(db_session):
     factory = mcp_session_factory(db_session)
     await mcp_members.create_member(factory, "admin-1", name="Alice", national_register_number="85010199999")
