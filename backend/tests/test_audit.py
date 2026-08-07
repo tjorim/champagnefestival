@@ -253,7 +253,7 @@ async def test_update_table_writes_audit_entry(client, db_session):
     updated = [e for e in entries if e.action == "table_updated"]
     assert len(updated) == 1
     assert updated[0].resource_id == table_id
-    assert "name" in updated[0].details["fields"]
+    assert "name" in updated[0].details["fields_changed"]
 
 
 @pytest.mark.anyio

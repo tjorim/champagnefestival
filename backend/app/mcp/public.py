@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.mcp.utils import edition_dict, edition_discovery_dict, event_dict, get_active_edition_obj
-from app.models import Edition, Layout, Table, Venue
+from app.models import Edition, Layout, Venue
 
 
 async def get_active_edition(session_factory: Any) -> dict:
@@ -71,7 +71,13 @@ async def get_event_schedule(session_factory: Any, edition_id: str | None = None
 
 
 async def get_venue_plan_summary(session_factory: Any, edition_id: str | None = None) -> dict:
-    """Return a high-level overview of the venue plan for an edition."""
+    """Return a high-level overview of the venue plan for an edition.
+
+    Room names only — no table counts or any other capacity/attendance
+    numbers, which stay behind the volunteer/admin tier (see
+    ``get_table_seating`` and the full ``/api/venue-plan/{edition_id}``
+    REST endpoint for the detailed floor layout).
+    """
     from sqlalchemy.orm import selectinload
 
     async with session_factory() as db:
@@ -95,16 +101,6 @@ async def get_venue_plan_summary(session_factory: Any, edition_id: str | None = 
         )
         layouts: list[Layout] = list(layouts_result.scalars().all())
 
-        table_counts: dict[str, int] = {}
-        if layouts:
-            layout_ids = [lay.id for lay in layouts]
-            counts_result = await db.execute(
-                select(Table.layout_id, func.count(Table.id))
-                .where(Table.layout_id.in_(layout_ids))
-                .group_by(Table.layout_id)
-            )
-            table_counts = {row[0]: row[1] for row in counts_result.all()}
-
         rooms_seen: set[str] = set()
         room_summaries: list[dict] = []
         for layout in layouts:
@@ -118,7 +114,6 @@ async def get_venue_plan_summary(session_factory: Any, edition_id: str | None = 
                     "room_name": room.name,
                     "layout_id": layout.id,
                     "day_id": layout.day_id,
-                    "table_count": table_counts.get(layout.id, 0),
                 }
             )
 
@@ -127,5 +122,4 @@ async def get_venue_plan_summary(session_factory: Any, edition_id: str | None = 
             "venue_id": edition.venue_id,
             "venue_name": venue.name if venue else None,
             "rooms": room_summaries,
-            "total_tables": sum(table_counts.values()),
         }

@@ -3,15 +3,62 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, TypeVar
 
+from fastapi import HTTPException
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Edition, Person, Registration
 
 ROLE_ADMIN = "admin"
 ROLE_VOLUNTEER = "volunteer"
 ROLE_PUBLIC = "public"
+
+T = TypeVar("T")
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
+
+
+async def get_or_error(db: AsyncSession, model: type[T], object_id: Any, message: str) -> T:
+    """Return the row with primary key ``object_id``, or raise ``ValueError``.
+
+    MCP-context equivalent of ``app.utils.get_or_404`` — tools have no HTTP
+    response to attach a status code to, so a plain ``ValueError`` (whose
+    message reaches the calling agent) stands in for the 404.
+    """
+    obj = await db.get(model, object_id)
+    if obj is None:
+        raise ValueError(message)
+    return obj
+
+
+def validate_with_schema(schema_cls: type[SchemaT], **kwargs: Any) -> SchemaT:
+    """Construct *schema_cls* (one of the REST ``app.schemas`` Create/Update models) from kwargs.
+
+    MCP tools take plain typed parameters rather than a parsed request body, so this is
+    the only place field constraints (ranges, patterns, ``model_validator``s such as
+    table-type dimension normalisation) actually run — reusing the exact REST schema
+    keeps validation identical across both surfaces instead of drifting out of sync.
+    Raises ``ValueError`` with a readable message on failure, matching the rest of the
+    admin MCP tools' error convention.
+    """
+    try:
+        return schema_cls(**kwargs)
+    except ValidationError as exc:
+        messages = [f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in exc.errors()]
+        raise ValueError("; ".join(messages)) from exc
+
+
+def as_value_error(exc: HTTPException) -> ValueError:
+    """Convert a reused router helper's ``HTTPException`` into a ``ValueError``.
+
+    Several REST routers factor validation (existence checks, business rules) into
+    private helpers that raise ``HTTPException`` for FastAPI's benefit. Admin MCP tools
+    reuse those helpers rather than duplicating the logic, then convert here so every
+    error an MCP caller sees is a plain ``ValueError``.
+    """
+    return ValueError(exc.detail)
 
 
 async def get_active_edition_obj(db: Any, edition_type: str | None = "festival") -> Edition | None:

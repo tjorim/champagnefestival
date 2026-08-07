@@ -85,13 +85,16 @@ async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
     result = await db.execute(select(Table).order_by(Table.created_at))
     tables = result.scalars().all()
 
-    # Compute registration_ids from the Registration.table_id FK (source of truth)
-    res_result = await db.execute(
-        select(Registration.id, Registration.table_id).where(Registration.table_id.isnot(None))
-    )
+    # Compute registration_ids from the Registration.table_id FK (source of truth),
+    # scoped to the tables actually being returned.
     table_res_map: dict[str, list[str]] = {}
-    for res_id, tbl_id in res_result.all():
-        table_res_map.setdefault(tbl_id, []).append(res_id)
+    table_ids = [t.id for t in tables]
+    if table_ids:
+        res_result = await db.execute(
+            select(Registration.id, Registration.table_id).where(Registration.table_id.in_(table_ids))
+        )
+        for res_id, tbl_id in res_result.all():
+            table_res_map.setdefault(tbl_id, []).append(res_id)
 
     return [table_to_dict(t, table_res_map.get(t.id, [])) for t in tables]
 
@@ -156,7 +159,7 @@ async def update_table(
         resource_type="table",
         resource_id=table_id,
         request_id=getattr(request.state, "request_id", None),
-        details={"fields": list(body.model_fields_set)},
+        details={"fields_changed": sorted(body.model_fields_set)},
     )
     await db.commit()
     await db.refresh(t)

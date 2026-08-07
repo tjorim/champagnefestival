@@ -199,19 +199,25 @@ async def update_edition(
         await _load_venue(db, body.venue_id)
         edition.venue_id = body.venue_id
 
+    exhibitors_implicitly_cleared = False
     if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
         _validate_exhibitors_allowed(edition.edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
         await _validate_exhibitor_ids(db, body.exhibitors)
         edition.exhibitors = list(body.exhibitors)
     elif edition.edition_type != "festival" and edition.exhibitors:
         # The edition type changed away from festival without an explicit exhibitors
-        # payload. Off-festival editions can't carry exhibitors, so clear the now-invalid
-        # associations as part of the same atomic transition instead of rejecting the
-        # update.
+        # payload — either just now (edition_type in this update) or on an edition
+        # already non-festival before this update. Off-festival editions can't carry
+        # exhibitors, so clear the now-invalid associations as part of the same atomic
+        # transition instead of rejecting the update.
         edition.exhibitors = []
+        exhibitors_implicitly_cleared = True
 
     _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
 
+    details: dict = {"fields_changed": sorted(body.model_fields_set)}
+    if exhibitors_implicitly_cleared:
+        details["exhibitors_cleared"] = True
     await write_audit_entry(
         db,
         actor=actor,
@@ -219,7 +225,7 @@ async def update_edition(
         resource_type="edition",
         resource_id=edition.id,
         request_id=getattr(request.state, "request_id", None),
-        details={"fields_changed": sorted(body.model_fields_set)},
+        details=details,
     )
     await db.commit()
     edition = await _get_edition_or_404(db, edition.id)
