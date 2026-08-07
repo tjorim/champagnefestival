@@ -24,6 +24,8 @@ Auth tiers (sourced from bearer JWT ``realm_access.roles``):
 from __future__ import annotations
 
 import logging
+from datetime import date as dt_date
+from datetime import datetime
 from typing import Any
 
 from fastmcp import FastMCP
@@ -614,7 +616,7 @@ class ChampagneFestivalMcpBackend:
         room_id: str,
         edition_id: str | None = None,
         day_id: int | None = None,
-        date: Any = None,
+        date: dt_date | str | None = None,
         label: str = "",
     ) -> dict:
         """Create a floor-plan layout for a room. Either ``day_id`` or ``date`` is required.
@@ -638,7 +640,7 @@ class ChampagneFestivalMcpBackend:
         room_id: str,
         edition_id: str | None = None,
         day_id: int | None = None,
-        date: Any = None,
+        date: dt_date | str | None = None,
         label: str = "",
         copy_tables: bool = True,
         copy_areas: bool = True,
@@ -835,13 +837,13 @@ class ChampagneFestivalMcpBackend:
         self,
         edition_id: str,
         title: str,
-        date: Any,
+        date: dt_date | str,
         start_time: str,
         category: str,
         description: str = "",
         end_time: str | None = None,
         registration_required: bool = False,
-        registrations_open_from: Any = None,
+        registrations_open_from: datetime | str | None = None,
         max_capacity: int | None = None,
         active: bool = True,
     ) -> dict:
@@ -879,12 +881,12 @@ class ChampagneFestivalMcpBackend:
         edition_id: str | None = None,
         title: str | None = None,
         description: str | None = None,
-        date: Any = None,
+        date: dt_date | str | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
         category: str | None = None,
         registration_required: bool | None = None,
-        registrations_open_from: Any = None,
+        registrations_open_from: datetime | str | None = None,
         max_capacity: int | None = None,
         active: bool | None = None,
         clear_end_time: bool = False,

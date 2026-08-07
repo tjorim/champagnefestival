@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.mcp.admin import venues as mcp_venues
-from app.models import Edition
+from app.models import Edition, Room
 from tests.helpers import mcp_session_factory
 
 
@@ -70,4 +70,15 @@ async def test_delete_venue_blocked_while_edition_in_use(db_session):
     await db_session.commit()
 
     with pytest.raises(ValueError, match="editions"):
+        await mcp_venues.delete_venue(factory, "admin-1", created["id"])
+
+
+async def test_delete_venue_blocked_while_room_in_use(db_session):
+    factory = mcp_session_factory(db_session)
+    created = await mcp_venues.create_venue(factory, "admin-1", name="Test Venue")
+
+    db_session.add(Room(id="room-1", venue_id=created["id"], name="Main Hall"))
+    await db_session.commit()
+
+    with pytest.raises(ValueError, match="rooms"):
         await mcp_venues.delete_venue(factory, "admin-1", created["id"])

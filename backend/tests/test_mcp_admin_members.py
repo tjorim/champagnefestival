@@ -64,6 +64,43 @@ async def test_update_member_not_found(db_session):
         await mcp_members.update_member(factory, "admin-1", "nonexistent", club_name="New Club")
 
 
+async def test_update_member_cannot_remove_member_role(db_session):
+    """_ensure_member_role re-adds 'member' even if the caller submits a roles
+    list that omits it — a member can't demote itself to a non-member Person."""
+    factory = mcp_session_factory(db_session)
+    created = await mcp_members.create_member(factory, "admin-1", name="Alice")
+
+    updated = await mcp_members.update_member(factory, "admin-1", created["id"], roles=["volunteer"])
+    assert set(updated["roles"]) == {"member", "volunteer"}
+
+
+async def test_list_members_filters_by_active(db_session):
+    factory = mcp_session_factory(db_session)
+    active_member = await mcp_members.create_member(factory, "admin-1", name="Active Alice", active=True)
+    inactive_member = await mcp_members.create_member(factory, "admin-1", name="Inactive Ivan", active=False)
+
+    active_only = await mcp_members.list_members(factory, active=True)
+    ids = [m["id"] for m in active_only["members"]]
+    assert active_member["id"] in ids
+    assert inactive_member["id"] not in ids
+
+    inactive_only = await mcp_members.list_members(factory, active=False)
+    ids = [m["id"] for m in inactive_only["members"]]
+    assert inactive_member["id"] in ids
+    assert active_member["id"] not in ids
+
+
+async def test_list_members_filters_by_query(db_session):
+    factory = mcp_session_factory(db_session)
+    alice = await mcp_members.create_member(factory, "admin-1", name="Alice Champagne", email="alice@example.com")
+    await mcp_members.create_member(factory, "admin-1", name="Bob Bubbles", email="bob@example.com")
+
+    matched = await mcp_members.list_members(factory, q="champagne")
+    ids = [m["id"] for m in matched["members"]]
+    assert alice["id"] in ids
+    assert len(matched["members"]) == 1
+
+
 async def test_member_phone_is_normalised_to_e164(db_session):
     """Phone numbers submitted in local format are normalised the same way people.py does."""
     factory = mcp_session_factory(db_session)

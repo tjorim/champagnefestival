@@ -150,6 +150,8 @@ async def update_edition(
         if v is not None
     }
     if clear_co_organizer:
+        if co_organizer_exhibitor_id is not None:
+            raise ValueError("Pass either co_organizer_exhibitor_id or clear_co_organizer, not both.")
         provided["co_organizer_exhibitor_id"] = None
     body = validate_with_schema(EditionUpdate, **provided)
 

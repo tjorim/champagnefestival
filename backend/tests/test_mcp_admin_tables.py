@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.live import live_bus
 from app.mcp.admin import tables as mcp_tables
 from app.models import Layout, Room, TableType, Venue
 from tests.helpers import mcp_session_factory
@@ -163,3 +164,53 @@ async def test_delete_table_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
         await mcp_tables.delete_table(factory, "admin-1", "nonexistent")
+
+
+async def test_create_table_publishes_seating_changed_event(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_layout(db_session)
+    await _seed_table_type(db_session)
+
+    async with live_bus.subscribe() as queue:
+        created = await mcp_tables.create_table(
+            factory, "admin-1", name="Table 1", capacity=6, table_type_id="ttype-1", layout_id="lay-1"
+        )
+        event = queue.get_nowait()
+
+    assert event.topic == "seating"
+    assert event.action == "created"
+    assert event.scope.table_id == created["id"]
+
+
+async def test_update_table_publishes_seating_changed_event(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_layout(db_session)
+    await _seed_table_type(db_session)
+    created = await mcp_tables.create_table(
+        factory, "admin-1", name="Table 1", capacity=6, table_type_id="ttype-1", layout_id="lay-1"
+    )
+
+    async with live_bus.subscribe() as queue:
+        await mcp_tables.update_table(factory, "admin-1", created["id"], capacity=8)
+        event = queue.get_nowait()
+
+    assert event.topic == "seating"
+    assert event.action == "updated"
+    assert event.scope.table_id == created["id"]
+
+
+async def test_delete_table_publishes_seating_changed_event(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_layout(db_session)
+    await _seed_table_type(db_session)
+    created = await mcp_tables.create_table(
+        factory, "admin-1", name="Table 1", capacity=6, table_type_id="ttype-1", layout_id="lay-1"
+    )
+
+    async with live_bus.subscribe() as queue:
+        await mcp_tables.delete_table(factory, "admin-1", created["id"])
+        event = queue.get_nowait()
+
+    assert event.topic == "seating"
+    assert event.action == "deleted"
+    assert event.scope.table_id == created["id"]

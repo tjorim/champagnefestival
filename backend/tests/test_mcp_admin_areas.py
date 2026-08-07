@@ -149,6 +149,34 @@ async def test_update_area_exhibitor_not_found(db_session):
         await mcp_areas.update_area(factory, "admin-1", created["id"], exhibitor_id=999)
 
 
+async def test_update_area_exhibitor_inactive(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_layout(db_session)
+    exhibitor = Exhibitor(name="Retired Vendor", type="vendor", active=False)
+    db_session.add(exhibitor)
+    await db_session.commit()
+    await db_session.refresh(exhibitor)
+    created = await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="DJ Stage")
+
+    with pytest.raises(ValueError, match="inactive"):
+        await mcp_areas.update_area(factory, "admin-1", created["id"], exhibitor_id=exhibitor.id)
+
+
+async def test_update_area_rejects_both_exhibitor_id_and_clear(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_layout(db_session)
+    exhibitor = Exhibitor(name="Oyster Bar", type="vendor", active=True)
+    db_session.add(exhibitor)
+    await db_session.commit()
+    await db_session.refresh(exhibitor)
+    created = await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="DJ Stage")
+
+    with pytest.raises(ValueError, match="not both"):
+        await mcp_areas.update_area(
+            factory, "admin-1", created["id"], exhibitor_id=exhibitor.id, clear_exhibitor_id=True
+        )
+
+
 async def test_delete_area(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)

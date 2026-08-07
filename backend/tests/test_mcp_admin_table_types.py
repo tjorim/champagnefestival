@@ -81,6 +81,21 @@ async def test_update_table_type_round_shape_renormalises_length_to_width(db_ses
     assert updated["length_m"] == updated["width_m"] == 1.5
 
 
+async def test_update_table_type_swaps_dimensions_when_width_exceeds_length(db_session):
+    """A rectangular table type's length must always be >= its width; changing a
+    dimension alone (not shape) still re-derives that invariant."""
+    factory = mcp_session_factory(db_session)
+    created = await mcp_table_types.create_table_type(
+        factory, "admin-1", name="Rect", shape="rectangle", width_m=1.0, length_m=2.0, max_capacity=8
+    )
+    assert created["width_m"] == 1.0
+    assert created["length_m"] == 2.0
+
+    updated = await mcp_table_types.update_table_type(factory, "admin-1", created["id"], width_m=3.0)
+    assert updated["length_m"] == 3.0
+    assert updated["width_m"] == 2.0
+
+
 async def test_delete_table_type(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)

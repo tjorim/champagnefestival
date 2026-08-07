@@ -90,6 +90,25 @@ async def test_create_exhibitor_invalid_contact_person(db_session):
         await mcp_exhibitors.create_exhibitor(factory, "admin-1", name="Bad Corp", contact_person_id="nonexistent-id")
 
 
+async def test_update_exhibitor_invalid_contact_person(db_session):
+    factory = mcp_session_factory(db_session)
+    created = await mcp_exhibitors.create_exhibitor(factory, "admin-1", name="Bollinger")
+
+    with pytest.raises(ValueError, match="Person not found"):
+        await mcp_exhibitors.update_exhibitor(factory, "admin-1", created["id"], contact_person_id="nonexistent-id")
+
+
+async def test_list_exhibitors_filters_by_type(db_session):
+    factory = mcp_session_factory(db_session)
+    producer = await mcp_exhibitors.create_exhibitor(factory, "admin-1", name="Bollinger", type="producer")
+    await mcp_exhibitors.create_exhibitor(factory, "admin-1", name="Food Truck", type="vendor")
+
+    listed = await mcp_exhibitors.list_exhibitors(factory, exhibitor_type="producer")
+    ids = [e["id"] for e in listed["exhibitors"]]
+    assert producer["id"] in ids
+    assert all(e["type"] == "producer" for e in listed["exhibitors"])
+
+
 async def test_update_exhibitor_blocked_retype_to_vendor_while_linked(db_session):
     factory = mcp_session_factory(db_session)
 

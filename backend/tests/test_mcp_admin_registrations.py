@@ -6,6 +6,7 @@ from datetime import date
 
 import pytest
 
+from app.mcp.admin import audit as mcp_audit
 from app.mcp.admin import registrations as mcp_registrations
 from app.models import Edition, Event, Layout, Person, Product, Room, Table, TableType, Venue
 from tests.helpers import mcp_session_factory
@@ -122,6 +123,73 @@ async def test_update_registration_table_assignment_and_clear(db_session):
 
     updated = await mcp_registrations.update_registration(factory, "admin-1", created["id"], clear_table=True)
     assert updated["table_id"] is None
+
+
+async def test_update_registration_rejects_table_from_another_edition(db_session):
+    """Layouts (and their tables) are per-edition; seating a registration at a
+    table drawn for a different edition's floor plan must be rejected."""
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    created = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+    )
+
+    room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
+    ttype = TableType(id="ttype-1", name="Standard", max_capacity=6)
+    db_session.add_all([room, ttype])
+    await db_session.flush()
+    other_edition = Edition(id="edition-2", year=2099, month="april", venue_id="venue-1")
+    db_session.add(other_edition)
+    await db_session.flush()
+    layout = Layout(id="lay-other", edition_id="edition-2", room_id="room-1", day_id=1)
+    db_session.add(layout)
+    await db_session.flush()
+    table = Table(id="tbl-other", name="Table 1", capacity=6, table_type_id="ttype-1", layout_id="lay-other")
+    db_session.add(table)
+    await db_session.commit()
+
+    with pytest.raises(ValueError, match="edition"):
+        await mcp_registrations.update_registration(factory, "admin-1", created["id"], table_id="tbl-other")
+
+
+async def test_update_registration_order_items_audit_action(db_session):
+    """The audit action distinguishes an order-quantity change from a
+    delivery-only change, so the trail can tell them apart at a glance."""
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=True)
+    created = await mcp_registrations.create_registration(
+        factory,
+        "admin-1",
+        person_id=person.id,
+        event_id=event.id,
+        guest_count=2,
+        order_items=[{"product_id": "prod-1", "quantity": 2}],
+    )
+    item = created["order_items"][0]
+
+    await mcp_registrations.update_registration(
+        factory,
+        "admin-1",
+        created["id"],
+        order_items=[{**item, "quantity": 3}],
+    )
+    entries = (await mcp_audit.list_audit_entries(factory, resource_type="registration", resource_id=created["id"]))[
+        "entries"
+    ]
+    actions = [e["action"] for e in entries]
+    assert "order_updated" in actions
+
+    await mcp_registrations.update_registration(
+        factory,
+        "admin-1",
+        created["id"],
+        order_items=[{**item, "quantity": 3, "delivered_quantity": 1}],
+    )
+    entries = (await mcp_audit.list_audit_entries(factory, resource_type="registration", resource_id=created["id"]))[
+        "entries"
+    ]
+    actions = [e["action"] for e in entries]
+    assert "delivery_updated" in actions
 
 
 async def test_update_registration_not_found(db_session):

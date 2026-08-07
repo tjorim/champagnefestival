@@ -129,6 +129,8 @@ async def update_area(
     # unchanged" (omitted, clear_exhibitor_id=False) from "explicitly unset"
     # (clear_exhibitor_id=True) the way REST distinguishes an absent JSON key
     # from an explicit ``null`` via ``model_fields_set``.
+    if exhibitor_id is not None and clear_exhibitor_id:
+        raise ValueError("Pass either exhibitor_id or clear_exhibitor_id, not both.")
     if exhibitor_id is not None:
         provided["exhibitor_id"] = exhibitor_id
     elif clear_exhibitor_id:

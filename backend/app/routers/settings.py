@@ -25,25 +25,34 @@ async def _get_or_create_settings(db: AsyncSession) -> AppSettings:
         return settings
 
     # Two concurrent first requests can both see no row and both try to insert
-    # the fixed id; the loser's commit raises IntegrityError rather than a
+    # the fixed id; the loser's flush raises IntegrityError rather than a
     # second row. Roll back and re-fetch instead of erroring out — either
     # request landing on the same row is a correct outcome here.
+    #
+    # Flushes rather than commits, so the caller controls the transaction
+    # boundary — update_settings folds the row creation, the mutation, and the
+    # audit entry into one atomic commit instead of two separate ones.
     settings = AppSettings(id=_SETTINGS_ID)
     db.add(settings)
     try:
-        await db.commit()
+        await db.flush()
     except IntegrityError:
         await db.rollback()
         settings = await db.get(AppSettings, _SETTINGS_ID)
-        assert settings is not None  # the conflicting insert guarantees a row now
+        if settings is None:
+            # The conflicting insert guarantees a row now — assert would do here,
+            # but assertions are stripped under `-O`, silently returning None and
+            # turning this into an AttributeError deep in the caller instead.
+            raise RuntimeError("Application settings row could not be created or reloaded.") from None
         return settings
-    await db.refresh(settings)
     return settings
 
 
 @router.get("", response_model=AppSettingsOut)
 async def get_settings(db: AsyncSession = Depends(get_db)) -> dict:
-    return app_settings_to_dict(await _get_or_create_settings(db))
+    settings = await _get_or_create_settings(db)
+    await db.commit()  # persist a freshly-created default row; a no-op otherwise
+    return app_settings_to_dict(settings)
 
 
 @router.put("", response_model=AppSettingsOut)

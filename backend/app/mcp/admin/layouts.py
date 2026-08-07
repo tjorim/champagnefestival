@@ -9,6 +9,7 @@ frontend editor.
 
 from __future__ import annotations
 
+from datetime import date as dt_date
 from typing import Any
 
 from fastapi import HTTPException
@@ -29,7 +30,7 @@ async def create_layout(
     room_id: str,
     edition_id: str | None = None,
     day_id: int | None = None,
-    date: Any = None,
+    date: dt_date | str | None = None,
     label: str = "",
 ) -> dict:
     body = validate_with_schema(
@@ -100,7 +101,7 @@ async def copy_layout(
     room_id: str,
     edition_id: str | None = None,
     day_id: int | None = None,
-    date: Any = None,
+    date: dt_date | str | None = None,
     label: str = "",
     copy_tables: bool = True,
     copy_areas: bool = True,

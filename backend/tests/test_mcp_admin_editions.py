@@ -60,6 +60,48 @@ async def test_update_edition_partial(db_session):
     assert updated["year"] == 2099  # untouched fields survive a partial update
 
 
+async def test_update_edition_clear_co_organizer(db_session):
+    factory = mcp_session_factory(db_session)
+    venue_id = await _create_venue(db_session)
+    co_organizer = Exhibitor(name="Co-op", type="sponsor")
+    db_session.add(co_organizer)
+    await db_session.flush()
+
+    created = await mcp_editions.create_edition(
+        factory,
+        "admin-1",
+        id="edition-co-organizer",
+        year=2099,
+        month="march",
+        venue_id=venue_id,
+        co_organizer_exhibitor_id=co_organizer.id,
+    )
+    assert created["co_organizer"]["id"] == co_organizer.id
+
+    updated = await mcp_editions.update_edition(factory, "admin-1", created["id"], clear_co_organizer=True)
+    assert updated["co_organizer"] is None
+
+
+async def test_update_edition_rejects_both_co_organizer_id_and_clear(db_session):
+    factory = mcp_session_factory(db_session)
+    venue_id = await _create_venue(db_session)
+    co_organizer = Exhibitor(name="Co-op", type="sponsor")
+    db_session.add(co_organizer)
+    await db_session.flush()
+    created = await mcp_editions.create_edition(
+        factory, "admin-1", id="edition-1", year=2099, month="march", venue_id=venue_id
+    )
+
+    with pytest.raises(ValueError, match="not both"):
+        await mcp_editions.update_edition(
+            factory,
+            "admin-1",
+            created["id"],
+            co_organizer_exhibitor_id=co_organizer.id,
+            clear_co_organizer=True,
+        )
+
+
 async def test_update_edition_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):

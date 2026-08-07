@@ -136,6 +136,29 @@ async def test_merge_people_happy_path(db_session):
         await mcp_people.get_person(factory, duplicate["id"])
 
 
+async def test_merge_people_adopts_duplicate_identity_fields(db_session):
+    """When the canonical person lacks a national register / eID number but the
+    duplicate has one, the canonical adopts it (the unique columns must be
+    cleared on the duplicate first, since they can't both hold the value)."""
+    factory = mcp_session_factory(db_session)
+    canonical = await mcp_people.create_person(factory, "admin-1", name="Canon")
+    duplicate = await mcp_people.create_person(
+        factory,
+        "admin-1",
+        name="Dup",
+        national_register_number="85010199999",
+        eid_document_number="BEI998877",
+    )
+
+    merged = await mcp_people.merge_people(factory, "admin-1", canonical["id"], duplicate["id"])
+    assert merged["national_register_number"] == "85010199999"
+    assert merged["eid_document_number"] == "bei998877"  # normalised to lowercase, like create/update
+
+    # The duplicate is gone, so the unique columns it vacated stay usable.
+    other = await mcp_people.create_person(factory, "admin-1", name="Other", national_register_number="11111111111")
+    assert other["national_register_number"] == "11111111111"
+
+
 async def test_merge_people_identity_conflict(db_session):
     factory = mcp_session_factory(db_session)
     a = await mcp_people.create_person(factory, "admin-1", name="A", national_register_number="12345")

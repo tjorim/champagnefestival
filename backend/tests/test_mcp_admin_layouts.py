@@ -232,3 +232,44 @@ async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):
 
     new_tables = (await db_session.execute(select(Table).where(Table.layout_id == new_layout_id))).scalars().all()
     assert new_tables == []
+
+
+async def test_copy_layout_copy_areas_true_without_tables(db_session):
+    """copy_tables and copy_areas are independent switches: an area outside
+    any table can be copied while a table outside any area is skipped."""
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session)
+    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+
+    db_session.add(TableType(id="ttype-1", name="Standard", max_capacity=6))
+    await db_session.flush()
+    db_session.add(
+        Table(
+            id="tbl-1",
+            name="T1",
+            capacity=4,
+            table_type_id="ttype-1",
+            layout_id=source["id"],
+            x=90.0,
+            y=90.0,
+        )
+    )
+    db_session.add(Area(id="area-1", layout_id=source["id"], label="Zone A", x=10.0, y=10.0))
+    await db_session.commit()
+
+    copied = await mcp_layouts.copy_layout(
+        factory,
+        "admin-1",
+        source["id"],
+        room_id="room-1",
+        day_id=2,
+        copy_tables=False,
+        copy_areas=True,
+    )
+    new_layout_id = copied["id"]
+
+    new_tables = (await db_session.execute(select(Table).where(Table.layout_id == new_layout_id))).scalars().all()
+    assert new_tables == []
+    new_areas = (await db_session.execute(select(Area).where(Area.layout_id == new_layout_id))).scalars().all()
+    assert len(new_areas) == 1
+    assert new_areas[0].label == "Zone A"

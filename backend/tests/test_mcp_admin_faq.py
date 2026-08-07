@@ -34,6 +34,20 @@ async def test_update_faq_item_clears_optional_locale_with_empty_string(db_sessi
     assert updated["question_nl"] == "Vraag?"  # untouched fields survive a partial update
 
 
+async def test_create_faq_item_rejects_empty_question_nl(db_session):
+    factory = mcp_session_factory(db_session)
+    with pytest.raises(ValueError, match="question_nl"):
+        await mcp_faq.create_faq_item(factory, "admin-1", question_nl="", answer_nl="Antwoord.")  # min_length=1
+
+
+async def test_update_faq_item_rejects_empty_question_nl(db_session):
+    factory = mcp_session_factory(db_session)
+    created = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag?", answer_nl="Antwoord.")
+
+    with pytest.raises(ValueError, match="question_nl"):
+        await mcp_faq.update_faq_item(factory, "admin-1", created["id"], question_nl="")  # min_length=1
+
+
 async def test_update_faq_item_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
