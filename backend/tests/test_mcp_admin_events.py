@@ -187,3 +187,37 @@ async def test_update_event_rejects_registration_settings_without_registration_r
 
     with pytest.raises(ValueError, match="registration_required"):
         await mcp_events.update_event(factory, "admin-1", created["id"], max_capacity=10)
+
+
+async def test_update_event_clears_nullable_fields(db_session):
+    factory = mcp_session_factory(db_session)
+    edition_id = await _create_edition(db_session)
+    created = await mcp_events.create_event(
+        factory,
+        "admin-1",
+        edition_id=edition_id,
+        title="Friday Tasting",
+        date="2099-03-21",
+        start_time="18:00",
+        end_time="22:00",
+        category="festival",
+        registration_required=True,
+        registrations_open_from="2026-01-01T00:00:00+00:00",
+        max_capacity=50,
+    )
+    assert created["end_time"] == "22:00"
+    assert created["max_capacity"] == 50
+    assert created["registrations_open_from"] is not None
+
+    updated = await mcp_events.update_event(
+        factory,
+        "admin-1",
+        created["id"],
+        clear_end_time=True,
+        clear_registrations_open_from=True,
+        clear_max_capacity=True,
+    )
+    assert updated["end_time"] is None
+    assert updated["max_capacity"] is None
+    assert updated["registrations_open_from"] is None
+    assert updated["title"] == "Friday Tasting"  # untouched fields survive a partial update

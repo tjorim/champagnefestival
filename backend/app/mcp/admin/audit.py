@@ -13,6 +13,9 @@ from sqlalchemy import select
 
 from app.models import AuditEntry
 
+DEFAULT_AUDIT_LIMIT = 100
+MAX_AUDIT_LIMIT = 1000
+
 
 def _entry_to_dict(entry: AuditEntry) -> dict:
     return {
@@ -43,9 +46,14 @@ async def list_audit_entries(
 
     ``since``/``until`` are ISO-8601 timestamps (a bare date such as
     ``"2026-03-20"`` also parses); naive timestamps are treated as UTC.
-    ``limit`` caps the page size (unlimited when omitted); ``offset`` skips
-    that many matching rows.
+    ``limit`` caps the page size — defaults to ``DEFAULT_AUDIT_LIMIT`` (100),
+    capped at ``MAX_AUDIT_LIMIT`` (1000); the audit table only grows, so an
+    unbounded read would eventually exhaust memory. ``offset`` skips that
+    many matching rows.
     """
+    if offset < 0:
+        raise ValueError("offset must not be negative.")
+    effective_limit = DEFAULT_AUDIT_LIMIT if limit is None else max(1, min(limit, MAX_AUDIT_LIMIT))
     async with session_factory() as db:
         stmt = select(AuditEntry)
         if resource_type:
@@ -66,9 +74,11 @@ async def list_audit_entries(
             if until_dt.tzinfo is None:
                 until_dt = until_dt.replace(tzinfo=UTC)
             stmt = stmt.where(AuditEntry.timestamp <= until_dt)
-        stmt = stmt.order_by(AuditEntry.timestamp.desc()).offset(offset)
-        if limit is not None:
-            stmt = stmt.limit(limit)
+        # Secondary sort key: entries written in the same transaction can share a
+        # timestamp, and an unstable order would let offset-based paging repeat
+        # or skip rows across calls.
+        stmt = stmt.order_by(AuditEntry.timestamp.desc(), AuditEntry.id.desc())
+        stmt = stmt.offset(offset).limit(effective_limit)
         result = await db.execute(stmt)
         return {"entries": [_entry_to_dict(e) for e in result.scalars().all()]}
 

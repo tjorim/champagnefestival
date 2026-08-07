@@ -29,7 +29,11 @@ async def _get_or_create_settings(db: AsyncSession) -> AppSettings:
     except IntegrityError:
         await db.rollback()
         settings = await db.get(AppSettings, _SETTINGS_ID)
-        assert settings is not None
+        if settings is None:
+            # The conflicting insert guarantees a row now — assert would do here,
+            # but assertions are stripped under `-O`, silently returning None and
+            # turning this into an AttributeError deep in the caller instead.
+            raise RuntimeError("Application settings row could not be created or reloaded.") from None
         return settings
     await db.refresh(settings)
     return settings

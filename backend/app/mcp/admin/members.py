@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
@@ -94,7 +95,13 @@ async def create_member(
             resource_id=person.id,
             details={"roles": person.roles},
         )
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise ValueError(
+                "Person with this national register number or eID document number already exists."
+            ) from exc
         await db.refresh(person)
         return person_to_dict(person)
 
@@ -223,7 +230,13 @@ async def update_member(
             resource_id=person.id,
             details={"fields_changed": sorted(body.model_fields_set)},
         )
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            raise ValueError(
+                "Person with this national register number or eID document number already exists."
+            ) from exc
         await db.refresh(person)
         return person_to_dict(person)
 

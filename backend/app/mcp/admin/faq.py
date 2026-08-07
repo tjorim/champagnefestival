@@ -107,41 +107,25 @@ async def update_faq_item(
         }.items()
         if v is not None
     }
-    validate_with_schema(FaqItemUpdate, **provided)
+    body = validate_with_schema(FaqItemUpdate, **provided)
     async with session_factory() as db:
         f = await get_or_error(db, FaqItem, faq_item_id, f"FAQ item '{faq_item_id}' not found.")
-        fields_changed: list[str] = []
-        if question_nl is not None:
-            f.question_nl = question_nl
-            fields_changed.append("question_nl")
-        if answer_nl is not None:
-            f.answer_nl = answer_nl
-            fields_changed.append("answer_nl")
-        if question_en is not None:
-            f.question_en = question_en or None
-            fields_changed.append("question_en")
-        if answer_en is not None:
-            f.answer_en = answer_en or None
-            fields_changed.append("answer_en")
-        if question_fr is not None:
-            f.question_fr = question_fr or None
-            fields_changed.append("question_fr")
-        if answer_fr is not None:
-            f.answer_fr = answer_fr or None
-            fields_changed.append("answer_fr")
-        if sort_order is not None:
-            f.sort_order = sort_order
-            fields_changed.append("sort_order")
-        if active is not None:
-            f.active = active
-            fields_changed.append("active")
+        # Apply from the validated `body`, not the raw arguments — any coercion or
+        # normalisation FaqItemUpdate performs must land on the row, matching
+        # create_faq_item and the REST router's own update_faq_item.
+        optional_locales = {"question_en", "answer_en", "question_fr", "answer_fr"}
+        for field in body.model_fields_set:
+            value = getattr(body, field)
+            if field in optional_locales:
+                value = value or None
+            setattr(f, field, value)
         await write_audit_entry(
             db,
             actor=actor,
             action="faq_item_updated",
             resource_type="faq_item",
             resource_id=f.id,
-            details={"fields_changed": sorted(fields_changed)},
+            details={"fields_changed": sorted(body.model_fields_set)},
         )
         await db.commit()
         await db.refresh(f)

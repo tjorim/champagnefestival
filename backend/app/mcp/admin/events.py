@@ -133,8 +133,20 @@ async def update_event(
     registrations_open_from: datetime | str | None = None,
     max_capacity: int | None = None,
     active: bool | None = None,
+    clear_end_time: bool = False,
+    clear_registrations_open_from: bool = False,
+    clear_max_capacity: bool = False,
 ) -> dict:
-    provided = {
+    """Partially update an event; omitted fields are left unchanged.
+
+    ``end_time``/``registrations_open_from``/``max_capacity`` are nullable with
+    no natural "clear" value via a plain optional parameter (there's no
+    ambiguity-free way to tell "leave unchanged" apart from "unset it" through
+    a bare ``None`` default) — pass ``clear_end_time=True`` /
+    ``clear_registrations_open_from=True`` / ``clear_max_capacity=True`` to
+    null them out instead of providing a value.
+    """
+    provided: dict[str, Any] = {
         k: v
         for k, v in {
             "edition_id": edition_id,
@@ -151,6 +163,12 @@ async def update_event(
         }.items()
         if v is not None
     }
+    if clear_end_time:
+        provided["end_time"] = None
+    if clear_registrations_open_from:
+        provided["registrations_open_from"] = None
+    if clear_max_capacity:
+        provided["max_capacity"] = None
     body = validate_with_schema(EventUpdate, **provided)
 
     async with session_factory() as db:
@@ -167,21 +185,26 @@ async def update_event(
                 raise as_value_error(exc) from exc
             event.edition_id = body.edition_id
 
-        candidate_date = body.date if body.date is not None else event.date
+        fields_set = body.model_fields_set
+        # `body.date`/`body.registration_required` are typed `X | None`, so narrow
+        # each via its own `is not None` check (not just fields_set membership) —
+        # ty can't narrow across a fields_set lookup, only a same-branch None check.
+        candidate_date = body.date if "date" in fields_set and body.date is not None else event.date
+        candidate_registration_required = (
+            body.registration_required
+            if "registration_required" in fields_set and body.registration_required is not None
+            else event.registration_required
+        )
+        candidate_registrations_open_from = (
+            body.registrations_open_from if "registrations_open_from" in fields_set else event.registrations_open_from
+        )
+        candidate_max_capacity = body.max_capacity if "max_capacity" in fields_set else event.max_capacity
         try:
             await _validate_standalone_event_date(db, edition, candidate_date, exclude_event_id=event.id)
             _validate_registration_settings(
-                registration_required=(
-                    body.registration_required
-                    if body.registration_required is not None
-                    else event.registration_required
-                ),
-                registrations_open_from=(
-                    body.registrations_open_from
-                    if body.registrations_open_from is not None
-                    else event.registrations_open_from
-                ),
-                max_capacity=(body.max_capacity if body.max_capacity is not None else event.max_capacity),
+                registration_required=candidate_registration_required,
+                registrations_open_from=candidate_registrations_open_from,
+                max_capacity=candidate_max_capacity,
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc
@@ -198,9 +221,8 @@ async def update_event(
             "max_capacity",
             "active",
         ):
-            value = getattr(body, field)
-            if value is not None:
-                setattr(event, field, value)
+            if field in fields_set:
+                setattr(event, field, getattr(body, field))
 
         await write_audit_entry(
             db,

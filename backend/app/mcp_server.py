@@ -887,8 +887,17 @@ class ChampagneFestivalMcpBackend:
         registrations_open_from: Any = None,
         max_capacity: int | None = None,
         active: bool | None = None,
+        clear_end_time: bool = False,
+        clear_registrations_open_from: bool = False,
+        clear_max_capacity: bool = False,
     ) -> dict:
-        """Partially update an event; omitted fields are left unchanged. Requires the ``admin`` role."""
+        """Partially update an event; omitted fields are left unchanged.
+
+        ``end_time``/``registrations_open_from``/``max_capacity`` have no natural
+        "clear" value, so pass ``clear_end_time=True`` / ``clear_registrations_open_from=True``
+        / ``clear_max_capacity=True`` to unset them instead of providing a value.
+        Requires the ``admin`` role.
+        """
         self._require_admin()
         return await mcp_admin_events.update_event(
             self.session_factory,
@@ -905,6 +914,9 @@ class ChampagneFestivalMcpBackend:
             registrations_open_from=registrations_open_from,
             max_capacity=max_capacity,
             active=active,
+            clear_end_time=clear_end_time,
+            clear_registrations_open_from=clear_registrations_open_from,
+            clear_max_capacity=clear_max_capacity,
         )
 
     async def delete_event(self, event_id: str) -> dict:
@@ -1409,7 +1421,8 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """List audit entries (newest first), with optional filters. Requires the ``admin`` role.
 
-        ``since``/``until`` are ISO-8601 timestamps.
+        ``since``/``until`` are ISO-8601 timestamps. ``limit`` defaults to 100 and is
+        capped at 1000 — the audit table only grows, so it is never unbounded.
         """
         self._require_admin()
         return await mcp_admin_audit.list_audit_entries(
