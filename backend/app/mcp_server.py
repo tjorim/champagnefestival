@@ -83,6 +83,31 @@ class ChampagneFestivalMcpBackend:
             raise PermissionError("Authentication required: this tool is only available to volunteers and admins.")
         return role
 
+    def _require_admin(self) -> str:
+        """Raise ``PermissionError`` unless the caller has the ``admin`` role.
+
+        Mirrors ``require_admin`` on the equivalent REST endpoints — every
+        write tool is admin-only. Returns ``'admin'`` for symmetry with
+        ``_require_volunteer``.
+        """
+        role = self._resolve_role()
+        if role != ROLE_ADMIN:
+            raise PermissionError("Authentication required: this tool is only available to admins.")
+        return role
+
+    def _actor(self) -> str:
+        """Return the OIDC ``sub`` claim for audit logging, or ``'anonymous'``.
+
+        MCP equivalent of ``app.auth.get_actor_id`` — there is no ``request.state``
+        to read from, so this reads the ``sub`` claim directly off the access token.
+        """
+        token = get_access_token()
+        if token is None:
+            return "anonymous"
+        claims: dict[str, Any] = getattr(token, "claims", {})
+        sub = claims.get("sub")
+        return str(sub) if sub is not None else "anonymous"
+
     # ------------------------------------------------------------------
     # Tools — public (no auth)
     # ------------------------------------------------------------------

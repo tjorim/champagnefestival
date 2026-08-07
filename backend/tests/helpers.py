@@ -2,6 +2,31 @@
 
 from __future__ import annotations
 
+from typing import Any
+
+
+def mcp_session_factory(db_session: Any) -> Any:
+    """Wrap a real ``db_session`` fixture as an ``async with``-able session factory.
+
+    MCP admin tool functions take a ``session_factory`` (mirroring
+    ``app.database.async_session_factory``) rather than a session directly, so
+    their tests need something that behaves like one. Every call returns the
+    same underlying test session/transaction.
+    """
+
+    class _CM:
+        async def __aenter__(self):
+            return db_session
+
+        async def __aexit__(self, *_exc: object) -> None:
+            pass
+
+    class _Factory:
+        def __call__(self) -> _CM:
+            return _CM()
+
+    return _Factory()
+
 # Auth headers sent with admin requests.  In tests the ``require_admin``
 # dependency is overridden (see conftest.py), so these headers are not
 # validated — they are kept for readability so test requests clearly signal
