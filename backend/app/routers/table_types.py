@@ -1,15 +1,18 @@
-"""Table type management endpoints (admin only)."""
+"""Table type management endpoints (admin only).
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+Business logic lives in ``app.services.table_types_service`` and is shared
+with ``app.mcp.admin.table_types`` — this router is a thin adapter that
+translates ``ServiceError`` into ``HTTPException`` (see #807).
+"""
+
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Table, TableType
 from app.schemas import TableTypeCreate, TableTypeOut, TableTypeUpdate
-from app.utils import get_or_404, make_id, table_type_to_dict
+from app.services import table_types_service
+from app.services.errors import ServiceError, to_http_exception
 
 router = APIRouter(
     prefix="/api/table-types",
@@ -25,29 +28,9 @@ async def create_table_type(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    tt = TableType(
-        id=make_id("ttype"),
-        name=body.name,
-        shape=body.shape,
-        width_m=body.width_m,
-        length_m=body.length_m,
-        height_type=body.height_type,
-        max_capacity=body.max_capacity,
-        active=body.active,
+    return await table_types_service.create_table_type(
+        db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
     )
-    db.add(tt)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="table_type_created",
-        resource_type="table_type",
-        resource_id=tt.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"name": tt.name, "shape": tt.shape},
-    )
-    await db.commit()
-    await db.refresh(tt)
-    return table_type_to_dict(tt)
 
 
 @router.get("", response_model=list[TableTypeOut])
@@ -56,16 +39,15 @@ async def list_table_types(
     limit: int | None = Query(default=None, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
 ) -> list[dict]:
-    stmt = select(TableType).order_by(TableType.created_at).offset(offset)
-    if limit is not None:
-        stmt = stmt.limit(limit)
-    result = await db.execute(stmt)
-    return [table_type_to_dict(tt) for tt in result.scalars().all()]
+    return await table_types_service.list_table_types(db, limit=limit, offset=offset)
 
 
 @router.get("/{type_id}", response_model=TableTypeOut)
 async def get_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return table_type_to_dict(await get_or_404(db, TableType, type_id, "Table type not found."))
+    try:
+        return await table_types_service.get_table_type(db, type_id)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 @router.put("/{type_id}", response_model=TableTypeOut)
@@ -76,39 +58,12 @@ async def update_table_type(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    tt = await get_or_404(db, TableType, type_id, "Table type not found.")
-    if body.name is not None:
-        tt.name = body.name
-    if body.shape is not None:
-        tt.shape = body.shape
-    if body.width_m is not None:
-        tt.width_m = body.width_m
-    if body.length_m is not None:
-        tt.length_m = body.length_m
-    # Only normalise dimensions when shape or at least one dimension was updated.
-    if body.shape is not None or body.width_m is not None or body.length_m is not None:
-        if tt.shape == "round":
-            tt.length_m = tt.width_m
-        elif tt.length_m < tt.width_m:
-            tt.length_m, tt.width_m = tt.width_m, tt.length_m
-    if body.height_type is not None:
-        tt.height_type = body.height_type
-    if body.max_capacity is not None:
-        tt.max_capacity = body.max_capacity
-    if body.active is not None:
-        tt.active = body.active
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="table_type_updated",
-        resource_type="table_type",
-        resource_id=tt.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"fields_changed": sorted(body.model_fields_set)},
-    )
-    await db.commit()
-    await db.refresh(tt)
-    return table_type_to_dict(tt)
+    try:
+        return await table_types_service.update_table_type(
+            db, actor=actor, type_id=type_id, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 @router.delete("/{type_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -118,25 +73,9 @@ async def delete_table_type(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
-    tt = await get_or_404(db, TableType, type_id, "Table type not found.")
-    # Lock the table type row so a concurrent table creation (which validates the
-    # type exists before inserting) can't race this delete: whichever transaction
-    # locks the type first is the one the other serializes behind.
-    await db.execute(select(TableType.id).where(TableType.id == type_id).with_for_update())
-    in_use = await db.execute(select(Table).where(Table.table_type_id == type_id).limit(1))
-    if in_use.scalars().first() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete: tables are still using this type.",
+    try:
+        await table_types_service.delete_table_type(
+            db, actor=actor, type_id=type_id, request_id=getattr(request.state, "request_id", None)
         )
-    await db.delete(tt)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="table_type_deleted",
-        resource_type="table_type",
-        resource_id=type_id,
-        request_id=getattr(request.state, "request_id", None),
-        details={},
-    )
-    await db.commit()
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
