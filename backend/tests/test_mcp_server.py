@@ -1457,13 +1457,15 @@ class TestGetVenuePlanSummary:
         assert result["rooms"] == []
 
     @pytest.mark.anyio
-    async def test_returns_room_and_table_counts(self):
+    async def test_returns_room_names_without_table_counts(self):
+        """Room names are public; table counts and any other capacity/attendance
+        numbers stay behind the volunteer/admin tier (see get_table_seating and
+        the full /api/venue-plan/{edition_id} REST endpoint)."""
         ev = _make_event(event_date=date(2099, 3, 21))
         edition = _make_edition(events=[ev])
         layout = _make_layout()
         venue = _make_venue()
-        # Mock execute returns: editions, venue, layouts, table counts
-        # table counts are returned as tuples (layout_id, count)
+        # Mock execute returns: editions, venue, layouts (no table-count query)
 
         call_count = [0]
 
@@ -1484,9 +1486,6 @@ class TestGetVenuePlanSummary:
                 scalars = MagicMock()
                 scalars.all = MagicMock(return_value=[layout])
                 result.scalars = MagicMock(return_value=scalars)
-            elif idx == 3:
-                # SELECT table count
-                result.all = MagicMock(return_value=[("lay-1", 5)])
             return result
 
         db = MagicMock()
@@ -1495,10 +1494,10 @@ class TestGetVenuePlanSummary:
         result = await backend.get_venue_plan_summary()
         assert result["edition_id"] == "2026-march"
         assert result["venue_name"] == "Salle des Fêtes"
-        assert result["total_tables"] == 5
+        assert "total_tables" not in result
         assert len(result["rooms"]) == 1
         assert result["rooms"][0]["room_name"] == "Main Hall"
-        assert result["rooms"][0]["table_count"] == 5
+        assert "table_count" not in result["rooms"][0]
 
 
 # ---------------------------------------------------------------------------

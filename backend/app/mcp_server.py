@@ -176,7 +176,8 @@ class ChampagneFestivalMcpBackend:
     async def get_venue_plan_summary(self, edition_id: str | None = None) -> dict:
         """Return a high-level overview of the venue plan for an edition.
 
-        Lists rooms and total table counts. No PII is included.
+        Lists room names only — no table counts or other capacity/attendance
+        numbers, which stay behind the volunteer/admin tier. No PII is included.
 
         Parameters
         ----------
