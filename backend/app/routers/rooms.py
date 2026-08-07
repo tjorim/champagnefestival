@@ -1,26 +1,24 @@
-"""Room management endpoints (admin only)."""
+"""Room management endpoints (admin only).
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+Business logic lives in ``app.services.rooms_service`` and is shared with
+``app.mcp.admin.rooms`` — this router is a thin adapter that translates
+``ServiceError`` into ``HTTPException`` (see #807).
+"""
+
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Layout, Room, Venue
 from app.schemas import RoomCreate, RoomOut, RoomUpdate
-from app.utils import get_or_404, make_id, room_to_dict
+from app.services import rooms_service
+from app.services.errors import ServiceError, to_http_exception
 
 router = APIRouter(
     prefix="/api/rooms",
     tags=["rooms"],
     dependencies=[Depends(require_admin)],
 )
-
-
-# ---------------------------------------------------------------------------
-# Create room
-# ---------------------------------------------------------------------------
 
 
 @router.post("", response_model=RoomOut, status_code=status.HTTP_201_CREATED)
@@ -30,58 +28,25 @@ async def create_room(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
-    if venue.scalar_one_or_none() is None:
-        raise HTTPException(status_code=404, detail=f"Venue '{body.venue_id}' not found.")
-
-    r = Room(
-        id=make_id("room"),
-        venue_id=body.venue_id,
-        name=body.name,
-        width_m=body.width_m,
-        length_m=body.length_m,
-        color=body.color,
-        active=body.active,
-    )
-    db.add(r)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="room_created",
-        resource_type="room",
-        resource_id=r.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"name": r.name, "venue_id": r.venue_id},
-    )
-    await db.commit()
-    await db.refresh(r)
-    return room_to_dict(r)
-
-
-# ---------------------------------------------------------------------------
-# List rooms
-# ---------------------------------------------------------------------------
+    try:
+        return await rooms_service.create_room(
+            db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 @router.get("", response_model=list[RoomOut])
 async def list_rooms(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    result = await db.execute(select(Room).order_by(Room.created_at))
-    return [room_to_dict(r) for r in result.scalars().all()]
-
-
-# ---------------------------------------------------------------------------
-# Get single room
-# ---------------------------------------------------------------------------
+    return await rooms_service.list_rooms(db)
 
 
 @router.get("/{room_id}", response_model=RoomOut)
 async def get_room(room_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return room_to_dict(await get_or_404(db, Room, room_id, "Room not found."))
-
-
-# ---------------------------------------------------------------------------
-# Update room
-# ---------------------------------------------------------------------------
+    try:
+        return await rooms_service.get_room(db, room_id)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 @router.put("/{room_id}", response_model=RoomOut)
@@ -92,36 +57,12 @@ async def update_room(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    r = await get_or_404(db, Room, room_id, "Room not found.")
-
-    if body.name is not None:
-        r.name = body.name
-    if body.width_m is not None:
-        r.width_m = body.width_m
-    if body.length_m is not None:
-        r.length_m = body.length_m
-    if body.color is not None:
-        r.color = body.color
-    if body.active is not None:
-        r.active = body.active
-
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="room_updated",
-        resource_type="room",
-        resource_id=r.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"fields_changed": sorted(body.model_fields_set)},
-    )
-    await db.commit()
-    await db.refresh(r)
-    return room_to_dict(r)
-
-
-# ---------------------------------------------------------------------------
-# Delete room
-# ---------------------------------------------------------------------------
+    try:
+        return await rooms_service.update_room(
+            db, actor=actor, room_id=room_id, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -131,28 +72,9 @@ async def delete_room(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
-    r = await get_or_404(db, Room, room_id, "Room not found.")
-    # Lock the room row so a concurrent layout creation (see layouts.create_layout
-    # and copy_layout) can't insert a new layout for this room between our check
-    # and the delete below, which would otherwise cascade-delete it silently.
-    await db.execute(select(Room.id).where(Room.id == room_id).with_for_update())
-    # Layouts cascade from rooms, and tables/areas cascade from layouts, so an
-    # unguarded delete would silently destroy a whole floor plan. Mirror the
-    # venue endpoint and make the caller clear the layouts first.
-    layouts_in_use = await db.execute(select(Layout).where(Layout.room_id == room_id).limit(1))
-    if layouts_in_use.scalars().first() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete: layouts are still using this room.",
+    try:
+        await rooms_service.delete_room(
+            db, actor=actor, room_id=room_id, request_id=getattr(request.state, "request_id", None)
         )
-    await db.delete(r)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="room_deleted",
-        resource_type="room",
-        resource_id=room_id,
-        request_id=getattr(request.state, "request_id", None),
-        details={},
-    )
-    await db.commit()
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc

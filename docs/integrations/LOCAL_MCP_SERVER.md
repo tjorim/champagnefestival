@@ -35,9 +35,12 @@ cd backend
 uv run python -m app.mcp_server
 ```
 
-This starts the MCP server in stdio mode without authentication enforcement. All unauthenticated tool calls resolve to the `public` role (edition/event/venue overview only).
+This starts the MCP server in stdio mode without authentication enforcement. All unauthenticated tool calls resolve to the `public` role (edition/event/venue overview only). Call the `whoami` tool at any time to check which role a session is currently resolving to.
 
-To run as a specific role (e.g., `volunteer`) in local development, you can set `MCP_INTEGRATION_TOKEN` to a signed JWT containing the appropriate `realm_access.roles` and configure `OIDC_ISSUER_URL` and a `JWTVerifier`.
+To run as a specific role (e.g., `volunteer`) in local development against a real backend, the two supported credential types are:
+
+- **A Keycloak-issued JWT** — obtain a token from your local/dev Keycloak realm (or use `DEV_AUTH_BYPASS_TOKEN`, see the backend README) with the appropriate `realm_access.roles` claim, and pass it as the bearer token when connecting over the HTTP transport (see [HTTP transport](#http-transport-with-keycloak--managed-integration-client-auth) below). Stdio mode has no bearer token to attach, so this only applies to the HTTP transport.
+- **A managed integration-client key** — create one via the admin API/MCP tools (`create_integration_client`, admin-only) and use the raw key it returns as the bearer token over the HTTP transport. See [Managed integration clients](#managed-integration-clients) below.
 
 ---
 
@@ -45,6 +48,7 @@ To run as a specific role (e.g., `volunteer`) in local development, you can set 
 
 | Tool | Auth required | Description |
 |------|---------------|-------------|
+| `whoami` | public | Resolved identity for the current session: auth source (`keycloak`/`integration`/`none`), subject, and effective role. Never returns token material. |
 | `get_active_edition` | public | Current/next upcoming active festival edition |
 | `list_editions` | public | Past and upcoming festival editions for historical discovery |
 | `get_event_schedule` | public | Event schedule for an edition |
@@ -86,6 +90,7 @@ complete regardless of which surface made the change. All are `admin`-only excep
 | Volunteers | `create_volunteer`, `get_volunteer`, `list_volunteers`, `update_volunteer`, `delete_volunteer` |
 | Registrations | `create_registration`, `update_registration`, `delete_registration` |
 | Audit trail | `list_audit_entries`, `list_audit_resource_types` |
+| Integration clients | `create_integration_client`, `list_integration_clients`, `revoke_integration_client`, `rotate_integration_client` |
 
 Partial updates follow one convention throughout: an omitted keyword argument (`None`)
 leaves that field unchanged. Nullable fields with no natural "clear" value (an id, not
@@ -147,7 +152,7 @@ env = { DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/ch
 
 ---
 
-## HTTP (SSE) transport with Keycloak auth
+## HTTP transport with Keycloak + managed integration-client auth
 
 For production use or when running as a network-accessible service, set the following environment variables:
 
@@ -157,14 +162,82 @@ For production use or when running as a network-accessible service, set the foll
 | `MCP_BASE_URL` | Public URL of this MCP server, e.g. `https://mcp.champagnefestival.be` |
 | `DATABASE_URL` | PostgreSQL connection string |
 
-Then run with:
+There is no separate `app.mcp_http` module — the MCP server is mounted directly inside the
+main FastAPI app (`app.main:app`) at the `/mcp` path (see `backend/app/main.py`). Run it with
+the same command you'd use for the REST API:
 
 ```bash
 cd backend
-uv run uvicorn app.mcp_http:app --host 0.0.0.0 --port 8001
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
-The HTTP transport will use `KeycloakAuthProvider` when both `OIDC_ISSUER_URL` and `MCP_BASE_URL` are configured.
+The MCP server is only mounted when `MCP_BASE_URL` is set; `OIDC_ISSUER_URL` is required
+whenever `MCP_BASE_URL` is (the app refuses to start otherwise). When both are configured,
+`build_keycloak_auth()` (`backend/app/mcp_server.py`) builds a FastMCP `MultiAuth` that
+accepts either credential type on the same endpoint:
+
+- a Keycloak-issued JWT (`KeycloakAuthProvider`), or
+- a managed integration-client key (`IntegrationKeyTokenVerifier`, see below).
+
+Both resolve through the same role-tier logic (`ChampagneFestivalMcpBackend._resolve_role()`),
+so every tool's authorization behaves identically regardless of which credential type made
+the call.
+
+### Managed integration clients
+
+For long-running automation (e.g. a Home Assistant integration or a scheduled script) that
+shouldn't depend on a Keycloak service account, an admin can issue a database-backed
+integration-client credential instead. Each credential:
+
+- is scoped to exactly one role tier (`admin` or `volunteer`), fixed at creation and never
+  more privileged than the creating admin's own tier;
+- is shown as a raw key exactly once, at creation or rotation time — only its SHA-256 hash
+  is stored afterward;
+- is rate-limited per minute (configurable per client, default 120/minute);
+- can be listed, revoked, or rotated at any time;
+- is recorded as the audit-trail actor (`integration:<client_id>`) for every mutation it makes.
+
+Create one via the REST API (admin bearer token required):
+
+```bash
+curl -X POST https://champagnefestival.example/api/integration-clients \
+  -H "Authorization: Bearer <admin-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Home Assistant", "allowed_role": "volunteer", "rate_limit_per_minute": 60}'
+```
+
+The response includes the one-time `key` — save it immediately, it cannot be retrieved
+again. Use it as the bearer token when connecting to `/mcp`:
+
+```bash
+curl https://champagnefestival.example/mcp \
+  -H "Authorization: Bearer cfic_<the-returned-key>" \
+  ...
+```
+
+Or the equivalent MCP tools (`create_integration_client`, `list_integration_clients`,
+`revoke_integration_client`, `rotate_integration_client`) from an already-authenticated
+admin session. Call `whoami` from the new session to confirm `auth_source: "integration"`
+and the expected `role`.
+
+### Capabilities manifest
+
+`GET /api/mcp/capabilities` returns whether the MCP server is mounted and, when it is, the
+live registered tool list with each tool's required role tier — generated directly from the
+running server's tool registration (`app.mcp_server.get_mcp_capabilities`), so it cannot
+drift from what's actually callable:
+
+```json
+{
+  "enabled": true,
+  "mount_path": "/mcp",
+  "version": "2026.8.1",
+  "tools": [
+    {"name": "whoami", "required_role": "public"},
+    {"name": "create_venue", "required_role": "admin"}
+  ]
+}
+```
 
 ---
 

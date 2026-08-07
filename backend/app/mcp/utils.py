@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Edition, Person, Registration
+from app.services.errors import ServiceError
 
 ROLE_ADMIN = "admin"
 ROLE_VOLUNTEER = "volunteer"
@@ -50,15 +51,18 @@ def validate_with_schema(schema_cls: type[SchemaT], **kwargs: Any) -> SchemaT:
         raise ValueError("; ".join(messages)) from exc
 
 
-def as_value_error(exc: HTTPException) -> ValueError:
-    """Convert a reused router helper's ``HTTPException`` into a ``ValueError``.
+def as_value_error(exc: HTTPException | ServiceError) -> ValueError:
+    """Convert a reused router helper's error into a ``ValueError``.
 
     Several REST routers factor validation (existence checks, business rules) into
-    private helpers that raise ``HTTPException`` for FastAPI's benefit. Admin MCP tools
-    reuse those helpers rather than duplicating the logic, then convert here so every
-    error an MCP caller sees is a plain ``ValueError``.
+    private helpers that raise ``HTTPException`` for FastAPI's benefit; shared
+    ``app.services.*_service`` operations raise ``ServiceError`` instead so both
+    the REST and MCP adapters can translate the same exception. Admin MCP tools
+    reuse those helpers/services rather than duplicating the logic, then convert
+    here so every error an MCP caller sees is a plain ``ValueError``.
     """
-    return ValueError(exc.detail)
+    detail = exc.detail if isinstance(exc, HTTPException) else exc.message
+    return ValueError(detail)
 
 
 async def get_active_edition_obj(db: Any, edition_type: str | None = "festival") -> Edition | None:
