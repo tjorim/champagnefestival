@@ -49,7 +49,14 @@ async def create_layout(
         # Lock the room row so a concurrent room deletion (which refuses to proceed
         # while layouts reference the room) can't race this insert: whichever
         # transaction locks the room first is the one the other serializes behind.
-        await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())
+        # Also doubles as the room-existence check — an unchecked bogus room_id
+        # would otherwise surface as a raw FK IntegrityError instead of a clean
+        # ValueError, unlike every other create tool in this module.
+        locked_room = (
+            await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())
+        ).scalar_one_or_none()
+        if locked_room is None:
+            raise ValueError(f"Room '{body.room_id}' not found.")
 
         existing_stmt = select(Layout).where(
             Layout.room_id == body.room_id,
@@ -115,9 +122,13 @@ async def copy_layout(
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
-        # See create_layout: lock the target room so it can't be deleted out from
-        # under this insert.
-        await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())
+        # See create_layout: lock the target room (also doubling as the
+        # existence check) so it can't be deleted out from under this insert.
+        locked_target_room = (
+            await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())
+        ).scalar_one_or_none()
+        if locked_target_room is None:
+            raise ValueError(f"Room '{body.room_id}' not found.")
 
         existing_stmt = select(Layout).where(
             Layout.room_id == body.room_id,
