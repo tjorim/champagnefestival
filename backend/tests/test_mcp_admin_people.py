@@ -101,9 +101,7 @@ async def test_delete_person_cascades_registrations(db_session):
     )
     await db_session.flush()
     db_session.add(
-        Registration(
-            id="reg-1", event_id="event-1", person_id=person["id"], guest_count=1, check_in_token="tok-1"
-        )
+        Registration(id="reg-1", event_id="event-1", person_id=person["id"], guest_count=1, check_in_token="tok-1")
     )
     await db_session.commit()
 

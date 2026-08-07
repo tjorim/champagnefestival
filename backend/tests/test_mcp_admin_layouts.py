@@ -89,9 +89,7 @@ async def test_delete_layout_blocked_while_table_in_use(db_session):
 
     db_session.add(TableType(id="ttype-1", name="Standard", max_capacity=6))
     await db_session.flush()
-    db_session.add(
-        Table(id="tbl-1", name="T1", capacity=6, table_type_id="ttype-1", layout_id=created["id"])
-    )
+    db_session.add(Table(id="tbl-1", name="T1", capacity=6, table_type_id="ttype-1", layout_id=created["id"]))
     await db_session.commit()
 
     with pytest.raises(ValueError, match="tables"):
@@ -188,7 +186,15 @@ async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):
     db_session.add(TableType(id="ttype-1", name="Standard", max_capacity=6))
     await db_session.flush()
     db_session.add(
-        Table(id="tbl-outside", name="Outside", capacity=4, table_type_id="ttype-1", layout_id=source["id"], x=90.0, y=90.0)
+        Table(
+            id="tbl-outside",
+            name="Outside",
+            capacity=4,
+            table_type_id="ttype-1",
+            layout_id=source["id"],
+            x=90.0,
+            y=90.0,
+        )
     )
     await db_session.commit()
 

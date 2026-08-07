@@ -27,6 +27,7 @@ def mcp_session_factory(db_session: Any) -> Any:
 
     return _Factory()
 
+
 # Auth headers sent with admin requests.  In tests the ``require_admin``
 # dependency is overridden (see conftest.py), so these headers are not
 # validated — they are kept for readability so test requests clearly signal

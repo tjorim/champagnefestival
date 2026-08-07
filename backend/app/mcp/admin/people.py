@@ -320,16 +320,12 @@ async def merge_people(session_factory: Any, actor: str, person_id: str, duplica
         await db.flush()
 
         # Re-point everything that references the duplicate.
-        await db.execute(
-            update(Registration).where(Registration.person_id == duplicate_id).values(person_id=person_id)
-        )
+        await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=person_id))
         await db.execute(
             update(Exhibitor).where(Exhibitor.contact_person_id == duplicate_id).values(contact_person_id=person_id)
         )
         await db.execute(
-            update(VolunteerPeriod)
-            .where(VolunteerPeriod.volunteer_id == duplicate_id)
-            .values(volunteer_id=person_id)
+            update(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == duplicate_id).values(volunteer_id=person_id)
         )
 
         await db.delete(duplicate)

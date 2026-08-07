@@ -991,7 +991,9 @@ class ChampagneFestivalMcpBackend:
     async def set_maintenance_mode(self, maintenance_mode: bool) -> dict:
         """Toggle maintenance mode site-wide. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_settings.set_maintenance_mode(self.session_factory, self._actor(), maintenance_mode=maintenance_mode)
+        return await mcp_admin_settings.set_maintenance_mode(
+            self.session_factory, self._actor(), maintenance_mode=maintenance_mode
+        )
 
     # -- Exhibitors ------------------------------------------------------
 

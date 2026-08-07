@@ -42,7 +42,9 @@ async def test_update_exhibitor_partial(db_session):
         factory, "admin-1", name="Bollinger", website="https://old.example.com"
     )
 
-    updated = await mcp_exhibitors.update_exhibitor(factory, "admin-1", created["id"], website="https://new.example.com")
+    updated = await mcp_exhibitors.update_exhibitor(
+        factory, "admin-1", created["id"], website="https://new.example.com"
+    )
     assert updated["website"] == "https://new.example.com"
     assert updated["name"] == "Bollinger"  # untouched fields survive a partial update
 
@@ -77,9 +79,7 @@ async def test_exhibitor_contact_person(db_session):
     assert created["contact_person"]["name"] == "Alice Contact"
     assert created["contact_person_id"] == person["id"]
 
-    updated = await mcp_exhibitors.update_exhibitor(
-        factory, "admin-1", created["id"], clear_contact_person=True
-    )
+    updated = await mcp_exhibitors.update_exhibitor(factory, "admin-1", created["id"], clear_contact_person=True)
     assert updated["contact_person"] is None
     assert updated["contact_person_id"] is None
 
@@ -98,9 +98,7 @@ async def test_update_exhibitor_blocked_retype_to_vendor_while_linked(db_session
 
     db_session.add(Venue(id="venue-1", name="Test Venue"))
     await db_session.flush()
-    db_session.add(
-        Edition(id="edition-1", year=2099, month="march", venue_id="venue-1", exhibitors=[exhibitor_id])
-    )
+    db_session.add(Edition(id="edition-1", year=2099, month="march", venue_id="venue-1", exhibitors=[exhibitor_id]))
     await db_session.commit()
 
     with pytest.raises(ValueError, match="editions still link"):

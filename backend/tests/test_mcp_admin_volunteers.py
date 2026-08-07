@@ -115,9 +115,7 @@ async def test_update_volunteer_replaces_help_periods(db_session):
     )
 
     new_periods = [{"first_help_day": "2099-04-01", "last_help_day": None}]
-    updated = await mcp_volunteers.update_volunteer(
-        factory, "admin-1", created["id"], help_periods=new_periods
-    )
+    updated = await mcp_volunteers.update_volunteer(factory, "admin-1", created["id"], help_periods=new_periods)
     assert len(updated["help_periods"]) == 1
     assert str(updated["help_periods"][0]["first_help_day"]) == "2099-04-01"
     assert updated["help_periods"][0]["last_help_day"] is None
@@ -191,8 +189,10 @@ async def test_delete_volunteer_removes_role_and_periods_but_keeps_person(db_ses
     assert "volunteer" not in person.roles
 
     periods = (
-        await db_session.execute(select(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id))
-    ).scalars().all()
+        (await db_session.execute(select(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)))
+        .scalars()
+        .all()
+    )
     assert periods == []
 
 
