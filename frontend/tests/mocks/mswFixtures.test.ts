@@ -14,6 +14,54 @@ function adminAuthHeaders(token = "dev-token"): Record<string, string> {
 }
 
 describe("MSW operational fixtures", () => {
+  it("provides localized public FAQ fixtures", async () => {
+    const expectedItemsByLocale = {
+      en: {
+        id: "faq-champagnefestival",
+        question: "What is the Champagnefestival?",
+        answer: "An annual festival dedicated to champagne.",
+      },
+      fr: {
+        id: "faq-champagnefestival",
+        question: "Qu’est-ce que le Champagnefestival ?",
+        answer: "Un festival annuel consacré au champagne.",
+      },
+      nl: {
+        id: "faq-champagnefestival",
+        question: "Wat is het Champagnefestival?",
+        answer: "Een jaarlijks festival waar champagne centraal staat.",
+      },
+    } as const;
+
+    for (const [locale, expectedItem] of Object.entries(expectedItemsByLocale)) {
+      const response = await fetch(`/api/faq/active?locale=${locale}`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual([expectedItem]);
+    }
+
+    const defaultResponse = await fetch("/api/faq/active");
+    expect(defaultResponse.status).toBe(200);
+    expect(await defaultResponse.json()).toEqual([expectedItemsByLocale.nl]);
+
+    const repeatedLocaleResponse = await fetch("/api/faq/active?locale=de&locale=en");
+    expect(repeatedLocaleResponse.status).toBe(200);
+    expect(await repeatedLocaleResponse.json()).toEqual([expectedItemsByLocale.en]);
+
+    const unsupportedResponse = await fetch("/api/faq/active?locale=de");
+    expect(unsupportedResponse.status).toBe(422);
+    expect(await unsupportedResponse.json()).toEqual({
+      detail: [
+        {
+          type: "literal_error",
+          loc: ["query", "locale"],
+          msg: "Input should be 'nl', 'en' or 'fr'",
+          input: "de",
+          ctx: { expected: "'nl', 'en' or 'fr'" },
+        },
+      ],
+    });
+  });
+
   it("switches to the event-day scenario for operational admin views", async () => {
     await setScenario("event-day");
 
