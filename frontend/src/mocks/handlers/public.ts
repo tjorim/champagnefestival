@@ -25,12 +25,57 @@ function isUpcomingEdition(edition: SeedEdition): boolean {
   return Boolean(endDate && endDate >= today);
 }
 
+const publicFaqItemsByLocale = {
+  en: [
+    {
+      id: "faq-champagnefestival",
+      question: "What is the Champagnefestival?",
+      answer: "An annual festival dedicated to champagne.",
+    },
+  ],
+  fr: [
+    {
+      id: "faq-champagnefestival",
+      question: "Qu’est-ce que le Champagnefestival ?",
+      answer: "Un festival annuel consacré au champagne.",
+    },
+  ],
+  nl: [
+    {
+      id: "faq-champagnefestival",
+      question: "Wat is het Champagnefestival?",
+      answer: "Een jaarlijks festival waar champagne centraal staat.",
+    },
+  ],
+} as const;
+
 export const publicHandlers = [
   /** GET /api/settings — site-wide settings; maintenance mode off by default. */
   http.get("/api/settings", () => HttpResponse.json({ maintenance_mode: false })),
 
-  /** GET /api/faq/active — active FAQ items; empty by default. */
-  http.get("/api/faq/active", () => HttpResponse.json([])),
+  /** GET /api/faq/active — returns a deterministic localized public FAQ item. */
+  http.get("/api/faq/active", ({ request }) => {
+    const locale = new URL(request.url).searchParams.getAll("locale").at(-1) ?? "nl";
+    if (!Object.hasOwn(publicFaqItemsByLocale, locale)) {
+      return HttpResponse.json(
+        {
+          detail: [
+            {
+              type: "literal_error",
+              loc: ["query", "locale"],
+              msg: "Input should be 'nl', 'en' or 'fr'",
+              input: locale,
+              ctx: { expected: "'nl', 'en' or 'fr'" },
+            },
+          ],
+        },
+        { status: 422 },
+      );
+    }
+    return HttpResponse.json(
+      publicFaqItemsByLocale[locale as keyof typeof publicFaqItemsByLocale],
+    );
+  }),
 
   /** GET /api/editions/active — returns the active edition. */
   http.get("/api/editions/active", ({ request }) => {
