@@ -1,6 +1,6 @@
 # Local MCP Server — Champagnefestival
 
-The Champagnefestival backend ships a read-only [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server built with [FastMCP v3](https://gofastmcp.com/).
+The Champagnefestival backend ships a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server built with [FastMCP v3](https://gofastmcp.com/).
 
 It exposes operational tools that allow desktop agents (Claude Desktop, Codex CLI, etc.) to answer event-day questions:
 
@@ -9,6 +9,11 @@ It exposes operational tools that allow desktop agents (Claude Desktop, Codex CL
 - Which champagne orders are already delivered?
 - Which tables still have undelivered champagne?
 - How many guests are checked in?
+
+Admins additionally get full write/management parity with the admin REST API — editions,
+events, venues, rooms, table types, tables, layouts, areas, FAQ, settings, exhibitors,
+people, members, volunteers, registrations, and read access to the audit trail. See
+[Admin write/management tools](#admin-writemanagement-tools) below.
 
 ---
 
@@ -54,13 +59,47 @@ To run as a specific role (e.g., `volunteer`) in local development, you can set 
 | `get_undelivered_champagne_by_table` | volunteer+ | Tables with pending champagne deliveries |
 | `get_check_in_summary` | volunteer+ | Check-in statistics for the edition |
 
+### Admin write/management tools
+
+Full write parity with the admin REST API, implemented in `backend/app/mcp/admin/` — one
+module per resource, each mirroring its REST router's validation, cascade guards, and
+audit trail. Every mutation writes an `AuditEntry` via the same `write_audit_entry` path
+the REST admin routes use (readable back via `list_audit_entries`), so the audit log is
+complete regardless of which surface made the change. All are `admin`-only except
+`get_settings`, which is public (mirroring `GET /api/settings`).
+
+| Resource | Tools |
+|----------|-------|
+| Editions | `create_edition`, `get_edition`, `update_edition`, `delete_edition` |
+| Events | `create_event`, `get_event`, `update_event`, `delete_event` |
+| Venues | `create_venue`, `list_venues`, `get_venue`, `update_venue`, `delete_venue` |
+| Rooms | `create_room`, `list_rooms`, `get_room`, `update_room`, `delete_room` |
+| Table types | `create_table_type`, `list_table_types`, `get_table_type`, `update_table_type`, `delete_table_type` |
+| Tables | `create_table`, `list_tables`, `get_table`, `update_table`, `delete_table` |
+| Layouts | `create_layout`, `copy_layout`, `list_layouts`, `get_layout`, `delete_layout` |
+| Areas | `create_area`, `list_areas`, `get_area`, `update_area`, `delete_area` |
+| FAQ | `create_faq_item`, `list_faq_items`, `update_faq_item`, `delete_faq_item` |
+| Settings | `get_settings` (public), `set_maintenance_mode` |
+| Exhibitors | `create_exhibitor`, `get_exhibitor`, `list_exhibitors`, `update_exhibitor`, `delete_exhibitor` |
+| People | `create_person`, `get_person`, `update_person`, `delete_person`, `merge_people` |
+| Members | `create_member`, `get_member`, `list_members`, `update_member`, `delete_member` |
+| Volunteers | `create_volunteer`, `get_volunteer`, `list_volunteers`, `update_volunteer`, `delete_volunteer` |
+| Registrations | `create_registration`, `update_registration`, `delete_registration` |
+| Audit trail | `list_audit_entries`, `list_audit_resource_types` |
+
+Partial updates follow one convention throughout: an omitted keyword argument (`None`)
+leaves that field unchanged. Nullable fields with no natural "clear" value (an id, not
+free text) expose a sibling `clear_<field>: bool = False` parameter instead — e.g.
+`update_registration(..., clear_table=True)` unassigns a table. See the docstrings on
+`backend/app/mcp/admin/__init__.py` and each tool for specifics.
+
 ### Role tiers
 
 | Role | Access |
 |------|--------|
-| **admin** | Full operational detail; all fields including email, phone, club notes |
+| **admin** | Full operational detail, all read tools, and all write/management tools |
 | **volunteer** | Event-day operational tools; name and contact info but not sensitive fields |
-| **public** | No PII; edition, event, and venue overview only |
+| **public** | No PII; edition, event, and venue overview only, plus `get_settings` |
 
 Roles are read from the `realm_access.roles` claim in the bearer JWT.
 
@@ -153,10 +192,34 @@ docker compose up db -d
 uv run pytest tests/test_mcp_server.py -v
 ```
 
-The MCP server unit tests use mocked database sessions and do not require a running PostgreSQL instance.
+`tests/test_mcp_server.py` (role resolution, tool registration, and the read-only tools)
+uses mocked database sessions and does not require a running PostgreSQL instance.
+
+`tests/test_mcp_admin_*.py` (one file per `app/mcp/admin/` module) exercise the admin
+write tools against a real database, same as the REST router tests — set
+`TEST_DATABASE_URL` (see the backend README) and run:
+
+```bash
+uv run pytest tests/test_mcp_admin_venues.py tests/test_mcp_admin_registrations.py -v
+```
 
 ### Adding new tools
 
+**Read-only tools:**
 1. Add a method to `ChampagneFestivalMcpBackend` in `backend/app/mcp_server.py`.
 2. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.
 3. Add unit tests in `backend/tests/test_mcp_server.py`.
+
+**Admin write tools:**
+1. Add the implementation to the relevant module under `backend/app/mcp/admin/` (or a new
+   module, for a resource not yet covered), reusing the REST router's Pydantic schemas
+   (via `validate_with_schema`) and private helper functions rather than re-deriving their
+   validation/business logic — see `backend/app/mcp/admin/__init__.py` for the module-wide
+   conventions and `venues.py` for a worked example.
+2. Add a thin `ChampagneFestivalMcpBackend` method in `backend/app/mcp_server.py` that
+   calls `self._require_admin()` (or leaves it out, for a REST endpoint with no auth
+   dependency, like `get_settings`) and delegates to it with `self._actor()`.
+3. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.
+4. Add tests in `backend/tests/test_mcp_admin_<module>.py` against a real database, and a
+   role-gating/delegation spot-check in `backend/tests/test_mcp_server.py`'s
+   `TestAdminToolWiring`.

@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -367,6 +367,144 @@ class TestResolveRole:
             role = backend._require_volunteer()
         assert role == ROLE_ADMIN
 
+    def test_require_admin_raises_for_public(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with patch.object(mcp_module, "get_access_token", return_value=None), pytest.raises(PermissionError):
+            backend._require_admin()
+
+    def test_require_admin_raises_for_volunteer(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = _make_access_token(["volunteer"])
+        with patch.object(mcp_module, "get_access_token", return_value=token), pytest.raises(PermissionError):
+            backend._require_admin()
+
+    def test_require_admin_passes_for_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = _make_access_token(["admin"])
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            role = backend._require_admin()
+        assert role == ROLE_ADMIN
+
+    def test_actor_returns_anonymous_without_token(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with patch.object(mcp_module, "get_access_token", return_value=None):
+            assert backend._actor() == "anonymous"
+
+    def test_actor_returns_sub_claim(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "admin-sub-123", "realm_access": {"roles": ["admin"]}})
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            assert backend._actor() == "admin-sub-123"
+
+    def test_actor_returns_anonymous_without_sub_claim(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"realm_access": {"roles": ["admin"]}})
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            assert backend._actor() == "anonymous"
+
+
+# ---------------------------------------------------------------------------
+# Admin write tool wiring (role gate + delegation to app.mcp.admin.*)
+# ---------------------------------------------------------------------------
+
+
+class TestAdminToolWiring:
+    """Spot-checks that admin tools enforce _require_admin and delegate with
+    the right (session_factory, actor, ...) shape. Business logic itself is
+    covered by each app.mcp.admin.* module's own test file."""
+
+    @pytest.mark.anyio
+    async def test_create_venue_requires_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with patch.object(mcp_module, "get_access_token", return_value=None), pytest.raises(PermissionError):
+            await backend.create_venue(name="Test Venue")
+
+    @pytest.mark.anyio
+    async def test_create_venue_delegates_with_actor(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "admin-1", "realm_access": {"roles": ["admin"]}})
+        with (
+            patch.object(mcp_module, "get_access_token", return_value=token),
+            patch.object(
+                mcp_module.mcp_admin_venues, "create_venue", new=AsyncMock(return_value={"id": "venue-1"})
+            ) as mocked,
+        ):
+            result = await backend.create_venue(name="Test Venue", city="Bredene")
+        assert result == {"id": "venue-1"}
+        mocked.assert_awaited_once_with(
+            backend.session_factory,
+            "admin-1",
+            name="Test Venue",
+            address="",
+            city="Bredene",
+            postal_code="",
+            country="",
+            lat=0.0,
+            lng=0.0,
+            active=True,
+        )
+
+    @pytest.mark.anyio
+    async def test_delete_registration_requires_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = _make_access_token(["volunteer"])
+        with patch.object(mcp_module, "get_access_token", return_value=token), pytest.raises(PermissionError):
+            await backend.delete_registration("reg-1")
+
+    @pytest.mark.anyio
+    async def test_delete_registration_delegates_with_actor(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "admin-1", "realm_access": {"roles": ["admin"]}})
+        with (
+            patch.object(mcp_module, "get_access_token", return_value=token),
+            patch.object(
+                mcp_module.mcp_admin_registrations,
+                "delete_registration",
+                new=AsyncMock(return_value={"deleted": True, "id": "reg-1"}),
+            ) as mocked,
+        ):
+            result = await backend.delete_registration("reg-1")
+        assert result == {"deleted": True, "id": "reg-1"}
+        mocked.assert_awaited_once_with(backend.session_factory, "admin-1", "reg-1")
+
+    @pytest.mark.anyio
+    async def test_get_settings_does_not_require_admin(self):
+        """Mirrors REST: GET /api/settings has no auth dependency."""
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with (
+            patch.object(mcp_module, "get_access_token", return_value=None),
+            patch.object(
+                mcp_module.mcp_admin_settings,
+                "get_settings",
+                new=AsyncMock(return_value={"maintenance_mode": False}),
+            ) as mocked,
+        ):
+            result = await backend.get_settings()
+        assert result == {"maintenance_mode": False}
+        mocked.assert_awaited_once_with(backend.session_factory)
+
+    @pytest.mark.anyio
+    async def test_set_maintenance_mode_requires_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with patch.object(mcp_module, "get_access_token", return_value=None), pytest.raises(PermissionError):
+            await backend.set_maintenance_mode(maintenance_mode=True)
+
+    @pytest.mark.anyio
+    async def test_set_maintenance_mode_delegates_with_actor(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "admin-1", "realm_access": {"roles": ["admin"]}})
+        with (
+            patch.object(mcp_module, "get_access_token", return_value=token),
+            patch.object(
+                mcp_module.mcp_admin_settings,
+                "set_maintenance_mode",
+                new=AsyncMock(return_value={"maintenance_mode": True}),
+            ) as mocked,
+        ):
+            result = await backend.set_maintenance_mode(maintenance_mode=True)
+        assert result == {"maintenance_mode": True}
+        mocked.assert_awaited_once_with(backend.session_factory, "admin-1", maintenance_mode=True)
+
 
 # ---------------------------------------------------------------------------
 # Server creation / tool registration
@@ -408,6 +546,75 @@ class TestCreateMcpServer:
             "get_champagne_delivery_summary",
             "get_undelivered_champagne_by_table",
             "get_check_in_summary",
+            "create_venue",
+            "list_venues",
+            "get_venue",
+            "update_venue",
+            "delete_venue",
+            "create_room",
+            "list_rooms",
+            "get_room",
+            "update_room",
+            "delete_room",
+            "create_table_type",
+            "list_table_types",
+            "get_table_type",
+            "update_table_type",
+            "delete_table_type",
+            "create_table",
+            "list_tables",
+            "get_table",
+            "update_table",
+            "delete_table",
+            "create_layout",
+            "copy_layout",
+            "list_layouts",
+            "get_layout",
+            "delete_layout",
+            "create_area",
+            "list_areas",
+            "get_area",
+            "update_area",
+            "delete_area",
+            "create_edition",
+            "get_edition",
+            "update_edition",
+            "delete_edition",
+            "create_event",
+            "get_event",
+            "update_event",
+            "delete_event",
+            "create_faq_item",
+            "list_faq_items",
+            "update_faq_item",
+            "delete_faq_item",
+            "get_settings",
+            "set_maintenance_mode",
+            "create_exhibitor",
+            "get_exhibitor",
+            "list_exhibitors",
+            "update_exhibitor",
+            "delete_exhibitor",
+            "create_person",
+            "get_person",
+            "update_person",
+            "delete_person",
+            "merge_people",
+            "create_member",
+            "get_member",
+            "list_members",
+            "update_member",
+            "delete_member",
+            "create_volunteer",
+            "get_volunteer",
+            "list_volunteers",
+            "update_volunteer",
+            "delete_volunteer",
+            "create_registration",
+            "update_registration",
+            "delete_registration",
+            "list_audit_entries",
+            "list_audit_resource_types",
         }
         assert expected == tool_names
 
