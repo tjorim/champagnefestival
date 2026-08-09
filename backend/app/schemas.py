@@ -943,6 +943,9 @@ class AuditEntryOut(BaseModel):
     id: str
     timestamp: datetime
     actor: str
+    auth_source: str
+    subject: str | None
+    integration_client_id: str | None
     action: str
     resource_type: str
     resource_id: str
@@ -965,6 +968,7 @@ class IntegrationClientOut(BaseModel):
 
     id: str
     name: str
+    key_preview: str
     allowed_role: str
     created_by_actor: str
     rate_limit_per_minute: int

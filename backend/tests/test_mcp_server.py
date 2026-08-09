@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 import app.mcp_server as mcp_module
+from app.mcp import auth as mcp_auth_module
 from app.mcp.utils import get_active_edition_obj, person_dict
 from app.mcp_server import (
     ROLE_ADMIN,
@@ -252,9 +253,9 @@ def _make_db_execute(rows_by_call: list[Any]):
 def test_build_keycloak_auth_accepts_client_credentials_without_user_scopes(monkeypatch):
     from fastmcp.server.auth import MultiAuth
 
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
-    monkeypatch.setattr(mcp_module.settings, "oidc_audience", "champagnefestival")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_audience", "champagnefestival")
 
     with patch("fastmcp.server.auth.providers.keycloak.KeycloakAuthProvider") as provider:
         auth = build_keycloak_auth(session_factory=MagicMock())
@@ -276,8 +277,8 @@ def test_build_keycloak_auth_accepts_client_credentials_without_user_scopes(monk
 def test_build_keycloak_auth_includes_integration_key_verifier(monkeypatch):
     from app.mcp.integration_auth import IntegrationKeyTokenVerifier
 
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
 
     with patch("fastmcp.server.auth.providers.keycloak.KeycloakAuthProvider"):
         auth = build_keycloak_auth(session_factory=MagicMock())
@@ -287,16 +288,16 @@ def test_build_keycloak_auth_includes_integration_key_verifier(monkeypatch):
 
 
 def test_build_keycloak_auth_rejects_http_mcp_without_oidc(monkeypatch):
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
 
     with pytest.raises(RuntimeError, match="OIDC_ISSUER_URL is required"):
         build_keycloak_auth()
 
 
 def test_build_keycloak_auth_propagates_provider_failure(monkeypatch):
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
 
     with (
         patch(
@@ -309,8 +310,8 @@ def test_build_keycloak_auth_propagates_provider_failure(monkeypatch):
 
 
 def test_build_keycloak_auth_is_unused_without_http_mcp(monkeypatch):
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "")
 
     assert build_keycloak_auth() is None
 

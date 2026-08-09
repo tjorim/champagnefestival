@@ -13,15 +13,18 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.mcp_server import (
+from app.mcp.capabilities import (
     PUBLIC_TOOL_NAMES,
     ROLE_ADMIN,
     ROLE_PUBLIC,
     ROLE_VOLUNTEER,
+    TOOL_EFFECT_READ,
+    TOOL_EFFECT_WRITE,
     VOLUNTEER_TOOL_NAMES,
-    create_mcp_server,
     get_mcp_capabilities,
+    tool_effect,
 )
+from app.mcp_server import create_mcp_server
 
 
 @pytest.mark.anyio
@@ -62,6 +65,7 @@ async def test_capabilities_manifest_required_roles_are_valid_and_sorted():
     names = [entry["name"] for entry in tools]
     assert names == sorted(names)
     assert all(entry["required_role"] in (ROLE_PUBLIC, ROLE_VOLUNTEER, ROLE_ADMIN) for entry in tools)
+    assert all(entry["effect"] in (TOOL_EFFECT_READ, TOOL_EFFECT_WRITE) for entry in tools)
 
 
 @pytest.mark.anyio
@@ -76,6 +80,20 @@ async def test_capabilities_manifest_spot_checks_known_tiers():
     assert role_by_name["get_check_in_summary"] == ROLE_VOLUNTEER
     assert role_by_name["create_venue"] == ROLE_ADMIN
     assert role_by_name["create_integration_client"] == ROLE_ADMIN
+
+
+@pytest.mark.anyio
+async def test_capabilities_manifest_classifies_side_effects_conservatively():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    effect_by_name = {entry["name"]: entry["effect"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
+
+    assert effect_by_name["whoami"] == TOOL_EFFECT_READ
+    assert effect_by_name["get_active_edition"] == TOOL_EFFECT_READ
+    assert effect_by_name["list_audit_entries"] == TOOL_EFFECT_READ
+    assert effect_by_name["create_venue"] == TOOL_EFFECT_WRITE
+    assert effect_by_name["rotate_integration_client"] == TOOL_EFFECT_WRITE
+    assert tool_effect("future_tool_without_policy") == TOOL_EFFECT_WRITE
 
 
 # ---------------------------------------------------------------------------

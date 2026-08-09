@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from app.models import IntegrationClient
 from app.services import integration_clients_service as ics
 from app.services.errors import ConflictError, ValidationFailedError
 
@@ -46,6 +47,7 @@ async def test_create_integration_client_returns_dict_and_raw_key(db_session):
     assert client_dict["is_active"] is True
     assert client_dict["created_by_actor"] == "admin-1"
     assert raw_key.startswith(ics.TOKEN_PREFIX)
+    assert client_dict["key_preview"] == raw_key[-8:]
     # The raw key itself is never persisted anywhere retrievable.
     assert "key" not in client_dict
     assert "key_hash" not in client_dict
@@ -148,10 +150,12 @@ async def test_authenticate_rejects_key_after_rotation(db_session):
     client_dict, old_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    _new_dict, new_key = await ics.rotate_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+    new_dict, new_key = await ics.rotate_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
 
     assert await ics.authenticate_integration_client(db_session, old_key) is None
     assert await ics.authenticate_integration_client(db_session, new_key) is not None
+    assert new_dict["key_preview"] == new_key[-8:]
+    assert new_dict["key_preview"] != client_dict["key_preview"]
 
 
 @pytest.mark.anyio
@@ -186,27 +190,26 @@ async def test_authenticate_throttles_last_used_write_on_rapid_reuse(db_session,
 # ---------------------------------------------------------------------------
 
 
-def test_check_rate_limit_allows_up_to_the_configured_limit():
-    client_id = "rl-client-1"
-    ics._request_log.pop(client_id, None)
-    try:
-        for _ in range(5):
-            assert ics.check_rate_limit(client_id, limit_per_minute=5) is True
-        assert ics.check_rate_limit(client_id, limit_per_minute=5) is False
-    finally:
-        ics._request_log.pop(client_id, None)
+@pytest.mark.anyio
+async def test_check_rate_limit_allows_up_to_the_configured_limit(db_session):
+    client_dict, _ = await ics.create_integration_client(
+        db_session, actor="admin", creator_role="admin", name="rl-1", allowed_role="volunteer", rate_limit_per_minute=5
+    )
+    for _ in range(5):
+        assert await ics.check_rate_limit(db_session, client_dict["id"]) is True
+    assert await ics.check_rate_limit(db_session, client_dict["id"]) is False
 
 
-def test_check_rate_limit_recovers_after_window_expires():
-    client_id = "rl-client-2"
-    ics._request_log.pop(client_id, None)
-    try:
-        stale_time = datetime.now(UTC) - timedelta(minutes=2)
-        ics._request_log[client_id] = __import__("collections").deque([stale_time] * 5)
-        # All 5 entries are outside the 1-minute window, so a fresh request is allowed.
-        assert ics.check_rate_limit(client_id, limit_per_minute=5) is True
-    finally:
-        ics._request_log.pop(client_id, None)
+@pytest.mark.anyio
+async def test_check_rate_limit_recovers_after_window_expires(db_session):
+    client_dict, _ = await ics.create_integration_client(
+        db_session, actor="admin", creator_role="admin", name="rl-2", allowed_role="volunteer", rate_limit_per_minute=1
+    )
+    client = await db_session.get(IntegrationClient, client_dict["id"])
+    client.rate_limit_window_started_at = datetime.now(UTC) - timedelta(minutes=2)
+    client.rate_limit_window_count = 1
+    await db_session.commit()
+    assert await ics.check_rate_limit(db_session, client_dict["id"]) is True
 
 
 @pytest.mark.anyio

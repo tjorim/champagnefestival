@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,7 @@ async def list_audit_entries(
     action: str | None = Query(default=None),
     since: datetime | None = Query(default=None, description="Only entries at or after this timestamp"),
     until: datetime | None = Query(default=None, description="Only entries at or before this timestamp"),
+    before_id: str | None = Query(default=None, description="Exclusive keyset cursor from the previous page"),
     pagination: Pagination = Depends(),
 ) -> list[AuditEntry]:
     stmt = select(AuditEntry)
@@ -49,8 +50,17 @@ async def list_audit_entries(
         if until.tzinfo is None:
             until = until.replace(tzinfo=UTC)
         stmt = stmt.where(AuditEntry.timestamp <= until)
-    stmt = stmt.order_by(AuditEntry.timestamp.desc())
-    stmt = apply_pagination(stmt, pagination)
+    if before_id is not None:
+        cursor = await db.get(AuditEntry, before_id)
+        if cursor is None:
+            raise HTTPException(status_code=422, detail="audit cursor does not exist")
+        stmt = stmt.where(
+            (AuditEntry.timestamp < cursor.timestamp)
+            | ((AuditEntry.timestamp == cursor.timestamp) & (AuditEntry.id < cursor.id))
+        )
+    stmt = stmt.order_by(AuditEntry.timestamp.desc(), AuditEntry.id.desc())
+    effective_pagination = Pagination(page=1 if before_id else pagination.page, limit=pagination.limit or 100)
+    stmt = apply_pagination(stmt, effective_pagination)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

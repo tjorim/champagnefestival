@@ -32,6 +32,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(64), primary_key=True),
         sa.Column("name", sa.String(120), nullable=False),
         sa.Column("key_hash", sa.String(128), nullable=False),
+        sa.Column("key_preview", sa.String(8), nullable=False),
         sa.Column("allowed_role", sa.String(20), nullable=False),
         sa.Column("created_by_actor", sa.String(255), nullable=False),
         sa.Column("rate_limit_per_minute", sa.Integer(), nullable=False, server_default="120"),
@@ -39,6 +40,8 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rate_limit_window_started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rate_limit_window_count", sa.Integer(), nullable=False, server_default="0"),
     )
     op.create_index(
         "ix_integration_clients_key_hash",

@@ -32,7 +32,6 @@ from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.config import settings
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -55,78 +54,16 @@ from app.mcp.admin import table_types as mcp_admin_table_types
 from app.mcp.admin import tables as mcp_admin_tables
 from app.mcp.admin import venues as mcp_admin_venues
 from app.mcp.admin import volunteers as mcp_admin_volunteers
-from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
+from app.mcp.auth import build_keycloak_auth as build_keycloak_auth
+from app.mcp.capabilities import (
+    ROLE_ADMIN,
+    ROLE_PUBLIC,
+    ROLE_VOLUNTEER,
+)
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Capability manifest (see #807 — identity/capability discovery)
-# ---------------------------------------------------------------------------
-
-# Tools reachable with no authentication at all. Kept as an explicit allowlist
-# (rather than inferred) so a new public tool is a deliberate choice, not an
-# accident of forgetting to call _require_volunteer/_require_admin.
-PUBLIC_TOOL_NAMES: frozenset[str] = frozenset(
-    {
-        "get_active_edition",
-        "list_editions",
-        "get_event_schedule",
-        "get_venue_plan_summary",
-        "get_settings",
-        "whoami",
-    }
-)
-
-# Tools requiring the 'volunteer' or 'admin' role (_require_volunteer).
-VOLUNTEER_TOOL_NAMES: frozenset[str] = frozenset(
-    {
-        "find_guest",
-        "get_guest_registration",
-        "get_table_seating",
-        "resolve_table_reference",
-        "get_table_order_summary",
-        "get_guest_order_status",
-        "get_champagne_delivery_summary",
-        "get_undelivered_champagne_by_table",
-        "get_check_in_summary",
-    }
-)
-
-
-def _tool_required_role(tool_name: str) -> str:
-    """Return the minimum role required to call *tool_name*.
-
-    Every tool not explicitly listed in ``PUBLIC_TOOL_NAMES`` or
-    ``VOLUNTEER_TOOL_NAMES`` defaults to ``admin`` — the safe default for the
-    dozens of write/management tools, and for any future tool whose author
-    forgets to update this manifest (it will simply advertise as more
-    restricted than necessary, never less).
-    """
-    if tool_name in PUBLIC_TOOL_NAMES:
-        return ROLE_PUBLIC
-    if tool_name in VOLUNTEER_TOOL_NAMES:
-        return ROLE_VOLUNTEER
-    return ROLE_ADMIN
-
-
-async def get_mcp_capabilities(mcp: FastMCP) -> dict[str, object]:
-    """Build the capabilities manifest from the *live* registered tool set.
-
-    Reads directly off ``mcp.list_tools()`` rather than a hand-maintained
-    tuple, so the manifest can never drift from what's actually registered —
-    only each tool's advertised ``required_role`` depends on the (tested)
-    ``PUBLIC_TOOL_NAMES``/``VOLUNTEER_TOOL_NAMES`` allowlists above.
-    """
-    tools = await mcp.list_tools()
-    return {
-        "tools": [
-            {"name": tool.name, "required_role": _tool_required_role(tool.name)}
-            for tool in sorted(tools, key=lambda t: t.name)
-        ],
-    }
-
 
 # ---------------------------------------------------------------------------
 # Backend wrapper
@@ -1517,6 +1454,7 @@ class ChampagneFestivalMcpBackend:
         until: str | None = None,
         limit: int | None = None,
         offset: int = 0,
+        before_id: str | None = None,
     ) -> dict:
         """List audit entries (newest first), with optional filters. Requires the ``admin`` role.
 
@@ -1534,6 +1472,7 @@ class ChampagneFestivalMcpBackend:
             until=until,
             limit=limit,
             offset=offset,
+            before_id=before_id,
         )
 
     async def list_audit_resource_types(self) -> dict:
@@ -1728,61 +1667,6 @@ def create_mcp_server(
     mcp.tool(backend.rotate_integration_client)
 
     return mcp
-
-
-# ---------------------------------------------------------------------------
-# Auth helper
-# ---------------------------------------------------------------------------
-
-
-def build_keycloak_auth(session_factory: async_sessionmaker | None = None) -> Any:
-    """Build the MCP authentication provider from application settings.
-
-    Combines Keycloak OIDC (interactive users and Keycloak service accounts)
-    with a database-backed managed integration-client verifier (issue #807)
-    via FastMCP's :class:`MultiAuth`, so an MCP caller can authenticate with
-    either. Both resolve through the same
-    ``ChampagneFestivalMcpBackend._resolve_role()``/``_actor()`` methods, since
-    ``IntegrationKeyTokenVerifier`` synthesises Keycloak-shaped claims (see
-    ``app.mcp.integration_auth``) — none of the 80+ existing tool methods
-    needed to change.
-
-    Requires ``OIDC_ISSUER_URL`` and ``MCP_BASE_URL`` to be set.
-    Returns ``None`` when the HTTP MCP server is not configured. Local stdio
-    mode passes ``auth=None`` directly and does not call this helper.
-
-    Parameters
-    ----------
-    session_factory:
-        An ``async_sessionmaker`` for the integration-client verifier's
-        database lookups. Defaults to the application's shared
-        ``async_session_factory``.
-    """
-    mcp_base_url = settings.mcp_base_url
-    if not mcp_base_url:
-        return None
-
-    if not settings.oidc_issuer_url:
-        raise RuntimeError("OIDC_ISSUER_URL is required when MCP_BASE_URL enables the HTTP MCP server")
-
-    from fastmcp.server.auth import MultiAuth
-    from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
-
-    from app.mcp.integration_auth import IntegrationKeyTokenVerifier
-
-    if session_factory is None:
-        from app.database import async_session_factory as _default_factory
-
-        session_factory = _default_factory
-
-    keycloak_provider = KeycloakAuthProvider(
-        realm_url=settings.oidc_issuer_url,
-        base_url=mcp_base_url,
-        audience=settings.oidc_audience or None,
-        required_scopes=[],
-    )
-    integration_verifier = IntegrationKeyTokenVerifier(session_factory)
-    return MultiAuth(server=keycloak_provider, verifiers=[integration_verifier])
 
 
 # ---------------------------------------------------------------------------

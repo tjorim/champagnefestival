@@ -16,7 +16,6 @@ keyed hash would only add a secret to manage without a security benefit.
 
 from __future__ import annotations
 
-import collections
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -38,13 +37,6 @@ every public MCP tool already works with no authentication at all."""
 DEFAULT_RATE_LIMIT_PER_MINUTE = 120
 _LAST_USED_UPDATE_INTERVAL = timedelta(minutes=5)
 
-# In-process sliding-window request timestamps, keyed by client id. Mirrors
-# app.ratelimit's per-IP limiter: process-local, so a multi-worker deployment
-# multiplies the effective limit by worker count. Acceptable for an
-# operator-issued automation credential; replace with a shared store if
-# strict enforcement across workers becomes necessary.
-_request_log: dict[str, collections.deque[datetime]] = {}
-
 
 def _hash_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
@@ -59,6 +51,7 @@ def integration_client_to_dict(client: IntegrationClient) -> dict:
     return {
         "id": client.id,
         "name": client.name,
+        "key_preview": client.key_preview,
         "allowed_role": client.allowed_role,
         "created_by_actor": client.created_by_actor,
         "rate_limit_per_minute": client.rate_limit_per_minute,
@@ -106,6 +99,7 @@ async def create_integration_client(
         id=make_id("ic"),
         name=name.strip(),
         key_hash=_hash_key(raw_key),
+        key_preview=raw_key[-8:],
         allowed_role=allowed_role,
         created_by_actor=actor,
         rate_limit_per_minute=rate_limit_per_minute,
@@ -172,6 +166,7 @@ async def rotate_integration_client(
         raise ConflictError(f"Integration client '{client_id}' is revoked; create a new one instead.")
     raw_key = _generate_raw_key()
     client.key_hash = _hash_key(raw_key)
+    client.key_preview = raw_key[-8:]
     client.last_used_at = None
     await write_audit_entry(
         db,
@@ -192,16 +187,24 @@ async def get_client_by_token_hash(db: AsyncSession, token_hash: str) -> Integra
     return result.scalar_one_or_none()
 
 
-def check_rate_limit(client_id: str, limit_per_minute: int) -> bool:
-    """In-process sliding-window rate limit for one client. Returns True if within limit."""
-    now = datetime.now(UTC)
-    cutoff = now - timedelta(minutes=1)
-    bucket = _request_log.setdefault(client_id, collections.deque())
-    while bucket and bucket[0] < cutoff:
-        bucket.popleft()
-    if len(bucket) >= limit_per_minute:
+async def check_rate_limit(db: AsyncSession, client_id: str) -> bool:
+    """Consume one database-backed fixed-window request across all workers."""
+    client = await db.scalar(select(IntegrationClient).where(IntegrationClient.id == client_id).with_for_update())
+    if client is None:
         return False
-    bucket.append(now)
+    now = datetime.now(UTC)
+    started = client.rate_limit_window_started_at
+    if started is not None and started.tzinfo is None:
+        started = started.replace(tzinfo=UTC)
+    if started is None or now - started >= timedelta(minutes=1):
+        client.rate_limit_window_started_at = now
+        client.rate_limit_window_count = 1
+    elif client.rate_limit_window_count >= client.rate_limit_per_minute:
+        await db.rollback()
+        return False
+    else:
+        client.rate_limit_window_count += 1
+    await db.commit()
     return True
 
 
@@ -220,7 +223,7 @@ async def authenticate_integration_client(db: AsyncSession, raw_token: str) -> I
     client = await get_client_by_token_hash(db, _hash_key(raw_token))
     if client is None or not client.is_active:
         return None
-    if not check_rate_limit(client.id, client.rate_limit_per_minute):
+    if not await check_rate_limit(db, client.id):
         return None
 
     now = datetime.now(UTC)

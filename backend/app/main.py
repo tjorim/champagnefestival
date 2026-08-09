@@ -12,7 +12,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import create_tables
-from app.mcp_server import build_keycloak_auth, create_mcp_server, get_mcp_capabilities
+from app.mcp.capabilities import get_mcp_capabilities
+from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
 from app.observability import request_metrics_middleware
 from app.routers import (

@@ -223,7 +223,8 @@ and the expected `role`.
 ### Capabilities manifest
 
 `GET /api/mcp/capabilities` returns whether the MCP server is mounted and, when it is, the
-live registered tool list with each tool's required role tier — generated directly from the
+live registered tool list with each tool's required role tier and side-effect classification
+(`read` or `write`) — generated directly from the
 running server's tool registration (`app.mcp_server.get_mcp_capabilities`), so it cannot
 drift from what's actually callable (example below is abbreviated — the live response includes all registered tools):
 
@@ -233,8 +234,8 @@ drift from what's actually callable (example below is abbreviated — the live r
   "mount_path": "/mcp",
   "version": "2026.8.1",
   "tools": [
-    {"name": "whoami", "required_role": "public"},
-    {"name": "create_venue", "required_role": "admin"}
+    {"name": "whoami", "effect": "read", "required_role": "public"},
+    {"name": "create_venue", "effect": "write", "required_role": "admin"}
     // ... additional tools omitted for brevity
   ]
 }

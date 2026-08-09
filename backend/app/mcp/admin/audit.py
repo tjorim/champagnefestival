@@ -22,6 +22,9 @@ def _entry_to_dict(entry: AuditEntry) -> dict:
         "id": entry.id,
         "timestamp": entry.timestamp.isoformat(),
         "actor": entry.actor,
+        "auth_source": entry.auth_source,
+        "subject": entry.subject,
+        "integration_client_id": entry.integration_client_id,
         "action": entry.action,
         "resource_type": entry.resource_type,
         "resource_id": entry.resource_id,
@@ -41,6 +44,7 @@ async def list_audit_entries(
     until: str | None = None,
     limit: int | None = None,
     offset: int = 0,
+    before_id: str | None = None,
 ) -> dict:
     """List audit entries, newest first, with optional filters.
 
@@ -74,13 +78,27 @@ async def list_audit_entries(
             if until_dt.tzinfo is None:
                 until_dt = until_dt.replace(tzinfo=UTC)
             stmt = stmt.where(AuditEntry.timestamp <= until_dt)
+        if before_id is not None:
+            cursor = await db.get(AuditEntry, before_id)
+            if cursor is None:
+                raise ValueError("audit cursor does not exist")
+            stmt = stmt.where(
+                (AuditEntry.timestamp < cursor.timestamp)
+                | ((AuditEntry.timestamp == cursor.timestamp) & (AuditEntry.id < cursor.id))
+            )
         # Secondary sort key: entries written in the same transaction can share a
         # timestamp, and an unstable order would let offset-based paging repeat
         # or skip rows across calls.
         stmt = stmt.order_by(AuditEntry.timestamp.desc(), AuditEntry.id.desc())
-        stmt = stmt.offset(offset).limit(effective_limit)
+        if before_id is None:
+            stmt = stmt.offset(offset)
+        stmt = stmt.limit(effective_limit)
         result = await db.execute(stmt)
-        return {"entries": [_entry_to_dict(e) for e in result.scalars().all()]}
+        entries = list(result.scalars().all())
+        return {
+            "entries": [_entry_to_dict(entry) for entry in entries],
+            "next_before_id": entries[-1].id if len(entries) == effective_limit else None,
+        }
 
 
 async def list_audit_resource_types(session_factory: Any) -> dict:
