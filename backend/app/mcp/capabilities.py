@@ -133,4 +133,6 @@ async def get_mcp_capabilities(mcp: FastMCP) -> dict[str, object]:
             }
             for tool in sorted(tools, key=lambda tool: tool.name)
         ],
+        "resources": [],
+        "prompts": [],
     }

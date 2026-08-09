@@ -187,6 +187,8 @@ async def test_mcp_capabilities_endpoint_reports_disabled_when_mcp_not_mounted(c
     body = r.json()
     assert body["enabled"] is False
     assert body["tools"] == []
+    assert body["resources"] == []
+    assert body["prompts"] == []
     assert body["mount_path"] == "/mcp"
 
 
