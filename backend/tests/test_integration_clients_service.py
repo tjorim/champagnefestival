@@ -172,10 +172,12 @@ async def test_authenticate_throttles_last_used_write_on_rapid_reuse(db_session,
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
     first = await ics.authenticate_integration_client(db_session, raw_key)
+    assert first is not None
     first_seen = first.last_used_at
 
     # Immediately re-authenticate: within the throttle window, last_used_at must not move.
     second = await ics.authenticate_integration_client(db_session, raw_key)
+    assert second is not None
     assert second.last_used_at == first_seen
 
 
