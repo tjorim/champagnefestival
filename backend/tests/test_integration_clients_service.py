@@ -222,13 +222,10 @@ async def test_authenticate_rejects_when_rate_limit_exceeded(db_session):
         allowed_role="volunteer",
         rate_limit_per_minute=2,
     )
-    try:
-        assert await ics.authenticate_integration_client(db_session, raw_key) is not None
-        assert await ics.authenticate_integration_client(db_session, raw_key) is not None
-        # Third call within the same minute exceeds the per-client limit.
-        assert await ics.authenticate_integration_client(db_session, raw_key) is None
-    finally:
-        ics._request_log.pop(client_dict["id"], None)
+    assert await ics.authenticate_integration_client(db_session, raw_key) is not None
+    assert await ics.authenticate_integration_client(db_session, raw_key) is not None
+    # Third call within the same minute exceeds the per-client limit.
+    assert await ics.authenticate_integration_client(db_session, raw_key) is None
 
 
 # ---------------------------------------------------------------------------

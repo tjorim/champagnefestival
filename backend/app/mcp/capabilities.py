@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Protocol
-
 from fastmcp import FastMCP
 
 from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
@@ -40,10 +38,6 @@ VOLUNTEER_TOOL_NAMES: frozenset[str] = frozenset(
 _READ_PREFIXES = ("find_", "get_", "list_", "resolve_")
 
 
-class _NamedTool(Protocol):
-    name: str
-
-
 def tool_required_role(tool_name: str) -> str:
     """Return a tool's minimum role, defaulting unknown tools to admin."""
     if tool_name in PUBLIC_TOOL_NAMES:
@@ -62,7 +56,7 @@ def tool_effect(tool_name: str) -> str:
 
 async def get_mcp_capabilities(mcp: FastMCP) -> dict[str, object]:
     """Build capability metadata from the server's live registered tools."""
-    tools: list[_NamedTool] = await mcp.list_tools()
+    tools = await mcp.list_tools()
     return {
         "tools": [
             {
