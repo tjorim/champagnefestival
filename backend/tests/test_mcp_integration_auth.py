@@ -3,6 +3,8 @@ authenticates managed integration-client credentials (issue #807)."""
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from app.mcp.integration_auth import IntegrationKeyTokenVerifier
@@ -31,6 +33,15 @@ async def test_verify_token_returns_access_token_with_synthesised_claims(db_sess
 async def test_verify_token_rejects_unknown_token(db_session):
     verifier = IntegrationKeyTokenVerifier(mcp_session_factory(db_session))
     assert await verifier.verify_token(f"{ics.TOKEN_PREFIX}bogus") is None
+
+
+@pytest.mark.anyio
+async def test_verify_token_rejects_other_bearer_tokens_without_db_lookup():
+    session_factory = MagicMock()
+    verifier = IntegrationKeyTokenVerifier(session_factory)
+
+    assert await verifier.verify_token("not-an-integration-key") is None
+    session_factory.assert_not_called()
 
 
 @pytest.mark.anyio

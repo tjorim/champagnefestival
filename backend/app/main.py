@@ -56,7 +56,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 _mcp = create_mcp_server(auth=build_keycloak_auth()) if settings.mcp_base_url else None
-_mcp_app = _mcp.http_app(path="/") if _mcp is not None else None
+_mcp_app = _mcp.http_app(path="/", stateless_http=True) if _mcp is not None else None
 
 
 if settings.sentry_dsn:
@@ -186,11 +186,18 @@ async def mcp_capabilities() -> dict[str, object]:
 
     Reports whether the MCP server is mounted and, when it is, the live
     registered tool set with each tool's required role tier — generated
-    directly from ``mcp.list_tools()`` so it can never drift from what's
+    directly from the local provider so it can never drift from what's
     actually registered (see ``app.mcp_server.get_mcp_capabilities``).
     """
     if _mcp is None:
-        return {"enabled": False, "mount_path": "/mcp", "version": None, "tools": []}
+        return {
+            "enabled": False,
+            "mount_path": "/mcp",
+            "version": None,
+            "tools": [],
+            "resources": [],
+            "prompts": [],
+        }
     manifest = await get_mcp_capabilities(_mcp)
     return {"enabled": True, "mount_path": "/mcp", "version": _mcp.version, **manifest}
 

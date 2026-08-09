@@ -12,7 +12,7 @@ from typing import Any
 
 from fastmcp.server.auth import AccessToken, TokenVerifier
 
-from app.services.integration_clients_service import authenticate_integration_client
+from app.services.integration_clients_service import TOKEN_PREFIX, authenticate_integration_client
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,9 @@ class IntegrationKeyTokenVerifier(TokenVerifier):
         self._session_factory = session_factory
 
     async def verify_token(self, token: str) -> AccessToken | None:
+        if not token.startswith(TOKEN_PREFIX):
+            return None
+
         async with self._session_factory() as db:
             client = await authenticate_integration_client(db, token)
             if client is None:

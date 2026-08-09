@@ -52,7 +52,7 @@ function isPaymentStatus(value: unknown): value is PaymentStatus {
 
 function isPersonRegistrationRecord(value: unknown): value is Record<string, unknown> & {
   id: string;
-  event_title: string;
+  event: { title: string };
   guest_count: number;
   status: RegistrationStatus;
   payment_status: PaymentStatus;
@@ -62,7 +62,8 @@ function isPersonRegistrationRecord(value: unknown): value is Record<string, unk
   return (
     isRecord(value) &&
     typeof value.id === "string" &&
-    typeof value.event_title === "string" &&
+    isRecord(value.event) &&
+    typeof value.event.title === "string" &&
     typeof value.guest_count === "number" &&
     isRegistrationStatus(value.status) &&
     isPaymentStatus(value.payment_status) &&
@@ -124,7 +125,7 @@ export async function fetchAdminPersonRegistrations(
 
   return raw.map((registration) => ({
     id: registration.id,
-    eventTitle: registration.event_title,
+    eventTitle: registration.event.title,
     guestCount: registration.guest_count,
     status: registration.status,
     paymentStatus: registration.payment_status,
