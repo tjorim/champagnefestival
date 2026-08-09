@@ -22,6 +22,7 @@ from app.mcp.capabilities import (
     TOOL_EFFECT_WRITE,
     VOLUNTEER_TOOL_NAMES,
     get_mcp_capabilities,
+    tool_annotations,
     tool_effect,
 )
 from app.mcp_server import create_mcp_server
@@ -94,6 +95,37 @@ async def test_capabilities_manifest_classifies_side_effects_conservatively():
     assert effect_by_name["create_venue"] == TOOL_EFFECT_WRITE
     assert effect_by_name["rotate_integration_client"] == TOOL_EFFECT_WRITE
     assert tool_effect("future_tool_without_policy") == TOOL_EFFECT_WRITE
+
+
+@pytest.mark.anyio
+async def test_registered_tools_advertise_explicit_safety_annotations():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    tools = await mcp.list_tools()
+
+    assert tools
+    for tool in tools:
+        annotations = tool.annotations
+        assert annotations is not None
+        expected_read_only = tool_effect(tool.name) == TOOL_EFFECT_READ
+        assert annotations.read_only_hint is expected_read_only
+        assert annotations.open_world_hint is False
+        if expected_read_only:
+            assert annotations.destructive_hint is False
+            assert annotations.idempotent_hint is True
+
+
+def test_write_annotations_distinguish_creation_from_destructive_changes():
+    create = tool_annotations("create_edition")
+    update = tool_annotations("update_edition")
+    delete = tool_annotations("delete_edition")
+    unknown = tool_annotations("future_tool_without_policy")
+
+    assert create.read_only_hint is False
+    assert create.destructive_hint is False
+    assert update.destructive_hint is True
+    assert delete.destructive_hint is True
+    assert unknown.read_only_hint is False
+    assert unknown.destructive_hint is True
 
 
 # ---------------------------------------------------------------------------
