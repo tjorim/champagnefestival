@@ -1,4 +1,4 @@
-"""FastMCP v3 MCP server for Champagnefestival event operations.
+"""FastMCP v4 MCP server for Champagnefestival event operations.
 
 Exposes operational tools for answering:
 - Who sits where?
@@ -60,6 +60,7 @@ from app.mcp.capabilities import (
     ROLE_PUBLIC,
     ROLE_VOLUNTEER,
     tool_annotations,
+    tool_auth,
 )
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.version import APP_VERSION
@@ -1577,7 +1578,11 @@ def create_mcp_server(
     )
 
     def register_tool(fn: Any) -> None:
-        mcp.tool(fn, annotations=tool_annotations(fn.__name__))
+        mcp.tool(
+            fn,
+            annotations=tool_annotations(fn.__name__),
+            auth=tool_auth(fn.__name__),
+        )
 
     # Register all tools with explicit safety metadata for MCP clients.
     register_tool(backend.whoami)

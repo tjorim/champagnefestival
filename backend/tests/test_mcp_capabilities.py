@@ -12,6 +12,7 @@ from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
+from fastmcp.server.auth import AccessToken, AuthContext, run_auth_checks
 
 from app.mcp.capabilities import (
     PUBLIC_TOOL_NAMES,
@@ -23,6 +24,7 @@ from app.mcp.capabilities import (
     VOLUNTEER_TOOL_NAMES,
     get_mcp_capabilities,
     tool_annotations,
+    tool_auth,
     tool_effect,
 )
 from app.mcp_server import create_mcp_server
@@ -31,7 +33,7 @@ from app.mcp_server import create_mcp_server
 @pytest.mark.anyio
 async def test_capabilities_manifest_covers_every_registered_tool_exactly_once():
     mcp = create_mcp_server(session_factory=MagicMock())
-    registered = {tool.name for tool in await mcp.list_tools()}
+    registered = {tool.name for tool in await mcp.local_provider.list_tools()}
 
     manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
     manifest_names = {entry["name"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
@@ -51,7 +53,7 @@ async def test_public_and_volunteer_allowlists_only_reference_real_tools():
     every name in PUBLIC_TOOL_NAMES/VOLUNTEER_TOOL_NAMES must correspond to an
     actually-registered tool, otherwise the manifest would silently omit it."""
     mcp = create_mcp_server(session_factory=MagicMock())
-    registered = {tool.name for tool in await mcp.list_tools()}
+    registered = {tool.name for tool in await mcp.local_provider.list_tools()}
 
     assert registered >= PUBLIC_TOOL_NAMES
     assert registered >= VOLUNTEER_TOOL_NAMES
@@ -100,7 +102,7 @@ async def test_capabilities_manifest_classifies_side_effects_conservatively():
 @pytest.mark.anyio
 async def test_registered_tools_advertise_explicit_safety_annotations():
     mcp = create_mcp_server(session_factory=MagicMock())
-    tools = await mcp.list_tools()
+    tools = await mcp.local_provider.list_tools()
 
     assert tools
     for tool in tools:
@@ -126,6 +128,50 @@ def test_write_annotations_distinguish_creation_from_destructive_changes():
     assert delete.destructive_hint is True
     assert unknown.read_only_hint is False
     assert unknown.destructive_hint is True
+
+
+@pytest.mark.anyio
+async def test_registered_tools_enforce_role_aware_component_authorization():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    tools = {tool.name: tool for tool in await mcp.local_provider.list_tools()}
+
+    def context(tool_name: str, roles: list[str]) -> AuthContext:
+        return AuthContext(
+            token=AccessToken(
+                token="test-token",
+                client_id="test-client",
+                scopes=[],
+                claims={"realm_access": {"roles": roles}},
+            ),
+            component=tools[tool_name],
+        )
+
+    assert tools["whoami"].auth is None
+
+    volunteer_auth = tools["find_guest"].auth
+    assert volunteer_auth is not None
+    assert await run_auth_checks(volunteer_auth, context("find_guest", [ROLE_VOLUNTEER]))
+    assert await run_auth_checks(volunteer_auth, context("find_guest", [ROLE_ADMIN]))
+    assert not await run_auth_checks(volunteer_auth, context("find_guest", []))
+
+    admin_auth = tools["create_venue"].auth
+    assert admin_auth is not None
+    assert await run_auth_checks(admin_auth, context("create_venue", [ROLE_ADMIN]))
+    assert not await run_auth_checks(admin_auth, context("create_venue", [ROLE_VOLUNTEER]))
+    assert not await run_auth_checks(admin_auth, context("create_venue", []))
+
+
+@pytest.mark.anyio
+async def test_component_auth_hides_non_public_tools_without_role_claims():
+    mcp = create_mcp_server(session_factory=MagicMock())
+
+    visible = {tool.name for tool in await mcp.list_tools()}
+
+    assert visible == PUBLIC_TOOL_NAMES
+
+
+def test_unknown_tools_default_to_admin_component_authorization():
+    assert tool_auth("future_tool_without_policy") is not None
 
 
 # ---------------------------------------------------------------------------
