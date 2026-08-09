@@ -36,6 +36,18 @@ async def test_venue_crud(client):
 
 
 @pytest.mark.anyio
+async def test_venue_create_respects_explicit_inactive(client):
+    """Regression test for a REST/MCP drift bug fixed by the shared
+    venues_service extraction (#807): the REST router used to construct the
+    Venue row without passing `active=`, silently ignoring `active: false` in
+    the request body and always creating an active venue. The MCP tool always
+    respected it. Both now go through the same service and behave identically."""
+    r = await client.post("/api/venues", json={**VENUE_PAYLOAD, "active": False}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    assert r.json()["active"] is False
+
+
+@pytest.mark.anyio
 async def test_venue_requires_admin(unauth_client):
     r = await unauth_client.post("/api/venues", json=VENUE_PAYLOAD)
     assert r.status_code == 401

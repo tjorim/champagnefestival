@@ -32,7 +32,6 @@ from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.config import settings
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -44,6 +43,7 @@ from app.mcp.admin import editions as mcp_admin_editions
 from app.mcp.admin import events as mcp_admin_events
 from app.mcp.admin import exhibitors as mcp_admin_exhibitors
 from app.mcp.admin import faq as mcp_admin_faq
+from app.mcp.admin import integration_clients as mcp_admin_integration_clients
 from app.mcp.admin import layouts as mcp_admin_layouts
 from app.mcp.admin import members as mcp_admin_members
 from app.mcp.admin import people as mcp_admin_people
@@ -54,10 +54,16 @@ from app.mcp.admin import table_types as mcp_admin_table_types
 from app.mcp.admin import tables as mcp_admin_tables
 from app.mcp.admin import venues as mcp_admin_venues
 from app.mcp.admin import volunteers as mcp_admin_volunteers
-from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
+from app.mcp.auth import build_keycloak_auth as build_keycloak_auth
+from app.mcp.capabilities import (
+    ROLE_ADMIN,
+    ROLE_PUBLIC,
+    ROLE_VOLUNTEER,
+)
+from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
+from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Backend wrapper
@@ -134,9 +140,37 @@ class ChampagneFestivalMcpBackend:
         sub = claims.get("sub")
         return str(sub) if sub is not None else "anonymous"
 
+    def _auth_source(self) -> str:
+        """Return ``'keycloak'``, ``'integration'``, or ``'none'`` for the current caller.
+
+        ``IntegrationKeyTokenVerifier`` stamps ``claims['auth_source'] =
+        'integration'`` on tokens it verifies (see ``app.mcp.integration_auth``);
+        a Keycloak-issued JWT never carries that claim, so its absence on an
+        authenticated token means Keycloak.
+        """
+        token = get_access_token()
+        if token is None:
+            return "none"
+        claims: dict[str, Any] = getattr(token, "claims", {})
+        return "integration" if claims.get("auth_source") == "integration" else "keycloak"
+
     # ------------------------------------------------------------------
     # Tools — public (no auth)
     # ------------------------------------------------------------------
+
+    async def whoami(self) -> dict:
+        """Return the caller's resolved identity: auth source, subject, and effective role.
+
+        No authentication required — an unauthenticated caller gets
+        ``{"auth_source": "none", "subject": None, "role": "public"}``. Never
+        exposes token material (the bearer token itself, or raw JWT claims).
+        """
+        auth_source = self._auth_source()
+        return {
+            "auth_source": auth_source,
+            "subject": self._actor() if auth_source != "none" else None,
+            "role": self._resolve_role(),
+        }
 
     async def get_active_edition(self) -> dict:
         """Return the current or next upcoming active festival edition.
@@ -1420,6 +1454,7 @@ class ChampagneFestivalMcpBackend:
         until: str | None = None,
         limit: int | None = None,
         offset: int = 0,
+        before_id: str | None = None,
     ) -> dict:
         """List audit entries (newest first), with optional filters. Requires the ``admin`` role.
 
@@ -1437,6 +1472,7 @@ class ChampagneFestivalMcpBackend:
             until=until,
             limit=limit,
             offset=offset,
+            before_id=before_id,
         )
 
     async def list_audit_resource_types(self) -> dict:
@@ -1446,6 +1482,54 @@ class ChampagneFestivalMcpBackend:
         """
         self._require_admin()
         return await mcp_admin_audit.list_audit_resource_types(self.session_factory)
+
+    # -- Integration clients (managed automation credentials) ------------
+
+    async def create_integration_client(
+        self,
+        name: str,
+        allowed_role: str,
+        rate_limit_per_minute: int = DEFAULT_RATE_LIMIT_PER_MINUTE,
+    ) -> dict:
+        """Create a managed integration-client credential for MCP automation.
+
+        Returns the new client's details plus its raw key — shown exactly
+        once here, never recoverable afterward (only its hash is stored).
+        ``allowed_role`` must be ``"admin"`` or ``"volunteer"``; a credential
+        can never be created more privileged than the caller's own tier.
+        Requires the ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_integration_clients.create_integration_client(
+            self.session_factory,
+            self._actor(),
+            name=name,
+            allowed_role=allowed_role,
+            rate_limit_per_minute=rate_limit_per_minute,
+        )
+
+    async def list_integration_clients(self) -> dict:
+        """List all managed integration clients (never includes key material). Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_integration_clients.list_integration_clients(self.session_factory)
+
+    async def revoke_integration_client(self, client_id: str) -> dict:
+        """Revoke (disable) a managed integration client. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_integration_clients.revoke_integration_client(
+            self.session_factory, self._actor(), client_id
+        )
+
+    async def rotate_integration_client(self, client_id: str) -> dict:
+        """Replace an active integration client's credential with a freshly generated one.
+
+        Returns the client's details plus the new raw key (shown exactly once).
+        Requires the ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_integration_clients.rotate_integration_client(
+            self.session_factory, self._actor(), client_id
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1488,9 +1572,11 @@ def create_mcp_server(
             "registrations, and the audit trail."
         ),
         auth=auth,
+        version=APP_VERSION,
     )
 
     # Register all tools
+    mcp.tool(backend.whoami)
     mcp.tool(backend.get_active_edition)
     mcp.tool(backend.list_editions)
     mcp.tool(backend.get_event_schedule)
@@ -1575,37 +1661,12 @@ def create_mcp_server(
     mcp.tool(backend.delete_registration)
     mcp.tool(backend.list_audit_entries)
     mcp.tool(backend.list_audit_resource_types)
+    mcp.tool(backend.create_integration_client)
+    mcp.tool(backend.list_integration_clients)
+    mcp.tool(backend.revoke_integration_client)
+    mcp.tool(backend.rotate_integration_client)
 
     return mcp
-
-
-# ---------------------------------------------------------------------------
-# Keycloak auth helper
-# ---------------------------------------------------------------------------
-
-
-def build_keycloak_auth() -> Any:
-    """Build a :class:`KeycloakAuthProvider` from application settings.
-
-    Requires ``OIDC_ISSUER_URL`` and ``MCP_BASE_URL`` to be set.
-    Returns ``None`` when the HTTP MCP server is not configured. Local stdio
-    mode passes ``auth=None`` directly and does not call this helper.
-    """
-    mcp_base_url = settings.mcp_base_url
-    if not mcp_base_url:
-        return None
-
-    if not settings.oidc_issuer_url:
-        raise RuntimeError("OIDC_ISSUER_URL is required when MCP_BASE_URL enables the HTTP MCP server")
-
-    from fastmcp.server.auth.providers.keycloak import KeycloakAuthProvider
-
-    return KeycloakAuthProvider(
-        realm_url=settings.oidc_issuer_url,
-        base_url=mcp_base_url,
-        audience=settings.oidc_audience or None,
-        required_scopes=[],
-    )
 
 
 # ---------------------------------------------------------------------------

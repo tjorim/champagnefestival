@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 import app.mcp_server as mcp_module
+from app.mcp import auth as mcp_auth_module
 from app.mcp.utils import get_active_edition_obj, person_dict
 from app.mcp_server import (
     ROLE_ADMIN,
@@ -250,14 +251,21 @@ def _make_db_execute(rows_by_call: list[Any]):
 
 
 def test_build_keycloak_auth_accepts_client_credentials_without_user_scopes(monkeypatch):
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
-    monkeypatch.setattr(mcp_module.settings, "oidc_audience", "champagnefestival")
+    from fastmcp.server.auth import MultiAuth
+
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_audience", "champagnefestival")
 
     with patch("fastmcp.server.auth.providers.keycloak.KeycloakAuthProvider") as provider:
-        auth = build_keycloak_auth()
+        auth = build_keycloak_auth(session_factory=MagicMock())
 
-    assert auth is provider.return_value
+    # build_keycloak_auth() now composes Keycloak with the database-backed
+    # integration-client verifier via MultiAuth (see #807) — Keycloak client
+    # credentials keep working unchanged, they're just no longer the only
+    # accepted credential type.
+    assert isinstance(auth, MultiAuth)
+    assert auth.server is provider.return_value
     provider.assert_called_once_with(
         realm_url="https://auth.example/realms/champagnefestival",
         base_url="https://api.example/mcp",
@@ -266,17 +274,30 @@ def test_build_keycloak_auth_accepts_client_credentials_without_user_scopes(monk
     )
 
 
+def test_build_keycloak_auth_includes_integration_key_verifier(monkeypatch):
+    from app.mcp.integration_auth import IntegrationKeyTokenVerifier
+
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
+
+    with patch("fastmcp.server.auth.providers.keycloak.KeycloakAuthProvider"):
+        auth = build_keycloak_auth(session_factory=MagicMock())
+
+    assert len(auth.verifiers) == 1
+    assert isinstance(auth.verifiers[0], IntegrationKeyTokenVerifier)
+
+
 def test_build_keycloak_auth_rejects_http_mcp_without_oidc(monkeypatch):
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
 
     with pytest.raises(RuntimeError, match="OIDC_ISSUER_URL is required"):
         build_keycloak_auth()
 
 
 def test_build_keycloak_auth_propagates_provider_failure(monkeypatch):
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "https://api.example/mcp")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "https://auth.example/realms/champagnefestival")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "https://api.example/mcp")
 
     with (
         patch(
@@ -289,8 +310,8 @@ def test_build_keycloak_auth_propagates_provider_failure(monkeypatch):
 
 
 def test_build_keycloak_auth_is_unused_without_http_mcp(monkeypatch):
-    monkeypatch.setattr(mcp_module.settings, "oidc_issuer_url", "")
-    monkeypatch.setattr(mcp_module.settings, "mcp_base_url", "")
+    monkeypatch.setattr(mcp_auth_module.settings, "oidc_issuer_url", "")
+    monkeypatch.setattr(mcp_auth_module.settings, "mcp_base_url", "")
 
     assert build_keycloak_auth() is None
 
@@ -402,6 +423,77 @@ class TestResolveRole:
         with patch.object(mcp_module, "get_access_token", return_value=token):
             assert backend._actor() == "anonymous"
 
+    def test_auth_source_none_without_token(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with patch.object(mcp_module, "get_access_token", return_value=None):
+            assert backend._auth_source() == "none"
+
+    def test_auth_source_keycloak_for_ordinary_jwt(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "user-1", "realm_access": {"roles": ["admin"]}})
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            assert backend._auth_source() == "keycloak"
+
+    def test_auth_source_integration_when_claim_present(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(
+            claims={
+                "sub": "integration:ic-1",
+                "realm_access": {"roles": ["volunteer"]},
+                "auth_source": "integration",
+            }
+        )
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            assert backend._auth_source() == "integration"
+
+
+# ---------------------------------------------------------------------------
+# whoami — identity/capability discovery (#807)
+# ---------------------------------------------------------------------------
+
+
+class TestWhoami:
+    @pytest.mark.anyio
+    async def test_whoami_unauthenticated(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with patch.object(mcp_module, "get_access_token", return_value=None):
+            result = await backend.whoami()
+        assert result == {"auth_source": "none", "subject": None, "role": ROLE_PUBLIC}
+
+    @pytest.mark.anyio
+    async def test_whoami_keycloak_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "user-1", "realm_access": {"roles": ["admin"]}})
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            result = await backend.whoami()
+        assert result == {"auth_source": "keycloak", "subject": "user-1", "role": ROLE_ADMIN}
+
+    @pytest.mark.anyio
+    async def test_whoami_integration_volunteer(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(
+            claims={
+                "sub": "integration:ic-1",
+                "realm_access": {"roles": ["volunteer"]},
+                "auth_source": "integration",
+            }
+        )
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            result = await backend.whoami()
+        assert result == {"auth_source": "integration", "subject": "integration:ic-1", "role": ROLE_VOLUNTEER}
+
+    @pytest.mark.anyio
+    async def test_whoami_never_exposes_token_material(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(
+            claims={"sub": "user-1", "realm_access": {"roles": ["admin"]}},
+            token="super-secret-raw-jwt",  # noqa: S106
+        )
+        with patch.object(mcp_module, "get_access_token", return_value=token):
+            result = await backend.whoami()
+        assert "super-secret-raw-jwt" not in str(result)
+        assert "token" not in result
+
 
 # ---------------------------------------------------------------------------
 # Admin write tool wiring (role gate + delegation to app.mcp.admin.*)
@@ -505,6 +597,41 @@ class TestAdminToolWiring:
         assert result == {"maintenance_mode": True}
         mocked.assert_awaited_once_with(backend.session_factory, "admin-1", maintenance_mode=True)
 
+    @pytest.mark.anyio
+    async def test_create_integration_client_requires_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = _make_access_token(["volunteer"])
+        with patch.object(mcp_module, "get_access_token", return_value=token), pytest.raises(PermissionError):
+            await backend.create_integration_client(name="X", allowed_role="volunteer")
+
+    @pytest.mark.anyio
+    async def test_create_integration_client_delegates_with_actor(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "admin-1", "realm_access": {"roles": ["admin"]}})
+        with (
+            patch.object(mcp_module, "get_access_token", return_value=token),
+            patch.object(
+                mcp_module.mcp_admin_integration_clients,
+                "create_integration_client",
+                new=AsyncMock(return_value={"id": "ic-1", "key": "cfic_x"}),
+            ) as mocked,
+        ):
+            result = await backend.create_integration_client(name="Home Assistant", allowed_role="volunteer")
+        assert result == {"id": "ic-1", "key": "cfic_x"}
+        mocked.assert_awaited_once_with(
+            backend.session_factory,
+            "admin-1",
+            name="Home Assistant",
+            allowed_role="volunteer",
+            rate_limit_per_minute=mcp_module.DEFAULT_RATE_LIMIT_PER_MINUTE,
+        )
+
+    @pytest.mark.anyio
+    async def test_revoke_integration_client_requires_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        with patch.object(mcp_module, "get_access_token", return_value=None), pytest.raises(PermissionError):
+            await backend.revoke_integration_client("ic-1")
+
 
 # ---------------------------------------------------------------------------
 # Server creation / tool registration
@@ -533,6 +660,7 @@ class TestCreateMcpServer:
         tools = await mcp.list_tools()
         tool_names = {tool.name for tool in tools}
         expected = {
+            "whoami",
             "get_active_edition",
             "list_editions",
             "get_event_schedule",
@@ -615,6 +743,10 @@ class TestCreateMcpServer:
             "delete_registration",
             "list_audit_entries",
             "list_audit_resource_types",
+            "create_integration_client",
+            "list_integration_clients",
+            "revoke_integration_client",
+            "rotate_integration_client",
         }
         assert expected == tool_names
 

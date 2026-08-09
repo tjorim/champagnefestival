@@ -34,6 +34,21 @@ from app.models import (
 T = TypeVar("T", bound=Base)
 
 
+def normalise_table_type_dimensions(shape: str, width_m: float, length_m: float) -> tuple[float, float]:
+    """Return canonical (width_m, length_m) for a table type.
+
+    - round tables force length_m == width_m
+    - rectangular tables ensure length_m >= width_m by swapping if needed
+    Shared between TableTypeCreate validator and table_types_service update path
+    so the two entry points cannot diverge.
+    """
+    if shape == "round":
+        return width_m, width_m
+    if length_m < width_m:
+        return length_m, width_m
+    return width_m, length_m
+
+
 async def get_or_404(
     db: AsyncSession,
     model: type[T],

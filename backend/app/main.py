@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import create_tables
+from app.mcp.capabilities import get_mcp_capabilities
 from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
 from app.observability import request_metrics_middleware
@@ -26,6 +27,7 @@ from app.routers import (
     exhibitors,
     faq,
     health,
+    integration_clients,
     layouts,
     live,
     me,
@@ -175,6 +177,23 @@ app.include_router(live.router)
 app.include_router(health.router)
 app.include_router(faq.router)
 app.include_router(settings_router.router)
+app.include_router(integration_clients.router)
+
+
+@app.get("/api/mcp/capabilities")
+async def mcp_capabilities() -> dict[str, object]:
+    """Public capabilities manifest for the MCP server (issue #807).
+
+    Reports whether the MCP server is mounted and, when it is, the live
+    registered tool set with each tool's required role tier — generated
+    directly from ``mcp.list_tools()`` so it can never drift from what's
+    actually registered (see ``app.mcp_server.get_mcp_capabilities``).
+    """
+    if _mcp is None:
+        return {"enabled": False, "mount_path": "/mcp", "version": None, "tools": []}
+    manifest = await get_mcp_capabilities(_mcp)
+    return {"enabled": True, "mount_path": "/mcp", "version": _mcp.version, **manifest}
+
 
 if _mcp_app is not None:
     app.mount("/mcp", _mcp_app)
