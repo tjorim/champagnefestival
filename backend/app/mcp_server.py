@@ -30,6 +30,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
+from fastmcp.server.transforms.search import BM25SearchTransform
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp import check_in as mcp_check_in
@@ -70,6 +71,25 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Backend wrapper
 # ---------------------------------------------------------------------------
+
+
+def _role_aware_search_serializer(tools: list[Any]) -> list[dict[str, Any]]:
+    """Custom serializer for BM25SearchTransform that adds role metadata.
+    
+    Adds required_role and effect to each tool in search results so clients
+    can see authorization requirements without calling each tool.
+    """
+    from app.mcp.capabilities import tool_effect, tool_required_role
+
+    return [
+        {
+            "name": tool.name,
+            "description": tool.description or "",
+            "required_role": tool_required_role(tool.name),
+            "effect": tool_effect(tool.name),
+        }
+        for tool in tools
+    ]
 
 
 class ChampagneFestivalMcpBackend:
@@ -1571,10 +1591,20 @@ def create_mcp_server(
             "'volunteer' or 'admin' role. Admins additionally get full write/management "
             "parity with the admin REST API: editions, events, venues, rooms, table types, "
             "tables, layouts, areas, FAQ, settings, exhibitors, people, members, volunteers, "
-            "registrations, and the audit trail."
+            "registrations, and the audit trail. Use search_tools for natural language "
+            "tool discovery."
         ),
         auth=auth,
         version=APP_VERSION,
+        transforms=[
+            BM25SearchTransform(
+                max_results=10,
+                always_visible=["whoami", "guest_search_app"],
+                search_tool_name="search_tools",
+                call_tool_name="call_tool",
+                search_result_serializer=_role_aware_search_serializer,
+            )
+        ],
     )
 
     def register_tool(fn: Any) -> None:
@@ -1674,6 +1704,75 @@ def create_mcp_server(
     register_tool(backend.list_integration_clients)
     register_tool(backend.revoke_integration_client)
     register_tool(backend.rotate_integration_client)
+
+    # MCP App: Guest search
+    # Registered directly on the main server
+    # Lazy import to avoid hard dependency on prefab-ui
+    try:
+        from app.mcp import seating as mcp_seating
+        from app.mcp.utils import ROLE_ADMIN, ROLE_VOLUNTEER
+        from fastmcp.server.dependencies import get_access_token
+
+        async def guest_search_app(
+            name: str | None = None,
+            email: str | None = None,
+        ) -> dict:
+            """Interactive guest search with structured fallback.
+            
+            Search for guests by name and/or email. Returns structured JSON
+            data that UI-capable MCP hosts (like ChatGPT) can render as
+            an interactive table. Requires volunteer or admin role.
+            
+            Parameters
+            ----------
+            name:
+                Partial, case-insensitive name match.
+            email:
+                Exact (case-insensitive) email match.
+            """
+            token = get_access_token()
+            if token is None:
+                role = "public"
+            else:
+                claims: dict = getattr(token, "claims", {})
+                realm_access = claims.get("realm_access")
+                roles: list = realm_access.get("roles", []) if isinstance(realm_access, dict) else []
+                if ROLE_ADMIN in roles:
+                    role = ROLE_ADMIN
+                elif ROLE_VOLUNTEER in roles:
+                    role = ROLE_VOLUNTEER
+                else:
+                    role = "public"
+            
+            if role not in (ROLE_VOLUNTEER, ROLE_ADMIN):
+                raise PermissionError(
+                    "Authentication required: this tool is only available to volunteers and admins."
+                )
+            
+            if not name and not email:
+                raise ValueError("Provide at least one of 'name' or 'email' to search.")
+            
+            result = await mcp_seating.find_guest(session_factory, role, name, email)
+            return {
+                "type": "structured",
+                "title": "Guest Search Results",
+                "query": {"name": name, "email": email},
+                "count": result.get("count", 0),
+                "has_more": result.get("has_more", False),
+                "guests": result.get("guests", []),
+            }
+
+        mcp.tool(
+            guest_search_app,
+            name="guest_search_app",
+            description=(
+                "Search for guests by name and/or email. Returns structured results "
+                "that UI-capable MCP hosts can render. Requires volunteer or admin role."
+            ),
+        )
+    except ImportError:
+        # seating module should always be available, but just in case
+        pass
 
     return mcp
 
