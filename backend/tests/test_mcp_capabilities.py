@@ -8,6 +8,7 @@ MCP registration."
 
 from __future__ import annotations
 
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,8 +29,8 @@ async def test_capabilities_manifest_covers_every_registered_tool_exactly_once()
     mcp = create_mcp_server(session_factory=MagicMock())
     registered = {tool.name for tool in await mcp.list_tools()}
 
-    manifest = await get_mcp_capabilities(mcp)
-    manifest_names = {entry["name"] for entry in manifest["tools"]}
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    manifest_names = {entry["name"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
 
     # Generated directly off mcp.list_tools(), so this can't drift by
     # construction — asserted anyway as a regression guard on that invariant.
@@ -55,18 +56,19 @@ async def test_public_and_volunteer_allowlists_only_reference_real_tools():
 @pytest.mark.anyio
 async def test_capabilities_manifest_required_roles_are_valid_and_sorted():
     mcp = create_mcp_server(session_factory=MagicMock())
-    manifest = await get_mcp_capabilities(mcp)
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
 
-    names = [entry["name"] for entry in manifest["tools"]]
+    tools = cast(list[dict[str, Any]], manifest["tools"])
+    names = [entry["name"] for entry in tools]
     assert names == sorted(names)
-    assert all(entry["required_role"] in (ROLE_PUBLIC, ROLE_VOLUNTEER, ROLE_ADMIN) for entry in manifest["tools"])
+    assert all(entry["required_role"] in (ROLE_PUBLIC, ROLE_VOLUNTEER, ROLE_ADMIN) for entry in tools)
 
 
 @pytest.mark.anyio
 async def test_capabilities_manifest_spot_checks_known_tiers():
     mcp = create_mcp_server(session_factory=MagicMock())
-    manifest = await get_mcp_capabilities(mcp)
-    role_by_name = {entry["name"]: entry["required_role"] for entry in manifest["tools"]}
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    role_by_name = {entry["name"]: entry["required_role"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
 
     assert role_by_name["whoami"] == ROLE_PUBLIC
     assert role_by_name["get_active_edition"] == ROLE_PUBLIC
