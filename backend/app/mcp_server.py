@@ -1709,9 +1709,10 @@ def create_mcp_server(
     # Registered directly on the main server
     # Lazy import to avoid hard dependency on prefab-ui
     try:
+        from fastmcp.server.dependencies import get_access_token
+
         from app.mcp import seating as mcp_seating
         from app.mcp.utils import ROLE_ADMIN, ROLE_VOLUNTEER
-        from fastmcp.server.dependencies import get_access_token
 
         async def guest_search_app(
             name: str | None = None,
