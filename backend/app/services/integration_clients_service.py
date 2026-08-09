@@ -94,8 +94,12 @@ async def create_integration_client(
         raise ValidationFailedError("Only an admin caller may create an admin-tier integration client.")
     if not name.strip():
         raise ValidationFailedError("name must not be blank.")
+    if len(name.strip()) > 120:
+        raise ValidationFailedError("name must not exceed 120 characters.")
     if rate_limit_per_minute <= 0:
         raise ValidationFailedError("rate_limit_per_minute must be greater than 0.")
+    if rate_limit_per_minute > 6000:
+        raise ValidationFailedError("rate_limit_per_minute must not exceed 6000.")
 
     raw_key = _generate_raw_key()
     client = IntegrationClient(

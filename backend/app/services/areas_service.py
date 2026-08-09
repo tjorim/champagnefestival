@@ -89,24 +89,33 @@ async def update_area(
     if a is None:
         raise NotFoundError(f"Area '{area_id}' not found.")
 
+    fields_changed: list[str] = []
     if body.label is not None:
         a.label = body.label
+        fields_changed.append("label")
     if body.icon is not None:
         a.icon = body.icon
+        fields_changed.append("icon")
     if body.x is not None:
         a.x = body.x
+        fields_changed.append("x")
     if body.y is not None:
         a.y = body.y
+        fields_changed.append("y")
     if body.width_m is not None:
         a.width_m = body.width_m
+        fields_changed.append("width_m")
     if body.length_m is not None:
         a.length_m = body.length_m
+        fields_changed.append("length_m")
     if body.rotation is not None:
         a.rotation = body.rotation
+        fields_changed.append("rotation")
     if "exhibitor_id" in body.model_fields_set:
         if body.exhibitor_id is not None:
             await _check_exhibitor_assignable(db, body.exhibitor_id)
         a.exhibitor_id = body.exhibitor_id
+        fields_changed.append("exhibitor_id")
 
     await write_audit_entry(
         db,
@@ -115,7 +124,7 @@ async def update_area(
         resource_type="area",
         resource_id=a.id,
         request_id=request_id,
-        details={"fields_changed": sorted(body.model_fields_set)},
+        details={"fields_changed": sorted(fields_changed)},
     )
     await db.commit()
     await db.refresh(a)

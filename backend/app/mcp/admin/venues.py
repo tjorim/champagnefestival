@@ -39,7 +39,10 @@ async def create_venue(
         active=active,
     )
     async with session_factory() as db:
-        return await venues_service.create_venue(db, actor=actor, body=body)
+        try:
+            return await venues_service.create_venue(db, actor=actor, body=body)
+        except ServiceError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 async def list_venues(session_factory: Any) -> dict:

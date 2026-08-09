@@ -28,9 +28,12 @@ async def create_venue(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    return await venues_service.create_venue(
-        db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
-    )
+    try:
+        return await venues_service.create_venue(
+            db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 @router.get("", response_model=list[VenueOut])

@@ -28,9 +28,12 @@ async def create_table_type(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    return await table_types_service.create_table_type(
-        db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
-    )
+    try:
+        return await table_types_service.create_table_type(
+            db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 @router.get("", response_model=list[TableTypeOut])

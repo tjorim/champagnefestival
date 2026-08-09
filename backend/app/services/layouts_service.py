@@ -226,6 +226,22 @@ async def copy_layout(
     source_tables = (await db.execute(select(Table).where(Table.layout_id == source_layout_id))).scalars().all()
     source_areas = (await db.execute(select(Area).where(Area.layout_id == source_layout_id))).scalars().all()
 
+    # Validate inactive exhibitors before creating any pending inserts — fail fast
+    # before db.add(cloned) / db.flush() or table copies.
+    if body.copy_areas:
+        exhibitor_ids = {area.exhibitor_id for area in source_areas if area.exhibitor_id is not None}
+        if exhibitor_ids:
+            active_result = await db.execute(
+                select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids), Exhibitor.active.is_(True))
+            )
+            active_ids = set(active_result.scalars().all())
+            inactive_ids = sorted(exhibitor_ids - active_ids)
+            if inactive_ids:
+                raise ValidationFailedError(
+                    "Cannot copy: the following areas reference an inactive or "
+                    f"deleted exhibitor: {inactive_ids}. Update those areas first."
+                )
+
     table_type_ids = {t.table_type_id for t in source_tables}
     table_types: dict[str, TableType] = {}
     if table_type_ids:
@@ -277,22 +293,6 @@ async def copy_layout(
         )
 
     if body.copy_areas:
-        # An area whose exhibitor was deactivated after the source area was created
-        # (or last updated) must not be silently carried into the copy — create_area
-        # and update_area both refuse to assign an inactive exhibitor, so the copy
-        # path can't create areas those tools would reject.
-        exhibitor_ids = {area.exhibitor_id for area in source_areas if area.exhibitor_id is not None}
-        if exhibitor_ids:
-            active_result = await db.execute(
-                select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids), Exhibitor.active.is_(True))
-            )
-            active_ids = set(active_result.scalars().all())
-            inactive_ids = sorted(exhibitor_ids - active_ids)
-            if inactive_ids:
-                raise ValidationFailedError(
-                    "Cannot copy: the following areas reference an inactive or "
-                    f"deleted exhibitor: {inactive_ids}. Update those areas first."
-                )
         for area in source_areas:
             db.add(
                 Area(

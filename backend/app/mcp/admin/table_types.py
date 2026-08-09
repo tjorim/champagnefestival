@@ -37,7 +37,10 @@ async def create_table_type(
         active=active,
     )
     async with session_factory() as db:
-        return await table_types_service.create_table_type(db, actor=actor, body=body)
+        try:
+            return await table_types_service.create_table_type(db, actor=actor, body=body)
+        except ServiceError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 async def list_table_types(session_factory: Any) -> dict:

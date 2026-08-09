@@ -39,7 +39,7 @@ This starts the MCP server in stdio mode without authentication enforcement. All
 
 To run as a specific role (e.g., `volunteer`) in local development against a real backend, the two supported credential types are:
 
-- **A Keycloak-issued JWT** — obtain a token from your local/dev Keycloak realm (or use `DEV_AUTH_BYPASS_TOKEN`, see the backend README) with the appropriate `realm_access.roles` claim, and pass it as the bearer token when connecting over the HTTP transport (see [HTTP transport](#http-transport-with-keycloak--managed-integration-client-auth) below). Stdio mode has no bearer token to attach, so this only applies to the HTTP transport.
+- **A Keycloak-issued JWT** — obtain a token from your local/dev Keycloak realm (or use `DEV_AUTH_BYPASS_TOKEN` when `ENVIRONMENT=development`, see the backend README) with the appropriate `realm_access.roles` claim, and pass it as the bearer token when connecting over the HTTP transport (see [HTTP transport](#http-transport-with-keycloak--managed-integration-client-auth) below). Stdio mode has no bearer token to attach, so this only applies to the HTTP transport. `DEV_AUTH_BYPASS_TOKEN` is accepted only when `ENVIRONMENT=development`; startup refuses any configuration using this token in all other environments (see `app.config.Settings.validate_production_no_dev_bypass`).
 - **A managed integration-client key** — create one via the admin API/MCP tools (`create_integration_client`, admin-only) and use the raw key it returns as the bearer token over the HTTP transport. See [Managed integration clients](#managed-integration-clients) below.
 
 ---
@@ -181,7 +181,7 @@ accepts either credential type on the same endpoint:
 
 Both resolve through the same role-tier logic (`ChampagneFestivalMcpBackend._resolve_role()`),
 so every tool's authorization behaves identically regardless of which credential type made
-the call.
+the call. Bearer JWT roles are read from the `realm_access.roles` claim in the Keycloak-issued token, while managed integration-key roles are supplied as fixed synthesized claims (`{"realm_access": {"roles": [allowed_role]}}` and `auth_source: "integration"`) by `IntegrationKeyTokenVerifier`.
 
 ### Managed integration clients
 
@@ -225,7 +225,7 @@ and the expected `role`.
 `GET /api/mcp/capabilities` returns whether the MCP server is mounted and, when it is, the
 live registered tool list with each tool's required role tier — generated directly from the
 running server's tool registration (`app.mcp_server.get_mcp_capabilities`), so it cannot
-drift from what's actually callable:
+drift from what's actually callable (example below is abbreviated — the live response includes all registered tools):
 
 ```json
 {
@@ -235,6 +235,7 @@ drift from what's actually callable:
   "tools": [
     {"name": "whoami", "required_role": "public"},
     {"name": "create_venue", "required_role": "admin"}
+    // ... additional tools omitted for brevity
   ]
 }
 ```

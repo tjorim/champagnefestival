@@ -18,7 +18,7 @@ from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableCreate, TableUpdate
-from app.services.errors import NotFoundError
+from app.services.errors import ConflictError, NotFoundError
 from app.utils import make_id, table_to_dict
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,9 @@ async def _publish_seating_changed(*, action: str, table_id: str, edition_id: st
 
 
 async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, request_id: str | None = None) -> dict:
-    tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
+    # Lock the referenced TableType row so a concurrent delete_table_type (which
+    # acquires with_for_update on the same row) serializes correctly.
+    tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id).with_for_update())
     if tt.scalar_one_or_none() is None:
         raise NotFoundError(f"TableType '{body.table_type_id}' not found.")
     lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
@@ -115,28 +117,34 @@ async def update_table(
     # All fields in TableUpdate are Optional[…], so an absent key and an
     # explicit null both arrive here as None and are simply skipped.  Only
     # fields with a real value are applied to the row.
+    fields_changed: list[str] = []
     if body.name is not None:
         t.name = body.name
+        fields_changed.append("name")
     if body.capacity is not None:
         t.capacity = body.capacity
+        fields_changed.append("capacity")
     if body.x is not None:
         t.x = body.x
+        fields_changed.append("x")
     if body.y is not None:
         t.y = body.y
+        fields_changed.append("y")
     if body.table_type_id is not None:
         tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
         if tt.scalar_one_or_none() is None:
             raise NotFoundError(f"TableType '{body.table_type_id}' not found.")
         t.table_type_id = body.table_type_id
-    # Zero-valid fields: must use model_fields_set so that an explicit zero
-    # degrees (rotation=0) is honoured even though the value is falsy.
-    if "rotation" in body.model_fields_set and body.rotation is not None:
+        fields_changed.append("table_type_id")
+    if body.rotation is not None:
         t.rotation = body.rotation
-    if "layout_id" in body.model_fields_set and body.layout_id is not None:
+        fields_changed.append("rotation")
+    if body.layout_id is not None:
         lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
         if lay.scalar_one_or_none() is None:
             raise NotFoundError(f"Layout '{body.layout_id}' not found.")
         t.layout_id = body.layout_id
+        fields_changed.append("layout_id")
 
     await write_audit_entry(
         db,
@@ -145,7 +153,7 @@ async def update_table(
         resource_type="table",
         resource_id=table_id,
         request_id=request_id,
-        details={"fields_changed": sorted(body.model_fields_set)},
+        details={"fields_changed": sorted(fields_changed)},
     )
     await db.commit()
     await db.refresh(t)
@@ -160,6 +168,9 @@ async def delete_table(db: AsyncSession, *, actor: str, table_id: str, request_i
     t = await db.get(Table, table_id)
     if t is None:
         raise NotFoundError(f"Table '{table_id}' not found.")
+    regs = await db.execute(select(Registration.id).where(Registration.table_id == table_id).limit(1))
+    if regs.scalars().first() is not None:
+        raise ConflictError("Cannot delete: registrations are still assigned to this table.")
     edition_id = await _get_layout_edition_id(db, t.layout_id)
     await write_audit_entry(
         db,

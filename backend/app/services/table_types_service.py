@@ -71,24 +71,37 @@ async def update_table_type(
     tt = await db.get(TableType, type_id)
     if tt is None:
         raise NotFoundError(f"Table type '{type_id}' not found.")
+    fields_changed: list[str] = []
+    pre_width, pre_length = tt.width_m, tt.length_m
     if body.name is not None:
         tt.name = body.name
+        fields_changed.append("name")
     if body.shape is not None:
         tt.shape = body.shape
+        fields_changed.append("shape")
     if body.width_m is not None:
         tt.width_m = body.width_m
+        fields_changed.append("width_m")
     if body.length_m is not None:
         tt.length_m = body.length_m
+        fields_changed.append("length_m")
     if body.shape is not None or body.width_m is not None or body.length_m is not None:
         from app.utils import normalise_table_type_dimensions
 
         tt.width_m, tt.length_m = normalise_table_type_dimensions(tt.shape, tt.width_m, tt.length_m)
+        if tt.width_m != pre_width and "width_m" not in fields_changed:
+            fields_changed.append("width_m")
+        if tt.length_m != pre_length and "length_m" not in fields_changed:
+            fields_changed.append("length_m")
     if body.height_type is not None:
         tt.height_type = body.height_type
+        fields_changed.append("height_type")
     if body.max_capacity is not None:
         tt.max_capacity = body.max_capacity
+        fields_changed.append("max_capacity")
     if body.active is not None:
         tt.active = body.active
+        fields_changed.append("active")
     await write_audit_entry(
         db,
         actor=actor,
@@ -96,7 +109,7 @@ async def update_table_type(
         resource_type="table_type",
         resource_id=tt.id,
         request_id=request_id,
-        details={"fields_changed": sorted(body.model_fields_set)},
+        details={"fields_changed": sorted(fields_changed)},
     )
     await db.commit()
     await db.refresh(tt)
