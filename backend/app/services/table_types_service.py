@@ -51,7 +51,7 @@ async def create_table_type(
 
 
 async def list_table_types(db: AsyncSession, *, limit: int | None = None, offset: int = 0) -> list[dict]:
-    stmt = select(TableType).order_by(TableType.created_at).offset(offset)
+    stmt = select(TableType).order_by(TableType.created_at, TableType.id).offset(offset)
     if limit is not None:
         stmt = stmt.limit(limit)
     result = await db.execute(stmt)
@@ -79,13 +79,10 @@ async def update_table_type(
         tt.width_m = body.width_m
     if body.length_m is not None:
         tt.length_m = body.length_m
-    # TableTypeUpdate has no model_validator (unlike TableTypeCreate), so the
-    # normalisation is re-derived by hand after applying fields.
     if body.shape is not None or body.width_m is not None or body.length_m is not None:
-        if tt.shape == "round":
-            tt.length_m = tt.width_m
-        elif tt.length_m < tt.width_m:
-            tt.length_m, tt.width_m = tt.width_m, tt.length_m
+        from app.utils import normalise_table_type_dimensions
+
+        tt.width_m, tt.length_m = normalise_table_type_dimensions(tt.shape, tt.width_m, tt.length_m)
     if body.height_type is not None:
         tt.height_type = body.height_type
     if body.max_capacity is not None:

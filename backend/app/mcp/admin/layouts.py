@@ -67,9 +67,7 @@ async def copy_layout(
     )
     async with session_factory() as db:
         try:
-            return await layouts_service.copy_layout(
-                db, actor=actor, source_layout_id=source_layout_id, body=body
-            )
+            return await layouts_service.copy_layout(db, actor=actor, source_layout_id=source_layout_id, body=body)
         except ServiceError as exc:
             raise ValueError(str(exc)) from exc
 

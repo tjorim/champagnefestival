@@ -44,17 +44,13 @@ async def test_create_list_revoke_rotate_integration_client(client):
 
 @pytest.mark.anyio
 async def test_create_integration_client_requires_admin(unauth_client):
-    r = await unauth_client.post(
-        "/api/integration-clients", json={"name": "X", "allowed_role": "volunteer"}
-    )
+    r = await unauth_client.post("/api/integration-clients", json={"name": "X", "allowed_role": "volunteer"})
     assert r.status_code == 401
 
 
 @pytest.mark.anyio
 async def test_volunteer_cannot_create_integration_client(volunteer_client):
-    r = await volunteer_client.post(
-        "/api/integration-clients", json={"name": "X", "allowed_role": "volunteer"}
-    )
+    r = await volunteer_client.post("/api/integration-clients", json={"name": "X", "allowed_role": "volunteer"})
     assert r.status_code == 403
 
 

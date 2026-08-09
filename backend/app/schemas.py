@@ -638,10 +638,9 @@ class TableTypeCreate(BaseModel):
 
     @model_validator(mode="after")
     def normalise_dimensions(self) -> Self:
-        if self.shape == "round":
-            self.length_m = self.width_m
-        elif self.length_m < self.width_m:
-            self.length_m, self.width_m = self.width_m, self.length_m
+        from app.utils import normalise_table_type_dimensions
+
+        self.width_m, self.length_m = normalise_table_type_dimensions(self.shape, self.width_m, self.length_m)
         return self
 
 

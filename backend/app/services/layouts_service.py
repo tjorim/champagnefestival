@@ -164,7 +164,9 @@ async def create_layout(
     # Also doubles as the room-existence check — an unchecked bogus room_id
     # would otherwise surface as a raw FK IntegrityError instead of a clean,
     # uniform NotFoundError.
-    locked_room = (await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())).scalar_one_or_none()
+    locked_room = (
+        await db.execute(select(Room.id).where(Room.id == body.room_id).with_for_update())
+    ).scalar_one_or_none()
     if locked_room is None:
         raise NotFoundError(f"Room '{body.room_id}' not found.")
 
@@ -244,7 +246,9 @@ async def copy_layout(
     all_areas = list(source_areas)
     tables_inside: list[Table] = []
     if body.copy_areas and all_areas:
-        tables_inside = [table for table in source_tables if table_in_any_area(table, all_areas, table_types, source_room)]
+        tables_inside = [
+            table for table in source_tables if table_in_any_area(table, all_areas, table_types, source_room)
+        ]
 
     tables_outside: list[Table] = []
     if body.copy_tables:

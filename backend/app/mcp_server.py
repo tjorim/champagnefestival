@@ -1577,7 +1577,9 @@ class ChampagneFestivalMcpBackend:
     async def revoke_integration_client(self, client_id: str) -> dict:
         """Revoke (disable) a managed integration client. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_integration_clients.revoke_integration_client(self.session_factory, self._actor(), client_id)
+        return await mcp_admin_integration_clients.revoke_integration_client(
+            self.session_factory, self._actor(), client_id
+        )
 
     async def rotate_integration_client(self, client_id: str) -> dict:
         """Replace an active integration client's credential with a freshly generated one.
@@ -1586,7 +1588,9 @@ class ChampagneFestivalMcpBackend:
         Requires the ``admin`` role.
         """
         self._require_admin()
-        return await mcp_admin_integration_clients.rotate_integration_client(self.session_factory, self._actor(), client_id)
+        return await mcp_admin_integration_clients.rotate_integration_client(
+            self.session_factory, self._actor(), client_id
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -485,7 +485,8 @@ class TestWhoami:
     async def test_whoami_never_exposes_token_material(self):
         backend = ChampagneFestivalMcpBackend(MagicMock())
         token = SimpleNamespace(
-            claims={"sub": "user-1", "realm_access": {"roles": ["admin"]}}, token="super-secret-raw-jwt"  # noqa: S106
+            claims={"sub": "user-1", "realm_access": {"roles": ["admin"]}},
+            token="super-secret-raw-jwt",  # noqa: S106
         )
         with patch.object(mcp_module, "get_access_token", return_value=token):
             result = await backend.whoami()
