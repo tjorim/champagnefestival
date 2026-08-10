@@ -656,10 +656,10 @@ class TestCreateMcpServer:
     async def test_create_mcp_server_registers_expected_tools(self):
         factory = MagicMock()
         mcp = create_mcp_server(session_factory=factory)
-        # Inspect the complete local registry. FastMCP list_tools() applies the
-        # current caller's component authorization and intentionally returns
-        # only public tools when this test has no authenticated role context.
-        tools = await mcp.local_provider.list_tools()
+        # With BM25SearchTransform, the server-level list_tools() returns only
+        # always_visible tools plus the synthetic search/call tools.
+        # local_provider.list_tools() returns the full catalog without transforms.
+        tools = await mcp.list_tools()
         tool_names = {tool.name for tool in tools}
 
         # With BM25SearchTransform, tools are hidden behind
