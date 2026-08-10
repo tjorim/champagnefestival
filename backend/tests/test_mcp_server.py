@@ -657,18 +657,19 @@ class TestCreateMcpServer:
         factory = MagicMock()
         mcp = create_mcp_server(session_factory=factory)
         # With BM25SearchTransform, the server-level list_tools() returns only
-        # always_visible tools plus the synthetic search/call tools.
+        # always_visible tools that pass auth plus the synthetic search/call tools.
         # local_provider.list_tools() returns the full catalog without transforms.
         tools = await mcp.list_tools()
         tool_names = {tool.name for tool in tools}
 
         # With BM25SearchTransform, tools are hidden behind
-        # search_tools and call_tool. Only always_visible tools are directly listed.
+        # search_tools and call_tool. Only always_visible tools that pass the
+        # current auth context are directly listed. guest_search_app requires
+        # volunteer/admin role and is filtered out without auth.
         expected = {
             "whoami",
             "search_tools",
             "call_tool",
-            "guest_search_app",
         }
         assert expected == tool_names
 
