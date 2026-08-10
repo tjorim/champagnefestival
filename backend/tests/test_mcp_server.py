@@ -661,7 +661,7 @@ class TestCreateMcpServer:
         # only public tools when this test has no authenticated role context.
         tools = await mcp.local_provider.list_tools()
         tool_names = {tool.name for tool in tools}
-        
+
         # With BM25SearchTransform, tools are hidden behind
         # search_tools and call_tool. Only always_visible tools are directly listed.
         expected = {

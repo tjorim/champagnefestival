@@ -24,6 +24,7 @@ Auth tiers (sourced from bearer JWT ``realm_access.roles``):
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from datetime import date as dt_date
 from datetime import datetime
 from typing import Any
@@ -31,6 +32,7 @@ from typing import Any
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.transforms.search import BM25SearchTransform
+from fastmcp.tools.base import Tool
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp import check_in as mcp_check_in
@@ -73,9 +75,11 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _role_aware_search_serializer(tools: list[Any]) -> list[dict[str, Any]]:
+def _role_aware_search_serializer(
+    tools: Sequence[Tool],
+) -> list[dict[str, Any]]:
     """Custom serializer for BM25SearchTransform that adds role metadata.
-    
+
     Adds required_role and effect to each tool in search results so clients
     can see authorization requirements without calling each tool.
     """
@@ -1719,11 +1723,11 @@ def create_mcp_server(
             email: str | None = None,
         ) -> dict:
             """Interactive guest search with structured fallback.
-            
+
             Search for guests by name and/or email. Returns structured JSON
             data that UI-capable MCP hosts (like ChatGPT) can render as
             an interactive table. Requires volunteer or admin role.
-            
+
             Parameters
             ----------
             name:
@@ -1744,15 +1748,13 @@ def create_mcp_server(
                     role = ROLE_VOLUNTEER
                 else:
                     role = "public"
-            
+
             if role not in (ROLE_VOLUNTEER, ROLE_ADMIN):
-                raise PermissionError(
-                    "Authentication required: this tool is only available to volunteers and admins."
-                )
-            
+                raise PermissionError("Authentication required: this tool is only available to volunteers and admins.")
+
             if not name and not email:
                 raise ValueError("Provide at least one of 'name' or 'email' to search.")
-            
+
             result = await mcp_seating.find_guest(session_factory, role, name, email)
             return {
                 "type": "structured",
