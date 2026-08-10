@@ -1768,6 +1768,8 @@ def create_mcp_server(
         mcp.tool(
             guest_search_app,
             name="guest_search_app",
+            annotations=tool_annotations("guest_search_app"),
+            auth=tool_auth("guest_search_app"),
             description=(
                 "Search for guests by name and/or email. Returns structured results "
                 "that UI-capable MCP hosts can render. Requires volunteer or admin role."
