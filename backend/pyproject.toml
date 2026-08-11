@@ -61,5 +61,3 @@ known-first-party = ["app"]
 [tool.ty.rules]
 unresolved-attribute = "warn"
 
-[tool.uv]
-constraint-dependencies = ["fastmcp-slim==4.0.0b1"]
