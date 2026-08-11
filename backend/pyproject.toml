@@ -12,7 +12,7 @@ version = "0.0.0"
 description = "FastAPI backend for the Champagnefestival reservation system"
 requires-python = ">=3.13"
 dependencies = [
-  "alembic==1.18.5",
+  "alembic==1.19.1",
   "asyncpg==0.31.0",
   "fastapi==0.141.1",
   "fastmcp==4.0.0b1",
