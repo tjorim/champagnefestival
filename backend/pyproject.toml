@@ -76,6 +76,6 @@ unresolved-attribute = "warn"
 # dependency still rejects prereleases — without going stale the way an
 # exact-pinned constraint did (Dependabot only bumps the `dependencies`
 # entry it's targeting, not a hand-pinned version here). Drop both lines
-# once fastmcp reaches a stable 1.0 release.
+# once fastmcp reaches a stable 4.0.0 release.
 prerelease = "explicit"
 constraint-dependencies = ["fastmcp-slim>=4.0.0a1"]
