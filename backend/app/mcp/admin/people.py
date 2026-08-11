@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.mcp.utils import as_value_error, get_or_error, validate_with_schema
+from app.mcp.utils import MCPToolError, as_value_error, get_or_error, validate_with_schema
 from app.models import Exhibitor, Person, Registration, VolunteerPeriod
 from app.routers.people import (
     _ensure_unique_identity_fields,
@@ -262,7 +262,7 @@ async def merge_people(session_factory: Any, actor: str, person_id: str, duplica
     error). The duplicate person record is deleted.
     """
     if person_id == duplicate_id:
-        raise ValueError("Cannot merge a person with themselves.")
+        raise MCPToolError("Cannot merge a person with themselves.")
 
     async with session_factory() as db:
         canonical = await get_or_error(db, Person, person_id, f"Person '{person_id}' not found.")
@@ -277,7 +277,7 @@ async def merge_people(session_factory: Any, actor: str, person_id: str, duplica
             dup_val = _normalise_optional_identity(getattr(duplicate, field))
             if canon_val and dup_val and canon_val != dup_val:
                 label = field_labels[field]
-                raise ValueError(f"Both persons have a different {label}; resolve manually before merging.")
+                raise MCPToolError(f"Both persons have a different {label}; resolve manually before merging.")
 
         # Normalise canonical's own existing identity fields in-place so the
         # surviving record is always in canonical form, consistent with

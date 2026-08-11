@@ -20,7 +20,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.audit import write_audit_entry
-from app.mcp.utils import as_value_error, validate_with_schema
+from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
 from app.models import Edition
 from app.routers.editions import (
     _edition_payload,
@@ -62,7 +62,7 @@ async def create_edition(
     async with session_factory() as db:
         existing = (await db.execute(select(Edition).where(Edition.id == body.id))).scalar_one_or_none()
         if existing is not None:
-            raise ValueError(f"Edition '{body.id}' already exists.")
+            raise MCPToolError(f"Edition '{body.id}' already exists.")
 
         try:
             await _load_venue(db, body.venue_id)
@@ -151,7 +151,7 @@ async def update_edition(
     }
     if clear_co_organizer:
         if co_organizer_exhibitor_id is not None:
-            raise ValueError("Pass either co_organizer_exhibitor_id or clear_co_organizer, not both.")
+            raise MCPToolError("Pass either co_organizer_exhibitor_id or clear_co_organizer, not both.")
         provided["co_organizer_exhibitor_id"] = None
     body = validate_with_schema(EditionUpdate, **provided)
 

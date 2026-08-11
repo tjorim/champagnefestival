@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import validate_with_schema
+from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import AreaCreate, AreaUpdate
 from app.services import areas_service
 from app.services.errors import ServiceError
@@ -44,7 +44,7 @@ async def create_area(
         try:
             return await areas_service.create_area(db, actor=actor, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def list_areas(session_factory: Any, layout_id: str | None = None) -> dict:
@@ -57,7 +57,7 @@ async def get_area(session_factory: Any, area_id: str) -> dict:
         try:
             return await areas_service.get_area(db, area_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def update_area(
@@ -94,7 +94,7 @@ async def update_area(
     # (clear_exhibitor_id=True) the way REST distinguishes an absent JSON key
     # from an explicit ``null`` via ``model_fields_set``.
     if exhibitor_id is not None and clear_exhibitor_id:
-        raise ValueError("Pass either exhibitor_id or clear_exhibitor_id, not both.")
+        raise MCPToolError("Pass either exhibitor_id or clear_exhibitor_id, not both.")
     if exhibitor_id is not None:
         provided["exhibitor_id"] = exhibitor_id
     elif clear_exhibitor_id:
@@ -105,7 +105,7 @@ async def update_area(
         try:
             return await areas_service.update_area(db, actor=actor, area_id=area_id, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def delete_area(session_factory: Any, actor: str, area_id: str) -> dict:
@@ -113,4 +113,4 @@ async def delete_area(session_factory: Any, actor: str, area_id: str) -> dict:
         try:
             return await areas_service.delete_area(db, actor=actor, area_id=area_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc

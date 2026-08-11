@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import validate_with_schema
+from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import VenueCreate, VenueUpdate
 from app.services import venues_service
 from app.services.errors import ServiceError
@@ -42,7 +42,7 @@ async def create_venue(
         try:
             return await venues_service.create_venue(db, actor=actor, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def list_venues(session_factory: Any) -> dict:
@@ -55,7 +55,7 @@ async def get_venue(session_factory: Any, venue_id: str) -> dict:
         try:
             return await venues_service.get_venue(db, venue_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def update_venue(
@@ -91,7 +91,7 @@ async def update_venue(
         try:
             return await venues_service.update_venue(db, actor=actor, venue_id=venue_id, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def delete_venue(session_factory: Any, actor: str, venue_id: str) -> dict:
@@ -99,4 +99,4 @@ async def delete_venue(session_factory: Any, actor: str, venue_id: str) -> dict:
         try:
             return await venues_service.delete_venue(db, actor=actor, venue_id=venue_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc

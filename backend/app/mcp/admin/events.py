@@ -28,6 +28,7 @@ from app.models import Event
 from app.routers.events import (
     _ensure_edition_exists,
     _get_event_or_404,
+    _reject_if_registrations_exist,
     _validate_registration_settings,
     _validate_standalone_event_date,
 )
@@ -244,6 +245,7 @@ async def delete_event(session_factory: Any, actor: str, event_id: str) -> dict:
     async with session_factory() as db:
         try:
             event = await _get_event_or_404(db, event_id)
+            await _reject_if_registrations_exist(db, event_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
         await db.delete(event)

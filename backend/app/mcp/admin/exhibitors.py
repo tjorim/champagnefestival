@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.mcp.utils import get_or_error, validate_with_schema
+from app.mcp.utils import MCPToolError, get_or_error, validate_with_schema
 from app.models import Edition, Exhibitor, Person
 from app.routers.exhibitors import _editions_linking
 from app.schemas import ExhibitorCreate, ExhibitorUpdate
@@ -55,7 +55,7 @@ async def create_exhibitor(
     async with session_factory() as db:
         contact = await _load_contact(db, body.contact_person_id)
         if body.contact_person_id and contact is None:
-            raise ValueError("Person not found.")
+            raise MCPToolError("Person not found.")
         e = Exhibitor(
             name=body.name,
             image=body.image,
@@ -147,7 +147,7 @@ async def update_exhibitor(
                 await db.execute(select(Exhibitor.id).where(Exhibitor.id == exhibitor_id).with_for_update())
                 linked = await _editions_linking(db, exhibitor_id)
                 if linked:
-                    raise ValueError(
+                    raise MCPToolError(
                         "Cannot change this exhibitor to a vendor while editions still link to it: "
                         f"{', '.join(linked)}. Remove it from those editions first."
                     )
@@ -161,7 +161,7 @@ async def update_exhibitor(
             if body.contact_person_id is not None:
                 contact_check = await _load_contact(db, body.contact_person_id)
                 if contact_check is None:
-                    raise ValueError("Person not found.")
+                    raise MCPToolError("Person not found.")
             e.contact_person_id = body.contact_person_id
 
         await write_audit_entry(

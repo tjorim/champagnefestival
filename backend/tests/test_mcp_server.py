@@ -20,6 +20,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastmcp.exceptions import ToolError
 
 import app.mcp_server as mcp_module
 from app.mcp import auth as mcp_auth_module
@@ -686,6 +687,73 @@ class TestCreateMcpServer:
         names = [item["name"] for item in result.structured_content["result"]]
         assert "get_event_schedule" in names
         assert "find_guest" not in names
+
+
+# ---------------------------------------------------------------------------
+# MCPToolError / mask_error_details — the mechanism admin MCP tools rely on
+# to keep unsanitized exception details from ever reaching a client.
+#
+# A full round trip through this project's ``create_mcp_server()`` would need
+# a real FastMCP-native auth context (its per-tool ``require_roles`` check
+# reads the access token via FastMCP's own request-context machinery, not the
+# ``mcp_module.get_access_token`` this file already patches for backend-level
+# tests) — not reproducible in-process without a live Keycloak token. These
+# tests instead exercise the mechanism directly against a minimal FastMCP
+# server with the same ``mask_error_details=True`` setting, which is exactly
+# where the "does our error class pass through unmodified, does everything
+# else get masked" behaviour actually lives.
+# ---------------------------------------------------------------------------
+
+
+class TestMCPToolErrorMasking:
+    @pytest.mark.anyio
+    async def test_mcp_tool_error_message_passes_through_unmodified(self):
+        from fastmcp import FastMCP
+
+        from app.mcp.utils import MCPToolError
+
+        mcp = FastMCP(name="test", mask_error_details=True)
+
+        @mcp.tool
+        def delete_something() -> str:
+            raise MCPToolError("Cannot delete event: 1 registration(s) are still linked to it.")
+
+        with pytest.raises(ToolError) as exc_info:
+            await mcp.call_tool("delete_something", {})
+
+        message = str(exc_info.value)
+        assert message == "Cannot delete event: 1 registration(s) are still linked to it."
+        # Would appear if MCPToolError fell into the generic `except Exception`
+        # branch (the one every plain `ValueError` hits) instead of FastMCP's
+        # `except FastMCPError` re-raise.
+        assert "Error calling tool" not in message
+
+    @pytest.mark.anyio
+    async def test_unwrapped_exception_is_masked_not_leaked(self):
+        """A bug nobody wrapped in ``MCPToolError`` must not leak ``str(exc)``.
+
+        This is the failure mode the original ``delete_event`` bug actually
+        was: an uncaught, unanticipated exception (there, a raw SQLAlchemy
+        ``IntegrityError`` with SQL and row contents). Without
+        ``mask_error_details=True``, FastMCP's default behaviour embeds the
+        full exception text in the tool result; this proves the server-wide
+        safety net now catches that case generally, not just the one call
+        site that got a manual pre-check.
+        """
+        from fastmcp import FastMCP
+
+        mcp = FastMCP(name="test", mask_error_details=True)
+
+        @mcp.tool
+        def delete_something() -> str:
+            raise RuntimeError("duplicate key value violates unique constraint, token='super-secret-token'")
+
+        with pytest.raises(ToolError) as exc_info:
+            await mcp.call_tool("delete_something", {})
+
+        message = str(exc_info.value)
+        assert "super-secret-token" not in message
+        assert "duplicate key value" not in message
 
 
 # ---------------------------------------------------------------------------

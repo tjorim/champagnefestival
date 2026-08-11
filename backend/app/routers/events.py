@@ -207,6 +207,7 @@ async def delete_event(
     actor: str = Depends(get_actor_id),
 ) -> None:
     event = await _get_event_or_404(db, event_id)
+    await _reject_if_registrations_exist(db, event_id)
     await db.delete(event)
     await write_audit_entry(
         db,
@@ -218,6 +219,29 @@ async def delete_event(
         details={},
     )
     await db.commit()
+
+
+async def _reject_if_registrations_exist(db: AsyncSession, event_id: str) -> None:
+    """Block event deletion while registrations still reference it.
+
+    ``registrations.event_id`` is non-nullable and the ORM relationship has no
+    delete cascade configured (registrations carry payment/attendance/order
+    history, so silently orphaning or cascading them is unsafe). Without this
+    check, ``db.delete(event)`` reaches the database, which raises a raw
+    ``NotNullViolationError`` that would otherwise surface driver/SQL details
+    and registration row contents to the caller.
+    """
+    count = (
+        await db.execute(select(func.count()).select_from(Registration).where(Registration.event_id == event_id))
+    ).scalar_one()
+    if count:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Cannot delete event: {count} registration(s) are still linked to it. "
+                "Delete or reassign them first."
+            ),
+        )
 
 
 async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:

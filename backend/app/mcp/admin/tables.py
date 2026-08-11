@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import validate_with_schema
+from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import TableCreate, TableUpdate
 from app.services import tables_service
 from app.services.errors import ServiceError
@@ -40,7 +40,7 @@ async def create_table(
         try:
             return await tables_service.create_table(db, actor=actor, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def list_tables(session_factory: Any) -> dict:
@@ -53,7 +53,7 @@ async def get_table(session_factory: Any, table_id: str) -> dict:
         try:
             return await tables_service.get_table(db, table_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def update_table(
@@ -87,7 +87,7 @@ async def update_table(
         try:
             return await tables_service.update_table(db, actor=actor, table_id=table_id, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def delete_table(session_factory: Any, actor: str, table_id: str) -> dict:
@@ -95,4 +95,4 @@ async def delete_table(session_factory: Any, actor: str, table_id: str) -> dict:
         try:
             return await tables_service.delete_table(db, actor=actor, table_id=table_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
