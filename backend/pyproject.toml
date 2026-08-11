@@ -63,12 +63,19 @@ unresolved-attribute = "warn"
 
 [tool.uv]
 # fastmcp is intentionally pinned to a prerelease (still pre-1.0 during its
-# v4 beta cycle) and requires an exact matching prerelease of fastmcp-slim,
-# a transitive dependency uv doesn't treat as "explicitly" prerelease the
-# same way. That inconsistency breaks specifically in the
-# `python_full_version >= '3.14'` resolution fork (this project's actual
-# Docker runtime — see backend/Dockerfile) whenever fastmcp itself moves to
-# a newer prerelease, which is exactly the update Dependabot needs to
-# propose. Allowing prereleases project-wide removes that inconsistency
-# instead of trying to dodge the one fork that hits it.
-prerelease = "allow"
+# v4 beta cycle) and exact-requires a matching prerelease of fastmcp-slim, a
+# transitive dependency — uv's default prerelease mode doesn't treat that
+# transitive requirement as "explicit" consistently across every resolution
+# fork, breaking specifically in the `python_full_version >= '3.14'` fork
+# (this project's actual Docker runtime — see backend/Dockerfile) whenever
+# fastmcp moves to a newer prerelease, which is exactly the update
+# Dependabot needs to propose.
+#
+# `prerelease = "explicit"` plus this open-ended constraint (not an exact
+# pin) scopes prerelease-allowance to fastmcp-slim only — every other
+# dependency still rejects prereleases — without going stale the way an
+# exact-pinned constraint did (Dependabot only bumps the `dependencies`
+# entry it's targeting, not a hand-pinned version here). Drop both lines
+# once fastmcp reaches a stable 1.0 release.
+prerelease = "explicit"
+constraint-dependencies = ["fastmcp-slim>=4.0.0a1"]
