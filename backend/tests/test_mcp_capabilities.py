@@ -81,7 +81,6 @@ async def test_capabilities_manifest_spot_checks_known_tiers():
     assert role_by_name["get_active_edition"] == ROLE_PUBLIC
     assert role_by_name["find_guest"] == ROLE_VOLUNTEER
     assert role_by_name["get_check_in_summary"] == ROLE_VOLUNTEER
-    assert role_by_name["guest_search_app"] == ROLE_VOLUNTEER
     assert role_by_name["create_venue"] == ROLE_ADMIN
     assert role_by_name["create_integration_client"] == ROLE_ADMIN
 
@@ -161,12 +160,6 @@ async def test_registered_tools_enforce_role_aware_component_authorization():
     assert not await run_auth_checks(admin_auth, context("create_venue", [ROLE_VOLUNTEER]))
     assert not await run_auth_checks(admin_auth, context("create_venue", []))
 
-    guest_search_auth = tools["guest_search_app"].auth
-    assert guest_search_auth is not None
-    assert await run_auth_checks(guest_search_auth, context("guest_search_app", [ROLE_VOLUNTEER]))
-    assert await run_auth_checks(guest_search_auth, context("guest_search_app", [ROLE_ADMIN]))
-    assert not await run_auth_checks(guest_search_auth, context("guest_search_app", []))
-
 
 @pytest.mark.anyio
 async def test_component_auth_hides_non_public_tools_without_role_claims():
@@ -175,8 +168,7 @@ async def test_component_auth_hides_non_public_tools_without_role_claims():
     visible = {tool.name for tool in await mcp.list_tools()}
 
     # With BM25SearchTransform, only always_visible tools that pass auth plus synthetic tools are listed.
-    # The always_visible tools are whoami and guest_search_app, but guest_search_app requires
-    # volunteer/admin role and is filtered out without auth. So only whoami, search_tools, and call_tool are visible.
+    # Only whoami plus the synthetic discovery tools remain initially visible.
     assert visible == {"whoami", "search_tools", "call_tool"}
 
 

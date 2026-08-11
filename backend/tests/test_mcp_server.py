@@ -664,14 +664,28 @@ class TestCreateMcpServer:
 
         # With BM25SearchTransform, tools are hidden behind
         # search_tools and call_tool. Only always_visible tools that pass the
-        # current auth context are directly listed. guest_search_app requires
-        # volunteer/admin role and is filtered out without auth.
+        # current auth context are directly listed.
         expected = {
             "whoami",
             "search_tools",
             "call_tool",
         }
         assert expected == tool_names
+
+        registered = {tool.name for tool in await mcp.local_provider.list_tools()}
+        assert "find_guest" in registered
+        assert "create_venue" in registered
+        assert "guest_search_app" not in registered
+
+    @pytest.mark.anyio
+    async def test_search_tools_finds_public_schedule_without_role_claims(self):
+        mcp = create_mcp_server(session_factory=MagicMock())
+        result = await mcp.call_tool("search_tools", {"query": "festival event schedule"})
+
+        assert result.structured_content is not None
+        names = [item["name"] for item in result.structured_content["result"]]
+        assert "get_event_schedule" in names
+        assert "find_guest" not in names
 
 
 # ---------------------------------------------------------------------------
