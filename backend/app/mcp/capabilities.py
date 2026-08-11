@@ -6,6 +6,7 @@ from fastmcp import FastMCP
 from fastmcp.server.auth import AuthCheck, AuthContext, require_roles
 from mcp.types import ToolAnnotations
 
+from app.config import settings
 from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
 
 TOOL_EFFECT_READ = "read"
@@ -78,8 +79,11 @@ def _require_interactive_admin(ctx: AuthContext) -> bool:
     claims = ctx.token.claims
     if claims.get("auth_source") == "integration":
         return False
-    username = claims.get("preferred_username")
-    if isinstance(username, str) and username.startswith("service-account-"):
+    authorized_party = claims.get("azp")
+    interactive_client_ids = {
+        client_id.strip() for client_id in settings.mcp_interactive_client_ids.split(",") if client_id.strip()
+    }
+    if authorized_party not in interactive_client_ids:
         return False
     return ROLE_ADMIN in _keycloak_roles(claims)
 

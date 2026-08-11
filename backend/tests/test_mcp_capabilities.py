@@ -172,7 +172,11 @@ async def test_integration_client_management_requires_interactive_admin():
                 token="test-token",
                 client_id="test-client",
                 scopes=[],
-                claims={"realm_access": {"roles": [ROLE_ADMIN]}, **claims},
+                claims={
+                    "azp": "champagnefestival",
+                    "realm_access": {"roles": [ROLE_ADMIN]},
+                    **claims,
+                },
             ),
             component=tools[tool_name],
         )
@@ -191,8 +195,13 @@ async def test_integration_client_management_requires_interactive_admin():
             auth,
             context(
                 tool_name,
+                azp="champagnefestival-mcp",
                 preferred_username="service-account-champagnefestival-mcp",
             ),
+        )
+        assert not await run_auth_checks(
+            auth,
+            context(tool_name, azp="champagnefestival-mcp"),
         )
 
 
