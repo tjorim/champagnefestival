@@ -15,7 +15,7 @@ dependencies = [
   "alembic==1.19.1",
   "asyncpg==0.31.0",
   "fastapi==0.141.1",
-  "fastmcp==4.0.0b1",
+  "fastmcp==4.0.0b2",
   "httpx==0.28.1",
   "limits==5.8.0",
   "phonenumbers==9.0.36",
