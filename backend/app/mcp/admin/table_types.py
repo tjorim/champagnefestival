@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import validate_with_schema
+from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import TableTypeCreate, TableTypeUpdate
 from app.services import table_types_service
 from app.services.errors import ServiceError
@@ -40,7 +40,7 @@ async def create_table_type(
         try:
             return await table_types_service.create_table_type(db, actor=actor, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def list_table_types(session_factory: Any) -> dict:
@@ -53,7 +53,7 @@ async def get_table_type(session_factory: Any, type_id: str) -> dict:
         try:
             return await table_types_service.get_table_type(db, type_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def update_table_type(
@@ -87,7 +87,7 @@ async def update_table_type(
         try:
             return await table_types_service.update_table_type(db, actor=actor, type_id=type_id, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def delete_table_type(session_factory: Any, actor: str, type_id: str) -> dict:
@@ -95,4 +95,4 @@ async def delete_table_type(session_factory: Any, actor: str, type_id: str) -> d
         try:
             return await table_types_service.delete_table_type(db, actor=actor, type_id=type_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc

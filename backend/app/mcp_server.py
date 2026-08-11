@@ -1601,6 +1601,12 @@ def create_mcp_server(
         ),
         auth=auth,
         version=APP_VERSION,
+        # Every admin tool's business errors are raised as `MCPToolError`
+        # (app.mcp.utils), which FastMCP re-raises verbatim regardless of this
+        # setting. Masking here is the safety net for exceptions nobody wrapped
+        # that way — e.g. a raw driver `IntegrityError` — which would otherwise
+        # have their full str() (SQL, row contents) embedded in the tool result.
+        mask_error_details=True,
         transforms=[
             BM25SearchTransform(
                 max_results=10,

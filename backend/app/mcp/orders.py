@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from app.mcp.utils import ROLE_ADMIN, order_item_dict
+from app.mcp.utils import ROLE_ADMIN, MCPToolError, order_item_dict
 from app.models import Person, Registration, Table
 from app.services.operational_search import DEFAULT_RESULT_LIMIT, rank_table_reference
 
@@ -18,7 +18,7 @@ async def get_table_order_summary(
     table_reference: str | None = None,
 ) -> dict:
     if not table_id and not table_reference:
-        raise ValueError("Provide 'table_id' or 'table_reference'.")
+        raise MCPToolError("Provide 'table_id' or 'table_reference'.")
 
     async with session_factory() as db:
         if not table_id and table_reference:
@@ -43,7 +43,7 @@ async def get_table_order_summary(
                 }
             table_id = candidates[0].id
         if table_id is None:
-            raise ValueError("table_id could not be resolved.")
+            raise MCPToolError("table_id could not be resolved.")
 
         table_result = await db.execute(select(Table).where(Table.id == table_id))
         table: Table | None = table_result.scalar_one_or_none()

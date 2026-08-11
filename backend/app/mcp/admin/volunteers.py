@@ -16,7 +16,7 @@ from sqlalchemy import delete, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.audit import write_audit_entry
-from app.mcp.utils import as_value_error, validate_with_schema
+from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
 from app.models import Person, VolunteerPeriod
 from app.routers.volunteers import _ensure_unique_fields as _volunteer_ensure_unique_fields
 from app.routers.volunteers import (
@@ -86,7 +86,7 @@ async def create_volunteer(
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError(
+            raise MCPToolError(
                 "Person with this national register number or eID document number already exists."
             ) from exc
         await db.refresh(person)
@@ -205,7 +205,7 @@ async def update_volunteer(
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError(
+            raise MCPToolError(
                 "Person with this national register number or eID document number already exists."
             ) from exc
         await db.refresh(volunteer)

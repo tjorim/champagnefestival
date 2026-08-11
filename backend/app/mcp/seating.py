@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import select
 
 from app.mcp.utils import (
+    MCPToolError,
     get_active_edition_obj,
     order_item_dict,
     person_dict,
@@ -31,7 +32,7 @@ async def find_guest(
     name = name.strip() if name else None
     email = email.strip() if email else None
     if not name and not email:
-        raise ValueError("Provide at least one of 'name' or 'email' to search.")
+        raise MCPToolError("Provide at least one of 'name' or 'email' to search.")
 
     async with session_factory() as db:
         stmt = (
@@ -198,7 +199,7 @@ async def get_table_seating(
 async def resolve_table_reference(session_factory: Any, reference: str) -> dict:
     reference = reference.strip()
     if not reference:
-        raise ValueError("Provide a table reference to resolve.")
+        raise MCPToolError("Provide a table reference to resolve.")
 
     async with session_factory() as db:
         tables_result = await db.execute(select(Table).order_by(Table.name))

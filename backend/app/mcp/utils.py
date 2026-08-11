@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime
 from typing import Any, TypeVar
 
 from fastapi import HTTPException
+from fastmcp.exceptions import ToolError
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,16 +23,39 @@ T = TypeVar("T")
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
+class MCPToolError(ValueError, ToolError):
+    """A domain error raised by an admin MCP tool.
+
+    Subclasses both ``ValueError`` (so every existing ``raise ValueError(...)``
+    call site, and every test asserting ``pytest.raises(ValueError, ...)``,
+    keeps working unchanged) and FastMCP's own ``ToolError``. The second parent
+    matters for how FastMCP's tool-call dispatcher treats the exception: a
+    plain ``ValueError`` falls through to the generic ``except Exception``
+    branch, which wraps *any* exception's ``str()`` into the response —
+    including, for an exception nobody anticipated (e.g. a raw driver
+    ``IntegrityError``), internal SQL/row details. A ``ToolError`` instead hits
+    FastMCP's ``except FastMCPError`` branch, which re-raises it unchanged: our
+    already-sanitized message reaches the caller verbatim, and — paired with
+    ``mask_error_details=True`` on the server — any exception we did *not*
+    explicitly raise this way gets masked to a generic message instead of
+    leaking its details.
+    """
+
+    def __init__(self, message: str) -> None:
+        ValueError.__init__(self, message)
+        self.log_level = logging.ERROR
+
+
 async def get_or_error(db: AsyncSession, model: type[T], object_id: Any, message: str) -> T:
-    """Return the row with primary key ``object_id``, or raise ``ValueError``.
+    """Return the row with primary key ``object_id``, or raise ``MCPToolError``.
 
     MCP-context equivalent of ``app.utils.get_or_404`` — tools have no HTTP
-    response to attach a status code to, so a plain ``ValueError`` (whose
-    message reaches the calling agent) stands in for the 404.
+    response to attach a status code to, so ``MCPToolError`` (whose message
+    reaches the calling agent verbatim) stands in for the 404.
     """
     obj = await db.get(model, object_id)
     if obj is None:
-        raise ValueError(message)
+        raise MCPToolError(message)
     return obj
 
 
@@ -41,28 +66,28 @@ def validate_with_schema(schema_cls: type[SchemaT], **kwargs: Any) -> SchemaT:
     the only place field constraints (ranges, patterns, ``model_validator``s such as
     table-type dimension normalisation) actually run — reusing the exact REST schema
     keeps validation identical across both surfaces instead of drifting out of sync.
-    Raises ``ValueError`` with a readable message on failure, matching the rest of the
+    Raises ``MCPToolError`` with a readable message on failure, matching the rest of the
     admin MCP tools' error convention.
     """
     try:
         return schema_cls(**kwargs)
     except ValidationError as exc:
         messages = [f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in exc.errors()]
-        raise ValueError("; ".join(messages)) from exc
+        raise MCPToolError("; ".join(messages)) from exc
 
 
-def as_value_error(exc: HTTPException | ServiceError) -> ValueError:
-    """Convert a reused router helper's error into a ``ValueError``.
+def as_value_error(exc: HTTPException | ServiceError) -> MCPToolError:
+    """Convert a reused router helper's error into an ``MCPToolError``.
 
     Several REST routers factor validation (existence checks, business rules) into
     private helpers that raise ``HTTPException`` for FastAPI's benefit; shared
     ``app.services.*_service`` operations raise ``ServiceError`` instead so both
     the REST and MCP adapters can translate the same exception. Admin MCP tools
     reuse those helpers/services rather than duplicating the logic, then convert
-    here so every error an MCP caller sees is a plain ``ValueError``.
+    here so every error an MCP caller sees is an ``MCPToolError``.
     """
     detail = exc.detail if isinstance(exc, HTTPException) else exc.message
-    return ValueError(detail)
+    return MCPToolError(detail)
 
 
 async def get_active_edition_obj(db: Any, edition_type: str | None = "festival") -> Edition | None:

@@ -11,6 +11,7 @@ from typing import Any
 
 from sqlalchemy import select
 
+from app.mcp.utils import MCPToolError
 from app.models import AuditEntry
 
 DEFAULT_AUDIT_LIMIT = 100
@@ -56,7 +57,7 @@ async def list_audit_entries(
     many matching rows.
     """
     if offset < 0:
-        raise ValueError("offset must not be negative.")
+        raise MCPToolError("offset must not be negative.")
     effective_limit = DEFAULT_AUDIT_LIMIT if limit is None else max(1, min(limit, MAX_AUDIT_LIMIT))
     async with session_factory() as db:
         stmt = select(AuditEntry)
@@ -81,7 +82,7 @@ async def list_audit_entries(
         if before_id is not None:
             cursor = await db.get(AuditEntry, before_id)
             if cursor is None:
-                raise ValueError("audit cursor does not exist")
+                raise MCPToolError("audit cursor does not exist")
             stmt = stmt.where(
                 (AuditEntry.timestamp < cursor.timestamp)
                 | ((AuditEntry.timestamp == cursor.timestamp) & (AuditEntry.id < cursor.id))

@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import date as dt_date
 from typing import Any
 
-from app.mcp.utils import validate_with_schema
+from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import LayoutCopyCreate, LayoutCreate
 from app.services import layouts_service
 from app.services.errors import ServiceError
@@ -39,7 +39,7 @@ async def create_layout(
         try:
             return await layouts_service.create_layout(db, actor=actor, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def copy_layout(
@@ -69,7 +69,7 @@ async def copy_layout(
         try:
             return await layouts_service.copy_layout(db, actor=actor, source_layout_id=source_layout_id, body=body)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def list_layouts(session_factory: Any) -> dict:
@@ -82,7 +82,7 @@ async def get_layout(session_factory: Any, layout_id: str) -> dict:
         try:
             return await layouts_service.get_layout(db, layout_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc
 
 
 async def delete_layout(session_factory: Any, actor: str, layout_id: str) -> dict:
@@ -90,4 +90,4 @@ async def delete_layout(session_factory: Any, actor: str, layout_id: str) -> dic
         try:
             return await layouts_service.delete_layout(db, actor=actor, layout_id=layout_id)
         except ServiceError as exc:
-            raise ValueError(str(exc)) from exc
+            raise MCPToolError(str(exc)) from exc

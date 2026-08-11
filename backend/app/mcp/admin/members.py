@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.mcp.utils import as_value_error, validate_with_schema
+from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
 from app.models import Person, Registration
 from app.routers.members import _ensure_member_role, _get_member_or_404
 from app.routers.members import _ensure_unique_fields as _member_ensure_unique_fields
@@ -101,7 +101,7 @@ async def create_member(
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError(
+            raise MCPToolError(
                 "Person with this national register number or eID document number already exists."
             ) from exc
         await db.refresh(person)
@@ -239,7 +239,7 @@ async def update_member(
             await db.commit()
         except IntegrityError as exc:
             await db.rollback()
-            raise ValueError(
+            raise MCPToolError(
                 "Person with this national register number or eID document number already exists."
             ) from exc
         await db.refresh(person)

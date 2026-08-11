@@ -5,7 +5,9 @@ from __future__ import annotations
 import pytest
 
 from app.mcp.admin import events as mcp_events
-from app.models import Edition, Venue
+from app.mcp.admin import people as mcp_people
+from app.mcp.utils import MCPToolError
+from app.models import Edition, Registration, Venue
 from tests.helpers import mcp_session_factory
 
 
@@ -106,6 +108,56 @@ async def test_delete_event(db_session):
 
     with pytest.raises(ValueError, match="not found"):
         await mcp_events.get_event(factory, created["id"])
+
+
+async def test_delete_event_rejects_when_registrations_exist(db_session):
+    """A blocking registration must produce a clean conflict message, not a raw DB error.
+
+    Regression test: without a pre-check, ``db.delete(event)`` reached the database and
+    raised a raw ``NotNullViolationError`` (the ORM has no cascade for `event.registrations`,
+    so it tried to null out the non-nullable `registrations.event_id`), which surfaced driver
+    internals, SQL, and the full registration row (including its check-in token) to the caller.
+    """
+    factory = mcp_session_factory(db_session)
+    edition_id = await _create_edition(db_session)
+    created = await mcp_events.create_event(
+        factory,
+        "admin-1",
+        edition_id=edition_id,
+        title="Friday Tasting",
+        date="2099-03-21",
+        start_time="18:00",
+        category="festival",
+    )
+    person = await mcp_people.create_person(factory, "admin-1", name="Alice")
+    db_session.add(
+        Registration(
+            id="reg-1",
+            event_id=created["id"],
+            person_id=person["id"],
+            guest_count=1,
+            check_in_token="super-secret-token",
+        )
+    )
+    await db_session.commit()
+
+    with pytest.raises(ValueError) as exc_info:
+        await mcp_events.delete_event(factory, "admin-1", created["id"])
+
+    # Must be the FastMCP-aware error type, not a plain ValueError — that's what
+    # lets the sanitized message reach the caller unmodified instead of being
+    # wrapped/masked by FastMCP's generic exception handling (see MCPToolError).
+    assert isinstance(exc_info.value, MCPToolError)
+    message = str(exc_info.value)
+    assert "1 registration" in message
+    assert "super-secret-token" not in message
+    assert "IntegrityError" not in message
+    assert "NotNullViolation" not in message
+
+    # the event and its registration must both survive the rejected delete
+    assert await db_session.get(Registration, "reg-1") is not None
+    fetched = await mcp_events.get_event(factory, created["id"])
+    assert fetched["id"] == created["id"]
 
 
 async def test_standalone_edition_rejects_a_second_date(db_session):

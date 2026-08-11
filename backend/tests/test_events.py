@@ -27,6 +27,32 @@ async def _register(client, event, *, guest_count, person_name):
 
 
 @pytest.mark.anyio
+async def test_delete_event_rejects_when_registrations_exist(client):
+    """A blocking registration must produce a clean 409, not a raw DB error.
+
+    Regression test: without a pre-check, the delete reached the database and raised a
+    raw ``NotNullViolationError`` (the ORM has no cascade for `event.registrations`, so it
+    tried to null out the non-nullable `registrations.event_id`), which surfaced driver
+    internals, SQL, and the full registration row (including its check-in token) to the caller.
+    """
+    event = await _create_event(client)
+    await _register(client, event, guest_count=1, person_name="Alice")
+
+    response = await client.delete(f"/api/events/{event['id']}", headers=ADMIN_HEADERS)
+
+    assert response.status_code == 409
+    body = response.json()
+    assert "1 registration" in body["detail"]
+    assert "IntegrityError" not in response.text
+    assert "NotNullViolation" not in response.text
+    assert "check_in_token" not in response.text
+
+    # the event must survive the rejected delete
+    get_response = await client.get(f"/api/events/{event['id']}", headers=ADMIN_HEADERS)
+    assert get_response.status_code == 200
+
+
+@pytest.mark.anyio
 async def test_checkin_stats_counts_guests_not_bookings(client):
     """total/checked_in are guest headcounts (sum of guest_count), matching the
     admin's own capacity panel — not a count of bookings."""
