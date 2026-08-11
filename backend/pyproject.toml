@@ -61,3 +61,14 @@ known-first-party = ["app"]
 [tool.ty.rules]
 unresolved-attribute = "warn"
 
+[tool.uv]
+# fastmcp is intentionally pinned to a prerelease (still pre-1.0 during its
+# v4 beta cycle) and requires an exact matching prerelease of fastmcp-slim,
+# a transitive dependency uv doesn't treat as "explicitly" prerelease the
+# same way. That inconsistency breaks specifically in the
+# `python_full_version >= '3.14'` resolution fork (this project's actual
+# Docker runtime — see backend/Dockerfile) whenever fastmcp itself moves to
+# a newer prerelease, which is exactly the update Dependabot needs to
+# propose. Allowing prereleases project-wide removes that inconsistency
+# instead of trying to dodge the one fork that hits it.
+prerelease = "allow"
