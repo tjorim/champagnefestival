@@ -238,8 +238,7 @@ async def _reject_if_registrations_exist(db: AsyncSession, event_id: str) -> Non
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                f"Cannot delete event: {count} registration(s) are still linked to it. "
-                "Delete or reassign them first."
+                f"Cannot delete event: {count} registration(s) are still linked to it. Delete or reassign them first."
             ),
         )
 
