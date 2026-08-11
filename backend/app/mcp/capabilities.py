@@ -39,6 +39,14 @@ VOLUNTEER_TOOL_NAMES: frozenset[str] = frozenset(
 
 _READ_PREFIXES = ("find_", "get_", "list_", "resolve_")
 _NON_DESTRUCTIVE_WRITE_PREFIXES = ("copy_", "create_")
+_INTERACTIVE_ADMIN_TOOLS = frozenset(
+    {
+        "create_integration_client",
+        "list_integration_clients",
+        "rotate_integration_client",
+        "revoke_integration_client",
+    }
+)
 
 
 def _keycloak_roles(claims: dict[str, object]) -> list[str]:
@@ -63,6 +71,19 @@ def _require_volunteer_or_admin(ctx: AuthContext) -> bool:
     return bool({ROLE_VOLUNTEER, ROLE_ADMIN} & roles)
 
 
+def _require_interactive_admin(ctx: AuthContext) -> bool:
+    """Allow human admins, but not managed keys or Keycloak service accounts."""
+    if ctx.token is None:
+        return False
+    claims = ctx.token.claims
+    if claims.get("auth_source") == "integration":
+        return False
+    username = claims.get("preferred_username")
+    if isinstance(username, str) and username.startswith("service-account-"):
+        return False
+    return ROLE_ADMIN in _keycloak_roles(claims)
+
+
 def tool_required_role(tool_name: str) -> str:
     """Return a tool's minimum role, defaulting unknown tools to admin."""
     if tool_name in PUBLIC_TOOL_NAMES:
@@ -84,6 +105,8 @@ def tool_auth(tool_name: str) -> AuthCheck | None:
         return None
     if required_role == ROLE_VOLUNTEER:
         return _require_volunteer_or_admin
+    if tool_name in _INTERACTIVE_ADMIN_TOOLS:
+        return _require_interactive_admin
     return _require_admin
 
 

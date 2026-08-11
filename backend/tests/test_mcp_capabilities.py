@@ -162,6 +162,41 @@ async def test_registered_tools_enforce_role_aware_component_authorization():
 
 
 @pytest.mark.anyio
+async def test_integration_client_management_requires_interactive_admin():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    tools = {tool.name: tool for tool in await mcp.local_provider.list_tools()}
+
+    def context(tool_name: str, **claims: object) -> AuthContext:
+        return AuthContext(
+            token=AccessToken(
+                token="test-token",
+                client_id="test-client",
+                scopes=[],
+                claims={"realm_access": {"roles": [ROLE_ADMIN]}, **claims},
+            ),
+            component=tools[tool_name],
+        )
+
+    for tool_name in (
+        "create_integration_client",
+        "list_integration_clients",
+        "rotate_integration_client",
+        "revoke_integration_client",
+    ):
+        auth = tools[tool_name].auth
+        assert auth is not None
+        assert await run_auth_checks(auth, context(tool_name))
+        assert not await run_auth_checks(auth, context(tool_name, auth_source="integration"))
+        assert not await run_auth_checks(
+            auth,
+            context(
+                tool_name,
+                preferred_username="service-account-champagnefestival-mcp",
+            ),
+        )
+
+
+@pytest.mark.anyio
 async def test_component_auth_hides_non_public_tools_without_role_claims():
     mcp = create_mcp_server(session_factory=MagicMock())
 
