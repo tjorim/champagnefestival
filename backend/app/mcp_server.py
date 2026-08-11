@@ -89,6 +89,7 @@ def _role_aware_search_serializer(
         {
             "name": tool.name,
             "description": tool.description or "",
+            "input_schema": tool.parameters,
             "required_role": tool_required_role(tool.name),
             "effect": tool_effect(tool.name),
         }

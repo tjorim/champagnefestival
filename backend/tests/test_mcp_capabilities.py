@@ -81,6 +81,7 @@ async def test_capabilities_manifest_spot_checks_known_tiers():
     assert role_by_name["get_active_edition"] == ROLE_PUBLIC
     assert role_by_name["find_guest"] == ROLE_VOLUNTEER
     assert role_by_name["get_check_in_summary"] == ROLE_VOLUNTEER
+    assert role_by_name["guest_search_app"] == ROLE_VOLUNTEER
     assert role_by_name["create_venue"] == ROLE_ADMIN
     assert role_by_name["create_integration_client"] == ROLE_ADMIN
 
@@ -159,6 +160,12 @@ async def test_registered_tools_enforce_role_aware_component_authorization():
     assert await run_auth_checks(admin_auth, context("create_venue", [ROLE_ADMIN]))
     assert not await run_auth_checks(admin_auth, context("create_venue", [ROLE_VOLUNTEER]))
     assert not await run_auth_checks(admin_auth, context("create_venue", []))
+
+    guest_search_auth = tools["guest_search_app"].auth
+    assert guest_search_auth is not None
+    assert await run_auth_checks(guest_search_auth, context("guest_search_app", [ROLE_VOLUNTEER]))
+    assert await run_auth_checks(guest_search_auth, context("guest_search_app", [ROLE_ADMIN]))
+    assert not await run_auth_checks(guest_search_auth, context("guest_search_app", []))
 
 
 @pytest.mark.anyio

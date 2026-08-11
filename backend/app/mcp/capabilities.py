@@ -34,6 +34,7 @@ VOLUNTEER_TOOL_NAMES: frozenset[str] = frozenset(
         "get_champagne_delivery_summary",
         "get_undelivered_champagne_by_table",
         "get_check_in_summary",
+        "guest_search_app",
     }
 )
 
