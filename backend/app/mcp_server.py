@@ -75,7 +75,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _role_aware_search_serializer(
+def _search_serializer(
     tools: Sequence[Tool],
 ) -> list[dict[str, Any]]:
     """Custom serializer for BM25SearchTransform that adds role metadata.
@@ -1607,7 +1607,7 @@ def create_mcp_server(
                 always_visible=["whoami"],
                 search_tool_name="search_tools",
                 call_tool_name="call_tool",
-                search_result_serializer=_role_aware_search_serializer,
+                search_result_serializer=_search_serializer,
             )
         ],
     )
