@@ -24,12 +24,15 @@ Auth tiers (sourced from bearer JWT ``realm_access.roles``):
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from datetime import date as dt_date
 from datetime import datetime
 from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
+from fastmcp.server.transforms.search import BM25SearchTransform
+from fastmcp.tools.base import Tool
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp import check_in as mcp_check_in
@@ -70,6 +73,28 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Backend wrapper
 # ---------------------------------------------------------------------------
+
+
+def _search_serializer(
+    tools: Sequence[Tool],
+) -> list[dict[str, Any]]:
+    """Custom serializer for BM25SearchTransform that adds role metadata.
+
+    Adds required_role and effect to each tool in search results so clients
+    can see authorization requirements without calling each tool.
+    """
+    from app.mcp.capabilities import tool_effect, tool_required_role
+
+    return [
+        {
+            "name": tool.name,
+            "description": tool.description or "",
+            "input_schema": tool.parameters,
+            "required_role": tool_required_role(tool.name),
+            "effect": tool_effect(tool.name),
+        }
+        for tool in tools
+    ]
 
 
 class ChampagneFestivalMcpBackend:
@@ -1571,10 +1596,20 @@ def create_mcp_server(
             "'volunteer' or 'admin' role. Admins additionally get full write/management "
             "parity with the admin REST API: editions, events, venues, rooms, table types, "
             "tables, layouts, areas, FAQ, settings, exhibitors, people, members, volunteers, "
-            "registrations, and the audit trail."
+            "registrations, and the audit trail. Use search_tools for natural language "
+            "tool discovery."
         ),
         auth=auth,
         version=APP_VERSION,
+        transforms=[
+            BM25SearchTransform(
+                max_results=10,
+                always_visible=["whoami"],
+                search_tool_name="search_tools",
+                call_tool_name="call_tool",
+                search_result_serializer=_search_serializer,
+            )
+        ],
     )
 
     def register_tool(fn: Any) -> None:

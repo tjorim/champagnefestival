@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     oidc_audience: str = ""
     """Expected audience claim in the JWT. Optional."""
 
+    mcp_interactive_client_ids: str = "champagnefestival,champagnefestival-android"
+    """Comma-separated OIDC client IDs allowed to manage MCP credentials."""
+
     oidc_jwks_uri: str = ""
     """JWKS endpoint override. Discovered from OIDC metadata when empty."""
 

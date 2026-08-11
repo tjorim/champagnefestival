@@ -162,12 +162,65 @@ async def test_registered_tools_enforce_role_aware_component_authorization():
 
 
 @pytest.mark.anyio
+async def test_integration_client_management_requires_interactive_admin():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    tools = {tool.name: tool for tool in await mcp.local_provider.list_tools()}
+
+    def context(tool_name: str, **claims: object) -> AuthContext:
+        return AuthContext(
+            token=AccessToken(
+                token="test-token",
+                client_id="test-client",
+                scopes=[],
+                claims={
+                    "azp": "champagnefestival",
+                    "realm_access": {"roles": [ROLE_ADMIN]},
+                    **claims,
+                },
+            ),
+            component=tools[tool_name],
+        )
+
+    for tool_name in (
+        "create_integration_client",
+        "list_integration_clients",
+        "rotate_integration_client",
+        "revoke_integration_client",
+    ):
+        auth = tools[tool_name].auth
+        assert auth is not None
+        assert await run_auth_checks(auth, context(tool_name))
+        assert not await run_auth_checks(auth, context(tool_name, auth_source="integration"))
+        assert not await run_auth_checks(
+            auth,
+            context(
+                tool_name,
+                azp="champagnefestival-mcp",
+                preferred_username="service-account-champagnefestival-mcp",
+            ),
+        )
+        assert not await run_auth_checks(
+            auth,
+            context(
+                tool_name,
+                preferred_username="service-account-champagnefestival",
+            ),
+        )
+        assert not await run_auth_checks(
+            auth,
+            context(tool_name, azp="champagnefestival-mcp"),
+        )
+
+
+@pytest.mark.anyio
 async def test_component_auth_hides_non_public_tools_without_role_claims():
     mcp = create_mcp_server(session_factory=MagicMock())
 
     visible = {tool.name for tool in await mcp.list_tools()}
 
-    assert visible == PUBLIC_TOOL_NAMES
+    # With BM25SearchTransform, only always_visible tools that pass auth plus synthetic tools are listed.
+    # Only whoami plus the synthetic discovery tools remain initially visible.
+    assert visible == {"whoami", "search_tools", "call_tool"}
 
 
 def test_unknown_tools_default_to_admin_component_authorization():

@@ -656,101 +656,36 @@ class TestCreateMcpServer:
     async def test_create_mcp_server_registers_expected_tools(self):
         factory = MagicMock()
         mcp = create_mcp_server(session_factory=factory)
-        # Inspect the complete local registry. FastMCP list_tools() applies the
-        # current caller's component authorization and intentionally returns
-        # only public tools when this test has no authenticated role context.
-        tools = await mcp.local_provider.list_tools()
+        # With BM25SearchTransform, the server-level list_tools() returns only
+        # always_visible tools that pass auth plus the synthetic search/call tools.
+        # local_provider.list_tools() returns the full catalog without transforms.
+        tools = await mcp.list_tools()
         tool_names = {tool.name for tool in tools}
+
+        # With BM25SearchTransform, tools are hidden behind
+        # search_tools and call_tool. Only always_visible tools that pass the
+        # current auth context are directly listed.
         expected = {
             "whoami",
-            "get_active_edition",
-            "list_editions",
-            "get_event_schedule",
-            "get_venue_plan_summary",
-            "find_guest",
-            "get_guest_registration",
-            "get_table_seating",
-            "resolve_table_reference",
-            "get_table_order_summary",
-            "get_guest_order_status",
-            "get_champagne_delivery_summary",
-            "get_undelivered_champagne_by_table",
-            "get_check_in_summary",
-            "create_venue",
-            "list_venues",
-            "get_venue",
-            "update_venue",
-            "delete_venue",
-            "create_room",
-            "list_rooms",
-            "get_room",
-            "update_room",
-            "delete_room",
-            "create_table_type",
-            "list_table_types",
-            "get_table_type",
-            "update_table_type",
-            "delete_table_type",
-            "create_table",
-            "list_tables",
-            "get_table",
-            "update_table",
-            "delete_table",
-            "create_layout",
-            "copy_layout",
-            "list_layouts",
-            "get_layout",
-            "delete_layout",
-            "create_area",
-            "list_areas",
-            "get_area",
-            "update_area",
-            "delete_area",
-            "create_edition",
-            "get_edition",
-            "update_edition",
-            "delete_edition",
-            "create_event",
-            "get_event",
-            "update_event",
-            "delete_event",
-            "create_faq_item",
-            "list_faq_items",
-            "update_faq_item",
-            "delete_faq_item",
-            "get_settings",
-            "set_maintenance_mode",
-            "create_exhibitor",
-            "get_exhibitor",
-            "list_exhibitors",
-            "update_exhibitor",
-            "delete_exhibitor",
-            "create_person",
-            "get_person",
-            "update_person",
-            "delete_person",
-            "merge_people",
-            "create_member",
-            "get_member",
-            "list_members",
-            "update_member",
-            "delete_member",
-            "create_volunteer",
-            "get_volunteer",
-            "list_volunteers",
-            "update_volunteer",
-            "delete_volunteer",
-            "create_registration",
-            "update_registration",
-            "delete_registration",
-            "list_audit_entries",
-            "list_audit_resource_types",
-            "create_integration_client",
-            "list_integration_clients",
-            "revoke_integration_client",
-            "rotate_integration_client",
+            "search_tools",
+            "call_tool",
         }
         assert expected == tool_names
+
+        registered = {tool.name for tool in await mcp.local_provider.list_tools()}
+        assert "find_guest" in registered
+        assert "create_venue" in registered
+        assert "guest_search_app" not in registered
+
+    @pytest.mark.anyio
+    async def test_search_tools_finds_public_schedule_without_role_claims(self):
+        mcp = create_mcp_server(session_factory=MagicMock())
+        result = await mcp.call_tool("search_tools", {"query": "festival event schedule"})
+
+        assert result.structured_content is not None
+        names = [item["name"] for item in result.structured_content["result"]]
+        assert "get_event_schedule" in names
+        assert "find_guest" not in names
 
 
 # ---------------------------------------------------------------------------
