@@ -79,6 +79,9 @@ def _require_interactive_admin(ctx: AuthContext) -> bool:
     claims = ctx.token.claims
     if claims.get("auth_source") == "integration":
         return False
+    username = claims.get("preferred_username")
+    if isinstance(username, str) and username.startswith("service-account-"):
+        return False
     authorized_party = claims.get("azp")
     interactive_client_ids = {
         client_id.strip() for client_id in settings.mcp_interactive_client_ids.split(",") if client_id.strip()

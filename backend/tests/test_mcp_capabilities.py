@@ -201,6 +201,13 @@ async def test_integration_client_management_requires_interactive_admin():
         )
         assert not await run_auth_checks(
             auth,
+            context(
+                tool_name,
+                preferred_username="service-account-champagnefestival",
+            ),
+        )
+        assert not await run_auth_checks(
+            auth,
             context(tool_name, azp="champagnefestival-mcp"),
         )
 
