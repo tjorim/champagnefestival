@@ -343,7 +343,13 @@ function App() {
   }, [edition.events]);
 
   if (isMaintenanceMode) {
-    return <MaintenancePage />;
+    return (
+      <>
+        <MaintenancePage />
+        {/* Preview-only switcher between the classic and refreshed visual designs */}
+        <ThemeSwitcher variant={variant} onChange={setVariant} />
+      </>
+    );
   }
 
   // --- Main marketing page ---
