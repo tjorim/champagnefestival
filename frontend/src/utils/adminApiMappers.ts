@@ -101,6 +101,7 @@ export function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
   return {
     id: d.id as string,
     name: d.name as string,
+    venueId: d.venue_id as string,
     shape: (d.shape ?? "rectangle") as "rectangle" | "round",
     widthM: (d.width_m ?? 1.8) as number,
     lengthM: (d.length_m ?? 0.7) as number,

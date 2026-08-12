@@ -336,6 +336,7 @@
   "admin_table_type_max_capacity": "Capacité maximale",
   "admin_table_type_select": "Choisir un type de table",
   "admin_table_type_name_required": "Le nom est obligatoire",
+  "admin_table_type_venue_required": "Le lieu est obligatoire",
   "admin_table_type_capacity_min": "La capacité maximale doit être un nombre entier supérieur ou égal à 1",
   "admin_table_type_dimensions_positive": "La largeur et la longueur doivent être des nombres positifs",
   "admin_table_type_delete_confirm": "Supprimer définitivement ce type de table ? Cette action est irréversible.",

@@ -354,11 +354,13 @@ describe("apiTableTypeToTableType", () => {
   const minimal = {
     id: "tt1",
     name: "Standard",
+    venue_id: "venue-1",
   };
 
   const full = {
     id: "tt2",
     name: "Round VIP",
+    venue_id: "venue-1",
     shape: "round",
     width_m: 1.2,
     length_m: 1.2,
@@ -371,6 +373,7 @@ describe("apiTableTypeToTableType", () => {
     expect(apiTableTypeToTableType(full)).toEqual<TableType>({
       id: "tt2",
       name: "Round VIP",
+      venueId: "venue-1",
       shape: "round",
       widthM: 1.2,
       lengthM: 1.2,

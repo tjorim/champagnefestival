@@ -38,6 +38,7 @@ function makeTableType(overrides: Partial<TableType> = {}): TableType {
   return {
     id: "tt-1",
     name: "Round 8",
+    venueId: "venue-1",
     shape: "round",
     widthM: 1.5,
     lengthM: 1.5,

@@ -15,11 +15,12 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
-import type { TableType } from "@/types/admin";
+import type { TableType, Venue } from "@/types/admin";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface TableTypeManagementProps {
   tableTypes: TableType[];
+  venues: Venue[];
   onAdd: (data: Omit<TableType, "id">) => Promise<void>;
   onUpdate: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
   onArchive: (id: string) => Promise<void>;
@@ -27,11 +28,13 @@ interface TableTypeManagementProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-// widthM/lengthM start blank — a table type's real dimensions have no
-// defensible generic default (see #833/#835/#858), so the admin must enter
-// them deliberately rather than accidentally saving a made-up size.
+// venueId starts blank and widthM/lengthM start blank — a table type belongs to
+// exactly one venue (like a room, see #858) and its real dimensions have no
+// defensible generic default (see #833/#835), so the admin must set both
+// deliberately rather than accidentally saving an unintended value.
 const emptyForm: {
   name: string;
+  venueId: string;
   shape: "rectangle" | "round";
   widthM: number | "";
   lengthM: number | "";
@@ -40,6 +43,7 @@ const emptyForm: {
   active: boolean;
 } = {
   name: "",
+  venueId: "",
   shape: "rectangle",
   widthM: "",
   lengthM: "",
@@ -52,6 +56,7 @@ const columnHelper = createAppColumnHelper<TableType>();
 
 export default function TableTypeManagement({
   tableTypes,
+  venues,
   onAdd,
   onUpdate,
   onArchive,
@@ -76,6 +81,7 @@ export default function TableTypeManagement({
     setEditingId(tt.id);
     setForm({
       name: tt.name,
+      venueId: tt.venueId,
       shape: tt.shape,
       widthM: tt.widthM,
       lengthM: tt.lengthM,
@@ -92,6 +98,10 @@ export default function TableTypeManagement({
     // button looking broken.
     if (!form.name.trim()) {
       setError(m.admin_table_type_name_required());
+      return;
+    }
+    if (!form.venueId) {
+      setError(m.admin_table_type_venue_required());
       return;
     }
     if (form.maxCapacity < 1 || !Number.isInteger(form.maxCapacity)) {
@@ -182,6 +192,11 @@ export default function TableTypeManagement({
               )}
             </>
           ),
+        }),
+        columnHelper.accessor("venueId", {
+          header: m.admin_room_venue_label(),
+          enableSorting: false,
+          cell: ({ getValue }) => venues.find((v) => v.id === getValue())?.name ?? "—",
         }),
         columnHelper.accessor("shape", {
           header: m.admin_table_shape_label(),
@@ -283,7 +298,7 @@ export default function TableTypeManagement({
           },
         }),
       ]),
-    [openEdit, handleArchive, handleRestore, handleDelete],
+    [openEdit, handleArchive, handleRestore, handleDelete, venues],
   );
 
   const table = useAppTable(
@@ -370,6 +385,23 @@ export default function TableTypeManagement({
               className="bg-dark text-light border-secondary"
               placeholder={m.admin_table_type_name_placeholder()}
             />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="tt-venue">
+            <Form.Label>{m.admin_room_venue_label()}</Form.Label>
+            <Form.Select
+              value={form.venueId}
+              onChange={(e) => setForm((p) => ({ ...p, venueId: e.target.value }))}
+              className="bg-dark text-light border-secondary"
+            >
+              <option value="">— {m.admin_room_venue_label()} —</option>
+              {venues
+                .filter((v) => v.active || v.id === form.venueId)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+            </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3" controlId="tt-shape">
             <Form.Label>{m.admin_table_shape_label()}</Form.Label>
@@ -493,6 +525,7 @@ export default function TableTypeManagement({
             disabled={
               saving ||
               !form.name.trim() ||
+              !form.venueId ||
               form.maxCapacity < 1 ||
               !Number.isInteger(form.maxCapacity) ||
               typeof form.widthM !== "number" ||

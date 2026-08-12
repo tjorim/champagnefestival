@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import Table, TableType
+from app.models import Table, TableType, Venue
 from app.schemas import TableTypeCreate, TableTypeUpdate
 from app.services.errors import ConflictError, NotFoundError
 from app.utils import make_id, table_type_to_dict
@@ -21,6 +21,10 @@ from app.utils import make_id, table_type_to_dict
 async def create_table_type(
     db: AsyncSession, *, actor: str, body: TableTypeCreate, request_id: str | None = None
 ) -> dict:
+    venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
+    if venue.scalar_one_or_none() is None:
+        raise NotFoundError(f"Venue '{body.venue_id}' not found.")
+
     # TableTypeCreate.normalise_dimensions (a model_validator) forces
     # length_m == width_m for round tables and swaps them if length_m <
     # width_m for rectangular ones — it already ran on `body` at the REST/MCP
@@ -28,6 +32,7 @@ async def create_table_type(
     tt = TableType(
         id=make_id("ttype"),
         name=body.name,
+        venue_id=body.venue_id,
         shape=body.shape,
         width_m=body.width_m,
         length_m=body.length_m,
@@ -43,7 +48,7 @@ async def create_table_type(
         resource_type="table_type",
         resource_id=tt.id,
         request_id=request_id,
-        details={"name": tt.name, "shape": tt.shape},
+        details={"name": tt.name, "shape": tt.shape, "venue_id": tt.venue_id},
     )
     await db.commit()
     await db.refresh(tt)
@@ -76,6 +81,12 @@ async def update_table_type(
     if body.name is not None:
         tt.name = body.name
         fields_changed.append("name")
+    if body.venue_id is not None:
+        venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
+        if venue.scalar_one_or_none() is None:
+            raise NotFoundError(f"Venue '{body.venue_id}' not found.")
+        tt.venue_id = body.venue_id
+        fields_changed.append("venue_id")
     if body.shape is not None:
         tt.shape = body.shape
         fields_changed.append("shape")

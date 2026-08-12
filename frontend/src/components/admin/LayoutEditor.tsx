@@ -1083,7 +1083,11 @@ export default function LayoutEditor({
                 key={`type-${selectedTableData.id}`}
               >
                 {tableTypes
-                  .filter((tt) => tt.active || tt.id === selectedTableData.tableTypeId)
+                  .filter(
+                    (tt) =>
+                      (tt.venueId === activeRoom?.venueId || tt.id === selectedTableData.tableTypeId) &&
+                      (tt.active || tt.id === selectedTableData.tableTypeId),
+                  )
                   .map((tt) => (
                     <option key={tt.id} value={tt.id} disabled={!tt.active}>
                       {tt.name}
@@ -1618,16 +1622,18 @@ export default function LayoutEditor({
               className="bg-dark text-light border-secondary"
             >
               <option value="">— {m.admin_table_type_select()} —</option>
-              {tableTypes.map((tt) => (
-                <option key={tt.id} value={tt.id}>
-                  {tt.name} (
-                  {tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`},{" "}
-                  {tt.heightType === "high"
-                    ? m.admin_table_height_type_high()
-                    : m.admin_table_height_type_low()}
-                  , {m.admin_layout_capacity_max()} {tt.maxCapacity})
-                </option>
-              ))}
+              {tableTypes
+                .filter((tt) => tt.venueId === activeRoom?.venueId)
+                .map((tt) => (
+                  <option key={tt.id} value={tt.id}>
+                    {tt.name} (
+                    {tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`},{" "}
+                    {tt.heightType === "high"
+                      ? m.admin_table_height_type_high()
+                      : m.admin_table_height_type_low()}
+                    , {m.admin_layout_capacity_max()} {tt.maxCapacity})
+                  </option>
+                ))}
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3" controlId="table-capacity">

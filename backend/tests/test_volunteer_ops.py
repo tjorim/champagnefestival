@@ -20,7 +20,9 @@ async def _create_table(client, *, name: str) -> str:
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     table_type_id = r.json()["id"]
     r = await client.post(
         "/api/tables",

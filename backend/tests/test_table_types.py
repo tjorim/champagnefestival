@@ -4,15 +4,26 @@ from __future__ import annotations
 
 import pytest
 
-from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VENUE_PAYLOAD
+from tests.helpers import (
+    ADMIN_HEADERS,
+    ROOM_PAYLOAD,
+    TABLE_TYPE_PAYLOAD,
+    _create_venue,
+)
 
 
 @pytest.mark.anyio
 async def test_table_type_crud(client):
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    # Table type requires a venue
+    venue_id = await _create_venue(client)
+
+    r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     assert r.status_code == 201
     table_type = r.json()
     assert table_type["name"] == "Standard"
+    assert table_type["venue_id"] == venue_id
     type_id = table_type["id"]
 
     r = await client.get("/api/table-types", headers=ADMIN_HEADERS)
@@ -54,10 +65,58 @@ async def test_table_type_update_not_found(client):
 
 
 @pytest.mark.anyio
-async def test_table_type_round_shape_uses_larger_dimension_as_diameter(client):
+async def test_table_type_create_rejects_unknown_venue(client):
     r = await client.post(
         "/api/table-types",
-        json={"name": "Round", "shape": "round", "width_m": 1.5, "length_m": 3.0, "max_capacity": 8},
+        json={**TABLE_TYPE_PAYLOAD, "venue_id": "venue-missing"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_table_type_venue_reassignment(client):
+    venue_a = await _create_venue(client)
+    r = await client.post("/api/venues", json={"name": "Other Venue"}, headers=ADMIN_HEADERS)
+    venue_b = r.json()["id"]
+
+    r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS
+    )
+    type_id = r.json()["id"]
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"venue_id": venue_b}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["venue_id"] == venue_b
+
+
+@pytest.mark.anyio
+async def test_table_type_venue_reassignment_rejects_unknown_venue(client):
+    venue_id = await _create_venue(client)
+    r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    type_id = r.json()["id"]
+
+    r = await client.put(
+        f"/api/table-types/{type_id}", json={"venue_id": "venue-missing"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_table_type_round_shape_uses_larger_dimension_as_diameter(client):
+    venue_id = await _create_venue(client)
+    r = await client.post(
+        "/api/table-types",
+        json={
+            "name": "Round",
+            "venue_id": venue_id,
+            "shape": "round",
+            "width_m": 1.5,
+            "length_m": 3.0,
+            "max_capacity": 8,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -66,11 +125,12 @@ async def test_table_type_round_shape_uses_larger_dimension_as_diameter(client):
 
 @pytest.mark.anyio
 async def test_table_type_delete_blocked_while_table_in_use(client):
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     type_id = r.json()["id"]
 
-    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
-    venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)

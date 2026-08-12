@@ -588,6 +588,7 @@ export function useVenueMutations({
           headers: authHeaders(),
           body: JSON.stringify({
             name: data.name,
+            venue_id: data.venueId,
             shape: data.shape,
             width_m: data.widthM,
             length_m: data.lengthM,
@@ -612,6 +613,7 @@ export function useVenueMutations({
           headers: authHeaders(),
           body: JSON.stringify({
             ...(data.name !== undefined && { name: data.name }),
+            ...(data.venueId !== undefined && { venue_id: data.venueId }),
             ...(data.shape !== undefined && { shape: data.shape }),
             ...(data.widthM !== undefined && { width_m: data.widthM }),
             ...(data.lengthM !== undefined && { length_m: data.lengthM }),

@@ -336,6 +336,7 @@
   "admin_table_type_max_capacity": "Max capacity",
   "admin_table_type_select": "Select table type",
   "admin_table_type_name_required": "Name is required",
+  "admin_table_type_venue_required": "Venue is required",
   "admin_table_type_capacity_min": "Max capacity must be a whole number of 1 or more",
   "admin_table_type_dimensions_positive": "Width and length must be positive numbers",
   "admin_table_type_delete_confirm": "Permanently delete this table type? This cannot be undone.",

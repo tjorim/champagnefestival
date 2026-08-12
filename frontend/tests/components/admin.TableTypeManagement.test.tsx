@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import TableTypeManagement from "@/components/admin/TableTypeManagement";
-import type { TableType } from "@/types/admin";
+import type { TableType, Venue } from "@/types/admin";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -11,9 +11,28 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
+function makeVenue(overrides: Partial<Venue> = {}): Venue {
+  return {
+    id: "venue-1",
+    name: "Venue One",
+    address: "",
+    city: "",
+    postalCode: "",
+    country: "",
+    lat: 0,
+    lng: 0,
+    active: true,
+    ...overrides,
+  };
+}
+
+const venue1 = makeVenue();
+const venue2 = makeVenue({ id: "venue-2", name: "Venue Two" });
+
 const activeType: TableType = {
   id: "tt-1",
   name: "Standard Rectangle",
+  venueId: "venue-1",
   shape: "rectangle",
   widthM: 0.7,
   lengthM: 1.8,
@@ -25,6 +44,7 @@ const activeType: TableType = {
 const archivedType: TableType = {
   id: "tt-2",
   name: "Retired Round",
+  venueId: "venue-1",
   shape: "round",
   widthM: 0.9,
   lengthM: 0.9,
@@ -35,6 +55,7 @@ const archivedType: TableType = {
 
 interface RenderOverrides {
   tableTypes?: TableType[];
+  venues?: Venue[];
   onAdd?: (data: Omit<TableType, "id">) => Promise<void>;
   onUpdate?: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
   onArchive?: (id: string) => Promise<void>;
@@ -52,6 +73,7 @@ function renderTableTypeManagement(overrides: RenderOverrides = {}) {
   render(
     <TableTypeManagement
       tableTypes={overrides.tableTypes ?? [activeType, archivedType]}
+      venues={overrides.venues ?? [venue1, venue2]}
       onAdd={onAdd}
       onUpdate={onUpdate}
       onArchive={onArchive}
@@ -74,6 +96,7 @@ describe("TableTypeManagement", () => {
 
     const activeRow = screen.getByText("Standard Rectangle").closest("tr") as HTMLElement;
     const activeScope = within(activeRow);
+    expect(activeScope.getByText("Venue One")).toBeInTheDocument();
     expect(activeScope.getByText("admin_table_shape_rectangle")).toBeInTheDocument();
     expect(activeScope.getByText("0.7 m")).toBeInTheDocument();
     expect(activeScope.getByText("1.8 m")).toBeInTheDocument();
@@ -119,12 +142,18 @@ describe("TableTypeManagement", () => {
     expect(saveButton).toBeDisabled();
 
     fireEvent.change(lengthField, { target: { value: "2" } });
+    expect(saveButton).toBeDisabled(); // still no venue chosen
+
+    fireEvent.change(dialogScope.getByLabelText("admin_room_venue_label"), {
+      target: { value: "venue-2" },
+    });
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.click(saveButton);
 
     expect(onAdd).toHaveBeenCalledWith({
       name: "Banquet Rect",
+      venueId: "venue-2",
       shape: "rectangle",
       widthM: 0.8,
       lengthM: 2,
@@ -172,6 +201,7 @@ describe("TableTypeManagement", () => {
 
     expect(onUpdate).toHaveBeenCalledWith("tt-1", {
       name: "Renamed Rectangle",
+      venueId: "venue-1",
       shape: "rectangle",
       widthM: 0.7,
       lengthM: 1.8,

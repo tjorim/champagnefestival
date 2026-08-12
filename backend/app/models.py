@@ -245,12 +245,19 @@ class Layout(Base):
 
 
 class TableType(Base):
-    """Physical template for a table (shape, dimensions, height, max seats)."""
+    """Physical template for a table (shape, dimensions, height, max seats), owned by a venue.
+
+    Scoped like Room (see #858) rather than shared across venues — an organizer's
+    physical tables belong to wherever they're actually stored, not a global catalog.
+    """
 
     __tablename__ = "table_types"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
+    venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
+    """FK to the Venue this table type belongs to."""
+
     shape: Mapped[str] = mapped_column(String(20), default="rectangle")
     """'rectangle' | 'round'"""
     width_m: Mapped[float] = mapped_column(default=0.7)

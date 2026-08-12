@@ -11,6 +11,7 @@ from tests.helpers import (
     TABLE_TYPE_PAYLOAD,
     _create_event,
     _create_layout_prerequisites,
+    _create_venue,
     _post_registration,
 )
 
@@ -157,7 +158,10 @@ async def test_admin_create_registration_writes_audit_entry(client, db_session):
 async def test_table_assignment_writes_audit_entry(client, db_session):
     reg, event = await _create_admin_registration(client)
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     assert tt_r.status_code == 201
     table_r = await client.post(
         "/api/tables",
@@ -217,7 +221,10 @@ async def test_delete_registration_writes_audit_entry(client, db_session):
 @pytest.mark.anyio
 async def test_create_table_writes_audit_entry(client, db_session):
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     assert tt_r.status_code == 201
 
     r = await client.post(
@@ -238,7 +245,10 @@ async def test_create_table_writes_audit_entry(client, db_session):
 @pytest.mark.anyio
 async def test_update_table_writes_audit_entry(client, db_session):
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     table_r = await client.post(
         "/api/tables",
         json={"name": "T1", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
@@ -259,7 +269,10 @@ async def test_update_table_writes_audit_entry(client, db_session):
 @pytest.mark.anyio
 async def test_delete_table_writes_audit_entry(client, db_session):
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     table_r = await client.post(
         "/api/tables",
         json={"name": "T-del", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
@@ -285,7 +298,10 @@ async def test_delete_table_writes_audit_entry(client, db_session):
 async def test_audit_entry_includes_request_id(client, db_session):
     """Every audit entry must carry the X-Request-ID from the middleware."""
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     await client.post(
         "/api/tables",
         json={"name": "T-req", "capacity": 2, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},

@@ -87,7 +87,7 @@ async def test_delete_layout_blocked_while_table_in_use(db_session):
     await _seed_room(db_session)
     created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
     await db_session.flush()
     db_session.add(Table(id="tbl-1", name="T1", capacity=6, table_type_id="ttype-1", layout_id=created["id"]))
     await db_session.commit()
@@ -130,7 +130,7 @@ async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
     await _seed_room(db_session)
     source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
     await db_session.flush()
 
     # Area covering the top-left of the 25m x 18m room.
@@ -204,7 +204,7 @@ async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):
     await _seed_room(db_session)
     source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
     await db_session.flush()
     db_session.add(
         Table(
@@ -241,7 +241,7 @@ async def test_copy_layout_copy_areas_true_without_tables(db_session):
     await _seed_room(db_session)
     source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
     await db_session.flush()
     db_session.add(
         Table(

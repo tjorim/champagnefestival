@@ -45,6 +45,12 @@ ROOM_PAYLOAD = {
 
 TABLE_TYPE_PAYLOAD = {"name": "Standard", "max_capacity": 6, "width_m": 0.7, "length_m": 1.8}
 
+
+async def _create_venue(client) -> str:
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, f"venue creation failed: {r.text}"
+    return r.json()["id"]
+
 VALID_RESERVATION = {
     "name": "Jean Dupont",
     "email": "jean@example.com",

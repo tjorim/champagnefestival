@@ -933,6 +933,7 @@ export const adminHandlers = [
     const newTT = {
       id: uid(),
       name: String(body.name ?? ""),
+      venue_id: String(body.venue_id ?? ""),
       shape: String(body.shape ?? "round"),
       width_m: Number(body.width_m ?? 1),
       length_m: Number(body.length_m ?? 1),

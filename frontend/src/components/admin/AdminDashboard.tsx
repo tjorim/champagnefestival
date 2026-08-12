@@ -580,6 +580,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {canManageAdminSections && activeKey === "table-types" && (
                   <TableTypeManagement
                     tableTypes={tableTypes}
+                    venues={venues}
                     onAdd={handleAddTableType}
                     onUpdate={handleUpdateTableType}
                     onArchive={handleArchiveTableType}
