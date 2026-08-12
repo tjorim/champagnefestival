@@ -72,5 +72,8 @@ jobs:
       - name: Migrate (alembic upgrade head)
         run: uv run alembic upgrade head
 
+      - name: Verify migrations are in sync with models
+        run: uv run alembic check
+
       - name: Test
         run: uv run pytest
