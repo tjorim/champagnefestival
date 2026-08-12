@@ -7,8 +7,8 @@ identification pass). Also drops the now-misleading `server_default`s on
 `width_m`/`length_m` so a write that bypasses the Pydantic layer can no
 longer resurrect the fake default.
 
-Revision ID: 009
-Revises: 008
+Revision ID: 010
+Revises: 009
 Create Date: 2026-08-12
 """
 
@@ -20,8 +20,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "009"
-down_revision: str | None = "008"
+revision: str = "010"
+down_revision: str | None = "009"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -42,9 +42,12 @@ def upgrade() -> None:
                 action, resource_type, resource_id, request_id, details
             )
             SELECT
-                'aud_mig009_' || id,
+                -- `audit_entries.id` is String(64) while `rooms.id` allows up to 64
+                -- chars itself; left() caps the generated id at the column limit
+                -- instead of letting a long room id abort the migration.
+                left('aud_mig010_' || id, 64),
                 now(),
-                'system:migration_009',
+                'system:migration_010',
                 'none',
                 NULL,
                 NULL,

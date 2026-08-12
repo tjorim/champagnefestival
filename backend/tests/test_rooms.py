@@ -100,7 +100,7 @@ async def test_room_venue_reassignment_rejects_unknown_venue(client):
 
 @pytest.mark.anyio
 async def test_room_dimensions_placeholder_flag_cleared_on_explicit_update(client, db_session):
-    """A room flagged as placeholder (e.g. by migration 009, backfilled for rows
+    """A room flagged as placeholder (e.g. by migration 010, backfilled for rows
     that got the old silent 20x15 default) should stay flagged through unrelated
     edits, and only clear once someone deliberately sets real dimensions."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)

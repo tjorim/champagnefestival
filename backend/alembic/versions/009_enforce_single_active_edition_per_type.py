@@ -6,8 +6,8 @@ and the rest are deactivated, each recorded as an `edition_deactivated` audit
 entry — then backs the invariant with a partial unique index so the database
 rejects it going forward. See #832.
 
-Revision ID: 008
-Revises: 007
+Revision ID: 009
+Revises: 008
 Create Date: 2026-08-12
 """
 
@@ -19,8 +19,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "008"
-down_revision: str | None = "007"
+revision: str = "009"
+down_revision: str | None = "008"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -45,9 +45,12 @@ def upgrade() -> None:
                 action, resource_type, resource_id, request_id, details
             )
             SELECT
-                'aud_mig008_' || id,
+                -- `audit_entries.id` is String(64) while `editions.id` allows up to 100
+                -- chars; left() caps the generated id at the column limit instead of
+                -- letting a long edition id abort the migration.
+                left('aud_mig009_' || id, 64),
                 now(),
-                'system:migration_008',
+                'system:migration_009',
                 'none',
                 NULL,
                 NULL,

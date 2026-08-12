@@ -189,7 +189,7 @@ class Room(Base):
     The ``default=20.0`` here is a Python-side convenience for ORM callers
     (e.g. test fixtures) that construct a ``Room`` directly; the REST/MCP API
     requires an explicit value (see ``RoomCreate`` and #835) and the DB-level
-    ``server_default`` was dropped in migration 009 so a raw insert can no
+    ``server_default`` was dropped in migration 010 so a raw insert can no
     longer silently resurrect it.
     """
 
@@ -204,7 +204,7 @@ class Room(Base):
     dimensions_placeholder: Mapped[bool] = mapped_column(Boolean, default=False)
     """True when width_m/length_m are a placeholder rather than a measured value.
 
-    Set by migration 009 for rooms that got the old silent 20x15 default before
+    Set by migration 010 for rooms that got the old silent 20x15 default before
     dimensions became a required field (#835), and cleared automatically the
     next time width_m/length_m is explicitly updated (see rooms_service.update_room).
     """
@@ -352,7 +352,7 @@ class Edition(Base):
 
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     """At most one edition per `edition_type` may be active at a time — enforced by the
-    `uq_editions_active_type` partial unique index (migration 008) and, on the normal
+    `uq_editions_active_type` partial unique index (migration 009) and, on the normal
     single-request path, by `app.routers.editions._deactivate_conflicting_editions`
     transactionally deactivating the previous active edition of the same type. See #832."""
 

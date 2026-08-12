@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Edition
+from app.routers.editions import _commit_or_conflict
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, _create_event, _post_registration
 
 
@@ -1368,6 +1369,27 @@ async def test_activation_conflict_that_slips_past_the_dedup_check_returns_409(c
     # The pre-existing edition must remain active — the conflicting write never committed.
     existing_response = await client.get("/api/editions/edition-conflict-existing", headers=ADMIN_HEADERS)
     assert existing_response.json()["active"] is True
+
+
+@pytest.mark.anyio
+async def test_commit_or_conflict_does_not_mislabel_unrelated_integrity_errors(db_session):
+    """`_commit_or_conflict` must only translate the `uq_editions_active_type`
+    violation into the activation-conflict 409 — an unrelated IntegrityError (e.g. a
+    foreign key violation from a concurrently deleted venue) must propagate as-is for
+    `app.main.integrity_error_handler` to report accurately, not get mislabeled as an
+    edition-activation conflict."""
+    db_session.add(
+        Edition(
+            id="edition-fk-race",
+            year=2099,
+            month="march",
+            venue_id="venue-does-not-exist",
+            edition_type="bourse",
+            active=False,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await _commit_or_conflict(db_session)
 
 
 @pytest.mark.anyio

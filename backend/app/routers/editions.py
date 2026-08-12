@@ -334,7 +334,7 @@ async def _deactivate_conflicting_editions(
     race unresolved — two brand-new editions of the same type activated at once, with no
     existing active row for either to lock — which is why this alone isn't the
     invariant's backstop: the ``uq_editions_active_type`` partial unique index
-    (migration 008) is, and ``_commit_or_conflict`` turns its violation into a 409.
+    (migration 009) is, and ``_commit_or_conflict`` turns its violation into a 409.
     """
     stmt = select(Edition).where(Edition.edition_type == edition_type, Edition.active.is_(True))
     if exclude_id is not None:
@@ -357,17 +357,28 @@ async def _deactivate_conflicting_editions(
 
 
 async def _commit_or_conflict(db: AsyncSession) -> None:
-    """Commit, translating a partial-unique-index violation into a 409.
+    """Commit, translating a ``uq_editions_active_type`` violation into a 409.
 
-    The only ``IntegrityError`` reachable here — validation for everything else
-    (venue, exhibitors, co-organizer) already ran before this point — is a concurrent
-    activation of two editions of the same type racing past `_deactivate_conflicting_editions`
-    with nothing to lock; see that function's docstring.
+    A concurrent activation of two editions of the same type can race past
+    `_deactivate_conflicting_editions` with nothing to lock; see that function's
+    docstring. Other integrity violations reaching this commit — a duplicate id
+    slipping past `create_edition`'s existence check, or a venue/co-organizer
+    deleted concurrently with this request — are re-raised as-is for
+    ``app.main.integrity_error_handler`` to report accurately instead of being
+    misreported as this specific conflict.
     """
     try:
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
+        # SQLAlchemy's asyncpg dialect wraps the driver error in a fresh exception
+        # that only copies pgcode/sqlstate, not asyncpg's richer diagnostics — but
+        # it chains the original via `raise ... from error`, so the real
+        # `asyncpg.exceptions.UniqueViolationError` (with `constraint_name`) is
+        # reachable through `__cause__`.
+        constraint = getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None)
+        if constraint != "uq_editions_active_type":
+            raise
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Another edition of this type was activated concurrently. Please retry.",
