@@ -930,9 +930,13 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
+    if (!body.venue_id) {
+      return HttpResponse.json({ detail: "venue_id is required." }, { status: 400 });
+    }
     const newTT = {
       id: uid(),
       name: String(body.name ?? ""),
+      venue_id: String(body.venue_id),
       shape: String(body.shape ?? "round"),
       width_m: Number(body.width_m ?? 1),
       length_m: Number(body.length_m ?? 1),

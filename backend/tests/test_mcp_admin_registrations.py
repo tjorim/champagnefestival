@@ -108,7 +108,7 @@ async def test_update_registration_table_assignment_and_clear(db_session):
     )
 
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
-    ttype = TableType(id="ttype-1", name="Standard", max_capacity=6)
+    ttype = TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6)
     db_session.add_all([room, ttype])
     await db_session.flush()
     layout = Layout(id="lay-1", edition_id="edition-1", room_id="room-1", day_id=1)
@@ -135,7 +135,7 @@ async def test_update_registration_rejects_table_from_another_edition(db_session
     )
 
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
-    ttype = TableType(id="ttype-1", name="Standard", max_capacity=6)
+    ttype = TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6)
     db_session.add_all([room, ttype])
     await db_session.flush()
     # Inactive: `edition-1` from `_seed_event` is already the active festival edition,

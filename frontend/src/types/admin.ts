@@ -5,6 +5,8 @@
 export interface TableType {
   id: string;
   name: string;
+  /** Venue this table type belongs to — table types are scoped like rooms, not shared (#858) */
+  venueId: string;
   shape: "rectangle" | "round";
   /** Physical width in metres (rectangle) or diameter (round) */
   widthM: number;

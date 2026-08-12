@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import Table, TableType
+from app.models import Layout, Room, Table, TableType, Venue
 from app.schemas import TableTypeCreate, TableTypeUpdate
 from app.services.errors import ConflictError, NotFoundError
 from app.utils import make_id, table_type_to_dict
@@ -21,6 +21,10 @@ from app.utils import make_id, table_type_to_dict
 async def create_table_type(
     db: AsyncSession, *, actor: str, body: TableTypeCreate, request_id: str | None = None
 ) -> dict:
+    venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
+    if venue.scalar_one_or_none() is None:
+        raise NotFoundError(f"Venue '{body.venue_id}' not found.")
+
     # TableTypeCreate.normalise_dimensions (a model_validator) forces
     # length_m == width_m for round tables and swaps them if length_m <
     # width_m for rectangular ones — it already ran on `body` at the REST/MCP
@@ -28,6 +32,7 @@ async def create_table_type(
     tt = TableType(
         id=make_id("ttype"),
         name=body.name,
+        venue_id=body.venue_id,
         shape=body.shape,
         width_m=body.width_m,
         length_m=body.length_m,
@@ -43,7 +48,7 @@ async def create_table_type(
         resource_type="table_type",
         resource_id=tt.id,
         request_id=request_id,
-        details={"name": tt.name, "shape": tt.shape},
+        details={"name": tt.name, "shape": tt.shape, "venue_id": tt.venue_id},
     )
     await db.commit()
     await db.refresh(tt)
@@ -76,6 +81,24 @@ async def update_table_type(
     if body.name is not None:
         tt.name = body.name
         fields_changed.append("name")
+    if body.venue_id is not None:
+        venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
+        if venue.scalar_one_or_none() is None:
+            raise NotFoundError(f"Venue '{body.venue_id}' not found.")
+        # A table type placed on tables at rooms in another venue can't move without
+        # stranding those placements outside the venue-scoped contract this type now
+        # has (#858) — block the reassignment rather than leaving them inconsistent.
+        other_venue_tables = await db.execute(
+            select(Table.id)
+            .join(Layout, Table.layout_id == Layout.id)
+            .join(Room, Layout.room_id == Room.id)
+            .where(Table.table_type_id == type_id, Room.venue_id != body.venue_id)
+            .limit(1)
+        )
+        if other_venue_tables.scalar_one_or_none() is not None:
+            raise ConflictError("Cannot reassign venue: tables using this type exist in rooms at another venue.")
+        tt.venue_id = body.venue_id
+        fields_changed.append("venue_id")
     if body.shape is not None:
         tt.shape = body.shape
         fields_changed.append("shape")
@@ -85,7 +108,9 @@ async def update_table_type(
     if body.length_m is not None:
         tt.length_m = body.length_m
         fields_changed.append("length_m")
-    if body.shape is not None or body.width_m is not None or body.length_m is not None:
+    reshape_requested = body.shape is not None or body.width_m is not None or body.length_m is not None
+    blast_radius: dict[str, int] = {}
+    if reshape_requested:
         from app.utils import normalise_table_type_dimensions
 
         tt.width_m, tt.length_m = normalise_table_type_dimensions(tt.shape, tt.width_m, tt.length_m)
@@ -93,6 +118,19 @@ async def update_table_type(
             fields_changed.append("width_m")
         if tt.length_m != pre_length and "length_m" not in fields_changed:
             fields_changed.append("length_m")
+        # A shape/dimension change re-renders every table of this type on every
+        # layout that ever placed one — including past editions, since tables
+        # render by joining live against TableType rather than a snapshot taken
+        # at placement time (#858). No confirmation gate here (that lives in the
+        # admin UI, which has this count ahead of the save); this is the audit
+        # trail's record of the blast radius for whichever change went through.
+        affected = await db.execute(
+            select(Table.id, Layout.room_id)
+            .join(Layout, Table.layout_id == Layout.id)
+            .where(Table.table_type_id == type_id)
+        )
+        rows = affected.all()
+        blast_radius = {"affected_tables": len(rows), "affected_rooms": len({room_id for _, room_id in rows})}
     if body.height_type is not None:
         tt.height_type = body.height_type
         fields_changed.append("height_type")
@@ -109,7 +147,7 @@ async def update_table_type(
         resource_type="table_type",
         resource_id=tt.id,
         request_id=request_id,
-        details={"fields_changed": sorted(fields_changed)},
+        details={"fields_changed": sorted(fields_changed), **blast_radius},
     )
     await db.commit()
     await db.refresh(tt)

@@ -45,6 +45,7 @@ export const seedTableTypes = [
   {
     id: "tt-01",
     name: "Round 6-top",
+    venue_id: "venue-01",
     shape: "round",
     width_m: 1.5,
     length_m: 1.5,
@@ -57,6 +58,7 @@ export const seedTableTypes = [
   {
     id: "tt-02",
     name: "Rectangle 8-top",
+    venue_id: "venue-01",
     shape: "rectangle",
     width_m: 2.4,
     length_m: 1.0,
@@ -69,6 +71,7 @@ export const seedTableTypes = [
   {
     id: "tt-03",
     name: "High table",
+    venue_id: "venue-01",
     shape: "round",
     width_m: 0.8,
     length_m: 0.8,

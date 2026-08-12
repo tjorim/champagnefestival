@@ -22,7 +22,7 @@ async def test_table_crud(client):
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     payload = {
@@ -61,7 +61,7 @@ async def test_table_with_layout_id(client):
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Create a table assigned to that layout
@@ -101,7 +101,7 @@ async def test_table_id_can_be_cleared(client):
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Create a table
@@ -158,7 +158,7 @@ async def test_table_registration_ids_computed_from_registration_table_id(client
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     layout_id = r.json()["id"]
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Create a table

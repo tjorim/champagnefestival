@@ -19,6 +19,7 @@ async def create_table_type(
     actor: str,
     *,
     name: str,
+    venue_id: str,
     width_m: float,
     length_m: float,
     shape: Literal["rectangle", "round"] = "rectangle",
@@ -29,6 +30,7 @@ async def create_table_type(
     body = validate_with_schema(
         TableTypeCreate,
         name=name,
+        venue_id=venue_id,
         shape=shape,
         width_m=width_m,
         length_m=length_m,
@@ -62,6 +64,7 @@ async def update_table_type(
     type_id: str,
     *,
     name: str | None = None,
+    venue_id: str | None = None,
     shape: Literal["rectangle", "round"] | None = None,
     width_m: float | None = None,
     length_m: float | None = None,
@@ -73,6 +76,7 @@ async def update_table_type(
         k: v
         for k, v in {
             "name": name,
+            "venue_id": venue_id,
             "shape": shape,
             "width_m": width_m,
             "length_m": length_m,

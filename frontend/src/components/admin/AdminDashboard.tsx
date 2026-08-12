@@ -8,7 +8,6 @@ import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
 import LayoutEditor from "./LayoutEditor";
-import TableTypeManagement from "./TableTypeManagement";
 import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
 import FaqManagement from "./FaqManagement";
@@ -566,6 +565,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <VenueManagement
                     venues={venues}
                     rooms={rooms}
+                    tableTypes={tableTypes}
+                    tables={tables}
+                    layouts={layouts}
                     onAdd={handleAddVenue}
                     onArchive={handleArchiveVenue}
                     onRestore={handleRestoreVenue}
@@ -575,16 +577,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onArchiveRoom={handleArchiveRoom}
                     onRestoreRoom={handleRestoreRoom}
                     onDeleteRoom={handleDeleteRoom}
-                  />
-                )}
-                {canManageAdminSections && activeKey === "table-types" && (
-                  <TableTypeManagement
-                    tableTypes={tableTypes}
-                    onAdd={handleAddTableType}
-                    onUpdate={handleUpdateTableType}
-                    onArchive={handleArchiveTableType}
-                    onRestore={handleRestoreTableType}
-                    onDelete={handleDeleteTableType}
+                    onAddTableType={handleAddTableType}
+                    onUpdateTableType={handleUpdateTableType}
+                    onArchiveTableType={handleArchiveTableType}
+                    onRestoreTableType={handleRestoreTableType}
+                    onDeleteTableType={handleDeleteTableType}
                   />
                 )}
                 {canManageAdminSections && activeKey === "directory" && (

@@ -269,6 +269,7 @@ def table_type_to_dict(tt: TableType) -> dict:
     return {
         "id": tt.id,
         "name": tt.name,
+        "venue_id": tt.venue_id,
         "shape": tt.shape,
         "width_m": tt.width_m,
         "length_m": tt.length_m,

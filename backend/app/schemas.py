@@ -629,6 +629,7 @@ class LayoutOut(BaseModel):
 
 class TableTypeCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
+    venue_id: str
     shape: Literal["rectangle", "round"] = "rectangle"
     # No defensible default exists for physical dimensions (unlike shape/height_type,
     # which have a legitimate industry-standard default) — required so a caller can't
@@ -649,6 +650,7 @@ class TableTypeCreate(BaseModel):
 
 class TableTypeUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    venue_id: str | None = None
     shape: Literal["rectangle", "round"] | None = None
     width_m: float | None = Field(default=None, ge=0.1, le=20.0)
     length_m: float | None = Field(default=None, ge=0.1, le=20.0)
@@ -660,6 +662,7 @@ class TableTypeUpdate(BaseModel):
 class TableTypeOut(BaseModel):
     id: str
     name: str
+    venue_id: str
     shape: str
     width_m: float
     length_m: float

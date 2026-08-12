@@ -11,6 +11,7 @@ from tests.helpers import (
     TABLE_TYPE_PAYLOAD,
     _create_event,
     _create_layout_prerequisites,
+    _create_venue,
     _post_registration,
 )
 
@@ -157,7 +158,10 @@ async def test_admin_create_registration_writes_audit_entry(client, db_session):
 async def test_table_assignment_writes_audit_entry(client, db_session):
     reg, event = await _create_admin_registration(client)
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     assert tt_r.status_code == 201
     table_r = await client.post(
         "/api/tables",
@@ -217,7 +221,10 @@ async def test_delete_registration_writes_audit_entry(client, db_session):
 @pytest.mark.anyio
 async def test_create_table_writes_audit_entry(client, db_session):
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     assert tt_r.status_code == 201
 
     r = await client.post(
@@ -238,7 +245,10 @@ async def test_create_table_writes_audit_entry(client, db_session):
 @pytest.mark.anyio
 async def test_update_table_writes_audit_entry(client, db_session):
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     table_r = await client.post(
         "/api/tables",
         json={"name": "T1", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
@@ -259,7 +269,10 @@ async def test_update_table_writes_audit_entry(client, db_session):
 @pytest.mark.anyio
 async def test_delete_table_writes_audit_entry(client, db_session):
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     table_r = await client.post(
         "/api/tables",
         json={"name": "T-del", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
@@ -277,6 +290,92 @@ async def test_delete_table_writes_audit_entry(client, db_session):
 
 
 # ---------------------------------------------------------------------------
+# Table type dimension-change blast radius (#858)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_table_type_dimension_change_records_blast_radius_in_audit_entry(client, db_session):
+    """A shape/dimension edit reshapes every table of that type on every layout that
+    ever placed one (live-joined at render time, not snapshotted) — the audit entry
+    should say how many tables/rooms were affected, not just which fields changed.
+
+    Two tables share one room/layout here specifically so affected_rooms==1 can only
+    pass if rooms are actually counted distinctly — counting tables instead would
+    give the same answer with a single-table fixture."""
+    layout_id = await _create_layout_prerequisites(client)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    type_id = tt_r.json()["id"]
+    for name in ("T1", "T2"):
+        table_r = await client.post(
+            "/api/tables",
+            json={"name": name, "capacity": 4, "layout_id": layout_id, "table_type_id": type_id},
+            headers=ADMIN_HEADERS,
+        )
+        assert table_r.status_code == 201
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"width_m": 1.2}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    entries = await _all_audit_entries(db_session)
+    updated = [e for e in entries if e.action == "table_type_updated"]
+    assert len(updated) == 1
+    assert updated[0].details["affected_tables"] == 2
+    assert updated[0].details["affected_rooms"] == 1
+
+
+@pytest.mark.anyio
+async def test_table_type_shape_only_change_records_blast_radius_in_audit_entry(client, db_session):
+    """The blast radius applies to shape changes too, not just width_m/length_m —
+    a shape switch re-derives dimensions (normalise_table_type_dimensions) and
+    carries the same reshape risk."""
+    layout_id = await _create_layout_prerequisites(client)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    type_id = tt_r.json()["id"]
+    table_r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "capacity": 4, "layout_id": layout_id, "table_type_id": type_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert table_r.status_code == 201
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"shape": "round"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    entries = await _all_audit_entries(db_session)
+    updated = [e for e in entries if e.action == "table_type_updated"]
+    assert len(updated) == 1
+    assert updated[0].details["affected_tables"] == 1
+    assert updated[0].details["affected_rooms"] == 1
+
+
+@pytest.mark.anyio
+async def test_table_type_non_dimension_update_omits_blast_radius_from_audit_entry(client, db_session):
+    """A max_capacity-only edit doesn't retroactively reshape anything (#858's 'not
+    gaps, checked' note), so the audit entry shouldn't claim a blast radius for it."""
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    type_id = tt_r.json()["id"]
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"max_capacity": 8}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    entries = await _all_audit_entries(db_session)
+    updated = [e for e in entries if e.action == "table_type_updated"]
+    assert len(updated) == 1
+    assert "affected_tables" not in updated[0].details
+    assert "affected_rooms" not in updated[0].details
+
+
+# ---------------------------------------------------------------------------
 # Audit entry schema validation
 # ---------------------------------------------------------------------------
 
@@ -285,7 +384,10 @@ async def test_delete_table_writes_audit_entry(client, db_session):
 async def test_audit_entry_includes_request_id(client, db_session):
     """Every audit entry must carry the X-Request-ID from the middleware."""
     layout_id = await _create_layout_prerequisites(client)
-    tt_r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
     await client.post(
         "/api/tables",
         json={"name": "T-req", "capacity": 2, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},

@@ -206,19 +206,13 @@ export default function AdminSidebar({
                 groupKey="venue"
                 icon="bi-geo-alt"
                 label={m.admin_venue_group()}
-                itemKeys={["venues", "table-types", "floor-plans"]}
+                itemKeys={["venues", "floor-plans"]}
                 {...groupProps}
               >
                 <SidebarItem
                   itemKey="venues"
                   icon="bi-building"
                   label={m.admin_venues_rooms_tab()}
-                  {...itemProps}
-                />
-                <SidebarItem
-                  itemKey="table-types"
-                  icon="bi-grid"
-                  label={m.admin_table_types_tab()}
                   {...itemProps}
                 />
                 <SidebarItem

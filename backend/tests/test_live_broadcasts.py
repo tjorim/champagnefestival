@@ -12,6 +12,7 @@ from tests.helpers import (
     ADMIN_HEADERS,
     TABLE_TYPE_PAYLOAD,
     _create_layout_prerequisites,
+    _create_venue,
     _post_registration,
 )
 
@@ -23,7 +24,8 @@ from tests.helpers import (
 async def _table_prerequisites(client) -> tuple[str, str]:
     """Return (layout_id, table_type_id) after creating all prerequisites."""
     layout_id = await _create_layout_prerequisites(client)
-    r = await client.post("/api/table-types", json=TABLE_TYPE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = await _create_venue(client)
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     return layout_id, r.json()["id"]
 

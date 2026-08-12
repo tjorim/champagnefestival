@@ -543,6 +543,7 @@ class ChampagneFestivalMcpBackend:
     async def create_table_type(
         self,
         name: str,
+        venue_id: str,
         max_capacity: int,
         width_m: float,
         length_m: float,
@@ -550,7 +551,7 @@ class ChampagneFestivalMcpBackend:
         height_type: Literal["low", "high"] = "low",
         active: bool = True,
     ) -> dict:
-        """Create a table type. Requires the ``admin`` role.
+        """Create a table type within a venue. Requires the ``admin`` role.
 
         ``width_m``/``length_m`` are the table's real measured dimensions in
         metres — there is no defensible generic default, so both are required.
@@ -565,6 +566,7 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             name=name,
+            venue_id=venue_id,
             shape=shape,
             width_m=width_m,
             length_m=length_m,
@@ -586,6 +588,7 @@ class ChampagneFestivalMcpBackend:
     async def update_table_type(
         self,
         type_id: str,
+        venue_id: str | None = None,
         name: str | None = None,
         shape: Literal["rectangle", "round"] | None = None,
         width_m: float | None = None,
@@ -605,6 +608,7 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             type_id,
+            venue_id=venue_id,
             name=name,
             shape=shape,
             width_m=width_m,

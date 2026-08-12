@@ -22,8 +22,12 @@ async def _seed_layout(db_session, *, layout_id: str = "lay-1") -> None:
     await db_session.commit()
 
 
-async def _seed_table_type(db_session, *, type_id: str = "ttype-1") -> None:
-    db_session.add(TableType(id=type_id, name="Standard", max_capacity=6))
+async def _seed_table_type(db_session, *, type_id: str = "ttype-1", venue_id: str = "venue-ttype-1") -> None:
+    # A dedicated venue id (distinct from `_seed_layout`'s "venue-1") so this helper
+    # works standalone, without depending on call order relative to `_seed_layout`.
+    db_session.add(Venue(id=venue_id, name="Test Venue"))
+    await db_session.flush()
+    db_session.add(TableType(id=type_id, name="Standard", venue_id=venue_id, max_capacity=6))
     await db_session.commit()
 
 
