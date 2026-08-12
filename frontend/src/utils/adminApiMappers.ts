@@ -120,6 +120,7 @@ export function apiRoomToRoom(d: Record<string, unknown>): Room {
     lengthM: d.length_m as number,
     color: d.color as string,
     active: (d.active ?? true) as boolean,
+    dimensionsPlaceholder: (d.dimensions_placeholder ?? false) as boolean,
   };
 }
 

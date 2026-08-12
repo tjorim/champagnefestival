@@ -318,6 +318,7 @@ def room_to_dict(r: Room) -> dict:
         "length_m": r.length_m,
         "color": r.color,
         "active": r.active,
+        "dimensions_placeholder": r.dimensions_placeholder,
         "created_at": r.created_at,
         "updated_at": r.updated_at,
     }

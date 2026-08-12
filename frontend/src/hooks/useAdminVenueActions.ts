@@ -201,32 +201,24 @@ export function useAdminVenueActions({
     [createRoomMutation, queryClient, roomsQueryKey],
   );
 
-  const handleArchiveRoom = useCallback(
-    async (roomId: string) => {
-      const data = await updateRoomMutation.mutateAsync({
-        roomId,
-        active: false,
-        fallbackMessage: m.admin_error_delete_room(),
-      });
+  const handleUpdateRoom = useCallback(
+    async (roomId: string, data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>) => {
+      const d = await updateRoomMutation.mutateAsync({ id: roomId, data });
       queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
-        prev ? prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)) : prev,
+        prev ? prev.map((r) => (r.id === roomId ? apiRoomToRoom(d) : r)) : prev,
       );
     },
     [queryClient, roomsQueryKey, updateRoomMutation],
   );
 
+  const handleArchiveRoom = useCallback(
+    (roomId: string) => handleUpdateRoom(roomId, { active: false }),
+    [handleUpdateRoom],
+  );
+
   const handleRestoreRoom = useCallback(
-    async (roomId: string) => {
-      const data = await updateRoomMutation.mutateAsync({
-        roomId,
-        active: true,
-        fallbackMessage: m.admin_content_error_save(),
-      });
-      queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
-        prev ? prev.map((r) => (r.id === roomId ? apiRoomToRoom(data) : r)) : prev,
-      );
-    },
-    [queryClient, roomsQueryKey, updateRoomMutation],
+    (roomId: string) => handleUpdateRoom(roomId, { active: true }),
+    [handleUpdateRoom],
   );
 
   const handleDeleteRoom = useCallback(
@@ -463,6 +455,7 @@ export function useAdminVenueActions({
     handleRotateArea,
     handleRotateTable,
     handleUpdateAreaLabel,
+    handleUpdateRoom,
     handleUpdateTable,
     handleUpdateTableType,
   };

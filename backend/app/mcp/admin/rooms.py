@@ -59,6 +59,7 @@ async def update_room(
     actor: str,
     room_id: str,
     *,
+    venue_id: str | None = None,
     name: str | None = None,
     width_m: float | None = None,
     length_m: float | None = None,
@@ -68,6 +69,7 @@ async def update_room(
     provided = {
         k: v
         for k, v in {
+            "venue_id": venue_id,
             "name": name,
             "width_m": width_m,
             "length_m": length_m,

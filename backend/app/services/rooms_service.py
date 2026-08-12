@@ -31,6 +31,7 @@ async def create_room(db: AsyncSession, *, actor: str, body: RoomCreate, request
         length_m=body.length_m,
         color=body.color,
         active=body.active,
+        dimensions_placeholder=False,
     )
     db.add(r)
     await write_audit_entry(
@@ -65,8 +66,16 @@ async def update_room(
     r = await db.get(Room, room_id)
     if r is None:
         raise NotFoundError(f"Room '{room_id}' not found.")
+    if "venue_id" in body.model_fields_set:
+        venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
+        if venue.scalar_one_or_none() is None:
+            raise NotFoundError(f"Venue '{body.venue_id}' not found.")
     for field in body.model_fields_set:
         setattr(r, field, getattr(body, field))
+    # An explicit width/length update means the value is now a deliberate,
+    # measured dimension rather than an unconfirmed placeholder.
+    if "width_m" in body.model_fields_set or "length_m" in body.model_fields_set:
+        r.dimensions_placeholder = False
     await write_audit_entry(
         db,
         actor=actor,

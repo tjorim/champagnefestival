@@ -228,6 +228,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleRotateArea,
     handleRotateTable,
     handleUpdateAreaLabel,
+    handleUpdateRoom,
     handleUpdateTable,
     handleUpdateTableType,
   } = useAdminVenueActions({
@@ -570,6 +571,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onRestore={handleRestoreVenue}
                     onDelete={handleDeleteVenue}
                     onAddRoom={handleAddRoom}
+                    onUpdateRoom={handleUpdateRoom}
                     onArchiveRoom={handleArchiveRoom}
                     onRestoreRoom={handleRestoreRoom}
                     onDeleteRoom={handleDeleteRoom}
