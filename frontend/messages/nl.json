@@ -337,6 +337,7 @@
   "admin_table_type_select": "Kies tafeltype",
   "admin_table_type_name_required": "Naam is verplicht",
   "admin_table_type_venue_required": "Locatie is verplicht",
+  "admin_no_table_types": "Nog geen tafeltypen gedefinieerd.",
   "admin_table_type_dimension_change_confirm": "Dit tafeltype wordt gebruikt door {tableCount} tafel(s) in {roomCount} zaal/zalen, ook bij voorbije edities. De vorm of afmetingen wijzigen verandert onmiddellijk hoe al deze tafels worden weergegeven. Doorgaan?",
   "admin_table_type_capacity_min": "Max. capaciteit moet een geheel getal van 1 of meer zijn",
   "admin_table_type_dimensions_positive": "Breedte en lengte moeten positieve getallen zijn",

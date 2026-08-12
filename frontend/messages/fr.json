@@ -337,6 +337,7 @@
   "admin_table_type_select": "Choisir un type de table",
   "admin_table_type_name_required": "Le nom est obligatoire",
   "admin_table_type_venue_required": "Le lieu est obligatoire",
+  "admin_no_table_types": "Aucun type de table défini.",
   "admin_table_type_dimension_change_confirm": "Ce type de table est utilisé par {tableCount} table(s) dans {roomCount} salle(s), y compris lors d'éditions passées. Modifier sa forme ou ses dimensions changera immédiatement l'affichage de toutes ces tables. Continuer ?",
   "admin_table_type_capacity_min": "La capacité maximale doit être un nombre entier supérieur ou égal à 1",
   "admin_table_type_dimensions_positive": "La largeur et la longueur doivent être des nombres positifs",

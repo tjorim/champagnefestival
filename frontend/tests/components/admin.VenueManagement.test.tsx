@@ -190,28 +190,46 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
   };
 }
 
+/** Each venue renders as its own nested `.card`; scope to it via a name inside it. */
+function venueCard(name: string): HTMLElement {
+  return screen.getByText(name).closest(".card") as HTMLElement;
+}
+
+/** Venue-level actions (Archive/Restore/Delete) live in that card's header, not its
+ * body — scoping here avoids ambiguity with the same-labelled room/table-type actions
+ * inside the body's list groups. */
+function venueCardHeader(name: string): HTMLElement {
+  return screen.getByText(name).closest(".card-header") as HTMLElement;
+}
+
+/** Room and table-type rows are `ListGroup.Item`s; scope to the specific row via its name. */
+function listItem(name: string): HTMLElement {
+  return screen.getByText(name).closest(".list-group-item") as HTMLElement;
+}
+
 describe("VenueManagement", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
-  it("renders venue rows with address/city/postal/country and room badges", () => {
+  it("renders a venue card with its location line, room list, and an archived badge on inactive venues", () => {
     renderVenueManagement();
 
-    const activeRow = screen.getByText("Grand Hall").closest("tr");
-    expect(activeRow).not.toBeNull();
-    const activeRowScope = within(activeRow as HTMLElement);
-    expect(activeRowScope.getByText("1 Main St")).toBeInTheDocument();
-    expect(activeRowScope.getByText("Ghent")).toBeInTheDocument();
-    expect(activeRowScope.getByText("9000")).toBeInTheDocument();
-    expect(activeRowScope.getByText("BE")).toBeInTheDocument();
-    expect(activeRowScope.getByText("Room A")).toBeInTheDocument();
-    expect(activeRowScope.getByText("Room B")).toBeInTheDocument();
+    const activeScope = within(venueCard("Grand Hall"));
+    expect(activeScope.getByText("1 Main St, Ghent, 9000, BE")).toBeInTheDocument();
+    expect(activeScope.getByText("Room A")).toBeInTheDocument();
+    expect(activeScope.getByText("Room B")).toBeInTheDocument();
 
-    const archivedRow = screen.getByText("Old Barn").closest("tr");
-    expect(archivedRow).not.toBeNull();
-    expect(within(archivedRow as HTMLElement).getByText("admin_venue_archived_badge")).toBeInTheDocument();
+    expect(within(venueCard("Old Barn")).getByText("admin_venue_archived_badge")).toBeInTheDocument();
+  });
+
+  it("hides the rooms/table-types body for an archived venue", () => {
+    renderVenueManagement();
+
+    const archivedScope = within(venueCard("Old Barn"));
+    expect(archivedScope.queryByText("admin_rooms_tab")).not.toBeInTheDocument();
+    expect(archivedScope.queryByText("admin_table_types_tab")).not.toBeInTheDocument();
   });
 
   it("shows the empty state when there are no venues", () => {
@@ -243,17 +261,13 @@ describe("VenueManagement", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  // Note: the venue row also contains a room "archive" (x) button reusing the
-  // same admin_content_archive label (room1 belongs to venue-1 and is active),
-  // so the venue-level archive action is disambiguated as the last matching
-  // button in the row (the actions column renders after the rooms/table-types columns).
   it("does not call onArchive when the confirm dialog is cancelled", () => {
     const confirmFn = mockConfirm(false);
     const { onArchive } = renderVenueManagement();
 
-    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
-    const archiveButtons = within(activeRow).getAllByRole("button", { name: "admin_content_archive" });
-    fireEvent.click(archiveButtons.at(-1) as HTMLElement);
+    fireEvent.click(
+      within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
+    );
 
     expect(confirmFn).toHaveBeenCalledWith("admin_venue_archive_confirm");
     expect(onArchive).not.toHaveBeenCalled();
@@ -263,9 +277,9 @@ describe("VenueManagement", () => {
     mockConfirm(true);
     const { onArchive } = renderVenueManagement();
 
-    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
-    const archiveButtons = within(activeRow).getAllByRole("button", { name: "admin_content_archive" });
-    fireEvent.click(archiveButtons.at(-1) as HTMLElement);
+    fireEvent.click(
+      within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
+    );
 
     expect(onArchive).toHaveBeenCalledWith("venue-1");
   });
@@ -274,8 +288,7 @@ describe("VenueManagement", () => {
     const confirmFn = mockConfirm(false);
     const { onDelete } = renderVenueManagement();
 
-    const archivedRow = screen.getByText("Old Barn").closest("tr") as HTMLElement;
-    fireEvent.click(within(archivedRow).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }));
 
     expect(confirmFn).toHaveBeenCalledWith("admin_venue_delete_confirm");
     expect(onDelete).not.toHaveBeenCalled();
@@ -285,8 +298,7 @@ describe("VenueManagement", () => {
     mockConfirm(true);
     const { onDelete } = renderVenueManagement();
 
-    const archivedRow = screen.getByText("Old Barn").closest("tr") as HTMLElement;
-    fireEvent.click(within(archivedRow).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }));
 
     expect(onDelete).toHaveBeenCalledWith("venue-2");
   });
@@ -296,8 +308,9 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onRestore } = renderVenueManagement();
 
-    const archivedRow = screen.getByText("Old Barn").closest("tr") as HTMLElement;
-    fireEvent.click(within(archivedRow).getByRole("button", { name: "admin_content_restore" }));
+    fireEvent.click(
+      within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_content_restore" }),
+    );
 
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onRestore).toHaveBeenCalledWith("venue-2");
@@ -350,8 +363,7 @@ describe("VenueManagement", () => {
   it("opens the edit-room modal prefilled, and calls onUpdateRoom with the edited fields", async () => {
     const { onUpdateRoom } = renderVenueManagement();
 
-    const roomBadge = screen.getByText("Room A").closest(".badge") as HTMLElement;
-    fireEvent.click(within(roomBadge).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(within(listItem("Room A")).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -384,8 +396,7 @@ describe("VenueManagement", () => {
       rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
     });
 
-    const roomBadge = screen.getByText("Room A").closest(".badge") as HTMLElement;
-    fireEvent.click(within(roomBadge).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(within(listItem("Room A")).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -417,16 +428,14 @@ describe("VenueManagement", () => {
   // Table types (nested under each venue, #858)
   // ---------------------------------------------------------------------------
 
-  it("renders table type badges within the venue row, with the archived badge dimmed", () => {
+  it("renders table type rows within the venue card, with the archived one dimmed", () => {
     renderVenueManagement();
 
-    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
-    const activeRowScope = within(activeRow);
-    expect(activeRowScope.getByText("Standard Rectangle")).toBeInTheDocument();
-    expect(activeRowScope.getByText("Retired Round")).toBeInTheDocument();
+    const activeScope = within(venueCard("Grand Hall"));
+    expect(activeScope.getByText("Standard Rectangle")).toBeInTheDocument();
+    expect(activeScope.getByText("Retired Round")).toBeInTheDocument();
 
-    const archivedBadge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
-    expect(archivedBadge.className).toContain("opacity-50");
+    expect(listItem("Retired Round").className).toContain("opacity-50");
   });
 
   it("disables Save until name/venue/dimensions are valid, then calls onAddTableType prefilled with the clicked venue", async () => {
@@ -485,11 +494,10 @@ describe("VenueManagement", () => {
     expect(diameterField.value).toBe("0.9");
   });
 
-  it("pre-fills the edit form from the badge's existing values and calls onUpdateTableType without the active field", async () => {
+  it("pre-fills the edit form from the row's existing values and calls onUpdateTableType without the active field", async () => {
     const { onUpdateTableType } = renderVenueManagement({ tables: [] });
 
-    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
-    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -517,8 +525,7 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement();
 
-    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
-    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -537,8 +544,7 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", vi.fn().mockReturnValue(false));
     const { onUpdateTableType } = renderVenueManagement();
 
-    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
-    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -556,8 +562,7 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement({ tables: [] });
 
-    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
-    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -575,22 +580,23 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onArchiveTableType } = renderVenueManagement();
 
-    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
-    fireEvent.click(within(badge).getByRole("button", { name: "admin_content_archive" }));
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_content_archive" }),
+    );
 
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onArchiveTableType).toHaveBeenCalledWith("tt-1");
   });
 
-  it("restores an archived table type immediately, with no confirm prompt, and hides the edit button on archived badges", () => {
+  it("restores an archived table type immediately, with no confirm prompt, and hides the edit button on archived rows", () => {
     const confirmSpy = vi.fn();
     vi.stubGlobal("confirm", confirmSpy);
     const { onRestoreTableType } = renderVenueManagement();
 
-    const badge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
-    expect(within(badge).queryByRole("button", { name: "admin_edit" })).not.toBeInTheDocument();
+    const row = listItem("Retired Round");
+    expect(within(row).queryByRole("button", { name: "admin_edit" })).not.toBeInTheDocument();
 
-    fireEvent.click(within(badge).getByRole("button", { name: "admin_content_restore" }));
+    fireEvent.click(within(row).getByRole("button", { name: "admin_content_restore" }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(onRestoreTableType).toHaveBeenCalledWith("tt-2");
@@ -601,13 +607,13 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onDeleteTableType } = renderVenueManagement();
 
-    const activeBadge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
     expect(
-      within(activeBadge).queryByRole("button", { name: /admin_delete/ }),
+      within(listItem("Standard Rectangle")).queryByRole("button", { name: /admin_delete/ }),
     ).not.toBeInTheDocument();
 
-    const archivedBadge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
-    fireEvent.click(within(archivedBadge).getByRole("button", { name: "admin_delete Retired Round" }));
+    fireEvent.click(
+      within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
+    );
 
     expect(confirmSpy).toHaveBeenCalledWith("admin_table_type_delete_confirm");
     expect(onDeleteTableType).toHaveBeenCalledWith("tt-2");
@@ -620,8 +626,9 @@ describe("VenueManagement", () => {
       .mockRejectedValue(new Error("Cannot delete: tables are still using this type."));
     renderVenueManagement({ onDeleteTableType });
 
-    const archivedBadge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
-    fireEvent.click(within(archivedBadge).getByRole("button", { name: "admin_delete Retired Round" }));
+    fireEvent.click(
+      within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
+    );
 
     expect(
       await screen.findByText("Cannot delete: tables are still using this type."),

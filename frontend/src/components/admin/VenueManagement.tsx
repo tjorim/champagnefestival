@@ -7,17 +7,16 @@
  */
 
 import clsx from "clsx";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
+import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
-import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
-import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface VenueManagementProps {
   venues: Venue[];
@@ -55,15 +54,6 @@ interface VenueManagementProps {
 
 const emptyVenueForm = { name: "", address: "", city: "", postalCode: "", country: "" };
 
-/** Pick black or white text to contrast against a hex background colour. */
-function contrastColor(hex: string): string {
-  const c = hex.replace("#", "");
-  if (c.length !== 6) return "#fff";
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? "#000" : "#fff";
-}
 // widthM/lengthM start blank — a room's real dimensions have no defensible
 // generic default (see #833/#835), so the admin must enter them deliberately
 // rather than accidentally saving a made-up size.
@@ -98,8 +88,6 @@ const emptyTableTypeForm: {
   maxCapacity: 4,
   active: true,
 };
-
-const columnHelper = createAppColumnHelper<Venue>();
 
 export default function VenueManagement({
   venues,
@@ -468,303 +456,6 @@ export default function VenueManagement({
     [onDeleteTableType],
   );
 
-  const columns = useMemo(
-    () =>
-      columnHelper.columns([
-        columnHelper.accessor("name", {
-          header: m.admin_venue_name_label(),
-          enableSorting: false,
-          meta: { tdClassName: "fw-semibold" },
-          cell: ({ row }) => {
-            const isArchived = !row.original.active;
-            return (
-              <>
-                {row.original.name}
-                {isArchived && (
-                  <Badge bg="secondary" className="ms-2 fs-2xs">
-                    {m.admin_venue_archived_badge()}
-                  </Badge>
-                )}
-              </>
-            );
-          },
-        }),
-        columnHelper.accessor("address", {
-          header: m.admin_venue_address_label(),
-          enableSorting: false,
-          meta: { tdClassName: "text-secondary" },
-          cell: ({ getValue }) => getValue() || "—",
-        }),
-        columnHelper.accessor("city", {
-          header: m.admin_venue_city_label(),
-          enableSorting: false,
-          meta: { tdClassName: "text-secondary" },
-          cell: ({ getValue }) => getValue() || "—",
-        }),
-        columnHelper.accessor("postalCode", {
-          header: m.admin_venue_postal_code_label(),
-          enableSorting: false,
-          meta: { tdClassName: "text-secondary" },
-          cell: ({ getValue }) => getValue() || "—",
-        }),
-        columnHelper.accessor("country", {
-          header: m.admin_venue_country_label(),
-          enableSorting: false,
-          meta: { tdClassName: "text-secondary" },
-          cell: ({ getValue }) => getValue() || "—",
-        }),
-        columnHelper.display({
-          id: "rooms",
-          header: m.admin_room_name_label(),
-          enableSorting: false,
-          cell: ({ row }) => {
-            const venue = row.original;
-            if (venue.active === false) return null;
-            const venueRooms = rooms.filter((r) => r.venueId === venue.id);
-            return (
-              <div className="d-flex flex-wrap gap-1 align-items-center">
-                {venueRooms.map((room) => (
-                  <Badge
-                    key={room.id}
-                    style={{
-                      background: room.active ? room.color : undefined,
-                      fontSize: "0.75rem",
-                      opacity: room.active ? 1 : 0.5,
-                    }}
-                    bg={room.active ? undefined : "secondary"}
-                    className="d-inline-flex align-items-center gap-1"
-                  >
-                    <span
-                      style={{
-                        color: room.active ? contrastColor(room.color) : undefined,
-                      }}
-                    >
-                      {room.name}
-                    </span>
-                    {room.dimensionsPlaceholder && (
-                      <i
-                        className="bi bi-exclamation-triangle-fill fs-5xs"
-                        aria-label={m.admin_room_dimensions_placeholder_badge()}
-                        title={m.admin_room_dimensions_placeholder_hint()}
-                      />
-                    )}
-                    {room.active ? (
-                      <>
-                        <button
-                          type="button"
-                          className={clsx(
-                            "btn btn-sm p-0 border-0 bg-transparent fs-5xs lh-1",
-                            contrastColor(room.color) === "#fff" ? "text-white" : "text-dark",
-                          )}
-                          onClick={() => openEditRoom(room)}
-                          aria-label={m.admin_edit()}
-                          title={m.admin_edit()}
-                        >
-                          <i className="bi bi-pencil" aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className={clsx(
-                            "btn-close fs-5xs",
-                            contrastColor(room.color) === "#fff" && "btn-close-white",
-                          )}
-                          onClick={() => handleArchiveRoom(room.id)}
-                          aria-label={m.admin_content_archive()}
-                          title={m.admin_content_archive()}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
-                          onClick={() => handleRestoreRoom(room.id)}
-                          aria-label={m.admin_content_restore()}
-                          title={m.admin_content_restore()}
-                        >
-                          <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
-                          onClick={() => handleDeleteRoom(room.id)}
-                          aria-label={`${m.admin_delete()} ${room.name}`}
-                          title={m.admin_delete()}
-                        >
-                          <i className="bi bi-trash" aria-hidden="true" />
-                        </button>
-                      </>
-                    )}
-                  </Badge>
-                ))}
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  className="py-0 px-1 fs-2xs"
-                  onClick={() => openAddRoom(venue.id)}
-                >
-                  <i className="bi bi-plus-lg" aria-hidden="true" />
-                  {m.admin_room_add()}
-                </Button>
-              </div>
-            );
-          },
-        }),
-        columnHelper.display({
-          id: "tableTypes",
-          header: m.admin_table_types_tab(),
-          enableSorting: false,
-          cell: ({ row }) => {
-            const venue = row.original;
-            if (venue.active === false) return null;
-            const venueTableTypes = tableTypes.filter((tt) => tt.venueId === venue.id);
-            return (
-              <div className="d-flex flex-wrap gap-1 align-items-center">
-                {venueTableTypes.map((tt) => (
-                  <Badge
-                    key={tt.id}
-                    bg={tt.active ? "dark" : "secondary"}
-                    className={clsx(
-                      "d-inline-flex align-items-center gap-1 border border-secondary",
-                      !tt.active && "opacity-50",
-                    )}
-                    style={{ fontSize: "0.75rem" }}
-                  >
-                    <i
-                      className={tt.shape === "round" ? "bi bi-circle" : "bi bi-square"}
-                      aria-hidden="true"
-                    />
-                    <span>{tt.name}</span>
-                    {tt.active ? (
-                      <>
-                        <button
-                          type="button"
-                          className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
-                          onClick={() => openEditTableType(tt)}
-                          aria-label={m.admin_edit()}
-                          title={m.admin_edit()}
-                        >
-                          <i className="bi bi-pencil" aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-close btn-close-white fs-5xs"
-                          onClick={() => handleArchiveTableType(tt.id)}
-                          aria-label={m.admin_content_archive()}
-                          title={m.admin_content_archive()}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
-                          onClick={() => handleRestoreTableType(tt.id)}
-                          aria-label={m.admin_content_restore()}
-                          title={m.admin_content_restore()}
-                        >
-                          <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm p-0 border-0 bg-transparent text-white fs-5xs lh-1"
-                          onClick={() => handleDeleteTableType(tt.id)}
-                          aria-label={`${m.admin_delete()} ${tt.name}`}
-                          title={m.admin_delete()}
-                        >
-                          <i className="bi bi-trash" aria-hidden="true" />
-                        </button>
-                      </>
-                    )}
-                  </Badge>
-                ))}
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  className="py-0 px-1 fs-2xs"
-                  onClick={() => openAddTableType(venue.id)}
-                >
-                  <i className="bi bi-plus-lg" aria-hidden="true" />
-                  {m.admin_add_table_type()}
-                </Button>
-              </div>
-            );
-          },
-        }),
-        columnHelper.display({
-          id: "actions",
-          header: () => m.admin_actions_label(),
-          enableSorting: false,
-          cell: ({ row }) => {
-            const venue = row.original;
-            const isArchived = !venue.active;
-            return (
-              <div className="d-flex gap-1 justify-content-end">
-                {isArchived ? (
-                  <>
-                    <Button
-                      variant="outline-success"
-                      size="sm"
-                      onClick={() => handleRestoreVenue(venue.id)}
-                      aria-label={m.admin_content_restore()}
-                      title={m.admin_content_restore()}
-                    >
-                      <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
-                      onClick={() => handleDeleteVenue(venue.id)}
-                      aria-label={m.admin_delete()}
-                      title={m.admin_delete()}
-                    >
-                      <i className="bi bi-trash" aria-hidden="true" />
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="outline-secondary"
-                    size="sm"
-                    onClick={() => handleArchiveVenue(venue.id)}
-                    aria-label={m.admin_content_archive()}
-                    title={m.admin_content_archive()}
-                  >
-                    <i className="bi bi-archive" aria-hidden="true" />
-                  </Button>
-                )}
-              </div>
-            );
-          },
-        }),
-      ]),
-    [
-      rooms,
-      tableTypes,
-      openAddRoom,
-      openEditRoom,
-      handleArchiveRoom,
-      handleRestoreRoom,
-      handleDeleteRoom,
-      openAddTableType,
-      openEditTableType,
-      handleArchiveTableType,
-      handleRestoreTableType,
-      handleDeleteTableType,
-      handleArchiveVenue,
-      handleRestoreVenue,
-      handleDeleteVenue,
-    ],
-  );
-
-  const table = useAppTable(
-    {
-      data: venues,
-      columns,
-      getRowId: (row) => row.id,
-    },
-    () => ({}),
-  );
-
   return (
     <Card bg="dark" text="white" border="secondary">
       <Card.Header className="d-flex align-items-center justify-content-between">
@@ -784,19 +475,19 @@ export default function VenueManagement({
           {m.admin_venue_add()}
         </Button>
       </Card.Header>
-      <Card.Body className="p-0">
+      <Card.Body className="d-flex flex-column gap-3">
         {deleteVenueError && (
-          <Alert variant="danger" className="m-2 py-1 small">
+          <Alert variant="danger" className="py-1 mb-0 small">
             {deleteVenueError}
           </Alert>
         )}
         {deleteRoomError && (
-          <Alert variant="danger" className="m-2 py-1 small">
+          <Alert variant="danger" className="py-1 mb-0 small">
             {deleteRoomError}
           </Alert>
         )}
         {deleteTableTypeError && (
-          <Alert variant="danger" className="m-2 py-1 small">
+          <Alert variant="danger" className="py-1 mb-0 small">
             {deleteTableTypeError}
           </Alert>
         )}
@@ -806,30 +497,248 @@ export default function VenueManagement({
             {m.admin_no_venues()}
           </p>
         ) : (
-          <Table variant="dark" hover responsive className="mb-0 small">
-            <thead>
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id}>
-                  {hg.headers.map((header) => (
-                    <th key={header.id} className={header.column.columnDef.meta?.tdClassName}>
-                      <table.FlexRender header={header} />
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className={clsx(!row.original.active && "opacity-50")}>
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                      <table.FlexRender cell={cell} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+          venues.map((venue) => {
+            const isArchived = !venue.active;
+            const venueRooms = rooms.filter((r) => r.venueId === venue.id);
+            const venueTableTypes = tableTypes.filter((tt) => tt.venueId === venue.id);
+            const locationLine = [venue.address, venue.city, venue.postalCode, venue.country]
+              .filter(Boolean)
+              .join(", ");
+            return (
+              <Card
+                key={venue.id}
+                bg="dark"
+                text="white"
+                border="secondary"
+                className={clsx(isArchived && "opacity-75")}
+              >
+                <Card.Header className="d-flex align-items-start justify-content-between gap-2">
+                  <div>
+                    <div className="fw-semibold">
+                      {venue.name}
+                      {isArchived && (
+                        <Badge bg="secondary" className="ms-2 fs-2xs">
+                          {m.admin_venue_archived_badge()}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-secondary small">{locationLine || "—"}</div>
+                  </div>
+                  <div className="d-flex gap-1 flex-shrink-0">
+                    {isArchived ? (
+                      <>
+                        <Button
+                          variant="outline-success"
+                          size="sm"
+                          onClick={() => handleRestoreVenue(venue.id)}
+                          aria-label={m.admin_content_restore()}
+                          title={m.admin_content_restore()}
+                        >
+                          <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleDeleteVenue(venue.id)}
+                          aria-label={m.admin_delete()}
+                          title={m.admin_delete()}
+                        >
+                          <i className="bi bi-trash" aria-hidden="true" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => handleArchiveVenue(venue.id)}
+                        aria-label={m.admin_content_archive()}
+                        title={m.admin_content_archive()}
+                      >
+                        <i className="bi bi-archive" aria-hidden="true" />
+                      </Button>
+                    )}
+                  </div>
+                </Card.Header>
+                {!isArchived && (
+                  <Card.Body className="py-2">
+                    <div className="d-flex align-items-center justify-content-between mb-1">
+                      <span className="text-secondary small text-uppercase fw-semibold">
+                        {m.admin_rooms_tab()}
+                      </span>
+                      <Button variant="outline-secondary" size="sm" onClick={() => openAddRoom(venue.id)}>
+                        <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                        {m.admin_room_add()}
+                      </Button>
+                    </div>
+                    {venueRooms.length === 0 ? (
+                      <p className="text-secondary small fst-italic mb-3">{m.admin_room_no_rooms()}</p>
+                    ) : (
+                      <ListGroup variant="flush" className="mb-3">
+                        {venueRooms.map((room) => (
+                          <ListGroup.Item
+                            key={room.id}
+                            className={clsx(
+                              "bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-2 py-1 px-0",
+                              !room.active && "opacity-50",
+                            )}
+                          >
+                            <span className="d-flex align-items-center gap-2">
+                              <span
+                                aria-hidden="true"
+                                style={{
+                                  display: "inline-block",
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: "50%",
+                                  background: room.color,
+                                  flexShrink: 0,
+                                }}
+                              />
+                              {room.name}
+                              {room.dimensionsPlaceholder && (
+                                <i
+                                  className="bi bi-exclamation-triangle-fill fs-5xs text-warning"
+                                  aria-label={m.admin_room_dimensions_placeholder_badge()}
+                                  title={m.admin_room_dimensions_placeholder_hint()}
+                                />
+                              )}
+                            </span>
+                            <span className="d-flex gap-1 flex-shrink-0">
+                              {room.active ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-secondary"
+                                    onClick={() => openEditRoom(room)}
+                                    aria-label={m.admin_edit()}
+                                    title={m.admin_edit()}
+                                  >
+                                    <i className="bi bi-pencil" aria-hidden="true" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-secondary"
+                                    onClick={() => handleArchiveRoom(room.id)}
+                                    aria-label={m.admin_content_archive()}
+                                    title={m.admin_content_archive()}
+                                  >
+                                    <i className="bi bi-archive" aria-hidden="true" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-success"
+                                    onClick={() => handleRestoreRoom(room.id)}
+                                    aria-label={m.admin_content_restore()}
+                                    title={m.admin_content_restore()}
+                                  >
+                                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-danger"
+                                    onClick={() => handleDeleteRoom(room.id)}
+                                    aria-label={`${m.admin_delete()} ${room.name}`}
+                                    title={m.admin_delete()}
+                                  >
+                                    <i className="bi bi-trash" aria-hidden="true" />
+                                  </Button>
+                                </>
+                              )}
+                            </span>
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    )}
+
+                    <div className="d-flex align-items-center justify-content-between mb-1">
+                      <span className="text-secondary small text-uppercase fw-semibold">
+                        {m.admin_table_types_tab()}
+                      </span>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => openAddTableType(venue.id)}
+                      >
+                        <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                        {m.admin_add_table_type()}
+                      </Button>
+                    </div>
+                    {venueTableTypes.length === 0 ? (
+                      <p className="text-secondary small fst-italic mb-0">{m.admin_no_table_types()}</p>
+                    ) : (
+                      <ListGroup variant="flush" className="mb-0">
+                        {venueTableTypes.map((tt) => (
+                          <ListGroup.Item
+                            key={tt.id}
+                            className={clsx(
+                              "bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-2 py-1 px-0",
+                              !tt.active && "opacity-50",
+                            )}
+                          >
+                            <span className="d-flex align-items-center gap-2">
+                              <i
+                                className={tt.shape === "round" ? "bi bi-circle" : "bi bi-square"}
+                                aria-hidden="true"
+                              />
+                              {tt.name}
+                            </span>
+                            <span className="d-flex gap-1 flex-shrink-0">
+                              {tt.active ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-secondary"
+                                    onClick={() => openEditTableType(tt)}
+                                    aria-label={m.admin_edit()}
+                                    title={m.admin_edit()}
+                                  >
+                                    <i className="bi bi-pencil" aria-hidden="true" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-secondary"
+                                    onClick={() => handleArchiveTableType(tt.id)}
+                                    aria-label={m.admin_content_archive()}
+                                    title={m.admin_content_archive()}
+                                  >
+                                    <i className="bi bi-archive" aria-hidden="true" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-success"
+                                    onClick={() => handleRestoreTableType(tt.id)}
+                                    aria-label={m.admin_content_restore()}
+                                    title={m.admin_content_restore()}
+                                  >
+                                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline-danger"
+                                    onClick={() => handleDeleteTableType(tt.id)}
+                                    aria-label={`${m.admin_delete()} ${tt.name}`}
+                                    title={m.admin_delete()}
+                                  >
+                                    <i className="bi bi-trash" aria-hidden="true" />
+                                  </Button>
+                                </>
+                              )}
+                            </span>
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    )}
+                  </Card.Body>
+                )}
+              </Card>
+            );
+          })
         )}
       </Card.Body>
 
