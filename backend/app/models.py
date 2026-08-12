@@ -34,7 +34,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    oidc_subject: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    oidc_subject: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     """OIDC ``sub`` claim — stable identifier from the identity provider."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
@@ -60,7 +60,7 @@ class PebbleAccessToken(Base):
         unique=True,
         nullable=False,
     )
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -71,21 +71,27 @@ class Registration(Base):
     __tablename__ = "registrations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="RESTRICT"), nullable=False)
+    event_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("events.id", ondelete="RESTRICT"), index=True, nullable=False
+    )
     guest_count: Mapped[int] = mapped_column(Integer)
     order_items: Mapped[list[dict]] = mapped_column(JSON, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     accessibility_note: Mapped[str] = mapped_column(Text, default="")
     """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
 
-    person_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="RESTRICT"), nullable=False)
-    table_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("tables.id", ondelete="SET NULL"), nullable=True
+    person_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("people.id", ondelete="RESTRICT"), index=True, nullable=False
     )
-    user_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    table_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("tables.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
     """FK to the portal User who owns this booking (filled when a visitor claims it)."""
 
-    status: Mapped[str] = mapped_column(String(20), default="pending")
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
     """pending | confirmed | cancelled"""
 
     payment_status: Mapped[str] = mapped_column(String(20), default="unpaid")
@@ -364,10 +370,12 @@ class Event(Base):
     __tablename__ = "events"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    edition_id: Mapped[str] = mapped_column(String(100), ForeignKey("editions.id", ondelete="CASCADE"), nullable=False)
+    edition_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
-    date: Mapped[date] = mapped_column(Date)  # ty: ignore[invalid-type-form]
+    date: Mapped[date] = mapped_column(Date, index=True)  # ty: ignore[invalid-type-form]
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
@@ -379,7 +387,7 @@ class Event(Base):
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
@@ -402,7 +410,9 @@ class Product(Base):
     __tablename__ = "products"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    event_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("events.id", ondelete="CASCADE"), index=True, nullable=False
+    )
     name: Mapped[str] = mapped_column(String(200))
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     category: Mapped[str] = mapped_column(String(20))
@@ -433,6 +443,30 @@ class Person(Base):
     """Unified person entity used for members, volunteers, and visitors."""
 
     __tablename__ = "people"
+    __table_args__ = (
+        # Trigram (pg_trgm) GIN indexes backing fuzzy operational search, in
+        # addition to the plain btree index=True below on search_email — the
+        # migration creates both, since exact-match lookup and fuzzy search
+        # need different index shapes on the same column.
+        Index(
+            "ix_people_search_name_trgm",
+            "search_name",
+            postgresql_using="gin",
+            postgresql_ops={"search_name": "gin_trgm_ops"},
+        ),
+        Index(
+            "ix_people_search_name_alt_trgm",
+            "search_name_alt",
+            postgresql_using="gin",
+            postgresql_ops={"search_name_alt": "gin_trgm_ops"},
+        ),
+        Index(
+            "ix_people_search_email_trgm",
+            "search_email",
+            postgresql_using="gin",
+            postgresql_ops={"search_email": "gin_trgm_ops"},
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
@@ -441,7 +475,7 @@ class Person(Base):
     """Trigger-maintained unaccented lower-case name for operational lookup."""
     search_name_alt: Mapped[str] = mapped_column(String(200), default="")
     """Trigger-maintained German-transliteration variant for operational lookup."""
-    search_email: Mapped[str] = mapped_column(String(200), default="")
+    search_email: Mapped[str] = mapped_column(String(200), default="", index=True)
     """Trigger-maintained lower-case email for authorized operational lookup."""
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
