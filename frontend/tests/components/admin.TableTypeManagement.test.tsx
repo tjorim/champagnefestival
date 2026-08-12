@@ -93,7 +93,7 @@ describe("TableTypeManagement", () => {
     expect(screen.getByText("admin_no_table_types")).toBeInTheDocument();
   });
 
-  it("disables Save until name and maxCapacity are valid, then calls onAdd with the expected rectangle shape object", async () => {
+  it("disables Save until name and dimensions are valid, then calls onAdd with the expected rectangle shape object", async () => {
     const { onAdd } = renderTableTypeManagement({ tableTypes: [] });
 
     fireEvent.click(screen.getByRole("button", { name: "admin_add_table_type" }));
@@ -103,9 +103,22 @@ describe("TableTypeManagement", () => {
     const saveButton = dialogScope.getByRole("button", { name: "admin_save" });
     expect(saveButton).toBeDisabled();
 
+    const widthField = dialogScope.getByLabelText("admin_table_width_label") as HTMLInputElement;
+    const lengthField = dialogScope.getByLabelText(
+      "admin_table_length_label",
+    ) as HTMLInputElement;
+    expect(widthField.value).toBe("");
+    expect(lengthField.value).toBe("");
+
     fireEvent.change(dialogScope.getByLabelText("admin_table_name"), {
       target: { value: "Banquet Rect" },
     });
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.change(widthField, { target: { value: "0.8" } });
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.change(lengthField, { target: { value: "2" } });
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.click(saveButton);
@@ -113,8 +126,8 @@ describe("TableTypeManagement", () => {
     expect(onAdd).toHaveBeenCalledWith({
       name: "Banquet Rect",
       shape: "rectangle",
-      widthM: 0.7,
-      lengthM: 1.8,
+      widthM: 0.8,
+      lengthM: 2,
       heightType: "low",
       maxCapacity: 4,
       active: true,

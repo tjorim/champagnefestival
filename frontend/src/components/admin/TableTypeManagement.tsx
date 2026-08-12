@@ -27,12 +27,23 @@ interface TableTypeManagementProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-const emptyForm = {
+// widthM/lengthM start blank — a table type's real dimensions have no
+// defensible generic default (see #833/#835/#858), so the admin must enter
+// them deliberately rather than accidentally saving a made-up size.
+const emptyForm: {
+  name: string;
+  shape: "rectangle" | "round";
+  widthM: number | "";
+  lengthM: number | "";
+  heightType: "low" | "high";
+  maxCapacity: number;
+  active: boolean;
+} = {
   name: "",
-  shape: "rectangle" as "rectangle" | "round",
-  widthM: 0.7,
-  lengthM: 1.8,
-  heightType: "low" as "low" | "high",
+  shape: "rectangle",
+  widthM: "",
+  lengthM: "",
+  heightType: "low",
   maxCapacity: 4,
   active: true,
 };
@@ -87,11 +98,12 @@ export default function TableTypeManagement({
       setError(m.admin_table_type_capacity_min());
       return;
     }
+    const { widthM, lengthM } = form;
     if (
-      !Number.isFinite(form.widthM) ||
-      form.widthM <= 0 ||
-      !Number.isFinite(form.lengthM) ||
-      form.lengthM <= 0
+      typeof widthM !== "number" ||
+      widthM <= 0 ||
+      typeof lengthM !== "number" ||
+      lengthM <= 0
     ) {
       setError(m.admin_table_type_dimensions_positive());
       return;
@@ -99,11 +111,12 @@ export default function TableTypeManagement({
     setSaving(true);
     setError(null);
     try {
+      const payload = { ...form, widthM, lengthM };
       if (editingId) {
-        const { active: _active, ...updateData } = form;
+        const { active: _active, ...updateData } = payload;
         await onUpdate(editingId, updateData);
       } else {
-        await onAdd(form);
+        await onAdd(payload);
       }
       setShowModal(false);
     } catch (err) {
@@ -398,9 +411,11 @@ export default function TableTypeManagement({
                 min={0.1}
                 max={20}
                 step={0.1}
+                required
                 value={form.widthM}
                 onChange={(e) => {
-                  const v = Number(e.target.value);
+                  const raw = e.target.value;
+                  const v = raw === "" ? "" : Number(raw);
                   setForm((p) => ({ ...p, widthM: v, lengthM: v }));
                 }}
                 className="bg-dark text-light border-secondary"
@@ -416,11 +431,13 @@ export default function TableTypeManagement({
                     min={0.1}
                     max={20}
                     step={0.1}
+                    required
                     value={form.widthM}
                     onChange={(e) => {
-                      const v = Number(e.target.value);
+                      const raw = e.target.value;
+                      const v = raw === "" ? "" : Number(raw);
                       setForm((p) =>
-                        v > p.lengthM
+                        typeof v === "number" && typeof p.lengthM === "number" && v > p.lengthM
                           ? { ...p, widthM: p.lengthM, lengthM: v }
                           : { ...p, widthM: v },
                       );
@@ -437,11 +454,13 @@ export default function TableTypeManagement({
                     min={0.1}
                     max={20}
                     step={0.1}
+                    required
                     value={form.lengthM}
                     onChange={(e) => {
-                      const v = Number(e.target.value);
+                      const raw = e.target.value;
+                      const v = raw === "" ? "" : Number(raw);
                       setForm((p) =>
-                        v < p.widthM
+                        typeof v === "number" && typeof p.widthM === "number" && v < p.widthM
                           ? { ...p, lengthM: p.widthM, widthM: v }
                           : { ...p, lengthM: v },
                       );
@@ -475,7 +494,11 @@ export default function TableTypeManagement({
               saving ||
               !form.name.trim() ||
               form.maxCapacity < 1 ||
-              !Number.isInteger(form.maxCapacity)
+              !Number.isInteger(form.maxCapacity) ||
+              typeof form.widthM !== "number" ||
+              form.widthM <= 0 ||
+              typeof form.lengthM !== "number" ||
+              form.lengthM <= 0
             }
           >
             {m.admin_save()}
