@@ -280,6 +280,22 @@ describe("LayoutEditor", () => {
     expect(optionValues).not.toContain("tt-2");
   });
 
+  it("selected-table detail: filters the change-type select to the active room's venue", () => {
+    const fixture = realisticFixture();
+    fixture.tableTypes = [
+      makeTableType({ id: "tt-1", name: "Round 8" }),
+      makeTableType({ id: "tt-2", name: "Other Venue Type", venueId: "venue-2" }),
+    ];
+    renderLayoutEditor(fixture);
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+
+    const select = screen.getByLabelText("admin_layout_table_type_label") as HTMLSelectElement;
+    const optionValues = Array.from(select.options).map((o) => o.value);
+    expect(optionValues).toContain("tt-1");
+    expect(optionValues).not.toContain("tt-2");
+  });
+
   it("add-area modal: Save disabled until label filled, then calls onAddArea", () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
