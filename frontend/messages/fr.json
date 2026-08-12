@@ -342,7 +342,6 @@
   "admin_table_type_dimensions_positive": "La largeur et la longueur doivent être des nombres positifs",
   "admin_table_type_delete_confirm": "Supprimer définitivement ce type de table ? Cette action est irréversible.",
   "admin_error_delete_table_type": "Échec de la suppression du type de table.",
-  "admin_no_table_types": "Aucun type de table défini.",
   "admin_venue_add": "Ajouter un lieu",
   "admin_venue_name_label": "Nom du lieu",
   "admin_venue_name_placeholder": "ex. Château Pommery",

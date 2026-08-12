@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import VenueManagement from "@/components/admin/VenueManagement";
-import type { Room, Venue } from "@/types/admin";
+import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 
 // happy-dom does not implement window.confirm, so it must be stubbed rather
 // than wrapped (vi.spyOn requires an existing function).
@@ -65,9 +65,57 @@ const room2: Room = {
   dimensionsPlaceholder: false,
 };
 
+const activeTableType: TableType = {
+  id: "tt-1",
+  name: "Standard Rectangle",
+  venueId: "venue-1",
+  shape: "rectangle",
+  widthM: 0.7,
+  lengthM: 1.8,
+  heightType: "low",
+  maxCapacity: 4,
+  active: true,
+};
+
+const archivedTableType: TableType = {
+  id: "tt-2",
+  name: "Retired Round",
+  venueId: "venue-1",
+  shape: "round",
+  widthM: 0.9,
+  lengthM: 0.9,
+  heightType: "high",
+  maxCapacity: 2,
+  active: false,
+};
+
+const layout1: Layout = {
+  id: "layout-1",
+  editionId: "edition-1",
+  roomId: "room-1",
+  date: "2026-08-01",
+  label: "",
+  createdAt: "2026-01-01T00:00:00Z",
+};
+
+const tableUsingActiveType: FloorTable = {
+  id: "table-1",
+  name: "Table A",
+  capacity: 4,
+  x: 10,
+  y: 10,
+  tableTypeId: "tt-1",
+  rotation: 0,
+  layoutId: "layout-1",
+  registrationIds: [],
+};
+
 interface RenderOverrides {
   venues?: Venue[];
   rooms?: Room[];
+  tableTypes?: TableType[];
+  tables?: FloorTable[];
+  layouts?: Layout[];
   onAdd?: (...args: unknown[]) => Promise<void>;
   onArchive?: (...args: unknown[]) => Promise<void>;
   onRestore?: (...args: unknown[]) => Promise<void>;
@@ -77,6 +125,11 @@ interface RenderOverrides {
   onArchiveRoom?: (...args: unknown[]) => Promise<void>;
   onRestoreRoom?: (...args: unknown[]) => Promise<void>;
   onDeleteRoom?: (...args: unknown[]) => Promise<void>;
+  onAddTableType?: (data: Omit<TableType, "id">) => Promise<void>;
+  onUpdateTableType?: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
+  onArchiveTableType?: (id: string) => Promise<void>;
+  onRestoreTableType?: (id: string) => Promise<void>;
+  onDeleteTableType?: (id: string) => Promise<void>;
 }
 
 function renderVenueManagement(overrides: RenderOverrides = {}) {
@@ -89,11 +142,19 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
   const onArchiveRoom = overrides.onArchiveRoom ?? vi.fn().mockResolvedValue(undefined);
   const onRestoreRoom = overrides.onRestoreRoom ?? vi.fn().mockResolvedValue(undefined);
   const onDeleteRoom = overrides.onDeleteRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onAddTableType = overrides.onAddTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onUpdateTableType = overrides.onUpdateTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onArchiveTableType = overrides.onArchiveTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onRestoreTableType = overrides.onRestoreTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onDeleteTableType = overrides.onDeleteTableType ?? vi.fn().mockResolvedValue(undefined);
 
   render(
     <VenueManagement
       venues={overrides.venues ?? [activeVenue, archivedVenue]}
       rooms={overrides.rooms ?? [room1, room2]}
+      tableTypes={overrides.tableTypes ?? [activeTableType, archivedTableType]}
+      tables={overrides.tables ?? [tableUsingActiveType]}
+      layouts={overrides.layouts ?? [layout1]}
       onAdd={onAdd}
       onArchive={onArchive}
       onRestore={onRestore}
@@ -103,6 +164,11 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
       onArchiveRoom={onArchiveRoom}
       onRestoreRoom={onRestoreRoom}
       onDeleteRoom={onDeleteRoom}
+      onAddTableType={onAddTableType}
+      onUpdateTableType={onUpdateTableType}
+      onArchiveTableType={onArchiveTableType}
+      onRestoreTableType={onRestoreTableType}
+      onDeleteTableType={onDeleteTableType}
     />,
   );
 
@@ -116,6 +182,11 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
     onArchiveRoom,
     onRestoreRoom,
     onDeleteRoom,
+    onAddTableType,
+    onUpdateTableType,
+    onArchiveTableType,
+    onRestoreTableType,
+    onDeleteTableType,
   };
 }
 
@@ -144,12 +215,12 @@ describe("VenueManagement", () => {
   });
 
   it("shows the empty state when there are no venues", () => {
-    renderVenueManagement({ venues: [], rooms: [] });
+    renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
     expect(screen.getByText("admin_no_venues")).toBeInTheDocument();
   });
 
   it("disables Save until name is filled, then calls onAdd with trimmed args and closes the modal", async () => {
-    const { onAdd } = renderVenueManagement({ venues: [], rooms: [] });
+    const { onAdd } = renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
 
     fireEvent.click(screen.getByRole("button", { name: "admin_venue_add" }));
 
@@ -175,7 +246,7 @@ describe("VenueManagement", () => {
   // Note: the venue row also contains a room "archive" (x) button reusing the
   // same admin_content_archive label (room1 belongs to venue-1 and is active),
   // so the venue-level archive action is disambiguated as the last matching
-  // button in the row (the actions column renders after the rooms column).
+  // button in the row (the actions column renders after the rooms/table-types columns).
   it("does not call onArchive when the confirm dialog is cancelled", () => {
     const confirmFn = mockConfirm(false);
     const { onArchive } = renderVenueManagement();
@@ -279,8 +350,8 @@ describe("VenueManagement", () => {
   it("opens the edit-room modal prefilled, and calls onUpdateRoom with the edited fields", async () => {
     const { onUpdateRoom } = renderVenueManagement();
 
-    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
-    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+    const roomBadge = screen.getByText("Room A").closest(".badge") as HTMLElement;
+    fireEvent.click(within(roomBadge).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -313,8 +384,8 @@ describe("VenueManagement", () => {
       rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
     });
 
-    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
-    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+    const roomBadge = screen.getByText("Room A").closest(".badge") as HTMLElement;
+    fireEvent.click(within(roomBadge).getByRole("button", { name: "admin_edit" }));
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -339,6 +410,221 @@ describe("VenueManagement", () => {
 
     expect(
       screen.getByLabelText("admin_room_dimensions_placeholder_badge"),
+    ).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Table types (nested under each venue, #858)
+  // ---------------------------------------------------------------------------
+
+  it("renders table type badges within the venue row, with the archived badge dimmed", () => {
+    renderVenueManagement();
+
+    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
+    const activeRowScope = within(activeRow);
+    expect(activeRowScope.getByText("Standard Rectangle")).toBeInTheDocument();
+    expect(activeRowScope.getByText("Retired Round")).toBeInTheDocument();
+
+    const archivedBadge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
+    expect(archivedBadge.className).toContain("opacity-50");
+  });
+
+  it("disables Save until name/venue/dimensions are valid, then calls onAddTableType prefilled with the clicked venue", async () => {
+    const { onAddTableType } = renderVenueManagement({ tableTypes: [], tables: [] });
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_add_table_type" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    const saveButton = dialogScope.getByRole("button", { name: "admin_save" });
+    expect(saveButton).toBeDisabled();
+    expect(dialogScope.getByLabelText("admin_room_venue_label")).toHaveValue("venue-1");
+
+    fireEvent.change(dialogScope.getByLabelText("admin_table_name"), {
+      target: { value: "Banquet Rect" },
+    });
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.8" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_table_length_label"), {
+      target: { value: "2" },
+    });
+    expect(saveButton).not.toBeDisabled();
+
+    fireEvent.click(saveButton);
+
+    expect(onAddTableType).toHaveBeenCalledWith({
+      venueId: "venue-1",
+      name: "Banquet Rect",
+      shape: "rectangle",
+      widthM: 0.8,
+      lengthM: 2,
+      heightType: "low",
+      maxCapacity: 4,
+      active: true,
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("switching the shape select to round updates default dimensions and swaps the width/length fields for a single diameter field", async () => {
+    renderVenueManagement({ tableTypes: [], tables: [] });
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_add_table_type" }));
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+
+    expect(dialogScope.queryByLabelText("admin_table_diameter_label")).not.toBeInTheDocument();
+    fireEvent.change(dialogScope.getByLabelText("admin_table_shape_label"), {
+      target: { value: "round" },
+    });
+
+    expect(dialogScope.queryByLabelText("admin_table_width_label")).not.toBeInTheDocument();
+    const diameterField = dialogScope.getByLabelText("admin_table_diameter_label") as HTMLInputElement;
+    expect(diameterField.value).toBe("0.9");
+  });
+
+  it("pre-fills the edit form from the badge's existing values and calls onUpdateTableType without the active field", async () => {
+    const { onUpdateTableType } = renderVenueManagement({ tables: [] });
+
+    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
+    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    const nameInput = dialogScope.getByLabelText("admin_table_name") as HTMLInputElement;
+    expect(nameInput.value).toBe("Standard Rectangle");
+
+    fireEvent.change(nameInput, { target: { value: "Renamed Rectangle" } });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(onUpdateTableType).toHaveBeenCalledWith("tt-1", {
+      venueId: "venue-1",
+      name: "Renamed Rectangle",
+      shape: "rectangle",
+      widthM: 0.7,
+      lengthM: 1.8,
+      heightType: "low",
+      maxCapacity: 4,
+    });
+    const callArgs = vi.mocked(onUpdateTableType).mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(callArgs).not.toHaveProperty("active");
+  });
+
+  it("confirms the affected table/room count before saving a dimension change on an in-use type, and proceeds when accepted", async () => {
+    const confirmSpy = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onUpdateTableType } = renderVenueManagement();
+
+    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
+    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
+    );
+    await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
+  });
+
+  it("cancels the save when the dimension-change confirmation is declined", async () => {
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(false));
+    const { onUpdateTableType } = renderVenueManagement();
+
+    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
+    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(onUpdateTableType).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("saves a dimension change without confirmation when no tables use the type", async () => {
+    const confirmSpy = vi.fn();
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onUpdateTableType } = renderVenueManagement({ tables: [] });
+
+    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
+    fireEvent.click(within(badge).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
+  });
+
+  it("archives an active table type immediately, with no confirm prompt", () => {
+    const confirmSpy = vi.fn();
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onArchiveTableType } = renderVenueManagement();
+
+    const badge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
+    fireEvent.click(within(badge).getByRole("button", { name: "admin_content_archive" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onArchiveTableType).toHaveBeenCalledWith("tt-1");
+  });
+
+  it("restores an archived table type immediately, with no confirm prompt, and hides the edit button on archived badges", () => {
+    const confirmSpy = vi.fn();
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onRestoreTableType } = renderVenueManagement();
+
+    const badge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
+    expect(within(badge).queryByRole("button", { name: "admin_edit" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(badge).getByRole("button", { name: "admin_content_restore" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onRestoreTableType).toHaveBeenCalledWith("tt-2");
+  });
+
+  it("offers delete on archived table types only, and asks for confirmation first", () => {
+    const confirmSpy = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onDeleteTableType } = renderVenueManagement();
+
+    const activeBadge = screen.getByText("Standard Rectangle").closest(".badge") as HTMLElement;
+    expect(
+      within(activeBadge).queryByRole("button", { name: /admin_delete/ }),
+    ).not.toBeInTheDocument();
+
+    const archivedBadge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
+    fireEvent.click(within(archivedBadge).getByRole("button", { name: "admin_delete Retired Round" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith("admin_table_type_delete_confirm");
+    expect(onDeleteTableType).toHaveBeenCalledWith("tt-2");
+  });
+
+  it("surfaces the API's refusal when tables still use the table type", async () => {
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(true));
+    const onDeleteTableType = vi
+      .fn()
+      .mockRejectedValue(new Error("Cannot delete: tables are still using this type."));
+    renderVenueManagement({ onDeleteTableType });
+
+    const archivedBadge = screen.getByText("Retired Round").closest(".badge") as HTMLElement;
+    fireEvent.click(within(archivedBadge).getByRole("button", { name: "admin_delete Retired Round" }));
+
+    expect(
+      await screen.findByText("Cannot delete: tables are still using this type."),
     ).toBeInTheDocument();
   });
 });

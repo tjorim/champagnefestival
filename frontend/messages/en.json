@@ -342,7 +342,6 @@
   "admin_table_type_dimensions_positive": "Width and length must be positive numbers",
   "admin_table_type_delete_confirm": "Permanently delete this table type? This cannot be undone.",
   "admin_error_delete_table_type": "Failed to delete table type.",
-  "admin_no_table_types": "No table types defined yet.",
   "admin_venue_add": "Add venue",
   "admin_venue_name_label": "Venue name",
   "admin_venue_name_placeholder": "e.g. Château Pommery",
