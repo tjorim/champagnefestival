@@ -332,6 +332,7 @@
   "admin_table_types_tab": "Table Types",
   "admin_add_table_type": "Add table type",
   "admin_edit_table_type": "Edit table type",
+  "admin_table_type_name_label": "Table type name",
   "admin_table_type_name_placeholder": "e.g. Round dinner table",
   "admin_table_type_max_capacity": "Max capacity",
   "admin_table_type_select": "Select table type",

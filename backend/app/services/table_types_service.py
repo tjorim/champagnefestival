@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import Layout, Table, TableType, Venue
+from app.models import Layout, Room, Table, TableType, Venue
 from app.schemas import TableTypeCreate, TableTypeUpdate
 from app.services.errors import ConflictError, NotFoundError
 from app.utils import make_id, table_type_to_dict
@@ -85,6 +85,18 @@ async def update_table_type(
         venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
         if venue.scalar_one_or_none() is None:
             raise NotFoundError(f"Venue '{body.venue_id}' not found.")
+        # A table type placed on tables at rooms in another venue can't move without
+        # stranding those placements outside the venue-scoped contract this type now
+        # has (#858) — block the reassignment rather than leaving them inconsistent.
+        other_venue_tables = await db.execute(
+            select(Table.id)
+            .join(Layout, Table.layout_id == Layout.id)
+            .join(Room, Layout.room_id == Room.id)
+            .where(Table.table_type_id == type_id, Room.venue_id != body.venue_id)
+            .limit(1)
+        )
+        if other_venue_tables.scalar_one_or_none() is not None:
+            raise ConflictError("Cannot reassign venue: tables using this type exist in rooms at another venue.")
         tt.venue_id = body.venue_id
         fields_changed.append("venue_id")
     if body.shape is not None:

@@ -298,7 +298,40 @@ async def test_delete_table_writes_audit_entry(client, db_session):
 async def test_table_type_dimension_change_records_blast_radius_in_audit_entry(client, db_session):
     """A shape/dimension edit reshapes every table of that type on every layout that
     ever placed one (live-joined at render time, not snapshotted) — the audit entry
-    should say how many tables/rooms were affected, not just which fields changed."""
+    should say how many tables/rooms were affected, not just which fields changed.
+
+    Two tables share one room/layout here specifically so affected_rooms==1 can only
+    pass if rooms are actually counted distinctly — counting tables instead would
+    give the same answer with a single-table fixture."""
+    layout_id = await _create_layout_prerequisites(client)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    type_id = tt_r.json()["id"]
+    for name in ("T1", "T2"):
+        table_r = await client.post(
+            "/api/tables",
+            json={"name": name, "capacity": 4, "layout_id": layout_id, "table_type_id": type_id},
+            headers=ADMIN_HEADERS,
+        )
+        assert table_r.status_code == 201
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"width_m": 1.2}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    entries = await _all_audit_entries(db_session)
+    updated = [e for e in entries if e.action == "table_type_updated"]
+    assert len(updated) == 1
+    assert updated[0].details["affected_tables"] == 2
+    assert updated[0].details["affected_rooms"] == 1
+
+
+@pytest.mark.anyio
+async def test_table_type_shape_only_change_records_blast_radius_in_audit_entry(client, db_session):
+    """The blast radius applies to shape changes too, not just width_m/length_m —
+    a shape switch re-derives dimensions (normalise_table_type_dimensions) and
+    carries the same reshape risk."""
     layout_id = await _create_layout_prerequisites(client)
     venue_id = await _create_venue(client)
     tt_r = await client.post(
@@ -312,7 +345,7 @@ async def test_table_type_dimension_change_records_blast_radius_in_audit_entry(c
     )
     assert table_r.status_code == 201
 
-    r = await client.put(f"/api/table-types/{type_id}", json={"width_m": 1.2}, headers=ADMIN_HEADERS)
+    r = await client.put(f"/api/table-types/{type_id}", json={"shape": "round"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
 
     entries = await _all_audit_entries(db_session)

@@ -449,7 +449,7 @@ describe("VenueManagement", () => {
     expect(saveButton).toBeDisabled();
     expect(dialogScope.getByLabelText("admin_room_venue_label")).toHaveValue("venue-1");
 
-    fireEvent.change(dialogScope.getByLabelText("admin_table_name"), {
+    fireEvent.change(dialogScope.getByLabelText("admin_table_type_name_label"), {
       target: { value: "Banquet Rect" },
     });
     expect(saveButton).toBeDisabled();
@@ -477,7 +477,7 @@ describe("VenueManagement", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("switching the shape select to round updates default dimensions and swaps the width/length fields for a single diameter field", async () => {
+  it("switching the shape select to round swaps the width/length fields for a single blank diameter field", async () => {
     renderVenueManagement({ tableTypes: [], tables: [] });
 
     fireEvent.click(screen.getByRole("button", { name: "admin_add_table_type" }));
@@ -485,13 +485,18 @@ describe("VenueManagement", () => {
     const dialogScope = within(dialog);
 
     expect(dialogScope.queryByLabelText("admin_table_diameter_label")).not.toBeInTheDocument();
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.8" },
+    });
     fireEvent.change(dialogScope.getByLabelText("admin_table_shape_label"), {
       target: { value: "round" },
     });
 
+    // Switching shape invalidates whatever was entered — no generic replacement
+    // is defensible (#833/#835), so it blanks rather than inventing a diameter.
     expect(dialogScope.queryByLabelText("admin_table_width_label")).not.toBeInTheDocument();
     const diameterField = dialogScope.getByLabelText("admin_table_diameter_label") as HTMLInputElement;
-    expect(diameterField.value).toBe("0.9");
+    expect(diameterField.value).toBe("");
   });
 
   it("pre-fills the edit form from the row's existing values and calls onUpdateTableType without the active field", async () => {
@@ -501,7 +506,7 @@ describe("VenueManagement", () => {
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
-    const nameInput = dialogScope.getByLabelText("admin_table_name") as HTMLInputElement;
+    const nameInput = dialogScope.getByLabelText("admin_table_type_name_label") as HTMLInputElement;
     expect(nameInput.value).toBe("Standard Rectangle");
 
     fireEvent.change(nameInput, { target: { value: "Renamed Rectangle" } });
@@ -531,6 +536,31 @@ describe("VenueManagement", () => {
     const dialogScope = within(dialog);
     fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
       target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
+    );
+    await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
+  });
+
+  it("confirms the affected table/room count when only the shape changes", async () => {
+    const confirmSpy = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onUpdateTableType } = renderVenueManagement();
+
+    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_table_shape_label"), {
+      target: { value: "round" },
+    });
+    // Switching shape blanks the dimensions (see the shape-swap test above), so a
+    // diameter has to be re-entered before Save is even enabled.
+    fireEvent.change(dialogScope.getByLabelText("admin_table_diameter_label"), {
+      target: { value: "1.2" },
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 

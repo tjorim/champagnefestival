@@ -372,19 +372,19 @@ export default function VenueManagement({
         widthM !== editingTableTypeOriginalShape.widthM ||
         lengthM !== editingTableTypeOriginalShape.lengthM)
     ) {
-      const affectedTableIds = tables
+      const affectedTableLayoutIds = tables
         .filter((t) => t.tableTypeId === editingTableTypeId)
         .map((t) => t.layoutId);
       const affectedRoomIds = new Set(
-        affectedTableIds
+        affectedTableLayoutIds
           .map((layoutId) => layouts.find((l) => l.id === layoutId)?.roomId)
           .filter((roomId): roomId is string => Boolean(roomId)),
       );
       if (
-        affectedTableIds.length > 0 &&
+        affectedTableLayoutIds.length > 0 &&
         !window.confirm(
           m.admin_table_type_dimension_change_confirm({
-            tableCount: affectedTableIds.length,
+            tableCount: affectedTableLayoutIds.length,
             roomCount: affectedRoomIds.size,
           }),
         )
@@ -971,7 +971,7 @@ export default function VenueManagement({
             </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3" controlId="tt-name">
-            <Form.Label>{m.admin_table_name()}</Form.Label>
+            <Form.Label>{m.admin_table_type_name_label()}</Form.Label>
             <Form.Control
               type="text"
               value={tableTypeForm.name}
@@ -989,8 +989,11 @@ export default function VenueManagement({
                 setTableTypeForm((p) => ({
                   ...p,
                   shape: s,
-                  widthM: s === "round" ? 0.9 : 0.7,
-                  lengthM: s === "round" ? 0.9 : 1.8,
+                  // Same reasoning as emptyTableTypeForm: a shape switch invalidates
+                  // whatever dimensions were entered, and no generic replacement is
+                  // defensible (#833/#835) — blank them rather than inventing values.
+                  widthM: "",
+                  lengthM: "",
                 }));
               }}
               className="bg-dark text-light border-secondary"

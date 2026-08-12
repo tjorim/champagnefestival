@@ -332,6 +332,7 @@
   "admin_table_types_tab": "Tafeltypen",
   "admin_add_table_type": "Tafeltype toevoegen",
   "admin_edit_table_type": "Tafeltype bewerken",
+  "admin_table_type_name_label": "Naam tafeltype",
   "admin_table_type_name_placeholder": "bijv. Ronde eettafel",
   "admin_table_type_max_capacity": "Max. capaciteit",
   "admin_table_type_select": "Kies tafeltype",

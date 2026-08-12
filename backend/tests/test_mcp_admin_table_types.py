@@ -111,6 +111,28 @@ async def test_update_table_type_venue_reassignment(db_session):
     assert updated["venue_id"] == "venue-2"
 
 
+async def test_update_table_type_venue_reassignment_blocked_while_table_in_use_elsewhere(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session, "venue-1")
+    await _seed_venue(db_session, "venue-2")
+    created = await mcp_table_types.create_table_type(
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+    )
+
+    room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
+    db_session.add(room)
+    await db_session.flush()
+    layout = Layout(id="lay-1", edition_id=None, room_id="room-1", day_id=1)
+    db_session.add(layout)
+    await db_session.flush()
+    table = Table(id="tbl-1", name="T1", capacity=4, table_type_id=created["id"], layout_id="lay-1")
+    db_session.add(table)
+    await db_session.commit()
+
+    with pytest.raises(ValueError, match="another venue"):
+        await mcp_table_types.update_table_type(factory, "admin-1", created["id"], venue_id="venue-2")
+
+
 async def test_update_table_type_venue_reassignment_not_found(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)

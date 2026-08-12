@@ -63,6 +63,18 @@ def upgrade() -> None:
             """
         )
     )
+    # The backfill above only assigns a venue when at least one exists (see
+    # _EARLIEST_VENUE's WHERE clause) — a table_types row predating any venue at
+    # all would otherwise hit the NOT NULL constraint below as an opaque Postgres
+    # error. Fail loudly and explain the fix instead.
+    unassigned = op.get_bind().execute(sa.text("SELECT count(*) FROM table_types WHERE venue_id IS NULL")).scalar()
+    if unassigned:
+        raise RuntimeError(
+            f"Migration 011 cannot proceed: {unassigned} table_types row(s) have no venue "
+            "to backfill from (no venues exist). Create at least one venue, or manually "
+            "assign table_types.venue_id, then re-run this migration."
+        )
+
     op.alter_column("table_types", "venue_id", nullable=False)
     op.create_foreign_key(
         "table_types_venue_id_fkey",

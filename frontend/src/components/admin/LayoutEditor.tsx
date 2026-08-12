@@ -750,6 +750,18 @@ export default function LayoutEditor({
     ? getTablesInArea(selectedAreaData, canvasTables, tableTypes, areaCanvasW, areaCanvasH)
     : [];
 
+  // The Add Table type list is venue-filtered (below), so a selection carried
+  // over from a previously active room in another venue would otherwise let
+  // Save submit a table type that doesn't belong to this room's venue (#858).
+  useEffect(() => {
+    setNewTable((p) =>
+      p.tableTypeId &&
+      !tableTypes.some((tt) => tt.id === p.tableTypeId && tt.venueId === activeRoom?.venueId)
+        ? { ...p, tableTypeId: "" }
+        : p,
+    );
+  }, [activeRoom?.venueId, tableTypes]);
+
   const handleSelectRoom = useCallback((k: string | null) => {
     if (k) {
       setActiveRoomId(k);

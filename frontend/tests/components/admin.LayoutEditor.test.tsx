@@ -263,6 +263,23 @@ describe("LayoutEditor", () => {
     expect(callbacks.onAddTable).toHaveBeenCalledWith("New Table", 6, "layout-1", "tt-1");
   });
 
+  it("add-table modal: filters the table type select to the active room's venue", () => {
+    const fixture = realisticFixture();
+    fixture.tableTypes = [
+      makeTableType({ id: "tt-1", name: "Round 8" }),
+      makeTableType({ id: "tt-2", name: "Other Venue Type", venueId: "venue-2" }),
+    ];
+    renderLayoutEditor(fixture);
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_add_table" }));
+
+    const dialog = screen.getByRole("dialog");
+    const select = within(dialog).getByLabelText("admin_table_type_select") as HTMLSelectElement;
+    const optionValues = Array.from(select.options).map((o) => o.value);
+    expect(optionValues).toContain("tt-1");
+    expect(optionValues).not.toContain("tt-2");
+  });
+
   it("add-area modal: Save disabled until label filled, then calls onAddArea", () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);

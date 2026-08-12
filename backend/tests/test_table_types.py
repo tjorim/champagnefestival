@@ -87,6 +87,31 @@ async def test_table_type_venue_reassignment(client):
 
 
 @pytest.mark.anyio
+async def test_table_type_venue_reassignment_blocked_while_table_in_use_elsewhere(client):
+    venue_a = await _create_venue(client)
+    r = await client.post("/api/venues", json={"name": "Other Venue"}, headers=ADMIN_HEADERS)
+    venue_b = r.json()["id"]
+
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS)
+    type_id = r.json()["id"]
+
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    layout_id = r.json()["id"]
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "capacity": 4, "x": 0.0, "y": 0.0, "table_type_id": type_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"venue_id": venue_b}, headers=ADMIN_HEADERS)
+    assert r.status_code == 409
+    assert "another venue" in r.json()["detail"]
+
+
+@pytest.mark.anyio
 async def test_table_type_venue_reassignment_rejects_unknown_venue(client):
     venue_id = await _create_venue(client)
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
