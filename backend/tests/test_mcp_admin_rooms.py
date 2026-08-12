@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.mcp.admin import rooms as mcp_rooms
-from app.models import Layout, Venue
+from app.models import Layout, Room, Venue
 from tests.helpers import mcp_session_factory
 
 
@@ -85,6 +85,30 @@ async def test_update_room_partial(db_session):
     assert updated["length_m"] == 20.0
     assert updated["name"] == "Main Hall"  # untouched fields survive a partial update
     assert updated["width_m"] == created["width_m"]
+
+
+async def test_update_room_partial_clears_dimensions_placeholder(db_session):
+    """`create_room` always sets `dimensions_placeholder=False`, so `test_update_room_partial`
+    (which starts from a freshly created room) can't detect a regression where a dimension
+    update fails to clear a pre-existing placeholder flag. Seed one directly, mirroring
+    `test_room_dimensions_placeholder_flag_cleared_on_explicit_update` in test_rooms.py."""
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session)
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=20.0, length_m=15.0
+    )
+
+    room = await db_session.get(Room, created["id"])
+    room.dimensions_placeholder = True
+    await db_session.commit()
+
+    # An unrelated field update must not clear the flag.
+    renamed = await mcp_rooms.update_room(factory, "admin-1", created["id"], name="Main Hall (renamed)")
+    assert renamed["dimensions_placeholder"] is True
+
+    # Supplying a real width/length clears it.
+    updated = await mcp_rooms.update_room(factory, "admin-1", created["id"], length_m=20.0)
+    assert updated["dimensions_placeholder"] is False
 
 
 async def test_update_room_venue_reassignment(db_session):

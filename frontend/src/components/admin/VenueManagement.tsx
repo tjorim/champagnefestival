@@ -91,6 +91,12 @@ export default function VenueManagement({
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [roomForm, setRoomForm] = useState(emptyRoomForm);
+  // Dimensions as loaded into the edit form, so `handleSaveRoom` can tell whether the
+  // admin actually changed width/length — see its comment for why that distinction matters.
+  const [editingRoomOriginalDims, setEditingRoomOriginalDims] = useState<{
+    widthM: number;
+    lengthM: number;
+  } | null>(null);
   const [addRoomError, setAddRoomError] = useState<string | null>(null);
   const [deleteRoomError, setDeleteRoomError] = useState<string | null>(null);
 
@@ -163,6 +169,7 @@ export default function VenueManagement({
 
   const openAddRoom = useCallback((venueId: string) => {
     setEditingRoomId(null);
+    setEditingRoomOriginalDims(null);
     setRoomForm({ ...emptyRoomForm, venueId });
     setAddRoomError(null);
     setShowRoomModal(true);
@@ -170,6 +177,7 @@ export default function VenueManagement({
 
   const openEditRoom = useCallback((room: Room) => {
     setEditingRoomId(room.id);
+    setEditingRoomOriginalDims({ widthM: room.widthM, lengthM: room.lengthM });
     setRoomForm({
       venueId: room.venueId,
       name: room.name,
@@ -188,11 +196,19 @@ export default function VenueManagement({
     setAddRoomError(null);
     try {
       if (editingRoomId) {
+        // Omit widthM/lengthM entirely when they match what the form was opened with —
+        // the backend clears a room's `dimensionsPlaceholder` flag whenever either field
+        // is present in the update, so sending them unchanged on an unrelated edit (e.g.
+        // renaming or recolouring) would wrongly mark an unverified legacy 20x15 room as
+        // a confirmed, measured one.
+        const dimensionsChanged =
+          editingRoomOriginalDims === null ||
+          editingRoomOriginalDims.widthM !== roomForm.widthM ||
+          editingRoomOriginalDims.lengthM !== roomForm.lengthM;
         await onUpdateRoom(editingRoomId, {
           venueId: roomForm.venueId,
           name: roomForm.name.trim(),
-          widthM: roomForm.widthM,
-          lengthM: roomForm.lengthM,
+          ...(dimensionsChanged ? { widthM: roomForm.widthM, lengthM: roomForm.lengthM } : {}),
           color: roomForm.color,
         });
       } else {
@@ -205,11 +221,12 @@ export default function VenueManagement({
         );
       }
       setRoomForm(emptyRoomForm);
+      setEditingRoomOriginalDims(null);
       setShowRoomModal(false);
     } catch (err) {
       setAddRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
-  }, [isRoomFormValid, roomForm, editingRoomId, onAddRoom, onUpdateRoom]);
+  }, [isRoomFormValid, roomForm, editingRoomId, editingRoomOriginalDims, onAddRoom, onUpdateRoom]);
 
   const handleArchiveRoom = useCallback(
     async (roomId: string) => {

@@ -308,6 +308,30 @@ describe("VenueManagement", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
+  it("omits width/length from onUpdateRoom when an edit doesn't touch dimensions, preserving dimensionsPlaceholder", async () => {
+    const { onUpdateRoom } = renderVenueManagement({
+      rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
+    });
+
+    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
+    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_room_name_label"), {
+      target: { value: "Room A (renamed)" },
+    });
+
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
+      venueId: "venue-1",
+      name: "Room A (renamed)",
+      color: "#ffc107",
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
   it("shows a placeholder-dimensions indicator for rooms with unconfirmed dimensions", () => {
     renderVenueManagement({
       rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
