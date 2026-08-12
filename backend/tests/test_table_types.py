@@ -17,9 +17,7 @@ async def test_table_type_crud(client):
     # Table type requires a venue
     venue_id = await _create_venue(client)
 
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     table_type = r.json()
     assert table_type["name"] == "Standard"
@@ -80,9 +78,7 @@ async def test_table_type_venue_reassignment(client):
     r = await client.post("/api/venues", json={"name": "Other Venue"}, headers=ADMIN_HEADERS)
     venue_b = r.json()["id"]
 
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS)
     type_id = r.json()["id"]
 
     r = await client.put(f"/api/table-types/{type_id}", json={"venue_id": venue_b}, headers=ADMIN_HEADERS)
@@ -93,14 +89,10 @@ async def test_table_type_venue_reassignment(client):
 @pytest.mark.anyio
 async def test_table_type_venue_reassignment_rejects_unknown_venue(client):
     venue_id = await _create_venue(client)
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     type_id = r.json()["id"]
 
-    r = await client.put(
-        f"/api/table-types/{type_id}", json={"venue_id": "venue-missing"}, headers=ADMIN_HEADERS
-    )
+    r = await client.put(f"/api/table-types/{type_id}", json={"venue_id": "venue-missing"}, headers=ADMIN_HEADERS)
     assert r.status_code == 404
 
 
@@ -126,9 +118,7 @@ async def test_table_type_round_shape_uses_larger_dimension_as_diameter(client):
 @pytest.mark.anyio
 async def test_table_type_delete_blocked_while_table_in_use(client):
     venue_id = await _create_venue(client)
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     type_id = r.json()["id"]
 
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)

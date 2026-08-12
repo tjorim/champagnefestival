@@ -91,9 +91,7 @@ async def test_copy_layout_copies_tables(client):
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     source_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Add a table to the source layout (no area, so it is an "outside" table)
@@ -128,9 +126,7 @@ async def test_copy_layout_copies_areas(client):
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     source_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     # Add an area covering the top-left of the room
@@ -219,9 +215,7 @@ async def test_copy_layout_no_tables_when_flags_false(client):
     room_id = r.json()["id"]
     r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
     source_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
     r = await client.post(

@@ -51,6 +51,7 @@ async def _create_venue(client) -> str:
     assert r.status_code == 201, f"venue creation failed: {r.text}"
     return r.json()["id"]
 
+
 VALID_RESERVATION = {
     "name": "Jean Dupont",
     "email": "jean@example.com",

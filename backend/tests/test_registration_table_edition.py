@@ -81,9 +81,7 @@ async def test_table_from_another_edition_is_rejected(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     type_id = r.json()["id"]
 
     festival_table = await _edition_with_table(client, "festival-2026", "2026-03-06", venue_id, room_id, type_id)
@@ -116,9 +114,7 @@ async def test_unknown_table_is_a_404(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     type_id = r.json()["id"]
     await _edition_with_table(client, "bourse-2026", "2026-11-21", venue_id, room_id, type_id)
     registration_id = await _registration_for(client, "bourse-2026")

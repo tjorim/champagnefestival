@@ -25,9 +25,7 @@ async def _table_prerequisites(client) -> tuple[str, str]:
     """Return (layout_id, table_type_id) after creating all prerequisites."""
     layout_id = await _create_layout_prerequisites(client)
     venue_id = await _create_venue(client)
-    r = await client.post(
-        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
-    )
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     return layout_id, r.json()["id"]
 
