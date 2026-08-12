@@ -15,12 +15,14 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
-import type { TableType, Venue } from "@/types/admin";
+import type { FloorTable, Layout, TableType, Venue } from "@/types/admin";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface TableTypeManagementProps {
   tableTypes: TableType[];
   venues: Venue[];
+  tables: FloorTable[];
+  layouts: Layout[];
   onAdd: (data: Omit<TableType, "id">) => Promise<void>;
   onUpdate: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
   onArchive: (id: string) => Promise<void>;
@@ -57,6 +59,8 @@ const columnHelper = createAppColumnHelper<TableType>();
 export default function TableTypeManagement({
   tableTypes,
   venues,
+  tables,
+  layouts,
   onAdd,
   onUpdate,
   onArchive,
@@ -69,9 +73,18 @@ export default function TableTypeManagement({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Shape/dimensions as loaded into the edit form, so `handleSave` can tell whether
+  // the admin actually changed the reshape-risky fields — see its comment for why
+  // that distinction matters (#858).
+  const [editingOriginalShape, setEditingOriginalShape] = useState<{
+    shape: "rectangle" | "round";
+    widthM: number;
+    lengthM: number;
+  } | null>(null);
 
   const openAdd = useCallback(() => {
     setEditingId(null);
+    setEditingOriginalShape(null);
     setForm(emptyForm);
     setError(null);
     setShowModal(true);
@@ -79,6 +92,7 @@ export default function TableTypeManagement({
 
   const openEdit = useCallback((tt: TableType) => {
     setEditingId(tt.id);
+    setEditingOriginalShape({ shape: tt.shape, widthM: tt.widthM, lengthM: tt.lengthM });
     setForm({
       name: tt.name,
       venueId: tt.venueId,
@@ -118,6 +132,38 @@ export default function TableTypeManagement({
       setError(m.admin_table_type_dimensions_positive());
       return;
     }
+    // Tables render by joining live against TableType rather than a dimension
+    // snapshot taken at placement time, so a shape/dimension change here silently
+    // redraws every table of this type on every layout that ever placed one —
+    // including past editions (#858). Surface the blast radius and let the admin
+    // back out before that happens; a name/capacity/venue-only edit is unaffected.
+    if (
+      editingId &&
+      editingOriginalShape &&
+      (form.shape !== editingOriginalShape.shape ||
+        widthM !== editingOriginalShape.widthM ||
+        lengthM !== editingOriginalShape.lengthM)
+    ) {
+      const affectedTableIds = tables
+        .filter((t) => t.tableTypeId === editingId)
+        .map((t) => t.layoutId);
+      const affectedRoomIds = new Set(
+        affectedTableIds
+          .map((layoutId) => layouts.find((l) => l.id === layoutId)?.roomId)
+          .filter((roomId): roomId is string => Boolean(roomId)),
+      );
+      if (
+        affectedTableIds.length > 0 &&
+        !window.confirm(
+          m.admin_table_type_dimension_change_confirm({
+            tableCount: affectedTableIds.length,
+            roomCount: affectedRoomIds.size,
+          }),
+        )
+      ) {
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
     try {
@@ -134,7 +180,7 @@ export default function TableTypeManagement({
     } finally {
       setSaving(false);
     }
-  }, [form, editingId, onAdd, onUpdate]);
+  }, [form, editingId, editingOriginalShape, tables, layouts, onAdd, onUpdate]);
 
   const handleArchive = useCallback(
     async (id: string) => {

@@ -337,6 +337,7 @@
   "admin_table_type_select": "Select table type",
   "admin_table_type_name_required": "Name is required",
   "admin_table_type_venue_required": "Venue is required",
+  "admin_table_type_dimension_change_confirm": "This table type is used by {tableCount} table(s) in {roomCount} room(s), including past editions. Changing its shape or dimensions will immediately change how all of them render. Continue?",
   "admin_table_type_capacity_min": "Max capacity must be a whole number of 1 or more",
   "admin_table_type_dimensions_positive": "Width and length must be positive numbers",
   "admin_table_type_delete_confirm": "Permanently delete this table type? This cannot be undone.",

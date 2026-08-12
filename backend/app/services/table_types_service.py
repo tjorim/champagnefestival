@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import Table, TableType, Venue
+from app.models import Layout, Table, TableType, Venue
 from app.schemas import TableTypeCreate, TableTypeUpdate
 from app.services.errors import ConflictError, NotFoundError
 from app.utils import make_id, table_type_to_dict
@@ -96,7 +96,9 @@ async def update_table_type(
     if body.length_m is not None:
         tt.length_m = body.length_m
         fields_changed.append("length_m")
-    if body.shape is not None or body.width_m is not None or body.length_m is not None:
+    reshape_requested = body.shape is not None or body.width_m is not None or body.length_m is not None
+    blast_radius: dict[str, int] = {}
+    if reshape_requested:
         from app.utils import normalise_table_type_dimensions
 
         tt.width_m, tt.length_m = normalise_table_type_dimensions(tt.shape, tt.width_m, tt.length_m)
@@ -104,6 +106,19 @@ async def update_table_type(
             fields_changed.append("width_m")
         if tt.length_m != pre_length and "length_m" not in fields_changed:
             fields_changed.append("length_m")
+        # A shape/dimension change re-renders every table of this type on every
+        # layout that ever placed one — including past editions, since tables
+        # render by joining live against TableType rather than a snapshot taken
+        # at placement time (#858). No confirmation gate here (that lives in the
+        # admin UI, which has this count ahead of the save); this is the audit
+        # trail's record of the blast radius for whichever change went through.
+        affected = await db.execute(
+            select(Table.id, Layout.room_id)
+            .join(Layout, Table.layout_id == Layout.id)
+            .where(Table.table_type_id == type_id)
+        )
+        rows = affected.all()
+        blast_radius = {"affected_tables": len(rows), "affected_rooms": len({room_id for _, room_id in rows})}
     if body.height_type is not None:
         tt.height_type = body.height_type
         fields_changed.append("height_type")
@@ -120,7 +135,7 @@ async def update_table_type(
         resource_type="table_type",
         resource_id=tt.id,
         request_id=request_id,
-        details={"fields_changed": sorted(fields_changed)},
+        details={"fields_changed": sorted(fields_changed), **blast_radius},
     )
     await db.commit()
     await db.refresh(tt)

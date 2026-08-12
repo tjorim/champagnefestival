@@ -581,6 +581,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <TableTypeManagement
                     tableTypes={tableTypes}
                     venues={venues}
+                    tables={tables}
+                    layouts={layouts}
                     onAdd={handleAddTableType}
                     onUpdate={handleUpdateTableType}
                     onArchive={handleArchiveTableType}

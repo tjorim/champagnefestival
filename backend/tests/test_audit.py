@@ -290,6 +290,59 @@ async def test_delete_table_writes_audit_entry(client, db_session):
 
 
 # ---------------------------------------------------------------------------
+# Table type dimension-change blast radius (#858)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_table_type_dimension_change_records_blast_radius_in_audit_entry(client, db_session):
+    """A shape/dimension edit reshapes every table of that type on every layout that
+    ever placed one (live-joined at render time, not snapshotted) — the audit entry
+    should say how many tables/rooms were affected, not just which fields changed."""
+    layout_id = await _create_layout_prerequisites(client)
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    type_id = tt_r.json()["id"]
+    table_r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "capacity": 4, "layout_id": layout_id, "table_type_id": type_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert table_r.status_code == 201
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"width_m": 1.2}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    entries = await _all_audit_entries(db_session)
+    updated = [e for e in entries if e.action == "table_type_updated"]
+    assert len(updated) == 1
+    assert updated[0].details["affected_tables"] == 1
+    assert updated[0].details["affected_rooms"] == 1
+
+
+@pytest.mark.anyio
+async def test_table_type_non_dimension_update_omits_blast_radius_from_audit_entry(client, db_session):
+    """A max_capacity-only edit doesn't retroactively reshape anything (#858's 'not
+    gaps, checked' note), so the audit entry shouldn't claim a blast radius for it."""
+    venue_id = await _create_venue(client)
+    tt_r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
+    )
+    type_id = tt_r.json()["id"]
+
+    r = await client.put(f"/api/table-types/{type_id}", json={"max_capacity": 8}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    entries = await _all_audit_entries(db_session)
+    updated = [e for e in entries if e.action == "table_type_updated"]
+    assert len(updated) == 1
+    assert "affected_tables" not in updated[0].details
+    assert "affected_rooms" not in updated[0].details
+
+
+# ---------------------------------------------------------------------------
 # Audit entry schema validation
 # ---------------------------------------------------------------------------
 

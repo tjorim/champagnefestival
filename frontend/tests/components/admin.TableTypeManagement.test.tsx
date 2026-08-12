@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import TableTypeManagement from "@/components/admin/TableTypeManagement";
-import type { TableType, Venue } from "@/types/admin";
+import type { FloorTable, Layout, TableType, Venue } from "@/types/admin";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -53,9 +53,32 @@ const archivedType: TableType = {
   active: false,
 };
 
+const layout1: Layout = {
+  id: "layout-1",
+  editionId: "edition-1",
+  roomId: "room-1",
+  date: "2026-08-01",
+  label: "",
+  createdAt: "2026-01-01T00:00:00Z",
+};
+
+const tableUsingActiveType: FloorTable = {
+  id: "table-1",
+  name: "Table A",
+  capacity: 4,
+  x: 10,
+  y: 10,
+  tableTypeId: "tt-1",
+  rotation: 0,
+  layoutId: "layout-1",
+  registrationIds: [],
+};
+
 interface RenderOverrides {
   tableTypes?: TableType[];
   venues?: Venue[];
+  tables?: FloorTable[];
+  layouts?: Layout[];
   onAdd?: (data: Omit<TableType, "id">) => Promise<void>;
   onUpdate?: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
   onArchive?: (id: string) => Promise<void>;
@@ -74,6 +97,8 @@ function renderTableTypeManagement(overrides: RenderOverrides = {}) {
     <TableTypeManagement
       tableTypes={overrides.tableTypes ?? [activeType, archivedType]}
       venues={overrides.venues ?? [venue1, venue2]}
+      tables={overrides.tables ?? [tableUsingActiveType]}
+      layouts={overrides.layouts ?? [layout1]}
       onAdd={onAdd}
       onUpdate={onUpdate}
       onArchive={onArchive}
@@ -210,6 +235,64 @@ describe("TableTypeManagement", () => {
     });
     const callArgs = vi.mocked(onUpdate).mock.calls[0]?.[1] as Record<string, unknown>;
     expect(callArgs).not.toHaveProperty("active");
+  });
+
+  it("confirms the affected table/room count before saving a dimension change on an in-use type, and proceeds when accepted", async () => {
+    const confirmSpy = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onUpdate } = renderTableTypeManagement();
+
+    const activeRow = screen.getByText("Standard Rectangle").closest("tr") as HTMLElement;
+    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
+    );
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+  });
+
+  it("cancels the save when the dimension-change confirmation is declined", async () => {
+    vi.stubGlobal("confirm", vi.fn().mockReturnValue(false));
+    const { onUpdate } = renderTableTypeManagement();
+
+    const activeRow = screen.getByText("Standard Rectangle").closest("tr") as HTMLElement;
+    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("saves a dimension change without confirmation when no tables use the type", async () => {
+    const confirmSpy = vi.fn();
+    vi.stubGlobal("confirm", confirmSpy);
+    const { onUpdate } = renderTableTypeManagement({ tables: [] });
+
+    const activeRow = screen.getByText("Standard Rectangle").closest("tr") as HTMLElement;
+    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
   });
 
   it("archives an active row immediately, with no confirm prompt", () => {
