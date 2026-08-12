@@ -38,7 +38,7 @@ async def test_create_table_type_rejects_missing_dimensions(db_session):
     """width_m/length_m have no defensible default and must be provided explicitly (#835)."""
     factory = mcp_session_factory(db_session)
     with pytest.raises(TypeError):
-        await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)  # type: ignore[call-arg]
+        await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)  # ty: ignore[missing-argument]
 
 
 async def test_create_table_type_round_shape_uses_larger_dimension_as_diameter(db_session):

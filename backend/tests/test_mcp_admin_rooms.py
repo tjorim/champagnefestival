@@ -48,7 +48,7 @@ async def test_create_room_rejects_missing_dimensions(db_session):
     await _seed_venue(db_session)
 
     with pytest.raises(TypeError):
-        await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")  # type: ignore[call-arg]
+        await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")  # ty: ignore[missing-argument]
 
 
 async def test_create_room_rejects_invalid_input(db_session):
