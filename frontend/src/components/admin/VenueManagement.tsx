@@ -38,6 +38,7 @@ interface VenueManagementProps {
     lengthM: number,
     color: string,
   ) => Promise<void>;
+  onUpdateRoom: (roomId: string, data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>) => Promise<void>;
   onArchiveRoom: (roomId: string) => Promise<void>;
   onRestoreRoom: (roomId: string) => Promise<void>;
   onDeleteRoom: (roomId: string) => Promise<void>;
@@ -54,7 +55,16 @@ function contrastColor(hex: string): string {
   const b = parseInt(c.substring(4, 6), 16);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? "#000" : "#fff";
 }
-const emptyRoomForm = { name: "", widthM: 20, lengthM: 15, color: "#ffc107" };
+// widthM/lengthM start blank — a room's real dimensions have no defensible
+// generic default (see #833/#835), so the admin must enter them deliberately
+// rather than accidentally saving a made-up size.
+const emptyRoomForm: {
+  venueId: string;
+  name: string;
+  widthM: number | "";
+  lengthM: number | "";
+  color: string;
+} = { venueId: "", name: "", widthM: "", lengthM: "", color: "#ffc107" };
 
 const columnHelper = createAppColumnHelper<Venue>();
 
@@ -66,6 +76,7 @@ export default function VenueManagement({
   onRestore,
   onDelete,
   onAddRoom,
+  onUpdateRoom,
   onArchiveRoom,
   onRestoreRoom,
   onDeleteRoom,
@@ -76,10 +87,16 @@ export default function VenueManagement({
   const [addVenueError, setAddVenueError] = useState<string | null>(null);
   const [deleteVenueError, setDeleteVenueError] = useState<string | null>(null);
 
-  // Room add
+  // Room add/edit (shared modal)
   const [showRoomModal, setShowRoomModal] = useState(false);
-  const [roomVenueId, setRoomVenueId] = useState<string | null>(null);
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [roomForm, setRoomForm] = useState(emptyRoomForm);
+  // Dimensions as loaded into the edit form, so `handleSaveRoom` can tell whether the
+  // admin actually changed width/length — see its comment for why that distinction matters.
+  const [editingRoomOriginalDims, setEditingRoomOriginalDims] = useState<{
+    widthM: number;
+    lengthM: number;
+  } | null>(null);
   const [addRoomError, setAddRoomError] = useState<string | null>(null);
   const [deleteRoomError, setDeleteRoomError] = useState<string | null>(null);
 
@@ -139,31 +156,77 @@ export default function VenueManagement({
     [onDelete],
   );
 
+  const isRoomFormValid = useCallback(
+    () =>
+      Boolean(roomForm.venueId) &&
+      roomForm.name.trim().length > 0 &&
+      typeof roomForm.widthM === "number" &&
+      roomForm.widthM >= 1 &&
+      typeof roomForm.lengthM === "number" &&
+      roomForm.lengthM >= 1,
+    [roomForm],
+  );
+
   const openAddRoom = useCallback((venueId: string) => {
-    setRoomVenueId(venueId);
-    setRoomForm(emptyRoomForm);
+    setEditingRoomId(null);
+    setEditingRoomOriginalDims(null);
+    setRoomForm({ ...emptyRoomForm, venueId });
     setAddRoomError(null);
     setShowRoomModal(true);
   }, []);
 
-  const handleAddRoom = useCallback(async () => {
-    if (!roomVenueId || !roomForm.name.trim() || roomForm.widthM < 1 || roomForm.lengthM < 1)
+  const openEditRoom = useCallback((room: Room) => {
+    setEditingRoomId(room.id);
+    setEditingRoomOriginalDims({ widthM: room.widthM, lengthM: room.lengthM });
+    setRoomForm({
+      venueId: room.venueId,
+      name: room.name,
+      widthM: room.widthM,
+      lengthM: room.lengthM,
+      color: room.color,
+    });
+    setAddRoomError(null);
+    setShowRoomModal(true);
+  }, []);
+
+  const handleSaveRoom = useCallback(async () => {
+    if (!isRoomFormValid() || typeof roomForm.widthM !== "number" || typeof roomForm.lengthM !== "number") {
       return;
+    }
     setAddRoomError(null);
     try {
-      await onAddRoom(
-        roomVenueId,
-        roomForm.name.trim(),
-        roomForm.widthM,
-        roomForm.lengthM,
-        roomForm.color,
-      );
+      if (editingRoomId) {
+        // Omit widthM/lengthM entirely when they match what the form was opened with —
+        // the backend clears a room's `dimensionsPlaceholder` flag whenever either field
+        // is present in the update, so sending them unchanged on an unrelated edit (e.g.
+        // renaming or recolouring) would wrongly mark an unverified legacy 20x15 room as
+        // a confirmed, measured one.
+        const dimensionsChanged =
+          editingRoomOriginalDims === null ||
+          editingRoomOriginalDims.widthM !== roomForm.widthM ||
+          editingRoomOriginalDims.lengthM !== roomForm.lengthM;
+        await onUpdateRoom(editingRoomId, {
+          venueId: roomForm.venueId,
+          name: roomForm.name.trim(),
+          ...(dimensionsChanged ? { widthM: roomForm.widthM, lengthM: roomForm.lengthM } : {}),
+          color: roomForm.color,
+        });
+      } else {
+        await onAddRoom(
+          roomForm.venueId,
+          roomForm.name.trim(),
+          roomForm.widthM,
+          roomForm.lengthM,
+          roomForm.color,
+        );
+      }
       setRoomForm(emptyRoomForm);
+      setEditingRoomOriginalDims(null);
       setShowRoomModal(false);
     } catch (err) {
       setAddRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
-  }, [roomVenueId, roomForm, onAddRoom]);
+  }, [isRoomFormValid, roomForm, editingRoomId, editingRoomOriginalDims, onAddRoom, onUpdateRoom]);
 
   const handleArchiveRoom = useCallback(
     async (roomId: string) => {
@@ -276,17 +339,38 @@ export default function VenueManagement({
                     >
                       {room.name}
                     </span>
-                    {room.active ? (
-                      <button
-                        type="button"
-                        className={clsx(
-                          "btn-close fs-5xs",
-                          contrastColor(room.color) === "#fff" && "btn-close-white",
-                        )}
-                        onClick={() => handleArchiveRoom(room.id)}
-                        aria-label={m.admin_content_archive()}
-                        title={m.admin_content_archive()}
+                    {room.dimensionsPlaceholder && (
+                      <i
+                        className="bi bi-exclamation-triangle-fill fs-5xs"
+                        aria-label={m.admin_room_dimensions_placeholder_badge()}
+                        title={m.admin_room_dimensions_placeholder_hint()}
                       />
+                    )}
+                    {room.active ? (
+                      <>
+                        <button
+                          type="button"
+                          className={clsx(
+                            "btn btn-sm p-0 border-0 bg-transparent fs-5xs lh-1",
+                            contrastColor(room.color) === "#fff" ? "text-white" : "text-dark",
+                          )}
+                          onClick={() => openEditRoom(room)}
+                          aria-label={m.admin_edit()}
+                          title={m.admin_edit()}
+                        >
+                          <i className="bi bi-pencil" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          className={clsx(
+                            "btn-close fs-5xs",
+                            contrastColor(room.color) === "#fff" && "btn-close-white",
+                          )}
+                          onClick={() => handleArchiveRoom(room.id)}
+                          aria-label={m.admin_content_archive()}
+                          title={m.admin_content_archive()}
+                        />
+                      </>
                     ) : (
                       <>
                         <button
@@ -370,7 +454,7 @@ export default function VenueManagement({
           },
         }),
       ]),
-    [rooms, openAddRoom, handleArchiveRoom, handleRestoreRoom, handleDeleteRoom, handleArchiveVenue, handleRestoreVenue, handleDeleteVenue],
+    [rooms, openAddRoom, openEditRoom, handleArchiveRoom, handleRestoreRoom, handleDeleteRoom, handleArchiveVenue, handleRestoreVenue, handleDeleteVenue],
   );
 
   const table = useAppTable(
@@ -525,15 +609,17 @@ export default function VenueManagement({
         </Modal.Footer>
       </Modal>
 
-      {/* Add Room Modal */}
+      {/* Add/Edit Room Modal */}
       <Modal
         show={showRoomModal}
         onHide={() => setShowRoomModal(false)}
         centered
-        aria-labelledby="add-room-modal-title"
+        aria-labelledby="room-modal-title"
       >
         <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="add-room-modal-title">{m.admin_room_add()}</Modal.Title>
+          <Modal.Title id="room-modal-title">
+            {editingRoomId ? m.admin_edit_room() : m.admin_room_add()}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addRoomError && (
@@ -541,6 +627,22 @@ export default function VenueManagement({
               {addRoomError}
             </Alert>
           )}
+          <Form.Group className="mb-3" controlId="room-venue">
+            <Form.Label>{m.admin_room_venue_label()}</Form.Label>
+            <Form.Select
+              value={roomForm.venueId}
+              onChange={(e) => setRoomForm((p) => ({ ...p, venueId: e.target.value }))}
+              className="bg-dark text-light border-secondary"
+            >
+              {venues
+                .filter((v) => v.active)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+            </Form.Select>
+          </Form.Group>
           <Form.Group className="mb-3" controlId="room-name">
             <Form.Label>{m.admin_room_name_label()}</Form.Label>
             <Form.Control
@@ -559,8 +661,14 @@ export default function VenueManagement({
                   type="number"
                   min={1}
                   max={500}
+                  required
                   value={roomForm.widthM}
-                  onChange={(e) => setRoomForm((p) => ({ ...p, widthM: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setRoomForm((p) => ({
+                      ...p,
+                      widthM: e.target.value === "" ? "" : Number(e.target.value),
+                    }))
+                  }
                   className="bg-dark text-light border-secondary"
                 />
               </Form.Group>
@@ -572,8 +680,14 @@ export default function VenueManagement({
                   type="number"
                   min={1}
                   max={500}
+                  required
                   value={roomForm.lengthM}
-                  onChange={(e) => setRoomForm((p) => ({ ...p, lengthM: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setRoomForm((p) => ({
+                      ...p,
+                      lengthM: e.target.value === "" ? "" : Number(e.target.value),
+                    }))
+                  }
                   className="bg-dark text-light border-secondary"
                 />
               </Form.Group>
@@ -602,11 +716,7 @@ export default function VenueManagement({
           <Button variant="secondary" onClick={() => setShowRoomModal(false)}>
             {m.admin_action_cancel()}
           </Button>
-          <Button
-            variant="warning"
-            onClick={handleAddRoom}
-            disabled={!roomForm.name.trim() || roomForm.widthM < 1 || roomForm.lengthM < 1}
-          >
+          <Button variant="warning" onClick={handleSaveRoom} disabled={!isRoomFormValid()}>
             {m.admin_save()}
           </Button>
         </Modal.Footer>

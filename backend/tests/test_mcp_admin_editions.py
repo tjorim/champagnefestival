@@ -205,3 +205,59 @@ async def test_update_edition_records_implicit_exhibitor_clearing_in_audit(db_se
     updated_entries = [e for e in entries if e["action"] == "edition_updated"]
     assert len(updated_entries) == 2
     assert "exhibitors_cleared" not in updated_entries[0]["details"]  # newest first
+
+
+# ---------------------------------------------------------------------------
+# At most one active edition per edition_type (#832) — the MCP surface must
+# behave the same as REST, since both go through the same router helpers.
+# ---------------------------------------------------------------------------
+
+
+async def test_create_edition_deactivates_conflicting_active_edition_of_same_type(db_session):
+    factory = mcp_session_factory(db_session)
+    venue_id = await _create_venue(db_session)
+
+    old = await mcp_editions.create_edition(
+        factory, "admin-1", id="edition-mcp-old", year=2099, month="march", venue_id=venue_id, edition_type="bourse"
+    )
+    assert old["active"] is True
+
+    new = await mcp_editions.create_edition(
+        factory, "admin-1", id="edition-mcp-new", year=2099, month="april", venue_id=venue_id, edition_type="bourse"
+    )
+    assert new["active"] is True
+
+    refetched_old = await mcp_editions.get_edition(factory, old["id"])
+    assert refetched_old["active"] is False
+
+
+async def test_update_edition_to_active_deactivates_conflicting_active_edition(db_session):
+    factory = mcp_session_factory(db_session)
+    venue_id = await _create_venue(db_session)
+
+    old = await mcp_editions.create_edition(
+        factory,
+        "admin-1",
+        id="edition-mcp-update-old",
+        year=2099,
+        month="march",
+        venue_id=venue_id,
+        edition_type="capsule_exchange",
+    )
+    new = await mcp_editions.create_edition(
+        factory,
+        "admin-1",
+        id="edition-mcp-update-new",
+        year=2099,
+        month="april",
+        venue_id=venue_id,
+        edition_type="capsule_exchange",
+        active=False,
+    )
+    assert new["active"] is False
+
+    updated = await mcp_editions.update_edition(factory, "admin-1", new["id"], active=True)
+    assert updated["active"] is True
+
+    refetched_old = await mcp_editions.get_edition(factory, old["id"])
+    assert refetched_old["active"] is False

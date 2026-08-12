@@ -43,7 +43,7 @@ ROOM_PAYLOAD = {
     "color": "#ffc107",
 }
 
-TABLE_TYPE_PAYLOAD = {"name": "Standard", "max_capacity": 6}
+TABLE_TYPE_PAYLOAD = {"name": "Standard", "max_capacity": 6, "width_m": 0.7, "length_m": 1.8}
 
 VALID_RESERVATION = {
     "name": "Jean Dupont",

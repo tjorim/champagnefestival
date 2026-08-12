@@ -24,7 +24,7 @@ async def create_layout(
     room_id: str,
     edition_id: str | None = None,
     day_id: int | None = None,
-    date: dt_date | str | None = None,
+    date: dt_date | None = None,
     label: str = "",
 ) -> dict:
     body = validate_with_schema(
@@ -50,7 +50,7 @@ async def copy_layout(
     room_id: str,
     edition_id: str | None = None,
     day_id: int | None = None,
-    date: dt_date | str | None = None,
+    date: dt_date | None = None,
     label: str = "",
     copy_tables: bool = True,
     copy_areas: bool = True,

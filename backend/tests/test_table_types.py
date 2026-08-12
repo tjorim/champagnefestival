@@ -54,14 +54,14 @@ async def test_table_type_update_not_found(client):
 
 
 @pytest.mark.anyio
-async def test_table_type_round_shape_normalises_length_to_width(client):
+async def test_table_type_round_shape_uses_larger_dimension_as_diameter(client):
     r = await client.post(
         "/api/table-types",
         json={"name": "Round", "shape": "round", "width_m": 1.5, "length_m": 3.0, "max_capacity": 8},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
-    assert r.json()["length_m"] == r.json()["width_m"] == 1.5
+    assert r.json()["length_m"] == r.json()["width_m"] == 3.0
 
 
 @pytest.mark.anyio

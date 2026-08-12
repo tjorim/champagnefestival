@@ -23,6 +23,8 @@ from app.audit import write_audit_entry
 from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
 from app.models import Edition
 from app.routers.editions import (
+    _commit_or_conflict,
+    _deactivate_conflicting_editions,
     _edition_payload,
     _get_edition_or_404,
     _load_venue,
@@ -30,7 +32,7 @@ from app.routers.editions import (
     _validate_exhibitor_ids,
     _validate_exhibitors_allowed,
 )
-from app.schemas import EditionCreate, EditionUpdate
+from app.schemas import EditionCreate, EditionType, EditionUpdate
 
 
 async def create_edition(
@@ -41,7 +43,7 @@ async def create_edition(
     year: int,
     month: str,
     venue_id: str,
-    edition_type: str = "festival",
+    edition_type: EditionType = "festival",
     exhibitors: list[int] | None = None,
     co_organizer_exhibitor_id: int | None = None,
     active: bool = True,
@@ -85,16 +87,29 @@ async def create_edition(
             await _validate_co_organizer(db, edition.co_organizer_exhibitor_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
+
+        deactivated: list[str] = []
+        if edition.active:
+            deactivated = await _deactivate_conflicting_editions(
+                db, edition_type=edition.edition_type, exclude_id=None, actor=actor, request_id=None
+            )
+
         db.add(edition)
+        details: dict = {"year": edition.year, "month": edition.month, "edition_type": edition.edition_type}
+        if deactivated:
+            details["deactivated_conflicting_editions"] = deactivated
         await write_audit_entry(
             db,
             actor=actor,
             action="edition_created",
             resource_type="edition",
             resource_id=edition.id,
-            details={"year": edition.year, "month": edition.month, "edition_type": edition.edition_type},
+            details=details,
         )
-        await db.commit()
+        try:
+            await _commit_or_conflict(db)
+        except HTTPException as exc:
+            raise as_value_error(exc) from exc
         try:
             edition = await _get_edition_or_404(db, edition.id)
             return await _edition_payload(db, edition, active_only=False)
@@ -119,7 +134,7 @@ async def update_edition(
     year: int | None = None,
     month: str | None = None,
     venue_id: str | None = None,
-    edition_type: str | None = None,
+    edition_type: EditionType | None = None,
     exhibitors: list[int] | None = None,
     co_organizer_exhibitor_id: int | None = None,
     clear_co_organizer: bool = False,
@@ -168,7 +183,7 @@ async def update_edition(
                 raise as_value_error(exc) from exc
             edition.co_organizer_exhibitor_id = body.co_organizer_exhibitor_id
 
-        for field in ("year", "month", "active", "edition_type"):
+        for field in ("year", "month"):
             if field in body.model_fields_set:
                 setattr(edition, field, getattr(body, field))
 
@@ -179,15 +194,22 @@ async def update_edition(
                 raise as_value_error(exc) from exc
             edition.venue_id = body.venue_id
 
+        # `active`/`edition_type` are deliberately not applied to `edition` yet — see the
+        # matching comment in `app.routers.editions.update_edition`, which this mirrors.
+        target_edition_type: str = (
+            body.edition_type if "edition_type" in body.model_fields_set else edition.edition_type
+        )  # ty: ignore[invalid-assignment]
+        target_active: bool = body.active if "active" in body.model_fields_set else edition.active  # ty: ignore[invalid-assignment]
+
         exhibitors_implicitly_cleared = False
         if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
             try:
-                _validate_exhibitors_allowed(edition.edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
+                _validate_exhibitors_allowed(target_edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
                 await _validate_exhibitor_ids(db, body.exhibitors)
             except HTTPException as exc:
                 raise as_value_error(exc) from exc
             edition.exhibitors = list(body.exhibitors)
-        elif edition.edition_type != "festival" and edition.exhibitors:
+        elif target_edition_type != "festival" and edition.exhibitors:
             # The edition type changed away from festival without an explicit exhibitors
             # payload — clear the now-invalid associations as part of the same update
             # instead of rejecting it, mirroring the router.
@@ -195,13 +217,27 @@ async def update_edition(
             exhibitors_implicitly_cleared = True
 
         try:
-            _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
+            _validate_exhibitors_allowed(target_edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
         except HTTPException as exc:
             raise as_value_error(exc) from exc
+
+        deactivated: list[str] = []
+        if target_active:
+            deactivated = await _deactivate_conflicting_editions(
+                db, edition_type=target_edition_type, exclude_id=edition.id, actor=actor, request_id=None
+            )
+
+        # Safe to apply now: any conflicting active row of `target_edition_type` has
+        # already been deactivated and flushed above.
+        for field in ("active", "edition_type"):
+            if field in body.model_fields_set:
+                setattr(edition, field, getattr(body, field))
 
         details: dict = {"fields_changed": sorted(body.model_fields_set)}
         if exhibitors_implicitly_cleared:
             details["exhibitors_cleared"] = True
+        if deactivated:
+            details["deactivated_conflicting_editions"] = deactivated
         await write_audit_entry(
             db,
             actor=actor,
@@ -210,7 +246,10 @@ async def update_edition(
             resource_id=edition.id,
             details=details,
         )
-        await db.commit()
+        try:
+            await _commit_or_conflict(db)
+        except HTTPException as exc:
+            raise as_value_error(exc) from exc
         try:
             edition = await _get_edition_or_404(db, edition.id)
             return await _edition_payload(db, edition, active_only=False)

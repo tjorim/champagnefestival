@@ -51,6 +51,7 @@ const room1: Room = {
   lengthM: 15,
   color: "#ffc107",
   active: true,
+  dimensionsPlaceholder: false,
 };
 
 const room2: Room = {
@@ -61,6 +62,7 @@ const room2: Room = {
   lengthM: 10,
   color: "#123456",
   active: false,
+  dimensionsPlaceholder: false,
 };
 
 interface RenderOverrides {
@@ -71,6 +73,7 @@ interface RenderOverrides {
   onRestore?: (...args: unknown[]) => Promise<void>;
   onDelete?: (...args: unknown[]) => Promise<void>;
   onAddRoom?: (...args: unknown[]) => Promise<void>;
+  onUpdateRoom?: (...args: unknown[]) => Promise<void>;
   onArchiveRoom?: (...args: unknown[]) => Promise<void>;
   onRestoreRoom?: (...args: unknown[]) => Promise<void>;
   onDeleteRoom?: (...args: unknown[]) => Promise<void>;
@@ -82,6 +85,7 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
   const onRestore = overrides.onRestore ?? vi.fn().mockResolvedValue(undefined);
   const onDelete = overrides.onDelete ?? vi.fn().mockResolvedValue(undefined);
   const onAddRoom = overrides.onAddRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onUpdateRoom = overrides.onUpdateRoom ?? vi.fn().mockResolvedValue(undefined);
   const onArchiveRoom = overrides.onArchiveRoom ?? vi.fn().mockResolvedValue(undefined);
   const onRestoreRoom = overrides.onRestoreRoom ?? vi.fn().mockResolvedValue(undefined);
   const onDeleteRoom = overrides.onDeleteRoom ?? vi.fn().mockResolvedValue(undefined);
@@ -95,13 +99,24 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
       onRestore={onRestore}
       onDelete={onDelete}
       onAddRoom={onAddRoom}
+      onUpdateRoom={onUpdateRoom}
       onArchiveRoom={onArchiveRoom}
       onRestoreRoom={onRestoreRoom}
       onDeleteRoom={onDeleteRoom}
     />,
   );
 
-  return { onAdd, onArchive, onRestore, onDelete, onAddRoom, onArchiveRoom, onRestoreRoom, onDeleteRoom };
+  return {
+    onAdd,
+    onArchive,
+    onRestore,
+    onDelete,
+    onAddRoom,
+    onUpdateRoom,
+    onArchiveRoom,
+    onRestoreRoom,
+    onDeleteRoom,
+  };
 }
 
 describe("VenueManagement", () => {
@@ -259,5 +274,71 @@ describe("VenueManagement", () => {
     fireEvent.click(deleteButton);
     await waitFor(() => expect(onDeleteRoom).toHaveBeenCalledTimes(2));
     expect(onDeleteRoom).toHaveBeenLastCalledWith("room-2");
+  });
+
+  it("opens the edit-room modal prefilled, and calls onUpdateRoom with the edited fields", async () => {
+    const { onUpdateRoom } = renderVenueManagement();
+
+    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
+    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    expect(dialogScope.getByText("admin_edit_room")).toBeInTheDocument();
+    expect(dialogScope.getByLabelText("admin_room_name_label")).toHaveValue("Room A");
+    expect(dialogScope.getByLabelText("admin_room_width_label")).toHaveValue(20);
+    expect(dialogScope.getByLabelText("admin_room_length_label")).toHaveValue(15);
+
+    fireEvent.change(dialogScope.getByLabelText("admin_room_name_label"), {
+      target: { value: "Room A (renamed)" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_room_width_label"), {
+      target: { value: "22" },
+    });
+
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
+      venueId: "venue-1",
+      name: "Room A (renamed)",
+      widthM: 22,
+      lengthM: 15,
+      color: "#ffc107",
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("omits width/length from onUpdateRoom when an edit doesn't touch dimensions, preserving dimensionsPlaceholder", async () => {
+    const { onUpdateRoom } = renderVenueManagement({
+      rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
+    });
+
+    const activeRow = screen.getByText("Grand Hall").closest("tr") as HTMLElement;
+    fireEvent.click(within(activeRow).getByRole("button", { name: "admin_edit" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    fireEvent.change(dialogScope.getByLabelText("admin_room_name_label"), {
+      target: { value: "Room A (renamed)" },
+    });
+
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
+      venueId: "venue-1",
+      name: "Room A (renamed)",
+      color: "#ffc107",
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("shows a placeholder-dimensions indicator for rooms with unconfirmed dimensions", () => {
+    renderVenueManagement({
+      rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
+    });
+
+    expect(
+      screen.getByLabelText("admin_room_dimensions_placeholder_badge"),
+    ).toBeInTheDocument();
   });
 });

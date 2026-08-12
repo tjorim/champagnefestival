@@ -25,6 +25,7 @@ function makeRoom(overrides: Partial<Room> = {}): Room {
     lengthM: 8,
     color: "#ff0000",
     active: true,
+    dimensionsPlaceholder: false,
     ...overrides,
   };
 }

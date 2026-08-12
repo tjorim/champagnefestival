@@ -27,7 +27,7 @@ import logging
 from collections.abc import Sequence
 from datetime import date as dt_date
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
@@ -65,6 +65,7 @@ from app.mcp.capabilities import (
     tool_annotations,
     tool_auth,
 )
+from app.schemas import EditionType
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.version import APP_VERSION
 
@@ -476,12 +477,16 @@ class ChampagneFestivalMcpBackend:
         self,
         name: str,
         venue_id: str,
-        width_m: float = 20.0,
-        length_m: float = 15.0,
+        width_m: float,
+        length_m: float,
         color: str = "#6c757d",
         active: bool = True,
     ) -> dict:
-        """Create a room within a venue. Requires the ``admin`` role."""
+        """Create a room within a venue. Requires the ``admin`` role.
+
+        ``width_m``/``length_m`` are the room's real measured dimensions in
+        metres — there is no defensible generic default, so both are required.
+        """
         self._require_admin()
         return await mcp_admin_rooms.create_room(
             self.session_factory,
@@ -507,6 +512,7 @@ class ChampagneFestivalMcpBackend:
     async def update_room(
         self,
         room_id: str,
+        venue_id: str | None = None,
         name: str | None = None,
         width_m: float | None = None,
         length_m: float | None = None,
@@ -519,6 +525,7 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             room_id,
+            venue_id=venue_id,
             name=name,
             width_m=width_m,
             length_m=length_m,
@@ -537,13 +544,22 @@ class ChampagneFestivalMcpBackend:
         self,
         name: str,
         max_capacity: int,
-        shape: str = "rectangle",
-        width_m: float = 0.7,
-        length_m: float = 1.8,
-        height_type: str = "low",
+        width_m: float,
+        length_m: float,
+        shape: Literal["rectangle", "round"] = "rectangle",
+        height_type: Literal["low", "high"] = "low",
         active: bool = True,
     ) -> dict:
-        """Create a table type. Requires the ``admin`` role."""
+        """Create a table type. Requires the ``admin`` role.
+
+        ``width_m``/``length_m`` are the table's real measured dimensions in
+        metres — there is no defensible generic default, so both are required.
+        For ``shape="round"`` only the diameter matters: pass it as either
+        ``width_m`` or ``length_m`` (the larger of the two is used).
+
+        ``height_type`` is ``"low"`` for a standard seated dining table, or
+        ``"high"`` for a high-top/cocktail-height standing table.
+        """
         self._require_admin()
         return await mcp_admin_table_types.create_table_type(
             self.session_factory,
@@ -571,10 +587,10 @@ class ChampagneFestivalMcpBackend:
         self,
         type_id: str,
         name: str | None = None,
-        shape: str | None = None,
+        shape: Literal["rectangle", "round"] | None = None,
         width_m: float | None = None,
         length_m: float | None = None,
-        height_type: str | None = None,
+        height_type: Literal["low", "high"] | None = None,
         max_capacity: int | None = None,
         active: bool | None = None,
     ) -> dict:
@@ -677,7 +693,7 @@ class ChampagneFestivalMcpBackend:
         room_id: str,
         edition_id: str | None = None,
         day_id: int | None = None,
-        date: dt_date | str | None = None,
+        date: dt_date | None = None,
         label: str = "",
     ) -> dict:
         """Create a floor-plan layout for a room. Either ``day_id`` or ``date`` is required.
@@ -701,7 +717,7 @@ class ChampagneFestivalMcpBackend:
         room_id: str,
         edition_id: str | None = None,
         day_id: int | None = None,
-        date: dt_date | str | None = None,
+        date: dt_date | None = None,
         label: str = "",
         copy_tables: bool = True,
         copy_areas: bool = True,
@@ -824,7 +840,7 @@ class ChampagneFestivalMcpBackend:
         year: int,
         month: str,
         venue_id: str,
-        edition_type: str = "festival",
+        edition_type: EditionType = "festival",
         exhibitors: list[int] | None = None,
         co_organizer_exhibitor_id: int | None = None,
         active: bool = True,
@@ -859,7 +875,7 @@ class ChampagneFestivalMcpBackend:
         year: int | None = None,
         month: str | None = None,
         venue_id: str | None = None,
-        edition_type: str | None = None,
+        edition_type: EditionType | None = None,
         exhibitors: list[int] | None = None,
         co_organizer_exhibitor_id: int | None = None,
         clear_co_organizer: bool = False,
@@ -898,13 +914,13 @@ class ChampagneFestivalMcpBackend:
         self,
         edition_id: str,
         title: str,
-        date: dt_date | str,
+        date: dt_date,
         start_time: str,
         category: str,
         description: str = "",
         end_time: str | None = None,
         registration_required: bool = False,
-        registrations_open_from: datetime | str | None = None,
+        registrations_open_from: datetime | None = None,
         max_capacity: int | None = None,
         active: bool = True,
     ) -> dict:
@@ -942,12 +958,12 @@ class ChampagneFestivalMcpBackend:
         edition_id: str | None = None,
         title: str | None = None,
         description: str | None = None,
-        date: dt_date | str | None = None,
+        date: dt_date | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
         category: str | None = None,
         registration_required: bool | None = None,
-        registrations_open_from: datetime | str | None = None,
+        registrations_open_from: datetime | None = None,
         max_capacity: int | None = None,
         active: bool | None = None,
         clear_end_time: bool = False,
