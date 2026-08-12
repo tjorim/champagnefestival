@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, date, datetime
+
 import pytest
 
 from app.mcp.admin import events as mcp_events
@@ -30,7 +32,7 @@ async def test_create_get_event(db_session):
         "admin-1",
         edition_id=edition_id,
         title="Friday Tasting",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="18:00",
         category="festival",
     )
@@ -53,7 +55,7 @@ async def test_create_event_rejects_invalid_input(db_session):
             "admin-1",
             edition_id=edition_id,
             title="Bad Event",
-            date="2099-03-21",
+            date=date(2099, 3, 21),
             start_time="99:99",  # invalid HH:MM pattern
             category="festival",
         )
@@ -73,7 +75,7 @@ async def test_update_event_partial(db_session):
         "admin-1",
         edition_id=edition_id,
         title="Friday Tasting",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="18:00",
         category="festival",
     )
@@ -98,7 +100,7 @@ async def test_delete_event(db_session):
         "admin-1",
         edition_id=edition_id,
         title="Friday Tasting",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="18:00",
         category="festival",
     )
@@ -125,7 +127,7 @@ async def test_delete_event_rejects_when_registrations_exist(db_session):
         "admin-1",
         edition_id=edition_id,
         title="Friday Tasting",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="18:00",
         category="festival",
     )
@@ -170,7 +172,7 @@ async def test_standalone_edition_rejects_a_second_date(db_session):
         "admin-1",
         edition_id=edition_id,
         title="Bourse Opening",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="10:00",
         category="exchange",
     )
@@ -181,7 +183,7 @@ async def test_standalone_edition_rejects_a_second_date(db_session):
             "admin-1",
             edition_id=edition_id,
             title="Bourse Auction",
-            date="2099-03-22",
+            date=date(2099, 3, 22),
             start_time="10:00",
             category="exchange",
         )
@@ -196,12 +198,12 @@ async def test_standalone_edition_allows_moving_within_same_single_day(db_sessio
         "admin-1",
         edition_id=edition_id,
         title="Bourse Opening",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="10:00",
         category="exchange",
     )
 
-    updated = await mcp_events.update_event(factory, "admin-1", created["id"], date="2099-03-21", title="Updated")
+    updated = await mcp_events.update_event(factory, "admin-1", created["id"], date=date(2099, 3, 21), title="Updated")
     assert str(updated["date"]) == "2099-03-21"
 
 
@@ -215,7 +217,7 @@ async def test_create_event_rejects_registration_settings_without_registration_r
             "admin-1",
             edition_id=edition_id,
             title="Walk-in Only Event",
-            date="2099-03-21",
+            date=date(2099, 3, 21),
             start_time="18:00",
             category="festival",
             registration_required=False,
@@ -231,7 +233,7 @@ async def test_update_event_rejects_registration_settings_without_registration_r
         "admin-1",
         edition_id=edition_id,
         title="Walk-in Only Event",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="18:00",
         category="festival",
         registration_required=False,
@@ -249,12 +251,12 @@ async def test_update_event_clears_nullable_fields(db_session):
         "admin-1",
         edition_id=edition_id,
         title="Friday Tasting",
-        date="2099-03-21",
+        date=date(2099, 3, 21),
         start_time="18:00",
         end_time="22:00",
         category="festival",
         registration_required=True,
-        registrations_open_from="2026-01-01T00:00:00+00:00",
+        registrations_open_from=datetime(2026, 1, 1, tzinfo=UTC),
         max_capacity=50,
     )
     assert created["end_time"] == "22:00"

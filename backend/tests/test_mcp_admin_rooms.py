@@ -20,9 +20,12 @@ async def test_create_get_list_room(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
 
-    created = await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
     assert created["name"] == "Main Hall"
     assert created["venue_id"] == "venue-1"
+    assert created["dimensions_placeholder"] is False
     room_id = created["id"]
 
     fetched = await mcp_rooms.get_room(factory, room_id)
@@ -35,7 +38,18 @@ async def test_create_get_list_room(db_session):
 async def test_create_room_venue_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="nonexistent")
+        await mcp_rooms.create_room(
+            factory, "admin-1", name="Main Hall", venue_id="nonexistent", width_m=25.0, length_m=18.0
+        )
+
+
+async def test_create_room_rejects_missing_dimensions(db_session):
+    """width_m/length_m have no defensible default and must be provided explicitly (#835)."""
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session)
+
+    with pytest.raises(TypeError):
+        await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")  # ty: ignore[missing-argument]
 
 
 async def test_create_room_rejects_invalid_input(db_session):
@@ -43,7 +57,15 @@ async def test_create_room_rejects_invalid_input(db_session):
     await _seed_venue(db_session)
 
     with pytest.raises(ValueError, match="color"):
-        await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1", color="not-a-color")
+        await mcp_rooms.create_room(
+            factory,
+            "admin-1",
+            name="Main Hall",
+            venue_id="venue-1",
+            width_m=25.0,
+            length_m=18.0,
+            color="not-a-color",
+        )
 
 
 async def test_get_room_not_found(db_session):
@@ -55,7 +77,9 @@ async def test_get_room_not_found(db_session):
 async def test_update_room_partial(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
-    created = await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
 
     updated = await mcp_rooms.update_room(factory, "admin-1", created["id"], length_m=20.0)
     assert updated["length_m"] == 20.0
@@ -63,10 +87,35 @@ async def test_update_room_partial(db_session):
     assert updated["width_m"] == created["width_m"]
 
 
+async def test_update_room_venue_reassignment(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session, "venue-1")
+    await _seed_venue(db_session, "venue-2")
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
+
+    updated = await mcp_rooms.update_room(factory, "admin-1", created["id"], venue_id="venue-2")
+    assert updated["venue_id"] == "venue-2"
+
+
+async def test_update_room_venue_reassignment_not_found(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session)
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
+
+    with pytest.raises(ValueError, match="not found"):
+        await mcp_rooms.update_room(factory, "admin-1", created["id"], venue_id="nonexistent")
+
+
 async def test_update_room_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
-    created = await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
 
     with pytest.raises(ValueError, match="width_m"):
         await mcp_rooms.update_room(factory, "admin-1", created["id"], width_m=1000.0)  # le=500
@@ -81,7 +130,9 @@ async def test_update_room_not_found(db_session):
 async def test_delete_room(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
-    created = await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
 
     result = await mcp_rooms.delete_room(factory, "admin-1", created["id"])
     assert result == {"deleted": True, "id": created["id"]}
@@ -99,7 +150,9 @@ async def test_delete_room_not_found(db_session):
 async def test_delete_room_blocked_while_layout_in_use(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
-    created = await mcp_rooms.create_room(factory, "admin-1", name="Main Hall", venue_id="venue-1")
+    created = await mcp_rooms.create_room(
+        factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
 
     db_session.add(Layout(id="lay-1", edition_id=None, room_id=created["id"], day_id=1))
     await db_session.commit()

@@ -447,7 +447,7 @@ describe("apiRoomToRoom", () => {
   };
 
   it("maps all fields from a fully populated response", () => {
-    expect(apiRoomToRoom(full)).toEqual<Room>({
+    expect(apiRoomToRoom({ ...full, dimensions_placeholder: true })).toEqual<Room>({
       id: "r1",
       venueId: "v1",
       name: "Main Hall",
@@ -455,6 +455,7 @@ describe("apiRoomToRoom", () => {
       lengthM: 40,
       color: "#ff0000",
       active: false,
+      dimensionsPlaceholder: true,
     });
   });
 
@@ -480,6 +481,14 @@ describe("apiRoomToRoom", () => {
 
   it("preserves color value", () => {
     expect(apiRoomToRoom({ ...minimal, color: "#00ff00" }).color).toBe("#00ff00");
+  });
+
+  it("defaults dimensionsPlaceholder to false when absent", () => {
+    expect(apiRoomToRoom(minimal).dimensionsPlaceholder).toBe(false);
+  });
+
+  it("preserves dimensions_placeholder: true when explicitly provided", () => {
+    expect(apiRoomToRoom({ ...minimal, dimensions_placeholder: true }).dimensionsPlaceholder).toBe(true);
   });
 });
 

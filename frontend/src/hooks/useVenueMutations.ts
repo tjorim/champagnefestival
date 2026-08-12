@@ -1,5 +1,5 @@
 import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import type { FloorArea, FloorTable, TableType } from "@/types/admin";
+import type { FloorArea, FloorTable, Room, TableType } from "@/types/admin";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
@@ -302,18 +302,27 @@ export function useVenueMutations({
 
   const updateRoomMutation = useMutation({
     mutationFn: ({
-      roomId,
-      active,
-      fallbackMessage,
+      id,
+      data,
     }: {
-      roomId: string;
-      active: boolean;
-      fallbackMessage: string;
+      id: string;
+      data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/rooms/${roomId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ active }) },
-        fallbackMessage,
+        `/api/rooms/${id}`,
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            ...(data.venueId !== undefined && { venue_id: data.venueId }),
+            ...(data.name !== undefined && { name: data.name }),
+            ...(data.widthM !== undefined && { width_m: data.widthM }),
+            ...(data.lengthM !== undefined && { length_m: data.lengthM }),
+            ...(data.color !== undefined && { color: data.color }),
+            ...(data.active !== undefined && { active: data.active }),
+          }),
+        },
+        m.admin_error_update_room(),
       ),
     onSettled: () => {
       void invalidateAdmin(queryClient, [roomsQueryKey]);

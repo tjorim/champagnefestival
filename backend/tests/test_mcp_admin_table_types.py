@@ -12,7 +12,9 @@ from tests.helpers import mcp_session_factory
 async def test_create_get_list_table_type(db_session):
     factory = mcp_session_factory(db_session)
 
-    created = await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)
+    created = await mcp_table_types.create_table_type(
+        factory, "admin-1", name="Standard", width_m=0.7, length_m=1.8, max_capacity=6
+    )
     assert created["name"] == "Standard"
     assert created["max_capacity"] == 6
     type_id = created["id"]
@@ -27,15 +29,26 @@ async def test_create_get_list_table_type(db_session):
 async def test_create_table_type_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="max_capacity"):
-        await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=51)  # le=50
+        await mcp_table_types.create_table_type(
+            factory, "admin-1", name="Standard", width_m=0.7, length_m=1.8, max_capacity=51
+        )  # le=50
 
 
-async def test_create_table_type_round_shape_normalises_length_to_width(db_session):
+async def test_create_table_type_rejects_missing_dimensions(db_session):
+    """width_m/length_m have no defensible default and must be provided explicitly (#835)."""
+    factory = mcp_session_factory(db_session)
+    with pytest.raises(TypeError):
+        await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)  # ty: ignore[missing-argument]
+
+
+async def test_create_table_type_round_shape_uses_larger_dimension_as_diameter(db_session):
+    """Round tables have a single diameter — whichever field the caller actually used to
+    express it (width_m or length_m) must be respected, not silently discarded (#835)."""
     factory = mcp_session_factory(db_session)
     created = await mcp_table_types.create_table_type(
         factory, "admin-1", name="Round", shape="round", width_m=1.5, length_m=3.0, max_capacity=8
     )
-    assert created["length_m"] == created["width_m"] == 1.5
+    assert created["length_m"] == created["width_m"] == 3.0
 
 
 async def test_get_table_type_not_found(db_session):
@@ -46,7 +59,9 @@ async def test_get_table_type_not_found(db_session):
 
 async def test_update_table_type_partial(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)
+    created = await mcp_table_types.create_table_type(
+        factory, "admin-1", name="Standard", width_m=0.7, length_m=1.8, max_capacity=6
+    )
 
     updated = await mcp_table_types.update_table_type(factory, "admin-1", created["id"], max_capacity=8)
     assert updated["max_capacity"] == 8
@@ -55,7 +70,9 @@ async def test_update_table_type_partial(db_session):
 
 async def test_update_table_type_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)
+    created = await mcp_table_types.create_table_type(
+        factory, "admin-1", name="Standard", width_m=0.7, length_m=1.8, max_capacity=6
+    )
 
     with pytest.raises(ValueError, match="max_capacity"):
         await mcp_table_types.update_table_type(factory, "admin-1", created["id"], max_capacity=0)  # ge=1
@@ -67,7 +84,7 @@ async def test_update_table_type_not_found(db_session):
         await mcp_table_types.update_table_type(factory, "admin-1", "nonexistent", max_capacity=8)
 
 
-async def test_update_table_type_round_shape_renormalises_length_to_width(db_session):
+async def test_update_table_type_round_shape_renormalises_to_larger_dimension(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_table_types.create_table_type(
         factory, "admin-1", name="Rect", shape="rectangle", width_m=1.5, length_m=3.0, max_capacity=8
@@ -78,7 +95,7 @@ async def test_update_table_type_round_shape_renormalises_length_to_width(db_ses
 
     updated = await mcp_table_types.update_table_type(factory, "admin-1", created["id"], shape="round")
     assert updated["shape"] == "round"
-    assert updated["length_m"] == updated["width_m"] == 1.5
+    assert updated["length_m"] == updated["width_m"] == 3.0
 
 
 async def test_update_table_type_swaps_dimensions_when_width_exceeds_length(db_session):
@@ -98,7 +115,9 @@ async def test_update_table_type_swaps_dimensions_when_width_exceeds_length(db_s
 
 async def test_delete_table_type(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)
+    created = await mcp_table_types.create_table_type(
+        factory, "admin-1", name="Standard", width_m=0.7, length_m=1.8, max_capacity=6
+    )
 
     result = await mcp_table_types.delete_table_type(factory, "admin-1", created["id"])
     assert result == {"deleted": True, "id": created["id"]}
@@ -115,7 +134,9 @@ async def test_delete_table_type_not_found(db_session):
 
 async def test_delete_table_type_blocked_while_table_in_use(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", max_capacity=6)
+    created = await mcp_table_types.create_table_type(
+        factory, "admin-1", name="Standard", width_m=0.7, length_m=1.8, max_capacity=6
+    )
 
     venue = Venue(id="venue-1", name="Test Venue")
     db_session.add(venue)
