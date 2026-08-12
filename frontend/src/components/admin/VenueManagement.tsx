@@ -1048,11 +1048,7 @@ export default function VenueManagement({
                     onChange={(e) => {
                       const raw = e.target.value;
                       const v = raw === "" ? "" : Number(raw);
-                      setTableTypeForm((p) =>
-                        typeof v === "number" && typeof p.lengthM === "number" && v > p.lengthM
-                          ? { ...p, widthM: p.lengthM, lengthM: v }
-                          : { ...p, widthM: v },
-                      );
+                      setTableTypeForm((p) => ({ ...p, widthM: v }));
                     }}
                     className="bg-dark text-light border-secondary"
                   />
@@ -1071,11 +1067,7 @@ export default function VenueManagement({
                     onChange={(e) => {
                       const raw = e.target.value;
                       const v = raw === "" ? "" : Number(raw);
-                      setTableTypeForm((p) =>
-                        typeof v === "number" && typeof p.widthM === "number" && v < p.widthM
-                          ? { ...p, lengthM: p.widthM, widthM: v }
-                          : { ...p, lengthM: v },
-                      );
+                      setTableTypeForm((p) => ({ ...p, lengthM: v }));
                     }}
                     className="bg-dark text-light border-secondary"
                   />
