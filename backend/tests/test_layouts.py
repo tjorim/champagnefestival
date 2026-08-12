@@ -23,6 +23,81 @@ async def test_layout_rejects_duplicate_room_day(client):
 
 
 @pytest.mark.anyio
+async def test_list_layouts_filters_by_edition_id_and_room_id(client):
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_a = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_b = r.json()["id"]
+    r = await client.post(
+        "/api/editions",
+        json={"id": "edition-834", "year": 2099, "month": "march", "venue_id": venue_id, "active": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_a, "day_id": 1, "edition_id": "edition-834"},
+        headers=ADMIN_HEADERS,
+    )
+    layout_a = r.json()["id"]
+    await client.post("/api/layouts", json={"room_id": room_b, "day_id": 1}, headers=ADMIN_HEADERS)
+
+    r = await client.get("/api/layouts", params={"edition_id": "edition-834"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert [lay["id"] for lay in r.json()] == [layout_a]
+
+    r = await client.get("/api/layouts", params={"room_id": room_a}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert [lay["id"] for lay in r.json()] == [layout_a]
+
+    r = await client.get("/api/layouts", params={"room_id": room_b}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert layout_a not in [lay["id"] for lay in r.json()]
+
+
+@pytest.mark.anyio
+async def test_get_layout_include_tables(client):
+    """get_layout(..., include_tables=True) returns the layout's tables and areas
+    in one call, without a separate global list_tables/list_areas scan (#834)."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    layout_id = r.json()["id"]
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    tt_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    table_id = r.json()["id"]
+    r = await client.post(
+        "/api/areas",
+        json={"layout_id": layout_id, "label": "Zone A"},
+        headers=ADMIN_HEADERS,
+    )
+    area_id = r.json()["id"]
+
+    # Default: no tables/areas embedded.
+    r = await client.get(f"/api/layouts/{layout_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["tables"] is None
+    assert r.json()["areas"] is None
+
+    r = await client.get(f"/api/layouts/{layout_id}", params={"include_tables": True}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    data = r.json()
+    assert [t["id"] for t in data["tables"]] == [table_id]
+    assert [a["id"] for a in data["areas"]] == [area_id]
+
+
+@pytest.mark.anyio
 async def test_copy_layout_basic(client):
     """Copying a layout to a new day creates a new layout entry."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)

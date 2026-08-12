@@ -51,6 +51,22 @@ async def test_create_get_list_table(db_session):
     assert any(t["id"] == table_id for t in listed["tables"])
 
 
+async def test_list_tables_filters_by_layout_id(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_layout(db_session, layout_id="lay-1")
+    db_session.add(Layout(id="lay-2", edition_id=None, room_id="room-1", day_id=2))
+    await db_session.commit()
+    await _seed_table_type(db_session)
+
+    created_a = await mcp_tables.create_table(
+        factory, "admin-1", name="A1", capacity=6, table_type_id="ttype-1", layout_id="lay-1"
+    )
+    await mcp_tables.create_table(factory, "admin-1", name="B1", capacity=6, table_type_id="ttype-1", layout_id="lay-2")
+
+    listed = await mcp_tables.list_tables(factory, layout_id="lay-1")
+    assert [t["id"] for t in listed["tables"]] == [created_a["id"]]
+
+
 async def test_create_table_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)

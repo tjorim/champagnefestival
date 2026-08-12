@@ -72,15 +72,19 @@ async def copy_layout(
             raise MCPToolError(str(exc)) from exc
 
 
-async def list_layouts(session_factory: Any) -> dict:
+async def list_layouts(
+    session_factory: Any,
+    edition_id: str | None = None,
+    room_id: str | None = None,
+) -> dict:
     async with session_factory() as db:
-        return {"layouts": await layouts_service.list_layouts(db)}
+        return {"layouts": await layouts_service.list_layouts(db, edition_id=edition_id, room_id=room_id)}
 
 
-async def get_layout(session_factory: Any, layout_id: str) -> dict:
+async def get_layout(session_factory: Any, layout_id: str, include_tables: bool = False) -> dict:
     async with session_factory() as db:
         try:
-            return await layouts_service.get_layout(db, layout_id)
+            return await layouts_service.get_layout(db, layout_id, include_tables=include_tables)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

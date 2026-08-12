@@ -52,6 +52,60 @@ async def test_table_crud(client):
 
 
 @pytest.mark.anyio
+async def test_list_tables_filters_by_layout_id(client):
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    layout_a = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 2}, headers=ADMIN_HEADERS)
+    layout_b = r.json()["id"]
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    tt_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/tables",
+        json={"name": "A1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_a},
+        headers=ADMIN_HEADERS,
+    )
+    table_a = r.json()["id"]
+    await client.post(
+        "/api/tables",
+        json={"name": "B1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_b},
+        headers=ADMIN_HEADERS,
+    )
+
+    r = await client.get("/api/tables", params={"layout_id": layout_a}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    ids = [t["id"] for t in r.json()]
+    assert ids == [table_a]
+
+
+@pytest.mark.anyio
+async def test_table_position_bounds_rejected(client):
+    """x/y outside [0, 100] and rotation outside [0, 359] are rejected consistently (#834)."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    layout_id = r.json()["id"]
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    tt_id = r.json()["id"]
+
+    base = {"name": "T1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_id}
+
+    for bad in ({"x": -0.1}, {"x": 100.1}, {"y": -0.1}, {"y": 100.1}, {"rotation": -1}, {"rotation": 360}):
+        r = await client.post("/api/tables", json={**base, **bad}, headers=ADMIN_HEADERS)
+        assert r.status_code == 422, f"{bad} should have been rejected"
+
+    for good in ({"x": 0.0}, {"x": 100.0}, {"y": 0.0}, {"y": 100.0}, {"rotation": 0}, {"rotation": 359}):
+        r = await client.post("/api/tables", json={**base, **good}, headers=ADMIN_HEADERS)
+        assert r.status_code == 201, f"{good} should have been accepted"
+
+
+@pytest.mark.anyio
 async def test_table_with_layout_id(client):
     """Tables can be assigned a layout_id and it is persisted."""
     # Build the prerequisite chain: venue → room → layout + table_type

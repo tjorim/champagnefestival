@@ -52,6 +52,23 @@ async def test_room_crud(client):
 
 
 @pytest.mark.anyio
+async def test_list_rooms_filters_by_venue_id(client):
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_a = r.json()["id"]
+    r = await client.post("/api/venues", json={"name": "Other Venue"}, headers=ADMIN_HEADERS)
+    venue_b = r.json()["id"]
+
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS)
+    room_a = r.json()["id"]
+    await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_b}, headers=ADMIN_HEADERS)
+
+    r = await client.get("/api/rooms", params={"venue_id": venue_a}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    ids = [room["id"] for room in r.json()]
+    assert ids == [room_a]
+
+
+@pytest.mark.anyio
 async def test_room_update_all_editable_fields_together(client):
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]

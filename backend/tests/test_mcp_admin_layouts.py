@@ -35,6 +35,39 @@ async def test_create_get_list_layout(db_session):
     assert any(lay["id"] == layout_id for lay in listed["layouts"])
 
 
+async def test_list_layouts_filters_by_room_id(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session, room_id="room-1")
+    db_session.add(Room(id="room-2", venue_id="venue-1", name="Second Room", width_m=25.0, length_m=18.0))
+    await db_session.commit()
+
+    created_a = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    await mcp_layouts.create_layout(factory, "admin-1", room_id="room-2", day_id=1)
+
+    listed = await mcp_layouts.list_layouts(factory, room_id="room-1")
+    assert [lay["id"] for lay in listed["layouts"]] == [created_a["id"]]
+
+
+async def test_get_layout_include_tables(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session)
+    created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
+    await db_session.flush()
+    db_session.add(Table(id="tbl-1", name="T1", capacity=4, table_type_id="ttype-1", layout_id=created["id"]))
+    db_session.add(Area(id="area-1", layout_id=created["id"], label="Zone A"))
+    await db_session.commit()
+
+    without_tables = await mcp_layouts.get_layout(factory, created["id"])
+    assert "tables" not in without_tables
+    assert "areas" not in without_tables
+
+    with_tables = await mcp_layouts.get_layout(factory, created["id"], include_tables=True)
+    assert [t["id"] for t in with_tables["tables"]] == ["tbl-1"]
+    assert [a["id"] for a in with_tables["areas"]] == ["area-1"]
+
+
 async def test_create_layout_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)

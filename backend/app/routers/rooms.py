@@ -5,7 +5,7 @@ Business logic lives in ``app.services.rooms_service`` and is shared with
 ``ServiceError`` into ``HTTPException`` (see #807).
 """
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
@@ -37,8 +37,11 @@ async def create_room(
 
 
 @router.get("", response_model=list[RoomOut])
-async def list_rooms(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    return await rooms_service.list_rooms(db)
+async def list_rooms(
+    venue_id: str | None = Query(default=None, description="Filter by venue ID"),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    return await rooms_service.list_rooms(db, venue_id)
 
 
 @router.get("/{room_id}", response_model=RoomOut)
