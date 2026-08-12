@@ -864,6 +864,7 @@ class RoomCreate(BaseModel):
 
 
 class RoomUpdate(BaseModel):
+    venue_id: str | None = None
     name: str | None = None
     width_m: float | None = Field(default=None, ge=1, le=500)
     length_m: float | None = Field(default=None, ge=1, le=500)
@@ -879,6 +880,7 @@ class RoomOut(BaseModel):
     length_m: float
     color: str
     active: bool
+    dimensions_placeholder: bool
     created_at: datetime
     updated_at: datetime
 

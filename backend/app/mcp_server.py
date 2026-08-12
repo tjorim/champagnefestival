@@ -512,6 +512,7 @@ class ChampagneFestivalMcpBackend:
     async def update_room(
         self,
         room_id: str,
+        venue_id: str | None = None,
         name: str | None = None,
         width_m: float | None = None,
         length_m: float | None = None,
@@ -524,6 +525,7 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             room_id,
+            venue_id=venue_id,
             name=name,
             width_m=width_m,
             length_m=length_m,

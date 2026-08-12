@@ -26,6 +26,9 @@ async def test_room_crud(client):
     assert data["name"] == "Main Hall"
     assert data["width_m"] == 25.0
     assert data["length_m"] == 18.0
+    # A room created through the API always has deliberately-supplied
+    # dimensions (see #835), so it must never be flagged as a placeholder.
+    assert data["dimensions_placeholder"] is False
     room_id = data["id"]
 
     # List
@@ -46,6 +49,80 @@ async def test_room_crud(client):
 
     r = await client.get("/api/rooms", headers=ADMIN_HEADERS)
     assert r.json() == []
+
+
+@pytest.mark.anyio
+async def test_room_update_all_editable_fields_together(client):
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+
+    r = await client.put(
+        f"/api/rooms/{room_id}",
+        json={"name": "Ballroom", "width_m": 30.0, "length_m": 22.0, "color": "#123abc", "active": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["name"] == "Ballroom"
+    assert data["width_m"] == 30.0
+    assert data["length_m"] == 22.0
+    assert data["color"] == "#123abc"
+    assert data["active"] is False
+
+
+@pytest.mark.anyio
+async def test_room_venue_reassignment(client):
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_a = r.json()["id"]
+    r = await client.post("/api/venues", json={"name": "Other Venue"}, headers=ADMIN_HEADERS)
+    venue_b = r.json()["id"]
+
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+
+    r = await client.put(f"/api/rooms/{room_id}", json={"venue_id": venue_b}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["venue_id"] == venue_b
+
+
+@pytest.mark.anyio
+async def test_room_venue_reassignment_rejects_unknown_venue(client):
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+
+    r = await client.put(f"/api/rooms/{room_id}", json={"venue_id": "venue-missing"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_room_dimensions_placeholder_flag_cleared_on_explicit_update(client, db_session):
+    """A room flagged as placeholder (e.g. by migration 009, backfilled for rows
+    that got the old silent 20x15 default) should stay flagged through unrelated
+    edits, and only clear once someone deliberately sets real dimensions."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post(
+        "/api/rooms",
+        json={"name": "Legacy Room", "width_m": 20.0, "length_m": 15.0, "venue_id": venue_id},
+        headers=ADMIN_HEADERS,
+    )
+    room_id = r.json()["id"]
+
+    room = await db_session.get(Room, room_id)
+    room.dimensions_placeholder = True
+    await db_session.commit()
+
+    # Editing an unrelated field must not clear the flag.
+    r = await client.put(f"/api/rooms/{room_id}", json={"name": "Legacy Room (renamed)"}, headers=ADMIN_HEADERS)
+    assert r.json()["dimensions_placeholder"] is True
+
+    # Supplying a real width/length clears it.
+    r = await client.put(f"/api/rooms/{room_id}", json={"width_m": 12.5, "length_m": 9.0}, headers=ADMIN_HEADERS)
+    assert r.json()["dimensions_placeholder"] is False
 
 
 @pytest.mark.anyio

@@ -80,6 +80,8 @@ export interface Room {
   /** CSS colour string for the room badge / canvas border */
   color: string;
   active: boolean;
+  /** True when widthM/lengthM are an unconfirmed placeholder, not a measured value */
+  dimensionsPlaceholder: boolean;
 }
 
 /**
