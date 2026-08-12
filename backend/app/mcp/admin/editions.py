@@ -199,9 +199,7 @@ async def update_edition(
         target_edition_type: str = (
             body.edition_type if "edition_type" in body.model_fields_set else edition.edition_type
         )  # ty: ignore[invalid-assignment]
-        target_active: bool = (
-            body.active if "active" in body.model_fields_set else edition.active
-        )  # ty: ignore[invalid-assignment]
+        target_active: bool = body.active if "active" in body.model_fields_set else edition.active  # ty: ignore[invalid-assignment]
 
         exhibitors_implicitly_cleared = False
         if "exhibitors" in body.model_fields_set and body.exhibitors is not None:

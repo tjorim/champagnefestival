@@ -667,9 +667,7 @@ async def test_upcoming_editions_are_ordered_by_start_date(client):
     venue_id = venue_response.json()["id"]
 
     # Created out of chronological order to prove ordering isn't insertion order.
-    await _create_upcoming_edition(
-        client, edition_id="edition-order-latest", venue_id=venue_id, edition_type="bourse"
-    )
+    await _create_upcoming_edition(client, edition_id="edition-order-latest", venue_id=venue_id, edition_type="bourse")
     await _create_upcoming_event(client, edition_id="edition-order-latest", date="2099-07-01")
     await _create_upcoming_edition(
         client, edition_id="edition-order-earliest", venue_id=venue_id, edition_type="capsule_exchange"
