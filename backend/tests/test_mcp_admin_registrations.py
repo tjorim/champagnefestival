@@ -138,7 +138,10 @@ async def test_update_registration_rejects_table_from_another_edition(db_session
     ttype = TableType(id="ttype-1", name="Standard", max_capacity=6)
     db_session.add_all([room, ttype])
     await db_session.flush()
-    other_edition = Edition(id="edition-2", year=2099, month="april", venue_id="venue-1")
+    # Inactive: `edition-1` from `_seed_event` is already the active festival edition,
+    # and only one may be active per type (#832) — irrelevant here since this test is
+    # about table/edition mismatch, not edition activation.
+    other_edition = Edition(id="edition-2", year=2099, month="april", venue_id="venue-1", active=False)
     db_session.add(other_edition)
     await db_session.flush()
     layout = Layout(id="lay-other", edition_id="edition-2", room_id="room-1", day_id=1)

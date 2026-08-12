@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import AuditEntry
+from app.models import AuditEntry, Edition
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, _create_event, _post_registration
 
 
@@ -656,17 +658,25 @@ async def test_upcoming_includes_embedded_venue(client):
 async def test_upcoming_editions_are_ordered_by_start_date(client):
     """Editions in the response must be ordered chronologically by their earliest
     active event, regardless of creation order.
+
+    Uses two different edition types (a same-type pair would now have its earlier
+    edition auto-deactivated by the #832 invariant, dropping it from `/upcoming`
+    entirely) and an unfiltered request so both remain eligible.
     """
     venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = venue_response.json()["id"]
 
     # Created out of chronological order to prove ordering isn't insertion order.
-    await _create_upcoming_edition(client, edition_id="edition-order-latest", venue_id=venue_id)
+    await _create_upcoming_edition(
+        client, edition_id="edition-order-latest", venue_id=venue_id, edition_type="bourse"
+    )
     await _create_upcoming_event(client, edition_id="edition-order-latest", date="2099-07-01")
-    await _create_upcoming_edition(client, edition_id="edition-order-earliest", venue_id=venue_id)
+    await _create_upcoming_edition(
+        client, edition_id="edition-order-earliest", venue_id=venue_id, edition_type="capsule_exchange"
+    )
     await _create_upcoming_event(client, edition_id="edition-order-earliest", date="2099-05-01")
 
-    r = await client.get("/api/editions/upcoming", params={"edition_type": "bourse"})
+    r = await client.get("/api/editions/upcoming")
     assert r.status_code == 200
     ordered_ids = [edition["id"] for edition in r.json() if edition["id"].startswith("edition-order-")]
     assert ordered_ids == ["edition-order-earliest", "edition-order-latest"]
@@ -1072,3 +1082,338 @@ async def test_edition_stats_includes_editions_with_no_registrations(client):
     assert entry["total_guests"] == 0
     assert entry["total_checked_in"] == 0
     assert entry["events_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# At most one active edition per edition_type (#832)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_creating_an_active_edition_deactivates_the_previous_active_edition_of_same_type(client):
+    """Activation transparently supersedes the previous active edition of that
+    type rather than rejecting the request or allowing both to be active."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-supersede-old",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-supersede-new",
+            "year": 2099,
+            "month": "april",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    assert r.json()["active"] is True
+
+    old_response = await client.get("/api/editions/edition-supersede-old", headers=ADMIN_HEADERS)
+    assert old_response.status_code == 200
+    assert old_response.json()["active"] is False
+
+    new_response = await client.get("/api/editions/edition-supersede-new", headers=ADMIN_HEADERS)
+    assert new_response.json()["active"] is True
+
+
+@pytest.mark.anyio
+async def test_creating_an_inactive_edition_does_not_disturb_the_active_one(client):
+    """Only activating a conflicting edition supersedes the existing active one — creating
+    an inactive edition of the same type must leave the currently active one untouched."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-untouched-active",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-untouched-draft",
+            "year": 2099,
+            "month": "april",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": False,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.get("/api/editions/edition-untouched-active", headers=ADMIN_HEADERS)
+    assert r.json()["active"] is True
+
+
+@pytest.mark.anyio
+async def test_updating_an_edition_to_active_deactivates_the_conflicting_active_edition(client):
+    """The same supersede behaviour applies to `PUT` activation, not just creation."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    for edition_id, active in [("edition-update-supersede-old", True), ("edition-update-supersede-new", False)]:
+        r = await client.post(
+            "/api/editions",
+            json={
+                "id": edition_id,
+                "year": 2099,
+                "month": "march",
+                "venue_id": venue_id,
+                "edition_type": "capsule_exchange",
+                "active": active,
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+
+    r = await client.put(
+        "/api/editions/edition-update-supersede-new",
+        json={"active": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["active"] is True
+
+    old_response = await client.get("/api/editions/edition-update-supersede-old", headers=ADMIN_HEADERS)
+    assert old_response.json()["active"] is False
+
+
+@pytest.mark.anyio
+async def test_changing_edition_type_to_an_already_active_type_deactivates_the_conflict(client):
+    """Retyping an already-active edition into a type that already has an active
+    edition must also trigger the supersede behaviour, even without an explicit
+    `active` field in the same request."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-retype-conflict-bourse",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-retype-conflict-capsule",
+            "year": 2099,
+            "month": "april",
+            "venue_id": venue_id,
+            "edition_type": "capsule_exchange",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.put(
+        "/api/editions/edition-retype-conflict-capsule",
+        json={"edition_type": "bourse"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["edition_type"] == "bourse"
+    assert r.json()["active"] is True
+
+    old_response = await client.get("/api/editions/edition-retype-conflict-bourse", headers=ADMIN_HEADERS)
+    assert old_response.json()["active"] is False
+
+
+@pytest.mark.anyio
+async def test_supersede_is_recorded_in_audit_trail(client, db_session):
+    """Auto-deactivating the previous active edition is a side effect the caller
+    didn't explicitly ask for — it must be visible in the audit trail."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-audit-supersede-old",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-audit-supersede-new",
+            "year": 2099,
+            "month": "april",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    deactivation_entries = (
+        (
+            await db_session.execute(
+                select(AuditEntry).where(
+                    AuditEntry.resource_type == "edition",
+                    AuditEntry.resource_id == "edition-audit-supersede-old",
+                    AuditEntry.action == "edition_deactivated",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(deactivation_entries) == 1
+    assert deactivation_entries[0].details == {"reason": "superseded_by_activation", "edition_type": "bourse"}
+
+    creation_entries = (
+        (
+            await db_session.execute(
+                select(AuditEntry).where(
+                    AuditEntry.resource_type == "edition",
+                    AuditEntry.resource_id == "edition-audit-supersede-new",
+                    AuditEntry.action == "edition_created",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert creation_entries[0].details["deactivated_conflicting_editions"] == ["edition-audit-supersede-old"]
+
+
+@pytest.mark.anyio
+async def test_activation_conflict_that_slips_past_the_dedup_check_returns_409(client, monkeypatch):
+    """If a concurrent request races past `_deactivate_conflicting_editions` (it finds
+    nothing to lock when neither of two brand-new editions is active yet — see that
+    function's docstring), the database's partial unique index is the real backstop.
+    Simulated here by neutralising the dedup check so the conflict only surfaces at
+    commit time, exactly as it would for a genuine second concurrent request."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-conflict-existing",
+            "year": 2099,
+            "month": "march",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    from app.routers import editions as editions_router
+
+    async def _noop_deactivate(*args, **kwargs):
+        return []
+
+    monkeypatch.setattr(editions_router, "_deactivate_conflicting_editions", _noop_deactivate)
+
+    r = await client.post(
+        "/api/editions",
+        json={
+            "id": "edition-conflict-new",
+            "year": 2099,
+            "month": "april",
+            "venue_id": venue_id,
+            "edition_type": "bourse",
+            "active": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 409
+    assert "concurrently" in r.json()["detail"].lower()
+
+    # The pre-existing edition must remain active — the conflicting write never committed.
+    existing_response = await client.get("/api/editions/edition-conflict-existing", headers=ADMIN_HEADERS)
+    assert existing_response.json()["active"] is True
+
+
+@pytest.mark.anyio
+async def test_two_brand_new_active_editions_of_the_same_type_cannot_both_commit(client, db_session, engine):
+    """The database constraint itself — not just the request-scoped dedup helper —
+    is what makes 'two active editions of the same type' impossible to commit, even
+    when two independent transactions race with nothing in common to lock."""
+    venue_response = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = venue_response.json()["id"]
+
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as first, factory() as second:
+        first.add(
+            Edition(
+                id="edition-race-a",
+                year=2099,
+                month="march",
+                venue_id=venue_id,
+                edition_type="capsule_exchange",
+                active=True,
+            )
+        )
+        second.add(
+            Edition(
+                id="edition-race-b",
+                year=2099,
+                month="april",
+                venue_id=venue_id,
+                edition_type="capsule_exchange",
+                active=True,
+            )
+        )
+        await first.commit()
+        with pytest.raises(IntegrityError):
+            await second.commit()
+        await second.rollback()
+
+    still_active = (
+        (
+            await db_session.execute(
+                select(Edition).where(Edition.edition_type == "capsule_exchange", Edition.active.is_(True))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert [edition.id for edition in still_active] == ["edition-race-a"]

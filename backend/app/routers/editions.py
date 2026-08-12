@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -162,17 +163,28 @@ async def create_edition(
     )
     await _validate_exhibitor_ids(db, edition.exhibitors)
     await _validate_co_organizer(db, edition.co_organizer_exhibitor_id)
+
+    request_id = getattr(request.state, "request_id", None)
+    deactivated: list[str] = []
+    if edition.active:
+        deactivated = await _deactivate_conflicting_editions(
+            db, edition_type=edition.edition_type, exclude_id=None, actor=actor, request_id=request_id
+        )
+
     db.add(edition)
+    details: dict = {"year": edition.year, "month": edition.month, "edition_type": edition.edition_type}
+    if deactivated:
+        details["deactivated_conflicting_editions"] = deactivated
     await write_audit_entry(
         db,
         actor=actor,
         action="edition_created",
         resource_type="edition",
         resource_id=edition.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"year": edition.year, "month": edition.month, "edition_type": edition.edition_type},
+        request_id=request_id,
+        details=details,
     )
-    await db.commit()
+    await _commit_or_conflict(db)
     edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition, active_only=False)
 
@@ -191,7 +203,7 @@ async def update_edition(
         await _validate_co_organizer(db, body.co_organizer_exhibitor_id)
         edition.co_organizer_exhibitor_id = body.co_organizer_exhibitor_id
 
-    for field in ["year", "month", "active", "edition_type"]:
+    for field in ["year", "month"]:
         if field in body.model_fields_set:
             setattr(edition, field, getattr(body, field))
 
@@ -199,12 +211,25 @@ async def update_edition(
         await _load_venue(db, body.venue_id)
         edition.venue_id = body.venue_id
 
+    # `active`/`edition_type` are deliberately not applied to `edition` yet: doing so
+    # here would dirty the object before `_deactivate_conflicting_editions` runs below,
+    # and any autoflush in between (the exhibitor/co-organizer validations above already
+    # ran, but `_validate_exhibitor_ids` below issues one too) could flush this row into
+    # an (edition_type, active) state that collides with the still-active conflicting
+    # row — the exact violation the deactivation step exists to avoid causing.
+    target_edition_type: str = (
+        body.edition_type if "edition_type" in body.model_fields_set else edition.edition_type
+    )  # ty: ignore[invalid-assignment]
+    target_active: bool = (
+        body.active if "active" in body.model_fields_set else edition.active
+    )  # ty: ignore[invalid-assignment]
+
     exhibitors_implicitly_cleared = False
     if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
-        _validate_exhibitors_allowed(edition.edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
+        _validate_exhibitors_allowed(target_edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
         await _validate_exhibitor_ids(db, body.exhibitors)
         edition.exhibitors = list(body.exhibitors)
-    elif edition.edition_type != "festival" and edition.exhibitors:
+    elif target_edition_type != "festival" and edition.exhibitors:
         # The edition type changed away from festival without an explicit exhibitors
         # payload — either just now (edition_type in this update) or on an edition
         # already non-festival before this update. Off-festival editions can't carry
@@ -213,21 +238,36 @@ async def update_edition(
         edition.exhibitors = []
         exhibitors_implicitly_cleared = True
 
-    _validate_exhibitors_allowed(edition.edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
+    _validate_exhibitors_allowed(target_edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
+
+    request_id = getattr(request.state, "request_id", None)
+    deactivated: list[str] = []
+    if target_active:
+        deactivated = await _deactivate_conflicting_editions(
+            db, edition_type=target_edition_type, exclude_id=edition.id, actor=actor, request_id=request_id
+        )
+
+    # Safe to apply now: any conflicting active row of `target_edition_type` has
+    # already been deactivated and flushed above.
+    for field in ("active", "edition_type"):
+        if field in body.model_fields_set:
+            setattr(edition, field, getattr(body, field))
 
     details: dict = {"fields_changed": sorted(body.model_fields_set)}
     if exhibitors_implicitly_cleared:
         details["exhibitors_cleared"] = True
+    if deactivated:
+        details["deactivated_conflicting_editions"] = deactivated
     await write_audit_entry(
         db,
         actor=actor,
         action="edition_updated",
         resource_type="edition",
         resource_id=edition.id,
-        request_id=getattr(request.state, "request_id", None),
+        request_id=request_id,
         details=details,
     )
-    await db.commit()
+    await _commit_or_conflict(db)
     edition = await _get_edition_or_404(db, edition.id)
     return await _edition_payload(db, edition, active_only=False)
 
@@ -278,6 +318,64 @@ async def _get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
         "Edition not found.",
         options=[selectinload(Edition.events).selectinload(Event.products)],
     )
+
+
+async def _deactivate_conflicting_editions(
+    db: AsyncSession,
+    *,
+    edition_type: str,
+    exclude_id: str | None,
+    actor: str,
+    request_id: str | None,
+) -> list[str]:
+    """Deactivate any other active edition of the same type in the same transaction.
+
+    Backs the "at most one active edition per type" invariant (#832) on the normal
+    single-request path: activating an edition transparently supersedes whichever
+    edition of that type was active before, rather than requiring the caller to
+    deactivate it first. Rows are locked with ``FOR UPDATE`` before being flipped so a
+    concurrent activation targeting one of them can't interleave. That still leaves one
+    race unresolved — two brand-new editions of the same type activated at once, with no
+    existing active row for either to lock — which is why this alone isn't the
+    invariant's backstop: the ``uq_editions_active_type`` partial unique index
+    (migration 008) is, and ``_commit_or_conflict`` turns its violation into a 409.
+    """
+    stmt = select(Edition).where(Edition.edition_type == edition_type, Edition.active.is_(True))
+    if exclude_id is not None:
+        stmt = stmt.where(Edition.id != exclude_id)
+    conflicting = list((await db.execute(stmt.with_for_update())).scalars().all())
+    for other in conflicting:
+        other.active = False
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="edition_deactivated",
+            resource_type="edition",
+            resource_id=other.id,
+            request_id=request_id,
+            details={"reason": "superseded_by_activation", "edition_type": edition_type},
+        )
+    if conflicting:
+        await db.flush()
+    return [other.id for other in conflicting]
+
+
+async def _commit_or_conflict(db: AsyncSession) -> None:
+    """Commit, translating a partial-unique-index violation into a 409.
+
+    The only ``IntegrityError`` reachable here — validation for everything else
+    (venue, exhibitors, co-organizer) already ran before this point — is a concurrent
+    activation of two editions of the same type racing past `_deactivate_conflicting_editions`
+    with nothing to lock; see that function's docstring.
+    """
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Another edition of this type was activated concurrently. Please retry.",
+        ) from exc
 
 
 async def _load_venue(db: AsyncSession, venue_id: str) -> dict:
