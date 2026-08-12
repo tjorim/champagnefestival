@@ -32,7 +32,7 @@ from app.routers.editions import (
     _validate_exhibitor_ids,
     _validate_exhibitors_allowed,
 )
-from app.schemas import EditionCreate, EditionUpdate
+from app.schemas import EditionCreate, EditionType, EditionUpdate
 
 
 async def create_edition(
@@ -43,7 +43,7 @@ async def create_edition(
     year: int,
     month: str,
     venue_id: str,
-    edition_type: str = "festival",
+    edition_type: EditionType = "festival",
     exhibitors: list[int] | None = None,
     co_organizer_exhibitor_id: int | None = None,
     active: bool = True,
@@ -134,7 +134,7 @@ async def update_edition(
     year: int | None = None,
     month: str | None = None,
     venue_id: str | None = None,
-    edition_type: str | None = None,
+    edition_type: EditionType | None = None,
     exhibitors: list[int] | None = None,
     co_organizer_exhibitor_id: int | None = None,
     clear_co_organizer: bool = False,

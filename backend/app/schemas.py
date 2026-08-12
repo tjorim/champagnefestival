@@ -630,8 +630,11 @@ class LayoutOut(BaseModel):
 class TableTypeCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     shape: Literal["rectangle", "round"] = "rectangle"
-    width_m: float = Field(ge=0.1, le=20.0, default=0.7)
-    length_m: float = Field(ge=0.1, le=20.0, default=1.8)
+    # No defensible default exists for physical dimensions (unlike shape/height_type,
+    # which have a legitimate industry-standard default) — required so a caller can't
+    # silently persist a 0.7 x 1.8m table type without realising it (see #835).
+    width_m: float = Field(ge=0.1, le=20.0)
+    length_m: float = Field(ge=0.1, le=20.0)
     height_type: Literal["low", "high"] = "low"
     max_capacity: int = Field(ge=1, le=50)
     active: bool = True
@@ -852,8 +855,10 @@ class VenueOut(BaseModel):
 class RoomCreate(BaseModel):
     venue_id: str
     name: str = Field(min_length=1, max_length=200)
-    width_m: float = Field(ge=1, le=500, default=20.0)
-    length_m: float = Field(ge=1, le=500, default=15.0)
+    # Required, not defaulted — a 20x15m default would silently masquerade as a
+    # measured room dimension for whatever venue was actually entered (see #835).
+    width_m: float = Field(ge=1, le=500)
+    length_m: float = Field(ge=1, le=500)
     color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
     active: bool = True
 

@@ -20,8 +20,8 @@ async def create_room(
     *,
     name: str,
     venue_id: str,
-    width_m: float = 20.0,
-    length_m: float = 15.0,
+    width_m: float,
+    length_m: float,
     color: str = "#6c757d",
     active: bool = True,
 ) -> dict:
