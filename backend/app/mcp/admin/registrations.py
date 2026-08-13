@@ -88,9 +88,15 @@ async def list_registrations(
             stmt = stmt.where(Registration.checked_in == checked_in)
         if q and (q_stripped := q.strip()):
             stmt = stmt.join(Registration.person).where(person_search_predicate(name=q_stripped, email=q_stripped))
-        stmt = stmt.offset(offset).limit(effective_limit)
+        # Fetch one extra row beyond effective_limit so its presence (not just a
+        # full page) tells us whether a next page actually exists — otherwise a
+        # result set that lands exactly on effective_limit rows would advertise
+        # a next_offset pointing at an empty page.
+        stmt = stmt.offset(offset).limit(effective_limit + 1)
 
         rows = list((await db.execute(stmt)).scalars().all())
+        has_more = len(rows) > effective_limit
+        rows = rows[:effective_limit]
         person_map = await _fetch_person_map(db, rows)
 
         registrations = []
@@ -102,7 +108,7 @@ async def list_registrations(
         return {
             "registrations": registrations,
             "count": len(registrations),
-            "next_offset": offset + len(registrations) if len(registrations) == effective_limit else None,
+            "next_offset": offset + len(registrations) if has_more else None,
         }
 
 

@@ -167,6 +167,23 @@ async def test_list_registrations_pagination(db_session):
     assert page2["next_offset"] is None
 
 
+async def test_list_registrations_next_offset_null_when_page_exactly_fills_limit(db_session):
+    """A result set whose size is an exact multiple of `limit` must not advertise
+    a `next_offset` pointing at an empty page (regression: previously any full
+    page — len(rows) == effective_limit — got a next_offset regardless of
+    whether another matching row actually existed)."""
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    for _ in range(2):
+        await mcp_registrations.create_registration(
+            factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+        )
+
+    result = await mcp_registrations.list_registrations(factory, "admin", limit=2)
+    assert len(result["registrations"]) == 2
+    assert result["next_offset"] is None
+
+
 async def test_list_registrations_rejects_negative_offset(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="offset"):
