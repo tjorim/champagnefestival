@@ -622,6 +622,24 @@ class LayoutOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LayoutBulkCreate(BaseModel):
+    """Create several layouts in one atomic transaction (#837).
+
+    All items are validated and, within the batch, checked against each other
+    for the same room+day+edition duplication ``create_layout`` already
+    rejects — a failure partway through leaves no layout created. Pass
+    ``idempotency_key`` to safely retry after a timeout or partial failure
+    without risking duplicates.
+    """
+
+    items: list[LayoutCreate] = Field(min_length=1, max_length=200)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class LayoutBulkOut(BaseModel):
+    items: list[LayoutOut]
+
+
 # ---------------------------------------------------------------------------
 # Table types
 # ---------------------------------------------------------------------------
@@ -673,6 +691,22 @@ class TableTypeOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TableTypeBulkCreate(BaseModel):
+    """Create several table types in one atomic transaction (#837).
+
+    A failure partway through (e.g. an unknown ``venue_id`` on any item)
+    leaves no table type created. Pass ``idempotency_key`` to safely retry
+    after a timeout or partial failure without risking duplicates.
+    """
+
+    items: list[TableTypeCreate] = Field(min_length=1, max_length=200)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class TableTypeBulkOut(BaseModel):
+    items: list[TableTypeOut]
 
 
 # ---------------------------------------------------------------------------
@@ -732,6 +766,23 @@ class TableOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TableBulkCreate(BaseModel):
+    """Create several tables in one atomic transaction (#837).
+
+    A failure partway through (e.g. an unknown ``table_type_id`` or
+    ``layout_id`` on any item) leaves no table created. Pass
+    ``idempotency_key`` to safely retry after a timeout or partial failure
+    without risking duplicates.
+    """
+
+    items: list[TableCreate] = Field(min_length=1, max_length=200)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class TableBulkOut(BaseModel):
+    items: list[TableOut]
 
 
 # ---------------------------------------------------------------------------
@@ -918,6 +969,22 @@ class RoomOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RoomBulkCreate(BaseModel):
+    """Create several rooms in one atomic transaction (#837).
+
+    A failure partway through (e.g. an unknown ``venue_id`` on any item)
+    leaves no room created. Pass ``idempotency_key`` to safely retry after a
+    timeout or partial failure without risking duplicates.
+    """
+
+    items: list[RoomCreate] = Field(min_length=1, max_length=200)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class RoomBulkOut(BaseModel):
+    items: list[RoomOut]
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.schemas import LayoutCopyCreate, LayoutCreate, LayoutOut, LayoutWithTablesOut
+from app.schemas import (
+    LayoutBulkCreate,
+    LayoutBulkOut,
+    LayoutCopyCreate,
+    LayoutCreate,
+    LayoutOut,
+    LayoutWithTablesOut,
+)
 from app.services import layouts_service
 from app.services.errors import ServiceError, to_http_exception
 
@@ -50,6 +57,25 @@ async def copy_layout(
             actor=actor,
             source_layout_id=source_layout_id,
             body=body,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.post("/bulk", response_model=LayoutBulkOut, status_code=status.HTTP_201_CREATED)
+async def bulk_create_layouts(
+    body: LayoutBulkCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    try:
+        return await layouts_service.bulk_create_layouts(
+            db,
+            actor=actor,
+            items=body.items,
+            idempotency_key=body.idempotency_key,
             request_id=getattr(request.state, "request_id", None),
         )
     except ServiceError as exc:

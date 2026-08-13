@@ -72,6 +72,22 @@ async def copy_layout(
             raise MCPToolError(str(exc)) from exc
 
 
+async def bulk_create_layouts(
+    session_factory: Any,
+    actor: str,
+    *,
+    items: list[LayoutCreate],
+    idempotency_key: str | None = None,
+) -> dict:
+    async with session_factory() as db:
+        try:
+            return await layouts_service.bulk_create_layouts(
+                db, actor=actor, items=items, idempotency_key=idempotency_key
+            )
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
 async def list_layouts(
     session_factory: Any,
     edition_id: str | None = None,

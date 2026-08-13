@@ -41,6 +41,20 @@ async def create_room(
             raise MCPToolError(str(exc)) from exc
 
 
+async def bulk_create_rooms(
+    session_factory: Any,
+    actor: str,
+    *,
+    items: list[RoomCreate],
+    idempotency_key: str | None = None,
+) -> dict:
+    async with session_factory() as db:
+        try:
+            return await rooms_service.bulk_create_rooms(db, actor=actor, items=items, idempotency_key=idempotency_key)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
 async def list_rooms(session_factory: Any, venue_id: str | None = None) -> dict:
     async with session_factory() as db:
         return {"rooms": await rooms_service.list_rooms(db, venue_id)}

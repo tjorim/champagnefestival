@@ -66,7 +66,16 @@ from app.mcp.capabilities import (
     tool_annotations,
     tool_auth,
 )
-from app.schemas import ROTATION_DESCRIPTION, X_POSITION_DESCRIPTION, Y_POSITION_DESCRIPTION, EditionType
+from app.schemas import (
+    ROTATION_DESCRIPTION,
+    X_POSITION_DESCRIPTION,
+    Y_POSITION_DESCRIPTION,
+    EditionType,
+    LayoutCreate,
+    RoomCreate,
+    TableCreate,
+    TableTypeCreate,
+)
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.version import APP_VERSION
 
@@ -539,6 +548,20 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_rooms.delete_room(self.session_factory, self._actor(), room_id)
 
+    async def bulk_create_rooms(self, items: list[RoomCreate], idempotency_key: str | None = None) -> dict:
+        """Create several rooms in one atomic transaction. Requires the ``admin`` role.
+
+        All rooms are validated up front; if any item is invalid, none are
+        created. Pass the same ``idempotency_key`` on a retry (e.g. after a
+        timeout) to safely replay the original result instead of creating
+        duplicates — reusing the key with a different ``items`` payload is
+        rejected.
+        """
+        self._require_admin()
+        return await mcp_admin_rooms.bulk_create_rooms(
+            self.session_factory, self._actor(), items=items, idempotency_key=idempotency_key
+        )
+
     # -- Table types -------------------------------------------------------
 
     async def create_table_type(
@@ -624,6 +647,20 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_table_types.delete_table_type(self.session_factory, self._actor(), type_id)
 
+    async def bulk_create_table_types(self, items: list[TableTypeCreate], idempotency_key: str | None = None) -> dict:
+        """Create several table types in one atomic transaction. Requires the ``admin`` role.
+
+        All items are validated up front; if any is invalid, none are
+        created. Pass the same ``idempotency_key`` on a retry (e.g. after a
+        timeout) to safely replay the original result instead of creating
+        duplicates — reusing the key with a different ``items`` payload is
+        rejected.
+        """
+        self._require_admin()
+        return await mcp_admin_table_types.bulk_create_table_types(
+            self.session_factory, self._actor(), items=items, idempotency_key=idempotency_key
+        )
+
     # -- Tables ----------------------------------------------------------
 
     async def create_table(
@@ -698,6 +735,21 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_tables.delete_table(self.session_factory, self._actor(), table_id)
 
+    async def bulk_create_tables(self, items: list[TableCreate], idempotency_key: str | None = None) -> dict:
+        """Create several tables in one atomic transaction. Requires the ``admin`` role.
+
+        All tables are validated up front; if any item is invalid, none are
+        created. Pass the same ``idempotency_key`` on a retry (e.g. after a
+        timeout) to safely replay the original result instead of creating
+        duplicates — reusing the key with a different ``items`` payload is
+        rejected. See ``create_table`` for the ``x``/``y``/``rotation``
+        coordinate contract.
+        """
+        self._require_admin()
+        return await mcp_admin_tables.bulk_create_tables(
+            self.session_factory, self._actor(), items=items, idempotency_key=idempotency_key
+        )
+
     # -- Layouts -----------------------------------------------------------
 
     async def create_layout(
@@ -747,6 +799,21 @@ class ChampagneFestivalMcpBackend:
             label=label,
             copy_tables=copy_tables,
             copy_areas=copy_areas,
+        )
+
+    async def bulk_create_layouts(self, items: list[LayoutCreate], idempotency_key: str | None = None) -> dict:
+        """Create several floor-plan layouts in one atomic transaction. Requires the ``admin`` role.
+
+        All items are validated up front — including duplicate room+day+edition
+        combinations both against existing layouts and within the batch itself
+        — so if any is invalid, none are created. Pass the same
+        ``idempotency_key`` on a retry (e.g. after a timeout) to safely replay
+        the original result instead of creating duplicates — reusing the key
+        with a different ``items`` payload is rejected.
+        """
+        self._require_admin()
+        return await mcp_admin_layouts.bulk_create_layouts(
+            self.session_factory, self._actor(), items=items, idempotency_key=idempotency_key
         )
 
     async def list_layouts(self, edition_id: str | None = None, room_id: str | None = None) -> dict:
@@ -1733,22 +1800,26 @@ def create_mcp_server(
     register_tool(backend.update_venue)
     register_tool(backend.delete_venue)
     register_tool(backend.create_room)
+    register_tool(backend.bulk_create_rooms)
     register_tool(backend.list_rooms)
     register_tool(backend.get_room)
     register_tool(backend.update_room)
     register_tool(backend.delete_room)
     register_tool(backend.create_table_type)
+    register_tool(backend.bulk_create_table_types)
     register_tool(backend.list_table_types)
     register_tool(backend.get_table_type)
     register_tool(backend.update_table_type)
     register_tool(backend.delete_table_type)
     register_tool(backend.create_table)
+    register_tool(backend.bulk_create_tables)
     register_tool(backend.list_tables)
     register_tool(backend.get_table)
     register_tool(backend.update_table)
     register_tool(backend.delete_table)
     register_tool(backend.create_layout)
     register_tool(backend.copy_layout)
+    register_tool(backend.bulk_create_layouts)
     register_tool(backend.list_layouts)
     register_tool(backend.get_layout)
     register_tool(backend.delete_layout)

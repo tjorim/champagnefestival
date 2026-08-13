@@ -15,7 +15,15 @@ from app.audit import write_audit_entry
 from app.models import Layout, Room, Table, TableType, Venue
 from app.schemas import TableTypeCreate, TableTypeUpdate
 from app.services.errors import ConflictError, NotFoundError
+from app.services.idempotency import (
+    check_idempotency_key,
+    commit_with_idempotency_guard,
+    hash_request,
+    record_idempotency_key,
+)
 from app.utils import make_id, table_type_to_dict
+
+_BULK_SCOPE = "table_types.bulk_create"
 
 
 async def create_table_type(
@@ -53,6 +61,70 @@ async def create_table_type(
     await db.commit()
     await db.refresh(tt)
     return table_type_to_dict(tt)
+
+
+async def bulk_create_table_types(
+    db: AsyncSession,
+    *,
+    actor: str,
+    items: list[TableTypeCreate],
+    idempotency_key: str | None = None,
+    request_id: str | None = None,
+) -> dict:
+    """Create several table types in a single transaction; all-or-nothing (#837).
+
+    See ``app.services.idempotency`` for the retry-safety contract of
+    ``idempotency_key``.
+    """
+    request_hash = hash_request([item.model_dump(mode="json") for item in items])
+    if idempotency_key:
+        cached = await check_idempotency_key(db, scope=_BULK_SCOPE, key=idempotency_key, request_hash=request_hash)
+        if cached is not None:
+            return cached
+
+    venue_ids = {item.venue_id for item in items}
+    found = await db.execute(select(Venue.id).where(Venue.id.in_(venue_ids)))
+    missing = venue_ids - set(found.scalars().all())
+    if missing:
+        raise NotFoundError(f"Venue(s) not found: {sorted(missing)}.")
+
+    # TableTypeCreate.normalise_dimensions already ran on each item at the
+    # REST/MCP boundary — see create_table_type.
+    rows = [
+        TableType(
+            id=make_id("ttype"),
+            name=item.name,
+            venue_id=item.venue_id,
+            shape=item.shape,
+            width_m=item.width_m,
+            length_m=item.length_m,
+            height_type=item.height_type,
+            max_capacity=item.max_capacity,
+            active=item.active,
+        )
+        for item in items
+    ]
+    db.add_all(rows)
+    await db.flush()
+
+    for tt in rows:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="table_type_created",
+            resource_type="table_type",
+            resource_id=tt.id,
+            request_id=request_id,
+            details={"name": tt.name, "shape": tt.shape, "venue_id": tt.venue_id, "bulk": True},
+        )
+
+    response = {"items": [table_type_to_dict(tt) for tt in rows]}
+    if idempotency_key:
+        record_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+        )
+    await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
+    return response
 
 
 async def list_table_types(db: AsyncSession, *, limit: int | None = None, offset: int = 0) -> list[dict]:

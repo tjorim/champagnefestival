@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.schemas import RoomCreate, RoomOut, RoomUpdate
+from app.schemas import RoomBulkCreate, RoomBulkOut, RoomCreate, RoomOut, RoomUpdate
 from app.services import rooms_service
 from app.services.errors import ServiceError, to_http_exception
 
@@ -31,6 +31,25 @@ async def create_room(
     try:
         return await rooms_service.create_room(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.post("/bulk", response_model=RoomBulkOut, status_code=status.HTTP_201_CREATED)
+async def bulk_create_rooms(
+    body: RoomBulkCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    try:
+        return await rooms_service.bulk_create_rooms(
+            db,
+            actor=actor,
+            items=body.items,
+            idempotency_key=body.idempotency_key,
+            request_id=getattr(request.state, "request_id", None),
         )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc

@@ -43,6 +43,22 @@ async def create_table(
             raise MCPToolError(str(exc)) from exc
 
 
+async def bulk_create_tables(
+    session_factory: Any,
+    actor: str,
+    *,
+    items: list[TableCreate],
+    idempotency_key: str | None = None,
+) -> dict:
+    async with session_factory() as db:
+        try:
+            return await tables_service.bulk_create_tables(
+                db, actor=actor, items=items, idempotency_key=idempotency_key
+            )
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
 async def list_tables(session_factory: Any, layout_id: str | None = None) -> dict:
     async with session_factory() as db:
         return {"tables": await tables_service.list_tables(db, layout_id)}
