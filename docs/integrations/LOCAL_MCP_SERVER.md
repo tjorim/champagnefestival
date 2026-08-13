@@ -82,7 +82,7 @@ complete regardless of which surface made the change. All are `admin`-only excep
 | Tables | `create_table`, `list_tables` (`layout_id` filter), `get_table`, `update_table`, `delete_table` |
 | Layouts | `create_layout`, `copy_layout`, `list_layouts` (`edition_id`/`room_id` filters), `get_layout` (`include_tables` to also return its tables/areas), `delete_layout` |
 | Areas | `create_area`, `list_areas` (`layout_id` filter), `get_area`, `update_area`, `delete_area` |
-| FAQ | `create_faq_item`, `list_faq_items`, `update_faq_item`, `delete_faq_item` |
+| FAQ | `create_faq_item`, `list_faq_items`, `update_faq_item`, `delete_faq_item`, `reorder_faq_items` |
 | Settings | `get_settings` (public), `set_maintenance_mode` |
 | Exhibitors | `create_exhibitor`, `get_exhibitor`, `list_exhibitors`, `update_exhibitor`, `delete_exhibitor` |
 | People | `create_person`, `get_person`, `update_person`, `delete_person`, `merge_people` |
