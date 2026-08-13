@@ -1,11 +1,11 @@
-"""Admin (write) MCP tool implementations for registration management.
+"""Admin MCP tool implementations for registration management.
 
 Mirrors the admin-only endpoints of ``app.routers.registrations``
-(``admin_create_registration``, ``update_registration``, ``delete_registration``).
-The public self-service endpoints (guest-facing creation with spam/rate-limit
-checks, the email-token "my registrations" lookup flow) have no MCP
-equivalent — those are unauthenticated flows already reachable via the web
-app, not admin management surface.
+(``list_registrations``, ``admin_create_registration``, ``update_registration``,
+``delete_registration``). The public self-service endpoints (guest-facing
+creation with spam/rate-limit checks, the email-token "my registrations"
+lookup flow) have no MCP equivalent — those are unauthenticated flows already
+reachable via the web app, not admin management surface.
 """
 
 from __future__ import annotations
@@ -16,12 +16,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.mcp.utils import as_value_error, validate_with_schema
-from app.models import Registration
+from app.mcp.utils import MCPToolError, as_value_error, registration_base_dict, validate_with_schema
+from app.models import Event, Registration
 from app.routers.registrations import (
     _assert_table_matches_edition,
     _fetch_person_map,
@@ -32,9 +34,76 @@ from app.routers.registrations import (
     _sum_delivered,
 )
 from app.schemas import RegistrationAdminCreate, RegistrationUpdate
+from app.services.operational_search import person_search_predicate
 from app.utils import make_id, registration_to_dict
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_LIST_LIMIT = 50
+MAX_LIST_LIMIT = 200
+
+
+async def list_registrations(
+    session_factory: Any,
+    role: str,
+    *,
+    edition_id: str | None = None,
+    event_id: str | None = None,
+    status: str | None = None,
+    payment_status: str | None = None,
+    checked_in: bool | None = None,
+    q: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict:
+    """List registrations, newest first, with optional filters (admin equivalent of ``GET /api/registrations``).
+
+    ``q`` matches against the registrant's name/email using the same
+    normalized/fuzzy predicate as ``find_guest``. ``limit`` caps the page size
+    — defaults to ``DEFAULT_LIST_LIMIT`` (50), capped at ``MAX_LIST_LIMIT``
+    (200). ``offset`` skips that many matching rows. Each row is a compact
+    projection (see ``registration_base_dict``); use ``get_guest_registration``
+    for full detail (order items, notes) on a specific registration.
+    """
+    if offset < 0:
+        raise MCPToolError("offset must not be negative.")
+    effective_limit = DEFAULT_LIST_LIMIT if limit is None else max(1, min(limit, MAX_LIST_LIMIT))
+
+    async with session_factory() as db:
+        stmt = (
+            select(Registration)
+            .join(Registration.event)
+            .options(selectinload(Registration.event))
+            .order_by(Registration.created_at.desc(), Registration.id.desc())
+        )
+        if edition_id:
+            stmt = stmt.where(Event.edition_id == edition_id)
+        if event_id:
+            stmt = stmt.where(Registration.event_id == event_id)
+        if status:
+            stmt = stmt.where(Registration.status == status)
+        if payment_status:
+            stmt = stmt.where(Registration.payment_status == payment_status)
+        if checked_in is not None:
+            stmt = stmt.where(Registration.checked_in == checked_in)
+        if q and (q_stripped := q.strip()):
+            stmt = stmt.join(Registration.person).where(person_search_predicate(name=q_stripped, email=q_stripped))
+        stmt = stmt.offset(offset).limit(effective_limit)
+
+        rows = list((await db.execute(stmt)).scalars().all())
+        person_map = await _fetch_person_map(db, rows)
+
+        registrations = []
+        for row in rows:
+            item = registration_base_dict(row, person_map[row.person_id], role=role)
+            item["edition_id"] = row.event.edition_id
+            registrations.append(item)
+
+        return {
+            "registrations": registrations,
+            "count": len(registrations),
+            "next_offset": offset + len(registrations) if len(registrations) == effective_limit else None,
+        }
 
 
 async def create_registration(

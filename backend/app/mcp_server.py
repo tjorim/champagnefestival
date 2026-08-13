@@ -1433,6 +1433,39 @@ class ChampagneFestivalMcpBackend:
 
     # -- Registrations (admin) ------------------------------------------
 
+    async def list_registrations(
+        self,
+        edition_id: str | None = None,
+        event_id: str | None = None,
+        status: str | None = None,
+        payment_status: str | None = None,
+        checked_in: bool | None = None,
+        q: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> dict:
+        """List registrations (newest first), with optional filters. Requires the ``admin`` role.
+
+        Enumerates registrations without needing to already know a
+        ``registration_id`` — pair with ``get_guest_registration`` for full
+        detail (order items, notes) on a specific result. ``q`` matches
+        against the registrant's name/email, same as ``find_guest``. ``limit``
+        defaults to 50 and is capped at 200.
+        """
+        role = self._require_admin()
+        return await mcp_admin_registrations.list_registrations(
+            self.session_factory,
+            role,
+            edition_id=edition_id,
+            event_id=event_id,
+            status=status,
+            payment_status=payment_status,
+            checked_in=checked_in,
+            q=q,
+            limit=limit,
+            offset=offset,
+        )
+
     async def create_registration(
         self,
         person_id: str,
@@ -1747,6 +1780,7 @@ def create_mcp_server(
     register_tool(backend.list_volunteers)
     register_tool(backend.update_volunteer)
     register_tool(backend.delete_volunteer)
+    register_tool(backend.list_registrations)
     register_tool(backend.create_registration)
     register_tool(backend.update_registration)
     register_tool(backend.delete_registration)
