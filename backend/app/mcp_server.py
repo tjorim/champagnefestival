@@ -27,12 +27,13 @@ import logging
 from collections.abc import Sequence
 from datetime import date as dt_date
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.transforms.search import BM25SearchTransform
 from fastmcp.tools.base import Tool
+from pydantic import Field
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp import check_in as mcp_check_in
@@ -65,7 +66,7 @@ from app.mcp.capabilities import (
     tool_annotations,
     tool_auth,
 )
-from app.schemas import EditionType
+from app.schemas import ROTATION_DESCRIPTION, X_POSITION_DESCRIPTION, Y_POSITION_DESCRIPTION, EditionType
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.version import APP_VERSION
 
@@ -499,10 +500,10 @@ class ChampagneFestivalMcpBackend:
             active=active,
         )
 
-    async def list_rooms(self) -> dict:
-        """List all rooms. Requires the ``admin`` role."""
+    async def list_rooms(self, venue_id: str | None = None) -> dict:
+        """List rooms, optionally filtered by ``venue_id``. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_rooms.list_rooms(self.session_factory)
+        return await mcp_admin_rooms.list_rooms(self.session_factory, venue_id)
 
     async def get_room(self, room_id: str) -> dict:
         """Return a single room. Requires the ``admin`` role."""
@@ -631,11 +632,15 @@ class ChampagneFestivalMcpBackend:
         capacity: int,
         table_type_id: str,
         layout_id: str,
-        x: float = 50.0,
-        y: float = 50.0,
-        rotation: int = 0,
+        x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] = 50.0,
+        y: Annotated[float, Field(ge=0, le=100, description=Y_POSITION_DESCRIPTION)] = 50.0,
+        rotation: Annotated[int, Field(ge=0, le=359, description=ROTATION_DESCRIPTION)] = 0,
     ) -> dict:
-        """Create a table on a layout. Requires the ``admin`` role."""
+        """Create a table on a layout. Requires the ``admin`` role.
+
+        See ``docs/floor-plan-coordinates.md`` for the full ``x``/``y``/``rotation``
+        coordinate contract.
+        """
         self._require_admin()
         return await mcp_admin_tables.create_table(
             self.session_factory,
@@ -649,10 +654,10 @@ class ChampagneFestivalMcpBackend:
             rotation=rotation,
         )
 
-    async def list_tables(self) -> dict:
-        """List all tables. Requires the ``admin`` role."""
+    async def list_tables(self, layout_id: str | None = None) -> dict:
+        """List tables, optionally filtered by ``layout_id``. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_tables.list_tables(self.session_factory)
+        return await mcp_admin_tables.list_tables(self.session_factory, layout_id)
 
     async def get_table(self, table_id: str) -> dict:
         """Return a single table, including its current registration ids. Requires the ``admin`` role."""
@@ -664,13 +669,16 @@ class ChampagneFestivalMcpBackend:
         table_id: str,
         name: str | None = None,
         capacity: int | None = None,
-        x: float | None = None,
-        y: float | None = None,
+        x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] | None = None,
+        y: Annotated[float, Field(ge=0, le=100, description=Y_POSITION_DESCRIPTION)] | None = None,
         table_type_id: str | None = None,
-        rotation: int | None = None,
+        rotation: Annotated[int, Field(ge=0, le=359, description=ROTATION_DESCRIPTION)] | None = None,
         layout_id: str | None = None,
     ) -> dict:
-        """Partially update a table; omitted fields are left unchanged. Requires the ``admin`` role."""
+        """Partially update a table; omitted fields are left unchanged. Requires the ``admin`` role.
+
+        See ``create_table`` for the ``x``/``y``/``rotation`` coordinate contract.
+        """
         self._require_admin()
         return await mcp_admin_tables.update_table(
             self.session_factory,
@@ -741,15 +749,23 @@ class ChampagneFestivalMcpBackend:
             copy_areas=copy_areas,
         )
 
-    async def list_layouts(self) -> dict:
-        """List all layouts. Requires the ``admin`` role."""
-        self._require_admin()
-        return await mcp_admin_layouts.list_layouts(self.session_factory)
+    async def list_layouts(self, edition_id: str | None = None, room_id: str | None = None) -> dict:
+        """List layouts, optionally filtered by ``edition_id`` and/or ``room_id``.
 
-    async def get_layout(self, layout_id: str) -> dict:
-        """Return a single layout. Requires the ``admin`` role."""
+        Requires the ``admin`` role.
+        """
         self._require_admin()
-        return await mcp_admin_layouts.get_layout(self.session_factory, layout_id)
+        return await mcp_admin_layouts.list_layouts(self.session_factory, edition_id=edition_id, room_id=room_id)
+
+    async def get_layout(self, layout_id: str, include_tables: bool = False) -> dict:
+        """Return a single layout. Requires the ``admin`` role.
+
+        Pass ``include_tables=True`` to also return the layout's ``tables`` and
+        ``areas`` in the same response, instead of a separate ``list_tables``/
+        ``list_areas`` call scoped to this ``layout_id``.
+        """
+        self._require_admin()
+        return await mcp_admin_layouts.get_layout(self.session_factory, layout_id, include_tables=include_tables)
 
     async def delete_layout(self, layout_id: str) -> dict:
         """Delete a layout. Fails if tables still reference it. Requires the ``admin`` role."""
@@ -766,11 +782,15 @@ class ChampagneFestivalMcpBackend:
         exhibitor_id: int | None = None,
         width_m: float = 1.5,
         length_m: float = 1.0,
-        x: float = 50.0,
-        y: float = 50.0,
-        rotation: int = 0,
+        x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] = 50.0,
+        y: Annotated[float, Field(ge=0, le=100, description=Y_POSITION_DESCRIPTION)] = 50.0,
+        rotation: Annotated[int, Field(ge=0, le=359, description=ROTATION_DESCRIPTION)] = 0,
     ) -> dict:
-        """Create a floor-plan area (e.g. an exhibitor booth) on a layout. Requires the ``admin`` role."""
+        """Create a floor-plan area (e.g. an exhibitor booth) on a layout. Requires the ``admin`` role.
+
+        See ``docs/floor-plan-coordinates.md`` for the ``x``/``y``/``rotation``
+        coordinate contract (identical for areas and tables).
+        """
         self._require_admin()
         return await mcp_admin_areas.create_area(
             self.session_factory,
@@ -805,15 +825,16 @@ class ChampagneFestivalMcpBackend:
         clear_exhibitor_id: bool = False,
         width_m: float | None = None,
         length_m: float | None = None,
-        x: float | None = None,
-        y: float | None = None,
-        rotation: int | None = None,
+        x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] | None = None,
+        y: Annotated[float, Field(ge=0, le=100, description=Y_POSITION_DESCRIPTION)] | None = None,
+        rotation: Annotated[int, Field(ge=0, le=359, description=ROTATION_DESCRIPTION)] | None = None,
     ) -> dict:
         """Partially update an area; omitted fields are left unchanged.
 
         ``exhibitor_id`` has no natural "clear" value (a real id is never blank) —
         pass ``clear_exhibitor_id=True`` to unassign the exhibitor instead of
-        providing an id. Requires the ``admin`` role.
+        providing an id. Requires the ``admin`` role. See
+        ``docs/floor-plan-coordinates.md`` for the ``x``/``y``/``rotation`` contract.
         """
         self._require_admin()
         return await mcp_admin_areas.update_area(
@@ -1017,10 +1038,12 @@ class ChampagneFestivalMcpBackend:
         answer_en: str | None = None,
         question_fr: str | None = None,
         answer_fr: str | None = None,
-        sort_order: int = 0,
         active: bool = True,
     ) -> dict:
-        """Create an FAQ item. Requires the ``admin`` role."""
+        """Create an FAQ item, appended after the current last one. Requires the ``admin`` role.
+
+        Display position isn't settable here — use ``reorder_faq_items`` to change it.
+        """
         self._require_admin()
         return await mcp_admin_faq.create_faq_item(
             self.session_factory,
@@ -1031,7 +1054,6 @@ class ChampagneFestivalMcpBackend:
             answer_en=answer_en,
             question_fr=question_fr,
             answer_fr=answer_fr,
-            sort_order=sort_order,
             active=active,
         )
 
@@ -1049,14 +1071,14 @@ class ChampagneFestivalMcpBackend:
         answer_en: str | None = None,
         question_fr: str | None = None,
         answer_fr: str | None = None,
-        sort_order: int | None = None,
         active: bool | None = None,
     ) -> dict:
         """Partially update an FAQ item; omitted fields are left unchanged.
 
         For the optional ``en``/``fr`` locale fields, an explicit empty string
         clears that locale's translation (hiding the item on that locale's FAQ)
-        rather than leaving it unchanged. Requires the ``admin`` role.
+        rather than leaving it unchanged. Display position isn't settable here —
+        use ``reorder_faq_items`` to change it. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_faq.update_faq_item(
@@ -1069,7 +1091,6 @@ class ChampagneFestivalMcpBackend:
             answer_en=answer_en,
             question_fr=question_fr,
             answer_fr=answer_fr,
-            sort_order=sort_order,
             active=active,
         )
 
@@ -1077,6 +1098,17 @@ class ChampagneFestivalMcpBackend:
         """Delete an FAQ item. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_faq.delete_faq_item(self.session_factory, self._actor(), faq_item_id)
+
+    async def reorder_faq_items(self, ordered_ids: list[str]) -> dict:
+        """Reassign every FAQ item's display position to match ``ordered_ids``.
+
+        ``ordered_ids`` must name every existing FAQ item exactly once — the
+        same all-at-once semantics the admin UI's reorder control uses, so a
+        reorder can't be partial, stale, or racing another admin's reorder.
+        Requires the ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_faq.reorder_faq_items(self.session_factory, self._actor(), ordered_ids=ordered_ids)
 
     # -- Settings ------------------------------------------------------
 
@@ -1412,6 +1444,39 @@ class ChampagneFestivalMcpBackend:
 
     # -- Registrations (admin) ------------------------------------------
 
+    async def list_registrations(
+        self,
+        edition_id: str | None = None,
+        event_id: str | None = None,
+        status: str | None = None,
+        payment_status: str | None = None,
+        checked_in: bool | None = None,
+        q: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> dict:
+        """List registrations (newest first), with optional filters. Requires the ``admin`` role.
+
+        Enumerates registrations without needing to already know a
+        ``registration_id`` — pair with ``get_guest_registration`` for full
+        detail (order items, notes) on a specific result. ``q`` matches
+        against the registrant's name/email, same as ``find_guest``. ``limit``
+        defaults to 50 and is capped at 200.
+        """
+        role = self._require_admin()
+        return await mcp_admin_registrations.list_registrations(
+            self.session_factory,
+            role,
+            edition_id=edition_id,
+            event_id=event_id,
+            status=status,
+            payment_status=payment_status,
+            checked_in=checked_in,
+            q=q,
+            limit=limit,
+            offset=offset,
+        )
+
     async def create_registration(
         self,
         person_id: str,
@@ -1704,6 +1769,7 @@ def create_mcp_server(
     register_tool(backend.list_faq_items)
     register_tool(backend.update_faq_item)
     register_tool(backend.delete_faq_item)
+    register_tool(backend.reorder_faq_items)
     register_tool(backend.get_settings)
     register_tool(backend.set_maintenance_mode)
     register_tool(backend.create_exhibitor)
@@ -1726,6 +1792,7 @@ def create_mcp_server(
     register_tool(backend.list_volunteers)
     register_tool(backend.update_volunteer)
     register_tool(backend.delete_volunteer)
+    register_tool(backend.list_registrations)
     register_tool(backend.create_registration)
     register_tool(backend.update_registration)
     register_tool(backend.delete_registration)

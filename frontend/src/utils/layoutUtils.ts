@@ -1,5 +1,8 @@
 import type { FloorTable, TableType } from "@/types/admin";
 
+// These constants define the canvas a table's/area's x/y percentage is relative to.
+// Mirrored in backend/app/services/layouts_service.py for the area-containment check —
+// see docs/floor-plan-coordinates.md for the full coordinate contract.
 export const LAYOUT_PX_PER_M = 28;
 export const LAYOUT_MIN_CANVAS_WIDTH_PX = 280;
 export const LAYOUT_MIN_CANVAS_HEIGHT_PX = 180;

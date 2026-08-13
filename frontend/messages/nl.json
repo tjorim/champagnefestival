@@ -446,6 +446,7 @@
   "admin_error_add_faq_item": "Toevoegen van de vraag is mislukt.",
   "admin_error_update_faq_item": "Bijwerken van de vraag is mislukt.",
   "admin_error_delete_faq_item": "Verwijderen van de vraag is mislukt.",
+  "admin_error_reorder_faq_items": "Herordenen van de vragen is mislukt.",
   "admin_settings_maintenance_mode_label": "Onderhoudsmodus",
   "admin_settings_maintenance_mode_help": "Toont bezoekers een pagina met alleen een afbeelding en een link naar Facebook in plaats van de volledige website. Het admin-dashboard blijft bereikbaar.",
   "admin_error_load_settings": "Laden van de instellingen is mislukt.",

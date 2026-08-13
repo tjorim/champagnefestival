@@ -19,10 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.models import Area, Edition, Exhibitor, Layout, Room, Table, TableType
+from app.models import Area, Edition, Exhibitor, Layout, Registration, Room, Table, TableType
 from app.schemas import LayoutCopyCreate, LayoutCreate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
-from app.utils import layout_to_dict, make_id
+from app.utils import area_to_dict, layout_to_dict, make_id, table_to_dict
 
 # Mirror the rendering constants from frontend/src/utils/layoutUtils.ts so that
 # the backend containment check matches the frontend's hit-testing exactly.
@@ -323,8 +323,19 @@ async def copy_layout(
     return layout_to_dict(cloned, date=resolved_date)
 
 
-async def list_layouts(db: AsyncSession, *, limit: int | None = None, offset: int = 0) -> list[dict]:
-    stmt = select(Layout).order_by(Layout.created_at).offset(offset)
+async def list_layouts(
+    db: AsyncSession,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+    edition_id: str | None = None,
+    room_id: str | None = None,
+) -> list[dict]:
+    stmt = select(Layout).order_by(Layout.created_at, Layout.id).offset(offset)
+    if edition_id is not None:
+        stmt = stmt.where(Layout.edition_id == edition_id)
+    if room_id is not None:
+        stmt = stmt.where(Layout.room_id == room_id)
     if limit is not None:
         stmt = stmt.limit(limit)
     result = await db.execute(stmt)
@@ -332,12 +343,32 @@ async def list_layouts(db: AsyncSession, *, limit: int | None = None, offset: in
     return await layout_payloads(db, layouts)
 
 
-async def get_layout(db: AsyncSession, layout_id: str) -> dict:
-    lay = await db.get(Layout, layout_id)
+async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool = False) -> dict:
+    if include_tables:
+        result = await db.execute(
+            select(Layout)
+            .options(selectinload(Layout.tables), selectinload(Layout.areas))
+            .where(Layout.id == layout_id)
+        )
+        lay = result.scalar_one_or_none()
+    else:
+        lay = await db.get(Layout, layout_id)
     if lay is None:
         raise NotFoundError(f"Layout '{layout_id}' not found.")
     payloads = await layout_payloads(db, [lay])
-    return payloads[0]
+    payload = payloads[0]
+    if include_tables:
+        table_ids = [t.id for t in lay.tables]
+        table_res_map: dict[str, list[str]] = {}
+        if table_ids:
+            res_result = await db.execute(
+                select(Registration.id, Registration.table_id).where(Registration.table_id.in_(table_ids))
+            )
+            for res_id, tbl_id in res_result.all():
+                table_res_map.setdefault(tbl_id, []).append(res_id)
+        payload["tables"] = [table_to_dict(t, table_res_map.get(t.id, [])) for t in lay.tables]
+        payload["areas"] = [area_to_dict(a) for a in lay.areas]
+    return payload
 
 
 async def delete_layout(db: AsyncSession, *, actor: str, layout_id: str, request_id: str | None = None) -> dict:

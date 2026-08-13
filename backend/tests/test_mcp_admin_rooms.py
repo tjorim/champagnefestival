@@ -35,6 +35,19 @@ async def test_create_get_list_room(db_session):
     assert any(r["id"] == room_id for r in listed["rooms"])
 
 
+async def test_list_rooms_filters_by_venue_id(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session, "venue-1")
+    await _seed_venue(db_session, "venue-2")
+    created_a = await mcp_rooms.create_room(
+        factory, "admin-1", name="Room A", venue_id="venue-1", width_m=25.0, length_m=18.0
+    )
+    await mcp_rooms.create_room(factory, "admin-1", name="Room B", venue_id="venue-2", width_m=25.0, length_m=18.0)
+
+    listed = await mcp_rooms.list_rooms(factory, venue_id="venue-1")
+    assert [r["id"] for r in listed["rooms"]] == [created_a["id"]]
+
+
 async def test_create_room_venue_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):

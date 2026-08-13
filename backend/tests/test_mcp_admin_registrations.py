@@ -38,6 +38,158 @@ async def _seed_event(db_session, *, with_product: bool = True) -> tuple[Person,
     return person, event
 
 
+async def test_list_registrations_empty(db_session):
+    factory = mcp_session_factory(db_session)
+    result = await mcp_registrations.list_registrations(factory, "admin")
+    assert result == {"registrations": [], "count": 0, "next_offset": None}
+
+
+async def test_list_registrations_returns_compact_projection(db_session):
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    created = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=2, notes="secret note"
+    )
+
+    result = await mcp_registrations.list_registrations(factory, "admin")
+    assert result["count"] == 1
+    assert result["next_offset"] is None
+    item = result["registrations"][0]
+    assert item["id"] == created["id"]
+    assert item["event_id"] == event.id
+    assert item["edition_id"] == "edition-1"
+    assert item["guest_count"] == 2
+    assert item["person"]["id"] == person.id
+    assert item["person"]["email"] == person.email  # admin role sees contact info
+    assert "notes" not in item  # compact projection — use get_guest_registration for full detail
+
+
+async def test_list_registrations_redacts_pii_for_public_role(db_session):
+    """``list_registrations`` reuses ``registration_base_dict``'s role-based redaction,
+    even though only admins can reach it through the MCP server today."""
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+    )
+
+    result = await mcp_registrations.list_registrations(factory, "public")
+    item = result["registrations"][0]
+    assert "email" not in item["person"]
+    assert "phone" not in item["person"]
+
+
+async def test_list_registrations_filters_by_status_and_checked_in(db_session):
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    confirmed = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1, status="confirmed"
+    )
+    await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1, status="pending"
+    )
+    await mcp_registrations.update_registration(factory, "admin-1", confirmed["id"], checked_in=True)
+
+    result = await mcp_registrations.list_registrations(factory, "admin", status="confirmed")
+    assert [r["id"] for r in result["registrations"]] == [confirmed["id"]]
+
+    result = await mcp_registrations.list_registrations(factory, "admin", checked_in=True)
+    assert [r["id"] for r in result["registrations"]] == [confirmed["id"]]
+
+    result = await mcp_registrations.list_registrations(factory, "admin", checked_in=False)
+    assert confirmed["id"] not in [r["id"] for r in result["registrations"]]
+
+
+async def test_list_registrations_filters_by_edition_and_event(db_session):
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    other_event = Event(
+        id="evt-2",
+        edition_id="edition-1",
+        title="Zaterdagmiddag",
+        date=date(2099, 3, 22),
+        start_time="14:00",
+        category="festival",
+        registration_required=True,
+    )
+    db_session.add(other_event)
+    await db_session.commit()
+
+    reg1 = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+    )
+    reg2 = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=other_event.id, guest_count=1
+    )
+
+    result = await mcp_registrations.list_registrations(factory, "admin", event_id=event.id)
+    assert [r["id"] for r in result["registrations"]] == [reg1["id"]]
+
+    result = await mcp_registrations.list_registrations(factory, "admin", edition_id="edition-1")
+    assert {r["id"] for r in result["registrations"]} == {reg1["id"], reg2["id"]}
+
+    result = await mcp_registrations.list_registrations(factory, "admin", edition_id="nonexistent")
+    assert result["registrations"] == []
+
+
+async def test_list_registrations_search_by_name(db_session):
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    created = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+    )
+
+    result = await mcp_registrations.list_registrations(factory, "admin", q="Jean Dupont")
+    assert [r["id"] for r in result["registrations"]] == [created["id"]]
+
+    result = await mcp_registrations.list_registrations(factory, "admin", q="Nobody Here")
+    assert result["registrations"] == []
+
+
+async def test_list_registrations_pagination(db_session):
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    created = [
+        await mcp_registrations.create_registration(
+            factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+        )
+        for _ in range(3)
+    ]
+    # Newest first: reverse creation order.
+    expected_ids = [r["id"] for r in reversed(created)]
+
+    page1 = await mcp_registrations.list_registrations(factory, "admin", limit=2)
+    assert [r["id"] for r in page1["registrations"]] == expected_ids[:2]
+    assert page1["next_offset"] == 2
+
+    page2 = await mcp_registrations.list_registrations(factory, "admin", limit=2, offset=page1["next_offset"])
+    assert [r["id"] for r in page2["registrations"]] == expected_ids[2:]
+    assert page2["next_offset"] is None
+
+
+async def test_list_registrations_next_offset_null_when_page_exactly_fills_limit(db_session):
+    """A result set whose size is an exact multiple of `limit` must not advertise
+    a `next_offset` pointing at an empty page (regression: previously any full
+    page — len(rows) == effective_limit — got a next_offset regardless of
+    whether another matching row actually existed)."""
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    for _ in range(2):
+        await mcp_registrations.create_registration(
+            factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+        )
+
+    result = await mcp_registrations.list_registrations(factory, "admin", limit=2)
+    assert len(result["registrations"]) == 2
+    assert result["next_offset"] is None
+
+
+async def test_list_registrations_rejects_negative_offset(db_session):
+    factory = mcp_session_factory(db_session)
+    with pytest.raises(ValueError, match="offset"):
+        await mcp_registrations.list_registrations(factory, "admin", offset=-1)
+
+
 async def test_create_registration_resolves_order_items(db_session):
     factory = mcp_session_factory(db_session)
     person, event = await _seed_event(db_session)

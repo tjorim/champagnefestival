@@ -48,8 +48,11 @@ async def create_room(db: AsyncSession, *, actor: str, body: RoomCreate, request
     return room_to_dict(r)
 
 
-async def list_rooms(db: AsyncSession) -> list[dict]:
-    result = await db.execute(select(Room).order_by(Room.created_at))
+async def list_rooms(db: AsyncSession, venue_id: str | None = None) -> list[dict]:
+    stmt = select(Room).order_by(Room.created_at, Room.id)
+    if venue_id is not None:
+        stmt = stmt.where(Room.venue_id == venue_id)
+    result = await db.execute(stmt)
     return [room_to_dict(r) for r in result.scalars().all()]
 
 

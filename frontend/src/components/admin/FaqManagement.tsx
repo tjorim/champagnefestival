@@ -56,7 +56,6 @@ const emptyForm: FaqFormState = {
 interface FaqLocaleData {
   question: string;
   answer: string;
-  sortOrder: number;
 }
 
 function faqPayload(data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) {
@@ -67,7 +66,6 @@ function faqPayload(data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "ans
     answer_en: data.answerEn,
     question_fr: data.questionFr,
     answer_fr: data.answerFr,
-    sort_order: data.sortOrder,
   };
 }
 
@@ -116,11 +114,25 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
             ...(data.answerEn !== undefined && { answer_en: data.answerEn ?? "" }),
             ...(data.questionFr !== undefined && { question_fr: data.questionFr ?? "" }),
             ...(data.answerFr !== undefined && { answer_fr: data.answerFr ?? "" }),
-            ...(data.sortOrder !== undefined && { sort_order: data.sortOrder }),
             ...(data.active !== undefined && { active: data.active }),
           }),
         },
         m.admin_error_update_faq_item(),
+      ),
+    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
+    retry: false,
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) =>
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        "/api/faq/reorder",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ ordered_ids: orderedIds }),
+        },
+        m.admin_error_reorder_faq_items(),
       ),
     onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
     retry: false,
@@ -188,11 +200,9 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           },
         });
       } else {
-        const nextSortOrder = faqItems.reduce((max, i) => Math.max(max, i.sortOrder), -1) + 1;
         await createMutation.mutateAsync({
           question: form.questionNl.trim(),
           answer: form.answerNl.trim(),
-          sortOrder: nextSortOrder,
           ...locales,
         });
       }
@@ -200,7 +210,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
-  }, [form, editingId, faqItems, createMutation, updateMutation]);
+  }, [form, editingId, createMutation, updateMutation]);
 
   const handleToggleActive = useCallback(
     async (item: FaqItem) => {
@@ -232,26 +242,23 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
       const sorted = [...faqItems].sort((a, b) => a.sortOrder - b.sortOrder);
       const index = sorted.findIndex((i) => i.id === item.id);
       const swapIndex = direction === "up" ? index - 1 : index + 1;
-      const swapWith = sorted[swapIndex];
-      if (!swapWith) return;
+      if (index === -1 || swapIndex < 0 || swapIndex >= sorted.length) return;
+      const reordered = sorted.map((entry, i) => {
+        if (i === index) return sorted[swapIndex]!;
+        if (i === swapIndex) return sorted[index]!;
+        return entry;
+      });
       setRowError(null);
-      // Sequential, not Promise.all: if the second write fails after the
-      // first succeeds, both rows would otherwise share one sort_order
-      // (ambiguous order, and the next move on either item becomes a no-op
-      // since they compare equal). Roll the first write back instead.
-      await updateMutation.mutateAsync({ id: item.id, data: { sortOrder: swapWith.sortOrder } });
       try {
-        await updateMutation.mutateAsync({ id: swapWith.id, data: { sortOrder: item.sortOrder } });
+        // One atomic call for the whole list rather than two independent
+        // per-item writes — the backend rejects a stale/partial list outright
+        // instead of risking an ambiguous half-applied order (#836).
+        await reorderMutation.mutateAsync(reordered.map((i) => i.id));
       } catch (err) {
-        try {
-          await updateMutation.mutateAsync({ id: item.id, data: { sortOrder: item.sortOrder } });
-        } catch {
-          // Rollback failure doesn't get to hide the original error.
-        }
         setRowError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
-    [faqItems, updateMutation],
+    [faqItems, reorderMutation],
   );
 
   const sortedItems = useMemo(
@@ -259,7 +266,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     [faqItems],
   );
 
-  const isMutating = updateMutation.isPending || deleteMutation.isPending;
+  const isMutating = updateMutation.isPending || deleteMutation.isPending || reorderMutation.isPending;
 
   const localeBadge = (label: string, translated: boolean) => (
     <Badge

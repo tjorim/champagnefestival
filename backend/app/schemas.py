@@ -680,23 +680,41 @@ class TableTypeOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+# x/y/rotation semantics (percentage of the layout's rendered canvas, top-left
+# origin, clockwise degrees) are shared by Table and Area — see
+# docs/floor-plan-coordinates.md for the full contract, including why the
+# canvas isn't a 1:1 percentage of the room's physical width_m/length_m.
+# Public (no leading underscore) so app.mcp_server can reuse the same text for
+# the MCP tool parameter schemas (see create_table/update_table/create_area/
+# update_area there), keeping the wording identical across REST and MCP.
+X_POSITION_DESCRIPTION = (
+    "Horizontal position: percentage [0, 100] of the layout's rendered canvas width, "
+    "from the left edge. See docs/floor-plan-coordinates.md."
+)
+Y_POSITION_DESCRIPTION = (
+    "Vertical position: percentage [0, 100] of the layout's rendered canvas height, "
+    "from the top edge. See docs/floor-plan-coordinates.md."
+)
+ROTATION_DESCRIPTION = "Clockwise rotation in whole degrees [0, 359], pivoting around this element's own center."
+
+
 class TableCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     capacity: int = Field(ge=1, le=50)
-    x: float = Field(ge=0, le=100, default=50.0)
-    y: float = Field(ge=0, le=100, default=50.0)
+    x: float = Field(ge=0, le=100, default=50.0, description=X_POSITION_DESCRIPTION)
+    y: float = Field(ge=0, le=100, default=50.0, description=Y_POSITION_DESCRIPTION)
     table_type_id: str
-    rotation: int = Field(ge=0, le=359, default=0)
+    rotation: int = Field(ge=0, le=359, default=0, description=ROTATION_DESCRIPTION)
     layout_id: str
 
 
 class TableUpdate(BaseModel):
     name: str | None = None
     capacity: int | None = Field(default=None, ge=1, le=50)
-    x: float | None = Field(default=None, ge=0, le=100)
-    y: float | None = Field(default=None, ge=0, le=100)
+    x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
+    y: float | None = Field(default=None, ge=0, le=100, description=Y_POSITION_DESCRIPTION)
     table_type_id: str | None = None
-    rotation: int | None = Field(default=None, ge=0, le=359)
+    rotation: int | None = Field(default=None, ge=0, le=359, description=ROTATION_DESCRIPTION)
     layout_id: str | None = None
 
 
@@ -728,9 +746,9 @@ class AreaCreate(BaseModel):
     exhibitor_id: int | None = None
     width_m: float = Field(ge=0.1, le=50.0, default=1.5)
     length_m: float = Field(ge=0.1, le=50.0, default=1.0)
-    x: float = Field(ge=0, le=100, default=50.0)
-    y: float = Field(ge=0, le=100, default=50.0)
-    rotation: int = Field(ge=0, le=359, default=0)
+    x: float = Field(ge=0, le=100, default=50.0, description=X_POSITION_DESCRIPTION)
+    y: float = Field(ge=0, le=100, default=50.0, description=Y_POSITION_DESCRIPTION)
+    rotation: int = Field(ge=0, le=359, default=0, description=ROTATION_DESCRIPTION)
 
 
 class AreaUpdate(BaseModel):
@@ -739,9 +757,9 @@ class AreaUpdate(BaseModel):
     exhibitor_id: int | None = None
     width_m: float | None = Field(default=None, ge=0.1, le=50.0)
     length_m: float | None = Field(default=None, ge=0.1, le=50.0)
-    x: float | None = Field(default=None, ge=0, le=100)
-    y: float | None = Field(default=None, ge=0, le=100)
-    rotation: int | None = Field(default=None, ge=0, le=359)
+    x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
+    y: float | None = Field(default=None, ge=0, le=100, description=Y_POSITION_DESCRIPTION)
+    rotation: int | None = Field(default=None, ge=0, le=359, description=ROTATION_DESCRIPTION)
 
 
 class AreaOut(BaseModel):
@@ -759,6 +777,18 @@ class AreaOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class LayoutWithTablesOut(LayoutOut):
+    """``LayoutOut`` plus its tables/areas, returned by ``GET /api/layouts/{id}``
+    when ``include_tables=true`` is passed (or the MCP ``get_layout`` tool's
+    ``include_tables`` argument). ``tables``/``areas`` are ``None`` unless
+    requested, so a scoped single-layout read no longer requires a separate
+    global ``list_tables``/``list_areas`` scan and client-side join.
+    """
+
+    tables: list[TableOut] | None = None
+    areas: list[AreaOut] | None = None
 
 
 class VenuePlanRoomOut(BaseModel):
@@ -1018,7 +1048,6 @@ class FaqItemCreate(BaseModel):
     answer_en: str | None = Field(default=None, max_length=10000)
     question_fr: str | None = Field(default=None, max_length=500)
     answer_fr: str | None = Field(default=None, max_length=10000)
-    sort_order: int = 0
     active: bool = True
 
 
@@ -1033,8 +1062,18 @@ class FaqItemUpdate(BaseModel):
     answer_en: str | None = Field(default=None, max_length=10000)
     question_fr: str | None = Field(default=None, max_length=500)
     answer_fr: str | None = Field(default=None, max_length=10000)
-    sort_order: int | None = None
     active: bool | None = None
+
+
+class FaqItemReorder(BaseModel):
+    """The complete, ordered list of every existing FAQ item's ID.
+
+    `sort_order` isn't settable through create/update — this is the only way
+    to change display order, and it takes the whole collection at once so a
+    reorder can't leave things ambiguous or race another admin's reorder (#836).
+    """
+
+    ordered_ids: list[str] = Field(min_length=1)
 
 
 class FaqItemOut(BaseModel):

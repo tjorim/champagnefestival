@@ -22,13 +22,13 @@ export interface FloorTable {
   id: string;
   name: string;
   capacity: number;
-  /** X position (percentage of room width) */
+  /** X position: percentage [0, 100] of the layout's rendered canvas width, top-left origin. See docs/floor-plan-coordinates.md. */
   x: number;
-  /** Y position (percentage of room height) */
+  /** Y position: percentage [0, 100] of the layout's rendered canvas height, top-left origin. See docs/floor-plan-coordinates.md. */
   y: number;
   /** Table type defining shape/dimensions */
   tableTypeId: string;
-  /** Rotation angle in whole degrees [0, 359], clockwise */
+  /** Rotation angle in whole degrees [0, 359], clockwise around this table's own center */
   rotation: number;
   /** Layout this table belongs to */
   layoutId: string;
@@ -41,6 +41,7 @@ export interface FloorArea {
   icon: string;
   exhibitorId: number | null;
   label: string;
+  /** Same x/y/rotation contract as FloorTable — see docs/floor-plan-coordinates.md. */
   x: number;
   y: number;
   rotation: number;

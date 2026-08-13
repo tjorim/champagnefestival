@@ -71,6 +71,7 @@ See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migrat
 - `frontend/messages/` for translation content
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior
 - `frontend/src/utils/adminApi.ts` and `frontend/src/utils/adminRegistrationApi.ts` for admin API integration
+- `docs/floor-plan-coordinates.md` for the `Table`/`Area` `x`/`y`/`rotation` coordinate contract
 
 ## CI & workflows
 

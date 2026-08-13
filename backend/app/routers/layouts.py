@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.schemas import LayoutCopyCreate, LayoutCreate, LayoutOut
+from app.schemas import LayoutCopyCreate, LayoutCreate, LayoutOut, LayoutWithTablesOut
 from app.services import layouts_service
 from app.services.errors import ServiceError, to_http_exception
 
@@ -61,14 +61,20 @@ async def list_layouts(
     db: AsyncSession = Depends(get_db),
     limit: int | None = Query(default=None, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
+    edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    room_id: str | None = Query(default=None, description="Filter by room ID"),
 ) -> list[dict]:
-    return await layouts_service.list_layouts(db, limit=limit, offset=offset)
+    return await layouts_service.list_layouts(db, limit=limit, offset=offset, edition_id=edition_id, room_id=room_id)
 
 
-@router.get("/{layout_id}", response_model=LayoutOut)
-async def get_layout(layout_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+@router.get("/{layout_id}", response_model=LayoutWithTablesOut)
+async def get_layout(
+    layout_id: str,
+    include_tables: bool = Query(default=False, description="Also return the layout's tables and areas"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     try:
-        return await layouts_service.get_layout(db, layout_id)
+        return await layouts_service.get_layout(db, layout_id, include_tables=include_tables)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
 

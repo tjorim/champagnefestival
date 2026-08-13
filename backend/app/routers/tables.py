@@ -5,7 +5,7 @@ Business logic lives in ``app.services.tables_service`` and is shared with
 ``ServiceError`` into ``HTTPException`` (see #807).
 """
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
@@ -37,8 +37,11 @@ async def create_table(
 
 
 @router.get("", response_model=list[TableOut])
-async def list_tables(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    return await tables_service.list_tables(db)
+async def list_tables(
+    layout_id: str | None = Query(default=None, description="Filter by layout ID"),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    return await tables_service.list_tables(db, layout_id)
 
 
 @router.get("/{table_id}", response_model=TableOut)

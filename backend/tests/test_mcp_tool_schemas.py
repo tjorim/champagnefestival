@@ -75,6 +75,37 @@ class TestRequiredPhysicalDimensions:
         assert {"width_m", "length_m"} <= required
 
 
+class TestCoordinateContract:
+    """Regression tests for #834: x/y/rotation must expose both a description
+    (unit/origin/direction — otherwise a caller has no way to know 50.0 means
+    "50% of the rendered canvas, top-left origin") and their numeric bounds via
+    the JSON schema, on every tool that accepts them."""
+
+    @pytest.mark.parametrize("tool_name", ["create_table", "create_area"])
+    @pytest.mark.parametrize("field", ["x", "y", "rotation"])
+    async def test_create_exposes_coordinate_description_and_bounds(self, tool_schemas, tool_name, field):
+        prop = tool_schemas[tool_name]["properties"][field]
+        assert prop.get("description"), f"{tool_name}.{field} has no description"
+        if field == "rotation":
+            assert prop["minimum"] == 0
+            assert prop["maximum"] == 359
+        else:
+            assert prop["minimum"] == 0
+            assert prop["maximum"] == 100
+
+    @pytest.mark.parametrize("tool_name", ["update_table", "update_area"])
+    @pytest.mark.parametrize("field", ["x", "y", "rotation"])
+    async def test_update_exposes_coordinate_description_and_bounds(self, tool_schemas, tool_name, field):
+        variant = _optional_variants(tool_schemas[tool_name]["properties"][field])[0]
+        assert variant.get("description"), f"{tool_name}.{field} has no description"
+        if field == "rotation":
+            assert variant["minimum"] == 0
+            assert variant["maximum"] == 359
+        else:
+            assert variant["minimum"] == 0
+            assert variant["maximum"] == 100
+
+
 class TestNoRedundantDateUnions:
     """A ``dt_date | str`` (or ``datetime | str``) annotation renders as two
     functionally-overlapping 'string' variants in the JSON schema's ``anyOf``

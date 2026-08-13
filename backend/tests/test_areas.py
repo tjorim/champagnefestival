@@ -99,6 +99,18 @@ async def test_area_linked_to_exhibitor(client):
 
 
 @pytest.mark.anyio
+async def test_list_areas_empty_string_layout_id_matches_nothing(client):
+    """An explicit layout_id="" filters on the (nonexistent) empty-string id, not
+    "no filter" — distinct from omitting the parameter entirely (#834 review)."""
+    layout_id = await _create_layout_prerequisites(client)
+    await client.post("/api/areas", json={"layout_id": layout_id, "label": "Zone A"}, headers=ADMIN_HEADERS)
+
+    r = await client.get("/api/areas", params={"layout_id": ""}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+@pytest.mark.anyio
 async def test_area_invalid_layout(client):
     r = await client.post(
         "/api/areas",

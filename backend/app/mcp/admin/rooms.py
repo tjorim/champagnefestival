@@ -41,9 +41,9 @@ async def create_room(
             raise MCPToolError(str(exc)) from exc
 
 
-async def list_rooms(session_factory: Any) -> dict:
+async def list_rooms(session_factory: Any, venue_id: str | None = None) -> dict:
     async with session_factory() as db:
-        return {"rooms": await rooms_service.list_rooms(db)}
+        return {"rooms": await rooms_service.list_rooms(db, venue_id)}
 
 
 async def get_room(session_factory: Any, room_id: str) -> dict:

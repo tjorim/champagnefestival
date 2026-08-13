@@ -75,8 +75,11 @@ async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, reque
     return table_to_dict(t, [])
 
 
-async def list_tables(db: AsyncSession) -> list[dict]:
-    result = await db.execute(select(Table).order_by(Table.created_at))
+async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[dict]:
+    stmt = select(Table).order_by(Table.created_at, Table.id)
+    if layout_id is not None:
+        stmt = stmt.where(Table.layout_id == layout_id)
+    result = await db.execute(stmt)
     tables = result.scalars().all()
 
     # Compute registration_ids from the Registration.table_id FK (source of truth),

@@ -43,9 +43,9 @@ async def create_table(
             raise MCPToolError(str(exc)) from exc
 
 
-async def list_tables(session_factory: Any) -> dict:
+async def list_tables(session_factory: Any, layout_id: str | None = None) -> dict:
     async with session_factory() as db:
-        return {"tables": await tables_service.list_tables(db)}
+        return {"tables": await tables_service.list_tables(db, layout_id)}
 
 
 async def get_table(session_factory: Any, table_id: str) -> dict:

@@ -17,6 +17,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -240,8 +241,8 @@ class Layout(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     room: Mapped[Room] = relationship()
-    tables: Mapped[list[Table]] = relationship(order_by="Table.created_at")
-    areas: Mapped[list[Area]] = relationship(order_by="Area.created_at")
+    tables: Mapped[list[Table]] = relationship(order_by="Table.created_at, Table.id")
+    areas: Mapped[list[Area]] = relationship(order_by="Area.created_at, Area.id")
 
 
 class TableType(Base):
@@ -279,16 +280,25 @@ class Table(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     capacity: Mapped[int] = mapped_column(Integer)
-    # Position as percentage of room dimensions (0-100)
+
     x: Mapped[float] = mapped_column(default=50.0)
     y: Mapped[float] = mapped_column(default=50.0)
+    """Position as a percentage [0, 100] of the layout's *rendered canvas*, not the
+    room's raw ``width_m``/``length_m`` — origin top-left, anchored at this table's
+    own top-left corner. See ``docs/floor-plan-coordinates.md`` for the full contract
+    (including why the canvas isn't a 1:1 percentage of physical room size for small
+    rooms) shared with ``Area.x``/``Area.y`` and the frontend editor.
+    """
+
     table_type_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("table_types.id", ondelete="RESTRICT"), nullable=False
     )
     """FK to the TableType template that defines this table's shape and dimensions."""
 
     rotation: Mapped[int] = mapped_column(Integer, default=0)
-    """Rotation angle in whole degrees [0, 359], clockwise."""
+    """Rotation angle in whole degrees [0, 359], clockwise, pivoting around this
+    table's own center. See ``docs/floor-plan-coordinates.md``.
+    """
 
     layout_id: Mapped[str] = mapped_column(String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False)
     """FK to the Layout this table belongs to."""
@@ -315,7 +325,15 @@ class Area(Base):
 
     x: Mapped[float] = mapped_column(default=50.0)
     y: Mapped[float] = mapped_column(default=50.0)
+    """Position as a percentage [0, 100] of the layout's rendered canvas. Same
+    contract as ``Table.x``/``Table.y`` — see ``docs/floor-plan-coordinates.md``.
+    """
+
     rotation: Mapped[int] = mapped_column(Integer, default=0)
+    """Rotation angle in whole degrees [0, 359], clockwise, pivoting around this
+    area's own center. Same contract as ``Table.rotation``.
+    """
+
     width_m: Mapped[float] = mapped_column(default=1.5)
     length_m: Mapped[float] = mapped_column(default=1.0)
 
@@ -587,6 +605,12 @@ class FaqItem(Base):
     """
 
     __tablename__ = "faq_items"
+    __table_args__ = (
+        # Deferred so a reorder can touch several rows in one transaction
+        # without a transient duplicate mid-transaction tripping the check —
+        # only the state at commit has to be unique (#836).
+        UniqueConstraint("sort_order", name="uq_faq_items_sort_order", deferrable=True, initially="DEFERRED"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     question_nl: Mapped[str] = mapped_column(String(500))

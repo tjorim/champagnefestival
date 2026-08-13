@@ -77,20 +77,25 @@ complete regardless of which surface made the change. All are `admin`-only excep
 | Editions | `create_edition`, `get_edition`, `update_edition`, `delete_edition` |
 | Events | `create_event`, `get_event`, `update_event`, `delete_event` |
 | Venues | `create_venue`, `list_venues`, `get_venue`, `update_venue`, `delete_venue` |
-| Rooms | `create_room`, `list_rooms`, `get_room`, `update_room`, `delete_room` |
+| Rooms | `create_room`, `list_rooms` (`venue_id` filter), `get_room`, `update_room`, `delete_room` |
 | Table types | `create_table_type`, `list_table_types`, `get_table_type`, `update_table_type`, `delete_table_type` |
-| Tables | `create_table`, `list_tables`, `get_table`, `update_table`, `delete_table` |
-| Layouts | `create_layout`, `copy_layout`, `list_layouts`, `get_layout`, `delete_layout` |
-| Areas | `create_area`, `list_areas`, `get_area`, `update_area`, `delete_area` |
-| FAQ | `create_faq_item`, `list_faq_items`, `update_faq_item`, `delete_faq_item` |
+| Tables | `create_table`, `list_tables` (`layout_id` filter), `get_table`, `update_table`, `delete_table` |
+| Layouts | `create_layout`, `copy_layout`, `list_layouts` (`edition_id`/`room_id` filters), `get_layout` (`include_tables` to also return its tables/areas), `delete_layout` |
+| Areas | `create_area`, `list_areas` (`layout_id` filter), `get_area`, `update_area`, `delete_area` |
+| FAQ | `create_faq_item`, `list_faq_items`, `update_faq_item`, `delete_faq_item`, `reorder_faq_items` |
 | Settings | `get_settings` (public), `set_maintenance_mode` |
 | Exhibitors | `create_exhibitor`, `get_exhibitor`, `list_exhibitors`, `update_exhibitor`, `delete_exhibitor` |
 | People | `create_person`, `get_person`, `update_person`, `delete_person`, `merge_people` |
 | Members | `create_member`, `get_member`, `list_members`, `update_member`, `delete_member` |
 | Volunteers | `create_volunteer`, `get_volunteer`, `list_volunteers`, `update_volunteer`, `delete_volunteer` |
-| Registrations | `create_registration`, `update_registration`, `delete_registration` |
+| Registrations | `list_registrations` (`edition_id`/`event_id`/`status`/`payment_status`/`checked_in`/`q` filters, paginated), `create_registration`, `update_registration`, `delete_registration` |
 | Audit trail | `list_audit_entries`, `list_audit_resource_types` |
 | Integration clients | `create_integration_client`, `list_integration_clients`, `revoke_integration_client`, `rotate_integration_client` |
+
+A table's/area's `x`/`y`/`rotation` fields follow a documented coordinate contract
+(percentage of the layout's rendered canvas, top-left origin, clockwise degrees) shared
+by REST, MCP, and the web admin editor — see
+[`docs/floor-plan-coordinates.md`](../floor-plan-coordinates.md).
 
 Partial updates follow one convention throughout: an omitted keyword argument (`None`)
 leaves that field unchanged. Nullable fields with no natural "clear" value (an id, not
