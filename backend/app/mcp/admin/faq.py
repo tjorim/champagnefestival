@@ -1,19 +1,17 @@
 """Admin (write) MCP tool implementations for FAQ item management.
 
-Mirrors ``app.routers.faq``.
+Mirrors ``app.routers.faq``. Business logic lives in
+``app.services.faq_service`` and is shared with the REST router.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
-
-from app.audit import write_audit_entry
-from app.mcp.utils import get_or_error, validate_with_schema
-from app.models import FaqItem
-from app.schemas import FaqItemCreate, FaqItemUpdate
-from app.utils import faq_item_to_dict, make_id
+from app.mcp.utils import MCPToolError, validate_with_schema
+from app.schemas import FaqItemCreate, FaqItemReorder, FaqItemUpdate
+from app.services import faq_service
+from app.services.errors import ServiceError
 
 
 async def create_faq_item(
@@ -26,7 +24,6 @@ async def create_faq_item(
     answer_en: str | None = None,
     question_fr: str | None = None,
     answer_fr: str | None = None,
-    sort_order: int = 0,
     active: bool = True,
 ) -> dict:
     body = validate_with_schema(
@@ -37,40 +34,19 @@ async def create_faq_item(
         answer_en=answer_en or None,
         question_fr=question_fr or None,
         answer_fr=answer_fr or None,
-        sort_order=sort_order,
         active=active,
     )
     async with session_factory() as db:
-        f = FaqItem(
-            id=make_id("faq"),
-            question_nl=body.question_nl,
-            answer_nl=body.answer_nl,
-            question_en=body.question_en,
-            answer_en=body.answer_en,
-            question_fr=body.question_fr,
-            answer_fr=body.answer_fr,
-            sort_order=body.sort_order,
-            active=body.active,
-        )
-        db.add(f)
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="faq_item_created",
-            resource_type="faq_item",
-            resource_id=f.id,
-            details={"question_nl": f.question_nl},
-        )
-        await db.commit()
-        await db.refresh(f)
-        return faq_item_to_dict(f)
+        try:
+            return await faq_service.create_faq_item(db, actor=actor, body=body)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
 
 
 async def list_faq_items(session_factory: Any) -> dict:
     """Every FAQ item and every locale, active or not, in display order (admin shape)."""
     async with session_factory() as db:
-        result = await db.execute(select(FaqItem).order_by(FaqItem.sort_order))
-        return {"faq_items": [faq_item_to_dict(f) for f in result.scalars().all()]}
+        return {"faq_items": await faq_service.list_faq_items(db)}
 
 
 async def update_faq_item(
@@ -84,7 +60,6 @@ async def update_faq_item(
     answer_en: str | None = None,
     question_fr: str | None = None,
     answer_fr: str | None = None,
-    sort_order: int | None = None,
     active: bool | None = None,
 ) -> dict:
     """Update an FAQ item.
@@ -102,47 +77,35 @@ async def update_faq_item(
             "answer_en": answer_en,
             "question_fr": question_fr,
             "answer_fr": answer_fr,
-            "sort_order": sort_order,
             "active": active,
         }.items()
         if v is not None
     }
     body = validate_with_schema(FaqItemUpdate, **provided)
     async with session_factory() as db:
-        f = await get_or_error(db, FaqItem, faq_item_id, f"FAQ item '{faq_item_id}' not found.")
-        # Apply from the validated `body`, not the raw arguments — any coercion or
-        # normalisation FaqItemUpdate performs must land on the row, matching
-        # create_faq_item and the REST router's own update_faq_item.
-        optional_locales = {"question_en", "answer_en", "question_fr", "answer_fr"}
-        for field in body.model_fields_set:
-            value = getattr(body, field)
-            if field in optional_locales:
-                value = value or None
-            setattr(f, field, value)
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="faq_item_updated",
-            resource_type="faq_item",
-            resource_id=f.id,
-            details={"fields_changed": sorted(body.model_fields_set)},
-        )
-        await db.commit()
-        await db.refresh(f)
-        return faq_item_to_dict(f)
+        try:
+            return await faq_service.update_faq_item(db, actor=actor, faq_item_id=faq_item_id, body=body)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
 
 
 async def delete_faq_item(session_factory: Any, actor: str, faq_item_id: str) -> dict:
     async with session_factory() as db:
-        f = await get_or_error(db, FaqItem, faq_item_id, f"FAQ item '{faq_item_id}' not found.")
-        await db.delete(f)
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="faq_item_deleted",
-            resource_type="faq_item",
-            resource_id=faq_item_id,
-            details={},
-        )
-        await db.commit()
-        return {"deleted": True, "id": faq_item_id}
+        try:
+            return await faq_service.delete_faq_item(db, actor=actor, faq_item_id=faq_item_id)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def reorder_faq_items(session_factory: Any, actor: str, *, ordered_ids: list[str]) -> dict:
+    """Reassign every FAQ item's display position to match ``ordered_ids``.
+
+    ``ordered_ids`` must name every existing FAQ item exactly once — the same
+    semantics the admin UI's reorder control uses (#836).
+    """
+    body = validate_with_schema(FaqItemReorder, ordered_ids=ordered_ids)
+    async with session_factory() as db:
+        try:
+            return {"faq_items": await faq_service.reorder_faq_items(db, actor=actor, ordered_ids=body.ordered_ids)}
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc

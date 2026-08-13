@@ -69,3 +69,29 @@ async def test_delete_faq_item_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
         await mcp_faq.delete_faq_item(factory, "admin-1", "nonexistent")
+
+
+async def test_create_faq_item_appends_after_the_current_last_item(db_session):
+    factory = mcp_session_factory(db_session)
+    first = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 1?", answer_nl="Antwoord 1.")
+    second = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 2?", answer_nl="Antwoord 2.")
+    assert second["sort_order"] > first["sort_order"]
+
+
+async def test_reorder_faq_items(db_session):
+    factory = mcp_session_factory(db_session)
+    first = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 1?", answer_nl="Antwoord 1.")
+    second = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 2?", answer_nl="Antwoord 2.")
+
+    reordered = await mcp_faq.reorder_faq_items(factory, "admin-1", ordered_ids=[second["id"], first["id"]])
+    assert [item["id"] for item in reordered["faq_items"]] == [second["id"], first["id"]]
+    assert reordered["faq_items"][0]["sort_order"] < reordered["faq_items"][1]["sort_order"]
+
+
+async def test_reorder_faq_items_rejects_stale_list(db_session):
+    factory = mcp_session_factory(db_session)
+    first = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 1?", answer_nl="Antwoord 1.")
+    await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 2?", answer_nl="Antwoord 2.")
+
+    with pytest.raises(ValueError, match="stale"):
+        await mcp_faq.reorder_faq_items(factory, "admin-1", ordered_ids=[first["id"]])
