@@ -69,7 +69,9 @@ async def test_list_registrations_redacts_pii_for_public_role(db_session):
     even though only admins can reach it through the MCP server today."""
     factory = mcp_session_factory(db_session)
     person, event = await _seed_event(db_session, with_product=False)
-    await mcp_registrations.create_registration(factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1)
+    await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=1
+    )
 
     result = await mcp_registrations.list_registrations(factory, "public")
     item = result["registrations"][0]
