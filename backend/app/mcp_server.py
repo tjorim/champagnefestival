@@ -1038,10 +1038,12 @@ class ChampagneFestivalMcpBackend:
         answer_en: str | None = None,
         question_fr: str | None = None,
         answer_fr: str | None = None,
-        sort_order: int = 0,
         active: bool = True,
     ) -> dict:
-        """Create an FAQ item. Requires the ``admin`` role."""
+        """Create an FAQ item, appended after the current last one. Requires the ``admin`` role.
+
+        Display position isn't settable here — use ``reorder_faq_items`` to change it.
+        """
         self._require_admin()
         return await mcp_admin_faq.create_faq_item(
             self.session_factory,
@@ -1052,7 +1054,6 @@ class ChampagneFestivalMcpBackend:
             answer_en=answer_en,
             question_fr=question_fr,
             answer_fr=answer_fr,
-            sort_order=sort_order,
             active=active,
         )
 
@@ -1070,14 +1071,14 @@ class ChampagneFestivalMcpBackend:
         answer_en: str | None = None,
         question_fr: str | None = None,
         answer_fr: str | None = None,
-        sort_order: int | None = None,
         active: bool | None = None,
     ) -> dict:
         """Partially update an FAQ item; omitted fields are left unchanged.
 
         For the optional ``en``/``fr`` locale fields, an explicit empty string
         clears that locale's translation (hiding the item on that locale's FAQ)
-        rather than leaving it unchanged. Requires the ``admin`` role.
+        rather than leaving it unchanged. Display position isn't settable here —
+        use ``reorder_faq_items`` to change it. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_faq.update_faq_item(
@@ -1090,7 +1091,6 @@ class ChampagneFestivalMcpBackend:
             answer_en=answer_en,
             question_fr=question_fr,
             answer_fr=answer_fr,
-            sort_order=sort_order,
             active=active,
         )
 
@@ -1098,6 +1098,17 @@ class ChampagneFestivalMcpBackend:
         """Delete an FAQ item. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_faq.delete_faq_item(self.session_factory, self._actor(), faq_item_id)
+
+    async def reorder_faq_items(self, ordered_ids: list[str]) -> dict:
+        """Reassign every FAQ item's display position to match ``ordered_ids``.
+
+        ``ordered_ids`` must name every existing FAQ item exactly once — the
+        same all-at-once semantics the admin UI's reorder control uses, so a
+        reorder can't be partial, stale, or racing another admin's reorder.
+        Requires the ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_faq.reorder_faq_items(self.session_factory, self._actor(), ordered_ids=ordered_ids)
 
     # -- Settings ------------------------------------------------------
 
@@ -1758,6 +1769,7 @@ def create_mcp_server(
     register_tool(backend.list_faq_items)
     register_tool(backend.update_faq_item)
     register_tool(backend.delete_faq_item)
+    register_tool(backend.reorder_faq_items)
     register_tool(backend.get_settings)
     register_tool(backend.set_maintenance_mode)
     register_tool(backend.create_exhibitor)

@@ -1048,7 +1048,6 @@ class FaqItemCreate(BaseModel):
     answer_en: str | None = Field(default=None, max_length=10000)
     question_fr: str | None = Field(default=None, max_length=500)
     answer_fr: str | None = Field(default=None, max_length=10000)
-    sort_order: int = 0
     active: bool = True
 
 
@@ -1063,8 +1062,18 @@ class FaqItemUpdate(BaseModel):
     answer_en: str | None = Field(default=None, max_length=10000)
     question_fr: str | None = Field(default=None, max_length=500)
     answer_fr: str | None = Field(default=None, max_length=10000)
-    sort_order: int | None = None
     active: bool | None = None
+
+
+class FaqItemReorder(BaseModel):
+    """The complete, ordered list of every existing FAQ item's ID.
+
+    `sort_order` isn't settable through create/update — this is the only way
+    to change display order, and it takes the whole collection at once so a
+    reorder can't leave things ambiguous or race another admin's reorder (#836).
+    """
+
+    ordered_ids: list[str] = Field(min_length=1)
 
 
 class FaqItemOut(BaseModel):

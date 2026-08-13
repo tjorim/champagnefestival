@@ -446,6 +446,7 @@
   "admin_error_add_faq_item": "Échec de l'ajout de la question.",
   "admin_error_update_faq_item": "Échec de la mise à jour de la question.",
   "admin_error_delete_faq_item": "Échec de la suppression de la question.",
+  "admin_error_reorder_faq_items": "Échec de la réorganisation des questions.",
   "admin_settings_maintenance_mode_label": "Mode maintenance",
   "admin_settings_maintenance_mode_help": "Affiche aux visiteurs une page avec uniquement une image et un lien vers Facebook au lieu du site complet. Le tableau de bord admin reste accessible.",
   "admin_error_load_settings": "Échec du chargement des paramètres.",
