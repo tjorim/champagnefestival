@@ -332,9 +332,9 @@ async def list_layouts(
     room_id: str | None = None,
 ) -> list[dict]:
     stmt = select(Layout).order_by(Layout.created_at, Layout.id).offset(offset)
-    if edition_id:
+    if edition_id is not None:
         stmt = stmt.where(Layout.edition_id == edition_id)
-    if room_id:
+    if room_id is not None:
         stmt = stmt.where(Layout.room_id == room_id)
     if limit is not None:
         stmt = stmt.limit(limit)

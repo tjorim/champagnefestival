@@ -81,6 +81,12 @@ async def test_list_tables_filters_by_layout_id(client):
     ids = [t["id"] for t in r.json()]
     assert ids == [table_a]
 
+    # An explicit layout_id="" filters on the (nonexistent) empty-string id, not
+    # "no filter" — distinct from omitting the parameter entirely (#834 review).
+    r = await client.get("/api/tables", params={"layout_id": ""}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json() == []
+
 
 @pytest.mark.anyio
 async def test_table_position_bounds_rejected(client):

@@ -77,7 +77,7 @@ async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, reque
 
 async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[dict]:
     stmt = select(Table).order_by(Table.created_at, Table.id)
-    if layout_id:
+    if layout_id is not None:
         stmt = stmt.where(Table.layout_id == layout_id)
     result = await db.execute(stmt)
     tables = result.scalars().all()

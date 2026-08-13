@@ -69,6 +69,19 @@ async def test_list_rooms_filters_by_venue_id(client):
 
 
 @pytest.mark.anyio
+async def test_list_rooms_empty_string_venue_id_matches_nothing(client):
+    """An explicit venue_id="" is a filter for the (nonexistent) empty-string id,
+    not "no filter" — distinct from omitting the parameter entirely (#834 review)."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+
+    r = await client.get("/api/rooms", params={"venue_id": ""}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+@pytest.mark.anyio
 async def test_room_update_all_editable_fields_together(client):
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]

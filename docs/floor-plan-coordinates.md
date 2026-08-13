@@ -30,7 +30,7 @@ issue #802 for that.
 The canvas a percentage is relative to is *derived* from the room's `width_m`/`length_m`,
 not used verbatim:
 
-```
+```text
 canvas_width_px  = max(280, room.width_m  * 28)
 canvas_height_px = max(180, room.length_m * 28)
 ```

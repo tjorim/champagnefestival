@@ -64,7 +64,7 @@ async def create_area(db: AsyncSession, *, actor: str, body: AreaCreate, request
 
 async def list_areas(db: AsyncSession, layout_id: str | None = None) -> list[dict]:
     stmt = select(Area).order_by(Area.created_at, Area.id)
-    if layout_id:
+    if layout_id is not None:
         stmt = stmt.where(Area.layout_id == layout_id)
     result = await db.execute(stmt)
     return [area_to_dict(a) for a in result.scalars().all()]

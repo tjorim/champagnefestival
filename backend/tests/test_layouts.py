@@ -57,6 +57,16 @@ async def test_list_layouts_filters_by_edition_id_and_room_id(client):
     assert r.status_code == 200
     assert layout_a not in [lay["id"] for lay in r.json()]
 
+    # An explicit edition_id="" / room_id="" filters on the (nonexistent) empty-string
+    # id, not "no filter" — distinct from omitting the parameter entirely (#834 review).
+    r = await client.get("/api/layouts", params={"edition_id": ""}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json() == []
+
+    r = await client.get("/api/layouts", params={"room_id": ""}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json() == []
+
 
 @pytest.mark.anyio
 async def test_get_layout_include_tables(client):
