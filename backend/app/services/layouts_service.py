@@ -220,14 +220,17 @@ async def bulk_create_layouts(
     """
     request_hash = hash_request([item.model_dump(mode="json") for item in items])
     if idempotency_key:
-        cached = await check_idempotency_key(db, scope=_BULK_SCOPE, key=idempotency_key, request_hash=request_hash)
+        cached = await check_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
+        )
         if cached is not None:
             return cached
 
     # Lock every referenced room up front — also doubles as the existence
-    # check, same as create_layout.
+    # check, same as create_layout. Ordered by id so two overlapping batches
+    # always acquire their locks in the same sequence and can't deadlock.
     room_ids = {item.room_id for item in items}
-    locked_rooms = await db.execute(select(Room.id).where(Room.id.in_(room_ids)).with_for_update())
+    locked_rooms = await db.execute(select(Room.id).where(Room.id.in_(room_ids)).order_by(Room.id).with_for_update())
     missing_rooms = room_ids - set(locked_rooms.scalars().all())
     if missing_rooms:
         raise NotFoundError(f"Room(s) not found: {sorted(missing_rooms)}.")

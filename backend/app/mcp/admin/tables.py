@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.mcp.utils import MCPToolError, validate_with_schema
-from app.schemas import TableCreate, TableUpdate
+from app.schemas import TableBulkCreate, TableCreate, TableUpdate
 from app.services import tables_service
 from app.services.errors import ServiceError
 
@@ -50,6 +50,7 @@ async def bulk_create_tables(
     items: list[TableCreate],
     idempotency_key: str | None = None,
 ) -> dict:
+    validate_with_schema(TableBulkCreate, items=items, idempotency_key=idempotency_key)
     async with session_factory() as db:
         try:
             return await tables_service.bulk_create_tables(

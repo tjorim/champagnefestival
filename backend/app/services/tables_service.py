@@ -98,7 +98,9 @@ async def bulk_create_tables(
     """
     request_hash = hash_request([item.model_dump(mode="json") for item in items])
     if idempotency_key:
-        cached = await check_idempotency_key(db, scope=_BULK_SCOPE, key=idempotency_key, request_hash=request_hash)
+        cached = await check_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
+        )
         if cached is not None:
             return cached
 
@@ -106,8 +108,11 @@ async def bulk_create_tables(
     layout_ids = {item.layout_id for item in items}
 
     # Lock the referenced TableType rows so a concurrent delete_table_type can't
-    # race this insert — see create_table.
-    locked_tt = await db.execute(select(TableType.id).where(TableType.id.in_(table_type_ids)).with_for_update())
+    # race this insert — see create_table. Ordered by id so two overlapping
+    # batches always acquire their locks in the same sequence and can't deadlock.
+    locked_tt = await db.execute(
+        select(TableType.id).where(TableType.id.in_(table_type_ids)).order_by(TableType.id).with_for_update()
+    )
     missing_tt = table_type_ids - set(locked_tt.scalars().all())
     if missing_tt:
         raise NotFoundError(f"TableType(s) not found: {sorted(missing_tt)}.")

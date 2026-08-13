@@ -71,7 +71,9 @@ async def bulk_create_rooms(
     """
     request_hash = hash_request([item.model_dump(mode="json") for item in items])
     if idempotency_key:
-        cached = await check_idempotency_key(db, scope=_BULK_SCOPE, key=idempotency_key, request_hash=request_hash)
+        cached = await check_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
+        )
         if cached is not None:
             return cached
 

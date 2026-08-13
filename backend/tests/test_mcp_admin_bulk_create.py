@@ -17,6 +17,7 @@ from app.mcp.admin import layouts as mcp_layouts
 from app.mcp.admin import rooms as mcp_rooms
 from app.mcp.admin import table_types as mcp_table_types
 from app.mcp.admin import tables as mcp_tables
+from app.mcp.utils import MCPToolError
 from app.models import IdempotencyKey, Layout, Room, Table, TableType, Venue
 from app.schemas import LayoutCreate, RoomCreate, TableCreate, TableTypeCreate
 from tests.helpers import mcp_session_factory
@@ -97,7 +98,7 @@ async def test_bulk_create_rooms_rolls_back_on_partial_failure(db_session):
         RoomCreate(venue_id="venue-1", name="Room A", width_m=10, length_m=10),
         RoomCreate(venue_id="nonexistent", name="Room B", width_m=10, length_m=10),
     ]
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(MCPToolError, match="not found"):
         await mcp_rooms.bulk_create_rooms(factory, "admin-1", items=items)
 
     rows = (await db_session.execute(select(Room))).scalars().all()
@@ -127,7 +128,7 @@ async def test_bulk_create_rooms_idempotency_key_reused_with_different_payload_c
         items=[RoomCreate(venue_id="venue-1", name="Room A", width_m=10, length_m=10)],
         idempotency_key="shared-key",
     )
-    with pytest.raises(ValueError, match="different request"):
+    with pytest.raises(MCPToolError, match="different request"):
         await mcp_rooms.bulk_create_rooms(
             factory,
             "admin-1",
@@ -137,6 +138,35 @@ async def test_bulk_create_rooms_idempotency_key_reused_with_different_payload_c
 
     rows = (await db_session.execute(select(Room))).scalars().all()
     assert len(rows) == 1
+
+
+async def test_bulk_create_rooms_idempotency_key_reused_by_different_actor_conflicts(db_session):
+    """A key is scoped per-actor: a different admin reusing the same key value
+    (even with the same request body) must not silently replay another
+    admin's cached result."""
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session)
+    items = [RoomCreate(venue_id="venue-1", name="Room A", width_m=10, length_m=10)]
+
+    await mcp_rooms.bulk_create_rooms(factory, "admin-a", items=items, idempotency_key="actor-scoped-key")
+    with pytest.raises(MCPToolError, match="another actor"):
+        await mcp_rooms.bulk_create_rooms(factory, "admin-b", items=items, idempotency_key="actor-scoped-key")
+
+    rows = (await db_session.execute(select(Room))).scalars().all()
+    assert len(rows) == 1
+
+
+async def test_bulk_create_rooms_rejects_batch_over_limit(db_session):
+    """The MCP surface enforces the same 200-item cap as the REST endpoint (#837 review)."""
+    factory = mcp_session_factory(db_session)
+    await _seed_venue(db_session)
+    items = [RoomCreate(venue_id="venue-1", name=f"Room {i}", width_m=10, length_m=10) for i in range(201)]
+
+    with pytest.raises(MCPToolError):
+        await mcp_rooms.bulk_create_rooms(factory, "admin-1", items=items)
+
+    rows = (await db_session.execute(select(Room))).scalars().all()
+    assert rows == []
 
 
 async def test_bulk_create_rooms_stores_idempotency_key_scoped_to_rooms(db_session):
@@ -181,7 +211,7 @@ async def test_bulk_create_table_types_rolls_back_on_partial_failure(db_session)
         TableTypeCreate(venue_id="venue-1", name="Type A", width_m=0.7, length_m=1.8, max_capacity=6),
         TableTypeCreate(venue_id="nonexistent", name="Type B", width_m=0.7, length_m=1.8, max_capacity=6),
     ]
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(MCPToolError, match="not found"):
         await mcp_table_types.bulk_create_table_types(factory, "admin-1", items=items)
 
     rows = (await db_session.execute(select(TableType))).scalars().all()
@@ -236,7 +266,7 @@ async def test_bulk_create_tables_rolls_back_on_partial_failure(db_session):
         TableCreate(name="Table A", capacity=4, table_type_id="ttype-1", layout_id="lay-1"),
         TableCreate(name="Table B", capacity=4, table_type_id="ttype-1", layout_id="nonexistent"),
     ]
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(MCPToolError, match="not found"):
         await mcp_tables.bulk_create_tables(factory, "admin-1", items=items)
 
     rows = (await db_session.execute(select(Table))).scalars().all()
@@ -283,7 +313,7 @@ async def test_bulk_create_layouts_rejects_duplicate_within_batch(db_session):
     await _seed_room(db_session)
 
     items = [LayoutCreate(room_id="room-1", day_id=1), LayoutCreate(room_id="room-1", day_id=1)]
-    with pytest.raises(ValueError, match="Duplicate layout"):
+    with pytest.raises(MCPToolError, match="Duplicate layout"):
         await mcp_layouts.bulk_create_layouts(factory, "admin-1", items=items)
 
     rows = (await db_session.execute(select(Layout))).scalars().all()
@@ -296,7 +326,7 @@ async def test_bulk_create_layouts_rolls_back_on_partial_failure(db_session):
     await _seed_room(db_session)
 
     items = [LayoutCreate(room_id="room-1", day_id=1), LayoutCreate(room_id="nonexistent", day_id=1)]
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(MCPToolError, match="not found"):
         await mcp_layouts.bulk_create_layouts(factory, "admin-1", items=items)
 
     rows = (await db_session.execute(select(Layout))).scalars().all()

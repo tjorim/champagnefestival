@@ -70,6 +70,14 @@ async def test_bulk_create_rooms_rejects_empty_batch(client):
 
 
 @pytest.mark.anyio
+async def test_bulk_create_rooms_rejects_batch_over_limit(client):
+    venue_id = await _create_venue(client)
+    items = [{**ROOM_PAYLOAD, "name": f"Room {i}", "venue_id": venue_id} for i in range(201)]
+    r = await client.post("/api/rooms/bulk", json={"items": items}, headers=ADMIN_HEADERS)
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
 async def test_bulk_create_rooms_idempotency_key_replays_result(client):
     venue_id = await _create_venue(client)
     body = {"items": [{**ROOM_PAYLOAD, "venue_id": venue_id}], "idempotency_key": "retry-key-1"}
@@ -144,6 +152,31 @@ async def test_bulk_create_rooms_stores_idempotency_key_scoped_to_rooms(client, 
     result = await db_session.execute(select(IdempotencyKey).where(IdempotencyKey.key == "scoped-key"))
     row = result.scalar_one()
     assert row.scope == "rooms.bulk_create"
+
+
+@pytest.mark.anyio
+async def test_bulk_create_idempotency_key_isolated_across_scopes(client, db_session):
+    """The same key value reused for a different resource type is a distinct
+    (scope, key) row, not a collision — scope is part of the identity."""
+    venue_id = await _create_venue(client)
+
+    r1 = await client.post(
+        "/api/rooms/bulk",
+        json={"items": [{**ROOM_PAYLOAD, "venue_id": venue_id}], "idempotency_key": "cross-scope-key"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r1.status_code == 201
+
+    r2 = await client.post(
+        "/api/table-types/bulk",
+        json={"items": [{**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}], "idempotency_key": "cross-scope-key"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r2.status_code == 201
+
+    result = await db_session.execute(select(IdempotencyKey).where(IdempotencyKey.key == "cross-scope-key"))
+    rows = result.scalars().all()
+    assert {row.scope for row in rows} == {"rooms.bulk_create", "table_types.bulk_create"}
 
 
 # ---------------------------------------------------------------------------
@@ -363,6 +396,10 @@ async def test_bulk_create_layouts_idempotency_key_replays_result(client):
 
 
 @pytest.mark.anyio
-async def test_bulk_create_endpoints_require_admin(unauth_client):
-    r = await unauth_client.post("/api/rooms/bulk", json={"items": [ROOM_PAYLOAD]})
+@pytest.mark.parametrize(
+    "path",
+    ["/api/rooms/bulk", "/api/table-types/bulk", "/api/tables/bulk", "/api/layouts/bulk"],
+)
+async def test_bulk_create_endpoints_require_admin(unauth_client, path):
+    r = await unauth_client.post(path, json={"items": []})
     assert r.status_code == 401

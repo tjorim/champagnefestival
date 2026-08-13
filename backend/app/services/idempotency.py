@@ -48,16 +48,22 @@ def hash_request(payload: Any) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-async def check_idempotency_key(db: AsyncSession, *, scope: str, key: str, request_hash: str) -> dict | None:
+async def check_idempotency_key(
+    db: AsyncSession, *, scope: str, key: str, actor: str, request_hash: str
+) -> dict | None:
     """Return the stored response to replay, or None if this is a first use.
 
-    Raises ``ConflictError`` if ``key`` was already used within ``scope`` for
-    a request with a different body — that's not a safe retry.
+    Raises ``ConflictError`` if ``key`` was already used within ``scope`` by a
+    *different* actor, or for a request with a different body — neither is a
+    safe retry (the former would otherwise leak one admin's created records to
+    another admin who happens to reuse the same key value).
     """
     result = await db.execute(select(IdempotencyKey).where(IdempotencyKey.scope == scope, IdempotencyKey.key == key))
     row = result.scalar_one_or_none()
     if row is None:
         return None
+    if row.actor != actor:
+        raise ConflictError(f"Idempotency key '{key}' is already in use by another actor.")
     if row.request_hash != request_hash:
         raise ConflictError(f"Idempotency key '{key}' was already used for a different request.")
     return row.response_body
@@ -83,18 +89,43 @@ def record_idempotency_key(
     )
 
 
+_IDEMPOTENCY_CONSTRAINT_NAME = "uq_idempotency_keys_scope_key"
+
+
+def _violates_idempotency_constraint(exc: IntegrityError) -> bool:
+    """Best-effort check that ``exc`` is specifically the (scope, key) unique violation.
+
+    Constraint-name attribute access differs by DB-API driver (e.g. asyncpg
+    nests it under ``exc.orig.__cause__``, psycopg exposes it via
+    ``exc.orig.diag``); fall back to a substring check of the rendered
+    exception so an unrecognised driver shape still classifies correctly
+    rather than silently mismatching every commit-time IntegrityError as an
+    idempotency conflict.
+    """
+    for candidate in (
+        getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None),
+        getattr(exc.orig, "constraint_name", None),
+    ):
+        if candidate is not None:
+            return candidate == _IDEMPOTENCY_CONSTRAINT_NAME
+    return _IDEMPOTENCY_CONSTRAINT_NAME in str(exc)
+
+
 async def commit_with_idempotency_guard(db: AsyncSession, *, idempotency_key: str | None) -> None:
     """Commit, translating a concurrent duplicate-key race into a clean ConflictError.
 
     Two concurrent retries with the same key can both pass ``check_idempotency_key``
     (neither has committed yet) and both attempt to insert the same (scope, key)
     row; the loser hits the unique constraint at commit time rather than earlier.
+    Only that specific constraint is translated — any other IntegrityError (e.g.
+    an unrelated FK violation racing the same commit) is re-raised unchanged so
+    it isn't misreported as an idempotency conflict.
     """
     try:
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        if idempotency_key:
+        if idempotency_key and _violates_idempotency_constraint(exc):
             raise ConflictError(
                 f"Idempotency key '{idempotency_key}' is already in use by a concurrent request; retry."
             ) from exc
