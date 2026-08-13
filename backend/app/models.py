@@ -17,6 +17,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -604,6 +605,12 @@ class FaqItem(Base):
     """
 
     __tablename__ = "faq_items"
+    __table_args__ = (
+        # Deferred so a reorder can touch several rows in one transaction
+        # without a transient duplicate mid-transaction tripping the check —
+        # only the state at commit has to be unique (#836).
+        UniqueConstraint("sort_order", name="uq_faq_items_sort_order", deferrable=True, initially="DEFERRED"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     question_nl: Mapped[str] = mapped_column(String(500))

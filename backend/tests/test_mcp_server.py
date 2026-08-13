@@ -538,6 +538,40 @@ class TestAdminToolWiring:
         )
 
     @pytest.mark.anyio
+    async def test_list_registrations_requires_admin(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = _make_access_token(["volunteer"])
+        with patch.object(mcp_module, "get_access_token", return_value=token), pytest.raises(PermissionError):
+            await backend.list_registrations()
+
+    @pytest.mark.anyio
+    async def test_list_registrations_delegates_with_role_and_filters(self):
+        backend = ChampagneFestivalMcpBackend(MagicMock())
+        token = SimpleNamespace(claims={"sub": "admin-1", "realm_access": {"roles": ["admin"]}})
+        with (
+            patch.object(mcp_module, "get_access_token", return_value=token),
+            patch.object(
+                mcp_module.mcp_admin_registrations,
+                "list_registrations",
+                new=AsyncMock(return_value={"registrations": [], "count": 0, "next_offset": None}),
+            ) as mocked,
+        ):
+            result = await backend.list_registrations(edition_id="edition-1", status="confirmed", limit=10)
+        assert result == {"registrations": [], "count": 0, "next_offset": None}
+        mocked.assert_awaited_once_with(
+            backend.session_factory,
+            "admin",
+            edition_id="edition-1",
+            event_id=None,
+            status="confirmed",
+            payment_status=None,
+            checked_in=None,
+            q=None,
+            limit=10,
+            offset=0,
+        )
+
+    @pytest.mark.anyio
     async def test_delete_registration_requires_admin(self):
         backend = ChampagneFestivalMcpBackend(MagicMock())
         token = _make_access_token(["volunteer"])

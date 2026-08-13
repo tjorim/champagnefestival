@@ -47,7 +47,6 @@ async def test_faq_crud(client):
         json={
             "question_nl": "Wanneer?",
             "answer_nl": "Op 2 oktober.",
-            "sort_order": 0,
         },
         headers=ADMIN_HEADERS,
     )
@@ -171,14 +170,71 @@ async def test_faq_requires_dutch_question_and_answer(client):
 
 @pytest.mark.anyio
 async def test_active_faq_respects_sort_order(client):
-    r = await client.post(
-        "/api/faq", json={"question_nl": "Second", "answer_nl": "b", "sort_order": 1}, headers=ADMIN_HEADERS
-    )
-    assert r.status_code == 201
-    r = await client.post(
-        "/api/faq", json={"question_nl": "First", "answer_nl": "a", "sort_order": 0}, headers=ADMIN_HEADERS
-    )
-    assert r.status_code == 201
+    """Items are created in append order, then reordering (not sort_order on
+    create/update) is what changes display order — see test_faq_reorder_*
+    below for the dedicated reorder endpoint (#836)."""
+    r = await client.post("/api/faq", json={"question_nl": "First", "answer_nl": "a"}, headers=ADMIN_HEADERS)
+    first_id = r.json()["id"]
+    r = await client.post("/api/faq", json={"question_nl": "Second", "answer_nl": "b"}, headers=ADMIN_HEADERS)
+    second_id = r.json()["id"]
 
     r = await client.get("/api/faq/active", params={"locale": "nl"})
     assert [i["question"] for i in r.json()] == ["First", "Second"]
+
+    r = await client.post("/api/faq/reorder", json={"ordered_ids": [second_id, first_id]}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert [i["id"] for i in r.json()] == [second_id, first_id]
+
+    r = await client.get("/api/faq/active", params={"locale": "nl"})
+    assert [i["question"] for i in r.json()] == ["Second", "First"]
+
+
+@pytest.mark.anyio
+async def test_faq_create_appends_after_the_current_last_item(client):
+    r = await client.post("/api/faq", json=DUTCH_ONLY, headers=ADMIN_HEADERS)
+    first = r.json()
+    r = await client.post("/api/faq", json={"question_nl": "Tweede", "answer_nl": "b"}, headers=ADMIN_HEADERS)
+    second = r.json()
+    assert second["sort_order"] > first["sort_order"]
+
+
+@pytest.mark.anyio
+async def test_faq_reorder_rejects_stale_or_partial_list(client):
+    r = await client.post("/api/faq", json=DUTCH_ONLY, headers=ADMIN_HEADERS)
+    first_id = r.json()["id"]
+    r = await client.post("/api/faq", json={"question_nl": "Tweede", "answer_nl": "b"}, headers=ADMIN_HEADERS)
+    second_id = r.json()["id"]
+
+    # Missing an existing item.
+    r = await client.post("/api/faq/reorder", json={"ordered_ids": [first_id]}, headers=ADMIN_HEADERS)
+    assert r.status_code == 409
+
+    # Names an item that doesn't exist.
+    r = await client.post(
+        "/api/faq/reorder", json={"ordered_ids": [first_id, second_id, "faq_nonexistent"]}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_faq_reorder_rejects_duplicate_ids(client):
+    r = await client.post("/api/faq", json=DUTCH_ONLY, headers=ADMIN_HEADERS)
+    first_id = r.json()["id"]
+
+    r = await client.post("/api/faq/reorder", json={"ordered_ids": [first_id, first_id]}, headers=ADMIN_HEADERS)
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_faq_update_cannot_set_sort_order(client):
+    """sort_order isn't part of the update payload shape at all — reordering
+    only happens through /api/faq/reorder (#836)."""
+    r = await client.post("/api/faq", json=DUTCH_ONLY, headers=ADMIN_HEADERS)
+    item = r.json()
+
+    r = await client.put(
+        f"/api/faq/{item['id']}", json={"sort_order": 99, "question_nl": "Aangepast"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert r.json()["sort_order"] == item["sort_order"]
+    assert r.json()["question_nl"] == "Aangepast"
