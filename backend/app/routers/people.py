@@ -1,115 +1,34 @@
-"""People CRUD endpoints (admin-only)."""
+"""People CRUD endpoints (admin-only).
 
-import logging
+Business logic — identity normalisation, phone parsing, and the
+create/update/delete/merge transitions — lives in
+``app.services.people_service`` and is shared with ``app.mcp.admin.people``.
+"""
 
-import phonenumbers
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import Text, cast, or_, select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Text, cast, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
-from app.live import live_bus
-from app.live import mapping as live_mapping
-from app.models import Event, Exhibitor, Person, Registration, VolunteerPeriod
+from app.models import Event, Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
+from app.services import people_service
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     bounded_limit,
     person_search_order_by,
     person_search_predicate,
 )
-from app.utils import get_or_404, make_id, person_to_dict, registration_to_list_dict, roles_contains
+from app.utils import person_to_dict, registration_to_list_dict, roles_contains
 
 router = APIRouter(
     prefix="/api/people",
     tags=["people"],
     dependencies=[Depends(require_admin)],
 )
-logger = logging.getLogger(__name__)
-
-
-def _normalise_roles(roles: list[str]) -> list[str]:
-    normalised: set[str] = set()
-    for role in roles:
-        if not role or not role.strip():
-            continue
-        r = role.strip().lower()
-        normalised.add(r)
-    return sorted(normalised)
-
-
-def _normalise_optional_identity(value: str | None) -> str | None:
-    """Strip separators and normalise case so that e.g. '93.05.18-223.61' and
-    '93051822361' are treated as the same value for uniqueness checks."""
-    if value is None:
-        return None
-    for ch in (" ", ".", "-", "/"):
-        value = value.replace(ch, "")
-    value = value.strip().lower()
-    return value or None
-
-
-def parse_phone(raw: str | None) -> str:
-    """Parse and normalise a phone number to E.164 format.
-
-    Uses the ``phonenumbers`` library (Google libphonenumber binding) with
-    ``"BE"`` as the default region for numbers that lack a country code prefix.
-    Numbers that already carry a ``+`` or ``00`` IDD prefix are parsed
-    regardless of the default region.
-
-    Returns ``""`` for empty/None input.
-    Raises :class:`fastapi.HTTPException` (422) for unparseable or invalid input.
-    """
-    if not raw or not raw.strip():
-        return ""
-    try:
-        parsed = phonenumbers.parse(raw, "BE")
-    except phonenumbers.NumberParseException as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=f"Invalid phone number: {exc}",
-        ) from exc
-    if not phonenumbers.is_valid_number(parsed):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Invalid phone number.",
-        )
-    return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
-
-
-def _raise_identity_conflict() -> None:
-    raise HTTPException(
-        status_code=409,
-        detail="Person with this national register number or eID document number already exists.",
-    )
-
-
-async def _ensure_unique_identity_fields(
-    db: AsyncSession,
-    national_register_number: str | None = None,
-    eid_document_number: str | None = None,
-    exclude_id: str | None = None,
-) -> None:
-    if national_register_number is not None:
-        stmt = select(Person).where(Person.national_register_number == national_register_number)
-        if exclude_id:
-            stmt = stmt.where(Person.id != exclude_id)
-        existing = (await db.execute(stmt)).scalar_one_or_none()
-        if existing is not None:
-            _raise_identity_conflict()
-
-    if eid_document_number is not None:
-        stmt = select(Person).where(Person.eid_document_number == eid_document_number)
-        if exclude_id:
-            stmt = stmt.where(Person.id != exclude_id)
-        existing = (await db.execute(stmt)).scalar_one_or_none()
-        if existing is not None:
-            _raise_identity_conflict()
 
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
@@ -119,46 +38,9 @@ async def create_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    national_register_number = _normalise_optional_identity(body.national_register_number)
-    eid_document_number = _normalise_optional_identity(body.eid_document_number)
-    await _ensure_unique_identity_fields(
-        db,
-        national_register_number=national_register_number,
-        eid_document_number=eid_document_number,
+    return await people_service.create_person(
+        db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-
-    person = Person(
-        id=make_id("per"),
-        name=body.name,
-        email=str(body.email).lower().strip() if body.email else "",
-        phone=parse_phone(body.phone),
-        address=body.address,
-        national_register_number=national_register_number,
-        eid_document_number=eid_document_number,
-        visits_per_month=body.visits_per_month,
-        club_name=body.club_name,
-        notes=body.notes,
-        active=body.active,
-    )
-    person.roles = _normalise_roles(body.roles)
-
-    db.add(person)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="person_created",
-        resource_type="person",
-        resource_id=person.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"roles": person.roles},
-    )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        _raise_identity_conflict()
-    await db.refresh(person)
-    return person_to_dict(person)
 
 
 @router.get("", response_model=list[PersonOut])
@@ -206,7 +88,7 @@ async def list_people(
 
 @router.get("/{person_id}", response_model=PersonOut)
 async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    person = await _get_person_or_404(db, person_id)
+    person = await people_service.get_person_or_404(db, person_id)
     return person_to_dict(person)
 
 
@@ -218,67 +100,10 @@ async def update_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    person = await _get_person_or_404(db, person_id)
-
-    for field in (
-        "name",
-        "address",
-        "visits_per_month",
-        "club_name",
-        "notes",
-        "active",
-    ):
-        if field in body.model_fields_set:
-            setattr(person, field, getattr(body, field))
-
-    if "phone" in body.model_fields_set:
-        person.phone = parse_phone(body.phone)
-
-    if "email" in body.model_fields_set:
-        person.email = str(body.email).lower().strip() if body.email else ""
-
-    nrr_in_set = "national_register_number" in body.model_fields_set
-    eid_in_set = "eid_document_number" in body.model_fields_set
-    nrr = _normalise_optional_identity(body.national_register_number) if nrr_in_set else None
-    eid = _normalise_optional_identity(body.eid_document_number) if eid_in_set else None
-
-    if nrr_in_set and nrr is not None:
-        await _ensure_unique_identity_fields(
-            db,
-            national_register_number=nrr,
-            exclude_id=person.id,
-        )
-    if eid_in_set and eid is not None:
-        await _ensure_unique_identity_fields(
-            db,
-            eid_document_number=eid,
-            exclude_id=person.id,
-        )
-
-    if nrr_in_set:
-        person.national_register_number = nrr
-    if eid_in_set:
-        person.eid_document_number = eid
-
-    if body.roles is not None:
-        person.roles = _normalise_roles(body.roles)
-
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="person_updated",
-        resource_type="person",
-        resource_id=person.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"fields_changed": sorted(body.model_fields_set)},
+    person = await people_service.get_person_or_404(db, person_id)
+    return await people_service.apply_person_update(
+        db, person, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        _raise_identity_conflict()
-    await db.refresh(person)
-    return person_to_dict(person)
 
 
 @router.get("/{person_id}/registrations")
@@ -286,7 +111,7 @@ async def list_person_registrations(
     person_id: str,
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    person = await _get_person_or_404(db, person_id)
+    person = await people_service.get_person_or_404(db, person_id)
 
     result = await db.execute(
         select(Registration)
@@ -309,109 +134,16 @@ async def merge_people(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    """Merge duplicate_id into person_id (admin-only).
-
-    - All reservations and exhibitor contacts linked to the duplicate are
-      re-pointed to the canonical person.
-    - Blank string fields on the canonical person are filled from the duplicate.
-    - Roles are merged (union).
-    - Unique identity fields (national_register_number, eid_document_number)
-      are adopted from the duplicate only if the canonical person lacks them;
-      if both carry conflicting values a 409 is returned.
-    - The duplicate person record is deleted.
-    """
+    """Merge duplicate_id into person_id (admin-only). See
+    ``app.services.people_service.merge_people`` for the exact semantics."""
     if person_id == duplicate_id:
         raise HTTPException(status_code=400, detail="Cannot merge a person with themselves.")
 
-    canonical = await _get_person_or_404(db, person_id)
-    duplicate = await _get_person_or_404(db, duplicate_id)
-
-    # Guard unique identity fields before making any changes.
-    # Normalise values with the same routine used by create/update so that
-    # equivalent but differently-formatted IDs are not treated as conflicts.
-    field_labels = {
-        "national_register_number": "national register number",
-        "eid_document_number": "eID document number",
-    }
-    for field in ("national_register_number", "eid_document_number"):
-        canon_val = _normalise_optional_identity(getattr(canonical, field))
-        dup_val = _normalise_optional_identity(getattr(duplicate, field))
-        if canon_val and dup_val and canon_val != dup_val:
-            label = field_labels[field]
-            raise HTTPException(
-                status_code=409,
-                detail=f"Both persons have a different {label}; resolve manually before merging.",
-            )
-
-    # Normalise canonical's own existing identity fields in-place so the
-    # surviving record is always in canonical form, consistent with
-    # create/update_person.
-    for field in ("national_register_number", "eid_document_number"):
-        existing = getattr(canonical, field)
-        normalised = _normalise_optional_identity(existing)
-        if normalised != existing:
-            setattr(canonical, field, normalised or None)
-
-    # Fill blank string fields on canonical from duplicate.
-    for field in ("email", "phone", "address", "club_name", "notes"):
-        if not getattr(canonical, field) and getattr(duplicate, field):
-            setattr(canonical, field, getattr(duplicate, field))
-
-    # Fill blank nullable fields on canonical from duplicate.
-    for field in ("visits_per_month",):
-        if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
-            setattr(canonical, field, getattr(duplicate, field))
-
-    # Merge roles (union).
-    canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
-
-    # Adopt unique identity fields from duplicate if canonical lacks them.
-    # Normalise the value from the duplicate before storing so the canonical
-    # ends up with the same canonical form used by create/update_person.
-    adopted = {
-        field: _normalise_optional_identity(getattr(duplicate, field))
-        for field in ("national_register_number", "eid_document_number")
-        if not getattr(canonical, field) and getattr(duplicate, field)
-    }
-    if adopted:
-        # These columns are UNIQUE, so the duplicate has to release its value
-        # before the canonical can take it. A single flush does not guarantee
-        # that order — SQLAlchemy batches same-mapper UPDATEs by primary key, so
-        # whenever the canonical's id sorts first it would write the value while
-        # the duplicate still holds it. Clear and flush separately.
-        for field in adopted:
-            setattr(duplicate, field, None)
-        await db.flush()
-        for field, value in adopted.items():
-            setattr(canonical, field, value)
-
-    await db.flush()
-
-    # Re-point everything that references the duplicate. VolunteerPeriod matters
-    # most: its FK cascades on delete, so a period left pointing at the duplicate
-    # is destroyed below rather than transferred, leaving a person carrying the
-    # volunteer role with no help periods.
-    await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=person_id))
-    await db.execute(
-        update(Exhibitor).where(Exhibitor.contact_person_id == duplicate_id).values(contact_person_id=person_id)
+    canonical = await people_service.get_person_or_404(db, person_id)
+    duplicate = await people_service.get_person_or_404(db, duplicate_id)
+    return await people_service.merge_people(
+        db, canonical, duplicate, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await db.execute(
-        update(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == duplicate_id).values(volunteer_id=person_id)
-    )
-
-    await db.delete(duplicate)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="person_merged",
-        resource_type="person",
-        resource_id=canonical.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"duplicate_id": duplicate_id},
-    )
-    await db.commit()
-    await db.refresh(canonical)
-    return person_to_dict(canonical)
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -421,40 +153,7 @@ async def delete_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
-    person = await _get_person_or_404(db, person_id)
-    result = await db.execute(
-        select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
+    person = await people_service.get_person_or_404(db, person_id)
+    await people_service.delete_person(
+        db, person, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    registrations = result.scalars().all()
-    registration_scopes = [
-        {
-            "registration_id": registration.id,
-            "event_id": registration.event_id,
-            "edition_id": registration.event.edition_id,
-        }
-        for registration in registrations
-    ]
-    for registration in registrations:
-        await db.delete(registration)
-    await db.delete(person)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="person_deleted",
-        resource_type="person",
-        resource_id=person_id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"deleted_registration_count": len(registrations)},
-    )
-    await db.commit()
-    for scope in registration_scopes:
-        try:
-            await live_bus.publish(live_mapping.registration_changed(action="deleted", **scope))
-        except Exception:
-            logger.warning(
-                "live_bus.publish failed for deleted registration %s", scope["registration_id"], exc_info=True
-            )
-
-
-async def _get_person_or_404(db: AsyncSession, person_id: str) -> Person:
-    return await get_or_404(db, Person, person_id, "Person not found.")

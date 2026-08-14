@@ -28,7 +28,6 @@ from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Edition, Event, Layout, Person, Product, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit, get_client_ip
-from app.routers.people import parse_phone
 from app.schemas import (
     OrderItemBase,
     OrderItemCategory,
@@ -50,6 +49,7 @@ from app.services.operational_search import (
     person_search_order_by,
     person_search_predicate,
 )
+from app.services.people_service import parse_phone
 from app.spam import check_form_timing, check_honeypot
 from app.utils import (
     make_id,
