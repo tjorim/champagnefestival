@@ -70,6 +70,15 @@ async def test_bulk_create_rooms_rejects_empty_batch(client):
 
 
 @pytest.mark.anyio
+async def test_bulk_create_rooms_accepts_batch_at_limit(client):
+    venue_id = await _create_venue(client)
+    items = [{**ROOM_PAYLOAD, "name": f"Room {i}", "venue_id": venue_id} for i in range(200)]
+    r = await client.post("/api/rooms/bulk", json={"items": items}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+    assert len(r.json()["items"]) == 200
+
+
+@pytest.mark.anyio
 async def test_bulk_create_rooms_rejects_batch_over_limit(client):
     venue_id = await _create_venue(client)
     items = [{**ROOM_PAYLOAD, "name": f"Room {i}", "venue_id": venue_id} for i in range(201)]
