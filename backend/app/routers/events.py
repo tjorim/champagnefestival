@@ -1,20 +1,27 @@
-"""Event management endpoints."""
+"""Event management endpoints.
+
+Business logic — the create/update transition, delete guard, and shared
+lookup/validation helpers — lives in ``app.services.events_service`` and is
+shared with ``app.mcp.admin.events``; see that module's docstring for why
+events use ``HTTPException`` directly rather than the ``ServiceError``
+convention other services follow.
+"""
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin, require_volunteer
 from app.database import get_db
-from app.models import Edition, Event, Registration
+from app.models import Event, Registration
 from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate
-from app.utils import event_to_summary_dict, get_or_404, make_id
+from app.services import events_service
+from app.utils import event_to_summary_dict
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -87,7 +94,7 @@ async def get_checkin_stats(
 
 @router.get("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
 async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    event = await _get_event_or_404(db, event_id)
+    event = await events_service.get_event_or_404(db, event_id)
     return event_to_summary_dict(event, include_edition=True)
 
 
@@ -103,40 +110,9 @@ async def create_event(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    edition = await _ensure_edition_exists(db, body.edition_id)
-    await _validate_standalone_event_date(db, edition, body.date)
-    _validate_registration_settings(
-        registration_required=body.registration_required,
-        registrations_open_from=body.registrations_open_from,
-        max_capacity=body.max_capacity,
+    return await events_service.create_event(
+        db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    event = Event(
-        id=make_id("evt"),
-        edition_id=body.edition_id,
-        title=body.title,
-        description=body.description,
-        date=body.date,
-        start_time=body.start_time,
-        end_time=body.end_time,
-        category=body.category,
-        registration_required=body.registration_required,
-        registrations_open_from=body.registrations_open_from,
-        max_capacity=body.max_capacity,
-        active=body.active,
-    )
-    db.add(event)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="event_created",
-        resource_type="event",
-        resource_id=event.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"title": event.title, "edition_id": event.edition_id},
-    )
-    await db.commit()
-    event = await _get_event_or_404(db, event.id)
-    return event_to_summary_dict(event, include_edition=True)
 
 
 @router.put("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
@@ -147,56 +123,10 @@ async def update_event(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    event = await _get_event_or_404(db, event_id)
-    edition = event.edition
-
-    if "edition_id" in body.model_fields_set and body.edition_id is not None:
-        edition = await _ensure_edition_exists(db, body.edition_id)
-        event.edition_id = body.edition_id
-
-    candidate_date = body.date if "date" in body.model_fields_set and body.date is not None else event.date
-    await _validate_standalone_event_date(db, edition, candidate_date, exclude_event_id=event.id)
-    _validate_registration_settings(
-        registration_required=(
-            body.registration_required
-            if "registration_required" in body.model_fields_set and body.registration_required is not None
-            else event.registration_required
-        ),
-        registrations_open_from=(
-            body.registrations_open_from
-            if "registrations_open_from" in body.model_fields_set
-            else event.registrations_open_from
-        ),
-        max_capacity=(body.max_capacity if "max_capacity" in body.model_fields_set else event.max_capacity),
+    event = await events_service.get_event_or_404(db, event_id)
+    return await events_service.apply_event_update(
+        db, event, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-
-    for field in [
-        "title",
-        "description",
-        "date",
-        "start_time",
-        "end_time",
-        "category",
-        "registration_required",
-        "registrations_open_from",
-        "max_capacity",
-        "active",
-    ]:
-        if field in body.model_fields_set:
-            setattr(event, field, getattr(body, field))
-
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="event_updated",
-        resource_type="event",
-        resource_id=event.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"fields_changed": sorted(body.model_fields_set)},
-    )
-    await db.commit()
-    event = await _get_event_or_404(db, event.id)
-    return event_to_summary_dict(event, include_edition=True)
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
@@ -206,99 +136,7 @@ async def delete_event(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
-    event = await _get_event_or_404(db, event_id)
-    await _reject_if_registrations_exist(db, event_id)
-    await db.delete(event)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="event_deleted",
-        resource_type="event",
-        resource_id=event_id,
-        request_id=getattr(request.state, "request_id", None),
-        details={},
+    event = await events_service.get_event_or_404(db, event_id)
+    await events_service.delete_event(
+        db, event, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await db.commit()
-
-
-async def _reject_if_registrations_exist(db: AsyncSession, event_id: str) -> None:
-    """Block event deletion while registrations still reference it.
-
-    ``registrations.event_id`` is non-nullable and the ORM relationship has no
-    delete cascade configured (registrations carry payment/attendance/order
-    history, so silently orphaning or cascading them is unsafe). Without this
-    check, ``db.delete(event)`` reaches the database, which raises a raw
-    ``NotNullViolationError`` that would otherwise surface driver/SQL details
-    and registration row contents to the caller.
-    """
-    count = (
-        await db.execute(select(func.count()).select_from(Registration).where(Registration.event_id == event_id))
-    ).scalar_one()
-    if count:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Cannot delete event: {count} registration(s) are still linked to it. Delete or reassign them first."
-            ),
-        )
-
-
-async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
-    return await get_or_404(
-        db,
-        Event,
-        event_id,
-        "Event not found.",
-        options=[selectinload(Event.edition), selectinload(Event.products)],
-    )
-
-
-async def _ensure_edition_exists(db: AsyncSession, edition_id: str) -> Edition:
-    result = await db.execute(select(Edition).where(Edition.id == edition_id))
-    edition = result.scalar_one_or_none()
-    if edition is None:
-        raise HTTPException(status_code=404, detail=f"Edition '{edition_id}' not found.")
-    return edition
-
-
-async def _validate_standalone_event_date(
-    db: AsyncSession,
-    edition: Edition,
-    event_date: date,
-    exclude_event_id: str | None = None,
-) -> None:
-    """Enforce the off-festival edition event cardinality contract.
-
-    Off-festival editions (`bourse`, `capsule_exchange`) may contain any number of events
-    (e.g. separate opening, tasting, and auction entries), but every event on such an
-    edition must share the same calendar date. Festival editions are unrestricted since
-    they legitimately span multiple days. The public UI and admin UI both render every
-    active event for an edition, so this is the only cardinality constraint enforced.
-    """
-    if edition.edition_type == "festival":
-        return
-    stmt = select(Event.date).where(Event.edition_id == edition.id)
-    if exclude_event_id is not None:
-        stmt = stmt.where(Event.id != exclude_event_id)
-    existing_dates = {row[0] for row in (await db.execute(stmt)).all()}
-    resulting_dates = existing_dates | {event_date}
-    if len(resulting_dates) > 1:
-        raise HTTPException(
-            status_code=400,
-            detail="Standalone editions may only contain events on a single date.",
-        )
-
-
-def _validate_registration_settings(
-    *,
-    registration_required: bool,
-    registrations_open_from: datetime | None,
-    max_capacity: int | None,
-) -> None:
-    if registration_required:
-        return
-    if registrations_open_from is not None or max_capacity is not None:
-        raise HTTPException(
-            status_code=400,
-            detail=("registrations_open_from and max_capacity may only be set when registration_required is true."),
-        )
