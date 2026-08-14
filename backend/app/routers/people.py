@@ -5,14 +5,14 @@ create/update/delete/merge transitions — lives in
 ``app.services.people_service`` and is shared with ``app.mcp.admin.people``.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import Text, cast, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination
+from app.dependencies import Pagination, apply_pagination, get_request_id
 from app.models import Event, Person, Registration
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services import people_service
@@ -34,13 +34,11 @@ router = APIRouter(
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 async def create_person(
     body: PersonCreate,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
 ) -> dict:
-    return await people_service.create_person(
-        db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    return await people_service.create_person(db, body=body, actor=actor, request_id=request_id)
 
 
 @router.get("", response_model=list[PersonOut])
@@ -96,14 +94,12 @@ async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> dict
 async def update_person(
     person_id: str,
     body: PersonUpdate,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
 ) -> dict:
     person = await people_service.get_person_or_404(db, person_id)
-    return await people_service.apply_person_update(
-        db, person, body, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    return await people_service.apply_person_update(db, person, body, actor=actor, request_id=request_id)
 
 
 @router.get("/{person_id}/registrations")
@@ -130,9 +126,9 @@ async def list_person_registrations(
 async def merge_people(
     person_id: str,
     duplicate_id: str,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
 ) -> dict:
     """Merge duplicate_id into person_id (admin-only). See
     ``app.services.people_service.merge_people`` for the exact semantics."""
@@ -141,17 +137,15 @@ async def merge_people(
 
     canonical = await people_service.get_person_or_404(db, person_id)
     duplicate = await people_service.get_person_or_404(db, duplicate_id)
-    return await people_service.merge_people(
-        db, canonical, duplicate, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    return await people_service.merge_people(db, canonical, duplicate, actor=actor, request_id=request_id)
 
 
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_person(
     person_id: str,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
 ) -> None:
     person = await people_service.get_person_or_404(db, person_id)
-    await people_service.delete_person(db, person, actor=actor, request_id=getattr(request.state, "request_id", None))
+    await people_service.delete_person(db, person, actor=actor, request_id=request_id)

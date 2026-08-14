@@ -10,14 +10,14 @@ multiple non-contiguous festival dates. Business logic lives in
 import csv
 import io
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination
+from app.dependencies import Pagination, apply_pagination, get_request_id
 from app.models import Person
 from app.schemas import VolunteerCreate, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
@@ -33,13 +33,11 @@ router = APIRouter(
 @router.post("", response_model=VolunteerOut, status_code=status.HTTP_201_CREATED)
 async def create_volunteer(
     body: VolunteerCreate,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
 ) -> dict:
-    return await volunteers_service.create_volunteer(
-        db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    return await volunteers_service.create_volunteer(db, body=body, actor=actor, request_id=request_id)
 
 
 @router.get("", response_model=list[VolunteerOut])
@@ -107,22 +105,20 @@ async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -
 async def update_volunteer(
     volunteer_id: str,
     body: VolunteerUpdate,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
 ) -> dict:
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
-    return await volunteers_service.apply_volunteer_update(
-        db, volunteer, body, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    return await volunteers_service.apply_volunteer_update(db, volunteer, body, actor=actor, request_id=request_id)
 
 
 @router.delete("/{volunteer_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_volunteer(
     volunteer_id: str,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
 ) -> None:
     """Remove the volunteer role from a person (soft archive).
 
@@ -130,6 +126,4 @@ async def delete_volunteer(
     semantics.
     """
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
-    await volunteers_service.delete_volunteer(
-        db, volunteer, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    await volunteers_service.delete_volunteer(db, volunteer, actor=actor, request_id=request_id)
