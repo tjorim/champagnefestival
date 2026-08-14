@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-sentry = ["sentry-sdk[fastapi]==2.66.1"]
+sentry = ["sentry-sdk[fastapi]==2.67.1"]
 
 [dependency-groups]
 dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.14.2", "ruff==0.16.2", "ty==0.0.70"]
