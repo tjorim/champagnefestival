@@ -154,6 +154,4 @@ async def delete_person(
     actor: str = Depends(get_actor_id),
 ) -> None:
     person = await people_service.get_person_or_404(db, person_id)
-    await people_service.delete_person(
-        db, person, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    await people_service.delete_person(db, person, actor=actor, request_id=getattr(request.state, "request_id", None))

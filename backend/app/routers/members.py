@@ -76,6 +76,4 @@ async def delete_member(
     actor: str = Depends(get_actor_id),
 ) -> None:
     person = await members_service.get_member_or_404(db, person_id)
-    await members_service.delete_member(
-        db, person, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    await members_service.delete_member(db, person, actor=actor, request_id=getattr(request.state, "request_id", None))

@@ -137,6 +137,4 @@ async def delete_event(
     actor: str = Depends(get_actor_id),
 ) -> None:
     event = await events_service.get_event_or_404(db, event_id)
-    await events_service.delete_event(
-        db, event, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
+    await events_service.delete_event(db, event, actor=actor, request_id=getattr(request.state, "request_id", None))
