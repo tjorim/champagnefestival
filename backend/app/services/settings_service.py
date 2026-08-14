@@ -29,25 +29,36 @@ async def get_or_create_settings(db: AsyncSession) -> AppSettings:
 
     # Two concurrent first requests can both see no row and both try to insert
     # the fixed id; the loser's flush raises IntegrityError rather than a
-    # second row. Roll back and re-fetch instead of erroring out — either
-    # request landing on the same row is a correct outcome here.
+    # second row. The insert runs inside a SAVEPOINT (db.begin_nested()) rather
+    # than the caller's outer transaction, so losing the race only unwinds
+    # this one insert — any other work the caller already queued on `db`
+    # survives instead of being silently discarded by a plain db.rollback().
     #
     # Flushes rather than commits, so the caller controls the transaction
     # boundary — update_settings folds the row creation, the mutation, and the
     # audit entry into one atomic commit instead of two separate ones.
     settings = AppSettings(id=_SETTINGS_ID)
-    db.add(settings)
     try:
-        await db.flush()
-    except IntegrityError:
-        await db.rollback()
+        async with db.begin_nested():
+            db.add(settings)
+            await db.flush()
+    except IntegrityError as exc:
+        # begin_nested() flushes any already-pending work before establishing
+        # the savepoint, so an IntegrityError here could in principle come
+        # from that pre-existing state rather than this insert. Only treat it
+        # as the expected app_settings race if it's actually that constraint —
+        # mirrors editions_service.commit_or_conflict's constraint-name check
+        # for the same reason: anything else must propagate as-is rather than
+        # being misreported as a settings-row race.
+        constraint = getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None)
+        if constraint != "app_settings_pkey":
+            raise
         settings = await db.get(AppSettings, _SETTINGS_ID)
         if settings is None:
             # The conflicting insert guarantees a row now — assert would do here,
             # but assertions are stripped under `-O`, silently returning None and
             # turning this into an AttributeError deep in the caller instead.
             raise RuntimeError("Application settings row could not be created or reloaded.") from None
-        return settings
     return settings
 
 
