@@ -62,7 +62,7 @@ class OrderItemRequest(BaseModel):
 
     Only `product_id` and `quantity` are client-supplied; `name`/`price`/`category`
     are resolved server-side against the event's real products (see
-    `_resolve_order_items` in routers/registrations.py) so a client can never set an
+    `app.services.registrations_service.resolve_order_items`) so a client can never set an
     arbitrary or zero price, or order a product that doesn't exist.
     """
 

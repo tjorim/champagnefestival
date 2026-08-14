@@ -1,4 +1,12 @@
-"""Registration CRUD endpoints."""
+"""Registration CRUD endpoints.
+
+Admin-only mutation logic — order-item resolution, the table/edition guard,
+and the admin create/update/delete transitions — lives in
+``app.services.registrations_service`` and is shared with
+``app.mcp.admin.registrations``. The public self-service endpoints below
+(guest-facing creation, CSV export, the email-token "my registrations"
+lookup flow) have no MCP equivalent and stay here.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +17,6 @@ import logging
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select
@@ -18,7 +25,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
-from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.config import settings
 from app.database import get_db
@@ -26,12 +32,9 @@ from app.dependencies import Pagination, apply_pagination
 from app.email import send_guest_access_email
 from app.live import live_bus
 from app.live import mapping as live_mapping
-from app.models import Edition, Event, Layout, Person, Product, Registration, ReservationAccessToken, Table
+from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
-    OrderItemBase,
-    OrderItemCategory,
-    OrderItemRequest,
     RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
     RegistrationCreate,
@@ -43,6 +46,7 @@ from app.schemas import (
     RegistrationOutWithToken,
     RegistrationUpdate,
 )
+from app.services import events_service, registrations_service
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     bounded_limit,
@@ -78,9 +82,9 @@ async def create_registration(
     check_honeypot(body.honeypot)
     check_form_timing(body.form_start_time)
 
-    event = await _get_event_or_404(db, body.event_id)
+    event = await events_service.get_event_or_404(db, body.event_id)
     await _ensure_public_registration_allowed(db, event, body.guest_count)
-    resolved_order_items = _resolve_order_items(event, body.order_items, body.guest_count)
+    resolved_order_items = registrations_service.resolve_order_items(event, body.order_items, body.guest_count)
 
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
@@ -115,7 +119,7 @@ async def create_registration(
     db.add(registration)
     await db.commit()
 
-    registration = await _get_registration_or_404(db, registration.id)
+    registration = await registrations_service.get_registration_or_404(db, registration.id)
     try:
         await live_bus.publish(
             live_mapping.registration_changed(
@@ -142,46 +146,9 @@ async def admin_create_registration(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    person = await _get_person_or_404(db, body.person_id)
-    event = await _get_event_or_404(db, body.event_id)
-    resolved_order_items = _resolve_order_items(event, body.order_items, body.guest_count)
-
-    registration = Registration(
-        id=make_id("reg"),
-        event_id=event.id,
-        guest_count=body.guest_count,
-        notes=body.notes,
-        accessibility_note=body.accessibility_note,
-        status=body.status,
-        person_id=person.id,
-        check_in_token=secrets.token_urlsafe(32),
+    return await registrations_service.admin_create_registration(
+        db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    registration.order_items = resolved_order_items
-    db.add(registration)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="registration_created",
-        resource_type="registration",
-        resource_id=registration.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"event_id": event.id, "person_id": person.id},
-    )
-    await db.commit()
-
-    registration = await _get_registration_or_404(db, registration.id)
-    try:
-        await live_bus.publish(
-            live_mapping.registration_changed(
-                action="created",
-                registration_id=registration.id,
-                event_id=registration.event_id,
-                edition_id=registration.event.edition_id,
-            )
-        )
-    except Exception:
-        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
-    return registration_to_dict(registration, person, event)
 
 
 @router.get(
@@ -231,7 +198,7 @@ async def list_registrations(
         stmt = apply_pagination(stmt, pagination)
 
     rows = (await db.execute(stmt)).scalars().all()
-    person_map = await _fetch_person_map(db, list(rows))
+    person_map = await registrations_service.fetch_person_map(db, list(rows))
     return [registration_to_list_dict(row, person_map[row.person_id], row.event) for row in rows]
 
 
@@ -241,7 +208,7 @@ async def export_registrations_csv(
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Export the guest list for one event as CSV (name, table, party size, status)."""
-    event = await _get_event_or_404(db, event_id)
+    event = await events_service.get_event_or_404(db, event_id)
 
     stmt = (
         select(Registration)
@@ -249,7 +216,7 @@ async def export_registrations_csv(
         .order_by(Registration.created_at)
     )
     rows = (await db.execute(stmt)).scalars().all()
-    person_map = await _fetch_person_map(db, list(rows))
+    person_map = await registrations_service.fetch_person_map(db, list(rows))
 
     table_ids = {row.table_id for row in rows if row.table_id}
     table_map: dict[str, str] = {}
@@ -396,34 +363,9 @@ async def get_registration(
     registration_id: str,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    registration = await _get_registration_or_404(db, registration_id)
-    person_map = await _fetch_person_map(db, [registration])
+    registration = await registrations_service.get_registration_or_404(db, registration_id)
+    person_map = await registrations_service.fetch_person_map(db, [registration])
     return registration_to_dict_with_token(registration, person_map[registration.person_id], registration.event)
-
-
-async def _assert_table_matches_edition(db: AsyncSession, table_id: str, edition_id: str | None) -> None:
-    """Reject seating a registration at a table belonging to another edition.
-
-    Layouts are per-edition, so a table only makes sense for registrations of the
-    edition its layout was drawn for. Layouts predating the edition link carry a
-    null edition_id and are left alone.
-    """
-    row = (
-        await db.execute(
-            select(Layout.edition_id).join(Table, Table.layout_id == Layout.id).where(Table.id == table_id)
-        )
-    ).first()
-    if row is None:
-        raise HTTPException(status_code=404, detail=f"Table '{table_id}' not found.")
-    table_edition_id = row[0]
-    if table_edition_id is not None and edition_id is not None and table_edition_id != edition_id:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Table '{table_id}' belongs to edition '{table_edition_id}', "
-                f"but this registration is for edition '{edition_id}'."
-            ),
-        )
 
 
 @router.put(
@@ -438,130 +380,10 @@ async def update_registration(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    registration = await _get_registration_or_404(db, registration_id)
-
-    # Capture pre-state for live-update topic detection.
-    _pre_table_id = registration.table_id
-    _pre_order_items = list(registration.order_items) if registration.order_items else []
-    _pre_delivery_sum = _sum_delivered(registration.order_items)
-    _pre_checked_in = registration.checked_in
-    _pre_strap_issued = registration.strap_issued
-    _pre_status = registration.status
-    _pre_payment_status = registration.payment_status
-    _pre_amount_due = registration.amount_due
-    _event_id = registration.event_id
-    _edition_id = registration.event.edition_id
-
-    if body.status is not None:
-        registration.status = body.status
-    if body.payment_status is not None:
-        registration.payment_status = body.payment_status
-    if "amount_due" in body.model_fields_set:
-        registration.amount_due = body.amount_due
-    if "table_id" in body.model_fields_set:
-        if body.table_id is not None:
-            await _assert_table_matches_edition(db, body.table_id, _edition_id)
-        registration.table_id = body.table_id
-    if body.notes is not None:
-        registration.notes = body.notes
-    if body.accessibility_note is not None:
-        registration.accessibility_note = body.accessibility_note
-    if "person_id" in body.model_fields_set:
-        if body.person_id is None:
-            raise HTTPException(
-                status_code=400, detail="person_id cannot be removed; every registration requires a person."
-            )
-        await _get_person_or_404(db, body.person_id)
-        registration.person_id = body.person_id
-    if body.order_items is not None:
-        registration.order_items = [item.model_dump() for item in body.order_items]
-    if body.checked_in is not None:
-        if body.checked_in and not registration.checked_in:
-            registration.checked_in_at = datetime.now(UTC)
-        if not body.checked_in:
-            registration.checked_in_at = None
-        registration.checked_in = body.checked_in
-    if body.strap_issued is not None:
-        registration.strap_issued = body.strap_issued
-
-    _request_id = getattr(request.state, "request_id", None)
-    _audit_base = {"resource_type": "registration", "resource_id": registration.id, "request_id": _request_id}
-    if "table_id" in body.model_fields_set and body.table_id != _pre_table_id:
-        action = "table_unassigned" if body.table_id is None else "table_assigned"
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action=action,
-            details={"table_id": body.table_id, "previous_table_id": _pre_table_id},
-            **_audit_base,
-        )
-    if body.order_items is not None and registration.order_items != _pre_order_items:
-        action = (
-            "delivery_updated" if _sum_delivered(registration.order_items) != _pre_delivery_sum else "order_updated"
-        )
-        await write_audit_entry(db, actor=actor, action=action, details={}, **_audit_base)
-    if body.checked_in is not None and registration.checked_in != _pre_checked_in:
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="check_in",
-            details={"checked_in": registration.checked_in},
-            **_audit_base,
-        )
-    if body.strap_issued is not None and registration.strap_issued != _pre_strap_issued:
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="strap_issued",
-            details={"strap_issued": registration.strap_issued},
-            **_audit_base,
-        )
-    if registration.status != _pre_status or registration.payment_status != _pre_payment_status:
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="registration_status_changed",
-            details={
-                "status": registration.status,
-                "payment_status": registration.payment_status,
-            },
-            **_audit_base,
-        )
-    if registration.amount_due != _pre_amount_due:
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="amount_due_updated",
-            details={
-                "amount_due": float(registration.amount_due) if registration.amount_due is not None else None,
-                "previous_amount_due": float(_pre_amount_due) if _pre_amount_due is not None else None,
-            },
-            **_audit_base,
-        )
-
-    await db.commit()
-    registration = await _get_registration_or_404(db, registration.id)
-    person_map = await _fetch_person_map(db, [registration])
-
-    # Publish live-update events; bus errors must never break write responses.
-    try:
-        _scope = {"registration_id": registration.id, "event_id": _event_id, "edition_id": _edition_id}
-        if registration.table_id != _pre_table_id:
-            await live_bus.publish(live_mapping.seating_changed(table_id=registration.table_id, **_scope))
-        if body.order_items is not None and registration.order_items != _pre_order_items:
-            if _sum_delivered(registration.order_items) != _pre_delivery_sum:
-                await live_bus.publish(live_mapping.delivery_changed(**_scope))
-            else:
-                await live_bus.publish(live_mapping.order_changed(**_scope))
-        if registration.checked_in != _pre_checked_in or registration.strap_issued != _pre_strap_issued:
-            await live_bus.publish(live_mapping.check_in_changed(**_scope))
-        _metadata = {"status", "payment_status", "amount_due", "notes", "accessibility_note", "person_id"}
-        if any(f in body.model_fields_set for f in _metadata):
-            await live_bus.publish(live_mapping.registration_changed(action="updated", **_scope))
-    except Exception:
-        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
-
-    return registration_to_dict(registration, person_map[registration.person_id], registration.event)
+    registration = await registrations_service.get_registration_or_404(db, registration_id)
+    return await registrations_service.apply_registration_update(
+        db, registration, body, actor=actor, request_id=getattr(request.state, "request_id", None)
+    )
 
 
 @router.delete(
@@ -575,38 +397,10 @@ async def delete_registration(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
-    registration = await _get_registration_or_404(db, registration_id)
-    _reg_id = registration.id
-    _event_id = registration.event_id
-    _edition_id = registration.event.edition_id
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="registration_deleted",
-        resource_type="registration",
-        resource_id=_reg_id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"event_id": _event_id},
+    registration = await registrations_service.get_registration_or_404(db, registration_id)
+    await registrations_service.delete_registration(
+        db, registration, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await db.delete(registration)
-    await db.commit()
-    try:
-        await live_bus.publish(
-            live_mapping.registration_changed(
-                action="deleted",
-                registration_id=_reg_id,
-                event_id=_event_id,
-                edition_id=_edition_id,
-            )
-        )
-    except Exception:
-        logger.warning("live_bus.publish failed for deleted registration %s", _reg_id, exc_info=True)
-
-
-def _sum_delivered(order_items: list[dict] | None) -> int:
-    if not order_items:
-        return 0
-    return sum(int(item.get("delivered_quantity") or 0) for item in order_items)
 
 
 def _hash_guest_access_token(token: str) -> str:
@@ -663,104 +457,6 @@ async def _load_guest_registrations_by_email(
     return [(row, person_map[row.person_id], row.event) for row in rows]
 
 
-async def _get_registration_or_404(db: AsyncSession, registration_id: str) -> Registration:
-    result = await db.execute(
-        select(Registration)
-        .options(
-            selectinload(Registration.event).selectinload(Event.edition),
-            selectinload(Registration.event).selectinload(Event.products),
-        )
-        .where(Registration.id == registration_id)
-    )
-    registration = result.scalar_one_or_none()
-    if registration is None:
-        raise HTTPException(status_code=404, detail="Registration not found.")
-    return registration
-
-
-async def _get_person_or_404(db: AsyncSession, person_id: str) -> Person:
-    result = await db.execute(select(Person).where(Person.id == person_id))
-    person = result.scalar_one_or_none()
-    if person is None:
-        raise HTTPException(status_code=404, detail="Person not found.")
-    return person
-
-
-async def _get_event_or_404(db: AsyncSession, event_id: str) -> Event:
-    result = await db.execute(
-        select(Event).options(selectinload(Event.edition), selectinload(Event.products)).where(Event.id == event_id)
-    )
-    event = result.scalar_one_or_none()
-    if event is None:
-        raise HTTPException(status_code=404, detail="Event not found.")
-    return event
-
-
-def _resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_count: int) -> list[dict]:
-    """Resolve client-supplied product_id/quantity pairs against the event's real,
-    active products, snapshotting name/price/category server-side (see Product's
-    docstring). Rejects any product_id that isn't an active product on this event,
-    so a client can never set an arbitrary price or order a nonexistent product.
-
-    Also enforces that a required product (e.g. an entry ticket) is present
-    whenever an optional one is ordered — an event with required products
-    configured rejects an order for optional add-ons alone — and applies each
-    ordered product's bundle (Product.included_product_id/included_per_guests):
-    a free quantity of the bundled product, scaled to guest_count, is merged
-    into that product's line item on top of anything explicitly requested.
-    """
-    products_by_id: dict[str, Product] = {p.id: p for p in event.products if p.active}
-
-    # product_id -> (quantity, included_quantity)
-    line_items: dict[str, tuple[int, int]] = {}
-    ordered_ids: set[str] = set()
-    for req in requests:
-        product = products_by_id.get(req.product_id)
-        if product is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Product '{req.product_id}' is not available for this event.",
-            )
-        ordered_ids.add(product.id)
-        quantity, included_quantity = line_items.get(product.id, (0, 0))
-        line_items[product.id] = (quantity + req.quantity, included_quantity)
-
-    required_ids = {p.id for p in products_by_id.values() if p.required}
-    if required_ids and (ordered_ids - required_ids) and not (ordered_ids & required_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This event requires a required product (e.g. an entry ticket) before any optional products can be ordered.",
-        )
-
-    for product_id in list(ordered_ids):
-        product = products_by_id[product_id]
-        if product.included_product_id is None or product.included_per_guests is None:
-            continue
-        target = products_by_id.get(product.included_product_id)
-        if target is None:
-            continue  # bundled product archived since — inclusion silently no longer applies
-        included_qty = guest_count // product.included_per_guests
-        if included_qty <= 0:
-            continue
-        quantity, included_quantity = line_items.get(target.id, (0, 0))
-        line_items[target.id] = (quantity + included_qty, included_quantity + included_qty)
-
-    resolved: list[dict] = []
-    for product_id, (quantity, included_quantity) in line_items.items():
-        product = products_by_id[product_id]
-        resolved.append(
-            OrderItemBase(
-                product_id=product.id,
-                name=product.name,
-                quantity=quantity,
-                price=float(product.price),
-                category=cast(OrderItemCategory, product.category),
-                included_quantity=included_quantity,
-            ).model_dump()
-        )
-    return resolved
-
-
 async def _ensure_public_registration_allowed(
     db: AsyncSession,
     event: Event,
@@ -813,11 +509,3 @@ async def _ensure_public_registration_allowed(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This event is fully booked.",
         )
-
-
-async def _fetch_person_map(db: AsyncSession, rows: list[Registration]) -> dict[str, Person]:
-    if not rows:
-        return {}
-    person_ids = {row.person_id for row in rows}
-    people = (await db.execute(select(Person).where(Person.id.in_(person_ids)))).scalars().all()
-    return {person.id: person for person in people}
