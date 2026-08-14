@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.mcp.utils import MCPToolError, validate_with_schema
-from app.schemas import RoomCreate, RoomUpdate
+from app.schemas import RoomBulkCreate, RoomCreate, RoomUpdate
 from app.services import rooms_service
 from app.services.errors import ServiceError
 
@@ -37,6 +37,24 @@ async def create_room(
     async with session_factory() as db:
         try:
             return await rooms_service.create_room(db, actor=actor, body=body)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def bulk_create_rooms(
+    session_factory: Any,
+    actor: str,
+    *,
+    items: list[RoomCreate],
+    idempotency_key: str | None = None,
+) -> dict:
+    # Reuse RoomBulkCreate's Field(min_length=1, max_length=200) so the MCP
+    # surface enforces the same batch-size bound as the REST endpoint (#837
+    # review) instead of a second, easily-drifting magic number.
+    validate_with_schema(RoomBulkCreate, items=items, idempotency_key=idempotency_key)
+    async with session_factory() as db:
+        try:
+            return await rooms_service.bulk_create_rooms(db, actor=actor, items=items, idempotency_key=idempotency_key)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

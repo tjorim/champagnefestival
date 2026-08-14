@@ -15,7 +15,15 @@ from app.audit import write_audit_entry
 from app.models import Layout, Room, Venue
 from app.schemas import RoomCreate, RoomUpdate
 from app.services.errors import ConflictError, NotFoundError
+from app.services.idempotency import (
+    check_idempotency_key,
+    commit_with_idempotency_guard,
+    hash_request,
+    record_idempotency_key,
+)
 from app.utils import make_id, room_to_dict
+
+_BULK_SCOPE = "rooms.bulk_create"
 
 
 async def create_room(db: AsyncSession, *, actor: str, body: RoomCreate, request_id: str | None = None) -> dict:
@@ -46,6 +54,69 @@ async def create_room(db: AsyncSession, *, actor: str, body: RoomCreate, request
     await db.commit()
     await db.refresh(r)
     return room_to_dict(r)
+
+
+async def bulk_create_rooms(
+    db: AsyncSession,
+    *,
+    actor: str,
+    items: list[RoomCreate],
+    idempotency_key: str | None = None,
+    request_id: str | None = None,
+) -> dict:
+    """Create several rooms in a single transaction; all-or-nothing (#837).
+
+    See ``app.services.idempotency`` for the retry-safety contract of
+    ``idempotency_key``.
+    """
+    request_hash = hash_request([item.model_dump(mode="json") for item in items])
+    if idempotency_key:
+        cached = await check_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
+        )
+        if cached is not None:
+            return cached
+
+    venue_ids = {item.venue_id for item in items}
+    found = await db.execute(select(Venue.id).where(Venue.id.in_(venue_ids)))
+    missing = venue_ids - set(found.scalars().all())
+    if missing:
+        raise NotFoundError(f"Venue(s) not found: {sorted(missing)}.")
+
+    rows = [
+        Room(
+            id=make_id("room"),
+            venue_id=item.venue_id,
+            name=item.name,
+            width_m=item.width_m,
+            length_m=item.length_m,
+            color=item.color,
+            active=item.active,
+            dimensions_placeholder=False,
+        )
+        for item in items
+    ]
+    db.add_all(rows)
+    await db.flush()
+
+    for r in rows:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="room_created",
+            resource_type="room",
+            resource_id=r.id,
+            request_id=request_id,
+            details={"name": r.name, "venue_id": r.venue_id, "bulk": True},
+        )
+
+    response = {"items": [room_to_dict(r) for r in rows]}
+    if idempotency_key:
+        record_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+        )
+    await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
+    return response
 
 
 async def list_rooms(db: AsyncSession, venue_id: str | None = None) -> list[dict]:

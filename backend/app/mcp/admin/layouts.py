@@ -12,7 +12,7 @@ from datetime import date as dt_date
 from typing import Any
 
 from app.mcp.utils import MCPToolError, validate_with_schema
-from app.schemas import LayoutCopyCreate, LayoutCreate
+from app.schemas import LayoutBulkCreate, LayoutCopyCreate, LayoutCreate
 from app.services import layouts_service
 from app.services.errors import ServiceError
 
@@ -68,6 +68,23 @@ async def copy_layout(
     async with session_factory() as db:
         try:
             return await layouts_service.copy_layout(db, actor=actor, source_layout_id=source_layout_id, body=body)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def bulk_create_layouts(
+    session_factory: Any,
+    actor: str,
+    *,
+    items: list[LayoutCreate],
+    idempotency_key: str | None = None,
+) -> dict:
+    validate_with_schema(LayoutBulkCreate, items=items, idempotency_key=idempotency_key)
+    async with session_factory() as db:
+        try:
+            return await layouts_service.bulk_create_layouts(
+                db, actor=actor, items=items, idempotency_key=idempotency_key
+            )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

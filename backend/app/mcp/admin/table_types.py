@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from app.mcp.utils import MCPToolError, validate_with_schema
-from app.schemas import TableTypeCreate, TableTypeUpdate
+from app.schemas import TableTypeBulkCreate, TableTypeCreate, TableTypeUpdate
 from app.services import table_types_service
 from app.services.errors import ServiceError
 
@@ -41,6 +41,23 @@ async def create_table_type(
     async with session_factory() as db:
         try:
             return await table_types_service.create_table_type(db, actor=actor, body=body)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def bulk_create_table_types(
+    session_factory: Any,
+    actor: str,
+    *,
+    items: list[TableTypeCreate],
+    idempotency_key: str | None = None,
+) -> dict:
+    validate_with_schema(TableTypeBulkCreate, items=items, idempotency_key=idempotency_key)
+    async with session_factory() as db:
+        try:
+            return await table_types_service.bulk_create_table_types(
+                db, actor=actor, items=items, idempotency_key=idempotency_key
+            )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

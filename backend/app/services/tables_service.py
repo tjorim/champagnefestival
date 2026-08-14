@@ -19,9 +19,17 @@ from app.live import mapping as live_mapping
 from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableCreate, TableUpdate
 from app.services.errors import ConflictError, NotFoundError
+from app.services.idempotency import (
+    check_idempotency_key,
+    commit_with_idempotency_guard,
+    hash_request,
+    record_idempotency_key,
+)
 from app.utils import make_id, table_to_dict
 
 logger = logging.getLogger(__name__)
+
+_BULK_SCOPE = "tables.bulk_create"
 
 
 async def _get_layout_edition_id(db: AsyncSession, layout_id: str) -> str | None:
@@ -73,6 +81,91 @@ async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, reque
     await _publish_seating_changed(action="created", table_id=t.id, edition_id=edition_id)
     # New tables have no reservations yet
     return table_to_dict(t, [])
+
+
+async def bulk_create_tables(
+    db: AsyncSession,
+    *,
+    actor: str,
+    items: list[TableCreate],
+    idempotency_key: str | None = None,
+    request_id: str | None = None,
+) -> dict:
+    """Create several tables in a single transaction; all-or-nothing (#837).
+
+    See ``app.services.idempotency`` for the retry-safety contract of
+    ``idempotency_key``.
+    """
+    request_hash = hash_request([item.model_dump(mode="json") for item in items])
+    if idempotency_key:
+        cached = await check_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
+        )
+        if cached is not None:
+            return cached
+
+    table_type_ids = {item.table_type_id for item in items}
+    layout_ids = {item.layout_id for item in items}
+
+    # Lock the referenced TableType rows so a concurrent delete_table_type can't
+    # race this insert — see create_table. Ordered by id so two overlapping
+    # batches always acquire their locks in the same sequence and can't deadlock.
+    locked_tt = await db.execute(
+        select(TableType.id).where(TableType.id.in_(table_type_ids)).order_by(TableType.id).with_for_update()
+    )
+    missing_tt = table_type_ids - set(locked_tt.scalars().all())
+    if missing_tt:
+        raise NotFoundError(f"TableType(s) not found: {sorted(missing_tt)}.")
+
+    found_layouts = await db.execute(select(Layout.id, Layout.edition_id).where(Layout.id.in_(layout_ids)))
+    layout_edition_by_id: dict[str, str | None] = {}
+    for layout_id, edition_id in found_layouts.all():
+        layout_edition_by_id[layout_id] = edition_id
+    missing_layouts = layout_ids - set(layout_edition_by_id.keys())
+    if missing_layouts:
+        raise NotFoundError(f"Layout(s) not found: {sorted(missing_layouts)}.")
+
+    rows: list[Table] = []
+    for item in items:
+        t = Table(
+            id=make_id("tbl"),
+            name=item.name,
+            capacity=item.capacity,
+            x=item.x,
+            y=item.y,
+            table_type_id=item.table_type_id,
+            rotation=item.rotation,
+            layout_id=item.layout_id,
+        )
+        t.reservation_ids = []
+        db.add(t)
+        rows.append(t)
+    await db.flush()
+
+    for t in rows:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="table_created",
+            resource_type="table",
+            resource_id=t.id,
+            request_id=request_id,
+            details={"layout_id": t.layout_id, "name": t.name, "bulk": True},
+        )
+
+    # New tables have no reservations yet.
+    response = {"items": [table_to_dict(t, []) for t in rows]}
+    if idempotency_key:
+        record_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+        )
+    await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
+
+    for t in rows:
+        await _publish_seating_changed(
+            action="created", table_id=t.id, edition_id=layout_edition_by_id.get(t.layout_id)
+        )
+    return response
 
 
 async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[dict]:

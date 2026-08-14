@@ -22,7 +22,15 @@ from app.audit import write_audit_entry
 from app.models import Area, Edition, Exhibitor, Layout, Registration, Room, Table, TableType
 from app.schemas import LayoutCopyCreate, LayoutCreate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
+from app.services.idempotency import (
+    check_idempotency_key,
+    commit_with_idempotency_guard,
+    hash_request,
+    record_idempotency_key,
+)
 from app.utils import area_to_dict, layout_to_dict, make_id, table_to_dict
+
+_BULK_SCOPE = "layouts.bulk_create"
 
 # Mirror the rendering constants from frontend/src/utils/layoutUtils.ts so that
 # the backend containment check matches the frontend's hit-testing exactly.
@@ -192,6 +200,85 @@ async def create_layout(
     await db.commit()
     await db.refresh(lay)
     return layout_to_dict(lay, date=resolved_date)
+
+
+async def bulk_create_layouts(
+    db: AsyncSession,
+    *,
+    actor: str,
+    items: list[LayoutCreate],
+    idempotency_key: str | None = None,
+    request_id: str | None = None,
+) -> dict:
+    """Create several layouts in a single transaction; all-or-nothing (#837).
+
+    Rejects duplicate room+day+edition combinations both against existing
+    rows (``_reject_if_duplicate``) and *within* the batch itself, since
+    nothing in the batch is flushed until every item has passed validation.
+    See ``app.services.idempotency`` for the retry-safety contract of
+    ``idempotency_key``.
+    """
+    request_hash = hash_request([item.model_dump(mode="json") for item in items])
+    if idempotency_key:
+        cached = await check_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
+        )
+        if cached is not None:
+            return cached
+
+    # Lock every referenced room up front — also doubles as the existence
+    # check, same as create_layout. Ordered by id so two overlapping batches
+    # always acquire their locks in the same sequence and can't deadlock.
+    room_ids = {item.room_id for item in items}
+    locked_rooms = await db.execute(select(Room.id).where(Room.id.in_(room_ids)).order_by(Room.id).with_for_update())
+    missing_rooms = room_ids - set(locked_rooms.scalars().all())
+    if missing_rooms:
+        raise NotFoundError(f"Room(s) not found: {sorted(missing_rooms)}.")
+
+    resolved_days: list[int] = []
+    resolved_dates: list[dt_date | None] = []
+    seen_in_batch: set[tuple[str, int, str | None]] = set()
+    for item in items:
+        day_id, date = await resolve_layout_day(db, item)
+        dedupe_key = (item.room_id, day_id, item.edition_id)
+        if dedupe_key in seen_in_batch:
+            raise ConflictError(f"Duplicate layout for room '{item.room_id}' and day {day_id} within this batch.")
+        seen_in_batch.add(dedupe_key)
+        await _reject_if_duplicate(db, room_id=item.room_id, day_id=day_id, edition_id=item.edition_id)
+        resolved_days.append(day_id)
+        resolved_dates.append(date)
+
+    rows = [
+        Layout(
+            id=make_id("lay"),
+            edition_id=item.edition_id,
+            room_id=item.room_id,
+            day_id=day_id,
+            label=item.label.strip(),
+        )
+        for item, day_id in zip(items, resolved_days, strict=True)
+    ]
+    db.add_all(rows)
+    await db.flush()
+
+    for lay in rows:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="layout_created",
+            resource_type="layout",
+            resource_id=lay.id,
+            request_id=request_id,
+            details={"room_id": lay.room_id, "day_id": lay.day_id, "bulk": True},
+        )
+
+    response = {"items": [layout_to_dict(lay, date=date) for lay, date in zip(rows, resolved_dates, strict=True)]}
+    if idempotency_key:
+        record_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+        )
+    await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
+    return response
 
 
 async def copy_layout(

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.schemas import TableTypeCreate, TableTypeOut, TableTypeUpdate
+from app.schemas import TableTypeBulkCreate, TableTypeBulkOut, TableTypeCreate, TableTypeOut, TableTypeUpdate
 from app.services import table_types_service
 from app.services.errors import ServiceError, to_http_exception
 
@@ -31,6 +31,25 @@ async def create_table_type(
     try:
         return await table_types_service.create_table_type(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.post("/bulk", response_model=TableTypeBulkOut, status_code=status.HTTP_201_CREATED)
+async def bulk_create_table_types(
+    body: TableTypeBulkCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    try:
+        return await table_types_service.bulk_create_table_types(
+            db,
+            actor=actor,
+            items=body.items,
+            idempotency_key=body.idempotency_key,
+            request_id=getattr(request.state, "request_id", None),
         )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
