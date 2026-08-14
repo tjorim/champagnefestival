@@ -10,9 +10,8 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
 
-from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
+from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import VolunteerCreate, VolunteerUpdate
 from app.services import volunteers_service
 
@@ -42,11 +41,6 @@ async def create_volunteer(
             return await volunteers_service.create_volunteer(db, body=body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        except IntegrityError as exc:
-            await db.rollback()
-            raise MCPToolError(
-                "Person with this national register number or eID document number already exists."
-            ) from exc
 
 
 async def get_volunteer(session_factory: Any, volunteer_id: str) -> dict:
@@ -99,11 +93,6 @@ async def update_volunteer(
             return await volunteers_service.apply_volunteer_update(db, volunteer, body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        except IntegrityError as exc:
-            await db.rollback()
-            raise MCPToolError(
-                "Person with this national register number or eID document number already exists."
-            ) from exc
 
 
 async def delete_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:

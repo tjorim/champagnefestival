@@ -132,7 +132,10 @@ def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_co
 
     for product_id in list(ordered_ids):
         product = products_by_id[product_id]
-        if product.included_product_id is None or product.included_per_guests is None:
+        # A zero/negative included_per_guests can't happen through the REST/MCP
+        # schemas (which require >= 1), but guard the division defensively
+        # against a row that reached the database some other way.
+        if product.included_product_id is None or not product.included_per_guests or product.included_per_guests < 1:
             continue
         target = products_by_id.get(product.included_product_id)
         if target is None:

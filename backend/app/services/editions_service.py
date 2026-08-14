@@ -166,7 +166,11 @@ async def validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) -> 
     # Lock the referenced exhibitor rows so a concurrent retype-to-vendor (see
     # exhibitors.update_exhibitor, which locks the same rows) can't interleave
     # with this check and leave a vendor exhibitor linked to an edition lineup.
-    await db.execute(select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids)).with_for_update())
+    # Ordered by id so two overlapping requests always acquire locks in the same
+    # sequence and can't deadlock against each other.
+    await db.execute(
+        select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids)).order_by(Exhibitor.id).with_for_update()
+    )
     exhibitor_map = await _load_exhibitors_by_ids(db, set(exhibitor_ids))
     invalid = [eid for eid in exhibitor_ids if eid not in exhibitor_map]
     if invalid:
@@ -416,3 +420,19 @@ async def apply_edition_update(
     await commit_or_conflict(db)
     edition = await get_edition_or_404(db, edition.id)
     return await edition_payload(db, edition, active_only=False)
+
+
+async def delete_edition(db: AsyncSession, edition: Edition, *, actor: str, request_id: str | None = None) -> dict:
+    edition_id = edition.id
+    await db.delete(edition)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_deleted",
+        resource_type="edition",
+        resource_id=edition_id,
+        request_id=request_id,
+        details={},
+    )
+    await db.commit()
+    return {"deleted": True, "id": edition_id}

@@ -16,7 +16,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Event, Registration
@@ -188,14 +187,6 @@ async def delete_edition(
     actor: str = Depends(get_actor_id),
 ) -> None:
     edition = await editions_service.get_edition_or_404(db, edition_id)
-    await db.delete(edition)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="edition_deleted",
-        resource_type="edition",
-        resource_id=edition_id,
-        request_id=getattr(request.state, "request_id", None),
-        details={},
+    await editions_service.delete_edition(
+        db, edition, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await db.commit()

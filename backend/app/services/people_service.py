@@ -2,11 +2,18 @@
 
 Used by both ``app.routers.people`` (REST) and ``app.mcp.admin.people`` (MCP).
 Members and volunteers are also ``Person`` rows (see
-``app.services.members_service`` / a future ``volunteers_service``) but each
-has its own rules layered on top, so they get their own service module too
-rather than being folded into this one — ``parse_phone``/``normalise_roles``/
-``normalise_optional_identity`` are reused from here though, since identity
-normalisation and phone parsing are identical across all three.
+``app.services.members_service`` / ``app.services.volunteers_service``) but
+each has its own rules layered on top, so they get their own service module
+too rather than being folded into this one. ``parse_phone``/``normalise_roles``
+are reused from here since phone parsing and role normalisation are identical
+across all three; ``normalise_optional_identity`` is *not* — members/volunteers
+only strip surrounding whitespace rather than this module's fuller separator
+stripping + lowercasing, a pre-existing inconsistency across the three
+domains' unique national-register/eID checks that predates this module split
+and isn't addressed here (unifying it would need a data migration to
+renormalise already-stored values, not just a code change) — also
+``delete_person``'s cascade is reused by ``members_service.delete_member`` via
+its ``action`` parameter.
 
 Raises ``HTTPException`` directly (matching the pre-existing shared helpers
 this consolidates, same convention as ``app/services/editions_service.py``)
@@ -18,6 +25,7 @@ for REST, ``get_or_error`` for MCP) and passes it in for update/delete/merge.
 from __future__ import annotations
 
 import logging
+from typing import NoReturn
 
 import phonenumbers
 from fastapi import HTTPException, status
@@ -85,7 +93,7 @@ def parse_phone(raw: str | None) -> str:
     return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
 
-def raise_identity_conflict() -> None:
+def raise_identity_conflict() -> NoReturn:
     raise HTTPException(
         status_code=409,
         detail="Person with this national register number or eID document number already exists.",
@@ -211,7 +219,15 @@ async def apply_person_update(
     return person_to_dict(person)
 
 
-async def delete_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+async def delete_person(
+    db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None, action: str = "person_deleted"
+) -> dict:
+    """Delete a person and cascade-delete their registrations.
+
+    ``action`` lets ``app.services.members_service.delete_member`` reuse this
+    routine verbatim with its own audit action name (``"member_deleted"``)
+    instead of keeping a byte-for-byte duplicate.
+    """
     person_id = person.id
     result = await db.execute(
         select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
@@ -231,7 +247,7 @@ async def delete_person(db: AsyncSession, person: Person, *, actor: str, request
     await write_audit_entry(
         db,
         actor=actor,
-        action="person_deleted",
+        action=action,
         resource_type="person",
         resource_id=person_id,
         request_id=request_id,

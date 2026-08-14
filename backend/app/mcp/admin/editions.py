@@ -19,7 +19,6 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.audit import write_audit_entry
 from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
 from app.schemas import EditionCreate, EditionType, EditionUpdate
 from app.services import editions_service
@@ -123,16 +122,6 @@ async def delete_edition(session_factory: Any, actor: str, edition_id: str) -> d
     async with session_factory() as db:
         try:
             edition = await editions_service.get_edition_or_404(db, edition_id)
+            return await editions_service.delete_edition(db, edition, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        await db.delete(edition)
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="edition_deleted",
-            resource_type="edition",
-            resource_id=edition_id,
-            details={},
-        )
-        await db.commit()
-        return {"deleted": True, "id": edition_id}

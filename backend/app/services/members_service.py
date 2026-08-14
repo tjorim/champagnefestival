@@ -11,27 +11,19 @@ hierarchy in ``app/services/errors.py``.
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.live import live_bus
-from app.live import mapping as live_mapping
-from app.models import Person, Registration
+from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
-from app.services.people_service import parse_phone
+from app.services import people_service
+from app.services.people_service import normalise_roles, parse_phone
 from app.utils import get_or_404, make_id, person_to_dict, roles_contains
-
-logger = logging.getLogger(__name__)
-
-
-def normalise_roles(roles: list[str]) -> list[str]:
-    return sorted({r.strip().lower() for r in roles if r and r.strip()})
 
 
 def normalise_optional_identity(value: str | None) -> str | None:
@@ -118,7 +110,14 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
         request_id=request_id,
         details={"roles": person.roles},
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Person with this national register number or eID document number already exists.",
+        ) from exc
     await db.refresh(person)
     return person_to_dict(person)
 
@@ -187,43 +186,23 @@ async def apply_member_update(
         request_id=request_id,
         details={"fields_changed": sorted(body.model_fields_set)},
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Person with this national register number or eID document number already exists.",
+        ) from exc
     await db.refresh(person)
     return person_to_dict(person)
 
 
 async def delete_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
-    person_id = person.id
-    result = await db.execute(
-        select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
-    )
-    registrations = result.scalars().all()
-    registration_scopes = [
-        {
-            "registration_id": registration.id,
-            "event_id": registration.event_id,
-            "edition_id": registration.event.edition_id,
-        }
-        for registration in registrations
-    ]
-    for registration in registrations:
-        await db.delete(registration)
-    await db.delete(person)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="member_deleted",
-        resource_type="person",
-        resource_id=person_id,
-        request_id=request_id,
-        details={"deleted_registration_count": len(registrations)},
-    )
-    await db.commit()
-    for scope in registration_scopes:
-        try:
-            await live_bus.publish(live_mapping.registration_changed(action="deleted", **scope))
-        except Exception:
-            logger.warning(
-                "live_bus.publish failed for deleted registration %s", scope["registration_id"], exc_info=True
-            )
-    return {"deleted": True, "id": person_id}
+    """Remove a member (and cascade-delete their registrations).
+
+    Delegates the shared cascade-delete/audit/live-publish routine to
+    ``people_service.delete_person``, tagged with the ``member_deleted`` audit
+    action instead of ``person_deleted``.
+    """
+    return await people_service.delete_person(db, person, actor=actor, request_id=request_id, action="member_deleted")

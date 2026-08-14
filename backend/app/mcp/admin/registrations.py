@@ -199,6 +199,6 @@ async def delete_registration(session_factory: Any, actor: str, registration_id:
     async with session_factory() as db:
         try:
             registration = await registrations_service.get_registration_or_404(db, registration_id)
+            return await registrations_service.delete_registration(db, registration, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await registrations_service.delete_registration(db, registration, actor=actor)

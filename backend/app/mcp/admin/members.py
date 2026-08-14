@@ -13,9 +13,8 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
 
-from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
+from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import members_service
 from app.utils import person_to_dict
@@ -56,11 +55,6 @@ async def create_member(
             return await members_service.create_member(db, body=body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        except IntegrityError as exc:
-            await db.rollback()
-            raise MCPToolError(
-                "Person with this national register number or eID document number already exists."
-            ) from exc
 
 
 async def get_member(session_factory: Any, person_id: str) -> dict:
@@ -122,11 +116,6 @@ async def update_member(
             return await members_service.apply_member_update(db, person, body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        except IntegrityError as exc:
-            await db.rollback()
-            raise MCPToolError(
-                "Person with this national register number or eID document number already exists."
-            ) from exc
 
 
 async def delete_member(session_factory: Any, actor: str, person_id: str) -> dict:

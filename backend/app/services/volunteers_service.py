@@ -17,6 +17,7 @@ from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import delete, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
@@ -190,7 +191,14 @@ async def create_volunteer(
         request_id=request_id,
         details={"help_period_count": len(body.help_periods)},
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Person with this national register number or eID document number already exists.",
+        ) from exc
     await db.refresh(person)
     periods_map = await load_periods_map(db, [person.id])
     return to_volunteer_out(person, periods_map.get(person.id, []))
@@ -238,7 +246,14 @@ async def apply_volunteer_update(
         request_id=request_id,
         details={"fields_changed": sorted(body.model_fields_set)},
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Person with this national register number or eID document number already exists.",
+        ) from exc
     await db.refresh(volunteer)
     periods_map = await load_periods_map(db, [volunteer.id])
     return to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
