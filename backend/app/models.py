@@ -378,7 +378,7 @@ class Edition(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     """At most one edition per `edition_type` may be active at a time — enforced by the
     `uq_editions_active_type` partial unique index (migration 009) and, on the normal
-    single-request path, by `app.routers.editions._deactivate_conflicting_editions`
+    single-request path, by `app.services.editions_service.deactivate_conflicting_editions`
     transactionally deactivating the previous active edition of the same type. See #832."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

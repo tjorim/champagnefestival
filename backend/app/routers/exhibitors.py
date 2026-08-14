@@ -113,12 +113,12 @@ async def update_exhibitor(
     if body.type is not None:
         if body.type == "vendor" and e.type != "vendor":
             # Lock this exhibitor row so a concurrent edition update that's about
-            # to link it to a lineup (see _validate_exhibitor_ids in the editions
-            # router, which locks the same row) can't interleave with this retype
-            # and leave a vendor exhibitor linked to an edition.
+            # to link it to a lineup (see validate_exhibitor_ids in
+            # editions_service, which locks the same row) can't interleave with
+            # this retype and leave a vendor exhibitor linked to an edition.
             await db.execute(select(Exhibitor.id).where(Exhibitor.id == exhibitor_id).with_for_update())
-            # Editions reject vendor ids (see _validate_exhibitor_ids in the
-            # editions router), so retyping an exhibitor that editions still link
+            # Editions reject vendor ids (see validate_exhibitor_ids in
+            # editions_service), so retyping an exhibitor that editions still link
             # to would strand them in a state their own update endpoint refuses.
             linked = await _editions_linking(db, exhibitor_id)
             if linked:

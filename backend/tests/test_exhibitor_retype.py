@@ -78,7 +78,7 @@ async def test_other_retypes_are_unaffected(client):
 
 @pytest.mark.anyio
 async def test_retyping_an_exhibitor_locks_it_against_concurrent_edition_linking(client, engine):
-    """update_exhibitor and _validate_exhibitor_ids both take a row lock on the
+    """update_exhibitor and validate_exhibitor_ids both take a row lock on the
     exhibitor, so a retype-to-vendor and an edition linking that same exhibitor
     into its lineup can't interleave — otherwise a vendor could end up linked to
     an edition despite both endpoints individually refusing that state."""
@@ -99,7 +99,7 @@ async def test_retyping_an_exhibitor_locks_it_against_concurrent_edition_linking
         await holder.execute(select(Exhibitor.id).where(Exhibitor.id == producer_id).with_for_update())
 
         async with factory() as contender:
-            # Simulate _validate_exhibitor_ids's lock attempt for an edition update
+            # Simulate validate_exhibitor_ids's lock attempt for an edition update
             # that's about to link the same exhibitor: it must block.
             with pytest.raises(asyncio.TimeoutError):
                 await asyncio.wait_for(

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Edition
-from app.routers.editions import _commit_or_conflict
+from app.services.editions_service import commit_or_conflict
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, _create_event, _post_registration
 
 
@@ -1322,7 +1322,7 @@ async def test_supersede_is_recorded_in_audit_trail(client, db_session):
 
 @pytest.mark.anyio
 async def test_activation_conflict_that_slips_past_the_dedup_check_returns_409(client, monkeypatch):
-    """If a concurrent request races past `_deactivate_conflicting_editions` (it finds
+    """If a concurrent request races past `deactivate_conflicting_editions` (it finds
     nothing to lock when neither of two brand-new editions is active yet — see that
     function's docstring), the database's partial unique index is the real backstop.
     Simulated here by neutralising the dedup check so the conflict only surfaces at
@@ -1344,12 +1344,12 @@ async def test_activation_conflict_that_slips_past_the_dedup_check_returns_409(c
     )
     assert r.status_code == 201
 
-    from app.routers import editions as editions_router
+    from app.services import editions_service
 
     async def _noop_deactivate(*args, **kwargs):
         return []
 
-    monkeypatch.setattr(editions_router, "_deactivate_conflicting_editions", _noop_deactivate)
+    monkeypatch.setattr(editions_service, "deactivate_conflicting_editions", _noop_deactivate)
 
     r = await client.post(
         "/api/editions",
@@ -1373,7 +1373,7 @@ async def test_activation_conflict_that_slips_past_the_dedup_check_returns_409(c
 
 @pytest.mark.anyio
 async def test_commit_or_conflict_does_not_mislabel_unrelated_integrity_errors(db_session):
-    """`_commit_or_conflict` must only translate the `uq_editions_active_type`
+    """`commit_or_conflict` must only translate the `uq_editions_active_type`
     violation into the activation-conflict 409 — an unrelated IntegrityError (e.g. a
     foreign key violation from a concurrently deleted venue) must propagate as-is for
     `app.main.integrity_error_handler` to report accurately, not get mislabeled as an
@@ -1389,7 +1389,7 @@ async def test_commit_or_conflict_does_not_mislabel_unrelated_integrity_errors(d
         )
     )
     with pytest.raises(IntegrityError):
-        await _commit_or_conflict(db_session)
+        await commit_or_conflict(db_session)
 
 
 @pytest.mark.anyio
