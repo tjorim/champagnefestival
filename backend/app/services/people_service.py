@@ -4,14 +4,15 @@ Used by both ``app.routers.people`` (REST) and ``app.mcp.admin.people`` (MCP).
 Members and volunteers are also ``Person`` rows (see
 ``app.services.members_service`` / ``app.services.volunteers_service``) but
 each has its own rules layered on top, so they get their own service module
-too rather than being folded into this one. ``parse_phone``/``normalise_roles``
-are reused from here since phone parsing and role normalisation are identical
-across all three; ``normalise_optional_identity`` is *not* — members/volunteers
-only strip surrounding whitespace rather than this module's fuller separator
-stripping + lowercasing, a pre-existing inconsistency across the three
-domains' unique national-register/eID checks that predates this module split
-and isn't addressed here (unifying it would need a data migration to
-renormalise already-stored values, not just a code change) — also
+too rather than being folded into this one. ``parse_phone``/``normalise_roles``/
+``normalise_optional_identity`` are all reused from here — identity
+normalisation, role normalisation, and phone parsing are identical across all
+three now. This wasn't always true: members/volunteers used to only strip
+surrounding whitespace instead of this module's fuller separator-stripping +
+lowercasing, a pre-existing inconsistency across the three domains' unique
+national-register/eID checks that predated #860's module split.
+Unifying it required renormalising already-stored rows so the unique
+constraint stayed valid under the stricter rule — see alembic revision 014.
 ``delete_person``'s cascade is reused by ``members_service.delete_member`` via
 its ``action`` parameter.
 

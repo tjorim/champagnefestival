@@ -119,6 +119,30 @@ async def test_volunteer_crud_and_constraints(client):
 
 
 @pytest.mark.anyio
+async def test_volunteer_duplicate_national_register_number_detected_despite_formatting(client):
+    """'93.05.18-223.61' and '93051822361' are the same identity — volunteers_service
+    normalises the same way people_service does (#866), so the second create is
+    rejected as a 409 even though the raw strings differ."""
+    payload = {
+        "name": "First Volunteer",
+        "national_register_number": "93.05.18-223.61",
+        "eid_document_number": "BEX000001",
+        "help_periods": [{"first_help_day": "2026-03-15", "last_help_day": "2026-03-17"}],
+    }
+    r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 201
+
+    payload = {
+        "name": "Second Volunteer",
+        "national_register_number": "93051822361",
+        "eid_document_number": "BEX000002",
+        "help_periods": [{"first_help_day": "2026-03-15", "last_help_day": "2026-03-17"}],
+    }
+    r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
+    assert r.status_code == 409
+
+
+@pytest.mark.anyio
 async def test_volunteers_support_limit_and_page(client):
     created_ids: set[str] = set()
     for i, name in enumerate(("Vol Alpha", "Vol Bravo", "Vol Charlie")):

@@ -7,6 +7,11 @@ other ``Person``-backed services. Raises ``HTTPException`` directly (matching
 the pre-existing shared helpers this consolidates, same convention as
 ``app/services/editions_service.py``) rather than the ``ServiceError``
 hierarchy in ``app/services/errors.py``.
+
+Identity fields are normalised via ``people_service.normalise_optional_identity``
+before both the uniqueness check and persistence, matching ``people_service``/
+``volunteers_service`` exactly (alembic revision 014 renormalised pre-existing
+rows so the unique constraint stays valid under the stricter rule).
 """
 
 from __future__ import annotations
@@ -22,15 +27,8 @@ from app.audit import write_audit_entry
 from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import people_service
-from app.services.people_service import normalise_roles, parse_phone
+from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
 from app.utils import get_or_404, make_id, person_to_dict, roles_contains
-
-
-def normalise_optional_identity(value: str | None) -> str | None:
-    if value is None:
-        return None
-    value = value.strip()
-    return value or None
 
 
 def ensure_member_role(person: Person) -> None:

@@ -8,6 +8,11 @@ other ``Person``-backed services. Raises ``HTTPException`` directly (matching
 the pre-existing shared helpers this consolidates, same convention as
 ``app/services/editions_service.py``) rather than the ``ServiceError``
 hierarchy in ``app/services/errors.py``.
+
+Identity fields are normalised via ``people_service.normalise_optional_identity``
+before both the uniqueness check and persistence, matching ``people_service``/
+``members_service`` exactly (alembic revision 014 renormalised pre-existing
+rows so the unique constraint stays valid under the stricter rule).
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
+from app.services.people_service import normalise_optional_identity
 from app.utils import get_or_404, make_id, person_to_dict, roles_contains
 
 
@@ -42,11 +48,9 @@ async def ensure_unique_fields(
     eid_document_number: str | None = None,
     exclude_id: str | None = None,
 ) -> None:
-    if national_register_number is not None:
-        national_register_number = national_register_number.strip() or None
-    if eid_document_number is not None:
-        eid_document_number = eid_document_number.strip() or None
-
+    """Check for a conflicting row. Callers are expected to have already run
+    values through ``normalise_optional_identity`` (see ``create_volunteer``/
+    ``apply_volunteer_update``) — this only queries with what it's given."""
     if national_register_number is not None:
         stmt = select(Person).where(Person.national_register_number == national_register_number)
         if exclude_id:
@@ -163,18 +167,16 @@ def search_volunteers_stmt(*, q: str | None = None, active: bool | None = None) 
 async def create_volunteer(
     db: AsyncSession, *, body: VolunteerCreate, actor: str, request_id: str | None = None
 ) -> dict:
-    await ensure_unique_fields(
-        db,
-        national_register_number=body.national_register_number,
-        eid_document_number=body.eid_document_number,
-    )
+    nrr = normalise_optional_identity(body.national_register_number)
+    eid = normalise_optional_identity(body.eid_document_number)
+    await ensure_unique_fields(db, national_register_number=nrr, eid_document_number=eid)
 
     person = Person(
         id=make_id("per"),
         name=body.name,
         address=body.address,
-        national_register_number=body.national_register_number,
-        eid_document_number=body.eid_document_number,
+        national_register_number=nrr,
+        eid_document_number=eid,
         active=body.active,
     )
     ensure_volunteer_role(person)
@@ -209,28 +211,24 @@ async def apply_volunteer_update(
 ) -> dict:
     volunteer_id = volunteer.id
 
-    if "national_register_number" in body.model_fields_set and body.national_register_number is not None:
-        await ensure_unique_fields(
-            db,
-            national_register_number=body.national_register_number,
-            exclude_id=volunteer_id,
-        )
-    if "eid_document_number" in body.model_fields_set and body.eid_document_number is not None:
-        await ensure_unique_fields(
-            db,
-            eid_document_number=body.eid_document_number,
-            exclude_id=volunteer_id,
-        )
+    nrr_in_set = "national_register_number" in body.model_fields_set
+    eid_in_set = "eid_document_number" in body.model_fields_set
+    nrr = normalise_optional_identity(body.national_register_number) if nrr_in_set else None
+    eid = normalise_optional_identity(body.eid_document_number) if eid_in_set else None
 
-    for field in (
-        "name",
-        "address",
-        "national_register_number",
-        "eid_document_number",
-        "active",
-    ):
+    if nrr_in_set and nrr is not None:
+        await ensure_unique_fields(db, national_register_number=nrr, exclude_id=volunteer_id)
+    if eid_in_set and eid is not None:
+        await ensure_unique_fields(db, eid_document_number=eid, exclude_id=volunteer_id)
+
+    for field in ("name", "address", "active"):
         if field in body.model_fields_set:
             setattr(volunteer, field, getattr(body, field))
+
+    if nrr_in_set:
+        volunteer.national_register_number = nrr
+    if eid_in_set:
+        volunteer.eid_document_number = eid
 
     if "help_periods" in body.model_fields_set and body.help_periods is not None:
         await replace_help_periods(db, volunteer_id, body.help_periods)
