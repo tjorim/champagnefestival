@@ -662,6 +662,26 @@ async def test_member_invalid_phone_rejected(client):
 
 
 @pytest.mark.anyio
+async def test_member_duplicate_national_register_number_detected_despite_formatting(client):
+    """'93.05.18-223.61' and '93051822361' are the same identity — members_service
+    normalises the same way people_service does (#866), so the second create is
+    rejected as a 409 even though the raw strings differ."""
+    r = await client.post(
+        "/api/members",
+        json={"name": "First Member", "national_register_number": "93.05.18-223.61"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        "/api/members",
+        json={"name": "Second Member", "national_register_number": "93051822361"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 409
+
+
+@pytest.mark.anyio
 async def test_delete_member_removes_existing_registrations(client):
     """Deleting a member with existing registrations must not hit the registrations FK RESTRICT."""
     member = await client.post(

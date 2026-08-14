@@ -2,10 +2,20 @@
 
 from typing import Any, TypeVar
 
-from fastapi import HTTPException, Query, status
+from fastapi import HTTPException, Query, Request, status
 from sqlalchemy.sql import Select
 
 SelectT = TypeVar("SelectT", bound=Select[Any])
+
+
+def get_request_id(request: Request) -> str | None:
+    """The request id set by ``app.observability``'s middleware, or ``None``.
+
+    The ``getattr`` default guards contexts where that middleware didn't run
+    (e.g. some test setups) rather than assuming ``request.state.request_id``
+    always exists.
+    """
+    return getattr(request.state, "request_id", None)
 
 
 class Pagination:

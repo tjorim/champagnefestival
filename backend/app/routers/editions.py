@@ -1,4 +1,11 @@
-"""Edition management endpoints."""
+"""Edition management endpoints.
+
+Business logic — the create/update transition, payload building, and shared
+lookup/validation helpers — lives in ``app.services.editions_service`` and is
+shared with ``app.mcp.admin.editions``; see that module's docstring for why
+editions use ``HTTPException`` directly rather than the ``ServiceError``
+convention other services follow.
+"""
 
 from __future__ import annotations
 
@@ -7,16 +14,13 @@ from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Edition, Event, Exhibitor, Registration, Venue
+from app.models import Event, Registration
 from app.schemas import EditionAttendanceStats, EditionCreate, EditionOut, EditionType, EditionUpdate
-from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
+from app.services import editions_service
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
 logger = logging.getLogger(__name__)
@@ -33,23 +37,24 @@ async def get_active_edition(
     event neither keeps an otherwise-finished edition classified as upcoming, nor
     appears in the response.
     """
-    editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
+    editions = await editions_service.load_editions(db, include_inactive=False, edition_type=edition_type)
     if not editions:
         raise HTTPException(status_code=404, detail="No active editions found.")
 
     today = datetime.now(UTC).date()
-    dated = _sorted_editions(editions, active_only=True)
+    dated = editions_service.sorted_editions(editions, active_only=True)
     active = next(
         (
             edition
             for edition in dated
-            if (edition_end_date := _edition_end_date(_active_events(edition))) and edition_end_date >= today
+            if (edition_end_date := editions_service.edition_end_date(editions_service.active_events(edition)))
+            and edition_end_date >= today
         ),
         None,
     )
     if active is None:
         raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
-    return await _edition_payload(db, active, active_only=True)
+    return await editions_service.edition_payload(db, active, active_only=True)
 
 
 @router.get("/upcoming", response_model=list[EditionOut])
@@ -63,9 +68,15 @@ async def list_upcoming_editions(
     active events are serialized in the response; see `get_active_edition`.
     """
     today = datetime.now(UTC).date()
-    editions = await _load_editions(db, include_inactive=False, edition_type=edition_type)
-    upcoming = [edition for edition in editions if (_edition_end_date(_active_events(edition)) or date.min) >= today]
-    return await _edition_payloads(db, _sorted_editions(upcoming, active_only=True), active_only=True)
+    editions = await editions_service.load_editions(db, include_inactive=False, edition_type=edition_type)
+    upcoming = [
+        edition
+        for edition in editions
+        if (editions_service.edition_end_date(editions_service.active_events(edition)) or date.min) >= today
+    ]
+    return await editions_service.edition_payloads(
+        db, editions_service.sorted_editions(upcoming, active_only=True), active_only=True
+    )
 
 
 @router.get("", response_model=list[EditionOut], dependencies=[Depends(require_admin)])
@@ -74,8 +85,10 @@ async def list_editions(
     include_inactive: bool = Query(False),
 ) -> list[dict]:
     """Admin listing: exposes every event (active or not) for management purposes."""
-    editions = await _load_editions(db, include_inactive=include_inactive)
-    return await _edition_payloads(db, _sorted_editions(editions, active_only=False), active_only=False)
+    editions = await editions_service.load_editions(db, include_inactive=include_inactive)
+    return await editions_service.edition_payloads(
+        db, editions_service.sorted_editions(editions, active_only=False), active_only=False
+    )
 
 
 @router.get("/stats", response_model=list[EditionAttendanceStats], dependencies=[Depends(require_admin)])
@@ -88,8 +101,8 @@ async def list_edition_attendance_stats(
     Includes inactive (past) editions since the point is historical comparison.
     Registered but cancelled bookings are excluded from every count.
     """
-    editions = await _load_editions(db, include_inactive=True, edition_type=edition_type)
-    editions = _sorted_editions(editions, active_only=False)
+    editions = await editions_service.load_editions(db, include_inactive=True, edition_type=edition_type)
+    editions = editions_service.sorted_editions(editions, active_only=False)
 
     stmt = (
         select(
@@ -115,7 +128,7 @@ async def list_edition_attendance_stats(
                 "year": edition.year,
                 "month": edition.month,
                 "edition_type": edition.edition_type,
-                "start_date": _edition_start_date(edition.events),
+                "start_date": editions_service.edition_start_date(edition.events),
                 "events_count": len(edition.events),
                 "total_registrations": stats.total_registrations if stats else 0,
                 "total_guests": stats.total_guests if stats else 0,
@@ -127,8 +140,8 @@ async def list_edition_attendance_stats(
 
 @router.get("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
 async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    edition = await _get_edition_or_404(db, edition_id)
-    return await _edition_payload(db, edition, active_only=False)
+    edition = await editions_service.get_edition_or_404(db, edition_id)
+    return await editions_service.edition_payload(db, edition, active_only=False)
 
 
 @router.post(
@@ -143,50 +156,9 @@ async def create_edition(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    if (await db.execute(select(Edition).where(Edition.id == body.id))).scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Edition '{body.id}' already exists.",
-        )
-    await _load_venue(db, body.venue_id)
-    _validate_exhibitors_allowed(body.edition_type, body.exhibitors)
-
-    edition = Edition(
-        id=body.id,
-        year=body.year,
-        month=body.month,
-        venue_id=body.venue_id,
-        edition_type=body.edition_type,
-        exhibitors=list(body.exhibitors),
-        co_organizer_exhibitor_id=body.co_organizer_exhibitor_id,
-        active=body.active,
+    return await editions_service.create_edition(
+        db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await _validate_exhibitor_ids(db, edition.exhibitors)
-    await _validate_co_organizer(db, edition.co_organizer_exhibitor_id)
-
-    request_id = getattr(request.state, "request_id", None)
-    deactivated: list[str] = []
-    if edition.active:
-        deactivated = await _deactivate_conflicting_editions(
-            db, edition_type=edition.edition_type, exclude_id=None, actor=actor, request_id=request_id
-        )
-
-    db.add(edition)
-    details: dict = {"year": edition.year, "month": edition.month, "edition_type": edition.edition_type}
-    if deactivated:
-        details["deactivated_conflicting_editions"] = deactivated
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="edition_created",
-        resource_type="edition",
-        resource_id=edition.id,
-        request_id=request_id,
-        details=details,
-    )
-    await _commit_or_conflict(db)
-    edition = await _get_edition_or_404(db, edition.id)
-    return await _edition_payload(db, edition, active_only=False)
 
 
 @router.put("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
@@ -197,75 +169,10 @@ async def update_edition(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    edition = await _get_edition_or_404(db, edition_id)
-
-    if "co_organizer_exhibitor_id" in body.model_fields_set:
-        await _validate_co_organizer(db, body.co_organizer_exhibitor_id)
-        edition.co_organizer_exhibitor_id = body.co_organizer_exhibitor_id
-
-    for field in ["year", "month"]:
-        if field in body.model_fields_set:
-            setattr(edition, field, getattr(body, field))
-
-    if "venue_id" in body.model_fields_set and body.venue_id is not None:
-        await _load_venue(db, body.venue_id)
-        edition.venue_id = body.venue_id
-
-    # `active`/`edition_type` are deliberately not applied to `edition` yet: doing so
-    # here would dirty the object before `_deactivate_conflicting_editions` runs below,
-    # and any autoflush in between (the exhibitor/co-organizer validations above already
-    # ran, but `_validate_exhibitor_ids` below issues one too) could flush this row into
-    # an (edition_type, active) state that collides with the still-active conflicting
-    # row — the exact violation the deactivation step exists to avoid causing.
-    target_edition_type: str = body.edition_type if "edition_type" in body.model_fields_set else edition.edition_type  # ty: ignore[invalid-assignment]
-    target_active: bool = body.active if "active" in body.model_fields_set else edition.active  # ty: ignore[invalid-assignment]
-
-    exhibitors_implicitly_cleared = False
-    if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
-        _validate_exhibitors_allowed(target_edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
-        await _validate_exhibitor_ids(db, body.exhibitors)
-        edition.exhibitors = list(body.exhibitors)
-    elif target_edition_type != "festival" and edition.exhibitors:
-        # The edition type changed away from festival without an explicit exhibitors
-        # payload — either just now (edition_type in this update) or on an edition
-        # already non-festival before this update. Off-festival editions can't carry
-        # exhibitors, so clear the now-invalid associations as part of the same atomic
-        # transition instead of rejecting the update.
-        edition.exhibitors = []
-        exhibitors_implicitly_cleared = True
-
-    _validate_exhibitors_allowed(target_edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
-
-    request_id = getattr(request.state, "request_id", None)
-    deactivated: list[str] = []
-    if target_active:
-        deactivated = await _deactivate_conflicting_editions(
-            db, edition_type=target_edition_type, exclude_id=edition.id, actor=actor, request_id=request_id
-        )
-
-    # Safe to apply now: any conflicting active row of `target_edition_type` has
-    # already been deactivated and flushed above.
-    for field in ("active", "edition_type"):
-        if field in body.model_fields_set:
-            setattr(edition, field, getattr(body, field))
-
-    details: dict = {"fields_changed": sorted(body.model_fields_set)}
-    if exhibitors_implicitly_cleared:
-        details["exhibitors_cleared"] = True
-    if deactivated:
-        details["deactivated_conflicting_editions"] = deactivated
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="edition_updated",
-        resource_type="edition",
-        resource_id=edition.id,
-        request_id=request_id,
-        details=details,
+    edition = await editions_service.get_edition_or_404(db, edition_id)
+    return await editions_service.apply_edition_update(
+        db, edition, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await _commit_or_conflict(db)
-    edition = await _get_edition_or_404(db, edition.id)
-    return await _edition_payload(db, edition, active_only=False)
 
 
 @router.delete(
@@ -279,279 +186,7 @@ async def delete_edition(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
-    edition = await _get_edition_or_404(db, edition_id)
-    await db.delete(edition)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="edition_deleted",
-        resource_type="edition",
-        resource_id=edition_id,
-        request_id=getattr(request.state, "request_id", None),
-        details={},
+    edition = await editions_service.get_edition_or_404(db, edition_id)
+    await editions_service.delete_edition(
+        db, edition, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await db.commit()
-
-
-async def _load_editions(
-    db: AsyncSession,
-    include_inactive: bool,
-    edition_type: EditionType | None = None,
-) -> list[Edition]:
-    stmt = select(Edition).options(selectinload(Edition.events).selectinload(Event.products))
-    if not include_inactive:
-        stmt = stmt.where(Edition.active.is_(True))
-    if edition_type is not None:
-        stmt = stmt.where(Edition.edition_type == edition_type)
-    return list((await db.execute(stmt)).scalars().all())
-
-
-async def _get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
-    return await get_or_404(
-        db,
-        Edition,
-        edition_id,
-        "Edition not found.",
-        options=[selectinload(Edition.events).selectinload(Event.products)],
-    )
-
-
-async def _deactivate_conflicting_editions(
-    db: AsyncSession,
-    *,
-    edition_type: str,
-    exclude_id: str | None,
-    actor: str,
-    request_id: str | None,
-) -> list[str]:
-    """Deactivate any other active edition of the same type in the same transaction.
-
-    Backs the "at most one active edition per type" invariant (#832) on the normal
-    single-request path: activating an edition transparently supersedes whichever
-    edition of that type was active before, rather than requiring the caller to
-    deactivate it first. Rows are locked with ``FOR UPDATE`` before being flipped so a
-    concurrent activation targeting one of them can't interleave. That still leaves one
-    race unresolved — two brand-new editions of the same type activated at once, with no
-    existing active row for either to lock — which is why this alone isn't the
-    invariant's backstop: the ``uq_editions_active_type`` partial unique index
-    (migration 009) is, and ``_commit_or_conflict`` turns its violation into a 409.
-    """
-    stmt = select(Edition).where(Edition.edition_type == edition_type, Edition.active.is_(True))
-    if exclude_id is not None:
-        stmt = stmt.where(Edition.id != exclude_id)
-    conflicting = list((await db.execute(stmt.with_for_update())).scalars().all())
-    for other in conflicting:
-        other.active = False
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="edition_deactivated",
-            resource_type="edition",
-            resource_id=other.id,
-            request_id=request_id,
-            details={"reason": "superseded_by_activation", "edition_type": edition_type},
-        )
-    if conflicting:
-        await db.flush()
-    return [other.id for other in conflicting]
-
-
-async def _commit_or_conflict(db: AsyncSession) -> None:
-    """Commit, translating a ``uq_editions_active_type`` violation into a 409.
-
-    A concurrent activation of two editions of the same type can race past
-    `_deactivate_conflicting_editions` with nothing to lock; see that function's
-    docstring. Other integrity violations reaching this commit — a duplicate id
-    slipping past `create_edition`'s existence check, or a venue/co-organizer
-    deleted concurrently with this request — are re-raised as-is for
-    ``app.main.integrity_error_handler`` to report accurately instead of being
-    misreported as this specific conflict.
-    """
-    try:
-        await db.commit()
-    except IntegrityError as exc:
-        await db.rollback()
-        # SQLAlchemy's asyncpg dialect wraps the driver error in a fresh exception
-        # that only copies pgcode/sqlstate, not asyncpg's richer diagnostics — but
-        # it chains the original via `raise ... from error`, so the real
-        # `asyncpg.exceptions.UniqueViolationError` (with `constraint_name`) is
-        # reachable through `__cause__`.
-        constraint = getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None)
-        if constraint != "uq_editions_active_type":
-            raise
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Another edition of this type was activated concurrently. Please retry.",
-        ) from exc
-
-
-async def _load_venue(db: AsyncSession, venue_id: str) -> dict:
-    result = await db.execute(select(Venue).where(Venue.id == venue_id))
-    venue = result.scalar_one_or_none()
-    if venue is None:
-        raise HTTPException(status_code=404, detail=f"Venue '{venue_id}' not found.")
-    return venue_to_dict(venue)
-
-
-async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, dict]:
-    if not ids:
-        return {}
-    result = await db.execute(select(Venue).where(Venue.id.in_(ids)))
-    return {venue.id: venue_to_dict(venue) for venue in result.scalars().all()}
-
-
-async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, dict]:
-    if not ids:
-        return {}
-    result = await db.execute(select(Exhibitor).where(Exhibitor.id.in_(ids), Exhibitor.active.is_(True)))
-    return {
-        exhibitor.id: {
-            "id": exhibitor.id,
-            "name": exhibitor.name,
-            "image": exhibitor.image,
-            "website": exhibitor.website,
-            "type": exhibitor.type,
-        }
-        for exhibitor in result.scalars().all()
-    }
-
-
-async def _validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) -> None:
-    if not exhibitor_ids:
-        return
-    # Lock the referenced exhibitor rows so a concurrent retype-to-vendor (see
-    # exhibitors.update_exhibitor, which locks the same rows) can't interleave
-    # with this check and leave a vendor exhibitor linked to an edition lineup.
-    await db.execute(select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids)).with_for_update())
-    exhibitor_map = await _load_exhibitors_by_ids(db, set(exhibitor_ids))
-    invalid = [eid for eid in exhibitor_ids if eid not in exhibitor_map]
-    if invalid:
-        raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
-    vendor_ids = [eid for eid in exhibitor_ids if exhibitor_map[eid]["type"] == "vendor"]
-    if vendor_ids:
-        raise HTTPException(
-            status_code=400, detail=f"Vendor-type exhibitors may not be linked to editions: {vendor_ids}"
-        )
-
-
-async def _edition_payloads(db: AsyncSession, editions: list[Edition], *, active_only: bool) -> list[dict]:
-    """Build edition response payloads.
-
-    `active_only` controls whether inactive events are dropped from the serialized
-    `events`/`dates` fields. Public endpoints (`/active`, `/upcoming`) pass `True` so
-    inactive (draft/cancelled) events never appear in unauthenticated responses;
-    admin endpoints pass `False` so event management keeps seeing everything.
-    """
-    venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
-    exhibitor_map = await _load_exhibitors_by_ids(
-        db,
-        {eid for edition in editions for eid in edition.exhibitors}
-        | {edition.co_organizer_exhibitor_id for edition in editions if edition.co_organizer_exhibitor_id},
-    )
-    payloads = []
-    for edition in editions:
-        if edition.venue_id not in venues:
-            logger.warning(
-                "Skipping edition payload because venue is missing. edition_id=%s venue_id=%s",
-                edition.id,
-                edition.venue_id,
-            )
-            continue
-        producers, sponsors, vendors = _resolve_exhibitors(edition, exhibitor_map)
-        # `Edition.events` is loaded pre-ordered by (date, start_time, created_at); filtering
-        # to active events preserves that order, so no re-sort is needed here.
-        events = _active_events(edition) if active_only else edition.events
-        payloads.append(
-            edition_to_dict(
-                edition,
-                venue=venues[edition.venue_id],
-                dates=_edition_dates(events),
-                events=[event_to_summary_dict(event) for event in events],
-                producers=producers,
-                sponsors=sponsors,
-                vendors=vendors,
-                co_organizer=exhibitor_map.get(edition.co_organizer_exhibitor_id)
-                if edition.co_organizer_exhibitor_id
-                else None,
-            )
-        )
-    return payloads
-
-
-async def _edition_payload(db: AsyncSession, edition: Edition, *, active_only: bool) -> dict:
-    payloads = await _edition_payloads(db, [edition], active_only=active_only)
-    if not payloads:
-        raise HTTPException(status_code=404, detail="Edition not found.")
-    return payloads[0]
-
-
-def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tuple[list[dict], list[dict], list[dict]]:
-    producers: list[dict] = []
-    sponsors: list[dict] = []
-    vendors: list[dict] = []
-    for exhibitor_id in edition.exhibitors:
-        item = exhibitor_map.get(exhibitor_id)
-        if item is None:
-            continue
-        if item["type"] == "producer":
-            producers.append(item)
-        elif item["type"] == "sponsor":
-            sponsors.append(item)
-        elif item["type"] == "vendor":
-            vendors.append(item)
-    return producers, sponsors, vendors
-
-
-def _active_events(edition: Edition) -> list[Event]:
-    return [event for event in edition.events if event.active]
-
-
-def _edition_dates(events: list[Event]) -> list[date]:
-    """Unique event dates in chronological order (relies on `events` being pre-sorted by date)."""
-    return list(dict.fromkeys(event.date for event in events))
-
-
-def _edition_start_date(events: list[Event]) -> date | None:
-    return events[0].date if events else None
-
-
-def _edition_end_date(events: list[Event]) -> date | None:
-    return events[-1].date if events else None
-
-
-def _sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Edition]:
-    def sort_key(edition: Edition) -> tuple:
-        events = _active_events(edition) if active_only else edition.events
-        return (
-            _edition_start_date(events) or date.max,
-            _edition_end_date(events) or date.max,
-            edition.year,
-            edition.month,
-            edition.created_at,
-        )
-
-    return sorted(editions, key=sort_key)
-
-
-async def _validate_co_organizer(db: AsyncSession, exhibitor_id: int | None) -> None:
-    """A co-organizer must be an existing, active exhibitor.
-
-    Unlike the lineup, any exhibitor type is acceptable and any edition type may
-    have one — co-organizing says who ran the event with the vzw, not who was
-    programmed at it.
-    """
-    if exhibitor_id is None:
-        return
-    exhibitor = (
-        await db.execute(select(Exhibitor).where(Exhibitor.id == exhibitor_id, Exhibitor.active.is_(True)))
-    ).scalar_one_or_none()
-    if exhibitor is None:
-        raise HTTPException(status_code=400, detail=f"Invalid or inactive co-organizer exhibitor id: {exhibitor_id}")
-
-
-def _validate_exhibitors_allowed(edition_type: EditionType, exhibitors: list[int]) -> None:
-    if edition_type != "festival" and exhibitors:
-        raise HTTPException(
-            status_code=400,
-            detail="Exhibitors are only supported on festival editions.",
-        )

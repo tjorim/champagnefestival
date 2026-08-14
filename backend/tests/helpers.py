@@ -60,7 +60,7 @@ VALID_RESERVATION = {
     "event_title": "Vrijdagavond",
     "guest_count": 2,
     # Registration creation now resolves order_items against the event's real
-    # products server-side (see _resolve_order_items in routers/registrations.py),
+    # products server-side (see app.services.registrations_service.resolve_order_items),
     # so a fixture product_id with no matching Product would be rejected. Tests
     # that care about order contents on creation create a real product first
     # and override this field; everyone else gets an order-free registration.
