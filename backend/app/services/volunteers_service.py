@@ -11,8 +11,8 @@ hierarchy in ``app/services/errors.py``.
 
 Identity fields are normalised via ``people_service.normalise_optional_identity``
 before both the uniqueness check and persistence, matching ``people_service``/
-``members_service`` exactly (alembic revision 014 renormalised pre-existing
-rows so the unique constraint stays valid under the stricter rule).
+``members_service`` exactly (the pre-baseline migration renormalised existing
+rows; that repair logic remains preserved in the baseline).
 """
 
 from __future__ import annotations
