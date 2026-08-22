@@ -12,7 +12,8 @@ surrounding whitespace instead of this module's fuller separator-stripping +
 lowercasing, a pre-existing inconsistency across the three domains' unique
 national-register/eID checks that predated #860's module split.
 Unifying it required renormalising already-stored rows so the unique
-constraint stayed valid under the stricter rule — see alembic revision 014.
+constraint stayed valid under the stricter rule; that repair is preserved in
+the database baseline.
 ``delete_person``'s cascade is reused by ``members_service.delete_member`` via
 its ``action`` parameter.
 
