@@ -88,7 +88,7 @@ risk.
 
 ## What's needed before this can actually run
 
-- **Database migration.** Deploy Alembic revision `002` before pairing. A new
+- **Database migration.** Deploy the current Alembic baseline before pairing. A new
   pairing rotates the previous watch credential; deleting the portal account
   also deletes it.
 - **Physical-device verification.** `pebble build` / `pebble install
