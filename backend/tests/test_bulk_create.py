@@ -126,6 +126,28 @@ async def test_bulk_create_rooms_idempotency_key_expires_after_replay_window(cli
 
 
 @pytest.mark.anyio
+async def test_bulk_create_rooms_idempotency_key_replays_until_window_expires(client, db_session):
+    venue_id = await _create_venue(client)
+    body = {"items": [{**ROOM_PAYLOAD, "venue_id": venue_id}], "idempotency_key": "within-window-key"}
+
+    first = await client.post("/api/rooms/bulk", json=body, headers=ADMIN_HEADERS)
+    assert first.status_code == 201
+
+    row = (
+        await db_session.execute(select(IdempotencyKey).where(IdempotencyKey.key == "within-window-key"))
+    ).scalar_one()
+    row.created_at -= timedelta(hours=71, minutes=59)
+    await db_session.commit()
+
+    retried = await client.post("/api/rooms/bulk", json=body, headers=ADMIN_HEADERS)
+    assert retried.status_code == 201
+    assert retried.json() == first.json()
+
+    rooms = await client.get("/api/rooms", headers=ADMIN_HEADERS)
+    assert len(rooms.json()) == 1
+
+
+@pytest.mark.anyio
 async def test_bulk_create_rooms_idempotency_key_reused_with_different_payload_conflicts(client):
     venue_id = await _create_venue(client)
     r1 = await client.post(
