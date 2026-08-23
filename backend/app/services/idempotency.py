@@ -14,6 +14,10 @@ those for the pattern: check the key first (short-circuiting all validation
 if it's a safe replay), do the work, then stage the key's result in the same
 transaction as the records it describes via ``record_idempotency_key`` so it
 only becomes visible once the write actually commits.
+
+Stored responses remain replayable for 72 hours. Production infrastructure
+removes older ``idempotency_keys`` rows daily; callers must not rely on a key
+replaying after that retention window.
 """
 
 from __future__ import annotations
