@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -34,6 +34,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import IdempotencyKey
 from app.services.errors import ConflictError
 from app.utils import make_id
+
+IDEMPOTENCY_REPLAY_WINDOW = timedelta(hours=72)
 
 
 def _json_safe(value: Any) -> Any:
@@ -62,9 +64,17 @@ async def check_idempotency_key(
     safe retry (the former would otherwise leak one admin's created records to
     another admin who happens to reuse the same key value).
     """
-    result = await db.execute(select(IdempotencyKey).where(IdempotencyKey.scope == scope, IdempotencyKey.key == key))
+    result = await db.execute(
+        select(IdempotencyKey).where(IdempotencyKey.scope == scope, IdempotencyKey.key == key).with_for_update()
+    )
     row = result.scalar_one_or_none()
     if row is None:
+        return None
+    if row.created_at < datetime.now(UTC) - IDEMPOTENCY_REPLAY_WINDOW:
+        # Replace an expired entry transactionally. The row lock ensures two
+        # retries arriving after expiry cannot both remove and recreate it.
+        await db.delete(row)
+        await db.flush()
         return None
     if row.actor != actor:
         raise ConflictError(f"Idempotency key '{key}' is already in use by another actor.")

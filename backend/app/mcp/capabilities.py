@@ -128,7 +128,7 @@ def tool_annotations(tool_name: str) -> ToolAnnotations:
     """Return explicit MCP safety metadata for a registered tool.
 
     ChatGPT treats missing annotations conservatively, which previously put
-    every Champagne Festival tool in its "write actions" group. Keep this
+    every Champagnefestival tool in its "write actions" group. Keep this
     classification derived from the same policy as the capabilities manifest
     so those two advertised surfaces cannot drift.
     """

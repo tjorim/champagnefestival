@@ -94,4 +94,5 @@ Future workflow additions should follow these conventions:
 
 - Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
 - Prefer targeted tests first, then broader checks before handoff
+- For every new or changed write operation, document its retry-safety decision in `docs/retry-safety.md`; do not advertise or automatically retry a write unless its documented strategy is implemented and tested
 - Do not commit automatically unless explicitly asked

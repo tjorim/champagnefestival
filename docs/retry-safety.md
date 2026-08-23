@@ -1,0 +1,62 @@
+# Write-operation retry safety
+
+Network timeouts are ambiguous: the caller cannot know whether a write committed.
+Every new or changed write operation must therefore make an explicit retry-safety
+decision during implementation. This document is the inventory and contract for
+writes that browsers, event-day clients, MCP callers, or automation may retry.
+
+An idempotency key is an opaque retry token. It is never a credential, does not
+grant access to a stored response, and does not replace normal authorization.
+
+## Supported strategies
+
+- **Natural-key upsert:** repeated application of the desired state converges on
+  one resource selected by a stable business key.
+- **Client-generated resource ID:** the caller chooses the resource identity and
+  repeats a create with that identity.
+- **Optimistic concurrency:** a version or precondition prevents a stale repeat
+  from overwriting newer state.
+- **Server-side replay:** the server stores the result against an opaque,
+  client-supplied key and returns it for an identical retry.
+
+If none is implemented, the operation is **not retry safe**. Clients must first
+reconcile state with a read and must not blindly retry it. Calling this out is a
+deliberate decision, not an implicit idempotency guarantee.
+
+## Inventory
+
+| Operations | Callers | Decision |
+| --- | --- | --- |
+| Bulk create rooms, table types, tables, and layouts (`POST /api/*/bulk`; MCP `bulk_create_*`) | REST and MCP automation | **Server-side replay.** The REST routers and MCP adapters call the same service functions and accept the same `idempotency_key`. |
+| Public and volunteer registration check-in | Event-day Android, browser, and volunteer clients | **Natural-key upsert.** Registration ID is the stable key; checked-in and strap-issued flags only converge from false to true. A repeat returns the current registration and reports that it was already checked in. |
+| Updates (`PUT`) and FAQ reorder | Browser and MCP admin clients | **Not retry safe.** They currently have no version precondition; clients must read and reconcile after an ambiguous result. Optimistic concurrency is the preferred strategy if automatic retries are added. |
+| Deletes, account/token revocation, and integration-client revocation | Browser and MCP admin clients | **Natural resource key, convergent state only.** Repeating reaches the same absent/revoked state, although the response can change to not-found. Callers needing the original response must reconcile. |
+| Single creates, layout copy, people merge, registration creation, contact submission, registration-access email request, Pebble token creation, and integration-client creation/rotation | Browser, public clients, and MCP automation | **Not retry safe.** Server-generated identity or an external side effect makes blind retry unsafe. Use server-side replay or a client-generated resource ID before adding automatic retries. Secret-returning operations must not gain replay storage without a separate security review. |
+
+Read-only `POST` operations (check-in lookup and registration access-token
+exchange) do not mutate application state and are outside this write inventory.
+
+## Bulk-create replay contract
+
+The four bulk-create operations share the implementation in
+`backend/app/services/idempotency.py`, regardless of whether they are reached
+through REST or MCP:
+
+1. The first successful `(operation scope, key)` request stores the canonical
+   request hash, authenticated actor, and response in the same transaction as
+   the created records.
+2. The same actor, key, scope, and payload replays the stored response without
+   executing the write again.
+3. Changing the payload produces a conflict. Reuse by another actor also
+   produces a conflict rather than disclosing the first actor's response.
+4. Concurrent first uses are serialized by the database uniqueness constraint;
+   the losing request receives a conflict and can retry to obtain the replay.
+5. A key is guaranteed to replay for **72 hours from the first successful
+   request**. At or after expiry it is treated as a new request and may execute
+   again. Production cleanup deletes expired rows daily under
+   `tjorim/apps#177`; the application does not run a local cleanup scheduler.
+
+Callers should generate high-entropy values, retain them only for the retry
+window, and reuse a value only for byte-equivalent intent. Tests for a replayed
+write must cover identical replay, payload mismatch, actor isolation, the
+concurrent-first-use conflict, and both sides of the 72-hour boundary.
