@@ -27,7 +27,7 @@ dependencies = [
   "python-multipart==0.0.32",
   "slowapi==0.1.10",
   "sqlalchemy==2.0.52",
-  "uvicorn[standard]==0.52.3",
+  "uvicorn[standard]==0.52.4",
 ]
 
 [project.optional-dependencies]
