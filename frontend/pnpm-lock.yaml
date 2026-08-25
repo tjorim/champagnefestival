@@ -82,8 +82,8 @@ importers:
         specifier: ^2.24.1
         version: 2.24.1(typescript@7.0.2)(vite@8.2.1(@types/node@26.2.0))
       '@inlang/plugin-m-function-matcher':
-        specifier: ^2.2.11
-        version: 2.2.11
+        specifier: ^2.2.12
+        version: 2.2.12
       '@inlang/plugin-message-format':
         specifier: ^4.4.3
         version: 4.4.3
@@ -281,8 +281,8 @@ packages:
       vite:
         optional: true
 
-  '@inlang/plugin-m-function-matcher@2.2.11':
-    resolution: {integrity: sha512-GPMPfe0zwqTEY2lkhpvScuIDcy9xgA7VYy0Fvl6GBc7KMCfBPgE39l/BlA/qheZ4MlWiidhFWNyu8f+h9tL0jg==}
+  '@inlang/plugin-m-function-matcher@2.2.12':
+    resolution: {integrity: sha512-iIF0bPoDlStI736ERkrx985MM7+WtYGYWm6Yomyu/VyYWO/WJTESkxrv9p9bEsYdEELDnctntAPYe5qAdESGDg==}
 
   '@inlang/plugin-message-format@4.4.3':
     resolution: {integrity: sha512-jBOT0CKgG49mctJZZ3Ltz4o9xkxbCYM1xXhKXl+1dIRV+IedpS93q1jAdMKGSfexgGxcagFopdNbnLb7wq/OZg==}
@@ -292,6 +292,10 @@ packages:
 
   '@inlang/sdk@3.0.1':
     resolution: {integrity: sha512-QvyMYjCqF7CnrTp8ZaPiuwpmxsoQPIDgfqGeWfqi4FDxBREye4QdyaZS4DGwIlCZXybF/YMj0TtL2uBfbmajug==}
+    engines: {node: '>=20.0.0'}
+
+  '@inlang/sdk@3.0.2':
+    resolution: {integrity: sha512-qBAzkOLRQ42hZBl2/AZFZD+/JkdjBAvwxWphdTs9UbikMsuLathOBOIl+rC/mzaq48ylD3zE8Je2nrx7tbm0pw==}
     engines: {node: '>=20.0.0'}
 
   '@inquirer/ansi@2.0.7':
@@ -374,8 +378,18 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  '@lix-js/sdk-darwin-arm64@0.12.3':
+    resolution: {integrity: sha512-YeMJyYGk+QwvQe8O4AAcBMgfNm68IjAGDvuvZHr1U1rIb3GC2kYFStajqf4mT4BGc+cN65/P/2kkqEo+Igu/sA==}
+    cpu: [arm64]
+    os: [darwin]
+
   '@lix-js/sdk-linux-arm64@0.12.2':
     resolution: {integrity: sha512-817uJlC2KTIKDaqQvALTu03hEJpNxEA+9d33FNs8sOm9pAguOWiAK1zGA2SD0IgS9Q8NqQeABLb84OesW5/NCA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@lix-js/sdk-linux-arm64@0.12.3':
+    resolution: {integrity: sha512-jtmfNg6jLW61l1QvsU3W184l3hGtYUyPGzZrQyekk0vsMF1hxsP++7ONEGNI19PE7ldwSnGCB8Q6OzRKX87abQ==}
     cpu: [arm64]
     os: [linux]
 
@@ -384,13 +398,26 @@ packages:
     cpu: [x64]
     os: [linux]
 
+  '@lix-js/sdk-linux-x64@0.12.3':
+    resolution: {integrity: sha512-PiQL4h1FJXbxnZx/PgenI5grgpFtYlS/ZtPtTYh638YHVu+6J0cqGY/pLVqP8CKv1dWAKsZ2YgftLd+1j2+WKA==}
+    cpu: [x64]
+    os: [linux]
+
   '@lix-js/sdk-win32-x64@0.12.2':
     resolution: {integrity: sha512-y9IikCdrYx6cFnfqeUvYKPw6KBY016U2F2wYDILYZDZndccK2xw7lJChX163w9PewMwY3GsC/UqRBi5yqFAJ2w==}
     cpu: [x64]
     os: [win32]
 
+  '@lix-js/sdk-win32-x64@0.12.3':
+    resolution: {integrity: sha512-hnxMI7kPS4ngXs0ZVnOve5CmtC4+vaNIyNDi/yWU0rSvxj7mqw/1RCegTrCB7LjxlX4DG+eg9HruXurk9NDjGg==}
+    cpu: [x64]
+    os: [win32]
+
   '@lix-js/sdk@0.12.2':
     resolution: {integrity: sha512-sKGOPdVKdChS5q60F4VQE4ZTcf0B7ZJM3KGCVQFN2suVNKhHcllbsCiwRYuM5WL7Yu1ql7YexltJ2FCsDqKePg==}
+
+  '@lix-js/sdk@0.12.3':
+    resolution: {integrity: sha512-T2194yoZsM2S9kyRmI8UtEJL0fgXYAkeY9jZ/PVyC0K78/wmBvrqOSt9SdvgYxM5qnZ57re3NLOjVlV+X5hWxQ==}
 
   '@mswjs/interceptors@0.41.9':
     resolution: {integrity: sha512-VVPPgHyQ6ShqnrmDWuxjmUIsO9gWyOZFmuOfLd9LfBGQJwZfy0gvv9pbHSJuoFNIYC7ZDX9aoFwowjcdSC4E8w==}
@@ -2023,6 +2050,10 @@ packages:
     resolution: {integrity: sha512-6ZxzVpzDXDa3bJWaHilVayA+BH/1zmxCJoVgvmqJnid/gPoKHxUrS/aC/T6LGQtNHT+XHG9fXPJB4d+IrU30Ew==}
     hasBin: true
 
+  uuid@14.0.2:
+    resolution: {integrity: sha512-xZe/16rV4aa+HGSOCiY2YeLT1OybRLrrkL/Rqaq7p7GMVXjFh+6wN4oMYgjFmnSnhY8t6Xpdl2l9qmnHYuMHwQ==}
+    hasBin: true
+
   vite@8.2.1:
     resolution: {integrity: sha512-EU/eS7BH3XROHh2YnBefjM6DBKA6ZeMZEYQbj7NLWg5wHYlhB8B/Mayd5XsgWq+NFYccDOTemRpdETWR6Ka/lw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -2341,9 +2372,9 @@ snapshots:
       typescript: 7.0.2
       vite: 8.2.1(@types/node@26.2.0)
 
-  '@inlang/plugin-m-function-matcher@2.2.11':
+  '@inlang/plugin-m-function-matcher@2.2.12':
     dependencies:
-      '@inlang/sdk': 3.0.1
+      '@inlang/sdk': 3.0.2
 
   '@inlang/plugin-message-format@4.4.3':
     dependencies:
@@ -2360,6 +2391,14 @@ snapshots:
       kysely: 0.28.17
       sqlite-wasm-kysely: 0.3.0(kysely@0.28.17)
       uuid: 14.0.1
+
+  '@inlang/sdk@3.0.2':
+    dependencies:
+      '@lix-js/sdk': 0.12.3
+      '@sinclair/typebox': 0.31.30
+      kysely: 0.28.17
+      sqlite-wasm-kysely: 0.3.0(kysely@0.28.17)
+      uuid: 14.0.2
 
   '@inquirer/ansi@2.0.7': {}
 
@@ -2437,13 +2476,25 @@ snapshots:
   '@lix-js/sdk-darwin-arm64@0.12.2':
     optional: true
 
+  '@lix-js/sdk-darwin-arm64@0.12.3':
+    optional: true
+
   '@lix-js/sdk-linux-arm64@0.12.2':
+    optional: true
+
+  '@lix-js/sdk-linux-arm64@0.12.3':
     optional: true
 
   '@lix-js/sdk-linux-x64@0.12.2':
     optional: true
 
+  '@lix-js/sdk-linux-x64@0.12.3':
+    optional: true
+
   '@lix-js/sdk-win32-x64@0.12.2':
+    optional: true
+
+  '@lix-js/sdk-win32-x64@0.12.3':
     optional: true
 
   '@lix-js/sdk@0.12.2':
@@ -2454,6 +2505,15 @@ snapshots:
       '@lix-js/sdk-linux-arm64': 0.12.2
       '@lix-js/sdk-linux-x64': 0.12.2
       '@lix-js/sdk-win32-x64': 0.12.2
+
+  '@lix-js/sdk@0.12.3':
+    dependencies:
+      fflate: 0.8.3
+    optionalDependencies:
+      '@lix-js/sdk-darwin-arm64': 0.12.3
+      '@lix-js/sdk-linux-arm64': 0.12.3
+      '@lix-js/sdk-linux-x64': 0.12.3
+      '@lix-js/sdk-win32-x64': 0.12.3
 
   '@mswjs/interceptors@0.41.9':
     dependencies:
@@ -3804,6 +3864,8 @@ snapshots:
       react: 19.2.8
 
   uuid@14.0.1: {}
+
+  uuid@14.0.2: {}
 
   vite@8.2.1(@types/node@26.2.0):
     dependencies:
