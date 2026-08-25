@@ -59,7 +59,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "@vitest/ui": "^4.1.11",
-    "happy-dom": "^20.11.2",
+    "happy-dom": "^20.11.6",
     "jest-axe": "^11.0.0",
     "msw": "^2.15.0",
     "oxfmt": "^0.64.0",
