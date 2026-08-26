@@ -10,6 +10,7 @@
  */
 
 import type { AuthProviderProps } from "react-oidc-context";
+import { WebStorageStateStore } from "oidc-client-ts";
 
 const OIDC_AUTHORITY =
   import.meta.env.VITE_OIDC_AUTHORITY ?? "http://localhost:9000/application/o/champagnefestival";
@@ -42,6 +43,11 @@ export function createOidcConfig({ navigateTo }: OidcConfigOptions): AuthProvide
     automaticSilentRenew: true,
     monitorSession: true,
     revokeTokensOnSignout: true,
+    // sessionStorage is thrown away on tab close, forcing a re-login even
+    // though the still-valid Keycloak session (and refresh token behind it)
+    // would otherwise let the app resume silently. See tjorim/worktime#1228
+    // and tjorim/daynest#805 for the same fix.
+    userStore: new WebStorageStateStore({ store: window.localStorage }),
     onSigninCallback: (user) => {
       return navigateTo(resolvePostSigninReturnTo(user?.state));
     },
