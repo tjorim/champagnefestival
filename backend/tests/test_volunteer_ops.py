@@ -152,6 +152,25 @@ async def test_volunteer_can_check_in_from_registration_search(client):
 
 
 @pytest.mark.anyio
+async def test_volunteer_cannot_check_in_cancelled_registration(client):
+    registration = await _post_registration(client, path="/api/registrations")
+    registration_id = registration.json()["id"]
+    cancelled = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"status": "cancelled"},
+        headers=ADMIN_HEADERS,
+    )
+    assert cancelled.status_code == 200
+
+    response = await client.post(
+        f"/api/volunteer/registrations/{registration_id}/check-in",
+        json={"issue_strap": True},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Cancelled registrations cannot be checked in."
+
+
+@pytest.mark.anyio
 async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(client):
     registration = await _post_registration(client, path="/api/registrations")
     assert registration.status_code == 201

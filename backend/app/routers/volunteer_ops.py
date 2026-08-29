@@ -37,6 +37,7 @@ from app.services.operational_search import (
     person_search_predicate,
     rank_table_reference,
 )
+from app.services.registrations_service import ensure_registration_can_check_in
 from app.utils import registration_to_checkin_dict
 
 logger = logging.getLogger(__name__)
@@ -374,6 +375,7 @@ async def volunteer_check_in_registration(
     registration, table_name = row
     if registration.person is None or registration.event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+    ensure_registration_can_check_in(registration)
 
     already = registration.checked_in
     changed = False

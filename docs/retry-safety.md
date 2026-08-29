@@ -36,6 +36,12 @@ deliberate decision, not an implicit idempotency guarantee.
 Read-only `POST` operations (check-in lookup and registration access-token
 exchange) do not mutate application state and are outside this write inventory.
 
+Cancelling a registration rotates its check-in token only on the transition
+into `cancelled`; repeating the same cancellation does not rotate it again.
+This makes that side effect convergent, but does not change the broader `PUT`
+decision above: registration updates are not advertised or automatically
+retried without first reconciling the current resource.
+
 ## Bulk-create replay contract
 
 The four bulk-create operations share the implementation in

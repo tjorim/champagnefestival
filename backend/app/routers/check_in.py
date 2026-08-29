@@ -15,6 +15,7 @@ from app.live import mapping as live_mapping
 from app.models import Event, Person, Registration, Table
 from app.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
+from app.services.registrations_service import ensure_registration_can_check_in
 from app.utils import registration_to_checkin_dict
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,7 @@ async def lookup_check_in(
             detail="Too many requests. Please try again later.",
         )
     r = await _get_by_token_or_401(db, reservation_id, body.token)
+    ensure_registration_can_check_in(r)
     person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
     event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
     table_name = (
@@ -82,6 +84,7 @@ async def post_check_in(
             detail="Too many requests. Please try again later.",
         )
     r = await _get_by_token_or_401(db, reservation_id, body.token)
+    ensure_registration_can_check_in(r)
     person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
     event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
     table_name = (

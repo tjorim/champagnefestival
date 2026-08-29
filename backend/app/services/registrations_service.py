@@ -55,6 +55,15 @@ async def get_registration_or_404(db: AsyncSession, registration_id: str) -> Reg
     return registration
 
 
+def ensure_registration_can_check_in(registration: Registration) -> None:
+    """Reject entrance mutations for a cancelled registration."""
+    if registration.status == "cancelled":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cancelled registrations cannot be checked in.",
+        )
+
+
 def sum_delivered(order_items: list[dict] | None) -> int:
     if not order_items:
         return 0
@@ -236,8 +245,18 @@ async def apply_registration_update(
     event_id = registration.event_id
     edition_id = registration.event.edition_id
 
+    target_status = body.status if body.status is not None else registration.status
+    target_checked_in = body.checked_in if body.checked_in is not None else registration.checked_in
+    if target_status == "cancelled" and target_checked_in:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A checked-in registration must be unchecked before it can be cancelled.",
+        )
+
     if body.status is not None:
         registration.status = body.status
+        if body.status == "cancelled" and pre_status != "cancelled":
+            registration.check_in_token = secrets.token_urlsafe(32)
     if body.payment_status is not None:
         registration.payment_status = body.payment_status
     if clear_amount_due:

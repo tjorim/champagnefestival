@@ -127,6 +127,53 @@ async def test_admin_uncheckin_clears_checked_in_at(client):
 
 
 @pytest.mark.anyio
+async def test_admin_cannot_check_in_cancelled_registration(client):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    cancelled = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"status": "cancelled"},
+        headers=ADMIN_HEADERS,
+    )
+    assert cancelled.status_code == 200
+
+    checked_in = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"checked_in": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert checked_in.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_admin_must_uncheck_registration_before_cancelling(client):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    checked_in = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"checked_in": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert checked_in.status_code == 200
+
+    cancelled = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"status": "cancelled"},
+        headers=ADMIN_HEADERS,
+    )
+    assert cancelled.status_code == 409
+
+    cancelled_and_unchecked = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"status": "cancelled", "checked_in": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert cancelled_and_unchecked.status_code == 200
+    assert cancelled_and_unchecked.json()["status"] == "cancelled"
+    assert cancelled_and_unchecked.json()["checked_in"] is False
+
+
+@pytest.mark.anyio
 async def test_filter_by_event(client):
     friday = await _post_registration(client, path="/api/registrations")
     assert friday.status_code == 201
