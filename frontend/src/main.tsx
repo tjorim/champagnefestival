@@ -588,6 +588,9 @@ function App() {
                   <MapComponent
                     location={edition.venue.venueName}
                     address={edition.venue.address}
+                    city={edition.venue.city}
+                    postalCode={edition.venue.postalCode}
+                    country={edition.venue.country}
                     coordinates={edition.venue.coordinates}
                   />
                 </SuspenseWithBoundary>

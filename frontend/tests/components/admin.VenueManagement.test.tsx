@@ -19,6 +19,14 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
+vi.mock("@/components/MapComponent", () => ({
+  default: ({ coordinates }: { coordinates: { lat: number; lng: number } }) => (
+    <div data-testid="venue-map-preview">
+      {coordinates.lat},{coordinates.lng}
+    </div>
+  ),
+}));
+
 const activeVenue: Venue = {
   id: "venue-1",
   name: "Grand Hall",
@@ -117,6 +125,7 @@ interface RenderOverrides {
   tables?: FloorTable[];
   layouts?: Layout[];
   onAdd?: (...args: unknown[]) => Promise<void>;
+  onUpdate?: (...args: unknown[]) => Promise<void>;
   onArchive?: (...args: unknown[]) => Promise<void>;
   onRestore?: (...args: unknown[]) => Promise<void>;
   onDelete?: (...args: unknown[]) => Promise<void>;
@@ -134,6 +143,7 @@ interface RenderOverrides {
 
 function renderVenueManagement(overrides: RenderOverrides = {}) {
   const onAdd = overrides.onAdd ?? vi.fn().mockResolvedValue(undefined);
+  const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(undefined);
   const onArchive = overrides.onArchive ?? vi.fn().mockResolvedValue(undefined);
   const onRestore = overrides.onRestore ?? vi.fn().mockResolvedValue(undefined);
   const onDelete = overrides.onDelete ?? vi.fn().mockResolvedValue(undefined);
@@ -156,6 +166,7 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
       tables={overrides.tables ?? [tableUsingActiveType]}
       layouts={overrides.layouts ?? [layout1]}
       onAdd={onAdd}
+      onUpdate={onUpdate}
       onArchive={onArchive}
       onRestore={onRestore}
       onDelete={onDelete}
@@ -174,6 +185,7 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
 
   return {
     onAdd,
+    onUpdate,
     onArchive,
     onRestore,
     onDelete,
@@ -221,7 +233,9 @@ describe("VenueManagement", () => {
     expect(activeScope.getByText("Room A")).toBeInTheDocument();
     expect(activeScope.getByText("Room B")).toBeInTheDocument();
 
-    expect(within(venueCard("Old Barn")).getByText("admin_venue_archived_badge")).toBeInTheDocument();
+    expect(
+      within(venueCard("Old Barn")).getByText("admin_venue_archived_badge"),
+    ).toBeInTheDocument();
   });
 
   it("hides the rooms/table-types body for an archived venue", () => {
@@ -253,12 +267,54 @@ describe("VenueManagement", () => {
     fireEvent.change(dialogScope.getByLabelText("admin_venue_city_label"), {
       target: { value: "  Antwerp  " },
     });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
+      target: { value: "51.2194" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_longitude_label"), {
+      target: { value: "4.4025" },
+    });
 
     expect(saveButton).not.toBeDisabled();
     fireEvent.click(saveButton);
 
-    expect(onAdd).toHaveBeenCalledWith("New Venue", "", "Antwerp", "", "");
+    expect(onAdd).toHaveBeenCalledWith("New Venue", "", "Antwerp", "", "", 51.2194, 4.4025);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("edits a venue including its map coordinates", async () => {
+    const { onUpdate } = renderVenueManagement();
+    fireEvent.click(
+      within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_edit Grand Hall" }),
+    );
+    const dialogScope = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
+      target: { value: "50.8503" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_longitude_label"), {
+      target: { value: "4.3517" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      "venue-1",
+      expect.objectContaining({ lat: 50.8503, lng: 4.3517 }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("shows a live map preview when both coordinates are valid", async () => {
+    renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
+    fireEvent.click(screen.getByRole("button", { name: "admin_venue_add" }));
+    const dialogScope = within(await screen.findByRole("dialog"));
+    expect(dialogScope.queryByTestId("venue-map-preview")).not.toBeInTheDocument();
+
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
+      target: { value: "50.8503" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_longitude_label"), {
+      target: { value: "4.3517" },
+    });
+
+    expect(await dialogScope.findByTestId("venue-map-preview")).toHaveTextContent("50.8503,4.3517");
   });
 
   it("does not call onArchive when the confirm dialog is cancelled", () => {
@@ -288,7 +344,9 @@ describe("VenueManagement", () => {
     const confirmFn = mockConfirm(false);
     const { onDelete } = renderVenueManagement();
 
-    fireEvent.click(within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(
+      within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
+    );
 
     expect(confirmFn).toHaveBeenCalledWith("admin_venue_delete_confirm");
     expect(onDelete).not.toHaveBeenCalled();
@@ -298,7 +356,9 @@ describe("VenueManagement", () => {
     mockConfirm(true);
     const { onDelete } = renderVenueManagement();
 
-    fireEvent.click(within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(
+      within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
+    );
 
     expect(onDelete).toHaveBeenCalledWith("venue-2");
   });
@@ -419,9 +479,7 @@ describe("VenueManagement", () => {
       rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
     });
 
-    expect(
-      screen.getByLabelText("admin_room_dimensions_placeholder_badge"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("admin_room_dimensions_placeholder_badge")).toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------
@@ -495,14 +553,18 @@ describe("VenueManagement", () => {
     // Switching shape invalidates whatever was entered — no generic replacement
     // is defensible (#833/#835), so it blanks rather than inventing a diameter.
     expect(dialogScope.queryByLabelText("admin_table_width_label")).not.toBeInTheDocument();
-    const diameterField = dialogScope.getByLabelText("admin_table_diameter_label") as HTMLInputElement;
+    const diameterField = dialogScope.getByLabelText(
+      "admin_table_diameter_label",
+    ) as HTMLInputElement;
     expect(diameterField.value).toBe("");
   });
 
   it("pre-fills the edit form from the row's existing values and calls onUpdateTableType without the active field", async () => {
     const { onUpdateTableType } = renderVenueManagement({ tables: [] });
 
-    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -530,7 +592,9 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement();
 
-    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -550,7 +614,9 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement();
 
-    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -574,7 +640,9 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", vi.fn().mockReturnValue(false));
     const { onUpdateTableType } = renderVenueManagement();
 
-    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -592,7 +660,9 @@ describe("VenueManagement", () => {
     vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement({ tables: [] });
 
-    fireEvent.click(within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);

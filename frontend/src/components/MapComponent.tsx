@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { contactConfig } from "@/config/contact";
 import { m } from "@/paraglide/messages";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -20,8 +20,9 @@ const generateGoogleMapsUrl = (
   address: string,
   postalCode: string,
   city: string,
+  country: string,
 ): string | null => {
-  const locationParts = [location, address, postalCode, city].filter(Boolean);
+  const locationParts = [location, address, postalCode, city, country].filter(Boolean);
 
   if (locationParts.length === 0) {
     return null;
@@ -31,16 +32,24 @@ const generateGoogleMapsUrl = (
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 };
 
-// Fix for default markers not showing in Vite/Webpack builds
-L.Icon.Default.mergeOptions({
+// A dedicated icon avoids Leaflet prepending its auto-detected image path to
+// the asset URLs emitted by Vite.
+const venueMarkerIcon = L.icon({
   iconUrl: markerIcon,
   iconRetinaUrl: markerIcon2x,
   shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
 });
 
 interface MapComponentProps {
   address?: string;
+  city?: string;
+  country?: string;
   location?: string;
+  postalCode?: string;
   coordinates?: { lat: number; lng: number };
 }
 
@@ -57,16 +66,21 @@ interface MapComponentProps {
  */
 const MapComponent: React.FC<MapComponentProps> = ({
   address = contactConfig.location.address,
+  city = contactConfig.location.city,
+  country = contactConfig.location.country,
   location = contactConfig.location.venueName,
+  postalCode = contactConfig.location.postalCode,
   coordinates = contactConfig.location.coordinates,
 }) => {
+  const descriptionId = useId();
+
   // Validate coordinates
   const validCoordinates =
     coordinates &&
     typeof coordinates.lat === "number" &&
     typeof coordinates.lng === "number" &&
-    !isNaN(coordinates.lat) &&
-    !isNaN(coordinates.lng) &&
+    Number.isFinite(coordinates.lat) &&
+    Number.isFinite(coordinates.lng) &&
     coordinates.lat >= -90 &&
     coordinates.lat <= 90 &&
     coordinates.lng >= -180 &&
@@ -81,12 +95,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   }
 
   // Generate Google Maps URL
-  const mapsUrl = generateGoogleMapsUrl(
-    location,
-    address,
-    contactConfig.location.postalCode,
-    contactConfig.location.city,
-  );
+  const mapsUrl = generateGoogleMapsUrl(location, address, postalCode, city, country);
 
   return (
     <div
@@ -99,21 +108,21 @@ const MapComponent: React.FC<MapComponentProps> = ({
         scrollWheelZoom={false}
         style={{ width: "100%", height: "100%" }}
         aria-label={m.location_map_title()}
-        aria-describedby="map-description"
+        aria-describedby={descriptionId}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker position={[coordinates.lat, coordinates.lng]}>
+        <Marker position={[coordinates.lat, coordinates.lng]} icon={venueMarkerIcon}>
           <Popup>
             <b>{location}</b>
             <br />
             {address}
             <br />
-            {contactConfig.location.postalCode} {contactConfig.location.city}
+            {[postalCode, city].filter(Boolean).join(" ")}
             <br />
-            {m.location_country()}
+            {country}
             <br />
             {mapsUrl && (
               <a
@@ -128,8 +137,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
           </Popup>
         </Marker>
       </MapContainer>
-      <div id="map-description" className="visually-hidden">
-        {location}: {address}
+      <div id={descriptionId} className="visually-hidden">
+        {location}: {[address, postalCode, city, country].filter(Boolean).join(", ")}
       </div>
     </div>
   );

@@ -211,19 +211,23 @@ export function useVenueMutations({
       city,
       postalCode,
       country,
+      lat,
+      lng,
     }: {
       name: string;
       address: string;
       city: string;
       postalCode: string;
       country: string;
+      lat: number;
+      lng: number;
     }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/venues",
         {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ name, address, city, postal_code: postalCode, country }),
+          body: JSON.stringify({ name, address, city, postal_code: postalCode, country, lat, lng }),
         },
         m.admin_error_add_venue(),
       ),
@@ -234,11 +238,36 @@ export function useVenueMutations({
   });
 
   const updateVenueMutation = useMutation({
-    mutationFn: ({ venueId, active }: { venueId: string; active: boolean }) =>
+    mutationFn: ({
+      venueId,
+      postalCode,
+      ...data
+    }: {
+      venueId: string;
+      postalCode?: string;
+      name?: string;
+      address?: string;
+      city?: string;
+      country?: string;
+      lat?: number;
+      lng?: number;
+      active?: boolean;
+    }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/venues/${venueId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ active }) },
-        active ? m.admin_error_restore_venue() : m.admin_error_archive_venue(),
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            ...data,
+            ...(postalCode === undefined ? {} : { postal_code: postalCode }),
+          }),
+        },
+        data.active === true
+          ? m.admin_error_restore_venue()
+          : data.active === false
+            ? m.admin_error_archive_venue()
+            : m.admin_content_error_save(),
       ),
     onSettled: () => {
       void invalidateAdmin(queryClient, [venuesQueryKey]);
