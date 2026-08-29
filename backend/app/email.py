@@ -26,8 +26,7 @@ async def send_contact_notification(*, name: str, email: str, message_text: str,
     message["To"] = recipient
     message["Reply-To"] = email
     message.set_content(
-        f"A new contact message was stored with ID {message_id}.\n\n"
-        f"Name: {name}\nEmail: {email}\n\n{message_text}\n"
+        f"A new contact message was stored with ID {message_id}.\n\nName: {name}\nEmail: {email}\n\n{message_text}\n"
     )
     try:
         await asyncio.to_thread(_send_message_sync, message)
