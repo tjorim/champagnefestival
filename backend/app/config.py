@@ -154,7 +154,7 @@ class Settings(BaseSettings):
     """
 
     contact_recipient: str = ""
-    """Mailbox notified about contact submissions. Defaults to SMTP_FROM."""
+    """Organizer mailbox notified about contact submissions. Defaults to SMTP_FROM."""
 
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
     recaptcha_secret: str = ""
