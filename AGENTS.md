@@ -72,6 +72,7 @@ See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migrat
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior
 - `frontend/src/utils/adminApi.ts` and `frontend/src/utils/adminRegistrationApi.ts` for admin API integration
 - `docs/floor-plan-coordinates.md` for the `Table`/`Area` `x`/`y`/`rotation` coordinate contract
+- `docs/product-audit-2026-08.md` for the combined product audit, feature-request scope, dependencies, and preferred implementation order
 
 ## CI & workflows
 
@@ -95,4 +96,5 @@ Future workflow additions should follow these conventions:
 - Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
 - Prefer targeted tests first, then broader checks before handoff
 - For every new or changed write operation, document its retry-safety decision in `docs/retry-safety.md`; do not advertise or automatically retry a write unless its documented strategy is implemented and tested
+- When a change implements, closes, splits, supersedes, or materially changes an issue tracked in `docs/product-audit-2026-08.md`, update that document in the same change. For completed or superseded items, remove the row from the active phase, renumber the remaining preferred order, and add a row to **Completed or superseded work** with the date, issue/PR or commit, outcome, and a concise implementation note. Update affected dependencies, index/specification text, and acceptance-criteria checkboxes. Partial work stays in the active phase with revised notes; do not record completion until the documented acceptance criteria are satisfied. Preserve the original finding/specification as historical context.
 - Do not commit automatically unless explicitly asked
