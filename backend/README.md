@@ -12,20 +12,20 @@ The table below tracks each user story against its current implementation status
 | #   | Role      | Story                                                     | Status                                                                                                                                                             |
 | --- | --------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 1   | Visitor   | Get a quick overview and information about the festival   | ✅ Frontend website                                                                                                                                                |
-| 2   | Visitor   | Register for special events (VIP, breakfast, …)           | ✅ `ReservationModal` + `POST /api/reservations`                                                                                                                   |
-| 3   | Manager   | Overview of all registered guests                         | ✅ Admin dashboard + `GET /api/reservations`                                                                                                                       |
-| 4   | Manager   | Approve, edit, or cancel registrations                    | ✅ `PUT /api/reservations/{id}` (status, notes, pre-orders)                                                                                                        |
-| 5   | Visitor   | Overview of own orders across all editions                | ✅ `POST /api/reservations/my/request` + `POST /api/reservations/my/access`                                                                                         |
-| 6   | Visitor   | Show personal QR code / order identifier                  | ⚠️ Partial — secure access links are prepared server-side, but SMTP delivery is still pending                                                                       |
+| 2   | Visitor   | Register for special events (VIP, breakfast, …)           | ✅ `RegistrationModal` + `POST /api/registrations`                                                                                                                  |
+| 3   | Manager   | Overview of all registered guests                         | ✅ Admin dashboard + `GET /api/registrations`                                                                                                                       |
+| 4   | Manager   | Approve, edit, or cancel registrations                    | ✅ `PUT /api/registrations/{id}` (status, notes, pre-orders)                                                                                                        |
+| 5   | Visitor   | Overview of own orders across all editions                | ✅ `POST /api/registrations/my/request` + `POST /api/registrations/my/access`                                                                                        |
+| 6   | Visitor   | Show personal QR code / order identifier                  | ✅ Short-lived access links are delivered by e-mail via `POST /api/registrations/my/request`                                                                         |
 | 7   | Manager   | Create / move / delete tables on the floor plan           | ✅ Hall Layout tab + `POST/PUT/DELETE /api/tables/{id}`                                                                                                            |
-| 8   | Manager   | Assign guests (and their orders) to tables                | ✅ `PUT /api/reservations/{id}` (`table_id`)                                                                                                                       |
-| 9   | Manager   | Mark orders as (partially) paid                           | ✅ `PUT /api/reservations/{id}` (`payment_status`)                                                                                                                 |
-| 10  | Volunteer | Scan a visitor's QR or search for them to see their order | ✅ QR scan → `GET /api/check-in/{id}?token=`; name/email search via `GET /api/reservations?q=`                                                                     |
-| 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/reservations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
+| 8   | Manager   | Assign guests (and their orders) to tables                | ✅ `PUT /api/registrations/{id}` (`table_id`)                                                                                                                       |
+| 9   | Manager   | Mark orders as (partially) paid                           | ✅ `PUT /api/registrations/{id}` (`payment_status`)                                                                                                                 |
+| 10  | Volunteer | Scan a visitor's QR or search for them to see their order | ✅ QR scan → `POST /api/check-in/{id}/lookup`; name/e-mail search via `GET /api/registrations?q=`                                                                   |
+| 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/registrations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
 | 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)               |
 | 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, member, festival-visitor; one person can have multiple roles                  |
 | 15  | Manager   | Quickly manage members                                    | ✅ Convenience CRUD via `/api/members` (role-filtered view on people)                                                                                              |
-| 14  | Manager   | Group returning attendees by order history                | ✅ `GET /api/people/{id}/reservations` groups all reservations for that person (linked by person + e-mail)                                                         |
+| 14  | Manager   | Group returning attendees by registration history         | ✅ `GET /api/people/{id}/registrations` groups all registrations for that person (linked by person + e-mail)                                                       |
 
 ---
 
@@ -201,18 +201,18 @@ location /api/ {
 | `OIDC_ALGORITHMS`  | no       | `RS256`                                                | Comma-separated accepted JWT signing algorithms                      |
 | `CORS_ORIGINS`     | no       | `""`                                                   | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |
 | `TRUSTED_HOSTS`    | yes in production | `""`                                          | Comma-separated allowed `Host` header values; empty disables Host header validation |
-| `RATE_LIMIT_ENABLED` | no     | `true`                                                 | Toggles the general per-IP, per-route rate limiter applied to every `/api` route |
+| `RATE_LIMIT_ENABLED` | no     | `true`                                                 | Toggles the general per-IP, per-route limiter; token-gated check-in uses its dedicated policy |
 | `RATE_LIMIT_DEFAULT` | no     | `60/minute`                                            | Default rate limit string (see [limits](https://limits.readthedocs.io/en/stable/quickstart.html#rate-limit-string-notation)) |
 | `MIN_FORM_SECONDS` | no       | `3`                                                    | Anti-spam: min seconds to fill the form                              |
-| `GUEST_ACCESS_TOKEN_TTL_MINUTES` | no | `30` | TTL in minutes for short-lived guest access tokens used by `/api/reservations/my/request` and `/api/reservations/my/access` |
+| `GUEST_ACCESS_TOKEN_TTL_MINUTES` | no | `30` | TTL in minutes for short-lived guest access tokens used by `/api/registrations/my/request` and `/api/registrations/my/access` |
 | `METRICS_HMAC_SECRET` | no    | `""`                                                   | Shared secret for the `X-Metrics-Token` HMAC on `GET /api/metrics`; empty disables the endpoint |
 | `SENTRY_DSN`       | no       | `""`                                                   | Sentry DSN for error tracking; empty disables Sentry                 |
 | `SENTRY_TRACES_SAMPLE_RATE` | no | `0.0`                                              | Fraction (0.0-1.0) of transactions sampled for Sentry performance monitoring |
-| `SMTP_HOST`        | no       | —                                                      | SMTP server (planned — see below)                                    |
-| `SMTP_PORT`        | no       | `587`                                                  | SMTP port (planned)                                                  |
-| `SMTP_USER`        | no       | —                                                      | SMTP username (planned)                                              |
-| `SMTP_PASSWORD`    | no       | —                                                      | SMTP password (planned)                                              |
-| `SMTP_FROM`        | no       | —                                                      | From address (planned)                                               |
+| `SMTP_HOST`        | no       | `""`                                                   | SMTP server used to deliver guest access links; empty disables delivery |
+| `SMTP_PORT`        | no       | `587`                                                  | SMTP port                                                            |
+| `SMTP_USER`        | no       | `""`                                                   | SMTP username                                                        |
+| `SMTP_PASSWORD`    | no       | `""`                                                   | SMTP password                                                        |
+| `SMTP_FROM`        | no       | `""`                                                   | Sender address for guest access-link e-mails                         |
 | `RECAPTCHA_SECRET` | no       | —                                                      | Google reCAPTCHA secret (planned)                                    |
 
 See `.env.example` for a template.
@@ -235,14 +235,15 @@ See `.env.example` for a template.
 
 | Method   | Path                            | Auth           | Description                                                                |
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
-| `POST`   | `/api/reservations`             | public         | Create a reservation                                                       |
-| `GET`    | `/api/reservations`             | admin          | List reservations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
-| `POST`   | `/api/reservations/my/request`  | public         | Prepare a short-lived visitor access link for out-of-band delivery.       |
-| `POST`   | `/api/reservations/my/access`   | public + token | View visitor reservations using a short-lived secure token                 |
-| `GET`    | `/api/reservations/{id}`        | admin          | Get reservation detail (token included)                                    |
-| `PUT`    | `/api/reservations/{id}`        | admin          | Update reservation                                                         |
-| `DELETE` | `/api/reservations/{id}`        | admin          | Delete reservation                                                         |
-| `GET`    | `/api/check-in/{id}?token=…`    | public + token | Verify QR token, return guest info                                         |
+| `POST`   | `/api/registrations`             | public         | Create a registration                                                       |
+| `GET`    | `/api/registrations`             | admin          | List registrations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
+| `GET`    | `/api/registrations/export`      | admin          | Export one event's non-cancelled registrations as CSV                       |
+| `POST`   | `/api/registrations/my/request`  | public         | E-mail a short-lived visitor access link                                    |
+| `POST`   | `/api/registrations/my/access`   | public + token | View visitor registrations using a short-lived secure token                 |
+| `GET`    | `/api/registrations/{id}`        | admin          | Get registration detail (token included)                                    |
+| `PUT`    | `/api/registrations/{id}`        | admin          | Update registration                                                         |
+| `DELETE` | `/api/registrations/{id}`        | admin          | Delete registration                                                         |
+| `POST`   | `/api/check-in/{id}/lookup`      | public + token | Verify QR token and return guest information                                |
 | `POST`   | `/api/check-in/{id}`            | public + token | Mark checked-in, issue strap                                               |
 | `POST`   | `/api/tables`                   | admin          | Create table                                                               |
 | `GET`    | `/api/tables`                   | admin          | List tables                                                                |
@@ -253,6 +254,7 @@ See `.env.example` for a template.
 | `PUT`    | `/api/content/{key}`            | admin          | Save CMS content                                                           |
 | `POST`   | `/api/volunteers`               | admin          | Create volunteer profile (person with role `volunteer`)                    |
 | `GET`    | `/api/volunteers`               | admin          | List volunteers (supports `?q=` search)                                    |
+| `GET`    | `/api/volunteers/export`        | admin          | Export active volunteer insurance records as CSV                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
 | `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
@@ -266,7 +268,7 @@ See `.env.example` for a template.
 | `GET`    | `/api/people/{id}`              | admin          | Get person detail                                                          |
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |
-| `GET`    | `/api/people/{id}/reservations` | admin          | List grouped reservation history for that person                           |
+| `GET`    | `/api/people/{id}/registrations` | admin          | List grouped registration history for that person                          |
 | `GET`    | `/api/health/liveness`          | public         | Fast alive check — no DB hit (for load-balancer liveness probes)           |
 | `GET`    | `/api/health/readiness`         | public         | DB connectivity check with 2 s timeout (for load-balancer readiness probes)|
 | `GET`    | `/api/health`                   | public         | Summary with links to liveness and readiness endpoints                     |
@@ -290,119 +292,12 @@ CORS_ORIGINS=https://champagnefestival.be
 
 ---
 
-## Planned features (not yet implemented)
+## Product backlog
 
-The items below are designed and partially scaffolded but **not yet active**.
-Each section notes where the code hook already exists.
-
-### 📧 Guest confirmation e-mail
-
-**What:** On successful reservation creation, send the guest a confirmation
-e-mail containing:
-
-- Booking summary (name, event, guest count, pre-orders)
-- Their QR code as an inline image or attachment (for offline scanning)
-- A link to the check-in page
-
-**Status:** The `TODO` comment in `app/routers/reservations.py` (`create_reservation`)
-marks the call site. SMTP settings are wired in `app/config.py` and
-`.env.example`.
-
-**To implement:**
-
-1. Add a `send_confirmation_email(reservation, qr_png_bytes)` helper in
-   `app/email.py` using `aiosmtplib` + `email.mime`.
-2. Generate the QR PNG with `qrcode[pil]` using the check-in URL
-   `{FRONTEND_URL}/check-in?id={id}&token={token}`.
-3. Call the helper after `db.commit()` in `create_reservation`.
-
----
-
-### 🔑 reCAPTCHA v3 on the reservation form
-
-**What:** Validate a reCAPTCHA token submitted by the frontend alongside the
-reservation form, providing a second bot-protection layer on top of the
-existing honeypot + timing check.
-
-**Status:** `RECAPTCHA_SECRET` is wired in `app/config.py` and `.env.example`.
-
-**To implement:**
-
-1. Add a `recaptcha_token: str` field to `ReservationCreate` in `app/schemas.py`.
-2. Add an `async def verify_recaptcha(token: str) -> bool` helper in
-   `app/spam.py` that calls the Google Siteverify API via `httpx`.
-3. Call `verify_recaptcha` in `create_reservation` and raise `HTTP 400` on
-   failure when `settings.recaptcha_secret` is non-empty.
-4. Update the frontend `ReservationModal` to load the reCAPTCHA script and
-   include the token in the POST body.
-
----
-
-### 💳 Payment gateway integration
-
-**What:** Mark a reservation as paid after the guest completes payment.
-The `payment_status` field (`unpaid | partial | paid`) already exists on
-every reservation.
-
-**Status:** Manual admin-side updates via `PUT /api/reservations/{id}` work
-today. A webhook receiver for automated updates is not implemented.
-
-**To implement (Mollie, Stripe, or similar):**
-
-1. Add `POST /api/payments/webhook` — verify the provider's HMAC signature,
-   then update `payment_status` on the matching reservation.
-2. Add `POST /api/payments/create-session/{reservation_id}` (admin) to
-   generate a payment link/session for a specific reservation.
-3. Store the provider's `payment_id` on the reservation for lookup.
-
----
-
-### 📅 Event management API
-
-**What:** Full CRUD for festival editions (dates, venue, schedule events) from
-the admin UI, replacing the current `src/config/editions.ts` source-code
-approach. The Content Management tab already shows editions read-only;
-saving changes requires this API.
-
-**Status:** The edition list is currently read-only in the admin Content tab
-(backed by `src/config/editions.ts`). The `event_id` / `event_title` on
-reservations also reference these hardcoded keys.
-
-**To implement:**
-
-1. Add an `Event` ORM model (id, title, date_from, date_to, venue, active).
-2. Add `ScheduleEvent` child model or embed as JSON on the Event row.
-3. Add `GET /api/events` (public) and `POST/PUT/DELETE /api/events/{id}` (admin).
-4. Extend the Content tab's "Festival Editions" section to call these routes.
-5. Update `ReservationCreate.event_id` to reference backend event IDs.
-
----
-
-### 📊 Export / reporting
-
-**What:** Allow organisers to download reservation data as CSV or Excel for
-offline use (e.g., printing guest lists, seating plans).
-
-**Status:** Not implemented.
-
-**To implement:**
-
-1. Add `GET /api/reservations/export?format=csv` (admin) using Python's
-   built-in `csv` module or `openpyxl` for Excel.
-2. Optionally add filtering query parameters (event, status, payment_status).
-
----
-
-### 🔔 Webhook / push notifications for organisers
-
-**What:** Notify organisers (e.g., via a Telegram bot or web push) when a new
-reservation is created or when a guest checks in.
-
-**Status:** Not implemented.
-
-**To implement:**
-
-1. Add a `WEBHOOK_URL` env var.
-2. After `db.commit()` in `create_reservation` and `post_check_in`, fire an
-   async `httpx.post(settings.webhook_url, json={...})` in the background
-   using `asyncio.create_task`.
+The README documents shipped behaviour; it is not a second product backlog.
+Current gaps, dependencies, and preferred implementation order live in the
+[product audit](../docs/product-audit-2026-08.md). In particular, automatic
+confirmation e-mail after registration creation is tracked by
+[#924](https://github.com/tjorim/champagnefestival/issues/924). The existing
+SMTP integration only delivers short-lived guest access links requested via
+`POST /api/registrations/my/request`.

@@ -28,13 +28,19 @@ deliberate decision, not an implicit idempotency guarantee.
 | Operations | Callers | Decision |
 | --- | --- | --- |
 | Bulk create rooms, table types, tables, and layouts (`POST /api/*/bulk`; MCP `bulk_create_*`) | REST and MCP automation | **Server-side replay.** The REST routers and MCP adapters call the same service functions and accept the same `idempotency_key`. |
-| Public and volunteer registration check-in | Event-day Android, browser, and volunteer clients | **Natural-key upsert.** Registration ID is the stable key; checked-in and strap-issued flags only converge from false to true. A repeat returns the current registration and reports that it was already checked in. |
+| Public and volunteer registration check-in | Event-day Android, browser, and volunteer clients | **Natural-key upsert.** Registration ID is the stable key; checked-in and strap-issued flags only converge from false to true. A repeat returns the current registration and reports that it was already checked in. The strict bucket is per registration, so one guest's retries do not consume another registration's allowance; a separate shared-IP abuse ceiling can still reject unrelated registrations when the venue-wide ceiling is exceeded. |
 | Updates (`PUT`), including venue details/coordinates, and FAQ reorder | Browser and MCP admin clients | **Not retry safe.** They currently have no version precondition; clients must read and reconcile after an ambiguous result. Optimistic concurrency is the preferred strategy if automatic retries are added. |
 | Deletes, account/token revocation, and integration-client revocation | Browser and MCP admin clients | **Natural resource key, convergent state only.** Repeating reaches the same absent/revoked state, although the response can change to not-found. Callers needing the original response must reconcile. |
 | Single creates, layout copy, people merge, registration creation, contact submission, registration-access email request, Pebble token creation, and integration-client creation/rotation | Browser, public clients, and MCP automation | **Not retry safe.** Server-generated identity or an external side effect makes blind retry unsafe. Use server-side replay or a client-generated resource ID before adding automatic retries. Secret-returning operations must not gain replay storage without a separate security review. |
 
 Read-only `POST` operations (check-in lookup and registration access-token
 exchange) do not mutate application state and are outside this write inventory.
+
+Cancelling a registration rotates its check-in token only on the transition
+into `cancelled`; repeating the same cancellation does not rotate it again.
+This makes that side effect convergent, but does not change the broader `PUT`
+decision above: registration updates are not advertised or automatically
+retried without first reconciling the current resource.
 
 ## Bulk-create replay contract
 

@@ -62,6 +62,8 @@ function CheckInCard({
   onSetOrderItemQuantity,
   onIssueStrap,
 }: CheckInCardProps) {
+  const isCancelled = registration.status === "cancelled";
+  const canUpdateEntrance = canManageEntranceActions && !isCancelled;
   return (
     <Card
       bg="dark"
@@ -79,6 +81,7 @@ function CheckInCard({
           {registration.name}
         </span>
         <div className="d-flex gap-2 flex-wrap">
+          {isCancelled && <Badge bg="danger">{m.admin_status_cancelled()}</Badge>}
           {registration.checkedIn && (
             <Badge bg="success">
               <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
@@ -106,6 +109,12 @@ function CheckInCard({
         </div>
 
         <div role="alert" aria-live="assertive">
+          {isCancelled && (
+            <Alert variant="danger" className="mb-3">
+              <i className="bi bi-x-octagon-fill me-2" aria-hidden="true" />
+              {m.admin_status_cancelled()}
+            </Alert>
+          )}
           {isAlreadyCheckedIn && !success && registration.checkedInAt && (
             <Alert variant="warning" className="mb-3">
               <i className="bi bi-exclamation-circle-fill me-2" aria-hidden="true" />
@@ -159,7 +168,7 @@ function CheckInCard({
                         variant="outline-secondary"
                         onClick={() => onAdjustOrderItem(item.productId, -1)}
                         disabled={
-                          !canManageEntranceActions ||
+                          !canUpdateEntrance ||
                           isUpdatingRegistration ||
                           item.deliveredQuantity <= 0
                         }
@@ -199,14 +208,14 @@ function CheckInCard({
                         style={{ width: "5rem" }}
                         type="number"
                         defaultValue={item.deliveredQuantity}
-                        disabled={!canManageEntranceActions || isUpdatingRegistration}
+                        disabled={!canUpdateEntrance || isUpdatingRegistration}
                       />
                       <Button
                         size="sm"
                         variant={item.delivered ? "success" : "outline-success"}
                         onClick={() => onAdjustOrderItem(item.productId, 1)}
                         disabled={
-                          !canManageEntranceActions ||
+                          !canUpdateEntrance ||
                           isUpdatingRegistration ||
                           item.deliveredQuantity >= item.quantity
                         }
@@ -230,7 +239,7 @@ function CheckInCard({
         )}
       </Card.Body>
 
-      {(!registration.checkedIn || !registration.strapIssued) && (
+      {!isCancelled && (!registration.checkedIn || !registration.strapIssued) && (
         <Card.Footer className="bg-dark border-secondary d-grid gap-2">
           {!registration.checkedIn && (
             <Button variant="warning" className="w-100" onClick={onCheckIn} disabled={isCheckingIn}>

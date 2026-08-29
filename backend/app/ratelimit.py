@@ -16,7 +16,25 @@ from fastapi import Request
 
 _RATE_LIMIT_MAX_REQUESTS = 5
 _RATE_LIMIT_WINDOW_SECONDS = 600
-_rate_limit_buckets: dict[str, collections.deque[datetime]] = {}
+_CHECK_IN_REGISTRATION_MAX_REQUESTS = 10
+_CHECK_IN_IP_MAX_REQUESTS = 300
+_CHECK_IN_WINDOW_SECONDS = 600
+_RATE_LIMIT_BUCKET_CAP = 10_000
+_rate_limit_buckets: dict[tuple[str, str], collections.deque[datetime]] = {}
+
+
+def _evict_expired_or_oldest_bucket(now: datetime) -> None:
+    """Keep process-local limiter storage bounded when new keys arrive."""
+    for bucket_key, bucket in list(_rate_limit_buckets.items()):
+        cutoff = now - timedelta(seconds=_CHECK_IN_WINDOW_SECONDS)
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
+        if not bucket:
+            _rate_limit_buckets.pop(bucket_key, None)
+
+    if len(_rate_limit_buckets) >= _RATE_LIMIT_BUCKET_CAP:
+        oldest_key = min(_rate_limit_buckets, key=lambda item: _rate_limit_buckets[item][-1])
+        _rate_limit_buckets.pop(oldest_key, None)
 
 
 def _peer_is_trusted_proxy(request: Request) -> bool:
@@ -52,14 +70,47 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def check_rate_limit(client_ip: str) -> bool:
-    """Return True if the request is within the rate limit, False otherwise."""
+def check_rate_limit(
+    key: str,
+    *,
+    scope: str,
+    max_requests: int = _RATE_LIMIT_MAX_REQUESTS,
+    window_seconds: int = _RATE_LIMIT_WINDOW_SECONDS,
+) -> bool:
+    """Consume one request from an explicitly scoped in-process bucket."""
     now = datetime.now(UTC)
-    cutoff = now - timedelta(seconds=_RATE_LIMIT_WINDOW_SECONDS)
-    bucket = _rate_limit_buckets.setdefault(client_ip, collections.deque())
+    cutoff = now - timedelta(seconds=window_seconds)
+    bucket_key = (scope, key)
+    bucket = _rate_limit_buckets.get(bucket_key)
+    if bucket is None:
+        _evict_expired_or_oldest_bucket(now)
+        bucket = collections.deque()
+        _rate_limit_buckets[bucket_key] = bucket
     while bucket and bucket[0] < cutoff:
         bucket.popleft()
-    if len(bucket) >= _RATE_LIMIT_MAX_REQUESTS:
+    if len(bucket) >= max_requests:
         return False
     bucket.append(now)
     return True
+
+
+def check_check_in_rate_limit(registration_id: str, client_ip: str) -> bool:
+    """Limit token attempts per registration, with a high per-IP abuse backstop.
+
+    Venue devices commonly share one public IP. The registration bucket stops
+    repeated guessing against one QR credential without making unrelated guests
+    consume the same small allowance; the IP bucket only catches bulk abuse.
+    """
+    if not check_rate_limit(
+        client_ip,
+        scope="check-in-ip",
+        max_requests=_CHECK_IN_IP_MAX_REQUESTS,
+        window_seconds=_CHECK_IN_WINDOW_SECONDS,
+    ):
+        return False
+    return check_rate_limit(
+        registration_id,
+        scope="check-in-registration",
+        max_requests=_CHECK_IN_REGISTRATION_MAX_REQUESTS,
+        window_seconds=_CHECK_IN_WINDOW_SECONDS,
+    )

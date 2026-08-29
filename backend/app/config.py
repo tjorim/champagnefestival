@@ -113,9 +113,9 @@ class Settings(BaseSettings):
 
     # --- Rate limiting ---
     rate_limit_enabled: bool = True
-    """Whether the general per-IP rate limiter applies to every /api route.
-    The stricter check-in/registration limiter (app/ratelimit.py) always applies
-    on top of this one, regardless of this setting."""
+    """Whether the general rate limiter applies to eligible /api routes.
+    Token-gated check-in routes are exempt because their purpose-specific
+    per-registration and shared-IP limits in app/ratelimit.py always apply."""
 
     rate_limit_default: str = "60/minute"
     """Default rate limit applied per client IP and route, e.g. "60/minute".
@@ -141,14 +141,16 @@ class Settings(BaseSettings):
     guest_access_token_ttl_minutes: int = 30
     """How long a visitor reservation access link remains valid."""
 
-    # --- TODO: Email notifications (planned, not yet implemented) ---
+    # --- SMTP delivery ---
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
-    """SMTP credentials for sending guest confirmation e-mails.
-    Leaving these empty disables e-mail sending (currently always disabled).
+    """SMTP credentials used to send guest reservation-access links.
+    E-mail delivery is disabled when smtp_host or smtp_from is empty; SMTP
+    authentication is optional. Reservation confirmation e-mails are a
+    separate, currently unimplemented product flow.
     """
 
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
