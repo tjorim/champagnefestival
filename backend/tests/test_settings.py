@@ -27,6 +27,7 @@ async def test_get_settings_creates_the_row_lazily(unauth_client):
     r = await unauth_client.get("/api/settings")
     assert r.status_code == 200
     assert r.json()["maintenance_mode"] is False
+    assert r.headers["cache-control"] == "public, max-age=30"
 
     # A second read returns the same row, not a duplicate.
     r = await unauth_client.get("/api/settings")
