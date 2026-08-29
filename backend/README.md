@@ -249,6 +249,8 @@ See `.env.example` for a template.
 | `POST`   | `/api/contact`                  | public         | Persist a contact submission and notify the configured recipient           |
 | `GET`    | `/api/contact`                  | admin          | List persisted contact messages                                            |
 | `PUT`    | `/api/contact/{id}/handled`     | admin          | Mark a contact message as handled                                          |
+| `GET`    | `/api/settings`                 | public         | Get maintenance mode and public contact settings                           |
+| `PUT`    | `/api/settings`                 | admin          | Update maintenance mode or public contact settings                         |
 | `POST`   | `/api/tables`                   | admin          | Create table                                                               |
 | `GET`    | `/api/tables`                   | admin          | List tables                                                                |
 | `GET`    | `/api/tables/{id}`              | admin          | Get table                                                                  |

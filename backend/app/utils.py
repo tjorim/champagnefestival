@@ -376,6 +376,9 @@ def person_summary_to_dict(p: Person) -> dict:
 def app_settings_to_dict(s: AppSettings) -> dict:
     return {
         "maintenance_mode": s.maintenance_mode,
+        "public_email": s.public_email,
+        "public_phone": s.public_phone,
+        "facebook_url": s.facebook_url,
         "updated_at": s.updated_at,
     }
 

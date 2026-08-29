@@ -83,7 +83,7 @@ This phase is the largest product gain in the audit.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 2 | #940 — public contact settings | Build immediately after #925 settles `/api/settings` failure semantics. It shares the public contact path with completed #923 but remains independent of message delivery. | S–M |
+| 2 | #940 — public contact settings | Implementation complete on `feat/940-public-contact-settings`: validated public email, telephone, and Facebook values use the existing audited settings write and shared last-good public cache; the admin form and all three public consumers include translated fallback/empty-state coverage. Migration and backend endpoint tests still need CI verification before this item moves to completed work. | S–M |
 | 3 | #947 — durable outbox and scheduled-delivery worker | Extract the shared DB-backed delivery contract from completed #923's persistence semantics. Adopt it in an individual transactional path before using it for push fan-out. | M–L |
 | 4 | #924 — no confirmation e-mail, QR only in the admin UI | The single biggest product gap. Reuses #923's persistence decisions and #947's delivery contract rather than adding inline SMTP or a second queue. | M–L |
 | 5 | #922 — `Registration.user_id` never written | Unblocks `/api/me/registrations` and the entire Pebble app (#757). Independent of 2–4, so it can run in parallel. | M |

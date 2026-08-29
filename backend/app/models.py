@@ -632,6 +632,9 @@ class AppSettings(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     maintenance_mode: Mapped[bool] = mapped_column(Boolean, default=False)
+    public_email: Mapped[str] = mapped_column(String(320), default="nancy.cattrysse@telenet.be")
+    public_phone: Mapped[str] = mapped_column(String(30), default="+32 478 48 01 77")
+    facebook_url: Mapped[str] = mapped_column(String(500), default="https://www.facebook.com/champagnefestival.kust")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

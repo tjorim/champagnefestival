@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { m } from "@/paraglide/messages";
-import { contactConfig } from "@/config/contact";
+import { usePublicSettings } from "@/hooks/useMaintenanceMode";
 
 /**
  * Path for the current edition's flyer/poster image. Replace
@@ -52,7 +52,7 @@ const FLYER_SRC = "/images/flyer.jpg";
 const WIDE_BREAKPOINT = "900px";
 
 export default function MaintenancePage() {
-  const facebookUrl = `https://www.facebook.com/${contactConfig.social.facebook}`;
+  const { facebook_url: facebookUrl } = usePublicSettings();
   const [flyerFailed, setFlyerFailed] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -297,15 +297,17 @@ export default function MaintenancePage() {
         <p style={{ fontSize: "1.1rem", marginBottom: "1.5rem", color: "#fff8ec" }}>
           {m.maintenance_message()}
         </p>
-        <a
-          href={facebookUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-lg maintenance-page__cta"
-        >
-          <i className="bi bi-facebook me-2" aria-hidden="true" />
-          {m.maintenance_facebook_cta()}
-        </a>
+        {facebookUrl && (
+          <a
+            href={facebookUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-lg maintenance-page__cta"
+          >
+            <i className="bi bi-facebook me-2" aria-hidden="true" />
+            {m.maintenance_facebook_cta()}
+          </a>
+        )}
 
         {flyerFailed ? (
           <div className="maintenance-page__flyer-card">

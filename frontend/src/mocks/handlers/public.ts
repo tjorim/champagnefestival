@@ -51,7 +51,14 @@ const publicFaqItemsByLocale = {
 
 export const publicHandlers = [
   /** GET /api/settings — site-wide settings; maintenance mode off by default. */
-  http.get("/api/settings", () => HttpResponse.json({ maintenance_mode: false })),
+  http.get("/api/settings", () =>
+    HttpResponse.json({
+      maintenance_mode: false,
+      public_email: "nancy.cattrysse@telenet.be",
+      public_phone: "+32 478 48 01 77",
+      facebook_url: "https://www.facebook.com/champagnefestival.kust",
+    }),
+  ),
 
   /** GET /api/faq/active — returns a deterministic localized public FAQ item. */
   http.get("/api/faq/active", ({ request }) => {

@@ -1,36 +1,37 @@
 import React from "react";
 import { m } from "@/paraglide/messages";
-import { contactConfig } from "@/config/contact";
+import { usePublicSettings } from "@/hooks/useMaintenanceMode";
 
 /**
  * Component to display contact information from configuration
  */
 const ContactInfo: React.FC = () => {
+  const settings = usePublicSettings();
   return (
     <div className="contact-info">
       <p className="mb-3">{m.contact_alternative_contact()}</p>
 
-      <div className="mb-2">
+      {settings.public_email && <div className="mb-2">
         <strong>{m.contact_email_label()}</strong>{" "}
         <a
-          href={`mailto:${contactConfig.emails.info}`}
+          href={`mailto:${settings.public_email}`}
           className="text-decoration-none"
           aria-label={m.contact_email_label()}
         >
-          {contactConfig.emails.info}
+          {settings.public_email}
         </a>
-      </div>
+      </div>}
 
-      <div className="mb-2">
+      {settings.public_phone && <div className="mb-2">
         <strong>{m.contact_phone_label()}</strong>{" "}
         <a
-          href={`tel:${contactConfig.phones.main.replace(/\s/g, "")}`}
+          href={`tel:${settings.public_phone.replace(/\s/g, "")}`}
           className="text-decoration-none"
           aria-label={m.contact_phone_label()}
         >
-          {contactConfig.phones.main}
+          {settings.public_phone}
         </a>
-      </div>
+      </div>}
     </div>
   );
 };

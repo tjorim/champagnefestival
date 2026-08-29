@@ -2,6 +2,17 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import ContactInfo from "@/components/ContactInfo";
 
+const publicSettings = {
+  maintenance_mode: false,
+  public_email: "info@example.com",
+  public_phone: "+32 59 12 34 56",
+  facebook_url: "https://www.facebook.com/example",
+};
+
+vi.mock("@/hooks/useMaintenanceMode", () => ({
+  usePublicSettings: () => publicSettings,
+}));
+
 vi.mock("@/paraglide/messages", () => ({
   m: {
     contact_alternative_contact: () => "Or contact us directly:",
@@ -34,5 +45,14 @@ describe("ContactInfo component", () => {
     render(<ContactInfo />);
     expect(screen.getByText("Email:")).toBeInTheDocument();
     expect(screen.getByText("Phone:")).toBeInTheDocument();
+  });
+
+  it("hides empty public contact actions", () => {
+    publicSettings.public_email = "";
+    publicSettings.public_phone = "";
+    render(<ContactInfo />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    publicSettings.public_email = "info@example.com";
+    publicSettings.public_phone = "+32 59 12 34 56";
   });
 });

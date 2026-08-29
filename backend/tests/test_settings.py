@@ -1,4 +1,4 @@
-"""Tests for the site-wide settings API (currently just maintenance mode).
+"""Tests for the site-wide maintenance and public-contact settings API.
 
 Concurrent-first-request atomicity (two requests racing to create the fixed
 singleton row) is deliberately not covered here: this test client's
@@ -12,9 +12,10 @@ with a single row) — see the PR description.
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.models import Edition
+from app.models import AuditEntry, Edition
 from app.services import settings_service
 from tests.helpers import ADMIN_HEADERS
 
@@ -27,6 +28,10 @@ async def test_get_settings_creates_the_row_lazily(unauth_client):
     r = await unauth_client.get("/api/settings")
     assert r.status_code == 200
     assert r.json()["maintenance_mode"] is False
+    assert r.json()["public_email"] == "nancy.cattrysse@telenet.be"
+    assert r.json()["public_phone"] == "+32 478 48 01 77"
+    assert r.json()["facebook_url"].startswith("https://")
+    assert not ({"smtp_host", "smtp_password", "smtp_from", "contact_recipient"} & r.json().keys())
     assert r.headers["cache-control"] == "public, max-age=30"
 
     # A second read returns the same row, not a duplicate.
@@ -59,6 +64,57 @@ async def test_put_settings_toggles_maintenance_mode(client):
     r = await client.put("/api/settings", json={"maintenance_mode": False}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert r.json()["maintenance_mode"] is False
+
+
+@pytest.mark.anyio
+async def test_admin_updates_public_contact_settings_and_audits_fields(client, db_session):
+    payload = {
+        "public_email": "hello@example.com",
+        "public_phone": "+32 59 12 34 56",
+        "facebook_url": "https://www.facebook.com/example",
+    }
+    response = await client.put("/api/settings", json=payload, headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    assert {key: response.json()[key] for key in payload} == payload
+
+    public_response = await client.get("/api/settings")
+    assert {key: public_response.json()[key] for key in payload} == payload
+    audit = await db_session.scalar(
+        select(AuditEntry).where(
+            AuditEntry.action == "settings_updated",
+            AuditEntry.resource_type == "app_settings",
+        )
+    )
+    assert audit is not None
+    assert audit.details["fields_changed"] == sorted(payload)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("public_email", "not-an-email"),
+        ("public_phone", "059 12"),
+        ("facebook_url", "http://www.facebook.com/example"),
+        ("facebook_url", "https:///missing-host"),
+    ],
+)
+async def test_put_settings_rejects_invalid_public_contact_values(client, field, value):
+    response = await client.put("/api/settings", json={field: value}, headers=ADMIN_HEADERS)
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_put_settings_accepts_empty_public_contact_values(client):
+    response = await client.put(
+        "/api/settings",
+        json={"public_email": "", "public_phone": "", "facebook_url": ""},
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 200
+    assert response.json()["public_email"] == ""
+    assert response.json()["public_phone"] == ""
+    assert response.json()["facebook_url"] == ""
 
 
 @pytest.mark.anyio
