@@ -152,7 +152,7 @@ async def test_volunteer_can_check_in_from_registration_search(client):
 
 
 @pytest.mark.anyio
-async def test_volunteer_cannot_check_in_cancelled_registration(client):
+async def test_volunteer_cannot_check_in_canceled_registration(client):
     registration = await _post_registration(client, path="/api/registrations")
     registration_id = registration.json()["id"]
     cancelled = await client.put(

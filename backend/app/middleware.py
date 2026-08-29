@@ -1,6 +1,7 @@
 """Application middleware configuration."""
 
 import logging
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from fastapi import FastAPI
@@ -12,7 +13,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import Settings
-from app.ratelimit import get_general_rate_limit_key
+from app.ratelimit import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -51,20 +52,26 @@ def add_cors_middleware(app: FastAPI, settings: Settings, *, mcp_enabled: bool =
         app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 
-def add_rate_limit_middleware(app: FastAPI, settings: Settings) -> Limiter:
+def add_rate_limit_middleware(
+    app: FastAPI,
+    settings: Settings,
+    *,
+    exempt_routes: Iterable[Callable[..., Any]] = (),
+) -> Limiter:
     """Install a general, configurable per-IP rate limiter across every route.
 
     Applies RATE_LIMIT_DEFAULT per client IP and route unless RATE_LIMIT_ENABLED
-    is false. Token-gated check-in routes use their registration ID instead, so
-    unrelated guests behind a venue's shared public IP do not share this bucket.
-    Purpose-specific limits in ``app.ratelimit`` provide the additional abuse
-    controls for public registration and check-in operations.
+    is false. Callers may exempt routes that have a purpose-specific policy;
+    token-gated check-in uses this to avoid stacking the global limit on top of
+    its per-registration limit and shared-IP abuse backstop.
     """
     limiter = Limiter(
-        key_func=get_general_rate_limit_key,
+        key_func=get_client_ip,
         default_limits=[settings.rate_limit_default],
         enabled=settings.rate_limit_enabled,
     )
+    for route in exempt_routes:
+        limiter.exempt(route)
     app.state.limiter = limiter
     app.exception_handler(RateLimitExceeded)(_rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)

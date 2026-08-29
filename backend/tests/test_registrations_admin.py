@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
-import pytest
+import asyncio
 
+import pytest
+from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.models import Registration
+from app.schemas import RegistrationUpdate
+from app.services import registrations_service
 from tests.helpers import (
     ADMIN_HEADERS,
     _create_event,
@@ -127,7 +135,7 @@ async def test_admin_uncheckin_clears_checked_in_at(client):
 
 
 @pytest.mark.anyio
-async def test_admin_cannot_check_in_cancelled_registration(client):
+async def test_admin_cannot_check_in_canceled_registration(client):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
     cancelled = await client.put(
@@ -146,7 +154,7 @@ async def test_admin_cannot_check_in_cancelled_registration(client):
 
 
 @pytest.mark.anyio
-async def test_admin_must_uncheck_registration_before_cancelling(client):
+async def test_admin_must_uncheck_registration_before_canceling(client):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
     checked_in = await client.put(
@@ -171,6 +179,45 @@ async def test_admin_must_uncheck_registration_before_cancelling(client):
     assert cancelled_and_unchecked.status_code == 200
     assert cancelled_and_unchecked.json()["status"] == "cancelled"
     assert cancelled_and_unchecked.json()["checked_in"] is False
+
+
+@pytest.mark.anyio
+async def test_concurrent_cancel_and_check_in_preserve_registration_invariant(client, engine):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with factory() as cancel_session, factory() as check_in_session:
+        cancel_registration = await registrations_service.get_registration_or_404(
+            cancel_session, registration_id
+        )
+        check_in_registration = await registrations_service.get_registration_or_404(
+            check_in_session, registration_id
+        )
+        results = await asyncio.gather(
+            registrations_service.apply_registration_update(
+                cancel_session,
+                cancel_registration,
+                RegistrationUpdate(status="cancelled"),
+                actor="cancel-test",
+            ),
+            registrations_service.apply_registration_update(
+                check_in_session,
+                check_in_registration,
+                RegistrationUpdate(checked_in=True),
+                actor="check-in-test",
+            ),
+            return_exceptions=True,
+        )
+
+    conflicts = [result for result in results if isinstance(result, HTTPException)]
+    assert len(conflicts) == 1
+    assert conflicts[0].status_code == 409
+
+    async with factory() as verify_session:
+        registration = await verify_session.scalar(select(Registration).where(Registration.id == registration_id))
+        assert registration is not None
+        assert not (registration.status == "cancelled" and registration.checked_in)
 
 
 @pytest.mark.anyio

@@ -83,7 +83,7 @@ async def post_check_in(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
         )
-    r = await _get_by_token_or_401(db, reservation_id, body.token)
+    r = await _get_by_token_or_401(db, reservation_id, body.token, for_update=True)
     ensure_registration_can_check_in(r)
     person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
     event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
@@ -154,12 +154,30 @@ async def post_check_in(
 # ---------------------------------------------------------------------------
 
 
-async def _get_by_token_or_401(db: AsyncSession, reservation_id: str, token: str) -> Registration:
-    result = await db.execute(select(Registration).where(Registration.id == reservation_id))
-    r = result.scalar_one_or_none()
+async def _get_by_token_or_401(
+    db: AsyncSession,
+    reservation_id: str,
+    token: str,
+    *,
+    for_update: bool = False,
+) -> Registration:
+    async def fetch(*, lock: bool) -> Registration | None:
+        stmt = select(Registration).where(Registration.id == reservation_id)
+        if lock:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        return (await db.execute(stmt)).scalar_one_or_none()
+
+    r = await fetch(lock=False)
     if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid registration ID or token.",
         )
+    if for_update:
+        r = await fetch(lock=True)
+        if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid registration ID or token.",
+            )
     return r

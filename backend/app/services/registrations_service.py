@@ -56,7 +56,7 @@ async def get_registration_or_404(db: AsyncSession, registration_id: str) -> Reg
 
 
 def ensure_registration_can_check_in(registration: Registration) -> None:
-    """Reject entrance mutations for a cancelled registration."""
+    """Reject entrance mutations for a canceled registration."""
     if registration.status == "cancelled":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -234,6 +234,19 @@ async def apply_registration_update(
     in the JSON body, which already lands in ``body.model_fields_set`` and so
     never needs the flags (it always passes ``False``).
     """
+    registration = (
+        await db.execute(
+            select(Registration)
+            .options(
+                selectinload(Registration.event).selectinload(Event.edition),
+                selectinload(Registration.event).selectinload(Event.products),
+            )
+            .where(Registration.id == registration.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one()
+
     pre_table_id = registration.table_id
     pre_order_items = list(registration.order_items) if registration.order_items else []
     pre_delivery_sum = sum_delivered(registration.order_items)

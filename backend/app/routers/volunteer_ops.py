@@ -361,6 +361,7 @@ async def volunteer_check_in_registration(
     QR token. The response remains PII-free.
     """
 
+    await db.execute(select(Registration.id).where(Registration.id == registration_id).with_for_update())
     row = (
         await db.execute(
             select(Registration, Table.name)

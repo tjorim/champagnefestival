@@ -44,7 +44,7 @@ async def test_check_in_wrong_token(client):
 
 
 @pytest.mark.anyio
-async def test_cancelled_registration_is_rejected_by_lookup_and_check_in(client):
+async def test_canceled_registration_is_rejected_by_lookup_and_check_in(client):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
     detail = await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
@@ -82,6 +82,34 @@ async def test_pending_registration_can_check_in(client):
         json={"token": detail.json()["check_in_token"]},
     )
     assert checked_in.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_lookup_allows_ten_requests_for_one_registration(client):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    detail = await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
+
+    for _ in range(10):
+        response = await client.post(
+            f"/api/check-in/{registration_id}/lookup",
+            json={"token": detail.json()["check_in_token"]},
+        )
+        assert response.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_check_in_allows_ten_requests_for_one_registration(client):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    detail = await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
+
+    for _ in range(10):
+        response = await client.post(
+            f"/api/check-in/{registration_id}",
+            json={"token": detail.json()["check_in_token"]},
+        )
+        assert response.status_code == 200
 
 
 @pytest.mark.anyio

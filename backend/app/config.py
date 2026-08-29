@@ -113,9 +113,9 @@ class Settings(BaseSettings):
 
     # --- Rate limiting ---
     rate_limit_enabled: bool = True
-    """Whether the general rate limiter applies to every /api route.
-    It is keyed per IP except for token-gated check-in routes, which are keyed
-    per registration. Purpose-specific limits in app/ratelimit.py always apply."""
+    """Whether the general rate limiter applies to eligible /api routes.
+    Token-gated check-in routes are exempt because their purpose-specific
+    per-registration and shared-IP limits in app/ratelimit.py always apply."""
 
     rate_limit_default: str = "60/minute"
     """Default rate limit applied per client IP and route, e.g. "60/minute".
@@ -148,8 +148,9 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
     """SMTP credentials used to send guest reservation-access links.
-    Leaving these empty disables e-mail delivery. Reservation confirmation
-    e-mails are a separate, currently unimplemented product flow.
+    E-mail delivery is disabled when smtp_host or smtp_from is empty; SMTP
+    authentication is optional. Reservation confirmation e-mails are a
+    separate, currently unimplemented product flow.
     """
 
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---

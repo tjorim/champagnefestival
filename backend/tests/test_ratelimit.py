@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import collections
+from datetime import UTC, datetime, timedelta
+
 from starlette.requests import Request
 
-from app.ratelimit import check_check_in_rate_limit, check_rate_limit, get_client_ip, get_general_rate_limit_key
+import app.ratelimit as ratelimit_module
+from app.ratelimit import check_check_in_rate_limit, check_rate_limit, get_client_ip
 
 
 def _make_request(headers: dict[str, str], client_host: str | None = "10.0.0.1") -> Request:
@@ -66,8 +70,32 @@ def test_check_in_rate_limit_rejects_repeated_attempts_for_one_registration() ->
     assert not check_check_in_rate_limit("reg-target", "203.0.113.5")
 
 
-def test_general_rate_limit_uses_registration_id_for_check_in() -> None:
-    request = _make_request({})
-    request.scope["path"] = "/api/check-in/reg-123/lookup"
+def test_ip_limit_is_checked_before_registration_bucket_is_allocated() -> None:
+    for index in range(300):
+        assert check_check_in_rate_limit(f"reg-{index}", "203.0.113.5")
 
-    assert get_general_rate_limit_key(request) == "check-in-registration:reg-123"
+    bucket_count = len(ratelimit_module._rate_limit_buckets)
+    assert not check_check_in_rate_limit("attacker-controlled-id", "203.0.113.5")
+    assert len(ratelimit_module._rate_limit_buckets) == bucket_count
+    assert ("check-in-registration", "attacker-controlled-id") not in ratelimit_module._rate_limit_buckets
+
+
+def test_new_bucket_evicts_expired_entries() -> None:
+    expired = datetime.now(UTC) - timedelta(seconds=601)
+    ratelimit_module._rate_limit_buckets[("check-in-registration", "expired")] = collections.deque([expired])
+
+    assert check_rate_limit("new", scope="registration-create")
+    assert ("check-in-registration", "expired") not in ratelimit_module._rate_limit_buckets
+
+
+def test_bucket_storage_has_a_hard_cap(monkeypatch) -> None:
+    monkeypatch.setattr(ratelimit_module, "_RATE_LIMIT_BUCKET_CAP", 3)
+    now = datetime.now(UTC)
+    for index in range(3):
+        ratelimit_module._rate_limit_buckets[("scope", str(index))] = collections.deque(
+            [now + timedelta(microseconds=index)]
+        )
+
+    assert check_rate_limit("new", scope="scope")
+    assert len(ratelimit_module._rate_limit_buckets) == 3
+    assert ("scope", "0") not in ratelimit_module._rate_limit_buckets
