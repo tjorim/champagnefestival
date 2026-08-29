@@ -83,7 +83,7 @@ This phase is the largest product gain in the audit.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 2 | #923 — contact form discards every message | Establishes honest persist-before-success semantics, unblocks the rights channel in #934, and supplies the first delivery use case for #947. | M |
+| 2 | #923 — contact form discards every message | Implementation complete on `fix/923-persist-contact-messages`: submissions use a client-generated ID, persist before success, notify the deployment-managed recipient, have a scoped rate limit, and are actionable in an admin inbox. PostgreSQL-backed migration and endpoint tests still need CI verification before this item moves to completed work. Establishes the persistence semantics needed by #934 and the first delivery use case for #947. | M |
 | 3 | #940 — public contact settings | Build immediately after #925 settles `/api/settings` failure semantics. It shares the public contact path with #923 but remains independent of message delivery, so the two can run in parallel after their contracts are agreed. | S–M |
 | 4 | #947 — durable outbox and scheduled-delivery worker | Extract the shared DB-backed delivery contract after #923 establishes persistence semantics. Adopt it in an individual transactional path before using it for push fan-out. | M–L |
 | 5 | #924 — no confirmation e-mail, QR only in the admin UI | The single biggest product gap. Reuses #923's persistence decisions and #947's delivery contract rather than adding inline SMTP or a second queue. | M–L |

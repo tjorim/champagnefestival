@@ -59,6 +59,7 @@ export const queryKeys = {
     editionStats: ["admin", "edition-stats"] as const,
     faqItems: ["admin", "faq-items"] as const,
     settings: ["admin", "settings"] as const,
+    contactMessages: ["admin", "contact-messages"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
       editions: ["admin", "content-management", "editions"] as const,

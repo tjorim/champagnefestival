@@ -115,6 +115,7 @@ describe("ContactForm component", () => {
     });
     const requestBody = JSON.parse(options.body as string);
     expect(requestBody).toMatchObject({
+      submission_id: expect.any(String),
       name: "John Doe",
       email: "john@example.com",
       message: "Hello there",
@@ -124,7 +125,7 @@ describe("ContactForm component", () => {
   it("shows error message when submission fails", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({ message: "Server error" }),
+      json: async () => ({ detail: "Server error" }),
     });
     vi.stubGlobal("fetch", fetchMock);
     renderForm();
@@ -151,6 +152,7 @@ describe("ContactForm component", () => {
     });
     const requestBody = JSON.parse(options.body as string);
     expect(requestBody).toMatchObject({
+      submission_id: expect.any(String),
       name: "John",
       email: "john@example.com",
       message: "Hello",

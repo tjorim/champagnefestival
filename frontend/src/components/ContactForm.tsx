@@ -27,13 +27,14 @@ class ContactSubmissionError extends Error {
   }
 }
 
-async function submitContactForm(form: FormData): Promise<void> {
+async function submitContactForm(form: FormData, submissionId: string): Promise<void> {
   const response = await fetch("/api/contact", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      submission_id: submissionId,
       name: form.name,
       email: form.email,
       message: form.message,
@@ -46,7 +47,7 @@ async function submitContactForm(form: FormData): Promise<void> {
 
   if (!response.ok) {
     throw new ContactSubmissionError(
-      (result as { message?: string }).message ?? m.contact_submission_error(),
+      (result as { detail?: string }).detail ?? m.contact_submission_error(),
     );
   }
 }
@@ -56,11 +57,12 @@ async function submitContactForm(form: FormData): Promise<void> {
  */
 const ContactForm = () => {
   const formStartTime = useRef(new Date().toISOString());
+  const submissionId = useRef(crypto.randomUUID());
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const submitContactMutation = useMutation({
-    mutationFn: submitContactForm,
+    mutationFn: (form: FormData) => submitContactForm(form, submissionId.current),
     retry: false,
   });
 
@@ -87,6 +89,7 @@ const ContactForm = () => {
 
       try {
         await submitContactMutation.mutateAsync(value);
+        submissionId.current = crypto.randomUUID();
         setIsSubmitted(true);
         form.reset({
           name: "",
