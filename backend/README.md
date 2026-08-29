@@ -246,6 +246,9 @@ See `.env.example` for a template.
 | `DELETE` | `/api/registrations/{id}`        | admin          | Delete registration                                                         |
 | `POST`   | `/api/check-in/{id}/lookup`      | public + token | Verify QR token and return guest information                                |
 | `POST`   | `/api/check-in/{id}`            | public + token | Mark checked-in, issue strap                                               |
+| `POST`   | `/api/contact`                  | public         | Persist a contact submission and notify the configured recipient           |
+| `GET`    | `/api/contact`                  | admin          | List persisted contact messages                                            |
+| `PUT`    | `/api/contact/{id}/handled`     | admin          | Mark a contact message as handled                                          |
 | `POST`   | `/api/tables`                   | admin          | Create table                                                               |
 | `GET`    | `/api/tables`                   | admin          | List tables                                                                |
 | `GET`    | `/api/tables/{id}`              | admin          | Get table                                                                  |

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import smtplib
+import ssl
 from datetime import datetime
 from email.message import EmailMessage
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 async def send_contact_notification(*, name: str, email: str, message_text: str, message_id: str) -> bool:
-    """Notify the organiser about a persisted contact submission."""
+    """Notify the organizer about a persisted contact submission."""
     recipient = settings.contact_recipient or settings.smtp_from
     if not settings.smtp_host or not settings.smtp_from or not recipient:
         logger.warning("Contact notification not sent for message_id=%s because SMTP is not configured.", message_id)
@@ -84,7 +85,7 @@ async def send_guest_access_email(
 def _send_message_sync(message: EmailMessage) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
         smtp.ehlo()
-        smtp.starttls()
+        smtp.starttls(context=ssl.create_default_context())
         smtp.ehlo()
         if settings.smtp_user:
             smtp.login(settings.smtp_user, settings.smtp_password)

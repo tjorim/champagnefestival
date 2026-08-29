@@ -27,6 +27,22 @@ class ContactSubmissionError extends Error {
   }
 }
 
+function contactErrorMessage(result: unknown): string {
+  if (typeof result !== "object" || result === null || !("detail" in result)) {
+    return m.contact_submission_error();
+  }
+  const detail = result.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const validationMessage = detail.find(
+      (item): item is { msg: string } =>
+        typeof item === "object" && item !== null && "msg" in item && typeof item.msg === "string",
+    );
+    if (validationMessage) return validationMessage.msg;
+  }
+  return m.contact_submission_error();
+}
+
 async function submitContactForm(form: FormData, submissionId: string): Promise<void> {
   const response = await fetch("/api/contact", {
     method: "POST",
@@ -46,9 +62,7 @@ async function submitContactForm(form: FormData, submissionId: string): Promise<
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new ContactSubmissionError(
-      (result as { detail?: string }).detail ?? m.contact_submission_error(),
-    );
+    throw new ContactSubmissionError(contactErrorMessage(result));
   }
 }
 
