@@ -207,6 +207,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleAddTable,
     handleAddTableType,
     handleAddVenue,
+    handleUpdateVenue,
     handleArchiveRoom,
     handleArchiveTableType,
     handleArchiveVenue,
@@ -569,6 +570,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     tables={tables}
                     layouts={layouts}
                     onAdd={handleAddVenue}
+                    onUpdate={handleUpdateVenue}
                     onArchive={handleArchiveVenue}
                     onRestore={handleRestoreVenue}
                     onDelete={handleDeleteVenue}
