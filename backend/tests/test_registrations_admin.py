@@ -188,12 +188,8 @@ async def test_concurrent_cancel_and_check_in_preserve_registration_invariant(cl
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with factory() as cancel_session, factory() as check_in_session:
-        cancel_registration = await registrations_service.get_registration_or_404(
-            cancel_session, registration_id
-        )
-        check_in_registration = await registrations_service.get_registration_or_404(
-            check_in_session, registration_id
-        )
+        cancel_registration = await registrations_service.get_registration_or_404(cancel_session, registration_id)
+        check_in_registration = await registrations_service.get_registration_or_404(check_in_session, registration_id)
         results = await asyncio.gather(
             registrations_service.apply_registration_update(
                 cancel_session,
