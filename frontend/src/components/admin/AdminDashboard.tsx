@@ -12,6 +12,7 @@ import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
 import FaqManagement from "./FaqManagement";
 import SettingsManagement from "./SettingsManagement";
+import ContactMessagesManagement from "./ContactMessagesManagement";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
@@ -629,6 +630,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "settings" && (
                   <SettingsManagement authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "contact-messages" && (
+                  <ContactMessagesManagement authHeaders={authHeaders} />
                 )}
               </div>
             )}

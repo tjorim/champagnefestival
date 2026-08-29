@@ -27,13 +27,30 @@ class ContactSubmissionError extends Error {
   }
 }
 
-async function submitContactForm(form: FormData): Promise<void> {
+function contactErrorMessage(result: unknown): string {
+  if (typeof result !== "object" || result === null || !("detail" in result)) {
+    return m.contact_submission_error();
+  }
+  const detail = result.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const validationMessage = detail.find(
+      (item): item is { msg: string } =>
+        typeof item === "object" && item !== null && "msg" in item && typeof item.msg === "string",
+    );
+    if (validationMessage) return validationMessage.msg;
+  }
+  return m.contact_submission_error();
+}
+
+async function submitContactForm(form: FormData, submissionId: string): Promise<void> {
   const response = await fetch("/api/contact", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      submission_id: submissionId,
       name: form.name,
       email: form.email,
       message: form.message,
@@ -45,9 +62,7 @@ async function submitContactForm(form: FormData): Promise<void> {
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new ContactSubmissionError(
-      (result as { message?: string }).message ?? m.contact_submission_error(),
-    );
+    throw new ContactSubmissionError(contactErrorMessage(result));
   }
 }
 
@@ -56,11 +71,12 @@ async function submitContactForm(form: FormData): Promise<void> {
  */
 const ContactForm = () => {
   const formStartTime = useRef(new Date().toISOString());
+  const submissionId = useRef(crypto.randomUUID());
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
   const submitContactMutation = useMutation({
-    mutationFn: submitContactForm,
+    mutationFn: (form: FormData) => submitContactForm(form, submissionId.current),
     retry: false,
   });
 
@@ -87,6 +103,7 @@ const ContactForm = () => {
 
       try {
         await submitContactMutation.mutateAsync(value);
+        submissionId.current = crypto.randomUUID();
         setIsSubmitted(true);
         form.reset({
           name: "",

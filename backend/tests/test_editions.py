@@ -865,11 +865,13 @@ async def test_implicit_exhibitor_clearing_is_recorded_in_audit_details(client, 
     entries = (
         (
             await db_session.execute(
-                select(AuditEntry).where(
+                select(AuditEntry)
+                .where(
                     AuditEntry.resource_type == "edition",
                     AuditEntry.resource_id == "edition-audit-implicit-clear",
                     AuditEntry.action == "edition_updated",
                 )
+                .order_by(AuditEntry.timestamp, AuditEntry.id)
             )
         )
         .scalars()
@@ -889,11 +891,13 @@ async def test_implicit_exhibitor_clearing_is_recorded_in_audit_details(client, 
     entries = (
         (
             await db_session.execute(
-                select(AuditEntry).where(
+                select(AuditEntry)
+                .where(
                     AuditEntry.resource_type == "edition",
                     AuditEntry.resource_id == "edition-audit-implicit-clear",
                     AuditEntry.action == "edition_updated",
                 )
+                .order_by(AuditEntry.timestamp, AuditEntry.id)
             )
         )
         .scalars()

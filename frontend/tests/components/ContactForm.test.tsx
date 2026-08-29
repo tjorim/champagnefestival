@@ -115,6 +115,7 @@ describe("ContactForm component", () => {
     });
     const requestBody = JSON.parse(options.body as string);
     expect(requestBody).toMatchObject({
+      submission_id: expect.any(String),
       name: "John Doe",
       email: "john@example.com",
       message: "Hello there",
@@ -124,7 +125,7 @@ describe("ContactForm component", () => {
   it("shows error message when submission fails", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({ message: "Server error" }),
+      json: async () => ({ detail: "Server error" }),
     });
     vi.stubGlobal("fetch", fetchMock);
     renderForm();
@@ -151,10 +152,48 @@ describe("ContactForm component", () => {
     });
     const requestBody = JSON.parse(options.body as string);
     expect(requestBody).toMatchObject({
+      submission_id: expect.any(String),
       name: "John",
       email: "john@example.com",
       message: "Hello",
     });
+  });
+
+  it("shows a FastAPI validation message when detail is an array", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ detail: [{ loc: ["body", "email"], msg: "Invalid email" }] }),
+      }),
+    );
+    renderForm();
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { name: "email", value: "john@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/message/i), {
+      target: { name: "message", value: "Hello" },
+    });
+    fireEvent.submit(screen.getByLabelText(/name/i).closest("form")!);
+    await waitFor(() => expect(screen.getByText("Invalid email")).toBeInTheDocument());
+  });
+
+  it("falls back when FastAPI detail is not textual", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, json: async () => ({ detail: { reason: "bad" } }) }),
+    );
+    renderForm();
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { name: "email", value: "john@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/message/i), {
+      target: { name: "message", value: "Hello" },
+    });
+    fireEvent.submit(screen.getByLabelText(/name/i).closest("form")!);
+    await waitFor(() => expect(screen.getByText("Submission error")).toBeInTheDocument());
   });
 
   it("shows spinner while submitting", async () => {

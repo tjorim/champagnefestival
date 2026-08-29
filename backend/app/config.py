@@ -153,6 +153,9 @@ class Settings(BaseSettings):
     separate, currently unimplemented product flow.
     """
 
+    contact_recipient: str = ""
+    """Organizer mailbox notified about contact submissions. Defaults to SMTP_FROM."""
+
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
     recaptcha_secret: str = ""
     """Google reCAPTCHA v2/v3 secret key.

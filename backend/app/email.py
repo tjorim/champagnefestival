@@ -5,12 +5,37 @@ from __future__ import annotations
 import asyncio
 import logging
 import smtplib
+import ssl
 from datetime import datetime
 from email.message import EmailMessage
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+async def send_contact_notification(*, name: str, email: str, message_text: str, message_id: str) -> bool:
+    """Notify the organizer about a persisted contact submission."""
+    recipient = settings.contact_recipient or settings.smtp_from
+    if not settings.smtp_host or not settings.smtp_from or not recipient:
+        logger.warning("Contact notification not sent for message_id=%s because SMTP is not configured.", message_id)
+        return False
+
+    message = EmailMessage()
+    message["Subject"] = f"Champagnefestival contact message from {name}"
+    message["From"] = settings.smtp_from
+    message["To"] = recipient
+    message["Reply-To"] = email
+    message.set_content(
+        f"A new contact message was stored with ID {message_id}.\n\nName: {name}\nEmail: {email}\n\n{message_text}\n"
+    )
+    try:
+        await asyncio.to_thread(_send_message_sync, message)
+    except Exception:
+        logger.exception("Failed to send contact notification for message_id=%s.", message_id)
+        return False
+    logger.info("Sent contact notification for message_id=%s.", message_id)
+    return True
 
 
 async def send_guest_access_email(
@@ -60,7 +85,7 @@ async def send_guest_access_email(
 def _send_message_sync(message: EmailMessage) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
         smtp.ehlo()
-        smtp.starttls()
+        smtp.starttls(context=ssl.create_default_context())
         smtp.ehlo()
         if settings.smtp_user:
             smtp.login(settings.smtp_user, settings.smtp_password)
