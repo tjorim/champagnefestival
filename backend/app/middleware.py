@@ -62,8 +62,8 @@ def add_rate_limit_middleware(
 
     Applies RATE_LIMIT_DEFAULT per client IP and route unless RATE_LIMIT_ENABLED
     is false. Callers may exempt routes that have a purpose-specific policy;
-    token-gated check-in uses this to avoid stacking the global limit on top of
-    its per-registration limit and shared-IP abuse backstop.
+    Purpose-specific exemptions include token-gated check-in, which has its own
+    limits, and the cacheable public settings read, which every open tab polls.
     """
     limiter = Limiter(
         key_func=get_client_ip,

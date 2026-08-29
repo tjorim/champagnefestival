@@ -4,7 +4,7 @@ Business logic lives in ``app.services.settings_service`` and is shared with
 ``app.mcp.admin.settings``.
 """
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
@@ -19,7 +19,8 @@ router = APIRouter(
 
 
 @router.get("", response_model=AppSettingsOut)
-async def get_settings(db: AsyncSession = Depends(get_db)) -> dict:
+async def get_settings(response: Response, db: AsyncSession = Depends(get_db)) -> dict:
+    response.headers["Cache-Control"] = "public, max-age=30"
     return await settings_service.get_settings(db)
 
 
