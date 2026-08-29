@@ -118,7 +118,7 @@ add_cors_middleware(app, settings, mcp_enabled=_mcp_app is not None)
 add_rate_limit_middleware(
     app,
     settings,
-    exempt_routes=(check_in.lookup_check_in, check_in.post_check_in, settings_router.get_settings),
+    exempt_routes=(check_in.lookup_check_in, check_in.post_check_in),
 )
 
 # Metrics middleware is registered next-to-last so it is close to outermost and

@@ -168,7 +168,7 @@ active preferred-order tables.
 | #938 | Completed | 2026-08-29 | #938, PR #948 | Corrected the backend API and SMTP documentation, removed shipped event CRUD and CSV exports from the backlog, and replaced speculative implementation plans with the canonical audit link. |
 | #921 | Completed | 2026-08-29 | #921, PR #948 | Split public-operation buckets, keyed QR check-in limits per registration with a high shared-IP backstop, and added same-IP event-day regression coverage. |
 | #939 | Completed | 2026-08-29 | #939, PR #948 | Blocked cancelled registrations across QR, volunteer, and admin check-in paths; rotated cancellation tokens; and disabled cancelled entrance actions in the volunteer UI. |
-| #925 | Completed | 2026-08-29 | #925 | Kept the last good maintenance value, distinguished HTTP client failures from outages, backed off failed polling, exempted the cacheable settings read from the shared-IP limiter, and added regression coverage. |
+| #925 | Completed | 2026-08-29 | #925, PR #949 | Kept the last good maintenance value, distinguished HTTP client failures from outages, backed off failed polling, added response caching, and added regression coverage. |
 
 ## Findings index
 
