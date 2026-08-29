@@ -4,6 +4,11 @@ This document is the issue-ready roadmap for adding a small set of operational
 communications tools to the admin dashboard. It is deliberately **not** a plan
 for a general-purpose CMS.
 
+For defects and gaps in code that already ships, see
+[`product-audit-2026-08.md`](./product-audit-2026-08.md). It notes where this
+roadmap and the audit findings interact — chiefly TODO 1 with the contact-form
+defect, and TODO 4 with the unimplemented retention commitments.
+
 ## Product boundary
 
 Administrators should be able to manage content that changes during normal
