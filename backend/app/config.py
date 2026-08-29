@@ -113,9 +113,9 @@ class Settings(BaseSettings):
 
     # --- Rate limiting ---
     rate_limit_enabled: bool = True
-    """Whether the general per-IP rate limiter applies to every /api route.
-    The stricter check-in/registration limiter (app/ratelimit.py) always applies
-    on top of this one, regardless of this setting."""
+    """Whether the general rate limiter applies to every /api route.
+    It is keyed per IP except for token-gated check-in routes, which are keyed
+    per registration. Purpose-specific limits in app/ratelimit.py always apply."""
 
     rate_limit_default: str = "60/minute"
     """Default rate limit applied per client IP and route, e.g. "60/minute".

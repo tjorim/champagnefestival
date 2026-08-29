@@ -74,7 +74,7 @@ async def create_registration(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     client_ip = get_client_ip(request)
-    if not check_rate_limit(client_ip):
+    if not check_rate_limit(client_ip, scope="registration-create"):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
@@ -267,7 +267,7 @@ async def request_my_registrations_access(
     db: AsyncSession = Depends(get_db),
 ) -> RegistrationLookupRequestAccepted:
     client_ip = get_client_ip(request)
-    if not check_rate_limit(client_ip):
+    if not check_rate_limit(client_ip, scope="registration-access-request"):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",

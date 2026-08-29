@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.helpers import ADMIN_HEADERS, _post_registration
+from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
 
 
 @pytest.mark.anyio
@@ -41,3 +41,26 @@ async def test_check_in_wrong_token(client):
     res_id = r.json()["id"]
     r = await client.post(f"/api/check-in/{res_id}", json={"token": "wrong", "issue_strap": True})
     assert r.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_many_guests_can_check_in_from_one_ip(client):
+    event = await _create_event(client)
+    registrations: list[tuple[str, str]] = []
+    for index in range(4):
+        created = await _post_registration(
+            client,
+            event=event,
+            name=f"Shared Network Guest {index}",
+            email=f"shared-network-{index}@example.com",
+        )
+        assert created.status_code == 201
+        registration_id = created.json()["id"]
+        detail = await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
+        registrations.append((registration_id, detail.json()["check_in_token"]))
+
+    for registration_id, token in registrations:
+        lookup = await client.post(f"/api/check-in/{registration_id}/lookup", json={"token": token})
+        assert lookup.status_code == 200
+        checked_in = await client.post(f"/api/check-in/{registration_id}", json={"token": token})
+        assert checked_in.status_code == 200

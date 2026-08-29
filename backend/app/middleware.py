@@ -12,7 +12,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import Settings
-from app.ratelimit import get_client_ip
+from app.ratelimit import get_general_rate_limit_key
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +55,13 @@ def add_rate_limit_middleware(app: FastAPI, settings: Settings) -> Limiter:
     """Install a general, configurable per-IP rate limiter across every route.
 
     Applies RATE_LIMIT_DEFAULT per client IP and route unless RATE_LIMIT_ENABLED
-    is false. This is a general floor, layered *underneath* the stricter,
-    hardcoded 5-req/600s limiter (app.ratelimit.check_rate_limit) already applied
-    to the check-in and registration endpoints — that one still overrides this
-    default for those specific abuse-prone routes.
+    is false. Token-gated check-in routes use their registration ID instead, so
+    unrelated guests behind a venue's shared public IP do not share this bucket.
+    Purpose-specific limits in ``app.ratelimit`` provide the additional abuse
+    controls for public registration and check-in operations.
     """
     limiter = Limiter(
-        key_func=get_client_ip,
+        key_func=get_general_rate_limit_key,
         default_limits=[settings.rate_limit_default],
         enabled=settings.rate_limit_enabled,
     )

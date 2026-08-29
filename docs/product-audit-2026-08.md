@@ -73,9 +73,8 @@ Everything here fails on the day, in front of guests, with no workaround.
 
 | Order | Issue | Why first | Effort |
 | --- | --- | --- | --- |
-| 1 | #921 — check-in rate limit locks out the door | Total operational failure after roughly three guests. Small, well-understood change. Also a prerequisite for #937. | S |
-| 2 | #939 — cancelled bookings still check in | Cancellation releases event capacity, so the seat is resold while the original QR still opens the door. Straightforward oversell at the entrance. | S |
-| 3 | #925 — maintenance page hijacks the public site | A single failed `/api/settings` poll flips an open tab to the placeholder. Cheap to bound correctly. | S |
+| 1 | #939 — cancelled bookings still check in | Cancellation releases event capacity, so the seat is resold while the original QR still opens the door. Straightforward oversell at the entrance. | S |
+| 2 | #925 — maintenance page hijacks the public site | A single failed `/api/settings` poll flips an open tab to the placeholder. Cheap to bound correctly. | S |
 
 Phase 0 is deliberately all-**S**. It is the shortest path to a system that
 survives an event day.
@@ -87,32 +86,32 @@ This phase is the largest product gain in the audit.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 4 | #923 — contact form discards every message | Establishes honest persist-before-success semantics, unblocks the rights channel in #934, and supplies the first delivery use case for #947. | M |
-| 5 | #940 — public contact settings | Build immediately after #925 settles `/api/settings` failure semantics. It shares the public contact path with #923 but remains independent of message delivery, so the two can run in parallel after their contracts are agreed. | S–M |
-| 6 | #947 — durable outbox and scheduled-delivery worker | Extract the shared DB-backed delivery contract after #923 establishes persistence semantics. Adopt it in an individual transactional path before using it for push fan-out. | M–L |
-| 7 | #924 — no confirmation e-mail, QR only in the admin UI | The single biggest product gap. Reuses #923's persistence decisions and #947's delivery contract rather than adding inline SMTP or a second queue. | M–L |
-| 8 | #922 — `Registration.user_id` never written | Unblocks `/api/me/registrations` and the entire Pebble app (#757). Independent of 4–7, so it can run in parallel. | M |
+| 3 | #923 — contact form discards every message | Establishes honest persist-before-success semantics, unblocks the rights channel in #934, and supplies the first delivery use case for #947. | M |
+| 4 | #940 — public contact settings | Build immediately after #925 settles `/api/settings` failure semantics. It shares the public contact path with #923 but remains independent of message delivery, so the two can run in parallel after their contracts are agreed. | S–M |
+| 5 | #947 — durable outbox and scheduled-delivery worker | Extract the shared DB-backed delivery contract after #923 establishes persistence semantics. Adopt it in an individual transactional path before using it for push fan-out. | M–L |
+| 6 | #924 — no confirmation e-mail, QR only in the admin UI | The single biggest product gap. Reuses #923's persistence decisions and #947's delivery contract rather than adding inline SMTP or a second queue. | M–L |
+| 7 | #922 — `Registration.user_id` never written | Unblocks `/api/me/registrations` and the entire Pebble app (#757). Independent of 3–6, so it can run in parallel. | M |
 
 ### Phase 2 — data integrity in the admin and seating layer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 9 | #930 — CSV formula injection | Standalone, small, and the volunteer export goes to an external insurer. No reason to defer. | S |
-| 10 | #928 — update path bypasses product resolution | **Prerequisite for #933.** Splitting delivery updates from order changes is what makes a `guest_count` edit re-resolvable. | M |
-| 11 | #926 — venue plan reads a dead column | Decide *before* #927, because the answer determines whether table occupancy has anywhere to be displayed. | S to delete, M–L to build the volunteer view |
-| 12 | #927 — no seating capacity enforcement | Enforcement is independent, but surfacing occupancy in the editor depends on #926. | M |
+| 8 | #930 — CSV formula injection | Standalone, small, and the volunteer export goes to an external insurer. No reason to defer. | S |
+| 9 | #928 — update path bypasses product resolution | **Prerequisite for #933.** Splitting delivery updates from order changes is what makes a `guest_count` edit re-resolvable. | M |
+| 10 | #926 — venue plan reads a dead column | Decide *before* #927, because the answer determines whether table occupancy has anywhere to be displayed. | S to delete, M–L to build the volunteer view |
+| 11 | #927 — no seating capacity enforcement | Enforcement is independent, but surfacing occupancy in the editor depends on #926. | M |
 
 ### Phase 3 — operational workflows and admin communication
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 13 | #929 — SSE recovery fires one disconnect late | Small fix, and it must be right before #932 reworks the bus underneath it. | S |
-| 14 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
-| 15 | #933 — registration lifecycle gaps | Needs #928. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. | M |
-| 16 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
-| 17 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
-| 18 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
-| 19 | #937 — no scanner, no offline check-in | **Needs #921.** Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 12 | #929 — SSE recovery fires one disconnect late | Small fix, and it must be right before #932 reworks the bus underneath it. | S |
+| 13 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
+| 14 | #933 — registration lifecycle gaps | Needs #928. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. | M |
+| 15 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
+| 16 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
+| 17 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
+| 18 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -120,24 +119,21 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 20 | #934 — no retention or erasure mechanism | **Needs #923.** Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 21 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 22 | #932 — single-process state | Overlaps #921 and follows #929 for the bus half. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
-| 23 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 24 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 19 | #934 — no retention or erasure mechanism | **Needs #923.** Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 20 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 21 | #932 — single-process state | Its #921 limiter prerequisite is complete; it follows #929 for the bus half. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
+| 22 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 23 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 25 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 24 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Dependency map
 
 ```text
-#921 rate limit ──────────────> #937 offline check-in
-                └────────────> #932 single-process (limiter half)
-
 #923 contact form ────────────> #934 retention/erasure
                 └────────────> #947 durable outbox ──> #924 confirmation e-mail
                                              ├───────> #941 Web Push foundation
@@ -173,6 +169,7 @@ active preferred-order tables.
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
 | #938 | Completed | 2026-08-29 | #938 | Corrected the backend API and SMTP documentation, removed shipped event CRUD and CSV exports from the backlog, and replaced speculative implementation plans with the canonical audit link. |
+| #921 | Completed | 2026-08-29 | #921 | Split public-operation buckets, keyed QR check-in limits per registration with a high shared-IP backstop, and added same-IP event-day regression coverage. |
 
 ## Findings index
 
@@ -181,7 +178,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 
 | Issue | Area | Kind |
 | --- | --- | --- |
-| #921 | backend, android | bug — event-day blocker |
+| #921 | backend, android (completed 2026-08-29) | bug — event-day blocker |
 | #922 | backend, auth | bug — dead feature |
 | #923 | backend, frontend | bug — silent data loss |
 | #924 | backend, frontend | gap — core flow incomplete |

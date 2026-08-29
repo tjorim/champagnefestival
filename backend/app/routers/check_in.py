@@ -13,7 +13,7 @@ from app.database import get_db
 from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Event, Person, Registration, Table
-from app.ratelimit import check_rate_limit, get_client_ip
+from app.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
 from app.utils import registration_to_checkin_dict
 
@@ -43,7 +43,7 @@ async def lookup_check_in(
     check-in/strap status). PII fields (email, phone) are not included.
     """
     client_ip = get_client_ip(request)
-    if not check_rate_limit(client_ip):
+    if not check_check_in_rate_limit(reservation_id, client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
@@ -76,7 +76,7 @@ async def post_check_in(
     Returns ``already_checked_in: true`` if the guest scanned their QR twice.
     """
     client_ip = get_client_ip(request)
-    if not check_rate_limit(client_ip):
+    if not check_check_in_rate_limit(reservation_id, client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
