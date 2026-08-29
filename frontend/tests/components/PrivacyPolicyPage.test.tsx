@@ -2,6 +2,13 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import PrivacyPolicyPage from "@/components/PrivacyPolicyPage";
 
+const publicSettings = {
+  maintenance_mode: false,
+  public_email: "privacy@example.com",
+  public_phone: "",
+  facebook_url: "",
+};
+
 vi.mock("@/paraglide/messages", () => ({
   m: {
     privacy_title: () => "Privacy Policy Title",
@@ -20,10 +27,8 @@ vi.mock("@/config/privacyPolicy", () => ({
   },
 }));
 
-vi.mock("@/config/contact", () => ({
-  contactConfig: {
-    emails: { contact: "privacy@example.com" },
-  },
+vi.mock("@/hooks/useMaintenanceMode", () => ({
+  usePublicSettings: () => publicSettings,
 }));
 
 describe("PrivacyPolicyPage component", () => {
@@ -51,5 +56,12 @@ describe("PrivacyPolicyPage component", () => {
     render(<PrivacyPolicyPage />);
     const link = screen.getByRole("link", { name: "privacy@example.com" });
     expect(link).toHaveAttribute("href", "mailto:privacy@example.com");
+  });
+
+  it("hides the contact link when the public email is empty", () => {
+    publicSettings.public_email = "";
+    render(<PrivacyPolicyPage />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    publicSettings.public_email = "privacy@example.com";
   });
 });

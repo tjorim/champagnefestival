@@ -74,6 +74,10 @@ async def update_settings(
     settings = await get_or_create_settings(db)
     if body.maintenance_mode is not None:
         settings.maintenance_mode = body.maintenance_mode
+    for field in ("public_email", "public_phone", "facebook_url"):
+        value = getattr(body, field)
+        if value is not None:
+            setattr(settings, field, str(value))
     await write_audit_entry(
         db,
         actor=actor,

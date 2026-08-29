@@ -16,11 +16,22 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { contactConfig } from "@/config/contact";
 import { queryKeys } from "@/utils/queryKeys";
 
-interface ApiAppSettings {
+export interface ApiAppSettings {
   maintenance_mode: boolean;
+  public_email: string;
+  public_phone: string;
+  facebook_url: string;
 }
+
+export const FALLBACK_APP_SETTINGS: ApiAppSettings = {
+  maintenance_mode: false,
+  public_email: contactConfig.emails.info,
+  public_phone: contactConfig.phones.main,
+  facebook_url: `https://www.facebook.com/${contactConfig.social.facebook}`,
+};
 
 export class SettingsHttpError extends Error {
   readonly status: number;
@@ -32,19 +43,19 @@ export class SettingsHttpError extends Error {
   }
 }
 
-export async function fetchMaintenanceMode(): Promise<boolean> {
+export async function fetchAppSettings(): Promise<ApiAppSettings> {
   const res = await fetch("/api/settings");
   if (!res.ok) {
     throw new SettingsHttpError(res.status);
   }
-  const api = (await res.json()) as ApiAppSettings;
-  return api.maintenance_mode;
+  const api = (await res.json()) as Partial<ApiAppSettings>;
+  return { ...FALLBACK_APP_SETTINGS, ...api };
 }
 
-export function useMaintenanceMode(): { isMaintenanceMode: boolean; isLoaded: boolean } {
-  const query = useQuery({
+function useSettingsQuery() {
+  return useQuery({
     queryKey: queryKeys.maintenanceMode,
-    queryFn: fetchMaintenanceMode,
+    queryFn: fetchAppSettings,
     staleTime: 15 * 1000,
     refetchInterval: (query) =>
       query.state.fetchFailureCount === 0
@@ -54,10 +65,19 @@ export function useMaintenanceMode(): { isMaintenanceMode: boolean; isLoaded: bo
     retry: (failureCount, error) =>
       !(error instanceof SettingsHttpError && error.status < 500) && failureCount < 2,
   });
+}
+
+export function usePublicSettings(): ApiAppSettings {
+  const query = useSettingsQuery();
+  return query.data ?? FALLBACK_APP_SETTINGS;
+}
+
+export function useMaintenanceMode(): { isMaintenanceMode: boolean; isLoaded: boolean } {
+  const query = useSettingsQuery();
 
   return {
     isMaintenanceMode:
-      query.data ??
+      query.data?.maintenance_mode ??
       (query.error instanceof SettingsHttpError ? query.error.status >= 500 : query.isError),
     isLoaded: query.status !== "pending",
   };

@@ -3,9 +3,10 @@ import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import { m } from "@/paraglide/messages";
 import { privacyPolicyConfig } from "@/config/privacyPolicy";
-import { contactConfig } from "@/config/contact";
+import { usePublicSettings } from "@/hooks/useMaintenanceMode";
 
 export default function PrivacyPolicyPage() {
+  const settings = usePublicSettings();
   return (
     <section id="privacy-policy" className="py-5">
       <Container>
@@ -27,9 +28,11 @@ export default function PrivacyPolicyPage() {
               </div>
             ))}
 
-            <a href={`mailto:${contactConfig.emails.contact}`} className="text-decoration-none">
-              {contactConfig.emails.contact}
-            </a>
+            {settings.public_email && (
+              <a href={`mailto:${settings.public_email}`} className="text-decoration-none">
+                {settings.public_email}
+              </a>
+            )}
           </Col>
         </Row>
       </Container>

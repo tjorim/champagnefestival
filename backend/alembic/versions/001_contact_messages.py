@@ -1,4 +1,4 @@
-"""Persist public contact messages.
+"""Persist Phase 1 contact messages and public contact settings.
 
 Revision ID: 001
 Revises: 000
@@ -27,8 +27,33 @@ def upgrade() -> None:
         sa.Column("handled_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_contact_messages_created_at", "contact_messages", ["created_at"])
+    op.add_column(
+        "app_settings",
+        sa.Column(
+            "public_email",
+            sa.String(320),
+            nullable=False,
+            server_default="nancy.cattrysse@telenet.be",
+        ),
+    )
+    op.add_column(
+        "app_settings",
+        sa.Column("public_phone", sa.String(30), nullable=False, server_default="+32 478 48 01 77"),
+    )
+    op.add_column(
+        "app_settings",
+        sa.Column(
+            "facebook_url",
+            sa.String(500),
+            nullable=False,
+            server_default="https://www.facebook.com/champagnefestival.kust",
+        ),
+    )
 
 
 def downgrade() -> None:
+    op.drop_column("app_settings", "facebook_url")
+    op.drop_column("app_settings", "public_phone")
+    op.drop_column("app_settings", "public_email")
     op.drop_index("ix_contact_messages_created_at", table_name="contact_messages")
     op.drop_table("contact_messages")
