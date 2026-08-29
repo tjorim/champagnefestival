@@ -141,14 +141,15 @@ class Settings(BaseSettings):
     guest_access_token_ttl_minutes: int = 30
     """How long a visitor reservation access link remains valid."""
 
-    # --- TODO: Email notifications (planned, not yet implemented) ---
+    # --- SMTP delivery ---
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
-    """SMTP credentials for sending guest confirmation e-mails.
-    Leaving these empty disables e-mail sending (currently always disabled).
+    """SMTP credentials used to send guest reservation-access links.
+    Leaving these empty disables e-mail delivery. Reservation confirmation
+    e-mails are a separate, currently unimplemented product flow.
     """
 
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
