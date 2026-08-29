@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 
+from app.models import OutboxJob
 from tests.helpers import (
     ADMIN_HEADERS,
     VALID_RESERVATION,
@@ -15,13 +17,17 @@ from tests.helpers import (
 
 
 @pytest.mark.anyio
-async def test_create_reservation(client):
+async def test_create_reservation(client, db_session):
     r = await _post_registration(client)
     assert r.status_code == 201
     data = r.json()
     assert data["person"]["name"] == "Jean Dupont"
     assert data["status"] == "pending"
     assert "check_in_token" not in data  # must not be returned here
+    job = await db_session.scalar(select(OutboxJob).where(OutboxJob.resource_id == data["id"]))
+    assert job is not None
+    assert job.job_type == "registration_confirmation"
+    assert job.state == "pending"
 
 
 @pytest.mark.anyio

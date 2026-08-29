@@ -38,6 +38,7 @@ Run these checks after the production deploy completes (typically within ~2–3 
 - [ ] **Health endpoint** — `curl -sf https://champagnefestival.tjor.im/api/health` returns HTTP 200.
 - [ ] **Frontend loads** — open `https://champagnefestival.tjor.im` in a browser; the page renders without console errors.
 - [ ] **Public registration flow** — submit a test registration (use a clearly fake name) and confirm the confirmation appears.
+- [ ] **Outbox worker** — confirm the separately supervised `python -m app.worker` service is healthy, then verify the test registration's confirmation job reaches `delivered` in `GET /api/outbox` and the email arrives.
 - [ ] **Admin login** — navigate to `/admin`, click **Login**, complete OIDC auth, and confirm the dashboard loads.
 - [ ] **Check-in token scan** — scan or manually enter a known check-in token; confirm guest lookup succeeds.
 - [ ] **Version visible** — `curl -sf https://champagnefestival.tjor.im/api/health | jq .version` returns the expected `X.Y.Z`.
@@ -70,6 +71,10 @@ cd /opt/apps/infra
 docker compose pull champagnefestival-api:<previous-version>
 docker compose up -d champagnefestival-api
 ```
+
+The durable outbox worker must use the same backend image and be rolled back or
+restarted with the API. The production infra stack owns its separate supervised
+service; do not run it as an in-process API task.
 
 Images are tagged by the app's CalVer version (see "Versioning" in `AGENTS.md`); replace `<previous-version>` with the last known-good tag (e.g. `2026.6.3`).
 

@@ -327,6 +327,8 @@ class RegistrationGuestOut(BaseModel):
     name: str
     event_id: str
     event_title: str
+    event_date: dt_date | None
+    check_in_token: str
     guest_count: int
     order_items: list[OrderItemOut]
     status: RegistrationStatus

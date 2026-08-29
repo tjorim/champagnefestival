@@ -24,6 +24,8 @@ vi.mock("@/paraglide/messages", () => ({
     registration_submit: () => "Place Registration",
     registration_submitting: () => "Placing registration...",
     registration_success: () => "Your registration has been received!",
+    registration_reference: ({ reference }: { reference: string }) => `Booking reference: ${reference}`,
+    registration_view_my_registrations: () => "View my registrations",
     registration_error: () => "An error occurred. Please try again.",
     registration_network_error: () => "Network error. Please check your connection.",
     registration_errors_name_required: () => "Name is required",
@@ -107,7 +109,7 @@ describe("RegistrationModal component", () => {
   it("submits form successfully and shows success message", async () => {
     // The default MSW POST /api/registrations handler accepts the submission,
     // stores the new registration, and returns 201 with the created object.
-    // The component only checks response.ok, so no handler override is needed.
+    // The response includes the persisted booking ID used as the reference.
     renderModal();
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
@@ -120,6 +122,11 @@ describe("RegistrationModal component", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Your registration has been received!")).toBeInTheDocument();
+      expect(screen.getByText(/Booking reference: reg-/)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /my registrations/i })).toHaveAttribute(
+        "href",
+        "/my-registrations",
+      );
     });
   });
 

@@ -163,6 +163,8 @@ export async function submitCheckIn(
 export interface GuestRegistration {
   id: string;
   eventTitle: string;
+  eventDate?: string;
+  checkInToken: string;
   guestCount: number;
   status: RegistrationStatus;
   paymentStatus: PaymentStatus;
@@ -195,6 +197,8 @@ interface GuestOrderItemResponse {
 interface GuestRegistrationResponse {
   id: string;
   event_title: string;
+  event_date?: string | null;
+  check_in_token: string;
   guest_count: number;
   status: RegistrationStatus;
   payment_status: PaymentStatus;
@@ -256,6 +260,8 @@ function isGuestRegistrationResponse(value: unknown): value is GuestRegistration
     isRecord(value) &&
     typeof value.id === "string" &&
     typeof value.event_title === "string" &&
+    (value.event_date === undefined || value.event_date === null || typeof value.event_date === "string") &&
+    typeof value.check_in_token === "string" &&
     typeof value.guest_count === "number" &&
     isRegistrationStatus(value.status) &&
     isPaymentStatus(value.payment_status) &&
@@ -299,6 +305,8 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
   return data.map((registration) => ({
     id: registration.id,
     eventTitle: registration.event_title,
+    eventDate: registration.event_date ?? undefined,
+    checkInToken: registration.check_in_token,
     guestCount: registration.guest_count,
     status: registration.status as RegistrationStatus,
     paymentStatus: registration.payment_status as PaymentStatus,
@@ -360,7 +368,7 @@ export class RegistrationSubmitError extends Error {
   }
 }
 
-export async function submitRegistration(payload: RegistrationFormData): Promise<void> {
+export async function submitRegistration(payload: RegistrationFormData): Promise<{ id: string }> {
   const response = await fetch("/api/registrations", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -386,4 +394,7 @@ export async function submitRegistration(payload: RegistrationFormData): Promise
     const data = await response.json().catch(() => ({}));
     throw new RegistrationSubmitError((data as { error?: string }).error ?? m.registration_error());
   }
+  const data = (await response.json()) as { id?: unknown };
+  if (typeof data.id !== "string") throw new RegistrationSubmitError(m.registration_error());
+  return { id: data.id };
 }

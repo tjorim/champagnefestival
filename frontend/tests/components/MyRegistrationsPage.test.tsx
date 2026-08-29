@@ -31,6 +31,9 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_no_results: () => "No registrations found.",
     my_registrations_error: () => "Unable to load your registrations.",
     my_registrations_guests_label: () => "guests",
+    my_registrations_qr_label: () => "Booking check-in QR code",
+    my_registrations_add_calendar: () => "Add to calendar",
+    registration_reference: ({ reference }: { reference: string }) => `Booking reference: ${reference}`,
     my_registrations_request_new_link: () => "Request another secure link",
     admin_status_confirmed: () => "Confirmed",
     admin_status_cancelled: () => "Cancelled",
@@ -83,6 +86,11 @@ describe("MyRegistrationsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
     });
+    expect(screen.getAllByLabelText("Booking check-in QR code").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Add to calendar" })[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining("calendar.google.com"),
+    );
   });
 
   it("shows an invalid-link message when the token is rejected", async () => {

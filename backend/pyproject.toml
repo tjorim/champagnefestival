@@ -25,6 +25,7 @@ dependencies = [
   "PyJWT[crypto]==2.13.0",
   "python-dotenv==1.2.3",
   "python-multipart==0.0.32",
+  "qrcode[pil]==8.2",
   "slowapi==0.1.10",
   "sqlalchemy==2.0.52",
   "uvicorn[standard]==0.52.4",

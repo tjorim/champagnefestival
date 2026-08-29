@@ -174,6 +174,8 @@ def registration_to_checkin_dict(
         "name": person.name,
         "event_id": r.event_id,
         "event_title": event.title,
+        "event_date": event.date,
+        "check_in_token": r.check_in_token,
         "table_id": r.table_id,
         "table_name": table_name,
         "guest_count": r.guest_count,

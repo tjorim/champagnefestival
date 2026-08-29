@@ -36,6 +36,39 @@ def upgrade() -> None:
             server_default="nancy.cattrysse@telenet.be",
         ),
     )
+    op.create_table(
+        "outbox_jobs",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("job_type", sa.String(100), nullable=False),
+        sa.Column("resource_type", sa.String(50), nullable=False),
+        sa.Column("resource_id", sa.String(64), nullable=False),
+        sa.Column("deduplication_key", sa.String(200), nullable=False),
+        sa.Column("state", sa.String(20), nullable=False, server_default="pending"),
+        sa.Column("attempt_count", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("max_attempts", sa.Integer(), nullable=False, server_default="5"),
+        sa.Column("scheduled_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("last_error_code", sa.String(100), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.UniqueConstraint("deduplication_key", name="uq_outbox_jobs_deduplication_key"),
+    )
+    op.create_index("ix_outbox_jobs_job_type", "outbox_jobs", ["job_type"])
+    op.create_index("ix_outbox_jobs_resource_id", "outbox_jobs", ["resource_id"])
+    op.create_index("ix_outbox_jobs_state", "outbox_jobs", ["state"])
+    op.create_index("ix_outbox_jobs_scheduled_at", "outbox_jobs", ["scheduled_at"])
+    op.create_table(
+        "delivery_attempts",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("job_id", sa.String(64), sa.ForeignKey("outbox_jobs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("attempt_number", sa.Integer(), nullable=False),
+        sa.Column("outcome", sa.String(20), nullable=False),
+        sa.Column("error_code", sa.String(100), nullable=True),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("finished_at", sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index("ix_delivery_attempts_job_id", "delivery_attempts", ["job_id"])
     op.add_column(
         "app_settings",
         sa.Column("public_phone", sa.String(30), nullable=False, server_default="+32 478 48 01 77"),
@@ -52,6 +85,13 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("ix_delivery_attempts_job_id", table_name="delivery_attempts")
+    op.drop_table("delivery_attempts")
+    op.drop_index("ix_outbox_jobs_scheduled_at", table_name="outbox_jobs")
+    op.drop_index("ix_outbox_jobs_state", table_name="outbox_jobs")
+    op.drop_index("ix_outbox_jobs_resource_id", table_name="outbox_jobs")
+    op.drop_index("ix_outbox_jobs_job_type", table_name="outbox_jobs")
+    op.drop_table("outbox_jobs")
     op.drop_column("app_settings", "facebook_url")
     op.drop_column("app_settings", "public_phone")
     op.drop_column("app_settings", "public_email")
