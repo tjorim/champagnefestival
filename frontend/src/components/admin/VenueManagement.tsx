@@ -7,7 +7,7 @@
  */
 
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -17,6 +17,8 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { m } from "@/paraglide/messages";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
+
+const MapComponent = lazy(() => import("@/components/MapComponent"));
 
 interface VenueManagementProps {
   venues: Venue[];
@@ -30,7 +32,10 @@ interface VenueManagementProps {
     city: string,
     postalCode: string,
     country: string,
+    lat: number,
+    lng: number,
   ) => Promise<void>;
+  onUpdate: (id: string, data: Partial<Omit<Venue, "id" | "active">>) => Promise<void>;
   onArchive: (id: string) => Promise<void>;
   onRestore: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -41,7 +46,10 @@ interface VenueManagementProps {
     lengthM: number,
     color: string,
   ) => Promise<void>;
-  onUpdateRoom: (roomId: string, data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>) => Promise<void>;
+  onUpdateRoom: (
+    roomId: string,
+    data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>,
+  ) => Promise<void>;
   onArchiveRoom: (roomId: string) => Promise<void>;
   onRestoreRoom: (roomId: string) => Promise<void>;
   onDeleteRoom: (roomId: string) => Promise<void>;
@@ -52,7 +60,15 @@ interface VenueManagementProps {
   onDeleteTableType: (id: string) => Promise<void>;
 }
 
-const emptyVenueForm = { name: "", address: "", city: "", postalCode: "", country: "" };
+const emptyVenueForm = {
+  name: "",
+  address: "",
+  city: "",
+  postalCode: "",
+  country: "",
+  lat: "" as number | "",
+  lng: "" as number | "",
+};
 
 // widthM/lengthM start blank — a room's real dimensions have no defensible
 // generic default (see #833/#835), so the admin must enter them deliberately
@@ -96,6 +112,7 @@ export default function VenueManagement({
   tables,
   layouts,
   onAdd,
+  onUpdate,
   onArchive,
   onRestore,
   onDelete,
@@ -112,6 +129,7 @@ export default function VenueManagement({
 }: VenueManagementProps) {
   // Venue add
   const [showVenueModal, setShowVenueModal] = useState(false);
+  const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
   const [venueForm, setVenueForm] = useState(emptyVenueForm);
   const [addVenueError, setAddVenueError] = useState<string | null>(null);
   const [deleteVenueError, setDeleteVenueError] = useState<string | null>(null);
@@ -144,23 +162,72 @@ export default function VenueManagement({
   const [addTableTypeError, setAddTableTypeError] = useState<string | null>(null);
   const [deleteTableTypeError, setDeleteTableTypeError] = useState<string | null>(null);
 
-  const handleAddVenue = useCallback(async () => {
-    if (!venueForm.name.trim()) return;
+  const venueCoordinatesAreValid =
+    typeof venueForm.lat === "number" &&
+    venueForm.lat >= -90 &&
+    venueForm.lat <= 90 &&
+    typeof venueForm.lng === "number" &&
+    venueForm.lng >= -180 &&
+    venueForm.lng <= 180;
+  const venueFormIsValid = venueForm.name.trim().length > 0 && venueCoordinatesAreValid;
+  const previewCoordinates = venueCoordinatesAreValid
+    ? { lat: Number(venueForm.lat), lng: Number(venueForm.lng) }
+    : null;
+
+  const openAddVenue = useCallback(() => {
+    setEditingVenueId(null);
+    setVenueForm(emptyVenueForm);
+    setAddVenueError(null);
+    setShowVenueModal(true);
+  }, []);
+
+  const openEditVenue = useCallback((venue: Venue) => {
+    setEditingVenueId(venue.id);
+    setVenueForm({
+      name: venue.name,
+      address: venue.address,
+      city: venue.city,
+      postalCode: venue.postalCode,
+      country: venue.country,
+      lat: venue.lat,
+      lng: venue.lng,
+    });
+    setAddVenueError(null);
+    setShowVenueModal(true);
+  }, []);
+
+  const handleSaveVenue = useCallback(async () => {
+    if (!venueFormIsValid || typeof venueForm.lat !== "number" || typeof venueForm.lng !== "number")
+      return;
     setAddVenueError(null);
     try {
-      await onAdd(
-        venueForm.name.trim(),
-        venueForm.address.trim(),
-        venueForm.city.trim(),
-        venueForm.postalCode.trim(),
-        venueForm.country.trim(),
-      );
+      const data = {
+        name: venueForm.name.trim(),
+        address: venueForm.address.trim(),
+        city: venueForm.city.trim(),
+        postalCode: venueForm.postalCode.trim(),
+        country: venueForm.country.trim(),
+        lat: venueForm.lat,
+        lng: venueForm.lng,
+      };
+      if (editingVenueId) await onUpdate(editingVenueId, data);
+      else
+        await onAdd(
+          data.name,
+          data.address,
+          data.city,
+          data.postalCode,
+          data.country,
+          data.lat,
+          data.lng,
+        );
       setVenueForm(emptyVenueForm);
+      setEditingVenueId(null);
       setShowVenueModal(false);
     } catch (err) {
       setAddVenueError(err instanceof Error ? err.message : m.admin_error_add_venue());
     }
-  }, [venueForm, onAdd]);
+  }, [editingVenueId, onAdd, onUpdate, venueForm, venueFormIsValid]);
 
   const handleArchiveVenue = useCallback(
     async (id: string) => {
@@ -234,7 +301,11 @@ export default function VenueManagement({
   }, []);
 
   const handleSaveRoom = useCallback(async () => {
-    if (!isRoomFormValid() || typeof roomForm.widthM !== "number" || typeof roomForm.lengthM !== "number") {
+    if (
+      !isRoomFormValid() ||
+      typeof roomForm.widthM !== "number" ||
+      typeof roomForm.lengthM !== "number"
+    ) {
       return;
     }
     setAddRoomError(null);
@@ -351,12 +422,7 @@ export default function VenueManagement({
       return;
     }
     const { widthM, lengthM } = tableTypeForm;
-    if (
-      typeof widthM !== "number" ||
-      widthM <= 0 ||
-      typeof lengthM !== "number" ||
-      lengthM <= 0
-    ) {
+    if (typeof widthM !== "number" || widthM <= 0 || typeof lengthM !== "number" || lengthM <= 0) {
       setAddTableTypeError(m.admin_table_type_dimensions_positive());
       return;
     }
@@ -463,14 +529,7 @@ export default function VenueManagement({
           <i className="bi bi-geo-alt me-2" aria-hidden="true" />
           {m.admin_venue_add()}
         </span>
-        <Button
-          variant="outline-warning"
-          size="sm"
-          onClick={() => {
-            setAddVenueError(null);
-            setShowVenueModal(true);
-          }}
-        >
+        <Button variant="outline-warning" size="sm" onClick={openAddVenue}>
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           {m.admin_venue_add()}
         </Button>
@@ -525,6 +584,15 @@ export default function VenueManagement({
                     <div className="text-secondary small">{locationLine || "—"}</div>
                   </div>
                   <div className="d-flex gap-1 flex-shrink-0">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={() => openEditVenue(venue)}
+                      aria-label={`${m.admin_edit()} ${venue.name}`}
+                      title={m.admin_edit()}
+                    >
+                      <i className="bi bi-pencil" aria-hidden="true" />
+                    </Button>
                     {isArchived ? (
                       <>
                         <Button
@@ -565,13 +633,19 @@ export default function VenueManagement({
                       <span className="text-secondary small text-uppercase fw-semibold">
                         {m.admin_rooms_tab()}
                       </span>
-                      <Button variant="outline-secondary" size="sm" onClick={() => openAddRoom(venue.id)}>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => openAddRoom(venue.id)}
+                      >
                         <i className="bi bi-plus-lg me-1" aria-hidden="true" />
                         {m.admin_room_add()}
                       </Button>
                     </div>
                     {venueRooms.length === 0 ? (
-                      <p className="text-secondary small fst-italic mb-3">{m.admin_room_no_rooms()}</p>
+                      <p className="text-secondary small fst-italic mb-3">
+                        {m.admin_room_no_rooms()}
+                      </p>
                     ) : (
                       <ListGroup variant="flush" className="mb-3">
                         {venueRooms.map((room) => (
@@ -634,7 +708,10 @@ export default function VenueManagement({
                                     aria-label={m.admin_content_restore()}
                                     title={m.admin_content_restore()}
                                   >
-                                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                                    <i
+                                      className="bi bi-arrow-counterclockwise"
+                                      aria-hidden="true"
+                                    />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -667,7 +744,9 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueTableTypes.length === 0 ? (
-                      <p className="text-secondary small fst-italic mb-0">{m.admin_no_table_types()}</p>
+                      <p className="text-secondary small fst-italic mb-0">
+                        {m.admin_no_table_types()}
+                      </p>
                     ) : (
                       <ListGroup variant="flush" className="mb-0">
                         {venueTableTypes.map((tt) => (
@@ -716,7 +795,10 @@ export default function VenueManagement({
                                     aria-label={m.admin_content_restore()}
                                     title={m.admin_content_restore()}
                                   >
-                                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                                    <i
+                                      className="bi bi-arrow-counterclockwise"
+                                      aria-hidden="true"
+                                    />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -750,7 +832,9 @@ export default function VenueManagement({
         aria-labelledby="add-venue-modal-title"
       >
         <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="add-venue-modal-title">{m.admin_venue_add()}</Modal.Title>
+          <Modal.Title id="add-venue-modal-title">
+            {editingVenueId ? `${m.admin_edit()} ${venueForm.name}` : m.admin_venue_add()}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addVenueError && (
@@ -802,7 +886,7 @@ export default function VenueManagement({
               </Form.Group>
             </div>
           </div>
-          <Form.Group controlId="venue-country">
+          <Form.Group className="mb-3" controlId="venue-country">
             <Form.Label>{m.admin_venue_country_label()}</Form.Label>
             <Form.Control
               type="text"
@@ -811,12 +895,73 @@ export default function VenueManagement({
               className="bg-dark text-light border-secondary"
             />
           </Form.Group>
+          <div className="row g-2">
+            <div className="col">
+              <Form.Group controlId="venue-latitude">
+                <Form.Label>{m.admin_venue_latitude_label()}</Form.Label>
+                <Form.Control
+                  type="number"
+                  step="any"
+                  min={-90}
+                  max={90}
+                  value={venueForm.lat}
+                  onChange={(e) =>
+                    setVenueForm((p) => ({
+                      ...p,
+                      lat: e.target.value === "" ? "" : Number(e.target.value),
+                    }))
+                  }
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
+            </div>
+            <div className="col">
+              <Form.Group controlId="venue-longitude">
+                <Form.Label>{m.admin_venue_longitude_label()}</Form.Label>
+                <Form.Control
+                  type="number"
+                  step="any"
+                  min={-180}
+                  max={180}
+                  value={venueForm.lng}
+                  onChange={(e) =>
+                    setVenueForm((p) => ({
+                      ...p,
+                      lng: e.target.value === "" ? "" : Number(e.target.value),
+                    }))
+                  }
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
+            </div>
+          </div>
+          {previewCoordinates && (
+            <div className="mt-3">
+              <div className="text-secondary small mb-1">{m.admin_venue_map_preview()}</div>
+              <Suspense
+                fallback={
+                  <div className="ratio ratio-16x9 rounded border border-secondary d-flex align-items-center justify-content-center">
+                    {m.loading()}
+                  </div>
+                }
+              >
+                <MapComponent
+                  location={venueForm.name}
+                  address={venueForm.address}
+                  city={venueForm.city}
+                  postalCode={venueForm.postalCode}
+                  country={venueForm.country}
+                  coordinates={previewCoordinates}
+                />
+              </Suspense>
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
           <Button variant="secondary" onClick={() => setShowVenueModal(false)}>
             {m.admin_action_cancel()}
           </Button>
-          <Button variant="warning" onClick={handleAddVenue} disabled={!venueForm.name.trim()}>
+          <Button variant="warning" onClick={handleSaveVenue} disabled={!venueFormIsValid}>
             {m.admin_save()}
           </Button>
         </Modal.Footer>

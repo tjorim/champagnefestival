@@ -125,13 +125,39 @@ export function useAdminVenueActions({
   );
 
   const handleAddVenue = useCallback(
-    async (name: string, address: string, city: string, postalCode: string, country: string) => {
-      const d = await createVenueMutation.mutateAsync({ name, address, city, postalCode, country });
+    async (
+      name: string,
+      address: string,
+      city: string,
+      postalCode: string,
+      country: string,
+      lat: number,
+      lng: number,
+    ) => {
+      const d = await createVenueMutation.mutateAsync({
+        name,
+        address,
+        city,
+        postalCode,
+        country,
+        lat,
+        lng,
+      });
       queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
         prev ? [...prev, apiVenueToVenue(d)] : [apiVenueToVenue(d)],
       );
     },
     [createVenueMutation, queryClient, venuesQueryKey],
+  );
+
+  const handleUpdateVenue = useCallback(
+    async (venueId: string, data: Partial<Omit<Venue, "id" | "active">>) => {
+      const d = await updateVenueMutation.mutateAsync({ venueId, ...data });
+      queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
+        prev ? prev.map((venue) => (venue.id === venueId ? apiVenueToVenue(d) : venue)) : prev,
+      );
+    },
+    [queryClient, updateVenueMutation, venuesQueryKey],
   );
 
   const handleArchiveVenue = useCallback(
@@ -365,7 +391,9 @@ export function useAdminVenueActions({
 
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
-      const area = queryClient.getQueryData<FloorArea[]>(areasQueryKey)?.find((a) => a.id === areaId);
+      const area = queryClient
+        .getQueryData<FloorArea[]>(areasQueryKey)
+        ?.find((a) => a.id === areaId);
       const layout = queryClient
         .getQueryData<Layout[]>(layoutsQueryKey)
         ?.find((l) => l.id === area?.layoutId);
@@ -458,5 +486,6 @@ export function useAdminVenueActions({
     handleUpdateRoom,
     handleUpdateTable,
     handleUpdateTableType,
+    handleUpdateVenue,
   };
 }

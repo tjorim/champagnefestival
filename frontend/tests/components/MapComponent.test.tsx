@@ -8,35 +8,34 @@ vi.mock("@/paraglide/messages", () => ({
     error_loading_map: () => "Error loading map",
     location_map_label: () => "Festival location map",
     location_map_title: () => "Map of festival venue",
-    location_country: () => "Belgium",
     location_open_in_maps: () => "Open in Google Maps",
   },
 }));
 
 vi.mock("react-leaflet", () => ({
-  MapContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="map-container">{children}</div>
+  MapContainer: ({
+    children,
+    "aria-describedby": ariaDescribedBy,
+  }: {
+    children: React.ReactNode;
+    "aria-describedby"?: string;
+  }) => (
+    <div data-testid="map-container" aria-describedby={ariaDescribedBy}>
+      {children}
+    </div>
   ),
-  TileLayer: () => <div data-testid="tile-layer" />,
-  Marker: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="marker">{children}</div>
+  TileLayer: ({ url }: { url: string }) => <div data-testid="tile-layer" data-url={url} />,
+  Marker: ({ children, icon }: { children: React.ReactNode; icon?: unknown }) => (
+    <div data-testid="marker" data-has-icon={Boolean(icon)}>
+      {children}
+    </div>
   ),
   Popup: ({ children }: { children: React.ReactNode }) => <div data-testid="popup">{children}</div>,
 }));
 
-// Extend the leaflet setup mock to include Icon.Default.mergeOptions
 vi.mock("leaflet", () => ({
   default: {
-    Icon: {
-      Default: {
-        mergeOptions: vi.fn(),
-      },
-    },
-  },
-  Icon: {
-    Default: {
-      mergeOptions: vi.fn(),
-    },
+    icon: vi.fn(() => ({ kind: "venue-icon" })),
   },
 }));
 
@@ -63,10 +62,10 @@ describe("MapComponent", () => {
       />,
     );
     expect(screen.getByTestId("tile-layer")).toBeInTheDocument();
-    expect(screen.getByTestId("marker")).toBeInTheDocument();
+    expect(screen.getByTestId("marker")).toHaveAttribute("data-has-icon", "true");
   });
 
-  it("shows location name and address in popup", () => {
+  it("uses the canonical OpenStreetMap tile endpoint", () => {
     render(
       <MapComponent
         address="Kapelstraat 76"
@@ -74,9 +73,28 @@ describe("MapComponent", () => {
         coordinates={validCoordinates}
       />,
     );
+    expect(screen.getByTestId("tile-layer")).toHaveAttribute(
+      "data-url",
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    );
+  });
+
+  it("shows location name and address in popup", () => {
+    render(
+      <MapComponent
+        address="Kapelstraat 76"
+        city="Ostend"
+        country="Belgium"
+        location="Event Center"
+        postalCode="8400"
+        coordinates={validCoordinates}
+      />,
+    );
     const popup = screen.getByTestId("popup");
     expect(popup).toHaveTextContent("Event Center");
     expect(popup).toHaveTextContent("Kapelstraat 76");
+    expect(popup).toHaveTextContent("8400 Ostend");
+    expect(popup).toHaveTextContent("Belgium");
   });
 
   it("shows error message for coordinates out of valid range", () => {
@@ -88,12 +106,36 @@ describe("MapComponent", () => {
     render(
       <MapComponent
         address="Kapelstraat 76"
+        city="Ostend"
+        country="Belgium"
         location="Event Center"
+        postalCode="8400"
         coordinates={validCoordinates}
       />,
     );
     const link = screen.getByText("Open in Google Maps");
-    expect(link).toBeInTheDocument();
-    expect(link.closest("a")).toHaveAttribute("href", expect.stringContaining("google.com/maps"));
+    const href = link.closest("a")?.getAttribute("href");
+    expect(href).toBeDefined();
+    expect(new URL(href!).searchParams.get("query")).toBe(
+      "Event Center, Kapelstraat 76, 8400, Ostend, Belgium",
+    );
+  });
+
+  it("uses a unique accessible description for each map", () => {
+    render(
+      <>
+        <MapComponent location="First venue" coordinates={validCoordinates} />
+        <MapComponent location="Second venue" coordinates={validCoordinates} />
+      </>,
+    );
+
+    const descriptionIds = screen
+      .getAllByTestId("map-container")
+      .map((container) => container.getAttribute("aria-describedby"));
+    expect(descriptionIds[0]).toBeTruthy();
+    expect(descriptionIds[1]).toBeTruthy();
+    expect(descriptionIds[0]).not.toBe(descriptionIds[1]);
+    expect(document.getElementById(descriptionIds[0]!)).toHaveTextContent("First venue");
+    expect(document.getElementById(descriptionIds[1]!)).toHaveTextContent("Second venue");
   });
 });
