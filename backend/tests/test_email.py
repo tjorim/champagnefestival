@@ -1,8 +1,41 @@
 """Tests for outgoing SMTP transport setup."""
 
 from email.message import EmailMessage
+from types import SimpleNamespace
+from typing import cast
 
 from app import email as email_module
+from app.models import Event, Person, Registration
+
+
+async def test_registration_confirmation_contains_reference_link_and_inline_qr(monkeypatch):
+    sent = []
+    monkeypatch.setattr(email_module.settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(email_module.settings, "smtp_from", "festival@example.com")
+    monkeypatch.setattr(email_module.settings, "frontend_url", "https://festival.example")
+    monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
+    registration = cast(
+        Registration,
+        SimpleNamespace(
+            id="reg-123",
+            check_in_token="secret-token",
+            guest_count=2,
+            amount_due=None,
+            order_items=[],
+        ),
+    )
+    person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com"))
+    event = cast(Event, SimpleNamespace(title="Opening", date=None))
+
+    assert await email_module.send_registration_confirmation(registration, person, event) is True
+    message = sent[0]
+    assert "reg-123" in message.get_body(preferencelist=("plain",)).get_content()
+    assert (
+        "https://festival.example/check-in?id=reg-123#token=secret-token"
+        in message.get_body(preferencelist=("plain",)).get_content()
+    )
+    qr_parts = [part for part in message.walk() if part.get_content_type() == "image/png"]
+    assert len(qr_parts) == 1
 
 
 def test_smtp_starttls_uses_certificate_verifying_context(monkeypatch):

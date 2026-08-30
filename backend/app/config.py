@@ -156,6 +156,13 @@ class Settings(BaseSettings):
     contact_recipient: str = ""
     """Organizer mailbox notified about contact submissions. Defaults to SMTP_FROM."""
 
+    frontend_url: str = "http://localhost:5173"
+    """Public frontend origin used for absolute links in transactional email."""
+
+    outbox_poll_seconds: float = 2.0
+    outbox_lease_seconds: int = 300
+    outbox_retention_days: int = 90
+
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
     recaptcha_secret: str = ""
     """Google reCAPTCHA v2/v3 secret key.
@@ -211,6 +218,27 @@ class Settings(BaseSettings):
             )
         return v
 
+    @field_validator("outbox_poll_seconds")
+    @classmethod
+    def validate_outbox_poll_seconds(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("OUTBOX_POLL_SECONDS must be greater than 0.")
+        return value
+
+    @field_validator("outbox_retention_days")
+    @classmethod
+    def validate_positive_outbox_integer(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("OUTBOX_RETENTION_DAYS must be greater than 0.")
+        return value
+
+    @field_validator("outbox_lease_seconds")
+    @classmethod
+    def validate_outbox_lease_seconds(cls, value: int) -> int:
+        if value < 30:
+            raise ValueError("OUTBOX_LEASE_SECONDS must be at least 30 seconds.")
+        return value
+
     @model_validator(mode="before")
     @classmethod
     def build_database_url_from_parts(cls, data: Any) -> Any:
@@ -251,6 +279,8 @@ class Settings(BaseSettings):
                 raise ValueError("OIDC_ISSUER_URL must be set in production.")
             if not self.trusted_hosts.strip():
                 raise ValueError("TRUSTED_HOSTS must be set in production.")
+            if not self.frontend_url.startswith("https://"):
+                raise ValueError("FRONTEND_URL must use HTTPS in production.")
         return self
 
     @model_validator(mode="after")

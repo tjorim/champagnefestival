@@ -53,6 +53,7 @@ from app.services.operational_search import (
     person_search_order_by,
     person_search_predicate,
 )
+from app.services.outbox_service import enqueue_registration_confirmation
 from app.services.people_service import parse_phone
 from app.spam import check_form_timing, check_honeypot
 from app.utils import (
@@ -117,6 +118,12 @@ async def create_registration(
     )
     registration.order_items = resolved_order_items
     db.add(registration)
+    await enqueue_registration_confirmation(
+        db,
+        registration.id,
+        actor="anonymous",
+        request_id=getattr(request.state, "request_id", None),
+    )
     await db.commit()
 
     registration = await registrations_service.get_registration_or_404(db, registration.id)

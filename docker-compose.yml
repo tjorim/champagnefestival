@@ -44,6 +44,24 @@ services:
       - ./VERSION:/app/VERSION:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/champagne
+      ENVIRONMENT: development
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - worker_venv:/app/.venv
+      - ./VERSION:/app/VERSION:ro
+    command: python -m app.worker
+
 volumes:
   postgres_data:
   backend_venv:
+  worker_venv:

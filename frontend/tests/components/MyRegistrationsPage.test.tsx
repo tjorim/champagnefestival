@@ -9,7 +9,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
-import MyRegistrationsPage from "@/components/MyRegistrationsPage";
+import MyRegistrationsPage, { buildCheckInQrUrl } from "@/components/MyRegistrationsPage";
 import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
@@ -25,12 +25,15 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_request_success: () =>
       "If we found registrations for that email, we prepared a secure link.",
     my_registrations_invalid_email: () => "Please enter a valid email address.",
-    my_registrations_request_pending_notice: () => "Automatic email sending is not enabled yet.",
+    my_registrations_request_pending_notice: () => "Check your inbox for the secure link.",
     my_registrations_loading: () => "Loading registrations...",
     my_registrations_invalid_token: () => "This secure link is invalid or expired.",
     my_registrations_no_results: () => "No registrations found.",
     my_registrations_error: () => "Unable to load your registrations.",
     my_registrations_guests_label: () => "guests",
+    my_registrations_qr_label: () => "Booking check-in QR code",
+    my_registrations_add_calendar: () => "Add to calendar",
+    registration_reference: ({ reference }: { reference: string }) => `Booking reference: ${reference}`,
     my_registrations_request_new_link: () => "Request another secure link",
     admin_status_confirmed: () => "Confirmed",
     admin_status_cancelled: () => "Cancelled",
@@ -43,6 +46,13 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("MyRegistrationsPage", () => {
+  it("keeps the check-in credential out of the QR query string", () => {
+    const url = new URL(buildCheckInQrUrl("https://festival.example", "reg 1", "secret/token"));
+    expect(url.searchParams.get("id")).toBe("reg 1");
+    expect(url.searchParams.has("token")).toBe(false);
+    expect(url.hash).toBe("#token=secret%2Ftoken");
+  });
+
   async function renderPage(initialEntry = "/my-registrations") {
     const rootRoute = createRootRoute();
     const myRegistrationsRoute = createRoute({
@@ -70,7 +80,7 @@ describe("MyRegistrationsPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/if we found registrations for that email/i)).toBeInTheDocument();
-      expect(screen.getByText("Automatic email sending is not enabled yet.")).toBeInTheDocument();
+      expect(screen.getByText("Check your inbox for the secure link.")).toBeInTheDocument();
     });
   });
 
@@ -83,6 +93,11 @@ describe("MyRegistrationsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
     });
+    expect(screen.getAllByLabelText("Booking check-in QR code").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Add to calendar" })[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining("calendar.google.com"),
+    );
   });
 
   it("shows an invalid-link message when the token is rejected", async () => {

@@ -212,6 +212,8 @@ export const publicHandlers = [
     const myRegs = sharedStore.registrations.map((r) => ({
       id: r.id,
       event_title: (r.event as Record<string, unknown> | null | undefined)?.title ?? "",
+      event_date: (r.event as Record<string, unknown> | null | undefined)?.date ?? null,
+      check_in_token: r.check_in_token ?? `mock-token-${r.id}`,
       guest_count: r.guest_count,
       status: r.status,
       payment_status: r.payment_status,

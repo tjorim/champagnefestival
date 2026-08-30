@@ -47,7 +47,7 @@ export default function RegistrationDetail({
   onClearActionError,
 }: RegistrationDetailProps) {
   const checkInUrl = registration
-    ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}&token=${encodeURIComponent(registration.checkInToken ?? "")}`
+    ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}#token=${encodeURIComponent(registration.checkInToken ?? "")}`
     : "";
 
   const sortedTables = useMemo(

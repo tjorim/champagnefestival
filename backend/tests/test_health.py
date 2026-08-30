@@ -215,7 +215,18 @@ def test_settings_reject_dev_auth_bypass_token_in_production():
             environment="production",
             oidc_issuer_url="https://auth.example.com",
             trusted_hosts="champagnefestival.tjor.im",
+            frontend_url="https://champagnefestival.tjor.im",
             dev_auth_bypass_token="some-token",
+        )
+
+
+def test_settings_reject_non_https_frontend_url_in_production():
+    with pytest.raises(ValidationError, match=r"FRONTEND_URL must use HTTPS in production\."):
+        Settings(
+            environment="production",
+            oidc_issuer_url="https://auth.example.com",
+            trusted_hosts="champagnefestival.tjor.im",
+            frontend_url="http://champagnefestival.tjor.im",
         )
 
 

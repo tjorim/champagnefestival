@@ -5,7 +5,6 @@ import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
 
 export interface CheckInSearch {
   id?: string;
-  token?: string;
 }
 
 export interface MyRegistrationsSearch {
@@ -15,7 +14,6 @@ export interface MyRegistrationsSearch {
 export function validateCheckInSearch(search: Record<string, unknown>): CheckInSearch {
   return {
     id: typeof search.id === "string" ? search.id : undefined,
-    token: typeof search.token === "string" ? search.token : undefined,
   };
 }
 

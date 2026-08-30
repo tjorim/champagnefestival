@@ -292,10 +292,15 @@ function CheckInCard({
 export default function CheckInPage() {
   const queryClient = useQueryClient();
   const auth = useAuth();
-  const { id: registrationId, token: checkInToken } = useSearch({
+  const { id: registrationId } = useSearch({
     from: "/admin-layout/check-in",
   });
   const location = useLocation();
+  const [fragmentCheckInToken] = useState(() => {
+    const value = new URLSearchParams(location.hash.replace(/^#/, "")).get("token");
+    return value ?? undefined;
+  });
+  const checkInToken = fragmentCheckInToken;
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
@@ -306,6 +311,12 @@ export default function CheckInPage() {
   const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
   const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
   const returnTo = location.pathname + location.searchStr;
+
+  useEffect(() => {
+    if (fragmentCheckInToken) {
+      window.history.replaceState(window.history.state, "", returnTo);
+    }
+  }, [fragmentCheckInToken, returnTo]);
 
   const authHeaders = useCallback((): Record<string, string> => {
     const token = auth.getAccessToken();

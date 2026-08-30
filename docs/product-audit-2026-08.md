@@ -83,8 +83,8 @@ This phase is the largest product gain in the audit.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 2 | #947 — durable outbox and scheduled-delivery worker | Extract the shared DB-backed delivery contract from completed #923's persistence semantics. Adopt it in an individual transactional path before using it for push fan-out. | M–L |
-| 3 | #924 — no confirmation e-mail, QR only in the admin UI | The single biggest product gap. Reuses #923's persistence decisions and #947's delivery contract rather than adding inline SMTP or a second queue. | M–L |
+| 2 | #947 — durable outbox and scheduled-delivery worker | Implementation is in progress together with #924: DB-backed jobs, atomic claims, bounded retries, diagnostics, retention, and a separately supervised worker are implemented; completion awaits database-backed CI and deployment wiring in the infra stack. | M–L |
+| 3 | #924 — no confirmation e-mail, QR only in the admin UI | Implementation is in progress together with #947: both registration paths enqueue a confirmation, and email/guest views include the reference, QR, URL, and calendar link; completion awaits database-backed CI and production worker deployment. | M–L |
 | 4 | #922 — `Registration.user_id` never written | Unblocks `/api/me/registrations` and the entire Pebble app (#757). Independent of 2–3, so it can run in parallel. | M |
 
 ### Phase 2 — data integrity in the admin and seating layer
@@ -546,9 +546,9 @@ Recorded so this ground does not get re-covered:
 
 Three findings propose changes that are judgement calls rather than clear fixes:
 
-1. **#924** proposes exposing `check_in_token` in `RegistrationGuestOut` so a
-   guest can retrieve their own QR. This widens what the guest endpoint returns
-   and deserves a second opinion before implementation.
+1. **#924** exposes `check_in_token` only from the short-lived, single-use
+   email-token-protected guest endpoint so a guest can retrieve their own QR;
+   the public registration response continues to omit it.
 2. **#926** asks whether the volunteer floor-plan view should be built or the
    unconsumed endpoint deleted. Either is defensible; carrying untested,
    unconsumed surface is not.

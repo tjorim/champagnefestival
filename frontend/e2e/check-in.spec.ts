@@ -15,7 +15,7 @@ test.describe("Check-in flow", () => {
   });
 
   test("loads registration details from URL params", async ({ page }) => {
-    await page.goto("/check-in?id=reg-01&token=mock-token-reg-01");
+    await page.goto("/check-in?id=reg-01#token=mock-token-reg-01");
 
     // Registration card should show the guest name
     await expect(page.locator("text=Alice Dupont")).toBeVisible({ timeout: 10_000 });
@@ -25,7 +25,7 @@ test.describe("Check-in flow", () => {
   });
 
   test("check-in button is visible for unchecked guest", async ({ page }) => {
-    await page.goto("/check-in?id=reg-01&token=mock-token-reg-01");
+    await page.goto("/check-in?id=reg-01#token=mock-token-reg-01");
 
     // Wait for the registration to load
     await expect(page.locator("text=Alice Dupont")).toBeVisible({ timeout: 10_000 });
@@ -37,7 +37,7 @@ test.describe("Check-in flow", () => {
   });
 
   test("completing check-in shows success state", async ({ page }) => {
-    await page.goto("/check-in?id=reg-01&token=mock-token-reg-01");
+    await page.goto("/check-in?id=reg-01#token=mock-token-reg-01");
 
     await expect(page.locator("text=Alice Dupont")).toBeVisible({ timeout: 10_000 });
 
@@ -52,7 +52,7 @@ test.describe("Check-in flow", () => {
   });
 
   test("shows error for invalid registration ID", async ({ page }) => {
-    await page.goto("/check-in?id=nonexistent&token=bad-token");
+    await page.goto("/check-in?id=nonexistent#token=bad-token");
 
     // An error alert should appear
     await expect(page.getByRole("alert")).toBeVisible({

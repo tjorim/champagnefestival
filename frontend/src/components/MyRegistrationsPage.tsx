@@ -11,6 +11,7 @@ import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
+import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -19,6 +20,18 @@ import {
   requestRegistrationLookup,
 } from "@/utils/publicRegistrationApi";
 import { EMAIL_REGEX } from "@/config/constants";
+
+function calendarDateRange(date: string): string {
+  const start = date.replaceAll("-", "");
+  const endDate = new Date(`${date}T00:00:00Z`);
+  endDate.setUTCDate(endDate.getUTCDate() + 1);
+  const end = endDate.toISOString().slice(0, 10).replaceAll("-", "");
+  return `${start}/${end}`;
+}
+
+export function buildCheckInQrUrl(origin: string, registrationId: string, checkInToken: string): string {
+  return `${origin}/check-in?id=${encodeURIComponent(registrationId)}#token=${encodeURIComponent(checkInToken)}`;
+}
 
 export default function MyRegistrationsPage() {
   const { token: rawToken } = useSearch({ from: "/my-registrations" });
@@ -207,6 +220,24 @@ export default function MyRegistrationsPage() {
                               </span>
                             </Card.Header>
                             <Card.Body className="pb-2">
+                              {registration.status !== "cancelled" && (
+                                <div className="text-center mb-3">
+                                  <QRCodeSVG
+                                    value={buildCheckInQrUrl(
+                                      window.location.origin,
+                                      registration.id,
+                                      registration.checkInToken,
+                                    )}
+                                    size={160}
+                                    level="M"
+                                    includeMargin
+                                    aria-label={m.my_registrations_qr_label()}
+                                  />
+                                  <div className="small text-secondary mt-1">
+                                    {m.registration_reference({ reference: registration.id })}
+                                  </div>
+                                </div>
+                              )}
                               <div className="d-flex gap-2 flex-wrap mb-2">
                                 <Badge
                                   bg={
@@ -249,6 +280,16 @@ export default function MyRegistrationsPage() {
                                 <i className="bi bi-people me-1" aria-hidden="true" />
                                 {registration.guestCount} {m.my_registrations_guests_label()}
                               </div>
+                              {registration.eventDate && (
+                                <a
+                                  className="btn btn-sm btn-outline-warning mt-2"
+                                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(registration.eventTitle)}&dates=${calendarDateRange(registration.eventDate)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {m.my_registrations_add_calendar()}
+                                </a>
+                              )}
                               {registration.orderItems.length > 0 && (
                                 <ListGroup variant="flush" className="mt-2">
                                   {registration.orderItems.map((item, idx) => (

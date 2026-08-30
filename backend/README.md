@@ -208,12 +208,16 @@ location /api/ {
 | `METRICS_HMAC_SECRET` | no    | `""`                                                   | Shared secret for the `X-Metrics-Token` HMAC on `GET /api/metrics`; empty disables the endpoint |
 | `SENTRY_DSN`       | no       | `""`                                                   | Sentry DSN for error tracking; empty disables Sentry                 |
 | `SENTRY_TRACES_SAMPLE_RATE` | no | `0.0`                                              | Fraction (0.0-1.0) of transactions sampled for Sentry performance monitoring |
-| `SMTP_HOST`        | no       | `""`                                                   | SMTP server used to deliver guest access links; empty disables delivery |
+| `SMTP_HOST`        | no       | `""`                                                   | SMTP server used to deliver guest access links and registration confirmations; empty disables delivery |
 | `SMTP_PORT`        | no       | `587`                                                  | SMTP port                                                            |
 | `SMTP_USER`        | no       | `""`                                                   | SMTP username                                                        |
 | `SMTP_PASSWORD`    | no       | `""`                                                   | SMTP password                                                        |
-| `SMTP_FROM`        | no       | `""`                                                   | Sender address for guest access-link e-mails                         |
+| `SMTP_FROM`        | no       | `""`                                                   | Sender address for transactional e-mails                            |
 | `CONTACT_RECIPIENT` | no      | `SMTP_FROM`                                             | Recipient for persisted contact-message notifications               |
+| `FRONTEND_URL`      | no       | `http://localhost:5173`                                | Public origin used in transactional check-in links                  |
+| `OUTBOX_POLL_SECONDS` | no     | `2`                                                    | Durable worker idle polling interval                                |
+| `OUTBOX_LEASE_SECONDS` | no    | `300`                                                  | Durable job claim lease for crash recovery                          |
+| `OUTBOX_RETENTION_DAYS` | no   | `90`                                                   | Retention for delivered and terminally failed jobs                  |
 | `RECAPTCHA_SECRET` | no       | —                                                      | Google reCAPTCHA secret (planned)                                    |
 
 See `.env.example` for a template.
@@ -251,6 +255,7 @@ See `.env.example` for a template.
 | `PUT`    | `/api/contact/{id}/handled`     | admin          | Mark a contact message as handled                                          |
 | `GET`    | `/api/settings`                 | public         | Get maintenance mode and public contact settings                           |
 | `PUT`    | `/api/settings`                 | admin          | Update maintenance mode or public contact settings                         |
+| `GET`    | `/api/outbox`                   | admin          | Inspect recent durable delivery jobs, optionally filtered by state         |
 | `POST`   | `/api/tables`                   | admin          | Create table                                                               |
 | `GET`    | `/api/tables`                   | admin          | List tables                                                                |
 | `GET`    | `/api/tables/{id}`              | admin          | Get table                                                                  |
@@ -302,8 +307,4 @@ CORS_ORIGINS=https://champagnefestival.be
 
 The README documents shipped behaviour; it is not a second product backlog.
 Current gaps, dependencies, and preferred implementation order live in the
-[product audit](../docs/product-audit-2026-08.md). In particular, automatic
-confirmation e-mail after registration creation is tracked by
-[#924](https://github.com/tjorim/champagnefestival/issues/924). The existing
-SMTP integration only delivers short-lived guest access links requested via
-`POST /api/registrations/my/request`.
+[product audit](../docs/product-audit-2026-08.md).

@@ -32,6 +32,7 @@ interface RegistrationFields {
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [registrationId, setRegistrationId] = useState("");
   const [submitError, setSubmitError] = useState("");
 
   const submitRegistrationMutation = useMutation({
@@ -63,11 +64,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       }
 
       try {
-        await submitRegistrationMutation.mutateAsync({
+        const created = await submitRegistrationMutation.mutateAsync({
           ...value,
           eventId: event.id,
           orderItems: showOrderItems ? orderItems : [],
         });
+        setRegistrationId(created.id);
         setSubmitSuccess(true);
       } catch (error) {
         setSubmitError(
@@ -149,6 +151,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     });
     setOrderItems([]);
     setSubmitSuccess(false);
+    setRegistrationId("");
     setSubmitError("");
     onHide();
   }, [form, onHide]);
@@ -178,6 +181,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           <Alert variant="success" className="mb-0">
             <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
             {m.registration_success()}
+            <div className="mt-2">
+              {m.registration_reference({ reference: registrationId })}
+            </div>
+            <a href="/my-registrations" className="alert-link">
+              {m.registration_view_my_registrations()}
+            </a>
           </Alert>
         ) : (
           <Form

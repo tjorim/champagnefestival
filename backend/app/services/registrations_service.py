@@ -35,6 +35,7 @@ from app.live import mapping as live_mapping
 from app.models import Event, Layout, Person, Product, Registration, Table
 from app.schemas import OrderItemBase, OrderItemCategory, OrderItemRequest, RegistrationAdminCreate, RegistrationUpdate
 from app.services import events_service, people_service
+from app.services.outbox_service import enqueue_registration_confirmation
 from app.utils import make_id, registration_to_dict
 
 logger = logging.getLogger(__name__)
@@ -199,6 +200,7 @@ async def admin_create_registration(
         request_id=request_id,
         details={"event_id": event.id, "person_id": person.id},
     )
+    await enqueue_registration_confirmation(db, registration.id, actor=actor, request_id=request_id)
     await db.commit()
 
     registration = await get_registration_or_404(db, registration.id)

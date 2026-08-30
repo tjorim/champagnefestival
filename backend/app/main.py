@@ -32,6 +32,7 @@ from app.routers import (
     live,
     me,
     members,
+    outbox,
     people,
     products,
     registrations,
@@ -162,6 +163,7 @@ app.include_router(members.router)
 app.include_router(events.router)
 app.include_router(check_in.router)
 app.include_router(contact.router)
+app.include_router(outbox.router)
 app.include_router(tables.router)
 app.include_router(table_types.router)
 app.include_router(venues.router)
