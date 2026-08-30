@@ -109,12 +109,7 @@ export async function updateVolunteerRegistration(
   if (payload.orderItems) {
     body.order_items = payload.orderItems.map((order) => ({
       product_id: order.productId,
-      name: order.name,
-      quantity: order.quantity,
       delivered_quantity: order.deliveredQuantity,
-      price: order.price,
-      category: order.category,
-      delivered: order.delivered,
     }));
   }
   if (payload.strapIssued !== undefined) {

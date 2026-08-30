@@ -71,6 +71,13 @@ class OrderItemRequest(BaseModel):
     quantity: int = Field(ge=1, le=100)
 
 
+class RegistrationDeliveryUpdate(BaseModel):
+    """The only order-line fields an entrance volunteer may change."""
+
+    product_id: str = Field(min_length=1)
+    delivered_quantity: int = Field(ge=0, le=100)
+
+
 # ---------------------------------------------------------------------------
 # People (output — defined early so registration schemas can reference it)
 # ---------------------------------------------------------------------------
@@ -257,7 +264,7 @@ class RegistrationUpdate(BaseModel):
     payment_status: PaymentStatus | None = None
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     table_id: str | None = None
-    order_items: list[OrderItemBase] | None = None
+    order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
     notes: str | None = None
     accessibility_note: str | None = None
     person_id: str | None = Field(default=None, min_length=1)
@@ -513,7 +520,7 @@ class VolunteerCheckInRequest(BaseModel):
 
 
 class VolunteerRegistrationUpdate(BaseModel):
-    order_items: list[OrderItemBase] | None = None
+    order_items: list[RegistrationDeliveryUpdate] | None = Field(default=None, max_length=50)
     strap_issued: bool | None = None
 
 

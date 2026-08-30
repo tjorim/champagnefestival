@@ -258,9 +258,33 @@ export const adminHandlers = [
     const idx = sharedStore.registrations.findIndex((r) => r.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
+    const current = sharedStore.registrations[idx]!;
+    const currentOrderItems = Array.isArray(current.order_items)
+      ? (current.order_items as Array<Record<string, unknown>>)
+      : [];
+    const deliveryUpdates = Array.isArray(body.order_items)
+      ? new Map(
+          body.order_items.map((item) => {
+            const update = item as Record<string, unknown>;
+            return [update.product_id, update.delivered_quantity];
+          }),
+        )
+      : null;
+    const orderItems = deliveryUpdates
+      ? currentOrderItems.map((item) => {
+          const deliveredQuantity = deliveryUpdates.get(item.product_id);
+          return typeof deliveredQuantity === "number"
+            ? {
+                ...item,
+                delivered_quantity: deliveredQuantity,
+                delivered: deliveredQuantity === item.quantity,
+              }
+            : item;
+        })
+      : currentOrderItems;
     sharedStore.registrations[idx] = {
-      ...sharedStore.registrations[idx]!,
-      ...(Array.isArray(body.order_items) ? { order_items: body.order_items } : {}),
+      ...current,
+      order_items: orderItems,
       ...(typeof body.strap_issued === "boolean" ? { strap_issued: body.strap_issued } : {}),
       updated_at: now(),
     };

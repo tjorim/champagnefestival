@@ -37,7 +37,7 @@ from app.services.operational_search import (
     person_search_predicate,
     rank_table_reference,
 )
-from app.services.registrations_service import ensure_registration_can_check_in
+from app.services.registrations_service import apply_delivery_updates, ensure_registration_can_check_in
 from app.utils import registration_to_checkin_dict
 
 logger = logging.getLogger(__name__)
@@ -296,6 +296,7 @@ async def update_volunteer_registration(
     previous_orders = list(registration.order_items) if registration.order_items else []
     previous_strap_issued = registration.strap_issued
     changed = False
+    delivery_changed = False
     request_id = getattr(request.state, "request_id", None)
     audit_base = {
         "actor": actor,
@@ -305,10 +306,11 @@ async def update_volunteer_registration(
     }
 
     if body.order_items is not None:
-        new_orders = [item.model_dump() for item in body.order_items]
+        new_orders = apply_delivery_updates(previous_orders, body.order_items)
         if new_orders != previous_orders:
             registration.order_items = new_orders
             changed = True
+            delivery_changed = True
             await write_audit_entry(
                 db,
                 action="delivery_updated",
@@ -329,14 +331,15 @@ async def update_volunteer_registration(
     if changed:
         await db.commit()
         try:
-            await live_bus.publish(
-                live_mapping.registration_changed(
-                    action="updated",
-                    registration_id=registration.id,
-                    event_id=registration.event_id,
-                    edition_id=registration.event.edition_id,
-                )
-            )
+            scope = {
+                "registration_id": registration.id,
+                "event_id": registration.event_id,
+                "edition_id": registration.event.edition_id,
+            }
+            if delivery_changed:
+                await live_bus.publish(live_mapping.delivery_changed(**scope))
+            if registration.strap_issued != previous_strap_issued:
+                await live_bus.publish(live_mapping.check_in_changed(**scope))
         except Exception:
             logger.warning(
                 "live_bus.publish failed for volunteer registration update %s", registration.id, exc_info=True

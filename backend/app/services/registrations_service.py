@@ -33,7 +33,14 @@ from app.audit import write_audit_entry
 from app.live import live_bus
 from app.live import mapping as live_mapping
 from app.models import Event, Layout, Person, Product, Registration, Table
-from app.schemas import OrderItemBase, OrderItemCategory, OrderItemRequest, RegistrationAdminCreate, RegistrationUpdate
+from app.schemas import (
+    OrderItemBase,
+    OrderItemCategory,
+    OrderItemRequest,
+    RegistrationAdminCreate,
+    RegistrationDeliveryUpdate,
+    RegistrationUpdate,
+)
 from app.services import events_service, people_service
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.utils import make_id, registration_to_dict
@@ -63,12 +70,6 @@ def ensure_registration_can_check_in(registration: Registration) -> None:
             status_code=status.HTTP_409_CONFLICT,
             detail="Cancelled registrations cannot be checked in.",
         )
-
-
-def sum_delivered(order_items: list[dict] | None) -> int:
-    if not order_items:
-        return 0
-    return sum(int(item.get("delivered_quantity") or 0) for item in order_items)
 
 
 async def fetch_person_map(db: AsyncSession, rows: list[Registration]) -> dict[str, Person]:
@@ -172,6 +173,37 @@ def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_co
     return resolved
 
 
+def apply_delivery_updates(
+    order_items: list[dict] | None, updates: list[RegistrationDeliveryUpdate]
+) -> list[dict]:
+    """Apply delivery counts without trusting clients with priced order data."""
+    updated = [dict(item) for item in (order_items or [])]
+    by_product_id = {item.get("product_id"): item for item in updated}
+    seen: set[str] = set()
+    for delivery in updates:
+        if delivery.product_id in seen:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Product '{delivery.product_id}' appears more than once in the delivery update.",
+            )
+        seen.add(delivery.product_id)
+        item = by_product_id.get(delivery.product_id)
+        if item is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Product '{delivery.product_id}' is not on this registration.",
+            )
+        quantity = int(item.get("quantity") or 0)
+        if delivery.delivered_quantity > quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"delivered_quantity for product '{delivery.product_id}' cannot exceed quantity.",
+            )
+        item["delivered_quantity"] = delivery.delivered_quantity
+        item["delivered"] = delivery.delivered_quantity == quantity
+    return updated
+
+
 async def admin_create_registration(
     db: AsyncSession, *, body: RegistrationAdminCreate, actor: str, request_id: str | None = None
 ) -> dict:
@@ -251,7 +283,6 @@ async def apply_registration_update(
 
     pre_table_id = registration.table_id
     pre_order_items = list(registration.order_items) if registration.order_items else []
-    pre_delivery_sum = sum_delivered(registration.order_items)
     pre_checked_in = registration.checked_in
     pre_strap_issued = registration.strap_issued
     pre_status = registration.status
@@ -299,7 +330,15 @@ async def apply_registration_update(
         await people_service.get_person_or_404(db, body.person_id)
         registration.person_id = body.person_id
     if body.order_items is not None:
-        registration.order_items = [item.model_dump() for item in body.order_items]
+        delivered_by_product = {
+            item.get("product_id"): int(item.get("delivered_quantity") or 0) for item in pre_order_items
+        }
+        resolved_items = resolve_order_items(registration.event, body.order_items, registration.guest_count)
+        for item in resolved_items:
+            delivered_quantity = min(delivered_by_product.get(item["product_id"], 0), item["quantity"])
+            item["delivered_quantity"] = delivered_quantity
+            item["delivered"] = delivered_quantity == item["quantity"]
+        registration.order_items = resolved_items
     if body.checked_in is not None:
         if body.checked_in and not registration.checked_in:
             registration.checked_in_at = datetime.now(UTC)
@@ -320,8 +359,7 @@ async def apply_registration_update(
             **audit_base,
         )
     if body.order_items is not None and registration.order_items != pre_order_items:
-        action = "delivery_updated" if sum_delivered(registration.order_items) != pre_delivery_sum else "order_updated"
-        await write_audit_entry(db, actor=actor, action=action, details={}, **audit_base)
+        await write_audit_entry(db, actor=actor, action="order_updated", details={}, **audit_base)
     if body.checked_in is not None and registration.checked_in != pre_checked_in:
         await write_audit_entry(
             db,
@@ -371,10 +409,7 @@ async def apply_registration_update(
         if registration.table_id != pre_table_id:
             await live_bus.publish(live_mapping.seating_changed(table_id=registration.table_id, **scope))
         if body.order_items is not None and registration.order_items != pre_order_items:
-            if sum_delivered(registration.order_items) != pre_delivery_sum:
-                await live_bus.publish(live_mapping.delivery_changed(**scope))
-            else:
-                await live_bus.publish(live_mapping.order_changed(**scope))
+            await live_bus.publish(live_mapping.order_changed(**scope))
         if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:
             await live_bus.publish(live_mapping.check_in_changed(**scope))
         metadata_fields = {"status", "payment_status", "amount_due", "notes", "accessibility_note", "person_id"}

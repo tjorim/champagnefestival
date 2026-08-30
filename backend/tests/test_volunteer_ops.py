@@ -9,6 +9,7 @@ from tests.helpers import (
     ROOM_PAYLOAD,
     TABLE_TYPE_PAYLOAD,
     VENUE_PAYLOAD,
+    _create_event,
     _post_registration,
 )
 
@@ -29,6 +30,28 @@ async def _create_table(client, *, name: str) -> str:
     )
     assert r.status_code == 201
     return r.json()["id"]
+
+
+async def _post_registration_with_order(client, *, quantity: int = 2):
+    event = await _create_event(client)
+    product = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name": "Champagne bottle",
+            "price": "42.00",
+            "category": "champagne",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert product.status_code == 201
+    response = await _post_registration(
+        client,
+        path="/api/registrations",
+        event=event,
+        order_items=[{"product_id": product.json()["id"], "quantity": quantity}],
+    )
+    return response
 
 
 @pytest.mark.anyio
@@ -88,18 +111,13 @@ async def test_volunteer_registrations_support_accent_insensitive_and_typo_name_
 
 @pytest.mark.anyio
 async def test_volunteer_registrations_normalize_visible_table_reference_and_filter_pending_orders(client):
-    registration = await _post_registration(client, path="/api/registrations")
+    registration = await _post_registration_with_order(client, quantity=1)
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
     table_id = await _create_table(client, name="table-12")
     r = await client.put(
         f"/api/registrations/{registration_id}",
-        json={
-            "table_id": table_id,
-            "order_items": [
-                {"product_id": "prod-01", "name": "Bottle", "quantity": 1, "price": 65.0, "category": "champagne"}
-            ],
-        },
+        json={"table_id": table_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -172,7 +190,7 @@ async def test_volunteer_cannot_check_in_canceled_registration(client):
 
 @pytest.mark.anyio
 async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(client):
-    registration = await _post_registration(client, path="/api/registrations")
+    registration = await _post_registration_with_order(client)
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
 
@@ -182,13 +200,8 @@ async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(
             "strap_issued": True,
             "order_items": [
                 {
-                    "product_id": "prod-01",
-                    "name": "Champagne bottle",
-                    "quantity": 2,
+                    "product_id": registration.json()["order_items"][0]["product_id"],
                     "delivered_quantity": 1,
-                    "price": 42,
-                    "category": "champagne",
-                    "delivered": False,
                 }
             ],
         },
@@ -201,6 +214,47 @@ async def test_volunteer_can_issue_strap_and_update_delivery_from_check_in_card(
     assert payload["order_items"][0]["delivered_quantity"] == 1
     assert "email" not in payload
     assert "phone" not in payload
+
+
+@pytest.mark.anyio
+async def test_volunteer_delivery_update_cannot_change_order_details(client):
+    registration = await _post_registration_with_order(client)
+    registration_id = registration.json()["id"]
+    original = registration.json()["order_items"][0]
+
+    response = await client.put(
+        f"/api/volunteer/registrations/{registration_id}",
+        json={
+            "order_items": [
+                {
+                    "product_id": original["product_id"],
+                    "delivered_quantity": 1,
+                    "name": "Forged",
+                    "quantity": 99,
+                    "price": 0,
+                    "category": "other",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    updated = response.json()["order_items"][0]
+    assert updated["delivered_quantity"] == 1
+    for field in ("name", "quantity", "price", "category"):
+        assert updated[field] == original[field]
+
+
+@pytest.mark.anyio
+async def test_volunteer_delivery_update_rejects_product_not_on_registration(client):
+    registration = await _post_registration(client, path="/api/registrations")
+    response = await client.put(
+        f"/api/volunteer/registrations/{registration.json()['id']}",
+        json={"order_items": [{"product_id": "not-ordered", "delivered_quantity": 1}]},
+    )
+
+    assert response.status_code == 400
+    assert "not on this registration" in response.json()["detail"]
 
 
 @pytest.mark.anyio

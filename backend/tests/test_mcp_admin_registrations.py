@@ -308,8 +308,7 @@ async def test_update_registration_rejects_table_from_another_edition(db_session
 
 
 async def test_update_registration_order_items_audit_action(db_session):
-    """The audit action distinguishes an order-quantity change from a
-    delivery-only change, so the trail can tell them apart at a glance."""
+    """Admin order changes are explicitly audited as order updates."""
     factory = mcp_session_factory(db_session)
     person, event = await _seed_event(db_session, with_product=True)
     created = await mcp_registrations.create_registration(
@@ -320,31 +319,17 @@ async def test_update_registration_order_items_audit_action(db_session):
         guest_count=2,
         order_items=[{"product_id": "prod-1", "quantity": 2}],
     )
-    item = created["order_items"][0]
-
     await mcp_registrations.update_registration(
         factory,
         "admin-1",
         created["id"],
-        order_items=[{**item, "quantity": 3}],
+        order_items=[{"product_id": "prod-1", "quantity": 3}],
     )
     entries = (await mcp_audit.list_audit_entries(factory, resource_type="registration", resource_id=created["id"]))[
         "entries"
     ]
     actions = [e["action"] for e in entries]
     assert "order_updated" in actions
-
-    await mcp_registrations.update_registration(
-        factory,
-        "admin-1",
-        created["id"],
-        order_items=[{**item, "quantity": 3, "delivered_quantity": 1}],
-    )
-    entries = (await mcp_audit.list_audit_entries(factory, resource_type="registration", resource_id=created["id"]))[
-        "entries"
-    ]
-    actions = [e["action"] for e in entries]
-    assert "delivery_updated" in actions
 
 
 async def test_update_registration_not_found(db_session):

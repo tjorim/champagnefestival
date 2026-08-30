@@ -11,6 +11,7 @@ from app.live import live_bus
 from tests.helpers import (
     ADMIN_HEADERS,
     TABLE_TYPE_PAYLOAD,
+    _create_event,
     _create_layout_prerequisites,
     _create_venue,
     _post_registration,
@@ -48,6 +49,24 @@ async def _registration_with_token(client) -> tuple[str, str]:
     reg_id = r.json()["id"]
     r = await client.get(f"/api/registrations/{reg_id}", headers=ADMIN_HEADERS)
     return reg_id, r.json()["check_in_token"]
+
+
+async def _registration_with_product(client) -> tuple[str, str]:
+    event = await _create_event(client)
+    product = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name": "Bottle",
+            "price": "65.00",
+            "category": "champagne",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert product.status_code == 201
+    registration = await _post_registration(client, event=event)
+    assert registration.status_code == 201
+    return registration.json()["id"], product.json()["id"]
 
 
 # ---------------------------------------------------------------------------
@@ -164,14 +183,14 @@ async def test_update_status_publishes_registration_event(client):
 
 
 async def test_update_order_items_quantity_publishes_order_event(client):
-    reg_id, _ = await _registration_with_token(client)
+    reg_id, product_id = await _registration_with_product(client)
 
     async with live_bus.subscribe() as queue:
         r = await client.put(
             f"/api/registrations/{reg_id}",
             json={
                 "order_items": [
-                    {"product_id": "p1", "name": "Bottle", "quantity": 2, "price": 65.0, "category": "champagne"}
+                    {"product_id": product_id, "quantity": 2}
                 ]
             },
             headers=ADMIN_HEADERS,
@@ -183,35 +202,31 @@ async def test_update_order_items_quantity_publishes_order_event(client):
 
 
 async def test_update_order_items_delivery_publishes_delivery_event(client):
-    reg_id, _ = await _registration_with_token(client)
+    reg_id, product_id = await _registration_with_product(client)
 
     # First set an order.
-    await client.put(
+    order = await client.put(
         f"/api/registrations/{reg_id}",
         json={
             "order_items": [
-                {"product_id": "p1", "name": "Bottle", "quantity": 2, "price": 65.0, "category": "champagne"}
+                    {"product_id": product_id, "quantity": 2}
             ]
         },
         headers=ADMIN_HEADERS,
     )
+    assert order.status_code == 200
 
     async with live_bus.subscribe() as queue:
         r = await client.put(
-            f"/api/registrations/{reg_id}",
+            f"/api/volunteer/registrations/{reg_id}",
             json={
                 "order_items": [
                     {
-                        "product_id": "p1",
-                        "name": "Bottle",
-                        "quantity": 2,
-                        "price": 65.0,
-                        "category": "champagne",
+                        "product_id": product_id,
                         "delivered_quantity": 1,
                     }
                 ]
             },
-            headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
         event = queue.get_nowait()
