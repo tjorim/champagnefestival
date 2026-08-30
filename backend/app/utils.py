@@ -33,6 +33,17 @@ from app.models import (
 
 T = TypeVar("T", bound=Base)
 
+_CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
+
+
+def csv_safe(value: object) -> str:
+    """Return a spreadsheet-safe CSV cell value.
+
+    Keep this rule aligned with ``frontend/src/utils/csvExport.ts``.
+    """
+    text = "" if value is None else str(value)
+    return f"'{text}" if text.startswith(_CSV_INJECTION_PREFIXES) else text
+
 
 def normalise_table_type_dimensions(shape: str, width_m: float, length_m: float) -> tuple[float, float]:
     """Return canonical (width_m, length_m) for a table type.

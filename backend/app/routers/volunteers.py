@@ -21,7 +21,7 @@ from app.dependencies import Pagination, apply_pagination, get_request_id
 from app.models import Person
 from app.schemas import VolunteerCreate, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
-from app.utils import roles_contains
+from app.utils import csv_safe, roles_contains
 
 router = APIRouter(
     prefix="/api/volunteers",
@@ -69,21 +69,26 @@ async def export_volunteers_csv(db: AsyncSession = Depends(get_db)) -> Streaming
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["Name", "National Register Number", "Address", "Period Start", "Period End"])
+    writer.writerow(map(csv_safe, ["Name", "National Register Number", "Address", "Period Start", "Period End"]))
     for volunteer in volunteers:
         periods = periods_map.get(volunteer.id, [])
         if not periods:
-            writer.writerow([volunteer.name, volunteer.national_register_number or "", volunteer.address or "", "", ""])
+            writer.writerow(
+                map(csv_safe, [volunteer.name, volunteer.national_register_number, volunteer.address, None, None])
+            )
             continue
         for period in periods:
             writer.writerow(
-                [
-                    volunteer.name,
-                    volunteer.national_register_number or "",
-                    volunteer.address or "",
-                    period.first_help_day.isoformat(),
-                    period.last_help_day.isoformat() if period.last_help_day else "",
-                ]
+                map(
+                    csv_safe,
+                    [
+                        volunteer.name,
+                        volunteer.national_register_number,
+                        volunteer.address,
+                        period.first_help_day.isoformat(),
+                        period.last_help_day.isoformat() if period.last_help_day else None,
+                    ],
+                )
             )
     buffer.seek(0)
 

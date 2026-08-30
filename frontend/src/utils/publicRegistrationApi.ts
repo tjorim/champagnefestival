@@ -344,13 +344,7 @@ export async function requestRegistrationLookup(
   return parseRegistrationLookupRequestAccepted(await response.json());
 }
 
-export async function fetchMyRegistrations(token: string): Promise<GuestRegistration[]> {
-  const response = await fetch("/api/registrations/my/access", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-
+async function parseRegistrationLookupResponse(response: Response): Promise<GuestRegistration[]> {
   if (!response.ok) {
     throw new RegistrationLookupError(
       response.status === 401 ? "invalid_token" : "request_failed",
@@ -362,16 +356,58 @@ export async function fetchMyRegistrations(token: string): Promise<GuestRegistra
   return mapGuestRegistrations(data);
 }
 
+export async function accessMyRegistrations(token: string): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/registrations/my/access", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+
+  return parseRegistrationLookupResponse(response);
+}
+
+export async function claimMyRegistrations(token: string, accessToken: string): Promise<void> {
+  const response = await fetch("/api/me/registrations/claim", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ token }),
+  });
+
+  if (!response.ok) {
+    throw new RegistrationLookupError(
+      response.status === 401 ? "invalid_token" : "request_failed",
+      response.status === 401 ? m.my_registrations_invalid_token() : m.my_registrations_error(),
+    );
+  }
+}
+
+export async function fetchOwnedRegistrations(accessToken: string): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/me/registrations", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  return parseRegistrationLookupResponse(response);
+}
+
 export class RegistrationSubmitError extends Error {
   constructor(message: string) {
     super(message);
   }
 }
 
-export async function submitRegistration(payload: RegistrationFormData): Promise<{ id: string }> {
+export async function submitRegistration(
+  payload: RegistrationFormData,
+  accessToken?: string | null,
+): Promise<{ id: string }> {
   const response = await fetch("/api/registrations", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
     body: JSON.stringify({
       name: payload.name,
       email: payload.email,

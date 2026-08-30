@@ -72,3 +72,20 @@ async def test_export_excludes_cancelled_registrations(client):
     names = [row[0] for row in rows[1:]]
     assert "Still Here" in names
     assert "Cancelled Guest" not in names
+
+
+@pytest.mark.anyio
+async def test_export_prefixes_formula_injection_cells(client):
+    event = await _create_event(client, edition_id="edition-export-formula", title="Formula Night")
+    response = await _post_registration(client, event=event, name="=1+1", email="formula@example.com")
+    assert response.status_code == 201
+
+    response = await client.get(
+        "/api/registrations/export",
+        params={"event_id": event["id"]},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 200
+    rows = list(csv.reader(io.StringIO(response.text)))
+    assert rows[1][0] == "'=1+1"

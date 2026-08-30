@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -13,6 +13,37 @@ import MyRegistrationsPage, { buildCheckInQrUrl } from "@/components/MyRegistrat
 import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
+
+const authState = vi.hoisted(() => ({
+  accessToken: null as string | null,
+  isAuthenticated: false,
+  isLoading: false,
+  listeners: new Set<() => void>(),
+  set(next: Partial<{ accessToken: string | null; isAuthenticated: boolean; isLoading: boolean }>) {
+    Object.assign(this, next);
+    this.listeners.forEach((listener) => listener());
+  },
+}));
+
+vi.mock("@/contexts/AuthContext", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    useAuth: () => {
+      useSyncExternalStore(
+        (listener) => {
+          authState.listeners.add(listener);
+          return () => authState.listeners.delete(listener);
+        },
+        () => `${authState.accessToken}:${authState.isAuthenticated}:${authState.isLoading}`,
+      );
+      return {
+        getAccessToken: () => authState.accessToken,
+        isAuthenticated: authState.isAuthenticated,
+        isLoading: authState.isLoading,
+      };
+    },
+  };
+});
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -46,6 +77,12 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("MyRegistrationsPage", () => {
+  beforeEach(() => {
+    authState.accessToken = null;
+    authState.isAuthenticated = false;
+    authState.isLoading = false;
+  });
+
   it("keeps the check-in credential out of the QR query string", () => {
     const url = new URL(buildCheckInQrUrl("https://festival.example", "reg 1", "secret/token"));
     expect(url.searchParams.get("id")).toBe("reg 1");
@@ -67,7 +104,7 @@ describe("MyRegistrationsPage", () => {
     await router.load();
     const Wrapper = createTestQueryClientWrapper();
 
-    return render(<RouterProvider router={router} />, { wrapper: Wrapper });
+    return { ...render(<RouterProvider router={router} />, { wrapper: Wrapper }), router };
   }
 
   it("requests a secure link instead of looking registrations up by email", async () => {
@@ -98,6 +135,141 @@ describe("MyRegistrationsPage", () => {
       "href",
       expect.stringContaining("calendar.google.com"),
     );
+  });
+
+  it("claims email-proven registrations when the visitor is signed in", async () => {
+    authState.accessToken = "visitor-access-token";
+    authState.isAuthenticated = true;
+    let authorization = "";
+    server.use(
+      http.post("/api/me/registrations/claim", ({ request }) => {
+        authorization = request.headers.get("Authorization") ?? "";
+        return HttpResponse.json([]);
+      }),
+      http.get("/api/me/registrations", () => HttpResponse.json([])),
+    );
+
+    await renderPage("/my-registrations?token=email-access-token");
+
+    await waitFor(() => {
+      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
+    });
+    expect(authorization).toBe("Bearer visitor-access-token");
+  });
+
+  it("waits for authentication restoration before claiming the token", async () => {
+    authState.isLoading = true;
+    let anonymousCalls = 0;
+    let claimCalls = 0;
+    let ownedCalls = 0;
+    server.use(
+      http.post("/api/registrations/my/access", () => {
+        anonymousCalls += 1;
+        return HttpResponse.json([]);
+      }),
+      http.post("/api/me/registrations/claim", () => {
+        claimCalls += 1;
+        return HttpResponse.json([]);
+      }),
+      http.get("/api/me/registrations", () => {
+        ownedCalls += 1;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    const view = await renderPage("/my-registrations?token=email-access-token");
+    expect(screen.getByText("Loading registrations...")).toBeInTheDocument();
+    expect(anonymousCalls).toBe(0);
+
+    authState.set({
+      isLoading: false,
+      isAuthenticated: true,
+      accessToken: "restored-access-token",
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
+    });
+    expect(anonymousCalls).toBe(0);
+    expect(claimCalls).toBe(1);
+    expect(ownedCalls).toBe(1);
+    await waitFor(() => expect(view.router.state.location.search).toEqual({}));
+    const currentHref = view.router.state.location.href;
+    view.unmount();
+    await renderPage(currentHref);
+    expect(claimCalls).toBe(1);
+  });
+
+  it("does not replay an anonymous token exchange after successful remount", async () => {
+    let accessCalls = 0;
+    server.use(
+      http.post("/api/registrations/my/access", () => {
+        accessCalls += 1;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    const view = await renderPage("/my-registrations?token=email-access-token");
+    await waitFor(() => {
+      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
+    });
+    expect(accessCalls).toBe(1);
+
+    await waitFor(() => expect(view.router.state.location.search).toEqual({}));
+    const currentHref = view.router.state.location.href;
+    view.unmount();
+    await renderPage(currentHref);
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(accessCalls).toBe(1);
+  });
+
+  it("scrubs an anonymous token before an in-flight exchange can be remounted", async () => {
+    let accessCalls = 0;
+    let finishExchange: (() => void) | undefined;
+    const exchangePending = new Promise<void>((resolve) => {
+      finishExchange = resolve;
+    });
+    server.use(
+      http.post("/api/registrations/my/access", async () => {
+        accessCalls += 1;
+        await exchangePending;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    const view = await renderPage("/my-registrations?token=email-access-token");
+    await waitFor(() => expect(accessCalls).toBe(1));
+    await waitFor(() => expect(view.router.state.location.search).toEqual({}));
+    const currentHref = view.router.state.location.href;
+    view.unmount();
+    await renderPage(currentHref);
+    expect(accessCalls).toBe(1);
+    finishExchange?.();
+  });
+
+  it("reconciles an ambiguous signed claim through the owned registrations GET", async () => {
+    authState.accessToken = "visitor-access-token";
+    authState.isAuthenticated = true;
+    let claimCalls = 0;
+    let ownedCalls = 0;
+    server.use(
+      http.post("/api/me/registrations/claim", () => {
+        claimCalls += 1;
+        return HttpResponse.error();
+      }),
+      http.get("/api/me/registrations", () => {
+        ownedCalls += 1;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    const view = await renderPage("/my-registrations?token=email-access-token");
+    await waitFor(() => {
+      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
+    });
+    expect(claimCalls).toBe(1);
+    expect(ownedCalls).toBe(1);
+    expect(view.router.state.location.search).toEqual({});
   });
 
   it("shows an invalid-link message when the token is rejected", async () => {

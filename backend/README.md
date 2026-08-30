@@ -240,11 +240,13 @@ See `.env.example` for a template.
 
 | Method   | Path                            | Auth           | Description                                                                |
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
-| `POST`   | `/api/registrations`             | public         | Create a registration                                                       |
+| `POST`   | `/api/registrations`             | public / optional user | Create a registration; a valid user Bearer token assigns ownership       |
 | `GET`    | `/api/registrations`             | admin          | List registrations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
 | `GET`    | `/api/registrations/export`      | admin          | Export one event's non-cancelled registrations as CSV                       |
 | `POST`   | `/api/registrations/my/request`  | public         | E-mail a short-lived visitor access link                                    |
 | `POST`   | `/api/registrations/my/access`   | public + token | View visitor registrations using a short-lived secure token                 |
+| `GET`    | `/api/me/registrations`          | user           | List owned registrations with guest order and check-in details               |
+| `POST`   | `/api/me/registrations/claim`    | user + access token | Claim unowned registrations after email-control proof                    |
 | `GET`    | `/api/registrations/{id}`        | admin          | Get registration detail (token included)                                    |
 | `PUT`    | `/api/registrations/{id}`        | admin          | Update registration                                                         |
 | `DELETE` | `/api/registrations/{id}`        | admin          | Delete registration                                                         |

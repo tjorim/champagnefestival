@@ -178,6 +178,22 @@ async def test_get_current_claims_returns_claims(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_optional_claims_returns_none_without_credentials() -> None:
+    assert await auth.get_optional_claims(_request(), None) is None
+
+
+@pytest.mark.asyncio
+async def test_get_optional_claims_validates_supplied_credentials(monkeypatch) -> None:
+    claims = {"sub": "user-123"}
+
+    async def fake_decode_token(_token: str) -> dict:
+        return claims
+
+    monkeypatch.setattr(auth, "decode_token", fake_decode_token)
+    assert await auth.get_optional_claims(_request(), _credentials()) == claims
+
+
+@pytest.mark.asyncio
 async def test_get_current_claims_raises_401_on_invalid_token(monkeypatch) -> None:
     from app.oidc_config import OIDCTokenError
 

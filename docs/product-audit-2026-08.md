@@ -78,35 +78,30 @@ survives an event day.
 
 ### Phase 1 — close the contact and booking loops
 
-The public booking flow currently ends with a success message and nothing else.
-This phase is the largest product gain in the audit.
+The public booking, confirmation, and registration-ownership gaps identified in
+this phase were completed through #924, #947, and #922 on 2026-08-30.
 
-| Order | Issue | Notes | Effort |
-| --- | --- | --- | --- |
-| 2 | #947 — durable outbox and scheduled-delivery worker | Implementation is in progress together with #924: DB-backed jobs, atomic claims, bounded retries, diagnostics, retention, and a separately supervised worker are implemented; completion awaits database-backed CI and deployment wiring in the infra stack. | M–L |
-| 3 | #924 — no confirmation e-mail, QR only in the admin UI | Implementation is in progress together with #947: both registration paths enqueue a confirmation, and email/guest views include the reference, QR, URL, and calendar link; completion awaits database-backed CI and production worker deployment. | M–L |
-| 4 | #922 — `Registration.user_id` never written | Unblocks `/api/me/registrations` and the entire Pebble app (#757). Independent of 2–3, so it can run in parallel. | M |
+No Phase 1 defects remain open.
 
 ### Phase 2 — data integrity in the admin and seating layer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 5 | #930 — CSV formula injection | Standalone, small, and the volunteer export goes to an external insurer. No reason to defer. | S |
-| 6 | #928 — update path bypasses product resolution | **Prerequisite for #933.** Splitting delivery updates from order changes is what makes a `guest_count` edit re-resolvable. | M |
-| 7 | #926 — venue plan reads a dead column | Decide *before* #927, because the answer determines whether table occupancy has anywhere to be displayed. | S to delete, M–L to build the volunteer view |
-| 8 | #927 — no seating capacity enforcement | Enforcement is independent, but surfacing occupancy in the editor depends on #926. | M |
+| 1 | #928 — update path bypasses product resolution | **Prerequisite for #933.** Splitting delivery updates from order changes is what makes a `guest_count` edit re-resolvable. | M |
+| 2 | #926 — venue plan reads a dead column | Decide *before* #927, because the answer determines whether table occupancy has anywhere to be displayed. | S to delete, M–L to build the volunteer view |
+| 3 | #927 — no seating capacity enforcement | Enforcement is independent, but surfacing occupancy in the editor depends on #926. | M |
 
 ### Phase 3 — operational workflows and admin communication
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 9 | #929 — SSE recovery fires one disconnect late | Small fix, and it must be right before #932 reworks the bus underneath it. | S |
-| 10 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
-| 11 | #933 — registration lifecycle gaps | Needs #928. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. | M |
-| 12 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
-| 13 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
-| 14 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
-| 15 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 4 | #929 — SSE recovery fires one disconnect late | Small fix, and it must be right before #932 reworks the bus underneath it. | S |
+| 5 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
+| 6 | #933 — registration lifecycle gaps | Needs #928. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. | M |
+| 7 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
+| 8 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
+| 9 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
+| 10 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -114,17 +109,23 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 16 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 17 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 18 | #932 — single-process state | Its #921 limiter prerequisite is complete; it follows #929 for the bus half. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
-| 19 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 20 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 11 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 12 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 13 | #932 — single-process state | Its #921 limiter prerequisite is complete; it follows #929 for the bus half. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
+| 14 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 15 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 21 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 16 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+
+### Phase 6 — deferred visitor account
+
+| Order | Issue | Notes | Effort |
+| --- | --- | --- | --- |
+| 17 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
 
 ### Dependency map
 
@@ -133,6 +134,10 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
                 └────────────> #947 durable outbox ──> #924 confirmation e-mail
                                              ├───────> #941 Web Push foundation
                                              └───────> #942 central composer
+
+#922 registration ownership ──┐
+#924 confirmation e-mail ─────┼──────────────> #953 visitor magic-link account
+#947 production delivery ─────┘
 
 #928 order resolution ────────> #933 registration lifecycle
 
@@ -163,6 +168,10 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #930 | Completed | 2026-08-30 | #930, PR (this change) | Applied one shared spreadsheet-formula guard to every backend registration and volunteer CSV cell, aligned it with the frontend rule, and added export regression coverage. |
+| #922 | Completed | 2026-08-30 | #922, PR (this change) | Attached authenticated bookings at creation, added email-proven ownership claims for older unowned bookings, and made owned registrations available to the web and Pebble self-service reads without trusting OIDC email claims. |
+| #947 | Completed | 2026-08-30 | #947, PR #952 | Added a durable database-backed outbox, atomic token-bound worker claims, bounded retries, delivery diagnostics and retention, plus independently supervised worker deployment wiring. |
+| #924 | Completed | 2026-08-30 | #924, PR #952 | Queued confirmations for public and admin bookings and provided guests with booking references, QR/check-in access, calendar links, and order details through email and the protected guest view. |
 | #940 | Completed | 2026-08-29 | #940, PR #951 | Added validated, audited public contact settings with a translated admin form and shared last-good/fallback rendering across contact, maintenance, and privacy pages. |
 | #923 | Completed | 2026-08-29 | #923, PR #950 | Persisted retry-safe contact submissions before success, added best-effort organiser notification and scoped limiting, exposed an admin inbox with idempotent handling, and corrected public error surfacing. |
 | #938 | Completed | 2026-08-29 | #938, PR #948 | Corrected the backend API and SMTP documentation, removed shipped event CRUD and CSV exports from the backlog, and replaced speculative implementation plans with the canonical audit link. |
@@ -178,15 +187,16 @@ deliberately, since the phase order above is a better signal than a flat label.
 | Issue | Area | Kind |
 | --- | --- | --- |
 | #921 | backend, android (completed 2026-08-29) | bug — event-day blocker |
-| #922 | backend, auth | bug — dead feature |
+| #922 | backend, auth (completed 2026-08-30) | bug — dead feature |
+| #953 | frontend, backend, auth | gap — visitor account and order-history experience |
 | #923 | backend, frontend (completed 2026-08-29) | bug — silent data loss |
-| #924 | backend, frontend | gap — core flow incomplete |
+| #924 | backend, frontend (completed 2026-08-30) | gap — core flow incomplete |
 | #925 | frontend, backend | bug — availability |
 | #926 | backend | bug — wrong data, dead column |
 | #927 | backend | bug — missing enforcement |
 | #928 | backend, mcp | bug — broken invariant |
 | #929 | frontend | bug — stale state |
-| #930 | backend | bug — export safety |
+| #930 | backend (completed 2026-08-30) | bug — export safety |
 | #931 | backend, frontend | bug — silent truncation |
 | #932 | backend | constraint — scaling |
 | #933 | backend, frontend | gap — lifecycle |
@@ -208,7 +218,7 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | #943 | frontend, admin | individual email-client actions | Does not replace #924 |
 | #945 | backend, frontend, admin, accessibility | scheduled announcements | Coordinates with #929, #931, and #935 |
 | #944 | backend, frontend, admin, security | versioned policy publishing | Follows #934's policy decisions |
-| #947 | backend, cross-cutting | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
+| #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
 | #941 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; coordinates with #937 |
 | #942 | backend, frontend, admin | central composer | Blocked by #945, #941, and #947 |
 
@@ -430,19 +440,19 @@ not a campaign or audience feature.
 
 Acceptance criteria:
 
-- [ ] Durable jobs have stable identity, type, schedule, state, attempts, and
+- [x] Durable jobs have stable identity, type, schedule, state, attempts, and
       timestamps; payloads contain only necessary references or snapshots.
-- [ ] Business state and enqueueing are atomic where the workflow requires it.
-- [ ] Multiple workers claim work atomically; duplicate execution is prevented.
-- [ ] Jobs survive restarts and abandoned claims recover safely.
-- [ ] Retry classification, bounded backoff, terminal failure, and poison-job
+- [x] Business state and enqueueing are atomic where the workflow requires it.
+- [x] Multiple workers claim work atomically; duplicate execution is prevented.
+- [x] Jobs survive restarts and abandoned claims recover safely.
+- [x] Retry classification, bounded backoff, terminal failure, and poison-job
       isolation are implemented and tested.
-- [ ] Scheduling uses UTC database/server time.
-- [ ] Delivery diagnostics and audit events distinguish queued work from actual
+- [x] Scheduling uses UTC database/server time.
+- [x] Delivery diagnostics and audit events distinguish queued work from actual
       outcomes without exposing credentials, tokens, endpoints, or secrets.
-- [ ] Cleanup and retention coordinate with #934; shared rate limits account
+- [x] Cleanup and retention coordinate with #934; shared rate limits account
       for #932.
-- [ ] At least one individual transactional path adopts the foundation before
+- [x] At least one individual transactional path adopts the foundation before
       broader delivery work.
 
 ### #941 — Web Push/VAPID subscription foundation

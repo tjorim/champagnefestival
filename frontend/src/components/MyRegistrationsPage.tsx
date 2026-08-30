@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -13,13 +13,15 @@ import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
-import { queryKeys } from "@/utils/queryKeys";
 import {
-  fetchMyRegistrations,
+  accessMyRegistrations,
+  claimMyRegistrations,
+  fetchOwnedRegistrations,
   isRegistrationLookupError,
   requestRegistrationLookup,
 } from "@/utils/publicRegistrationApi";
 import { EMAIL_REGEX } from "@/config/constants";
+import { useAuth } from "@/contexts/AuthContext";
 
 function calendarDateRange(date: string): string {
   const start = date.replaceAll("-", "");
@@ -34,6 +36,7 @@ export function buildCheckInQrUrl(origin: string, registrationId: string, checkI
 }
 
 export default function MyRegistrationsPage() {
+  const auth = useAuth();
   const { token: rawToken } = useSearch({ from: "/my-registrations" });
   const token = rawToken?.trim() ?? "";
   const navigate = useNavigate({ from: "/my-registrations" });
@@ -48,33 +51,72 @@ export default function MyRegistrationsPage() {
     retry: false,
   });
 
-  const registrationsQuery = useQuery({
-    queryKey: queryKeys.myRegistrations(token),
-    queryFn: () => fetchMyRegistrations(token),
-    enabled: token.length > 0,
+  const accessToken = auth.getAccessToken();
+  const attemptedToken = useRef("");
+  const registrationsMutation = useMutation({
+    mutationFn: async ({ lookupToken, oidcToken }: { lookupToken: string; oidcToken: string | null }) => {
+      await navigate({ search: {}, replace: true });
+      if (!oidcToken) {
+        return accessMyRegistrations(lookupToken);
+      }
+      try {
+        await claimMyRegistrations(lookupToken, oidcToken);
+      } catch (claimError) {
+        if (isRegistrationLookupError(claimError) && claimError.code === "invalid_token") {
+          throw claimError;
+        }
+        return fetchOwnedRegistrations(oidcToken);
+      }
+      return fetchOwnedRegistrations(oidcToken);
+    },
     retry: false,
-    staleTime: 30 * 1000,
   });
 
-  const registrations = registrationsQuery.data ?? null;
+  useEffect(() => {
+    if (
+      !token ||
+      auth.isLoading ||
+      (auth.isAuthenticated && !accessToken) ||
+      attemptedToken.current === token
+    ) {
+      return;
+    }
+
+    attemptedToken.current = token;
+    registrationsMutation.mutate({
+      lookupToken: token,
+      oidcToken: auth.isAuthenticated ? accessToken : null,
+    });
+  }, [accessToken, auth.isAuthenticated, auth.isLoading, navigate, registrationsMutation, token]);
+
+  const registrations = registrationsMutation.data ?? null;
   const isSubmittingEmail = requestLookupMutation.isPending;
-  const isLoadingRegistrations = registrationsQuery.isPending;
-  const tokenError = registrationsQuery.isError
-    ? registrationsQuery.error instanceof Error
-      ? registrationsQuery.error.message
-      : String(registrationsQuery.error)
+  const isLoadingRegistrations =
+    registrationsMutation.isPending ||
+    (token.length > 0 && (auth.isLoading || (auth.isAuthenticated && !accessToken)));
+  const tokenError = registrationsMutation.isError
+    ? registrationsMutation.error instanceof Error
+      ? registrationsMutation.error.message
+      : String(registrationsMutation.error)
     : "";
   const showRecoveryCTA =
-    registrationsQuery.isError &&
-    isRegistrationLookupError(registrationsQuery.error) &&
-    registrationsQuery.error.code === "invalid_token";
+    registrationsMutation.isError &&
+    isRegistrationLookupError(registrationsMutation.error) &&
+    registrationsMutation.error.code === "invalid_token";
+  const showRegistrationFlow =
+    token.length > 0 ||
+    registrations !== null ||
+    registrationsMutation.isPending ||
+    registrationsMutation.isError;
 
   const resetToRequestForm = useCallback(() => {
     void navigate({ search: {}, replace: true });
     setRequestSent(false);
     setError("");
     setIsEmailInvalid(false);
-  }, [navigate]);
+    attemptedToken.current = "";
+    registrationsMutation.reset();
+  }, [navigate, registrationsMutation]);
 
   const handleEmailSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -119,7 +161,7 @@ export default function MyRegistrationsPage() {
 
         <Row className="justify-content-center">
           <Col xs={12} sm={10} md={8} lg={6}>
-            {!token && (
+            {!showRegistrationFlow && (
               <>
                 <Form onSubmit={handleEmailSubmit} noValidate>
                   <Form.Group controlId="my-registrations-email" className="mb-3">
@@ -183,7 +225,7 @@ export default function MyRegistrationsPage() {
               </>
             )}
 
-            {token && (
+            {showRegistrationFlow && (
               <>
                 {isLoadingRegistrations && (
                   <Alert variant="secondary" className="text-center">

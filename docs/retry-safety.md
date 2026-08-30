@@ -33,12 +33,14 @@ deliberate decision, not an implicit idempotency guarantee.
 | Deletes, account/token revocation, and integration-client revocation | Browser and MCP admin clients | **Natural resource key, convergent state only.** Repeating reaches the same absent/revoked state, although the response can change to not-found. Callers needing the original response must reconcile. |
 | Contact submission (`POST /api/contact`) | Public browser | **Client-generated resource ID.** The browser retains one UUID for an attempt; repeating it returns success without inserting another message or sending another notification. A fresh form submission gets a fresh UUID. |
 | Mark contact message handled (`PUT /api/contact/{id}/handled`) | Admin browser | **Natural-key upsert.** The first call records `handled_at`; repeats preserve that timestamp and return the same handled state. |
+| Claim registrations (`POST /api/me/registrations/claim`) | Signed-in browser | **Not retry safe with the same access token.** The write itself is convergent because only unowned registrations are linked, but the email access token is consumed atomically with the claim. After an ambiguous response, callers must reconcile through `GET /api/me/registrations` instead of replaying the token. |
+| Access registrations (`POST /api/registrations/my/access`) | Public browser | **Not retry safe with the same access token.** A successful exchange expires the single-use token. Before its one-shot mutation, the browser removes the token from the URL, then keeps returned guest data in memory; an ambiguous response requires requesting a new link. |
 | Single creates, layout copy, people merge, registration creation, registration-access email request, Pebble token creation, and integration-client creation/rotation | Browser, public clients, and MCP automation | **Not retry safe.** Server-generated identity or an external side effect makes blind retry unsafe. Use server-side replay or a client-generated resource ID before adding automatic retries. Secret-returning operations must not gain replay storage without a separate security review. |
 | Outbox enqueue within registration creation | Backend transaction | **Natural resource key.** The unique `registration-confirmation:{registration_id}` key permits one confirmation job per registration, and the job is committed atomically with the registration. This does not make registration creation itself retry safe because a repeated create receives a new registration ID. |
 | Outbox delivery attempts | Supervised worker | **At-least-once delivery.** A lease and atomic `SKIP LOCKED` claim prevent concurrent workers from owning the same live attempt, and expired claims recover after a crash. A process failure after SMTP accepts a message but before the result commits is inherently ambiguous and can cause a duplicate email; consumers must tolerate duplicates. Retries are bounded and use exponential backoff before terminal failure. |
 
-Read-only `POST` operations (check-in lookup and registration access-token
-exchange) do not mutate application state and are outside this write inventory.
+The check-in lookup `POST` does not mutate application state and is outside
+this write inventory.
 
 Cancelling a registration rotates its check-in token only on the transition
 into `cancelled`; repeating the same cancellation does not rotate it again.
