@@ -2,8 +2,10 @@
 
 from email.message import EmailMessage
 from types import SimpleNamespace
+from typing import cast
 
 from app import email as email_module
+from app.models import Event, Person, Registration
 
 
 async def test_registration_confirmation_contains_reference_link_and_inline_qr(monkeypatch):
@@ -12,15 +14,18 @@ async def test_registration_confirmation_contains_reference_link_and_inline_qr(m
     monkeypatch.setattr(email_module.settings, "smtp_from", "festival@example.com")
     monkeypatch.setattr(email_module.settings, "frontend_url", "https://festival.example")
     monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
-    registration = SimpleNamespace(
-        id="reg-123",
-        check_in_token="secret-token",
-        guest_count=2,
-        amount_due=None,
-        order_items=[],
+    registration = cast(
+        Registration,
+        SimpleNamespace(
+            id="reg-123",
+            check_in_token="secret-token",
+            guest_count=2,
+            amount_due=None,
+            order_items=[],
+        ),
     )
-    person = SimpleNamespace(name="Alice", email="alice@example.com")
-    event = SimpleNamespace(title="Opening", date=None)
+    person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com"))
+    event = cast(Event, SimpleNamespace(title="Opening", date=None))
 
     assert await email_module.send_registration_confirmation(registration, person, event) is True
     message = sent[0]
