@@ -147,8 +147,8 @@ Use these routes with `VITE_MSW=true`:
 
 - Public page: `/`
 - Admin dashboard root: `/admin`
-- Check-in success fixture: `/check-in?id=reg-01&token=mock-token-reg-01`
-- Check-in not-found fixture: `/check-in?id=reg-404&token=mock-token-reg-404`
+- Check-in success fixture: `/check-in?id=reg-01#token=mock-token-reg-01`
+- Check-in not-found fixture: `/check-in?id=reg-404#token=mock-token-reg-404`
 - Guest registrations: `/my-registrations?token=demo-token`
 
 For venue, seating, order, and delivery screenshots, open `/admin` and use the seeded data:

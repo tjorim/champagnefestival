@@ -25,7 +25,7 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_request_success: () =>
       "If we found registrations for that email, we prepared a secure link.",
     my_registrations_invalid_email: () => "Please enter a valid email address.",
-    my_registrations_request_pending_notice: () => "Automatic email sending is not enabled yet.",
+    my_registrations_request_pending_notice: () => "Check your inbox for the secure link.",
     my_registrations_loading: () => "Loading registrations...",
     my_registrations_invalid_token: () => "This secure link is invalid or expired.",
     my_registrations_no_results: () => "No registrations found.",
@@ -80,7 +80,7 @@ describe("MyRegistrationsPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/if we found registrations for that email/i)).toBeInTheDocument();
-      expect(screen.getByText("Automatic email sending is not enabled yet.")).toBeInTheDocument();
+      expect(screen.getByText("Check your inbox for the secure link.")).toBeInTheDocument();
     });
   });
 

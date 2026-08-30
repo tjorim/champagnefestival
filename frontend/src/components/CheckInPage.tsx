@@ -292,7 +292,7 @@ function CheckInCard({
 export default function CheckInPage() {
   const queryClient = useQueryClient();
   const auth = useAuth();
-  const { id: registrationId, token: queryCheckInToken } = useSearch({
+  const { id: registrationId } = useSearch({
     from: "/admin-layout/check-in",
   });
   const location = useLocation();
@@ -300,7 +300,7 @@ export default function CheckInPage() {
     const value = new URLSearchParams(location.hash.replace(/^#/, "")).get("token");
     return value ?? undefined;
   });
-  const checkInToken = queryCheckInToken ?? fragmentCheckInToken;
+  const checkInToken = fragmentCheckInToken;
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);

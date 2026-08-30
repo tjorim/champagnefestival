@@ -107,7 +107,7 @@ describe("CheckInPage", () => {
     });
   });
 
-  async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`) {
+  async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}#token=${SEED_REG_TOKEN}`) {
     const router = createCheckInTestRouter(initialEntry);
     await router.load();
     const Wrapper = createTestQueryClientWrapper();
@@ -133,6 +133,12 @@ describe("CheckInPage", () => {
     });
   });
 
+  it("does not accept a check-in credential from the query string", async () => {
+    await renderPage(`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`);
+
+    expect(screen.getByText("Scan a QR code to begin.")).toBeInTheDocument();
+  });
+
   it("submits check-in via the mutation", async () => {
     await renderPage();
 
@@ -149,7 +155,7 @@ describe("CheckInPage", () => {
   });
 
   it("invalidates the checked-in registration query after submitting", async () => {
-    const router = createCheckInTestRouter(`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`);
+    const router = createCheckInTestRouter(`/check-in?id=${SEED_REG_ID}#token=${SEED_REG_TOKEN}`);
     await router.load();
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");

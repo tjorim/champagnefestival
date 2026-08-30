@@ -66,8 +66,7 @@ async def send_registration_confirmation(registration: Registration, person: Per
     )
     calculated_due = sum(
         (
-            Decimal(str(item["price"]))
-            * max(0, int(item["quantity"]) - int(item.get("included_quantity") or 0))
+            Decimal(str(item["price"])) * max(0, int(item["quantity"]) - int(item.get("included_quantity") or 0))
             for item in (registration.order_items or [])
         ),
         Decimal("0"),
@@ -89,9 +88,13 @@ async def send_registration_confirmation(registration: Registration, person: Per
     safe_name = escape(person.name)
     safe_event_title = escape(event.title)
     safe_check_in_url = escape(check_in_url, quote=True)
-    html_order_lines = "".join(
-        f"<li>{escape(str(item['name']))} × {int(item['quantity'])}</li>" for item in (registration.order_items or [])
-    ) or "<li>None</li>"
+    html_order_lines = (
+        "".join(
+            f"<li>{escape(str(item['name']))} × {int(item['quantity'])}</li>"
+            for item in (registration.order_items or [])
+        )
+        or "<li>None</li>"
+    )
     message.add_alternative(
         "<html><body>"
         f"<p>Hello {safe_name},</p><p>Your booking has been received.</p>"
