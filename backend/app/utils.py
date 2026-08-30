@@ -207,6 +207,8 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "name": person.name,
         "event_id": r.event_id,
         "event_title": event.title,
+        "event_date": event.date,
+        "check_in_token": r.check_in_token,
         "guest_count": r.guest_count,
         "order_items": r.order_items,
         "status": r.status,

@@ -15,7 +15,9 @@ Jobs are inserted in the same transaction as their business record. Workers
 claim one ready row with `FOR UPDATE SKIP LOCKED`, commit an expiring lease,
 perform the external operation without holding a database lock, and record a
 non-secret attempt result. An expired lease is eligible for another worker,
-so process termination does not strand work. Failures retry after bounded
+so process termination does not strand work. Each lease has a unique claim
+token, and stale workers cannot record results after a job is reclaimed.
+Failures retry after bounded
 exponential backoff (one minute through one hour) and become terminal after
 five attempts; one terminal job does not block later jobs.
 

@@ -12,6 +12,7 @@ def _make_registration():
         id="reg_test",
         person_id="per_test",
         event_id="evt_test",
+        check_in_token="check-in-secret",
         guest_count=2,
         order_items=[],
         status="confirmed",
@@ -29,7 +30,7 @@ def _make_person(name: str = "Jean Dupont"):
 
 
 def _make_event(title: str = "Friday Tasting"):
-    return SimpleNamespace(title=title)
+    return SimpleNamespace(title=title, date=datetime.now(UTC).date())
 
 
 def test_registration_to_guest_dict_includes_person_name():
@@ -42,3 +43,10 @@ def test_registration_to_guest_dict_includes_event_title():
     r = _make_registration()
     result = registration_to_guest_dict(r, _make_person(), _make_event("Saturday Gala"))
     assert result["event_title"] == "Saturday Gala"
+
+
+def test_registration_to_guest_dict_includes_check_in_fields():
+    event = _make_event()
+    result = registration_to_guest_dict(_make_registration(), _make_person(), event)
+    assert result["event_date"] == event.date
+    assert result["check_in_token"] == "check-in-secret"

@@ -9,7 +9,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
-import MyRegistrationsPage from "@/components/MyRegistrationsPage";
+import MyRegistrationsPage, { buildCheckInQrUrl } from "@/components/MyRegistrationsPage";
 import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
@@ -46,6 +46,13 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 describe("MyRegistrationsPage", () => {
+  it("keeps the check-in credential out of the QR query string", () => {
+    const url = new URL(buildCheckInQrUrl("https://festival.example", "reg 1", "secret/token"));
+    expect(url.searchParams.get("id")).toBe("reg 1");
+    expect(url.searchParams.has("token")).toBe(false);
+    expect(url.hash).toBe("#token=secret%2Ftoken");
+  });
+
   async function renderPage(initialEntry = "/my-registrations") {
     const rootRoute = createRootRoute();
     const myRegistrationsRoute = createRoute({

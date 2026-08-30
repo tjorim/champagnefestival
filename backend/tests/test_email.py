@@ -26,7 +26,7 @@ async def test_registration_confirmation_contains_reference_link_and_inline_qr(m
     message = sent[0]
     assert "reg-123" in message.get_body(preferencelist=("plain",)).get_content()
     assert (
-        "https://festival.example/check-in?id=reg-123&token=secret-token"
+        "https://festival.example/check-in?id=reg-123#token=secret-token"
         in message.get_body(preferencelist=("plain",)).get_content()
     )
     qr_parts = [part for part in message.walk() if part.get_content_type() == "image/png"]

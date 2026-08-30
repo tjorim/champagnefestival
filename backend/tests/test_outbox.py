@@ -10,7 +10,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import DeliveryAttempt, OutboxJob
-from app.services.outbox_service import claim_next_job, cleanup_completed_jobs, enqueue_job, process_one_job
+from app.services.outbox_service import (
+    claim_next_job,
+    cleanup_completed_jobs,
+    enqueue_job,
+    finish_attempt,
+    process_one_job,
+)
 
 
 async def _enqueue(db, resource_id: str, *, max_attempts: int = 5) -> OutboxJob:
@@ -78,12 +84,11 @@ async def test_retry_uses_bounded_backoff(db_session):
     job = await _enqueue(db_session, "reg-retry")
     claimed = await claim_next_job(db_session)
     assert claimed is not None
-    from app.services.outbox_service import finish_attempt
-
     before = datetime.now(UTC)
     await finish_attempt(
         db_session,
         job.id,
+        claim_token=claimed.claim_token or "",
         started_at=before,
         delivered=False,
         error_code="temporary",
@@ -91,6 +96,34 @@ async def test_retry_uses_bounded_backoff(db_session):
     await db_session.refresh(job)
     assert job.state == "pending"
     assert before + timedelta(seconds=60) <= job.scheduled_at <= before + timedelta(seconds=65)
+
+
+@pytest.mark.anyio
+async def test_stale_worker_cannot_finish_reclaimed_job(db_session):
+    job = await _enqueue(db_session, "reg-reclaimed")
+    first_claim = await claim_next_job(db_session)
+    assert first_claim is not None
+    stale_token = first_claim.claim_token
+    assert stale_token is not None
+
+    first_claim.locked_until = datetime.now(UTC) - timedelta(seconds=1)
+    await db_session.commit()
+    current_claim = await claim_next_job(db_session)
+    assert current_claim is not None
+    assert current_claim.claim_token != stale_token
+
+    completed = await finish_attempt(
+        db_session,
+        job.id,
+        claim_token=stale_token,
+        started_at=datetime.now(UTC),
+        delivered=True,
+    )
+    assert completed is False
+    await db_session.refresh(job)
+    assert job.state == "processing"
+    assert job.claim_token == current_claim.claim_token
+    assert (await db_session.scalars(select(DeliveryAttempt))).all() == []
 
 
 @pytest.mark.anyio

@@ -48,6 +48,7 @@ def upgrade() -> None:
         sa.Column("max_attempts", sa.Integer(), nullable=False, server_default="5"),
         sa.Column("scheduled_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("claim_token", sa.String(64), nullable=True),
         sa.Column("last_error_code", sa.String(100), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),

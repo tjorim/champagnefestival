@@ -36,7 +36,7 @@ async def deliver_registration_confirmation(registration_id: str) -> bool:
             logger.error("Registration confirmation resource missing for registration_id=%s", registration_id)
             return False
         if registration.status == "cancelled":
-            logger.info("Skipped confirmation for cancelled registration_id=%s", registration_id)
+            logger.info("Skipped confirmation for canceled registration_id=%s", registration_id)
             return True
         person = await db.get(Person, registration.person_id)
         if person is None or not person.email:
@@ -55,7 +55,7 @@ async def send_registration_confirmation(registration: Registration, person: Per
         return False
 
     check_in_url = (
-        f"{settings.frontend_url.rstrip('/')}/check-in?id={registration.id}&token={registration.check_in_token}"
+        f"{settings.frontend_url.rstrip('/')}/check-in?id={registration.id}#token={registration.check_in_token}"
     )
     qr_image = qrcode.make(check_in_url)
     qr_buffer = BytesIO()

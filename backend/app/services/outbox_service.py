@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime, timedelta
 
@@ -85,6 +86,7 @@ async def claim_next_job(db: AsyncSession, *, lease_seconds: int = 300) -> Outbo
     job.state = "processing"
     job.attempt_count += 1
     job.locked_until = now + timedelta(seconds=lease_seconds)
+    job.claim_token = secrets.token_urlsafe(24)
     await db.commit()
     return job
 
@@ -93,14 +95,24 @@ async def finish_attempt(
     db: AsyncSession,
     job_id: str,
     *,
+    claim_token: str,
     started_at: datetime,
     delivered: bool,
     error_code: str | None = None,
-) -> None:
+) -> bool:
     now = datetime.now(UTC)
-    job = await db.get(OutboxJob, job_id, with_for_update=True)
+    job = await db.scalar(
+        select(OutboxJob)
+        .where(
+            OutboxJob.id == job_id,
+            OutboxJob.state == "processing",
+            OutboxJob.claim_token == claim_token,
+        )
+        .with_for_update()
+    )
     if job is None:
-        return
+        await db.rollback()
+        return False
     outcome = "delivered" if delivered else "failed"
     db.add(
         DeliveryAttempt(
@@ -114,6 +126,7 @@ async def finish_attempt(
         )
     )
     job.locked_until = None
+    job.claim_token = None
     job.last_error_code = error_code
     if delivered:
         job.state = "delivered"
@@ -135,6 +148,7 @@ async def finish_attempt(
         details={"job_id": job.id, "job_type": job.job_type, "attempt": job.attempt_count, "error_code": error_code},
     )
     await db.commit()
+    return True
 
 
 async def process_one_job(
@@ -147,6 +161,9 @@ async def process_one_job(
         job = await claim_next_job(db, lease_seconds=lease_seconds)
     if job is None:
         return False
+    claim_token = job.claim_token
+    if claim_token is None:
+        raise RuntimeError("Claimed outbox job has no claim token")
 
     started_at = datetime.now(UTC)
     delivered = False
@@ -163,7 +180,14 @@ async def process_one_job(
             error_code = type(exc).__name__[:100]
 
     async with session_factory() as db:
-        await finish_attempt(db, job.id, started_at=started_at, delivered=delivered, error_code=error_code)
+        await finish_attempt(
+            db,
+            job.id,
+            claim_token=claim_token,
+            started_at=started_at,
+            delivered=delivered,
+            error_code=error_code,
+        )
     return True
 
 

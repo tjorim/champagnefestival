@@ -29,6 +29,10 @@ function calendarDateRange(date: string): string {
   return `${start}/${end}`;
 }
 
+export function buildCheckInQrUrl(origin: string, registrationId: string, checkInToken: string): string {
+  return `${origin}/check-in?id=${encodeURIComponent(registrationId)}#token=${encodeURIComponent(checkInToken)}`;
+}
+
 export default function MyRegistrationsPage() {
   const { token: rawToken } = useSearch({ from: "/my-registrations" });
   const token = rawToken?.trim() ?? "";
@@ -219,7 +223,11 @@ export default function MyRegistrationsPage() {
                               {registration.status !== "cancelled" && (
                                 <div className="text-center mb-3">
                                   <QRCodeSVG
-                                    value={`${window.location.origin}/check-in?id=${encodeURIComponent(registration.id)}&token=${encodeURIComponent(registration.checkInToken)}`}
+                                    value={buildCheckInQrUrl(
+                                      window.location.origin,
+                                      registration.id,
+                                      registration.checkInToken,
+                                    )}
                                     size={160}
                                     level="M"
                                     includeMargin

@@ -125,6 +125,14 @@ describe("CheckInPage", () => {
     });
   });
 
+  it("loads a QR credential from the fragment", async () => {
+    await renderPage(`/check-in?id=${SEED_REG_ID}#token=${encodeURIComponent(SEED_REG_TOKEN)}`);
+
+    await waitFor(() => {
+      expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+    });
+  });
+
   it("submits check-in via the mutation", async () => {
     await renderPage();
 
