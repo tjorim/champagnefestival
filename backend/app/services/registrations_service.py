@@ -173,9 +173,7 @@ def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_co
     return resolved
 
 
-def apply_delivery_updates(
-    order_items: list[dict] | None, updates: list[RegistrationDeliveryUpdate]
-) -> list[dict]:
+def apply_delivery_updates(order_items: list[dict] | None, updates: list[RegistrationDeliveryUpdate]) -> list[dict]:
     """Apply delivery counts without trusting clients with priced order data."""
     updated = [dict(item) for item in (order_items or [])]
     by_product_id = {item.get("product_id"): item for item in updated}

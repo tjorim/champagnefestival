@@ -258,6 +258,20 @@ async def test_volunteer_delivery_update_rejects_product_not_on_registration(cli
 
 
 @pytest.mark.anyio
+async def test_volunteer_delivery_update_rejects_quantity_above_ordered(client):
+    registration = await _post_registration_with_order(client, quantity=2)
+    item = registration.json()["order_items"][0]
+
+    response = await client.put(
+        f"/api/volunteer/registrations/{registration.json()['id']}",
+        json={"order_items": [{"product_id": item["product_id"], "delivered_quantity": 3}]},
+    )
+
+    assert response.status_code == 400
+    assert "cannot exceed quantity" in response.json()["detail"]
+
+
+@pytest.mark.anyio
 async def test_volunteer_update_registration_returns_404_for_unknown_id(client):
     r = await client.put(
         "/api/volunteer/registrations/nonexistent-id",

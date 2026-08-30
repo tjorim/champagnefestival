@@ -188,11 +188,7 @@ async def test_update_order_items_quantity_publishes_order_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.put(
             f"/api/registrations/{reg_id}",
-            json={
-                "order_items": [
-                    {"product_id": product_id, "quantity": 2}
-                ]
-            },
+            json={"order_items": [{"product_id": product_id, "quantity": 2}]},
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
@@ -207,11 +203,7 @@ async def test_update_order_items_delivery_publishes_delivery_event(client):
     # First set an order.
     order = await client.put(
         f"/api/registrations/{reg_id}",
-        json={
-            "order_items": [
-                    {"product_id": product_id, "quantity": 2}
-            ]
-        },
+        json={"order_items": [{"product_id": product_id, "quantity": 2}]},
         headers=ADMIN_HEADERS,
     )
     assert order.status_code == 200
