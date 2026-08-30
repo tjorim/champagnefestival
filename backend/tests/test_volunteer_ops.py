@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from app.schemas import RegistrationDeliveryUpdate
+from app.services.registrations_service import apply_delivery_updates
 from tests.helpers import (
     ADMIN_HEADERS,
     ROOM_PAYLOAD,
@@ -12,6 +14,16 @@ from tests.helpers import (
     _create_event,
     _post_registration,
 )
+
+
+def test_delivery_update_allows_bundled_order_quantity_above_request_limit():
+    updated = apply_delivery_updates(
+        [{"product_id": "bundled", "quantity": 120, "delivered_quantity": 0, "delivered": False}],
+        [RegistrationDeliveryUpdate(product_id="bundled", delivered_quantity=110)],
+    )
+
+    assert updated[0]["delivered_quantity"] == 110
+    assert updated[0]["delivered"] is False
 
 
 async def _create_table(client, *, name: str) -> str:

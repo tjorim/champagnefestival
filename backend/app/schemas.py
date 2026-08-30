@@ -75,7 +75,7 @@ class RegistrationDeliveryUpdate(BaseModel):
     """The only order-line fields an entrance volunteer may change."""
 
     product_id: str = Field(min_length=1)
-    delivered_quantity: int = Field(ge=0, le=100)
+    delivered_quantity: int = Field(ge=0)
 
 
 # ---------------------------------------------------------------------------

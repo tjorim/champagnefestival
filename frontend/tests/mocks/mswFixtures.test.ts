@@ -116,6 +116,31 @@ describe("MSW operational fixtures", () => {
     expect(completedOrder.delivered).toBe(true);
   });
 
+  it("rejects invalid volunteer delivery updates without changing the order", async () => {
+    await setScenario("default");
+    const requests = [
+      { product_id: "not-ordered", delivered_quantity: 1 },
+      { product_id: "prod-01", delivered_quantity: -1 },
+      { product_id: "prod-01", delivered_quantity: 5 },
+    ];
+
+    for (const update of requests) {
+      const response = await fetch("/api/volunteer/registrations/reg-01", {
+        method: "PUT",
+        headers: { ...adminAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ order_items: [update] }),
+      });
+      expect(response.status).toBe(400);
+    }
+
+    const registrationResponse = await fetch("/api/registrations/reg-01", {
+      headers: adminAuthHeaders(),
+    });
+    const registration = (await registrationResponse.json()) as Record<string, unknown>;
+    const order = (registration.order_items as Array<Record<string, unknown>>)[0];
+    expect(order?.delivered_quantity).toBe(2);
+  });
+
   it("supports explicit auth error scenarios for regression tests", async () => {
     await setScenario("auth-expired");
 

@@ -262,14 +262,35 @@ export const adminHandlers = [
     const currentOrderItems = Array.isArray(current.order_items)
       ? (current.order_items as Array<Record<string, unknown>>)
       : [];
-    const deliveryUpdates = Array.isArray(body.order_items)
-      ? new Map(
-          body.order_items.map((item) => {
-            const update = item as Record<string, unknown>;
-            return [update.product_id, update.delivered_quantity];
-          }),
-        )
-      : null;
+    let deliveryUpdates: Map<unknown, number> | null = null;
+    if (Array.isArray(body.order_items)) {
+      deliveryUpdates = new Map();
+      for (const item of body.order_items) {
+        const update = item as Record<string, unknown>;
+        const productId = update.product_id;
+        const orderItem = currentOrderItems.find((order) => order.product_id === productId);
+        if (!orderItem) {
+          return HttpResponse.json(
+            { detail: `Product '${String(productId)}' is not on this registration.` },
+            { status: 400 },
+          );
+        }
+        const deliveredQuantity = update.delivered_quantity;
+        if (typeof deliveredQuantity !== "number" || deliveredQuantity < 0) {
+          return HttpResponse.json(
+            { detail: "delivered_quantity must be a non-negative number." },
+            { status: 400 },
+          );
+        }
+        if (typeof orderItem.quantity !== "number" || deliveredQuantity > orderItem.quantity) {
+          return HttpResponse.json(
+            { detail: `delivered_quantity for product '${String(productId)}' cannot exceed quantity.` },
+            { status: 400 },
+          );
+        }
+        deliveryUpdates.set(productId, deliveredQuantity);
+      }
+    }
     const orderItems = deliveryUpdates
       ? currentOrderItems.map((item) => {
           const deliveredQuantity = deliveryUpdates.get(item.product_id);
