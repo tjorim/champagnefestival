@@ -16,6 +16,7 @@ export function exportToCsv(
 
   const escape = (value: string | number | boolean | null | undefined): string => {
     const str = String(value ?? "");
+    // Keep this rule aligned with backend/app/utils.py::csv_safe.
     // Prefix formula-injection characters so spreadsheet apps treat the value as text.
     const sanitized = /^[=+\-@\t\r\n]/.test(str) ? `'${str}` : str;
     return `"${sanitized.replace(/"/g, '""')}"`;

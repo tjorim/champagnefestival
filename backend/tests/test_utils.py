@@ -3,7 +3,20 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from app.utils import registration_to_guest_dict
+import pytest
+
+from app.utils import csv_safe, registration_to_guest_dict
+
+
+@pytest.mark.parametrize("prefix", ["=", "+", "-", "@", "\t", "\r", "\n"])
+def test_csv_safe_prefixes_spreadsheet_formula_characters(prefix: str):
+    assert csv_safe(f"{prefix}value") == f"'{prefix}value"
+
+
+def test_csv_safe_normalizes_other_cell_values():
+    assert csv_safe(None) == ""
+    assert csv_safe(42) == "42"
+    assert csv_safe("Alice") == "Alice"
 
 
 def _make_registration():

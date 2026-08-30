@@ -17,6 +17,7 @@ import logging
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select
@@ -25,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
-from app.auth import get_actor_id, require_admin
+from app.auth import get_actor_id, get_optional_claims, require_admin
 from app.config import settings
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
@@ -55,8 +56,10 @@ from app.services.operational_search import (
 )
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.services.people_service import parse_phone
+from app.services.users_service import get_or_create_user
 from app.spam import check_form_timing, check_honeypot
 from app.utils import (
+    csv_safe,
     make_id,
     registration_to_dict,
     registration_to_dict_with_token,
@@ -72,6 +75,7 @@ logger = logging.getLogger(__name__)
 async def create_registration(
     body: RegistrationCreate,
     request: Request,
+    claims: dict[str, Any] | None = Depends(get_optional_claims),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     client_ip = get_client_ip(request)
@@ -82,6 +86,10 @@ async def create_registration(
         )
     check_honeypot(body.honeypot)
     check_form_timing(body.form_start_time)
+
+    user = None
+    if claims is not None:
+        user = await get_or_create_user(db, claims["sub"])
 
     event = await events_service.get_event_or_404(db, body.event_id)
     await _ensure_public_registration_allowed(db, event, body.guest_count)
@@ -114,6 +122,7 @@ async def create_registration(
         guest_count=body.guest_count,
         notes=body.notes,
         person_id=person.id,
+        user_id=user.id if user else None,
         check_in_token=secrets.token_urlsafe(32),
     )
     registration.order_items = resolved_order_items
@@ -121,7 +130,7 @@ async def create_registration(
     await enqueue_registration_confirmation(
         db,
         registration.id,
-        actor="anonymous",
+        actor=claims["sub"] if claims is not None else "anonymous",
         request_id=getattr(request.state, "request_id", None),
     )
     await db.commit()
@@ -234,23 +243,40 @@ async def export_registrations_csv(
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(
-        ["Name", "Email", "Phone", "Table", "Guests", "Status", "Payment", "Checked In", "Strap Issued", "Notes"]
+        map(
+            csv_safe,
+            [
+                "Name",
+                "Email",
+                "Phone",
+                "Table",
+                "Guests",
+                "Status",
+                "Payment",
+                "Checked In",
+                "Strap Issued",
+                "Notes",
+            ],
+        )
     )
     for row in rows:
         person = person_map[row.person_id]
         writer.writerow(
-            [
-                person.name,
-                person.email or "",
-                person.phone or "",
-                table_map.get(row.table_id, ""),
-                row.guest_count,
-                row.status,
-                row.payment_status,
-                "yes" if row.checked_in else "no",
-                "yes" if row.strap_issued else "no",
-                row.notes or "",
-            ]
+            map(
+                csv_safe,
+                [
+                    person.name,
+                    person.email or "",
+                    person.phone or "",
+                    table_map.get(row.table_id, ""),
+                    row.guest_count,
+                    row.status,
+                    row.payment_status,
+                    "yes" if row.checked_in else "no",
+                    "yes" if row.strap_issued else "no",
+                    row.notes or "",
+                ],
+            )
         )
     buffer.seek(0)
 
@@ -423,7 +449,9 @@ async def _get_guest_access_token_or_401(
     token: str,
 ) -> ReservationAccessToken:
     token_hash = _hash_guest_access_token(token)
-    result = await db.execute(select(ReservationAccessToken).where(ReservationAccessToken.token_hash == token_hash))
+    result = await db.execute(
+        select(ReservationAccessToken).where(ReservationAccessToken.token_hash == token_hash).with_for_update()
+    )
     token_row = result.scalar_one_or_none()
     if token_row:
         now = datetime.now(UTC)

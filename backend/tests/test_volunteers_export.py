@@ -67,3 +67,25 @@ async def test_volunteers_export_excludes_inactive(client):
     rows = list(csv.reader(io.StringIO(r.text)))
     names = [row[0] for row in rows[1:]]
     assert "Inactive Volunteer" not in names
+
+
+@pytest.mark.anyio
+async def test_volunteers_export_prefixes_formula_injection_cells(client):
+    response = await client.post(
+        "/api/volunteers",
+        json={
+            "name": "=1+1",
+            "national_register_number": "85010199999",
+            "eid_document_number": "BEI112233",
+            "help_periods": [{"first_help_day": "2099-03-20"}],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 201
+
+    response = await client.get("/api/volunteers/export", headers=ADMIN_HEADERS)
+
+    assert response.status_code == 200
+    rows = list(csv.reader(io.StringIO(response.text)))
+    formula_row = next(row for row in rows[1:] if row[0] == "'=1+1")
+    assert formula_row[0] == "'=1+1"

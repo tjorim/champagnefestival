@@ -5,7 +5,9 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from app.models import OutboxJob
+from app.auth import get_optional_claims
+from app.main import app
+from app.models import OutboxJob, Registration, User
 from tests.helpers import (
     ADMIN_HEADERS,
     VALID_RESERVATION,
@@ -28,6 +30,22 @@ async def test_create_reservation(client, db_session):
     assert job is not None
     assert job.job_type == "registration_confirmation"
     assert job.state == "pending"
+
+
+@pytest.mark.anyio
+async def test_authenticated_create_assigns_registration_owner(client, db_session):
+    app.dependency_overrides[get_optional_claims] = lambda: {"sub": "booking-owner"}
+    try:
+        response = await _post_registration(client)
+    finally:
+        app.dependency_overrides.pop(get_optional_claims, None)
+
+    assert response.status_code == 201
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "booking-owner"))
+    assert user is not None
+    registration = await db_session.get(Registration, response.json()["id"])
+    assert registration is not None
+    assert registration.user_id == user.id
 
 
 @pytest.mark.anyio

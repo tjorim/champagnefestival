@@ -12,6 +12,7 @@ import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import type { Event } from "@/types/event";
 import { RegistrationSubmitError, submitRegistration } from "@/utils/publicRegistrationApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RegistrationModalProps {
   show: boolean;
@@ -30,13 +31,15 @@ interface RegistrationFields {
 }
 
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
+  const auth = useAuth();
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState("");
   const [submitError, setSubmitError] = useState("");
 
   const submitRegistrationMutation = useMutation({
-    mutationFn: (payload: RegistrationFormData) => submitRegistration(payload),
+    mutationFn: (payload: RegistrationFormData) =>
+      submitRegistration(payload, auth.getAccessToken()),
     retry: false,
   });
 

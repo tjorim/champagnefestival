@@ -1,10 +1,16 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import RegistrationModal from "@/components/RegistrationModal";
 import { server } from "@/mocks/server";
 import type { Event, Product } from "@/types/event";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
+
+const authState = vi.hoisted(() => ({ accessToken: null as string | null }));
+
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({ getAccessToken: () => authState.accessToken }),
+}));
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -72,6 +78,10 @@ const vipEvent: Event = {
 };
 
 describe("RegistrationModal component", () => {
+  beforeEach(() => {
+    authState.accessToken = null;
+  });
+
   function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
     const wrapper = createTestQueryClientWrapper();
 
@@ -128,6 +138,25 @@ describe("RegistrationModal component", () => {
         "/my-registrations",
       );
     });
+  });
+
+  it("sends the visitor token when placing a signed-in registration", async () => {
+    authState.accessToken = "visitor-access-token";
+    let authorization = "";
+    server.use(
+      http.post("/api/registrations", ({ request }) => {
+        authorization = request.headers.get("Authorization") ?? "";
+        return HttpResponse.json({ id: "reg-owned" }, { status: 201 });
+      }),
+    );
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), { target: { value: "+32 123 456 789" } });
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => expect(authorization).toBe("Bearer visitor-access-token"));
   });
 
   it("shows order products when the event has active products", () => {
