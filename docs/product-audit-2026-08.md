@@ -87,21 +87,19 @@ No Phase 1 defects remain open.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #928 — update path bypasses product resolution | **Prerequisite for #933.** Splitting delivery updates from order changes is what makes a `guest_count` edit re-resolvable. | M |
-| 2 | #926 — venue plan reads a dead column | Decide *before* #927, because the answer determines whether table occupancy has anywhere to be displayed. | S to delete, M–L to build the volunteer view |
-| 3 | #927 — no seating capacity enforcement | Enforcement is independent, but surfacing occupancy in the editor depends on #926. | M |
+| 1 | #926 — venue plan reads a dead column | Decide *before* #927, because the answer determines whether table occupancy has anywhere to be displayed. | S to delete, M–L to build the volunteer view |
+| 2 | #927 — no seating capacity enforcement | Enforcement is independent, but surfacing occupancy in the editor depends on #926. | M |
 
 ### Phase 3 — operational workflows and admin communication
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 4 | #929 — SSE recovery fires one disconnect late | Small fix, and it must be right before #932 reworks the bus underneath it. | S |
-| 5 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
-| 6 | #933 — registration lifecycle gaps | Needs #928. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. | M |
-| 7 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
-| 8 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
-| 9 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
-| 10 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 3 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
+| 4 | #933 — registration lifecycle gaps | Its #928 prerequisite is complete. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. | M |
+| 5 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
+| 6 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
+| 7 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
+| 8 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -109,23 +107,23 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 11 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 12 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 13 | #932 — single-process state | Its #921 limiter prerequisite is complete; it follows #929 for the bus half. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
-| 14 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 15 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 9 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 10 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 11 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
+| 12 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 13 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 16 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 14 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Phase 6 — deferred visitor account
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 17 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
+| 15 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
 
 ### Dependency map
 
@@ -168,6 +166,8 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #928 | Completed | 2026-08-30 | #928, PR (this change) | Re-resolved admin/MCP order edits against event products, preserved clamped delivery state, and restricted volunteer edits to validated delivery counts. |
+| #929 | Completed | 2026-08-30 | #929, PR (this change) | Triggered blanket cache recovery on each server `ready` frame, before consuming later stream events, including the first connection for restored tabs. |
 | #930 | Completed | 2026-08-30 | #930, PR (this change) | Applied one shared spreadsheet-formula guard to every backend registration and volunteer CSV cell, aligned it with the frontend rule, and added export regression coverage. |
 | #922 | Completed | 2026-08-30 | #922, PR (this change) | Attached authenticated bookings at creation, added email-proven ownership claims for older unowned bookings, and made owned registrations available to the web and Pebble self-service reads without trusting OIDC email claims. |
 | #947 | Completed | 2026-08-30 | #947, PR #952 | Added a durable database-backed outbox, atomic token-bound worker claims, bounded retries, delivery diagnostics and retention, plus independently supervised worker deployment wiring. |
@@ -194,8 +194,8 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #925 | frontend, backend | bug — availability |
 | #926 | backend | bug — wrong data, dead column |
 | #927 | backend | bug — missing enforcement |
-| #928 | backend, mcp | bug — broken invariant |
-| #929 | frontend | bug — stale state |
+| #928 | backend, mcp (completed 2026-08-30) | bug — broken invariant |
+| #929 | frontend (completed 2026-08-30) | bug — stale state |
 | #930 | backend (completed 2026-08-30) | bug — export safety |
 | #931 | backend, frontend | bug — silent truncation |
 | #932 | backend | constraint — scaling |

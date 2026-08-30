@@ -157,10 +157,9 @@ async def update_registration(
     unchanged" vs "clear" signal via a plain optional parameter (0.0 is a
     valid amount_due; an empty table_id isn't meaningful) — pass
     ``clear_amount_due=True`` / ``clear_table=True`` to null them out
-    instead of providing a value. ``order_items`` takes full order lines
-    (``product_id``, ``name``, ``quantity``, ``price``, ``category``,
-    ``delivered_quantity``, ...) as this is how delivery/order edits are
-    made — see ``OrderItemBase``.
+    instead of providing a value. ``order_items`` accepts only
+    ``product_id``/``quantity`` pairs. Product metadata is resolved from the
+    event and existing delivery counts are preserved (clamped to quantity).
     """
     provided = {
         k: v

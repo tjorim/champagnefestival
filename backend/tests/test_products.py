@@ -243,6 +243,58 @@ async def test_admin_registration_creation_also_resolves_order_items(client):
 
 
 @pytest.mark.anyio
+async def test_admin_registration_update_resolves_order_items_and_preserves_delivery(client):
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"], name="Authoritative Bottle", price="17.50")
+    registration = await _register(client, event["id"], [{"product_id": product["id"], "quantity": 3}])
+    registration_id = registration.json()["id"]
+    delivered = await client.put(
+        f"/api/volunteer/registrations/{registration_id}",
+        json={"order_items": [{"product_id": product["id"], "delivered_quantity": 2}]},
+    )
+    assert delivered.status_code == 200
+
+    response = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={
+            "order_items": [
+                {
+                    "product_id": product["id"],
+                    "quantity": 1,
+                    "name": "Forged",
+                    "price": 0,
+                    "category": "other",
+                }
+            ]
+        },
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 200
+    item = response.json()["order_items"][0]
+    assert item["name"] == "Authoritative Bottle"
+    assert item["price"] == 17.5
+    assert item["category"] == "champagne"
+    assert item["quantity"] == 1
+    assert item["delivered_quantity"] == 1
+
+
+@pytest.mark.anyio
+async def test_admin_registration_update_rejects_unknown_product(client):
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"])
+    registration = await _register(client, event["id"], [{"product_id": product["id"], "quantity": 1}])
+
+    response = await client.put(
+        f"/api/registrations/{registration.json()['id']}",
+        json={"order_items": [{"product_id": "does-not-exist", "quantity": 1}]},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.anyio
 async def test_registration_allowed_for_walkin_event_with_active_product(client):
     """An event that doesn't require registration (walk-in) should still accept a
     registration from someone who wants to order something — e.g. a VIP package —

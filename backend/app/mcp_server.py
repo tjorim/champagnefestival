@@ -1592,9 +1592,8 @@ class ChampagneFestivalMcpBackend:
 
         ``amount_due``/``table_id`` have no natural "clear" value via a plain optional
         parameter (0.0 is a valid amount_due) — pass ``clear_amount_due=True`` /
-        ``clear_table=True`` to null them out. ``order_items`` takes full order lines
-        (``product_id``, ``name``, ``quantity``, ``price``, ``category``,
-        ``delivered_quantity``, ...), which is how delivery/order edits are made.
+        ``clear_table=True`` to null them out. ``order_items`` takes
+        ``product_id``/``quantity`` pairs; product details are resolved server-side.
         Requires the ``admin`` role.
         """
         self._require_admin()

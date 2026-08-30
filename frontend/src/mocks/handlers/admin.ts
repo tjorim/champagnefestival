@@ -258,9 +258,54 @@ export const adminHandlers = [
     const idx = sharedStore.registrations.findIndex((r) => r.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
+    const current = sharedStore.registrations[idx]!;
+    const currentOrderItems = Array.isArray(current.order_items)
+      ? (current.order_items as Array<Record<string, unknown>>)
+      : [];
+    let deliveryUpdates: Map<unknown, number> | null = null;
+    if (Array.isArray(body.order_items)) {
+      deliveryUpdates = new Map();
+      for (const item of body.order_items) {
+        const update = item as Record<string, unknown>;
+        const productId = update.product_id;
+        const orderItem = currentOrderItems.find((order) => order.product_id === productId);
+        if (!orderItem) {
+          return HttpResponse.json(
+            { detail: `Product '${String(productId)}' is not on this registration.` },
+            { status: 400 },
+          );
+        }
+        const deliveredQuantity = update.delivered_quantity;
+        if (typeof deliveredQuantity !== "number" || deliveredQuantity < 0) {
+          return HttpResponse.json(
+            { detail: "delivered_quantity must be a non-negative number." },
+            { status: 400 },
+          );
+        }
+        if (typeof orderItem.quantity !== "number" || deliveredQuantity > orderItem.quantity) {
+          return HttpResponse.json(
+            { detail: `delivered_quantity for product '${String(productId)}' cannot exceed quantity.` },
+            { status: 400 },
+          );
+        }
+        deliveryUpdates.set(productId, deliveredQuantity);
+      }
+    }
+    const orderItems = deliveryUpdates
+      ? currentOrderItems.map((item) => {
+          const deliveredQuantity = deliveryUpdates.get(item.product_id);
+          return typeof deliveredQuantity === "number"
+            ? {
+                ...item,
+                delivered_quantity: deliveredQuantity,
+                delivered: deliveredQuantity === item.quantity,
+              }
+            : item;
+        })
+      : currentOrderItems;
     sharedStore.registrations[idx] = {
-      ...sharedStore.registrations[idx]!,
-      ...(Array.isArray(body.order_items) ? { order_items: body.order_items } : {}),
+      ...current,
+      order_items: orderItems,
       ...(typeof body.strap_issued === "boolean" ? { strap_issued: body.strap_issued } : {}),
       updated_at: now(),
     };

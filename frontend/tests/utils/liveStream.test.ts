@@ -1,5 +1,38 @@
-import { describe, expect, it } from "vitest";
-import { parseSSEFrame } from "@/utils/liveStream";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { connectLiveStream, parseSSEFrame } from "@/utils/liveStream";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("connectLiveStream", () => {
+  it("recovers cached queries when ready arrives, before the stream closes", async () => {
+    const encoder = new TextEncoder();
+    let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        streamController = controller;
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status: 200 })));
+    const abortController = new AbortController();
+    const onReconnect = vi.fn(() => abortController.abort());
+
+    const connection = connectLiveStream({
+      url: "/api/live/stream",
+      getToken: () => "token",
+      signal: abortController.signal,
+      onInvalidate: vi.fn(),
+      onReconnect,
+    });
+    await vi.waitFor(() => expect(streamController).toBeDefined());
+    streamController!.enqueue(encoder.encode('event: ready\ndata: {"ok":true}\n\n'));
+
+    await vi.waitFor(() => expect(onReconnect).toHaveBeenCalledOnce());
+    expect(abortController.signal.aborted).toBe(true);
+    await connection;
+  });
+});
 
 describe("parseSSEFrame", () => {
   it("returns null for a keepalive comment", () => {

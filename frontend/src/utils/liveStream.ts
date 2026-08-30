@@ -30,8 +30,8 @@ export interface ConnectLiveStreamOptions {
   /** Called for each received `event: invalidate` frame. */
   onInvalidate: (envelope: LiveEnvelope) => void;
   /**
-   * Called after every reconnect so callers can do a blanket query invalidation
-   * to recover events that may have been missed during the gap.
+   * Called when each connection receives the server's ready frame so callers
+   * can recover missed events, including stale state after a restored tab.
    */
   onReconnect?: () => void;
 }
@@ -68,7 +68,6 @@ export function parseSSEFrame(frame: string): { eventType: string; data: string 
 export async function connectLiveStream(options: ConnectLiveStreamOptions): Promise<void> {
   const { url, getToken, signal, onInvalidate, onReconnect } = options;
   let attempt = 0;
-  let wasConnected = false;
 
   while (!signal.aborted) {
     const token = getToken();
@@ -91,14 +90,8 @@ export async function connectLiveStream(options: ConnectLiveStreamOptions): Prom
         continue;
       }
 
-      const isReconnect = wasConnected;
       attempt = 0; // Successful connection resets backoff.
-      wasConnected = true;
-      await _readStream(response.body, signal, onInvalidate);
-      // Blanket invalidate after a successful re-connection to recover missed events.
-      if (isReconnect) {
-        onReconnect?.();
-      }
+      await _readStream(response.body, signal, onInvalidate, onReconnect);
     } catch {
       if (signal.aborted) return;
     }
@@ -116,10 +109,12 @@ async function _readStream(
   body: ReadableStream<Uint8Array>,
   signal: AbortSignal,
   onInvalidate: (envelope: LiveEnvelope) => void,
+  onReady?: () => void,
 ): Promise<void> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let readyReceived = false;
 
   try {
     while (!signal.aborted) {
@@ -135,6 +130,11 @@ async function _readStream(
         buffer = buffer.slice(boundary + 2);
 
         const parsed = parseSSEFrame(frame);
+        if (parsed?.eventType === "ready" && !readyReceived) {
+          readyReceived = true;
+          onReady?.();
+          continue;
+        }
         if (parsed?.eventType !== "invalidate") continue;
 
         try {
