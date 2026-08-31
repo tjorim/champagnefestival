@@ -254,11 +254,7 @@ async def test_volunteer_delivery_update_cannot_change_order_details(client):
 
     response = await client.put(
         f"/api/volunteer/registrations/{registration_id}",
-        json={
-            "order_items": [
-                {"product_id": original["product_id"], "delivered_quantity": 1}
-            ]
-        },
+        json={"order_items": [{"product_id": original["product_id"], "delivered_quantity": 1}]},
     )
     assert response.status_code == 200
     updated = response.json()["order_items"][0]

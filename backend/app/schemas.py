@@ -759,7 +759,6 @@ class TableCreate(RequestModel):
     layout_id: str
 
 
-
 class TableUpdate(RequestModel):
     name: str | None = None
     x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
@@ -767,6 +766,7 @@ class TableUpdate(RequestModel):
     table_type_id: str | None = None
     rotation: int | None = Field(default=None, ge=0, le=359, description=ROTATION_DESCRIPTION)
     layout_id: str | None = None
+
 
 class TableOut(BaseModel):
     id: str
