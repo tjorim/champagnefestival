@@ -130,7 +130,7 @@ async def test_update_table_rejects_removed_capacity_input(db_session):
     )
 
     with pytest.raises(TypeError, match="capacity"):
-        await mcp_tables.update_table(factory, "admin-1", created["id"], capacity=4)  # ty: ignore[call-arg]
+        await mcp_tables.update_table(factory, "admin-1", created["id"], capacity=4)  # ty: ignore[unknown-argument]
 
 
 async def test_update_table_not_found(db_session):
