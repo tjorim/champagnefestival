@@ -10,9 +10,11 @@ export interface CheckInData {
   id: string;
   name: string;
   eventId: string;
+  editionId?: string;
   eventTitle: string;
   guestCount: number;
   tableName?: string;
+  tableId?: string;
   orderItems: {
     productId: string;
     name: string;
@@ -35,9 +37,11 @@ interface CheckInResponseRegistration {
   id?: string;
   name?: string;
   event_id?: string;
+  edition_id?: string | null;
   event_title?: string;
   guest_count?: number;
   table_name?: string | null;
+  table_id?: string | null;
   order_items?: Record<string, unknown>[];
   notes?: string;
   accessibility_note?: string;
@@ -90,9 +94,11 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
     id: data.id ?? "",
     name: data.name ?? "",
     eventId: data.event_id ?? "",
+    editionId: data.edition_id ?? undefined,
     eventTitle: data.event_title ?? "",
     guestCount: data.guest_count ?? 1,
     tableName: data.table_name ?? undefined,
+    tableId: data.table_id ?? undefined,
     orderItems: rawOrders.filter(isGuestOrderItemResponse).map((item) => ({
       ...normalizeDeliveredQuantities(item),
       productId: item.product_id,

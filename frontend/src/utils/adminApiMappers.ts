@@ -106,7 +106,7 @@ export function apiTableTypeToTableType(d: Record<string, unknown>): TableType {
     widthM: (d.width_m ?? 1.8) as number,
     lengthM: (d.length_m ?? 0.7) as number,
     heightType: (d.height_type ?? "low") as "low" | "high",
-    maxCapacity: (d.max_capacity ?? 4) as number,
+    capacity: (d.capacity ?? 4) as number,
     active: (d.active ?? true) as boolean,
   };
 }

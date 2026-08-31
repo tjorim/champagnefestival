@@ -35,7 +35,7 @@ async def _create_table(client) -> str:
     layout_id, tt_id = await _table_prerequisites(client)
     r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 6, "x": 0.0, "y": 0.0, "table_type_id": tt_id, "layout_id": layout_id},
+        json={"name": "T1", "x": 0.0, "y": 0.0, "table_type_id": tt_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -255,7 +255,7 @@ async def test_create_table_publishes_seating_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.post(
             "/api/tables",
-            json={"name": "T1", "capacity": 6, "x": 0.0, "y": 0.0, "table_type_id": tt_id, "layout_id": layout_id},
+            json={"name": "T1", "x": 0.0, "y": 0.0, "table_type_id": tt_id, "layout_id": layout_id},
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 201
@@ -270,7 +270,7 @@ async def test_update_table_publishes_seating_event(client):
     table_id = await _create_table(client)
 
     async with live_bus.subscribe() as queue:
-        r = await client.put(f"/api/tables/{table_id}", json={"capacity": 8}, headers=ADMIN_HEADERS)
+        r = await client.put(f"/api/tables/{table_id}", json={"name": "Renamed"}, headers=ADMIN_HEADERS)
         assert r.status_code == 200
         event = queue.get_nowait()
 

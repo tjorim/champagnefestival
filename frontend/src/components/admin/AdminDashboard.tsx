@@ -31,7 +31,7 @@ import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions
 import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import { queryKeys } from "@/utils/queryKeys";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
+import { invalidateAdmin, removeAuthenticatedQueries } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
 import { recordSignOutReason } from "@/utils/signOutReason";
 import Card from "react-bootstrap/Card";
@@ -245,9 +245,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   });
 
   const handleLogout = useCallback(() => {
-    queryClient.removeQueries({
-      predicate: (query) => query.queryKey[0] === "admin",
-    });
+    removeAuthenticatedQueries(queryClient);
     setDetailRegistration(null);
     auth.logout();
   }, [auth, queryClient]);

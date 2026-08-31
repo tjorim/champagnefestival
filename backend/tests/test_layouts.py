@@ -83,7 +83,7 @@ async def test_get_layout_include_tables(client):
 
     r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_id},
+        json={"name": "T1", "table_type_id": tt_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
     table_id = r.json()["id"]
@@ -182,7 +182,7 @@ async def test_copy_layout_copies_tables(client):
     # Add a table to the source layout (no area, so it is an "outside" table)
     r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
+        json={"name": "T1", "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -233,7 +233,7 @@ async def test_copy_layout_copies_areas(client):
     # Add a table inside that area (x=10%, y=10% of a 25m×18m room = 2.5m, 1.8m — inside the 10m×10m area)
     r = await client.post(
         "/api/tables",
-        json={"name": "InArea", "capacity": 4, "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
+        json={"name": "InArea", "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -305,7 +305,7 @@ async def test_copy_layout_no_tables_when_flags_false(client):
 
     r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
+        json={"name": "T1", "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": source_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201

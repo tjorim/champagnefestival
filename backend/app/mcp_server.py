@@ -568,7 +568,7 @@ class ChampagneFestivalMcpBackend:
         self,
         name: str,
         venue_id: str,
-        max_capacity: int,
+        capacity: int,
         width_m: float,
         length_m: float,
         shape: Literal["rectangle", "round"] = "rectangle",
@@ -595,7 +595,7 @@ class ChampagneFestivalMcpBackend:
             width_m=width_m,
             length_m=length_m,
             height_type=height_type,
-            max_capacity=max_capacity,
+            capacity=capacity,
             active=active,
         )
 
@@ -618,7 +618,7 @@ class ChampagneFestivalMcpBackend:
         width_m: float | None = None,
         length_m: float | None = None,
         height_type: Literal["low", "high"] | None = None,
-        max_capacity: int | None = None,
+        capacity: int | None = None,
         active: bool | None = None,
     ) -> dict:
         """Partially update a table type; omitted fields are left unchanged.
@@ -638,7 +638,7 @@ class ChampagneFestivalMcpBackend:
             width_m=width_m,
             length_m=length_m,
             height_type=height_type,
-            max_capacity=max_capacity,
+            capacity=capacity,
             active=active,
         )
 
@@ -666,7 +666,6 @@ class ChampagneFestivalMcpBackend:
     async def create_table(
         self,
         name: str,
-        capacity: int,
         table_type_id: str,
         layout_id: str,
         x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] = 50.0,
@@ -683,7 +682,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             name=name,
-            capacity=capacity,
             table_type_id=table_type_id,
             layout_id=layout_id,
             x=x,
@@ -705,7 +703,6 @@ class ChampagneFestivalMcpBackend:
         self,
         table_id: str,
         name: str | None = None,
-        capacity: int | None = None,
         x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] | None = None,
         y: Annotated[float, Field(ge=0, le=100, description=Y_POSITION_DESCRIPTION)] | None = None,
         table_type_id: str | None = None,
@@ -722,7 +719,6 @@ class ChampagneFestivalMcpBackend:
             self._actor(),
             table_id,
             name=name,
-            capacity=capacity,
             x=x,
             y=y,
             table_type_id=table_type_id,
@@ -1581,6 +1577,7 @@ class ChampagneFestivalMcpBackend:
         clear_amount_due: bool = False,
         table_id: str | None = None,
         clear_table: bool = False,
+        confirm_over_capacity: bool = False,
         order_items: list[dict] | None = None,
         notes: str | None = None,
         accessibility_note: str | None = None,
@@ -1607,6 +1604,7 @@ class ChampagneFestivalMcpBackend:
             clear_amount_due=clear_amount_due,
             table_id=table_id,
             clear_table=clear_table,
+            confirm_over_capacity=confirm_over_capacity,
             order_items=order_items,
             notes=notes,
             accessibility_note=accessibility_note,

@@ -336,7 +336,7 @@
   "admin_edit_table_type": "Tafeltype bewerken",
   "admin_table_type_name_label": "Naam tafeltype",
   "admin_table_type_name_placeholder": "bijv. Ronde eettafel",
-  "admin_table_type_max_capacity": "Max. capaciteit",
+  "admin_table_type_max_capacity": "Voorziene capaciteit",
   "admin_table_type_select": "Kies tafeltype",
   "admin_table_type_name_required": "Naam is verplicht",
   "admin_table_type_venue_required": "Locatie is verplicht",
@@ -423,7 +423,7 @@
   "admin_layout_table_type_label": "Tafeltype",
   "admin_layout_rotate_cw": "15° met de klok mee draaien",
   "admin_layout_rotate_ccw": "15° tegen de klok in draaien",
-  "admin_layout_capacity_max": "max",
+  "admin_layout_capacity_max": "voorzien",
   "admin_item_website_url": "Website-URL",
   "admin_item_type": "Type",
   "admin_item_vendor": "Verkoper",
@@ -765,5 +765,12 @@
   "my_account_delete_button": "Mijn account verwijderen",
   "my_account_deleting": "Bezig met verwijderen…",
   "my_account_delete_confirm": "Je account verwijderen? Dit kan niet ongedaan gemaakt worden. Je inschrijvingen en bestellingen blijven bewaard, maar je kan je niet meer met dit account aanmelden om ze te beheren.",
-  "my_account_delete_error": "Je account kon niet verwijderd worden. Probeer het opnieuw."
+  "my_account_delete_error": "Je account kon niet verwijderd worden. Probeer het opnieuw.",
+  "venue_plan_title": "Zaalplan",
+  "venue_plan_description": "Alleen-lezen zaalplan voor het evenement. Bezette tafels zijn groen; de gekozen tafel is gemarkeerd.",
+  "venue_plan_show_table": "Toon tafel op zaalplan",
+  "venue_plan_missing_edition": "Open het zaalplan vanuit een inschrijving om een editie te kiezen.",
+  "venue_plan_empty": "Er is geen zaalplan beschikbaar voor deze editie.",
+  "venue_plan_error": "Het zaalplan kon niet worden geladen.",
+  "admin_table_over_capacity_confirm": "Deze toewijzing overschrijdt de bedoelde tafelcapaciteit. Wil je de groep toch toevoegen?"
 }

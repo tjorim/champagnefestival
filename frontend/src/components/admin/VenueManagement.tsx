@@ -92,7 +92,7 @@ const emptyTableTypeForm: {
   widthM: number | "";
   lengthM: number | "";
   heightType: "low" | "high";
-  maxCapacity: number;
+  capacity: number;
   active: boolean;
 } = {
   venueId: "",
@@ -101,7 +101,7 @@ const emptyTableTypeForm: {
   widthM: "",
   lengthM: "",
   heightType: "low",
-  maxCapacity: 4,
+  capacity: 4,
   active: true,
 };
 
@@ -399,7 +399,7 @@ export default function VenueManagement({
       widthM: tt.widthM,
       lengthM: tt.lengthM,
       heightType: tt.heightType,
-      maxCapacity: tt.maxCapacity,
+      capacity: tt.capacity,
       active: tt.active,
     });
     setAddTableTypeError(null);
@@ -417,7 +417,7 @@ export default function VenueManagement({
       setAddTableTypeError(m.admin_table_type_venue_required());
       return;
     }
-    if (tableTypeForm.maxCapacity < 1 || !Number.isInteger(tableTypeForm.maxCapacity)) {
+    if (tableTypeForm.capacity < 1 || !Number.isInteger(tableTypeForm.capacity)) {
       setAddTableTypeError(m.admin_table_type_capacity_min());
       return;
     }
@@ -1226,9 +1226,9 @@ export default function VenueManagement({
               type="number"
               min={1}
               max={50}
-              value={tableTypeForm.maxCapacity}
+              value={tableTypeForm.capacity}
               onChange={(e) =>
-                setTableTypeForm((p) => ({ ...p, maxCapacity: Number(e.target.value) }))
+                setTableTypeForm((p) => ({ ...p, capacity: Number(e.target.value) }))
               }
               className="bg-dark text-light border-secondary"
             />
@@ -1244,8 +1244,8 @@ export default function VenueManagement({
             disabled={
               !tableTypeForm.name.trim() ||
               !tableTypeForm.venueId ||
-              tableTypeForm.maxCapacity < 1 ||
-              !Number.isInteger(tableTypeForm.maxCapacity) ||
+              tableTypeForm.capacity < 1 ||
+              !Number.isInteger(tableTypeForm.capacity) ||
               typeof tableTypeForm.widthM !== "number" ||
               tableTypeForm.widthM <= 0 ||
               typeof tableTypeForm.lengthM !== "number" ||

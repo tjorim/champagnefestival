@@ -45,7 +45,7 @@ async def create_table_type(
         width_m=body.width_m,
         length_m=body.length_m,
         height_type=body.height_type,
-        max_capacity=body.max_capacity,
+        capacity=body.capacity,
         active=body.active,
     )
     db.add(tt)
@@ -101,7 +101,7 @@ async def bulk_create_table_types(
             width_m=item.width_m,
             length_m=item.length_m,
             height_type=item.height_type,
-            max_capacity=item.max_capacity,
+            capacity=item.capacity,
             active=item.active,
         )
         for item in items
@@ -147,7 +147,7 @@ async def get_table_type(db: AsyncSession, type_id: str) -> dict:
 async def update_table_type(
     db: AsyncSession, *, actor: str, type_id: str, body: TableTypeUpdate, request_id: str | None = None
 ) -> dict:
-    tt = await db.get(TableType, type_id)
+    tt = (await db.execute(select(TableType).where(TableType.id == type_id).with_for_update())).scalar_one_or_none()
     if tt is None:
         raise NotFoundError(f"Table type '{type_id}' not found.")
     fields_changed: list[str] = []
@@ -208,9 +208,9 @@ async def update_table_type(
     if body.height_type is not None:
         tt.height_type = body.height_type
         fields_changed.append("height_type")
-    if body.max_capacity is not None:
-        tt.max_capacity = body.max_capacity
-        fields_changed.append("max_capacity")
+    if body.capacity is not None:
+        tt.capacity = body.capacity
+        fields_changed.append("capacity")
     if body.active is not None:
         tt.active = body.active
         fields_changed.append("active")

@@ -14,12 +14,13 @@ from app.database import get_db
 from app.email import send_contact_notification
 from app.models import ContactMessage
 from app.ratelimit import check_rate_limit, get_client_ip
+from app.schemas import RequestModel
 from app.spam import check_form_timing, check_honeypot
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 
 
-class ContactRequest(BaseModel):
+class ContactRequest(RequestModel):
     submission_id: UUID
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr

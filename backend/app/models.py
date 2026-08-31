@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
+from datetime import date as dt_date
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -18,9 +19,10 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    select,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
 
@@ -320,8 +322,8 @@ class TableType(Base):
     """Length in metres (equals width_m for round tables)."""
     height_type: Mapped[str] = mapped_column(String(20), default="low")
     """'low' | 'high'"""
-    max_capacity: Mapped[int] = mapped_column(Integer)
-    """Physical maximum number of seats for this table shape/size."""
+    capacity: Mapped[int] = mapped_column(Integer)
+    """Intended soft seating limit for every table of this type."""
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
@@ -332,8 +334,6 @@ class Table(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
-    capacity: Mapped[int] = mapped_column(Integer)
-
     x: Mapped[float] = mapped_column(default=50.0)
     y: Mapped[float] = mapped_column(default=50.0)
     """Position as a percentage [0, 100] of the layout's *rendered canvas*, not the
@@ -347,6 +347,10 @@ class Table(Base):
         String(64), ForeignKey("table_types.id", ondelete="RESTRICT"), nullable=False
     )
     """FK to the TableType template that defines this table's shape and dimensions."""
+    capacity: Mapped[int] = column_property(
+        select(TableType.capacity).where(TableType.id == table_type_id).scalar_subquery()
+    )
+    """Read-only projection of the table type's capacity limit."""
 
     rotation: Mapped[int] = mapped_column(Integer, default=0)
     """Rotation angle in whole degrees [0, 359], clockwise, pivoting around this
@@ -355,8 +359,6 @@ class Table(Base):
 
     layout_id: Mapped[str] = mapped_column(String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False)
     """FK to the Layout this table belongs to."""
-
-    reservation_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
@@ -453,7 +455,7 @@ class Event(Base):
     )
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
-    date: Mapped[date] = mapped_column(Date, index=True)  # ty: ignore[invalid-type-form]
+    date: Mapped[dt_date] = mapped_column(Date, index=True)
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
@@ -580,8 +582,8 @@ class VolunteerPeriod(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), nullable=False)
-    first_help_day: Mapped[date] = mapped_column(Date, nullable=False)
-    last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    first_help_day: Mapped[dt_date] = mapped_column(Date, nullable=False)
+    last_help_day: Mapped[dt_date | None] = mapped_column(Date, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

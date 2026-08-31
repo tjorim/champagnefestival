@@ -27,7 +27,6 @@ async def test_table_crud(client):
 
     payload = {
         "name": "Table 1",
-        "capacity": 6,
         "x": 25.0,
         "y": 30.0,
         "table_type_id": tt_id,
@@ -41,8 +40,8 @@ async def test_table_crud(client):
     r = await client.get("/api/tables", headers=ADMIN_HEADERS)
     assert len(r.json()) == 1
 
-    r = await client.put(f"/api/tables/{tbl_id}", json={"capacity": 8}, headers=ADMIN_HEADERS)
-    assert r.json()["capacity"] == 8
+    r = await client.put(f"/api/tables/{tbl_id}", json={"capacity": 5}, headers=ADMIN_HEADERS)
+    assert r.status_code == 422
 
     r = await client.delete(f"/api/tables/{tbl_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
@@ -66,13 +65,13 @@ async def test_list_tables_filters_by_layout_id(client):
 
     r = await client.post(
         "/api/tables",
-        json={"name": "A1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_a},
+        json={"name": "A1", "table_type_id": tt_id, "layout_id": layout_a},
         headers=ADMIN_HEADERS,
     )
     table_a = r.json()["id"]
     await client.post(
         "/api/tables",
-        json={"name": "B1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_b},
+        json={"name": "B1", "table_type_id": tt_id, "layout_id": layout_b},
         headers=ADMIN_HEADERS,
     )
 
@@ -100,7 +99,7 @@ async def test_table_position_bounds_rejected(client):
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
-    base = {"name": "T1", "capacity": 4, "table_type_id": tt_id, "layout_id": layout_id}
+    base = {"name": "T1", "table_type_id": tt_id, "layout_id": layout_id}
 
     for bad in ({"x": -0.1}, {"x": 100.1}, {"y": -0.1}, {"y": 100.1}, {"rotation": -1}, {"rotation": 360}):
         r = await client.post("/api/tables", json={**base, **bad}, headers=ADMIN_HEADERS)
@@ -129,7 +128,6 @@ async def test_table_with_layout_id(client):
         "/api/tables",
         json={
             "name": "T1",
-            "capacity": 4,
             "x": 10.0,
             "y": 10.0,
             "table_type_id": tt_id,
@@ -169,7 +167,6 @@ async def test_table_id_can_be_cleared(client):
         "/api/tables",
         json={
             "name": "T-Clear",
-            "capacity": 4,
             "table_type_id": tt_id,
             "layout_id": layout_id,
         },
@@ -226,7 +223,6 @@ async def test_table_registration_ids_computed_from_registration_table_id(client
         "/api/tables",
         json={
             "name": "T-Persist",
-            "capacity": 4,
             "table_type_id": tt_id,
             "layout_id": layout_id,
         },

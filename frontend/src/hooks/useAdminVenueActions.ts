@@ -76,8 +76,8 @@ export function useAdminVenueActions({
   });
 
   const handleAddTable = useCallback(
-    async (name: string, capacity: number, layoutId: string, tableTypeId: string) => {
-      const data = await createTableMutation.mutateAsync({ name, capacity, layoutId, tableTypeId });
+    async (name: string, layoutId: string, tableTypeId: string) => {
+      const data = await createTableMutation.mutateAsync({ name, layoutId, tableTypeId });
       const table = (data.table ?? data) as Record<string, unknown>;
       queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
         prev ? [...prev, apiTableToTable(table)] : [apiTableToTable(table)],

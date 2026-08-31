@@ -317,9 +317,7 @@ async def test_bulk_create_tables_happy_path(client):
     table_type_id = await _create_table_type(client, venue_id)
     layout_id = await _create_layout(client, room_id)
 
-    items = [
-        {"name": f"Table {i}", "capacity": 4, "table_type_id": table_type_id, "layout_id": layout_id} for i in range(4)
-    ]
+    items = [{"name": f"Table {i}", "table_type_id": table_type_id, "layout_id": layout_id} for i in range(4)]
     r = await client.post("/api/tables/bulk", json={"items": items}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     data = r.json()
@@ -338,8 +336,8 @@ async def test_bulk_create_tables_rolls_back_on_partial_failure(client, db_sessi
     layout_id = await _create_layout(client, room_id)
 
     items = [
-        {"name": "Table OK", "capacity": 4, "table_type_id": table_type_id, "layout_id": layout_id},
-        {"name": "Table Bad", "capacity": 4, "table_type_id": table_type_id, "layout_id": "layout-missing"},
+        {"name": "Table OK", "table_type_id": table_type_id, "layout_id": layout_id},
+        {"name": "Table Bad", "table_type_id": table_type_id, "layout_id": "layout-missing"},
     ]
     r = await client.post("/api/tables/bulk", json={"items": items}, headers=ADMIN_HEADERS)
     assert r.status_code == 404
@@ -356,7 +354,7 @@ async def test_bulk_create_tables_idempotency_key_replays_result(client):
     layout_id = await _create_layout(client, room_id)
 
     body = {
-        "items": [{"name": "Table A", "capacity": 4, "table_type_id": table_type_id, "layout_id": layout_id}],
+        "items": [{"name": "Table A", "table_type_id": table_type_id, "layout_id": layout_id}],
         "idempotency_key": "table-retry-key",
     }
     r1 = await client.post("/api/tables/bulk", json=body, headers=ADMIN_HEADERS)

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests.helpers import _post_registration
+
 ADMIN_HEADERS = {"Authorization": "Bearer admin-token"}
 
 VENUE_PAYLOAD = {
@@ -51,7 +53,7 @@ async def _setup_edition_with_layout(client) -> tuple[str, str, str]:
         "start_time": "19:00",
         "end_time": "22:00",
         "category": "festival",
-        "registration_required": False,
+        "registration_required": True,
         "active": True,
     }
     r = await client.post("/api/events", json=event_payload, headers=ADMIN_HEADERS)
@@ -113,3 +115,39 @@ async def test_venue_plan_empty_layouts_when_none(client):
     assert r.status_code == 200
     data = r.json()
     assert data["layouts"] == []
+
+
+@pytest.mark.anyio
+async def test_venue_plan_returns_non_cancelled_guest_occupancy(client):
+    edition_id, layout_id, room_id = await _setup_edition_with_layout(client)
+    events = (await client.get("/api/events", headers=ADMIN_HEADERS)).json()
+    event = next(item for item in events if item["edition_id"] == edition_id)
+    rooms = (await client.get("/api/rooms", headers=ADMIN_HEADERS)).json()
+    venue_id = next(item["venue_id"] for item in rooms if item["id"] == room_id)
+    table_type = await client.post(
+        "/api/table-types",
+        json={"name": "Standard", "venue_id": venue_id, "capacity": 6, "width_m": 0.7, "length_m": 1.8},
+        headers=ADMIN_HEADERS,
+    )
+    table = await client.post(
+        "/api/tables",
+        json={"name": "A1", "table_type_id": table_type.json()["id"], "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    registration = await _post_registration(client, event=event, guest_count=3)
+    registration_id = registration.json()["id"]
+    assigned = await client.put(
+        f"/api/registrations/{registration_id}", json={"table_id": table.json()["id"]}, headers=ADMIN_HEADERS
+    )
+    assert assigned.status_code == 200
+
+    response = await client.get(f"/api/venue-plan/{edition_id}", headers=ADMIN_HEADERS)
+    payload = response.json()["layouts"][0]["tables"][0]
+    assert payload["registration_ids"] == [registration_id]
+    assert payload["occupied_seats"] == 3
+
+    await client.put(f"/api/registrations/{registration_id}", json={"status": "cancelled"}, headers=ADMIN_HEADERS)
+    response = await client.get(f"/api/venue-plan/{edition_id}", headers=ADMIN_HEADERS)
+    payload = response.json()["layouts"][0]["tables"][0]
+    assert payload["registration_ids"] == []
+    assert payload["occupied_seats"] == 0

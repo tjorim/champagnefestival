@@ -14,7 +14,7 @@ export interface TableType {
   lengthM: number;
   heightType: "low" | "high";
   /** Physical maximum number of seats */
-  maxCapacity: number;
+  capacity: number;
   active: boolean;
 }
 

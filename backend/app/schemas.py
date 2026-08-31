@@ -21,6 +21,12 @@ PaymentStatus = Literal["unpaid", "partial", "paid"]
 FaqLocale = Literal["nl", "en", "fr"]
 
 
+class RequestModel(BaseModel):
+    """Base for external request bodies; reject misspelled or stale fields."""
+
+    model_config = {"extra": "forbid"}
+
+
 # ---------------------------------------------------------------------------
 # Order items
 # ---------------------------------------------------------------------------
@@ -58,7 +64,7 @@ class OrderItemOut(OrderItemBase):
     pass
 
 
-class OrderItemRequest(BaseModel):
+class OrderItemRequest(RequestModel):
     """What a registration request supplies for an order line item.
 
     Only `product_id` and `quantity` are client-supplied; `name`/`price`/`category`
@@ -71,7 +77,7 @@ class OrderItemRequest(BaseModel):
     quantity: int = Field(ge=1, le=100)
 
 
-class RegistrationDeliveryUpdate(BaseModel):
+class RegistrationDeliveryUpdate(RequestModel):
     """The only order-line fields an entrance volunteer may change."""
 
     product_id: str = Field(min_length=1)
@@ -132,7 +138,7 @@ class EditionSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class EventCreate(BaseModel):
+class EventCreate(RequestModel):
     edition_id: str = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=10000)
@@ -146,7 +152,7 @@ class EventCreate(BaseModel):
     active: bool = True
 
 
-class EventUpdate(BaseModel):
+class EventUpdate(RequestModel):
     edition_id: str | None = Field(default=None, min_length=1, max_length=100)
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=10000)
@@ -182,7 +188,7 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ProductCreate(BaseModel):
+class ProductCreate(RequestModel):
     event_id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
@@ -199,7 +205,7 @@ class ProductCreate(BaseModel):
         return self
 
 
-class ProductUpdate(BaseModel):
+class ProductUpdate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
@@ -242,7 +248,7 @@ class EventCheckInStats(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class RegistrationCreate(BaseModel):
+class RegistrationCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
@@ -259,11 +265,12 @@ class RegistrationCreate(BaseModel):
         return v.strip() if isinstance(v, str) else v
 
 
-class RegistrationUpdate(BaseModel):
+class RegistrationUpdate(RequestModel):
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     table_id: str | None = None
+    confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
     notes: str | None = None
     accessibility_note: str | None = None
@@ -370,7 +377,7 @@ class PebbleAccessTokenOut(BaseModel):
     token: str
 
 
-class RegistrationLookupRequest(BaseModel):
+class RegistrationLookupRequest(RequestModel):
     email: EmailStr
 
     @field_validator("email", mode="before")
@@ -385,11 +392,11 @@ class RegistrationLookupRequestAccepted(BaseModel):
     expires_in_minutes: int
 
 
-class RegistrationAccessLookupRequest(BaseModel):
+class RegistrationAccessLookupRequest(RequestModel):
     token: str = Field(min_length=20)
 
 
-class RegistrationAdminCreate(BaseModel):
+class RegistrationAdminCreate(RequestModel):
     """Admin-only registration creation — skips spam checks, accepts person_id directly."""
 
     person_id: str = Field(min_length=1, max_length=64)
@@ -406,7 +413,7 @@ class RegistrationAdminCreate(BaseModel):
         return v.strip() if isinstance(v, str) else v
 
 
-class VolunteerHelpPeriodIn(BaseModel):
+class VolunteerHelpPeriodIn(RequestModel):
     first_help_day: dt_date
     last_help_day: dt_date | None = None
 
@@ -417,7 +424,7 @@ class VolunteerHelpPeriodIn(BaseModel):
         return self
 
 
-class VolunteerCreate(BaseModel):
+class VolunteerCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     address: str = Field(default="", max_length=300)
     national_register_number: str = Field(min_length=1, max_length=20)
@@ -431,7 +438,7 @@ class VolunteerCreate(BaseModel):
         return value.strip() if isinstance(value, str) else value
 
 
-class VolunteerUpdate(BaseModel):
+class VolunteerUpdate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     address: str | None = Field(default=None, max_length=300)
     national_register_number: str | None = Field(default=None, min_length=1, max_length=20)
@@ -487,6 +494,7 @@ class CheckInGuestOut(BaseModel):
     id: str
     name: str
     event_id: str
+    edition_id: str | None = None
     event_title: str
     table_id: str | None = None
     table_name: str | None = None
@@ -501,11 +509,11 @@ class CheckInGuestOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CheckInLookupRequest(BaseModel):
+class CheckInLookupRequest(RequestModel):
     token: str
 
 
-class CheckInRequest(BaseModel):
+class CheckInRequest(RequestModel):
     token: str
     issue_strap: bool = True
 
@@ -515,11 +523,11 @@ class CheckInOut(BaseModel):
     already_checked_in: bool
 
 
-class VolunteerCheckInRequest(BaseModel):
+class VolunteerCheckInRequest(RequestModel):
     issue_strap: bool = True
 
 
-class VolunteerRegistrationUpdate(BaseModel):
+class VolunteerRegistrationUpdate(RequestModel):
     order_items: list[RegistrationDeliveryUpdate] | None = Field(default=None, max_length=50)
     strap_issued: bool | None = None
 
@@ -529,7 +537,7 @@ class VolunteerRegistrationUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class PersonCreate(BaseModel):
+class PersonCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr | None = None
     phone: str = Field(default="", max_length=50)
@@ -543,7 +551,7 @@ class PersonCreate(BaseModel):
     active: bool = True
 
 
-class PersonUpdate(BaseModel):
+class PersonUpdate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=50)
@@ -562,7 +570,7 @@ class PersonUpdate(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class ExhibitorCreate(BaseModel):
+class ExhibitorCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(default="", max_length=500)
     website: str = Field(default="", max_length=500)
@@ -571,7 +579,7 @@ class ExhibitorCreate(BaseModel):
     contact_person_id: str | None = None
 
 
-class ExhibitorUpdate(BaseModel):
+class ExhibitorUpdate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     image: str | None = Field(default=None, max_length=500)
     website: str | None = Field(default=None, max_length=500)
@@ -600,7 +608,7 @@ class ExhibitorOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class LayoutCreate(BaseModel):
+class LayoutCreate(RequestModel):
     edition_id: str | None = Field(default=None, max_length=100)
     room_id: str = Field(max_length=64)
     day_id: int | None = Field(default=None, ge=1)
@@ -632,7 +640,7 @@ class LayoutOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class LayoutBulkCreate(BaseModel):
+class LayoutBulkCreate(RequestModel):
     """Create several layouts in one atomic transaction (#837).
 
     All items are validated and, within the batch, checked against each other
@@ -655,7 +663,7 @@ class LayoutBulkOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class TableTypeCreate(BaseModel):
+class TableTypeCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     venue_id: str
     shape: Literal["rectangle", "round"] = "rectangle"
@@ -665,7 +673,7 @@ class TableTypeCreate(BaseModel):
     width_m: float = Field(ge=0.1, le=20.0)
     length_m: float = Field(ge=0.1, le=20.0)
     height_type: Literal["low", "high"] = "low"
-    max_capacity: int = Field(ge=1, le=50)
+    capacity: int = Field(ge=1, le=50)
     active: bool = True
 
     @model_validator(mode="after")
@@ -676,14 +684,14 @@ class TableTypeCreate(BaseModel):
         return self
 
 
-class TableTypeUpdate(BaseModel):
+class TableTypeUpdate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     venue_id: str | None = None
     shape: Literal["rectangle", "round"] | None = None
     width_m: float | None = Field(default=None, ge=0.1, le=20.0)
     length_m: float | None = Field(default=None, ge=0.1, le=20.0)
     height_type: Literal["low", "high"] | None = None
-    max_capacity: int | None = Field(default=None, ge=1, le=50)
+    capacity: int | None = Field(default=None, ge=1, le=50)
     active: bool | None = None
 
 
@@ -695,7 +703,7 @@ class TableTypeOut(BaseModel):
     width_m: float
     length_m: float
     height_type: str
-    max_capacity: int
+    capacity: int
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -703,7 +711,7 @@ class TableTypeOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class TableTypeBulkCreate(BaseModel):
+class TableTypeBulkCreate(RequestModel):
     """Create several table types in one atomic transaction (#837).
 
     A failure partway through (e.g. an unknown ``venue_id`` on any item)
@@ -742,9 +750,8 @@ Y_POSITION_DESCRIPTION = (
 ROTATION_DESCRIPTION = "Clockwise rotation in whole degrees [0, 359], pivoting around this element's own center."
 
 
-class TableCreate(BaseModel):
+class TableCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
-    capacity: int = Field(ge=1, le=50)
     x: float = Field(ge=0, le=100, default=50.0, description=X_POSITION_DESCRIPTION)
     y: float = Field(ge=0, le=100, default=50.0, description=Y_POSITION_DESCRIPTION)
     table_type_id: str
@@ -752,9 +759,8 @@ class TableCreate(BaseModel):
     layout_id: str
 
 
-class TableUpdate(BaseModel):
+class TableUpdate(RequestModel):
     name: str | None = None
-    capacity: int | None = Field(default=None, ge=1, le=50)
     x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
     y: float | None = Field(default=None, ge=0, le=100, description=Y_POSITION_DESCRIPTION)
     table_type_id: str | None = None
@@ -778,7 +784,7 @@ class TableOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class TableBulkCreate(BaseModel):
+class TableBulkCreate(RequestModel):
     """Create several tables in one atomic transaction (#837).
 
     A failure partway through (e.g. an unknown ``table_type_id`` or
@@ -800,7 +806,7 @@ class TableBulkOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class AreaCreate(BaseModel):
+class AreaCreate(RequestModel):
     layout_id: str = Field(max_length=64)
     label: str = Field(min_length=1, max_length=200)
     icon: str = Field(default="bi-shop", max_length=50)
@@ -812,7 +818,7 @@ class AreaCreate(BaseModel):
     rotation: int = Field(ge=0, le=359, default=0, description=ROTATION_DESCRIPTION)
 
 
-class AreaUpdate(BaseModel):
+class AreaUpdate(RequestModel):
     label: str | None = Field(default=None, min_length=1, max_length=200)
     icon: str | None = Field(default=None, max_length=50)
     exhibitor_id: int | None = None
@@ -869,6 +875,7 @@ class VenuePlanTableOut(BaseModel):
     rotation: int
     table_type_id: str
     registration_ids: list[str]
+    occupied_seats: int
 
 
 class VenuePlanAreaOut(BaseModel):
@@ -903,7 +910,7 @@ class VenuePlanOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class VenueCreate(BaseModel):
+class VenueCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     address: str = Field(default="", max_length=200)
     city: str = Field(default="", max_length=100)
@@ -914,7 +921,7 @@ class VenueCreate(BaseModel):
     active: bool = True
 
 
-class VenueUpdate(BaseModel):
+class VenueUpdate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     address: str | None = Field(default=None, max_length=200)
     city: str | None = Field(default=None, max_length=100)
@@ -946,7 +953,7 @@ class VenueOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class RoomCreate(BaseModel):
+class RoomCreate(RequestModel):
     venue_id: str
     name: str = Field(min_length=1, max_length=200)
     # Required, not defaulted — a 20x15m default would silently masquerade as a
@@ -957,7 +964,7 @@ class RoomCreate(BaseModel):
     active: bool = True
 
 
-class RoomUpdate(BaseModel):
+class RoomUpdate(RequestModel):
     venue_id: str | None = None
     name: str | None = None
     width_m: float | None = Field(default=None, ge=1, le=500)
@@ -981,7 +988,7 @@ class RoomOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class RoomBulkCreate(BaseModel):
+class RoomBulkCreate(RequestModel):
     """Create several rooms in one atomic transaction (#837).
 
     A failure partway through (e.g. an unknown ``venue_id`` on any item)
@@ -1002,7 +1009,7 @@ class RoomBulkOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class EditionCreate(BaseModel):
+class EditionCreate(RequestModel):
     id: str = Field(min_length=1, max_length=100)
     year: int = Field(ge=2020, le=2100)
     month: str
@@ -1013,7 +1020,7 @@ class EditionCreate(BaseModel):
     active: bool = True
 
 
-class EditionUpdate(BaseModel):
+class EditionUpdate(RequestModel):
     year: int | None = Field(default=None, ge=2020, le=2100)
     month: str | None = None
     venue_id: str | None = None
@@ -1021,6 +1028,13 @@ class EditionUpdate(BaseModel):
     exhibitors: list[int] | None = None
     co_organizer_exhibitor_id: int | None = None
     active: bool | None = None
+
+    @model_validator(mode="after")
+    def reject_null_active_and_edition_type(self) -> Self:
+        for field in ("edition_type", "active"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} may be omitted but cannot be null.")
+        return self
 
 
 class EditionItemOut(BaseModel):
@@ -1072,7 +1086,7 @@ class AuditEntryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class IntegrationClientCreate(BaseModel):
+class IntegrationClientCreate(RequestModel):
     name: str = Field(min_length=1, max_length=120)
     allowed_role: Literal["admin", "volunteer"]
     """Fixed at creation; never more privileged than the creating admin's own tier
@@ -1107,7 +1121,7 @@ class IntegrationClientCreatedOut(IntegrationClientOut):
     key: str
 
 
-class AppSettingsUpdate(BaseModel):
+class AppSettingsUpdate(RequestModel):
     maintenance_mode: bool | None = None
     public_email: EmailStr | Literal[""] | None = None
     public_phone: str | None = Field(default=None, max_length=30)
@@ -1150,7 +1164,7 @@ class AppSettingsOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class FaqItemCreate(BaseModel):
+class FaqItemCreate(RequestModel):
     question_nl: str = Field(min_length=1, max_length=500)
     answer_nl: str = Field(min_length=1, max_length=10000)
     question_en: str | None = Field(default=None, max_length=500)
@@ -1160,7 +1174,7 @@ class FaqItemCreate(BaseModel):
     active: bool = True
 
 
-class FaqItemUpdate(BaseModel):
+class FaqItemUpdate(RequestModel):
     question_nl: str | None = Field(default=None, min_length=1, max_length=500)
     answer_nl: str | None = Field(default=None, min_length=1, max_length=10000)
     # Optional locales use presence (model_fields_set), not None-ness, to tell
@@ -1174,7 +1188,7 @@ class FaqItemUpdate(BaseModel):
     active: bool | None = None
 
 
-class FaqItemReorder(BaseModel):
+class FaqItemReorder(RequestModel):
     """The complete, ordered list of every existing FAQ item's ID.
 
     `sort_order` isn't settable through create/update — this is the only way

@@ -90,12 +90,7 @@ interface LayoutEditorProps {
   rooms: Room[];
   exhibitors: ItemRef[];
   areas: FloorArea[];
-  onAddTable: (
-    name: string,
-    capacity: number,
-    layoutId: string,
-    tableTypeId: string,
-  ) => Promise<void>;
+  onAddTable: (name: string, layoutId: string, tableTypeId: string) => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onDeleteTable: (tableId: string) => Promise<void>;
   onRotateTable: (tableId: string, rotation: number) => void;
@@ -172,18 +167,23 @@ function DraggableTable({
   const leftPx = (table.x / 100) * canvasW;
   const topPx = (table.y / 100) * canvasH;
 
-  const isFull = table.capacity > 0 && assignedCount >= table.capacity;
+  const isOverfilled = table.capacity > 0 && assignedCount > table.capacity;
+  const isFull = table.capacity > 0 && assignedCount === table.capacity;
   const borderCls = isSelected
     ? "border-warning"
-    : isFull
+    : isOverfilled
       ? "border-danger"
+      : isFull
+        ? "border-warning"
       : assignedCount > 0
         ? "border-success"
         : "border-secondary";
   const bgCls = isSelected
     ? "bg-warning bg-opacity-25 text-warning"
-    : isFull
+    : isOverfilled
       ? "bg-danger bg-opacity-10 text-danger"
+      : isFull
+        ? "bg-warning bg-opacity-10 text-warning"
       : assignedCount > 0
         ? "bg-success bg-opacity-10 text-success"
         : "bg-dark text-secondary";
@@ -624,7 +624,6 @@ export default function LayoutEditor({
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTable, setNewTable] = useState({
     name: "",
-    capacity: 4,
     tableTypeId: "",
   });
   const [addTableError, setAddTableError] = useState<string | null>(null);
@@ -647,17 +646,11 @@ export default function LayoutEditor({
   const [resizeAreaError, setResizeAreaError] = useState<string | null>(null);
 
   const handleAddTable = useCallback(async () => {
-    if (!newTable.name.trim() || newTable.capacity < 1 || !newTable.tableTypeId || !activeLayoutId)
-      return;
+    if (!newTable.name.trim() || !newTable.tableTypeId || !activeLayoutId) return;
     setAddTableError(null);
     try {
-      await onAddTable(
-        newTable.name.trim(),
-        newTable.capacity,
-        activeLayoutId,
-        newTable.tableTypeId,
-      );
-      setNewTable({ name: "", capacity: 4, tableTypeId: "" });
+      await onAddTable(newTable.name.trim(), activeLayoutId, newTable.tableTypeId);
+      setNewTable({ name: "", tableTypeId: "" });
       setShowAddTable(false);
     } catch (err) {
       devError("Failed to add table", err);
@@ -1623,14 +1616,7 @@ export default function LayoutEditor({
             <Form.Label>{m.admin_table_type_select()}</Form.Label>
             <Form.Select
               value={newTable.tableTypeId}
-              onChange={(e) => {
-                const tt = tableTypes.find((t) => t.id === e.target.value);
-                setNewTable((p) => ({
-                  ...p,
-                  tableTypeId: e.target.value,
-                  capacity: tt ? Math.min(p.capacity, tt.maxCapacity) : p.capacity,
-                }));
-              }}
+              onChange={(e) => setNewTable((p) => ({ ...p, tableTypeId: e.target.value }))}
               className="bg-dark text-light border-secondary"
             >
               <option value="">— {m.admin_table_type_select()} —</option>
@@ -1643,21 +1629,10 @@ export default function LayoutEditor({
                     {tt.heightType === "high"
                       ? m.admin_table_height_type_high()
                       : m.admin_table_height_type_low()}
-                    , {m.admin_layout_capacity_max()} {tt.maxCapacity})
+                    , {m.admin_layout_capacity_max()} {tt.capacity})
                   </option>
                 ))}
             </Form.Select>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="table-capacity">
-            <Form.Label>{m.admin_table_capacity()}</Form.Label>
-            <Form.Control
-              type="number"
-              min={1}
-              max={50}
-              value={newTable.capacity}
-              onChange={(e) => setNewTable((p) => ({ ...p, capacity: Number(e.target.value) }))}
-              className="bg-dark text-light border-secondary"
-            />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer className="bg-dark border-secondary">
@@ -1667,7 +1642,7 @@ export default function LayoutEditor({
           <Button
             variant="warning"
             onClick={handleAddTable}
-            disabled={!newTable.name.trim() || newTable.capacity < 1 || !newTable.tableTypeId}
+            disabled={!newTable.name.trim() || !newTable.tableTypeId}
           >
             {m.admin_save()}
           </Button>

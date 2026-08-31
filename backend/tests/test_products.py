@@ -106,9 +106,7 @@ async def test_event_out_embeds_only_active_products(client):
 
 @pytest.mark.anyio
 async def test_registration_resolves_order_item_against_real_product(client):
-    """The server must snapshot name/price/category from the real product, ignoring
-    whatever the client sends for those fields — a client can only choose product_id
-    and quantity."""
+    """Clients can only choose product_id and quantity; resolved fields are rejected."""
     event = await _create_event(client)
     product = await _create_product(client, event["id"], name="Bottle of Champagne", price="25.00")
 
@@ -124,14 +122,27 @@ async def test_registration_resolves_order_item_against_real_product(client):
                 {
                     "product_id": product["id"],
                     "quantity": 2,
-                    # An attacker-controlled client might also try to smuggle these in;
-                    # pydantic silently drops unknown fields, but assert the resolved
-                    # order reflects the server's authoritative product data regardless.
                     "name": "Free Champagne",
                     "price": 0,
                     "category": "other",
                 },
             ],
+            "notes": "",
+            "honeypot": "",
+            "form_start_time": "",
+        },
+    )
+    assert r.status_code == 422
+
+    r = await client.post(
+        "/api/registrations",
+        json={
+            "name": "Jean Dupont",
+            "email": "jean@example.com",
+            "phone": "+32499000000",
+            "event_id": event["id"],
+            "guest_count": 1,
+            "order_items": [{"product_id": product["id"], "quantity": 2}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",
@@ -236,6 +247,18 @@ async def test_admin_registration_creation_also_resolves_order_items(client):
         },
         headers=ADMIN_HEADERS,
     )
+    assert r.status_code == 422
+
+    r = await client.post(
+        "/api/registrations/admin",
+        json={
+            "person_id": person_id,
+            "event_id": event["id"],
+            "guest_count": 1,
+            "order_items": [{"product_id": product["id"], "quantity": 3}],
+        },
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201, r.text
     order_items = r.json()["order_items"]
     assert order_items[0]["price"] == 10.5
@@ -270,6 +293,13 @@ async def test_admin_registration_update_resolves_order_items_and_preserves_deli
         headers=ADMIN_HEADERS,
     )
 
+    assert response.status_code == 422
+
+    response = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"order_items": [{"product_id": product["id"], "quantity": 1}]},
+        headers=ADMIN_HEADERS,
+    )
     assert response.status_code == 200
     item = response.json()["order_items"][0]
     assert item["name"] == "Authoritative Bottle"

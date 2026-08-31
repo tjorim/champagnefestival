@@ -109,14 +109,26 @@ export function useAdminRegistrationActions({
 
   const handleAssignTable = useCallback(
     async (registrationId: string, tableId: string | undefined) => {
+      const assign = (confirmOverCapacity = false) =>
+        updateRegistrationMutation.mutateAsync({
+          id: registrationId,
+          payload: {
+            table_id: tableId ?? null,
+            ...(confirmOverCapacity ? { confirm_over_capacity: true } : {}),
+          },
+          fallbackMessage: m.admin_error_assign_table(),
+        });
       try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id: registrationId,
-            payload: { table_id: tableId ?? null },
-            fallbackMessage: m.admin_error_assign_table(),
-          }),
-        );
+        let response: Record<string, unknown>;
+        try {
+          response = await assign();
+        } catch (err) {
+          const isCapacityWarning =
+            tableId !== undefined && err instanceof Error && err.message.includes("seat(s) remaining");
+          if (!isCapacityWarning || !window.confirm(m.admin_table_over_capacity_confirm())) throw err;
+          response = await assign(true);
+        }
+        const updated = apiToRegistration(response);
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev
             ? prev.map((registration) =>

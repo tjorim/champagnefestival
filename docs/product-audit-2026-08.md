@@ -85,21 +85,19 @@ No Phase 1 defects remain open.
 
 ### Phase 2 — data integrity in the admin and seating layer
 
-| Order | Issue | Notes | Effort |
-| --- | --- | --- | --- |
-| 1 | #926 — venue plan reads a dead column | Decide *before* #927, because the answer determines whether table occupancy has anywhere to be displayed. | S to delete, M–L to build the volunteer view |
-| 2 | #927 — no seating capacity enforcement | Enforcement is independent, but surfacing occupancy in the editor depends on #926. | M |
+No sufficiently defined Phase 2 findings remain open. Broader seating-allocation
+work is intentionally outside this audit until the bourse requirements are clear.
 
 ### Phase 3 — operational workflows and admin communication
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 3 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
-| 4 | #933 — registration lifecycle gaps | Its #928 prerequisite is complete. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. | M |
-| 5 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
-| 6 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
-| 7 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
-| 8 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 1 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
+| 2 | #933 — registration lifecycle gaps | Its #928 prerequisite is complete. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. Any seated guest-count edit must reuse #927's soft-capacity confirmation guard. | M |
+| 3 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
+| 4 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
+| 5 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
+| 6 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -107,23 +105,23 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 9 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 10 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 11 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
-| 12 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 13 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 7 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 8 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 9 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
+| 10 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 11 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 14 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 12 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Phase 6 — deferred visitor account
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 15 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
+| 13 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
 
 ### Dependency map
 
@@ -139,7 +137,6 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 #928 order resolution ────────> #933 registration lifecycle
 
-#926 venue plan decision ─────> #927 capacity (occupancy display only)
 
 #929 SSE recovery ────────────> #932 single-process (bus half)
 
@@ -166,6 +163,8 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #926 | Completed | 2026-08-30 | #926, PR (this change) | Removed the dead table reservation column, derived non-cancelled occupancy from registrations, and shipped a volunteer read-only floor plan linked from check-in. |
+| #927 | Completed | 2026-08-30 | #927, PR (this change) | Made the table type the single stored soft capacity source, added locked guest-capacity checks across REST/MCP assignment, preserved plan type editing, and added confirmation, audited override, and distinct overfilled styling. |
 | #928 | Completed | 2026-08-30 | #928, PR (this change) | Re-resolved admin/MCP order edits against event products, preserved clamped delivery state, and restricted volunteer edits to validated delivery counts. |
 | #929 | Completed | 2026-08-30 | #929, PR (this change) | Triggered blanket cache recovery on each server `ready` frame, before consuming later stream events, including the first connection for restored tabs. |
 | #930 | Completed | 2026-08-30 | #930, PR (this change) | Applied one shared spreadsheet-formula guard to every backend registration and volunteer CSV cell, aligned it with the frontend rule, and added export regression coverage. |
@@ -192,8 +191,8 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #923 | backend, frontend (completed 2026-08-29) | bug — silent data loss |
 | #924 | backend, frontend (completed 2026-08-30) | gap — core flow incomplete |
 | #925 | frontend, backend | bug — availability |
-| #926 | backend | bug — wrong data, dead column |
-| #927 | backend | bug — missing enforcement |
+| #926 | backend, frontend (completed 2026-08-30) | bug — wrong data, dead column |
+| #927 | backend, frontend, mcp (completed 2026-08-30) | bug — missing enforcement |
 | #928 | backend, mcp (completed 2026-08-30) | bug — broken invariant |
 | #929 | frontend (completed 2026-08-30) | bug — stale state |
 | #930 | backend (completed 2026-08-30) | bug — export safety |
@@ -532,8 +531,8 @@ Recorded so this ground does not get re-covered:
   structurally prevented from being set outside development.
 - **Public event capacity.** `_ensure_public_registration_allowed` takes a
   `SELECT ... FOR UPDATE` row lock before summing guest counts, so concurrent
-  bookings cannot both pass the check. This is the pattern #927 should copy for
-  tables.
+  bookings cannot both pass the check. #927 now applies the same row-lock pattern
+  to tables.
 - **Check-in token handling.** 32-byte `secrets.token_urlsafe` tokens compared
   with `secrets.compare_digest`, sent in the request body rather than the query
   string specifically to keep them out of access logs and `Referer` headers.
@@ -554,14 +553,11 @@ Recorded so this ground does not get re-covered:
 
 ## Open questions for the maintainer
 
-Three findings propose changes that are judgement calls rather than clear fixes:
+Two findings propose changes that are judgement calls rather than clear fixes:
 
 1. **#924** exposes `check_in_token` only from the short-lived, single-use
    email-token-protected guest endpoint so a guest can retrieve their own QR;
    the public registration response continues to omit it.
-2. **#926** asks whether the volunteer floor-plan view should be built or the
-   unconsumed endpoint deleted. Either is defensible; carrying untested,
-   unconsumed surface is not.
-3. **#934** needs a retention schedule decided per table before any code, and
+2. **#934** needs a retention schedule decided per table before any code, and
    raises whether `national_register_number` should be stored outside the window
    in which the insurance export is produced.

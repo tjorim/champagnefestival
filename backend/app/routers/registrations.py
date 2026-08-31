@@ -527,7 +527,7 @@ async def _ensure_public_registration_allowed(
         return
 
     # Re-fetch the event with a row-level lock so concurrent registrations are
-    # serialised and cannot both pass the capacity check (preventing overbooking).
+    # serialised and cannot both pass the capacity check (preventing unconfirmed over-capacity assignments).
     locked_event = (await db.execute(select(Event).where(Event.id == event.id).with_for_update())).scalar_one()
 
     reserved_guest_count = (

@@ -53,9 +53,9 @@ async def test_get_layout_include_tables(db_session):
     await _seed_room(db_session)
     created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
-    db_session.add(Table(id="tbl-1", name="T1", capacity=4, table_type_id="ttype-1", layout_id=created["id"]))
+    db_session.add(Table(id="tbl-1", name="T1", table_type_id="ttype-1", layout_id=created["id"]))
     db_session.add(Area(id="area-1", layout_id=created["id"], label="Zone A"))
     await db_session.commit()
 
@@ -120,9 +120,9 @@ async def test_delete_layout_blocked_while_table_in_use(db_session):
     await _seed_room(db_session)
     created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
-    db_session.add(Table(id="tbl-1", name="T1", capacity=6, table_type_id="ttype-1", layout_id=created["id"]))
+    db_session.add(Table(id="tbl-1", name="T1", table_type_id="ttype-1", layout_id=created["id"]))
     await db_session.commit()
 
     with pytest.raises(ValueError, match="tables"):
@@ -163,7 +163,7 @@ async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
     await _seed_room(db_session)
     source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
 
     # Area covering the top-left of the 25m x 18m room.
@@ -178,11 +178,11 @@ async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
     )
     # Table inside the area (x=10%, y=10% of a 25m x 18m room -> inside the 10m x 10m area).
     table_inside = Table(
-        id="tbl-inside", name="InArea", capacity=4, table_type_id="ttype-1", layout_id=source["id"], x=10.0, y=10.0
+        id="tbl-inside", name="InArea", table_type_id="ttype-1", layout_id=source["id"], x=10.0, y=10.0
     )
     # Table far outside the area (bottom-right corner of the room).
     table_outside = Table(
-        id="tbl-outside", name="Outside", capacity=4, table_type_id="ttype-1", layout_id=source["id"], x=90.0, y=90.0
+        id="tbl-outside", name="Outside", table_type_id="ttype-1", layout_id=source["id"], x=90.0, y=90.0
     )
     db_session.add_all([area, table_inside, table_outside])
     await db_session.commit()
@@ -237,13 +237,12 @@ async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):
     await _seed_room(db_session)
     source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
     db_session.add(
         Table(
             id="tbl-outside",
             name="Outside",
-            capacity=4,
             table_type_id="ttype-1",
             layout_id=source["id"],
             x=90.0,
@@ -274,13 +273,12 @@ async def test_copy_layout_copy_areas_true_without_tables(db_session):
     await _seed_room(db_session)
     source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
 
-    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6))
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
     db_session.add(
         Table(
             id="tbl-1",
             name="T1",
-            capacity=4,
             table_type_id="ttype-1",
             layout_id=source["id"],
             x=90.0,

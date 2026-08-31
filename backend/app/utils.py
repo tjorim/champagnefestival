@@ -156,6 +156,7 @@ def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
         "person_id": r.person_id,
         "person": person_summary_to_dict(person),
         "event_id": r.event_id,
+        "edition_id": event.edition_id,
         "event": event_to_summary_dict(event, include_edition=True),
         "guest_count": r.guest_count,
         "order_items": r.order_items,
@@ -184,6 +185,7 @@ def registration_to_checkin_dict(
         "id": r.id,
         "name": person.name,
         "event_id": r.event_id,
+        "edition_id": event.edition_id,
         "event_title": event.title,
         "event_date": event.date,
         "check_in_token": r.check_in_token,
@@ -289,7 +291,7 @@ def table_type_to_dict(tt: TableType) -> dict:
         "width_m": tt.width_m,
         "length_m": tt.length_m,
         "height_type": tt.height_type,
-        "max_capacity": tt.max_capacity,
+        "capacity": tt.capacity,
         "active": tt.active,
         "created_at": tt.created_at,
         "updated_at": tt.updated_at,
@@ -309,17 +311,17 @@ def layout_to_dict(lay: Layout, date: date | None = None) -> dict:
     }
 
 
-def table_to_dict(t: Table, registration_ids: list[str] | None = None) -> dict:
+def table_to_dict(t: Table, registration_ids: list[str], *, capacity: int | None = None) -> dict:
     return {
         "id": t.id,
         "name": t.name,
-        "capacity": t.capacity,
+        "capacity": t.capacity if capacity is None else capacity,
         "x": t.x,
         "y": t.y,
         "table_type_id": t.table_type_id,
         "rotation": t.rotation,
         "layout_id": t.layout_id,
-        "registration_ids": registration_ids if registration_ids is not None else t.reservation_ids,
+        "registration_ids": registration_ids,
         "created_at": t.created_at,
         "updated_at": t.updated_at,
     }

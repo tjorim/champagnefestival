@@ -21,11 +21,11 @@ async def test_create_get_list_table_type(db_session):
     await _seed_venue(db_session)
 
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
     assert created["name"] == "Standard"
     assert created["venue_id"] == "venue-1"
-    assert created["max_capacity"] == 6
+    assert created["capacity"] == 6
     type_id = created["id"]
 
     fetched = await mcp_table_types.get_table_type(factory, type_id)
@@ -39,7 +39,7 @@ async def test_create_table_type_venue_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
         await mcp_table_types.create_table_type(
-            factory, "admin-1", name="Standard", venue_id="nonexistent", width_m=0.7, length_m=1.8, max_capacity=6
+            factory, "admin-1", name="Standard", venue_id="nonexistent", width_m=0.7, length_m=1.8, capacity=6
         )
 
 
@@ -47,9 +47,9 @@ async def test_create_table_type_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
 
-    with pytest.raises(ValueError, match="max_capacity"):
+    with pytest.raises(ValueError, match="capacity"):
         await mcp_table_types.create_table_type(
-            factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=51
+            factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=51
         )  # le=50
 
 
@@ -59,7 +59,7 @@ async def test_create_table_type_rejects_missing_dimensions(db_session):
     await _seed_venue(db_session)
 
     with pytest.raises(TypeError):
-        await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", venue_id="venue-1", max_capacity=6)  # ty: ignore[missing-argument]
+        await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", venue_id="venue-1", capacity=6)  # ty: ignore[missing-argument]
 
 
 async def test_create_table_type_round_shape_uses_larger_dimension_as_diameter(db_session):
@@ -76,7 +76,7 @@ async def test_create_table_type_round_shape_uses_larger_dimension_as_diameter(d
         shape="round",
         width_m=1.5,
         length_m=3.0,
-        max_capacity=8,
+        capacity=8,
     )
     assert created["length_m"] == created["width_m"] == 3.0
 
@@ -91,11 +91,11 @@ async def test_update_table_type_partial(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
 
-    updated = await mcp_table_types.update_table_type(factory, "admin-1", created["id"], max_capacity=8)
-    assert updated["max_capacity"] == 8
+    updated = await mcp_table_types.update_table_type(factory, "admin-1", created["id"], capacity=8)
+    assert updated["capacity"] == 8
     assert updated["name"] == "Standard"  # untouched fields survive a partial update
 
 
@@ -104,7 +104,7 @@ async def test_update_table_type_venue_reassignment(db_session):
     await _seed_venue(db_session, "venue-1")
     await _seed_venue(db_session, "venue-2")
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
 
     updated = await mcp_table_types.update_table_type(factory, "admin-1", created["id"], venue_id="venue-2")
@@ -116,7 +116,7 @@ async def test_update_table_type_venue_reassignment_blocked_while_table_in_use_e
     await _seed_venue(db_session, "venue-1")
     await _seed_venue(db_session, "venue-2")
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
 
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
@@ -125,7 +125,7 @@ async def test_update_table_type_venue_reassignment_blocked_while_table_in_use_e
     layout = Layout(id="lay-1", edition_id=None, room_id="room-1", day_id=1)
     db_session.add(layout)
     await db_session.flush()
-    table = Table(id="tbl-1", name="T1", capacity=4, table_type_id=created["id"], layout_id="lay-1")
+    table = Table(id="tbl-1", name="T1", table_type_id=created["id"], layout_id="lay-1")
     db_session.add(table)
     await db_session.commit()
 
@@ -137,7 +137,7 @@ async def test_update_table_type_venue_reassignment_not_found(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
 
     with pytest.raises(ValueError, match="not found"):
@@ -148,17 +148,17 @@ async def test_update_table_type_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
 
-    with pytest.raises(ValueError, match="max_capacity"):
-        await mcp_table_types.update_table_type(factory, "admin-1", created["id"], max_capacity=0)  # ge=1
+    with pytest.raises(ValueError, match="capacity"):
+        await mcp_table_types.update_table_type(factory, "admin-1", created["id"], capacity=0)  # ge=1
 
 
 async def test_update_table_type_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_table_types.update_table_type(factory, "admin-1", "nonexistent", max_capacity=8)
+        await mcp_table_types.update_table_type(factory, "admin-1", "nonexistent", capacity=8)
 
 
 async def test_update_table_type_round_shape_renormalises_to_larger_dimension(db_session):
@@ -172,7 +172,7 @@ async def test_update_table_type_round_shape_renormalises_to_larger_dimension(db
         shape="rectangle",
         width_m=1.5,
         length_m=3.0,
-        max_capacity=8,
+        capacity=8,
     )
     assert created["shape"] == "rectangle"
     assert created["width_m"] == 1.5
@@ -196,7 +196,7 @@ async def test_update_table_type_swaps_dimensions_when_width_exceeds_length(db_s
         shape="rectangle",
         width_m=1.0,
         length_m=2.0,
-        max_capacity=8,
+        capacity=8,
     )
     assert created["width_m"] == 1.0
     assert created["length_m"] == 2.0
@@ -210,7 +210,7 @@ async def test_delete_table_type(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
 
     result = await mcp_table_types.delete_table_type(factory, "admin-1", created["id"])
@@ -230,7 +230,7 @@ async def test_delete_table_type_blocked_while_table_in_use(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
     created = await mcp_table_types.create_table_type(
-        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, max_capacity=6
+        factory, "admin-1", name="Standard", venue_id="venue-1", width_m=0.7, length_m=1.8, capacity=6
     )
 
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
@@ -239,7 +239,7 @@ async def test_delete_table_type_blocked_while_table_in_use(db_session):
     layout = Layout(id="lay-1", edition_id=None, room_id="room-1", day_id=1)
     db_session.add(layout)
     await db_session.flush()
-    table = Table(id="tbl-1", name="T1", capacity=4, table_type_id=created["id"], layout_id="lay-1")
+    table = Table(id="tbl-1", name="T1", table_type_id=created["id"], layout_id="lay-1")
     db_session.add(table)
     await db_session.commit()
 

@@ -59,6 +59,7 @@ const Schedule = lazy(() => import("./components/Schedule"));
 const OtherEvents = lazy(() => import("./components/OtherEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
+const VenuePlanPage = lazy(() => import("./components/VenuePlanPage"));
 const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
@@ -161,6 +162,17 @@ function CheckInRoute() {
         <AppSuspense errorFallbackText={m.admin_error_load_checkin()}>
           <CheckInPage />
         </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+function VenuePlanRoute() {
+  return (
+    <div className="App standalone-app">
+      <StandaloneNavBar iconClass="bi bi-map" title={m.venue_plan_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.venue_plan_error()}><VenuePlanPage /></AppSuspense>
       </main>
     </div>
   );
@@ -683,6 +695,7 @@ const router = createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
+  VenuePlanRoute,
 });
 
 const oidcConfig = createOidcConfig({

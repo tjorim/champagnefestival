@@ -57,7 +57,7 @@ async def _seed_room(db_session, venue_id: str = "venue-1", room_id: str = "room
 
 
 async def _seed_table_type(db_session, venue_id: str = "venue-1", type_id: str = "ttype-1") -> TableType:
-    tt = TableType(id=type_id, name="Standard", venue_id=venue_id, width_m=0.7, length_m=1.8, max_capacity=6)
+    tt = TableType(id=type_id, name="Standard", venue_id=venue_id, width_m=0.7, length_m=1.8, capacity=6)
     db_session.add(tt)
     await db_session.commit()
     return tt
@@ -193,8 +193,8 @@ async def test_bulk_create_table_types_happy_path(db_session):
     await _seed_venue(db_session)
 
     items = [
-        TableTypeCreate(venue_id="venue-1", name="Type A", width_m=0.7, length_m=1.8, max_capacity=6),
-        TableTypeCreate(venue_id="venue-1", name="Type B", width_m=0.7, length_m=1.8, max_capacity=8),
+        TableTypeCreate(venue_id="venue-1", name="Type A", width_m=0.7, length_m=1.8, capacity=6),
+        TableTypeCreate(venue_id="venue-1", name="Type B", width_m=0.7, length_m=1.8, capacity=8),
     ]
     result = await mcp_table_types.bulk_create_table_types(factory, "admin-1", items=items)
     assert [tt["name"] for tt in result["items"]] == ["Type A", "Type B"]
@@ -208,8 +208,8 @@ async def test_bulk_create_table_types_rolls_back_on_partial_failure(db_session)
     await _seed_venue(db_session)
 
     items = [
-        TableTypeCreate(venue_id="venue-1", name="Type A", width_m=0.7, length_m=1.8, max_capacity=6),
-        TableTypeCreate(venue_id="nonexistent", name="Type B", width_m=0.7, length_m=1.8, max_capacity=6),
+        TableTypeCreate(venue_id="venue-1", name="Type A", width_m=0.7, length_m=1.8, capacity=6),
+        TableTypeCreate(venue_id="nonexistent", name="Type B", width_m=0.7, length_m=1.8, capacity=6),
     ]
     with pytest.raises(MCPToolError, match="not found"):
         await mcp_table_types.bulk_create_table_types(factory, "admin-1", items=items)
@@ -221,7 +221,7 @@ async def test_bulk_create_table_types_rolls_back_on_partial_failure(db_session)
 async def test_bulk_create_table_types_idempotency_key_replays_result(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_venue(db_session)
-    items = [TableTypeCreate(venue_id="venue-1", name="Type A", width_m=0.7, length_m=1.8, max_capacity=6)]
+    items = [TableTypeCreate(venue_id="venue-1", name="Type A", width_m=0.7, length_m=1.8, capacity=6)]
 
     first = await mcp_table_types.bulk_create_table_types(factory, "admin-1", items=items, idempotency_key="tt-key")
     second = await mcp_table_types.bulk_create_table_types(factory, "admin-1", items=items, idempotency_key="tt-key")
@@ -244,8 +244,8 @@ async def test_bulk_create_tables_happy_path(db_session):
     await _seed_layout(db_session)
 
     items = [
-        TableCreate(name="Table A", capacity=4, table_type_id="ttype-1", layout_id="lay-1"),
-        TableCreate(name="Table B", capacity=4, table_type_id="ttype-1", layout_id="lay-1"),
+        TableCreate(name="Table A", table_type_id="ttype-1", layout_id="lay-1"),
+        TableCreate(name="Table B", table_type_id="ttype-1", layout_id="lay-1"),
     ]
     result = await mcp_tables.bulk_create_tables(factory, "admin-1", items=items)
     assert [t["name"] for t in result["items"]] == ["Table A", "Table B"]
@@ -263,8 +263,8 @@ async def test_bulk_create_tables_rolls_back_on_partial_failure(db_session):
     await _seed_layout(db_session)
 
     items = [
-        TableCreate(name="Table A", capacity=4, table_type_id="ttype-1", layout_id="lay-1"),
-        TableCreate(name="Table B", capacity=4, table_type_id="ttype-1", layout_id="nonexistent"),
+        TableCreate(name="Table A", table_type_id="ttype-1", layout_id="lay-1"),
+        TableCreate(name="Table B", table_type_id="ttype-1", layout_id="nonexistent"),
     ]
     with pytest.raises(MCPToolError, match="not found"):
         await mcp_tables.bulk_create_tables(factory, "admin-1", items=items)
@@ -279,7 +279,7 @@ async def test_bulk_create_tables_idempotency_key_replays_result(db_session):
     await _seed_room(db_session)
     await _seed_table_type(db_session)
     await _seed_layout(db_session)
-    items = [TableCreate(name="Table A", capacity=4, table_type_id="ttype-1", layout_id="lay-1")]
+    items = [TableCreate(name="Table A", table_type_id="ttype-1", layout_id="lay-1")]
 
     first = await mcp_tables.bulk_create_tables(factory, "admin-1", items=items, idempotency_key="table-key")
     second = await mcp_tables.bulk_create_tables(factory, "admin-1", items=items, idempotency_key="table-key")

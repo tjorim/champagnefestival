@@ -35,7 +35,6 @@ export function useVenueMutations({
   const createTableMutation = useMutation({
     mutationFn: ({
       name,
-      capacity,
       layoutId,
       tableTypeId,
       x,
@@ -43,7 +42,6 @@ export function useVenueMutations({
       rotation,
     }: {
       name: string;
-      capacity: number;
       layoutId: string;
       tableTypeId: string;
       x?: number;
@@ -57,7 +55,6 @@ export function useVenueMutations({
           headers: authHeaders(),
           body: JSON.stringify({
             name,
-            capacity,
             x: x ?? 10,
             y: y ?? 10,
             rotation: rotation ?? 0,
@@ -622,7 +619,7 @@ export function useVenueMutations({
             width_m: data.widthM,
             length_m: data.lengthM,
             height_type: data.heightType,
-            max_capacity: data.maxCapacity,
+            capacity: data.capacity,
           }),
         },
         m.admin_error_add_table_type(),
@@ -647,7 +644,7 @@ export function useVenueMutations({
             ...(data.widthM !== undefined && { width_m: data.widthM }),
             ...(data.lengthM !== undefined && { length_m: data.lengthM }),
             ...(data.heightType !== undefined && { height_type: data.heightType }),
-            ...(data.maxCapacity !== undefined && { max_capacity: data.maxCapacity }),
+            ...(data.capacity !== undefined && { capacity: data.capacity }),
             ...(data.active !== undefined && { active: data.active }),
           }),
         },

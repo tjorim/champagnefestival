@@ -37,7 +37,7 @@ async def _create_table(client, *, name: str) -> str:
     table_type_id = r.json()["id"]
     r = await client.post(
         "/api/tables",
-        json={"name": name, "capacity": 6, "table_type_id": table_type_id, "layout_id": layout_id},
+        json={"name": name, "table_type_id": table_type_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -250,6 +250,12 @@ async def test_volunteer_delivery_update_cannot_change_order_details(client):
         },
     )
 
+    assert response.status_code == 422
+
+    response = await client.put(
+        f"/api/volunteer/registrations/{registration_id}",
+        json={"order_items": [{"product_id": original["product_id"], "delivered_quantity": 1}]},
+    )
     assert response.status_code == 200
     updated = response.json()["order_items"][0]
     assert updated["delivered_quantity"] == 1

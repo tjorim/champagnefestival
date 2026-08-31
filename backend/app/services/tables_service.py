@@ -48,7 +48,8 @@ async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, reque
     # Lock the referenced TableType row so a concurrent delete_table_type (which
     # acquires with_for_update on the same row) serializes correctly.
     tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id).with_for_update())
-    if tt.scalar_one_or_none() is None:
+    table_type = tt.scalar_one_or_none()
+    if table_type is None:
         raise NotFoundError(f"TableType '{body.table_type_id}' not found.")
     lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
     if lay.scalar_one_or_none() is None:
@@ -57,14 +58,12 @@ async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, reque
     t = Table(
         id=make_id("tbl"),
         name=body.name,
-        capacity=body.capacity,
         x=body.x,
         y=body.y,
         table_type_id=body.table_type_id,
         rotation=body.rotation,
         layout_id=body.layout_id,
     )
-    t.reservation_ids = []
     db.add(t)
     await write_audit_entry(
         db,
@@ -111,9 +110,10 @@ async def bulk_create_tables(
     # race this insert — see create_table. Ordered by id so two overlapping
     # batches always acquire their locks in the same sequence and can't deadlock.
     locked_tt = await db.execute(
-        select(TableType.id).where(TableType.id.in_(table_type_ids)).order_by(TableType.id).with_for_update()
+        select(TableType).where(TableType.id.in_(table_type_ids)).order_by(TableType.id).with_for_update()
     )
-    missing_tt = table_type_ids - set(locked_tt.scalars().all())
+    table_types = {tt.id: tt for tt in locked_tt.scalars().all()}
+    missing_tt = table_type_ids - set(table_types)
     if missing_tt:
         raise NotFoundError(f"TableType(s) not found: {sorted(missing_tt)}.")
 
@@ -130,14 +130,12 @@ async def bulk_create_tables(
         t = Table(
             id=make_id("tbl"),
             name=item.name,
-            capacity=item.capacity,
             x=item.x,
             y=item.y,
             table_type_id=item.table_type_id,
             rotation=item.rotation,
             layout_id=item.layout_id,
         )
-        t.reservation_ids = []
         db.add(t)
         rows.append(t)
     await db.flush()
@@ -154,7 +152,7 @@ async def bulk_create_tables(
         )
 
     # New tables have no reservations yet.
-    response = {"items": [table_to_dict(t, []) for t in rows]}
+    response = {"items": [table_to_dict(t, [], capacity=table_types[t.table_type_id].capacity) for t in rows]}
     if idempotency_key:
         record_idempotency_key(
             db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
@@ -190,7 +188,7 @@ async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[di
 
 
 async def get_table(db: AsyncSession, table_id: str) -> dict:
-    t = await db.get(Table, table_id)
+    t = (await db.execute(select(Table).where(Table.id == table_id).with_for_update())).scalar_one_or_none()
     if t is None:
         raise NotFoundError(f"Table '{table_id}' not found.")
     res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
@@ -217,9 +215,12 @@ async def update_table(
     if body.name is not None:
         t.name = body.name
         fields_changed.append("name")
-    if body.capacity is not None:
-        t.capacity = body.capacity
-        fields_changed.append("capacity")
+    effective_type_id = body.table_type_id if body.table_type_id is not None else t.table_type_id
+    tt = (
+        await db.execute(select(TableType).where(TableType.id == effective_type_id).with_for_update())
+    ).scalar_one_or_none()
+    if tt is None:
+        raise NotFoundError(f"TableType '{effective_type_id}' not found.")
     if body.x is not None:
         t.x = body.x
         fields_changed.append("x")
@@ -227,9 +228,6 @@ async def update_table(
         t.y = body.y
         fields_changed.append("y")
     if body.table_type_id is not None:
-        tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id))
-        if tt.scalar_one_or_none() is None:
-            raise NotFoundError(f"TableType '{body.table_type_id}' not found.")
         t.table_type_id = body.table_type_id
         fields_changed.append("table_type_id")
     if body.rotation is not None:

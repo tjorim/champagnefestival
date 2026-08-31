@@ -336,7 +336,7 @@
   "admin_edit_table_type": "Edit table type",
   "admin_table_type_name_label": "Table type name",
   "admin_table_type_name_placeholder": "e.g. Round dinner table",
-  "admin_table_type_max_capacity": "Max capacity",
+  "admin_table_type_max_capacity": "Intended capacity",
   "admin_table_type_select": "Select table type",
   "admin_table_type_name_required": "Name is required",
   "admin_table_type_venue_required": "Venue is required",
@@ -423,7 +423,7 @@
   "admin_layout_table_type_label": "Table type",
   "admin_layout_rotate_cw": "Rotate 15° clockwise",
   "admin_layout_rotate_ccw": "Rotate 15° counter-clockwise",
-  "admin_layout_capacity_max": "max",
+  "admin_layout_capacity_max": "intended",
   "admin_item_website_url": "Website URL",
   "admin_item_type": "Type",
   "admin_item_vendor": "Vendor",
@@ -765,5 +765,12 @@
   "my_account_delete_button": "Delete my account",
   "my_account_deleting": "Deleting…",
   "my_account_delete_confirm": "Delete your account? This can't be undone. Your registrations and orders are kept, but you'll no longer be able to sign in to manage them with this account.",
-  "my_account_delete_error": "Could not delete your account. Please try again."
+  "my_account_delete_error": "Could not delete your account. Please try again.",
+  "venue_plan_title": "Floor plan",
+  "venue_plan_description": "Read-only event floor plan. Occupied tables are shown in green; the selected table is highlighted.",
+  "venue_plan_show_table": "Show table on floor plan",
+  "venue_plan_missing_edition": "Open the floor plan from a registration to select an edition.",
+  "venue_plan_empty": "No floor plan is available for this edition.",
+  "venue_plan_error": "Could not load the floor plan.",
+  "admin_table_over_capacity_confirm": "This assignment exceeds the table’s intended capacity. Add the party anyway?"
 }

@@ -365,7 +365,7 @@ describe("apiTableTypeToTableType", () => {
     width_m: 1.2,
     length_m: 1.2,
     height_type: "high",
-    max_capacity: 6,
+    capacity: 6,
     active: false,
   };
 
@@ -378,7 +378,7 @@ describe("apiTableTypeToTableType", () => {
       widthM: 1.2,
       lengthM: 1.2,
       heightType: "high",
-      maxCapacity: 6,
+      capacity: 6,
       active: false,
     });
   });
@@ -415,12 +415,12 @@ describe("apiTableTypeToTableType", () => {
     expect(apiTableTypeToTableType({ ...minimal, height_type: "high" }).heightType).toBe("high");
   });
 
-  it("defaults maxCapacity to 4 when absent", () => {
-    expect(apiTableTypeToTableType(minimal).maxCapacity).toBe(4);
+  it("defaults capacity to 4 when absent", () => {
+    expect(apiTableTypeToTableType(minimal).capacity).toBe(4);
   });
 
-  it("maps max_capacity to maxCapacity", () => {
-    expect(apiTableTypeToTableType({ ...minimal, max_capacity: 8 }).maxCapacity).toBe(8);
+  it("maps capacity to capacity", () => {
+    expect(apiTableTypeToTableType({ ...minimal, capacity: 8 }).capacity).toBe(8);
   });
 
   it("defaults active to true when absent", () => {
