@@ -37,7 +37,7 @@ async def _create_table(client, *, name: str) -> str:
     table_type_id = r.json()["id"]
     r = await client.post(
         "/api/tables",
-        json={"name": name, "capacity": 6, "table_type_id": table_type_id, "layout_id": layout_id},
+        json={"name": name, "table_type_id": table_type_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201

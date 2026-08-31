@@ -43,7 +43,7 @@ function makeTableType(overrides: Partial<TableType> = {}): TableType {
     widthM: 1.5,
     lengthM: 1.5,
     heightType: "low",
-    maxCapacity: 8,
+    capacity: 8,
     active: true,
     ...overrides,
   };
@@ -233,9 +233,9 @@ describe("LayoutEditor", () => {
     expect(screen.queryByText("Table A")).not.toBeInTheDocument();
   });
 
-  it("add-table modal: Save disabled until valid, then calls onAddTable with expected args", () => {
+  it("add-table modal derives capacity from the selected type", () => {
     const fixture = realisticFixture();
-    fixture.tableTypes = [makeTableType({ id: "tt-1", name: "Round 8", maxCapacity: 8 })];
+    fixture.tableTypes = [makeTableType({ id: "tt-1", name: "Round 8", capacity: 8 })];
     const { callbacks } = renderLayoutEditor(fixture);
 
     fireEvent.click(screen.getByRole("button", { name: "admin_add_table" }));
@@ -252,15 +252,11 @@ describe("LayoutEditor", () => {
     fireEvent.change(within(dialog).getByLabelText("admin_table_type_select"), {
       target: { value: "tt-1" },
     });
-    fireEvent.change(within(dialog).getByLabelText("admin_table_capacity"), {
-      target: { value: "6" },
-    });
-
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.click(saveButton);
 
-    expect(callbacks.onAddTable).toHaveBeenCalledWith("New Table", 6, "layout-1", "tt-1");
+    expect(callbacks.onAddTable).toHaveBeenCalledWith("New Table", "layout-1", "tt-1");
   });
 
   it("add-table modal: filters the table type select to the active room's venue", () => {

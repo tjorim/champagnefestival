@@ -81,7 +81,7 @@ const activeTableType: TableType = {
   widthM: 0.7,
   lengthM: 1.8,
   heightType: "low",
-  maxCapacity: 4,
+  capacity: 4,
   active: true,
 };
 
@@ -93,7 +93,7 @@ const archivedTableType: TableType = {
   widthM: 0.9,
   lengthM: 0.9,
   heightType: "high",
-  maxCapacity: 2,
+  capacity: 2,
   active: false,
 };
 
@@ -529,7 +529,7 @@ describe("VenueManagement", () => {
       widthM: 0.8,
       lengthM: 2,
       heightType: "low",
-      maxCapacity: 4,
+      capacity: 4,
       active: true,
     });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -581,7 +581,7 @@ describe("VenueManagement", () => {
       widthM: 0.7,
       lengthM: 1.8,
       heightType: "low",
-      maxCapacity: 4,
+      capacity: 4,
     });
     const callArgs = vi.mocked(onUpdateTableType).mock.calls[0]?.[1] as Record<string, unknown>;
     expect(callArgs).not.toHaveProperty("active");

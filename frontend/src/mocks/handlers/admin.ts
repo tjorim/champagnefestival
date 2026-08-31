@@ -986,7 +986,7 @@ export const adminHandlers = [
       width_m: Number(body.width_m ?? 1),
       length_m: Number(body.length_m ?? 1),
       height_type: String(body.height_type ?? "high"),
-      max_capacity: Number(body.max_capacity ?? 4),
+      capacity: Number(body.capacity ?? 4),
       active: body.active !== false,
       created_at: now(),
       updated_at: now(),

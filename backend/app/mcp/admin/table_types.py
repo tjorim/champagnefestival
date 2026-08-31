@@ -24,7 +24,7 @@ async def create_table_type(
     length_m: float,
     shape: Literal["rectangle", "round"] = "rectangle",
     height_type: Literal["low", "high"] = "low",
-    max_capacity: int,
+    capacity: int,
     active: bool = True,
 ) -> dict:
     body = validate_with_schema(
@@ -35,7 +35,7 @@ async def create_table_type(
         width_m=width_m,
         length_m=length_m,
         height_type=height_type,
-        max_capacity=max_capacity,
+        capacity=capacity,
         active=active,
     )
     async with session_factory() as db:
@@ -86,7 +86,7 @@ async def update_table_type(
     width_m: float | None = None,
     length_m: float | None = None,
     height_type: Literal["low", "high"] | None = None,
-    max_capacity: int | None = None,
+    capacity: int | None = None,
     active: bool | None = None,
 ) -> dict:
     provided = {
@@ -98,7 +98,7 @@ async def update_table_type(
             "width_m": width_m,
             "length_m": length_m,
             "height_type": height_type,
-            "max_capacity": max_capacity,
+            "capacity": capacity,
             "active": active,
         }.items()
         if v is not None

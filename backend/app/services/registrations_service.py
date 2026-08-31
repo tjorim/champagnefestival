@@ -25,7 +25,7 @@ from datetime import UTC, datetime
 from typing import cast
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -105,6 +105,51 @@ async def assert_table_matches_edition(db: AsyncSession, table_id: str, edition_
         )
 
 
+async def assert_table_has_room(
+    db: AsyncSession,
+    *,
+    table_id: str,
+    edition_id: str | None,
+    registration_id: str,
+    guest_count: int,
+) -> None:
+    """Lock a table and reject an assignment that exceeds its guest capacity."""
+    row = (
+        await db.execute(
+            select(Table, Layout.edition_id)
+            .join(Layout, Table.layout_id == Layout.id)
+            .where(Table.id == table_id)
+            .with_for_update()
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Table '{table_id}' not found.")
+    table, table_edition_id = row
+    if table_edition_id is not None and edition_id is not None and table_edition_id != edition_id:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Table '{table_id}' belongs to edition '{table_edition_id}', "
+                f"but this registration is for edition '{edition_id}'."
+            ),
+        )
+    occupied = (
+        await db.execute(
+            select(func.coalesce(func.sum(Registration.guest_count), 0)).where(
+                Registration.table_id == table_id,
+                Registration.id != registration_id,
+                Registration.status != "cancelled",
+            )
+        )
+    ).scalar_one()
+    if occupied + guest_count > table.capacity:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Table '{table.name}' has {table.capacity - occupied} seat(s) remaining; "
+                f"this party requires {guest_count}."
+            ),
+        )
 def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_count: int) -> list[dict]:
     """Resolve client-supplied product_id/quantity pairs against the event's real,
     active products, snapshotting name/price/category server-side (see Product's
@@ -309,12 +354,26 @@ async def apply_registration_update(
         registration.amount_due = body.amount_due
 
     table_id_targeted = clear_table or "table_id" in body.model_fields_set
-    if clear_table:
-        registration.table_id = None
-    elif "table_id" in body.model_fields_set:
-        if body.table_id is not None:
-            await assert_table_matches_edition(db, body.table_id, edition_id)
-        registration.table_id = body.table_id
+    target_table_id = (
+        None if clear_table else body.table_id if "table_id" in body.model_fields_set else registration.table_id
+    )
+
+    capacity_override_used = False
+    capacity_may_change = table_id_targeted or body.status is not None
+    if target_table_id is not None and registration.status != "cancelled" and capacity_may_change:
+        if body.confirm_over_capacity:
+            await assert_table_matches_edition(db, target_table_id, edition_id)
+            capacity_override_used = True
+        else:
+            await assert_table_has_room(
+                db,
+                table_id=target_table_id,
+                edition_id=edition_id,
+                registration_id=registration.id,
+                guest_count=registration.guest_count,
+            )
+    if table_id_targeted:
+        registration.table_id = target_table_id
 
     if body.notes is not None:
         registration.notes = body.notes
@@ -354,6 +413,14 @@ async def apply_registration_update(
             actor=actor,
             action=action,
             details={"table_id": registration.table_id, "previous_table_id": pre_table_id},
+            **audit_base,
+        )
+    if capacity_override_used:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="table_capacity_exceeded_confirmed",
+            details={"table_id": registration.table_id, "guest_count": registration.guest_count},
             **audit_base,
         )
     if body.order_items is not None and registration.order_items != pre_order_items:

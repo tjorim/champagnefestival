@@ -260,13 +260,13 @@ async def test_update_registration_table_assignment_and_clear(db_session):
     )
 
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
-    ttype = TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6)
+    ttype = TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6)
     db_session.add_all([room, ttype])
     await db_session.flush()
     layout = Layout(id="lay-1", edition_id="edition-1", room_id="room-1", day_id=1)
     db_session.add(layout)
     await db_session.flush()
-    table = Table(id="tbl-1", name="Table 1", capacity=6, table_type_id="ttype-1", layout_id="lay-1")
+    table = Table(id="tbl-1", name="Table 1", table_type_id="ttype-1", layout_id="lay-1")
     db_session.add(table)
     await db_session.commit()
 
@@ -275,6 +275,40 @@ async def test_update_registration_table_assignment_and_clear(db_session):
 
     updated = await mcp_registrations.update_registration(factory, "admin-1", created["id"], clear_table=True)
     assert updated["table_id"] is None
+
+
+async def test_table_assignment_enforces_capacity_and_allows_audited_override(db_session):
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    second_person = Person(id="per-2", name="Marie Dupont", email="marie@example.com", phone="")
+    db_session.add(second_person)
+    await db_session.commit()
+    first = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=person.id, event_id=event.id, guest_count=2
+    )
+    second = await mcp_registrations.create_registration(
+        factory, "admin-1", person_id=second_person.id, event_id=event.id, guest_count=1
+    )
+
+    room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
+    ttype = TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=2)
+    db_session.add_all([room, ttype])
+    await db_session.flush()
+    db_session.add(Layout(id="lay-1", edition_id="edition-1", room_id="room-1", day_id=1))
+    await db_session.flush()
+    db_session.add(Table(id="tbl-1", name="Table 1", table_type_id="ttype-1", layout_id="lay-1"))
+    await db_session.commit()
+
+    await mcp_registrations.update_registration(factory, "admin-1", first["id"], table_id="tbl-1")
+    with pytest.raises(ValueError, match="seat.*remaining"):
+        await mcp_registrations.update_registration(factory, "admin-1", second["id"], table_id="tbl-1")
+
+    updated = await mcp_registrations.update_registration(
+        factory, "admin-1", second["id"], table_id="tbl-1", confirm_over_capacity=True
+    )
+    assert updated["table_id"] == "tbl-1"
+    audit = await mcp_audit.list_audit_entries(factory, action="table_capacity_exceeded_confirmed")
+    assert len(audit["entries"]) == 1
 
 
 async def test_update_registration_rejects_table_from_another_edition(db_session):
@@ -287,7 +321,7 @@ async def test_update_registration_rejects_table_from_another_edition(db_session
     )
 
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
-    ttype = TableType(id="ttype-1", name="Standard", venue_id="venue-1", max_capacity=6)
+    ttype = TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6)
     db_session.add_all([room, ttype])
     await db_session.flush()
     # Inactive: `edition-1` from `_seed_event` is already the active festival edition,
@@ -299,7 +333,7 @@ async def test_update_registration_rejects_table_from_another_edition(db_session
     layout = Layout(id="lay-other", edition_id="edition-2", room_id="room-1", day_id=1)
     db_session.add(layout)
     await db_session.flush()
-    table = Table(id="tbl-other", name="Table 1", capacity=6, table_type_id="ttype-1", layout_id="lay-other")
+    table = Table(id="tbl-other", name="Table 1", table_type_id="ttype-1", layout_id="lay-other")
     db_session.add(table)
     await db_session.commit()
 

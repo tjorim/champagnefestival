@@ -369,13 +369,11 @@ async def copy_layout(
             Table(
                 id=make_id("tbl"),
                 name=table.name,
-                capacity=table.capacity,
                 x=table.x,
                 y=table.y,
                 table_type_id=table.table_type_id,
                 rotation=table.rotation,
                 layout_id=cloned.id,
-                reservation_ids=[],
             )
         )
 

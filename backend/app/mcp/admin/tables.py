@@ -19,7 +19,6 @@ async def create_table(
     actor: str,
     *,
     name: str,
-    capacity: int,
     table_type_id: str,
     layout_id: str,
     x: float = 50.0,
@@ -29,7 +28,6 @@ async def create_table(
     body = validate_with_schema(
         TableCreate,
         name=name,
-        capacity=capacity,
         x=x,
         y=y,
         table_type_id=table_type_id,
@@ -79,7 +77,6 @@ async def update_table(
     table_id: str,
     *,
     name: str | None = None,
-    capacity: int | None = None,
     x: float | None = None,
     y: float | None = None,
     table_type_id: str | None = None,
@@ -90,7 +87,6 @@ async def update_table(
         k: v
         for k, v in {
             "name": name,
-            "capacity": capacity,
             "x": x,
             "y": y,
             "table_type_id": table_type_id,

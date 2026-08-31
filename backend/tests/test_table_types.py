@@ -32,9 +32,9 @@ async def test_table_type_crud(client):
     assert r.status_code == 200
     assert r.json()["name"] == "Standard"
 
-    r = await client.put(f"/api/table-types/{type_id}", json={"max_capacity": 8}, headers=ADMIN_HEADERS)
+    r = await client.put(f"/api/table-types/{type_id}", json={"capacity": 8}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert r.json()["max_capacity"] == 8
+    assert r.json()["capacity"] == 8
     assert r.json()["name"] == "Standard"  # untouched fields survive a partial update
 
     r = await client.delete(f"/api/table-types/{type_id}", headers=ADMIN_HEADERS)
@@ -58,7 +58,7 @@ async def test_table_type_get_not_found(client):
 
 @pytest.mark.anyio
 async def test_table_type_update_not_found(client):
-    r = await client.put("/api/table-types/nonexistent", json={"max_capacity": 8}, headers=ADMIN_HEADERS)
+    r = await client.put("/api/table-types/nonexistent", json={"capacity": 8}, headers=ADMIN_HEADERS)
     assert r.status_code == 404
 
 
@@ -101,7 +101,7 @@ async def test_table_type_venue_reassignment_blocked_while_table_in_use_elsewher
     layout_id = r.json()["id"]
     r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "x": 0.0, "y": 0.0, "table_type_id": type_id, "layout_id": layout_id},
+        json={"name": "T1", "x": 0.0, "y": 0.0, "table_type_id": type_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -132,7 +132,7 @@ async def test_table_type_round_shape_uses_larger_dimension_as_diameter(client):
             "shape": "round",
             "width_m": 1.5,
             "length_m": 3.0,
-            "max_capacity": 8,
+            "capacity": 8,
         },
         headers=ADMIN_HEADERS,
     )
@@ -152,7 +152,7 @@ async def test_table_type_delete_blocked_while_table_in_use(client):
     layout_id = r.json()["id"]
     r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "x": 0.0, "y": 0.0, "table_type_id": type_id, "layout_id": layout_id},
+        json={"name": "T1", "x": 0.0, "y": 0.0, "table_type_id": type_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201

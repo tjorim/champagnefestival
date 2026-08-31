@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { useLocation, useSearch } from "@tanstack/react-router";
+import { Link, useLocation, useSearch } from "@tanstack/react-router";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -107,6 +107,16 @@ function CheckInCard({
             </Alert>
           )}
         </div>
+        {canManageEntranceActions && registration.editionId && registration.tableId && (
+          <Link
+            to="/venue-plan"
+            search={{ edition: registration.editionId, table: registration.tableId }}
+            className="btn btn-outline-warning w-100 mb-3"
+          >
+            <i className="bi bi-map me-2" aria-hidden="true" />
+            {m.venue_plan_show_table()}
+          </Link>
+        )}
 
         <div role="alert" aria-live="assertive">
           {isCancelled && (

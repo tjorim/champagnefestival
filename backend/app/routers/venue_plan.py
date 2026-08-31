@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import require_volunteer
 from app.database import get_db
-from app.models import Edition, Layout
+from app.models import Edition, Layout, Registration
 from app.schemas import VenuePlanAreaOut, VenuePlanLayoutOut, VenuePlanOut, VenuePlanRoomOut, VenuePlanTableOut
 
 router = APIRouter(
@@ -55,6 +55,19 @@ async def get_venue_plan(
     if not layouts:
         return VenuePlanOut(edition_id=edition_id, layouts=[])
 
+    table_ids = [table.id for layout in layouts for table in layout.tables]
+    table_registration_ids: dict[str, list[str]] = {}
+    occupied_seats: dict[str, int] = {}
+    if table_ids:
+        registrations = await db.execute(
+            select(Registration.id, Registration.table_id, Registration.guest_count).where(
+                Registration.table_id.in_(table_ids), Registration.status != "cancelled"
+            )
+        )
+        for registration_id, table_id, guest_count in registrations.all():
+            table_registration_ids.setdefault(table_id, []).append(registration_id)
+            occupied_seats[table_id] = occupied_seats.get(table_id, 0) + guest_count
+
     payload_layouts = []
     for lay in layouts:
         layout_date: date | None = None
@@ -83,7 +96,8 @@ async def get_venue_plan(
                 y=t.y,
                 rotation=t.rotation,
                 table_type_id=t.table_type_id,
-                registration_ids=t.reservation_ids,
+                registration_ids=table_registration_ids.get(t.id, []),
+                occupied_seats=occupied_seats.get(t.id, 0),
             )
             for t in lay.tables
         ]

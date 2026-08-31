@@ -165,7 +165,7 @@ async def test_table_assignment_writes_audit_entry(client, db_session):
     assert tt_r.status_code == 201
     table_r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
+        json={"name": "T1", "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
         headers=ADMIN_HEADERS,
     )
     assert table_r.status_code == 201
@@ -229,7 +229,7 @@ async def test_create_table_writes_audit_entry(client, db_session):
 
     r = await client.post(
         "/api/tables",
-        json={"name": "AuditTable", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
+        json={"name": "AuditTable", "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -251,7 +251,7 @@ async def test_update_table_writes_audit_entry(client, db_session):
     )
     table_r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
+        json={"name": "T1", "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
         headers=ADMIN_HEADERS,
     )
     table_id = table_r.json()["id"]
@@ -275,7 +275,7 @@ async def test_delete_table_writes_audit_entry(client, db_session):
     )
     table_r = await client.post(
         "/api/tables",
-        json={"name": "T-del", "capacity": 4, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
+        json={"name": "T-del", "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
         headers=ADMIN_HEADERS,
     )
     table_id = table_r.json()["id"]
@@ -312,7 +312,7 @@ async def test_table_type_dimension_change_records_blast_radius_in_audit_entry(c
     for name in ("T1", "T2"):
         table_r = await client.post(
             "/api/tables",
-            json={"name": name, "capacity": 4, "layout_id": layout_id, "table_type_id": type_id},
+            json={"name": name, "layout_id": layout_id, "table_type_id": type_id},
             headers=ADMIN_HEADERS,
         )
         assert table_r.status_code == 201
@@ -340,7 +340,7 @@ async def test_table_type_shape_only_change_records_blast_radius_in_audit_entry(
     type_id = tt_r.json()["id"]
     table_r = await client.post(
         "/api/tables",
-        json={"name": "T1", "capacity": 4, "layout_id": layout_id, "table_type_id": type_id},
+        json={"name": "T1", "layout_id": layout_id, "table_type_id": type_id},
         headers=ADMIN_HEADERS,
     )
     assert table_r.status_code == 201
@@ -357,7 +357,7 @@ async def test_table_type_shape_only_change_records_blast_radius_in_audit_entry(
 
 @pytest.mark.anyio
 async def test_table_type_non_dimension_update_omits_blast_radius_from_audit_entry(client, db_session):
-    """A max_capacity-only edit doesn't retroactively reshape anything (#858's 'not
+    """A capacity-only edit doesn't retroactively reshape anything (#858's 'not
     gaps, checked' note), so the audit entry shouldn't claim a blast radius for it."""
     venue_id = await _create_venue(client)
     tt_r = await client.post(
@@ -365,7 +365,7 @@ async def test_table_type_non_dimension_update_omits_blast_radius_from_audit_ent
     )
     type_id = tt_r.json()["id"]
 
-    r = await client.put(f"/api/table-types/{type_id}", json={"max_capacity": 8}, headers=ADMIN_HEADERS)
+    r = await client.put(f"/api/table-types/{type_id}", json={"capacity": 8}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
 
     entries = await _all_audit_entries(db_session)
@@ -390,7 +390,7 @@ async def test_audit_entry_includes_request_id(client, db_session):
     )
     await client.post(
         "/api/tables",
-        json={"name": "T-req", "capacity": 2, "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
+        json={"name": "T-req", "layout_id": layout_id, "table_type_id": tt_r.json()["id"]},
         headers=ADMIN_HEADERS,
     )
 

@@ -336,7 +336,7 @@
   "admin_edit_table_type": "Modifier le type de table",
   "admin_table_type_name_label": "Nom du type de table",
   "admin_table_type_name_placeholder": "ex. Table ronde à dîner",
-  "admin_table_type_max_capacity": "Capacité maximale",
+  "admin_table_type_max_capacity": "Capacité prévue",
   "admin_table_type_select": "Choisir un type de table",
   "admin_table_type_name_required": "Le nom est obligatoire",
   "admin_table_type_venue_required": "Le lieu est obligatoire",
@@ -423,7 +423,7 @@
   "admin_layout_table_type_label": "Type de table",
   "admin_layout_rotate_cw": "Tourner 15° dans le sens horaire",
   "admin_layout_rotate_ccw": "Tourner 15° dans le sens antihoraire",
-  "admin_layout_capacity_max": "max",
+  "admin_layout_capacity_max": "prévue",
   "admin_item_website_url": "URL du site web",
   "admin_item_type": "Type",
   "admin_item_vendor": "Vendeur",
@@ -765,5 +765,12 @@
   "my_account_delete_button": "Supprimer mon compte",
   "my_account_deleting": "Suppression…",
   "my_account_delete_confirm": "Supprimer votre compte ? Cette action est irréversible. Vos inscriptions et commandes sont conservées, mais vous ne pourrez plus vous connecter avec ce compte pour les gérer.",
-  "my_account_delete_error": "Impossible de supprimer votre compte. Veuillez réessayer."
+  "my_account_delete_error": "Impossible de supprimer votre compte. Veuillez réessayer.",
+  "venue_plan_title": "Plan de salle",
+  "venue_plan_description": "Plan de salle en lecture seule. Les tables occupées sont vertes ; la table sélectionnée est mise en évidence.",
+  "venue_plan_show_table": "Afficher la table sur le plan",
+  "venue_plan_missing_edition": "Ouvrez le plan depuis une inscription pour sélectionner une édition.",
+  "venue_plan_empty": "Aucun plan de salle n’est disponible pour cette édition.",
+  "venue_plan_error": "Impossible de charger le plan de salle.",
+  "admin_table_over_capacity_confirm": "Cette attribution dépasse la capacité prévue de la table. Ajouter quand même le groupe ?"
 }

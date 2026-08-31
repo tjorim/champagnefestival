@@ -10,6 +10,7 @@ export interface CheckInSearch {
 export interface MyRegistrationsSearch {
   token?: string;
 }
+export interface VenuePlanSearch { edition?: string; table?: string }
 
 export function validateCheckInSearch(search: Record<string, unknown>): CheckInSearch {
   return {
@@ -33,6 +34,7 @@ interface AppRouteComponents {
   PrivacyPolicyRoute: RouteComponent;
   PebblePairRoute: RouteComponent;
   MyAccountRoute: RouteComponent;
+  VenuePlanRoute: RouteComponent;
 }
 
 export function createAppRouter({
@@ -43,6 +45,7 @@ export function createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
+  VenuePlanRoute,
 }: AppRouteComponents) {
   const rootRoute = createRootRoute({
     notFoundComponent: App,
@@ -77,6 +80,15 @@ export function createAppRouter({
     validateSearch: validateCheckInSearch,
     component: CheckInRoute,
   });
+  const venuePlanRoute = createRoute({
+    getParentRoute: () => adminLayoutRoute,
+    path: "/venue-plan",
+    validateSearch: (search: Record<string, unknown>): VenuePlanSearch => ({
+      edition: typeof search.edition === "string" ? search.edition : undefined,
+      table: typeof search.table === "string" ? search.table : undefined,
+    }),
+    component: VenuePlanRoute,
+  });
 
   const myRegistrationsRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -105,7 +117,7 @@ export function createAppRouter({
 
   const routeTree = rootRoute.addChildren([
     indexRoute,
-    adminLayoutRoute.addChildren([adminRoute, checkInRoute]),
+    adminLayoutRoute.addChildren([adminRoute, checkInRoute, venuePlanRoute]),
     myRegistrationsRoute,
     privacyPolicyRoute,
     pebblePairRoute,

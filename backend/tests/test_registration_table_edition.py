@@ -51,7 +51,7 @@ async def _edition_with_table(client, edition_id: str, date: str, venue_id: str,
 
     r = await client.post(
         "/api/tables",
-        json={"name": f"Table {edition_id}", "capacity": 6, "table_type_id": type_id, "layout_id": layout_id},
+        json={"name": f"Table {edition_id}", "table_type_id": type_id, "layout_id": layout_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text

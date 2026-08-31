@@ -7,6 +7,7 @@ interface VolunteerRegistrationResponse {
   id?: string;
   name?: string;
   event_id?: string;
+  edition_id?: string | null;
   event_title?: string;
   table_id?: string | null;
   table_name?: string | null;
@@ -30,9 +31,11 @@ function mapVolunteerRegistration(data: VolunteerRegistrationResponse): CheckInD
     id: data.id ?? "",
     name: data.name ?? "",
     eventId: data.event_id ?? "",
+    editionId: data.edition_id ?? undefined,
     eventTitle: data.event_title ?? "",
     guestCount: data.guest_count ?? 1,
     tableName: data.table_name ?? undefined,
+    tableId: data.table_id ?? undefined,
     orderItems: rawOrders.map((item) => {
       const quantityRaw = Number(item.quantity ?? 0);
       const quantity = Number.isFinite(quantityRaw) ? Math.max(0, quantityRaw) : 0;

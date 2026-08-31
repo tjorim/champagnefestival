@@ -264,6 +264,7 @@ class RegistrationUpdate(BaseModel):
     payment_status: PaymentStatus | None = None
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     table_id: str | None = None
+    confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
     notes: str | None = None
     accessibility_note: str | None = None
@@ -487,6 +488,7 @@ class CheckInGuestOut(BaseModel):
     id: str
     name: str
     event_id: str
+    edition_id: str | None = None
     event_title: str
     table_id: str | None = None
     table_name: str | None = None
@@ -665,7 +667,7 @@ class TableTypeCreate(BaseModel):
     width_m: float = Field(ge=0.1, le=20.0)
     length_m: float = Field(ge=0.1, le=20.0)
     height_type: Literal["low", "high"] = "low"
-    max_capacity: int = Field(ge=1, le=50)
+    capacity: int = Field(ge=1, le=50)
     active: bool = True
 
     @model_validator(mode="after")
@@ -683,7 +685,7 @@ class TableTypeUpdate(BaseModel):
     width_m: float | None = Field(default=None, ge=0.1, le=20.0)
     length_m: float | None = Field(default=None, ge=0.1, le=20.0)
     height_type: Literal["low", "high"] | None = None
-    max_capacity: int | None = Field(default=None, ge=1, le=50)
+    capacity: int | None = Field(default=None, ge=1, le=50)
     active: bool | None = None
 
 
@@ -695,7 +697,7 @@ class TableTypeOut(BaseModel):
     width_m: float
     length_m: float
     height_type: str
-    max_capacity: int
+    capacity: int
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -744,22 +746,24 @@ ROTATION_DESCRIPTION = "Clockwise rotation in whole degrees [0, 359], pivoting a
 
 class TableCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    capacity: int = Field(ge=1, le=50)
     x: float = Field(ge=0, le=100, default=50.0, description=X_POSITION_DESCRIPTION)
     y: float = Field(ge=0, le=100, default=50.0, description=Y_POSITION_DESCRIPTION)
     table_type_id: str
     rotation: int = Field(ge=0, le=359, default=0, description=ROTATION_DESCRIPTION)
     layout_id: str
 
+    model_config = {"extra": "forbid"}
+
 
 class TableUpdate(BaseModel):
     name: str | None = None
-    capacity: int | None = Field(default=None, ge=1, le=50)
     x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
     y: float | None = Field(default=None, ge=0, le=100, description=Y_POSITION_DESCRIPTION)
     table_type_id: str | None = None
     rotation: int | None = Field(default=None, ge=0, le=359, description=ROTATION_DESCRIPTION)
     layout_id: str | None = None
+
+    model_config = {"extra": "forbid"}
 
 
 class TableOut(BaseModel):
@@ -869,6 +873,7 @@ class VenuePlanTableOut(BaseModel):
     rotation: int
     table_type_id: str
     registration_ids: list[str]
+    occupied_seats: int
 
 
 class VenuePlanAreaOut(BaseModel):

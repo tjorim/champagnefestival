@@ -1,4 +1,4 @@
-"""Persist Phase 1 contact messages and public contact settings.
+"""Persist Phase 1 operations and remove stale table reservation data.
 
 Revision ID: 001
 Revises: 000
@@ -36,6 +36,9 @@ def upgrade() -> None:
             server_default="nancy.cattrysse@telenet.be",
         ),
     )
+    op.alter_column("table_types", "max_capacity", new_column_name="capacity")
+    op.drop_column("tables", "reservation_ids")
+    op.drop_column("tables", "capacity")
     op.create_table(
         "outbox_jobs",
         sa.Column("id", sa.String(64), primary_key=True),
@@ -86,6 +89,15 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.add_column(
+        "tables",
+        sa.Column("capacity", sa.Integer(), nullable=False, server_default="4"),
+    )
+    op.alter_column("table_types", "capacity", new_column_name="max_capacity")
+    op.add_column(
+        "tables",
+        sa.Column("reservation_ids", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
+    )
     op.drop_index("ix_delivery_attempts_job_id", table_name="delivery_attempts")
     op.drop_table("delivery_attempts")
     op.drop_index("ix_outbox_jobs_scheduled_at", table_name="outbox_jobs")
