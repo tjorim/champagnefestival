@@ -463,7 +463,6 @@ async def test_merge_people_repoints_reservations(client):
         json={
             "person_id": dup_id,
             "event_id": event["id"],
-            "event_title": event["title"],
             "guest_count": 1,
         },
         headers=ADMIN_HEADERS,

@@ -243,7 +243,6 @@ async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):
         Table(
             id="tbl-outside",
             name="Outside",
-            capacity=4,
             table_type_id="ttype-1",
             layout_id=source["id"],
             x=90.0,
@@ -280,7 +279,6 @@ async def test_copy_layout_copy_areas_true_without_tables(db_session):
         Table(
             id="tbl-1",
             name="T1",
-            capacity=4,
             table_type_id="ttype-1",
             layout_id=source["id"],
             x=90.0,

@@ -59,7 +59,9 @@ async def test_create_table_type_rejects_missing_dimensions(db_session):
     await _seed_venue(db_session)
 
     with pytest.raises(TypeError):
-        await mcp_table_types.create_table_type(factory, "admin-1", name="Standard", venue_id="venue-1")  # ty: ignore[missing-argument]
+        await mcp_table_types.create_table_type(
+            factory, "admin-1", name="Standard", venue_id="venue-1", capacity=6
+        )  # ty: ignore[missing-argument]
 
 
 async def test_create_table_type_round_shape_uses_larger_dimension_as_diameter(db_session):

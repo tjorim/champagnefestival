@@ -235,6 +235,8 @@ async def test_faq_update_cannot_set_sort_order(client):
     r = await client.put(
         f"/api/faq/{item['id']}", json={"sort_order": 99, "question_nl": "Aangepast"}, headers=ADMIN_HEADERS
     )
-    assert r.status_code == 200
-    assert r.json()["sort_order"] == item["sort_order"]
-    assert r.json()["question_nl"] == "Aangepast"
+    assert r.status_code == 422
+
+    unchanged = await client.get("/api/faq", headers=ADMIN_HEADERS)
+    assert unchanged.json()[0]["sort_order"] == item["sort_order"]
+    assert unchanged.json()[0]["question_nl"] == item["question_nl"]

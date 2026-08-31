@@ -57,7 +57,6 @@ VALID_RESERVATION = {
     "email": "jean@example.com",
     "phone": "+32499000000",
     "event_id": "event-fri",
-    "event_title": "Vrijdagavond",
     "guest_count": 2,
     # Registration creation now resolves order_items against the event's real
     # products server-side (see app.services.registrations_service.resolve_order_items),
@@ -122,10 +121,10 @@ async def _create_event(
 
 
 def _registration_body(event: dict, **overrides):
+    overrides.pop("event_title", None)
     body = {
         **VALID_RESERVATION,
         "event_id": event["id"],
-        "event_title": event["title"],
         **overrides,
     }
     return body
@@ -140,8 +139,9 @@ async def _post_registration(
     **overrides,
 ):
     event_kwargs = dict(event_kwargs or {})
+    event_title = overrides.get("event_title", "Vrijdagavond")
     if event is None:
-        event_kwargs.setdefault("title", overrides.get("event_title", VALID_RESERVATION["event_title"]))
+        event_kwargs.setdefault("title", event_title)
         event = await _create_event(client, **event_kwargs)
     return await client.post(path, json=_registration_body(event, **overrides))
 

@@ -301,7 +301,6 @@ async def test_admin_create_reservation(client):
         json={
             "person_id": person_id,
             "event_id": event["id"],
-            "event_title": event["title"],
             "guest_count": 3,
             "status": "confirmed",
         },
@@ -319,7 +318,7 @@ async def test_admin_create_reservation(client):
 async def test_admin_create_reservation_requires_auth(unauth_client):
     r = await unauth_client.post(
         "/api/registrations/admin",
-        json={"person_id": "x", "event_id": "e", "event_title": "t", "guest_count": 1},
+        json={"person_id": "x", "event_id": "e", "guest_count": 1},
     )
     assert r.status_code == 401
 
@@ -332,7 +331,6 @@ async def test_admin_create_reservation_person_not_found(client):
         json={
             "person_id": "nonexistent",
             "event_id": event["id"],
-            "event_title": event["title"],
             "guest_count": 1,
         },
         headers=ADMIN_HEADERS,

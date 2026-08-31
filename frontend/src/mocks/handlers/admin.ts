@@ -1027,13 +1027,15 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
+    const tableTypeId = String(body.table_type_id ?? "");
+    const tableType = tableTypes.find((candidate) => candidate.id === tableTypeId);
     const newTable = {
       id: uid(),
       name: String(body.name ?? ""),
-      capacity: Number(body.capacity ?? 4),
+      capacity: Number(tableType?.capacity ?? 4),
       x: Number(body.x ?? 50),
       y: Number(body.y ?? 50),
-      table_type_id: String(body.table_type_id ?? ""),
+      table_type_id: tableTypeId,
       rotation: Number(body.rotation ?? 0),
       layout_id: String(body.layout_id ?? ""),
       registration_ids: [],
