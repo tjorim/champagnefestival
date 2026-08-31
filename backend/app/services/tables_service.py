@@ -152,12 +152,7 @@ async def bulk_create_tables(
         )
 
     # New tables have no reservations yet.
-    response = {
-        "items": [
-            table_to_dict(t, [], capacity=table_types[t.table_type_id].capacity)
-            for t in rows
-        ]
-    }
+    response = {"items": [table_to_dict(t, [], capacity=table_types[t.table_type_id].capacity) for t in rows]}
     if idempotency_key:
         record_idempotency_key(
             db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
@@ -221,7 +216,9 @@ async def update_table(
         t.name = body.name
         fields_changed.append("name")
     effective_type_id = body.table_type_id if body.table_type_id is not None else t.table_type_id
-    tt = (await db.execute(select(TableType).where(TableType.id == effective_type_id).with_for_update())).scalar_one_or_none()
+    tt = (
+        await db.execute(select(TableType).where(TableType.id == effective_type_id).with_for_update())
+    ).scalar_one_or_none()
     if tt is None:
         raise NotFoundError(f"TableType '{effective_type_id}' not found.")
     if body.x is not None:

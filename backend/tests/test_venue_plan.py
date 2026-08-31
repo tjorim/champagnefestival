@@ -146,9 +146,7 @@ async def test_venue_plan_returns_non_cancelled_guest_occupancy(client):
     assert payload["registration_ids"] == [registration_id]
     assert payload["occupied_seats"] == 3
 
-    await client.put(
-        f"/api/registrations/{registration_id}", json={"status": "cancelled"}, headers=ADMIN_HEADERS
-    )
+    await client.put(f"/api/registrations/{registration_id}", json={"status": "cancelled"}, headers=ADMIN_HEADERS)
     response = await client.get(f"/api/venue-plan/{edition_id}", headers=ADMIN_HEADERS)
     payload = response.json()["layouts"][0]["tables"][0]
     assert payload["registration_ids"] == []

@@ -150,6 +150,8 @@ async def assert_table_has_room(
                 f"this party requires {guest_count}."
             ),
         )
+
+
 def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_count: int) -> list[dict]:
     """Resolve client-supplied product_id/quantity pairs against the event's real,
     active products, snapshotting name/price/category server-side (see Product's

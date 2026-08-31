@@ -317,9 +317,7 @@ async def test_bulk_create_tables_happy_path(client):
     table_type_id = await _create_table_type(client, venue_id)
     layout_id = await _create_layout(client, room_id)
 
-    items = [
-        {"name": f"Table {i}", "table_type_id": table_type_id, "layout_id": layout_id} for i in range(4)
-    ]
+    items = [{"name": f"Table {i}", "table_type_id": table_type_id, "layout_id": layout_id} for i in range(4)]
     r = await client.post("/api/tables/bulk", json={"items": items}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     data = r.json()

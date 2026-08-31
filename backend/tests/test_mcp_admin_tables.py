@@ -58,9 +58,7 @@ async def test_list_tables_filters_by_layout_id(db_session):
     await db_session.commit()
     await _seed_table_type(db_session)
 
-    created_a = await mcp_tables.create_table(
-        factory, "admin-1", name="A1", table_type_id="ttype-1", layout_id="lay-1"
-    )
+    created_a = await mcp_tables.create_table(factory, "admin-1", name="A1", table_type_id="ttype-1", layout_id="lay-1")
     await mcp_tables.create_table(factory, "admin-1", name="B1", table_type_id="ttype-1", layout_id="lay-2")
 
     listed = await mcp_tables.list_tables(factory, layout_id="lay-1")
