@@ -1,4 +1,4 @@
-"""Unit tests for the FastMCP v3 MCP server backend.
+"""Unit tests for the FastMCP v4 MCP server backend.
 
 Tests are organised as:
 - Role resolution
@@ -721,6 +721,27 @@ class TestCreateMcpServer:
         names = [item["name"] for item in result.structured_content["result"]]
         assert "get_event_schedule" in names
         assert "find_guest" not in names
+
+    @pytest.mark.anyio
+    async def test_search_tools_supports_unicode_tokens(self):
+        from fastmcp import FastMCP
+        from fastmcp.server.transforms.search import BM25SearchTransform
+
+        mcp = FastMCP(
+            name="unicode-search-test",
+            transforms=[BM25SearchTransform(search_tool_name="search_tools")],
+        )
+
+        @mcp.tool
+        def tasting_programme() -> str:
+            """Return the dégustation programme."""
+            return ""
+
+        result = await mcp.call_tool("search_tools", {"query": "dégustation"})
+
+        assert result.structured_content is not None
+        names = [item["name"] for item in result.structured_content["result"]]
+        assert "tasting_programme" in names
 
 
 # ---------------------------------------------------------------------------

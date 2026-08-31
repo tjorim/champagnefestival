@@ -1,6 +1,6 @@
 # Local MCP Server — Champagnefestival
 
-The Champagnefestival backend ships a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server built with [FastMCP v3](https://gofastmcp.com/).
+The Champagnefestival backend ships a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server built with [FastMCP v4](https://gofastmcp.com/).
 
 It exposes operational tools that allow desktop agents (Claude Desktop, Codex CLI, etc.) to answer event-day questions:
 
