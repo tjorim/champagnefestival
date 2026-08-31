@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
+from datetime import date as dt_date
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -454,7 +455,7 @@ class Event(Base):
     )
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
-    date: Mapped[date] = mapped_column(Date, index=True)  # ty: ignore[invalid-type-form]
+    date: Mapped[dt_date] = mapped_column(Date, index=True)
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
@@ -581,8 +582,8 @@ class VolunteerPeriod(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), nullable=False)
-    first_help_day: Mapped[date] = mapped_column(Date, nullable=False)
-    last_help_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    first_help_day: Mapped[dt_date] = mapped_column(Date, nullable=False)
+    last_help_day: Mapped[dt_date | None] = mapped_column(Date, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

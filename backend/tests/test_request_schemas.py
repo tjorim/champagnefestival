@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import RequestModel
+from app.schemas import EditionUpdate, RequestModel
 
 
 def test_request_models_reject_unknown_fields() -> None:
@@ -22,3 +22,9 @@ def test_all_request_model_subclasses_inherit_strict_validation() -> None:
 
     assert request_models
     assert all(model.model_config.get("extra") == "forbid" for model in request_models)
+
+
+@pytest.mark.parametrize("field", ["edition_type", "active"])
+def test_edition_update_rejects_null_non_nullable_fields(field: str) -> None:
+    with pytest.raises(ValidationError, match=f"{field} may be omitted but cannot be null"):
+        EditionUpdate.model_validate({field: None})

@@ -1029,6 +1029,13 @@ class EditionUpdate(RequestModel):
     co_organizer_exhibitor_id: int | None = None
     active: bool | None = None
 
+    @model_validator(mode="after")
+    def reject_null_active_and_edition_type(self) -> Self:
+        for field in ("edition_type", "active"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} may be omitted but cannot be null.")
+        return self
+
 
 class EditionItemOut(BaseModel):
     """Slim exhibitor shape embedded in the public edition response.

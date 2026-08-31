@@ -372,12 +372,15 @@ async def apply_edition_update(
     # ran, but `validate_exhibitor_ids` below issues one too) could flush this row into
     # an (edition_type, active) state that collides with the still-active conflicting
     # row — the exact violation the deactivation step exists to avoid causing.
-    target_edition_type: str = body.edition_type if "edition_type" in body.model_fields_set else edition.edition_type  # ty: ignore[invalid-assignment]
-    target_active: bool = body.active if "active" in body.model_fields_set else edition.active  # ty: ignore[invalid-assignment]
+    persisted_edition_type = edition.edition_type
+    if persisted_edition_type not in ("festival", "bourse", "capsule_exchange"):
+        raise ValueError(f"Unsupported persisted edition type: {persisted_edition_type}")
+    target_edition_type: EditionType = body.edition_type or persisted_edition_type
+    target_active = body.active if body.active is not None else edition.active
 
     exhibitors_implicitly_cleared = False
     if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
-        validate_exhibitors_allowed(target_edition_type, body.exhibitors)  # ty: ignore[invalid-argument-type]
+        validate_exhibitors_allowed(target_edition_type, body.exhibitors)
         await validate_exhibitor_ids(db, body.exhibitors)
         edition.exhibitors = list(body.exhibitors)
     elif target_edition_type != "festival" and edition.exhibitors:
@@ -389,7 +392,7 @@ async def apply_edition_update(
         edition.exhibitors = []
         exhibitors_implicitly_cleared = True
 
-    validate_exhibitors_allowed(target_edition_type, edition.exhibitors)  # ty: ignore[invalid-argument-type]
+    validate_exhibitors_allowed(target_edition_type, edition.exhibitors)
 
     deactivated: list[str] = []
     if target_active:
@@ -400,7 +403,7 @@ async def apply_edition_update(
     # Safe to apply now: any conflicting active row of `target_edition_type` has
     # already been deactivated and flushed above.
     for field in ("active", "edition_type"):
-        if field in body.model_fields_set:
+        if field in body.model_fields_set and getattr(body, field) is not None:
             setattr(edition, field, getattr(body, field))
 
     details: dict = {"fields_changed": sorted(body.model_fields_set)}
