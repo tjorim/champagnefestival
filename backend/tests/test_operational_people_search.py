@@ -51,4 +51,4 @@ async def test_admin_registration_search_uses_ranked_person_lookup(client):
 
     response = await client.get("/api/registrations", params={"q": "Francoiss"}, headers=ADMIN_HEADERS)
     assert response.status_code == 200
-    assert [item["id"] for item in response.json()] == [registration.json()["id"]]
+    assert [item["id"] for item in response.json()["items"]] == [registration.json()["id"]]

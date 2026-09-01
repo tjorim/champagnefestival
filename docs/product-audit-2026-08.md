@@ -92,7 +92,7 @@ work is intentionally outside this audit until the bourse requirements are clear
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
+| 1 | #931 — search silently truncates at 20 | Partially fixed: `GET /api/registrations` now returns a `{items, total, limit, page}` envelope with one shared default page size for both the search and browse paths, and a ceiling decoupled from the volunteer door-lookup limit; `RegistrationList` surfaces a "showing X of Y" notice when search results are truncated. Still open: server-side pagination for the admin table itself (currently fetches a large bounded page and paginates client-side) and reconsidering `fetchPeople`'s full client-side pull. | S |
 | 2 | #933 — registration lifecycle gaps | Its #928 prerequisite is complete. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. Any seated guest-count edit must reuse #927's soft-capacity confirmation guard. | M |
 | 3 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
 | 4 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |

@@ -26,7 +26,7 @@ import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import {
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
-  fetchRegistrations,
+  fetchRegistrationsSearch,
 } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { toLocalDateKey } from "@/utils/dateUtils";
@@ -176,11 +176,15 @@ export default function RegistrationList({
   }, [q]);
   const registrationSearchQuery = useQuery({
     queryKey: ["admin", "registrations", "search", debouncedQ],
-    queryFn: () => fetchRegistrations(authHeaders, debouncedQ),
+    queryFn: () => fetchRegistrationsSearch(authHeaders, debouncedQ),
     enabled: debouncedQ.length > 0,
     staleTime: 30 * 1000,
     retry: false,
   });
+  const searchResultsTruncated =
+    debouncedQ.length > 0 &&
+    !!registrationSearchQuery.data &&
+    registrationSearchQuery.data.total > registrationSearchQuery.data.registrations.length;
   const checkInStatsQuery = useQuery({
     queryKey: queryKeys.admin.eventCheckInStats,
     queryFn: () => fetchEventCheckInStats(authHeaders),
@@ -188,7 +192,7 @@ export default function RegistrationList({
     retry: false,
   });
   const displayedRegistrations = useMemo(
-    () => (debouncedQ ? (registrationSearchQuery.data ?? []) : registrations),
+    () => (debouncedQ ? (registrationSearchQuery.data?.registrations ?? []) : registrations),
     [debouncedQ, registrationSearchQuery.data, registrations],
   );
 
@@ -1009,6 +1013,14 @@ export default function RegistrationList({
               onClose={onClearSectionError}
             >
               {sectionError}
+            </Alert>
+          )}
+          {searchResultsTruncated && registrationSearchQuery.data && (
+            <Alert variant="warning" className="m-3 mb-0 py-2">
+              {m.admin_registrations_search_truncated({
+                shown: registrationSearchQuery.data.registrations.length,
+                total: registrationSearchQuery.data.total,
+              })}
             </Alert>
           )}
           {registrationSearchQuery.isLoading ? (

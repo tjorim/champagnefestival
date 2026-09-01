@@ -19,6 +19,7 @@ import {
   fetchJsonOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
+import { devError } from "@/utils/devLog";
 import {
   apiVenueToVenue,
   apiLayoutToLayout,
@@ -33,17 +34,71 @@ import {
   mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
-export async function fetchRegistrations(
+export interface RegistrationsPage {
+  registrations: Registration[];
+  total: number;
+  limit: number;
+  page: number;
+}
+
+interface RegistrationListEnvelope {
+  items?: Record<string, unknown>[];
+  total?: number;
+  limit?: number;
+  page?: number;
+}
+
+async function fetchRegistrationsPage(
   authHeaders: () => Record<string, string>,
-  query?: string,
-): Promise<Registration[]> {
-  const suffix = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  options: { query?: string; limit?: number } = {},
+): Promise<RegistrationsPage> {
+  const params = new URLSearchParams();
+  const trimmedQuery = options.query?.trim();
+  if (trimmedQuery) params.set("q", trimmedQuery);
+  if (options.limit) params.set("limit", String(options.limit));
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationListEnvelope>(
     `/api/registrations${suffix}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiToRegistration) : [];
+  return {
+    registrations: Array.isArray(payload.items) ? payload.items.map(apiToRegistration) : [],
+    total: payload.total ?? 0,
+    limit: payload.limit ?? 0,
+    page: payload.page ?? 1,
+  };
+}
+
+// The admin dashboard needs the full working set for client-side filtering,
+// sorting, and aggregate stats (status/edition counts, per-event capacity),
+// not one page of it — same reasoning as fetchPeople's full pull below. This
+// mirrors backend/app/routers/registrations.py's Pagination ceiling so the
+// request is bounded (not literally unlimited) while still covering any
+// realistic guest list.
+export const ADMIN_REGISTRATIONS_FULL_LIST_LIMIT = 1000;
+
+export async function fetchAllRegistrations(
+  authHeaders: () => Record<string, string>,
+): Promise<Registration[]> {
+  const { registrations, total } = await fetchRegistrationsPage(authHeaders, {
+    limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
+  });
+  if (total > registrations.length) {
+    devError(
+      `Admin registrations dashboard is showing ${registrations.length} of ${total} registrations; ` +
+        "raise ADMIN_REGISTRATIONS_FULL_LIST_LIMIT or add server-side pagination to the admin table.",
+    );
+  }
+  return registrations;
+}
+
+/** Admin registration search: returns `total` alongside the (possibly truncated) page of matches. */
+export async function fetchRegistrationsSearch(
+  authHeaders: () => Record<string, string>,
+  query: string,
+): Promise<RegistrationsPage> {
+  return fetchRegistrationsPage(authHeaders, { query });
 }
 
 export async function fetchRegistration(

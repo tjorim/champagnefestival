@@ -199,7 +199,8 @@ export const adminHandlers = [
   http.get("/api/registrations", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(sharedStore.registrations);
+    const items = sharedStore.registrations;
+    return HttpResponse.json({ items, total: items.length, limit: items.length, page: 1 });
   }),
 
   http.get("/api/volunteer/registrations", ({ request }) => {

@@ -37,7 +37,9 @@ async def test_list_and_detail(client):
 
     r = await client.get("/api/registrations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    items = r.json()
+    body = r.json()
+    items = body["items"]
+    assert body["total"] == 1
     assert len(items) == 1
     assert "check_in_token" not in items[0]  # stripped from list
 
@@ -69,7 +71,9 @@ async def test_search_by_name(client):
 
     r = await client.get("/api/registrations", params={"q": "jean"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    items = r.json()
+    body = r.json()
+    items = body["items"]
+    assert body["total"] == 1
     assert len(items) == 1
     assert items[0]["person"]["name"] == "Jean Dupont"
 
@@ -81,7 +85,7 @@ async def test_search_by_email(client):
 
     r = await client.get("/api/registrations", params={"q": "example.com"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
 
 @pytest.mark.anyio
@@ -89,7 +93,7 @@ async def test_filter_by_status(client):
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
     r_list = await client.get("/api/registrations", headers=ADMIN_HEADERS)
-    res_id = r_list.json()[0]["id"]
+    res_id = r_list.json()["items"][0]["id"]
 
     # Confirm the reservation
     r = await client.put(
@@ -100,10 +104,10 @@ async def test_filter_by_status(client):
     assert r.status_code == 200
 
     r = await client.get("/api/registrations", params={"status": "confirmed"}, headers=ADMIN_HEADERS)
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
     r = await client.get("/api/registrations", params={"status": "pending"}, headers=ADMIN_HEADERS)
-    assert len(r.json()) == 0
+    assert len(r.json()["items"]) == 0
 
 
 @pytest.mark.anyio
@@ -233,8 +237,9 @@ async def test_filter_by_event(client):
     assert saturday.status_code == 201
 
     r = await client.get("/api/registrations", params={"event_id": friday.json()["event_id"]}, headers=ADMIN_HEADERS)
-    assert len(r.json()) == 1
-    assert r.json()[0]["event_id"] == friday.json()["event_id"]
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["event_id"] == friday.json()["event_id"]
 
 
 @pytest.mark.anyio
@@ -253,13 +258,19 @@ async def test_registrations_support_limit_and_page(client):
 
     first_page = await client.get("/api/registrations", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
     assert first_page.status_code == 200
-    first_page_results = first_page.json()
+    first_page_body = first_page.json()
+    first_page_results = first_page_body["items"]
     assert len(first_page_results) == 2
+    assert first_page_body["limit"] == 2
+    assert first_page_body["page"] == 1
+    assert first_page_body["total"] >= 3
 
     second_page = await client.get("/api/registrations", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
     assert second_page.status_code == 200
-    second_page_results = second_page.json()
+    second_page_body = second_page.json()
+    second_page_results = second_page_body["items"]
     assert len(second_page_results) == 1
+    assert second_page_body["total"] == first_page_body["total"]
 
     first_page_ids = {row["id"] for row in first_page_results}
     second_page_ids = {row["id"] for row in second_page_results}
@@ -268,7 +279,7 @@ async def test_registrations_support_limit_and_page(client):
     # Ordering must be consistent with the unpaginated endpoint
     all_response = await client.get("/api/registrations", headers=ADMIN_HEADERS)
     assert all_response.status_code == 200
-    all_results = all_response.json()
+    all_results = all_response.json()["items"]
     # Filter to only the IDs created in this test to avoid interference from other tests
     created_ids = first_page_ids | second_page_ids
     all_test_results = [r for r in all_results if r["id"] in created_ids]
