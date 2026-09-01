@@ -89,9 +89,14 @@ def validate_registration_settings(
     if registration_required:
         return
     if registrations_open_from is not None or registrations_close_at is not None or max_capacity is not None:
+        detail = (
+            "registrations_close_at may only be set when registration_required is true."
+            if registrations_close_at is not None
+            else "registrations_open_from and max_capacity may only be set when registration_required is true."
+        )
         raise HTTPException(
             status_code=400,
-            detail=("Registration dates and max_capacity may only be set when registration_required is true."),
+            detail=detail,
         )
 
 
