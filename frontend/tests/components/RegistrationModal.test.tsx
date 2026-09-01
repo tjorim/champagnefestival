@@ -19,6 +19,9 @@ vi.mock("@/paraglide/messages", () => ({
     registration_email: () => "Email",
     registration_phone: () => "Phone Number",
     registration_guests: () => "Number of Guests",
+    registration_accessibility_note: () => "Accessibility needs (optional)",
+    registration_accessibility_note_help: () =>
+      "Tell us about wheelchair access, seating or other support you need.",
     registration_order_title: () => "Order",
     registration_order_description: () => "Order champagne or snacks with your registration",
     registration_order_required_hint: ({ products }: { products: string }) =>

@@ -515,7 +515,15 @@ async def apply_registration_update(
             await live_bus.publish(live_mapping.order_changed(**scope))
         if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:
             await live_bus.publish(live_mapping.check_in_changed(**scope))
-        metadata_fields = {"guest_count", "status", "payment_status", "amount_due", "notes", "accessibility_note", "person_id"}
+        metadata_fields = {
+            "guest_count",
+            "status",
+            "payment_status",
+            "amount_due",
+            "notes",
+            "accessibility_note",
+            "person_id",
+        }
         if any(f in body.model_fields_set for f in metadata_fields) or clear_amount_due:
             await live_bus.publish(live_mapping.registration_changed(action="updated", **scope))
     except Exception:
