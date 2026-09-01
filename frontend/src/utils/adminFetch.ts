@@ -242,13 +242,16 @@ interface PersonListEnvelope {
   page?: number;
 }
 
-// GET /api/people, /api/volunteers, and /api/members all page like
-// GET /api/registrations (see backend/app/routers/{people,volunteers,members}.py)
-// — {items, total, limit, page}. Unlike the registrations table, the People/
-// Volunteers/Members admin tabs are still full client-side tables (see
-// PeopleManagement/VolunteersManagement/MembersManagement), so instead of
-// real server-side pagination we fetch one bounded "everything" page and
-// warn loudly if it was ever truncated, mirroring fetchAllRegistrations.
+// GET /api/people and /api/volunteers page like GET /api/registrations (see
+// backend/app/routers/{people,volunteers}.py) — {items, total, limit, page}.
+// GET /api/members doesn't exist (retired — it was functionally identical to
+// /api/people?role=member; see backend/app/routers/members.py), so the
+// member list is read through /api/people?role=member instead. Unlike the
+// registrations table, the People/Volunteers/Members admin tabs are still
+// full client-side tables (see PeopleManagement/VolunteersManagement/
+// MembersManagement), so instead of real server-side pagination we fetch one
+// bounded "everything" page and warn loudly if it was ever truncated,
+// mirroring fetchAllRegistrations.
 export const PEOPLE_FULL_LIST_LIMIT = 1000;
 
 async function fetchPersonListEnvelope(
@@ -311,7 +314,7 @@ export async function fetchPeople(authHeaders: () => Record<string, string>): Pr
 
 export async function fetchMembers(authHeaders: () => Record<string, string>): Promise<Person[]> {
   const result = await fetchPersonListEnvelope(
-    `/api/members?limit=${PEOPLE_FULL_LIST_LIMIT}`,
+    `/api/people?role=member&limit=${PEOPLE_FULL_LIST_LIMIT}`,
     authHeaders,
   );
   warnIfPersonListTruncated("members", result.people.length, result.total);

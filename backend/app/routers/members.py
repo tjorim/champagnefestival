@@ -5,14 +5,13 @@ Business logic lives in ``app.services.members_service`` and is shared with
 ``app.mcp.admin.members``.
 """
 
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, get_request_id
-from app.schemas import PersonCreate, PersonListEnvelope, PersonOut, PersonUpdate
+from app.dependencies import get_request_id
+from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services import members_service
 from app.utils import person_to_dict
 
@@ -22,9 +21,12 @@ router = APIRouter(
     dependencies=[Depends(require_admin)],
 )
 
-# See app/routers/people.py's ADMIN_LIST_DEFAULT_LIMIT for why this is its own
-# constant rather than app.services.operational_search's door-lookup-sized one.
-ADMIN_LIST_DEFAULT_LIMIT = 200
+# GET "" was retired — the frontend now reads the member list from
+# GET /api/people?role=member (see PeopleManagement/MembersManagement and
+# app/routers/people.py), since it was functionally identical to that filter
+# and its own hand-rolled search predicate had already drifted from people.py's.
+# The CRUD endpoints below stay: "delete a member" is a role removal (soft
+# archive), not a generic person delete, so it keeps its own named operation.
 
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
@@ -35,26 +37,6 @@ async def create_member(
     request_id: str | None = Depends(get_request_id),
 ) -> dict:
     return await members_service.create_member(db, body=body, actor=actor, request_id=request_id)
-
-
-@router.get("", response_model=PersonListEnvelope)
-async def list_members(
-    db: AsyncSession = Depends(get_db),
-    q: str | None = Query(default=None),
-    active: bool | None = Query(default=None),
-    pagination: Pagination = Depends(),
-) -> dict:
-    filtered_stmt = members_service.search_members_stmt(q=q, active=active)
-    total = (await db.execute(select(func.count()).select_from(filtered_stmt.order_by(None).subquery()))).scalar_one()
-
-    limit = pagination.limit or ADMIN_LIST_DEFAULT_LIMIT
-    page = pagination.page
-    stmt = filtered_stmt.offset((page - 1) * limit).limit(limit)
-
-    result = await db.execute(stmt)
-    rows = result.scalars().all()
-    items = [person_to_dict(p) for p in rows]
-    return {"items": items, "total": total, "limit": limit, "page": page}
 
 
 @router.get("/{person_id}", response_model=PersonOut)

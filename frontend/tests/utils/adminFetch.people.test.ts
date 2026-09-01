@@ -74,8 +74,10 @@ describe("fetchPeople / fetchPeopleSearch / fetchMembers — envelope handling",
   it("fetchMembers rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {
     // A bare array is exactly the pre-#931-fix shape: if this were accepted,
     // a malformed or reverted backend response would look like an empty or
-    // truncated member list instead of a loud failure.
-    server.use(http.get("/api/members", () => HttpResponse.json([personPayload("m1")])));
+    // truncated member list instead of a loud failure. fetchMembers reads
+    // GET /api/people?role=member (there's no separate /api/members list
+    // route — see backend/app/routers/members.py).
+    server.use(http.get("/api/people", () => HttpResponse.json([personPayload("m1")])));
 
     await expect(fetchMembers(authHeaders)).rejects.toThrow(
       /expected \{items, total, limit, page\}/,

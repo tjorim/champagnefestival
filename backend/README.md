@@ -24,7 +24,7 @@ The table below tracks each user story against its current implementation status
 | 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/registrations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
 | 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)               |
 | 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, member, festival-visitor; one person can have multiple roles                  |
-| 15  | Manager   | Quickly manage members                                    | ✅ Convenience CRUD via `/api/members` (role-filtered view on people)                                                                                              |
+| 15  | Manager   | Quickly manage members                                    | ✅ Create/update/delete via `/api/members`; browse/search via `/api/people?role=member`                                                                            |
 | 14  | Manager   | Group returning attendees by registration history         | ✅ `GET /api/people/{id}/registrations` groups all registrations for that person (linked by person + e-mail)                                                       |
 
 ---
@@ -272,7 +272,6 @@ See `.env.example` for a template.
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
 | `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
-| `GET`    | `/api/members`                  | admin          | Paginated member list (`?q=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
 | `DELETE` | `/api/members/{id}`             | admin          | Delete member                                                              |

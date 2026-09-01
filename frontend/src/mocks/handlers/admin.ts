@@ -519,20 +519,10 @@ export const adminHandlers = [
   }),
 
   // ──────────────────────────────────────────────────────────────
-  // Members — derived from the people store (role: "member")
+  // Members — derived from the people store (role: "member"). There's no
+  // GET /api/members list route (retired — see adminFetch.ts's comment);
+  // the member list is read via GET /api/people?role=member instead.
   // ──────────────────────────────────────────────────────────────
-  http.get("/api/members", ({ request }) => {
-    const authError = requireAuth(request);
-    if (authError) return authError;
-    const url = new URL(request.url);
-    const result = people.filter((p) => (p.roles as string[]).includes("member"));
-    const limit = Number(url.searchParams.get("limit") ?? result.length) || result.length;
-    const page = Number(url.searchParams.get("page") ?? 1) || 1;
-    const start = (page - 1) * limit;
-    const items = result.slice(start, start + limit);
-    return HttpResponse.json({ items, total: result.length, limit, page });
-  }),
-
   http.post("/api/members", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
