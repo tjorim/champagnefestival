@@ -466,6 +466,7 @@ class Event(Base):
 
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    registrations_close_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

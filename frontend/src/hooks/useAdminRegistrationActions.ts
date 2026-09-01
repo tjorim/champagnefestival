@@ -78,6 +78,54 @@ export function useAdminRegistrationActions({
     ],
   );
 
+  const handleUpdateGuestCount = useCallback(
+    async (id: string, guestCount: number) => {
+      try {
+        const updated = apiToRegistration(
+          await updateRegistrationMutation.mutateAsync({
+            id,
+            payload: { guest_count: guestCount },
+            fallbackMessage: m.admin_error_update_registration(),
+          }),
+        );
+        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
+          prev?.map((registration) => (registration.id === id ? updated : registration)),
+        );
+        setDetailRegistration((prev) => (prev?.id === id ? updated : prev));
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          err.message.includes("seat(s) remaining") &&
+          window.confirm(m.admin_table_over_capacity_confirm())
+        ) {
+          const updated = apiToRegistration(
+            await updateRegistrationMutation.mutateAsync({
+              id,
+              payload: { guest_count: guestCount, confirm_over_capacity: true },
+              fallbackMessage: m.admin_error_update_registration(),
+            }),
+          );
+          queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
+            prev?.map((registration) => (registration.id === id ? updated : registration)),
+          );
+          setDetailRegistration((prev) => (prev?.id === id ? updated : prev));
+          return;
+        }
+        setRegistrationError(
+          err instanceof Error ? err.message : m.admin_error_update_registration(),
+        );
+        throw err;
+      }
+    },
+    [
+      queryClient,
+      registrationsQueryKey,
+      setDetailRegistration,
+      setRegistrationError,
+      updateRegistrationMutation,
+    ],
+  );
+
   const handleUpdatePayment = useCallback(
     async (id: string, paymentStatus: PaymentStatus) => {
       try {
@@ -332,6 +380,7 @@ export function useAdminRegistrationActions({
     handleIssueStrap,
     handleToggleDelivered,
     handleUpdatePayment,
+    handleUpdateGuestCount,
     handleUpdateStatus,
     handleViewDetail,
   };

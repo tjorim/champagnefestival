@@ -266,6 +266,10 @@ export async function saveEditionEvent(
           payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
             ? payload.formData.registrationsOpenFrom
             : null,
+        registrations_close_at:
+          payload.formData.registrationRequired && payload.formData.registrationsCloseAt
+            ? payload.formData.registrationsCloseAt
+            : null,
         max_capacity: (() => {
           if (!payload.formData.registrationRequired || !payload.formData.maxCapacity) return null;
           const n = Number(payload.formData.maxCapacity);

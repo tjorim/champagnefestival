@@ -25,6 +25,7 @@ const EMPTY_FORM: EventFormData = {
   category: "other",
   registrationRequired: false,
   registrationsOpenFrom: "",
+  registrationsCloseAt: "",
   maxCapacity: "",
   sortOrder: "",
   active: true,
@@ -56,6 +57,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             category: initial.category,
             registrationRequired: initial.registrationRequired,
             registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
+            registrationsCloseAt: initial.registrationsCloseAt ?? "",
             maxCapacity: initial.maxCapacity != null ? String(initial.maxCapacity) : "",
             sortOrder: initial.sortOrder != null ? String(initial.sortOrder) : "",
             active: initial.active,
@@ -328,27 +330,42 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             )}
           </form.Field>
           {registrationRequired && (
-            <Form.Group
-              className="mb-2"
-              style={{ maxWidth: "280px" }}
-              controlId="event-registrations-open-from"
-            >
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_content_edition_registration_opens()}
-              </Form.Label>
-              <form.Field name="registrationsOpenFrom">
-                {(field) => (
-                  <Form.Control
-                    type="datetime-local"
-                    size="sm"
-                    className="bg-dark text-light border-secondary"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </Form.Group>
+            <div className="d-flex gap-2 flex-wrap mb-2">
+              <Form.Group style={{ maxWidth: "280px" }} controlId="event-registrations-open-from">
+                <Form.Label className="text-secondary small mb-1">
+                  {m.admin_content_edition_registration_opens()}
+                </Form.Label>
+                <form.Field name="registrationsOpenFrom">
+                  {(field) => (
+                    <Form.Control
+                      type="datetime-local"
+                      size="sm"
+                      className="bg-dark text-light border-secondary"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                  )}
+                </form.Field>
+              </Form.Group>
+              <Form.Group style={{ maxWidth: "280px" }} controlId="event-registrations-close-at">
+                <Form.Label className="text-secondary small mb-1">
+                  {m.admin_content_edition_registration_closes()}
+                </Form.Label>
+                <form.Field name="registrationsCloseAt">
+                  {(field) => (
+                    <Form.Control
+                      type="datetime-local"
+                      size="sm"
+                      className="bg-dark text-light border-secondary"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                  )}
+                </form.Field>
+              </Form.Group>
+            </div>
           )}
 
           {!isFestival && (

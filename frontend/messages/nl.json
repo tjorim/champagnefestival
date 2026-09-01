@@ -785,5 +785,9 @@
   "venue_plan_missing_edition": "Open het zaalplan vanuit een inschrijving om een editie te kiezen.",
   "venue_plan_empty": "Er is geen zaalplan beschikbaar voor deze editie.",
   "venue_plan_error": "Het zaalplan kon niet worden geladen.",
-  "admin_table_over_capacity_confirm": "Deze toewijzing overschrijdt de bedoelde tafelcapaciteit. Wil je de groep toch toevoegen?"
+  "admin_table_over_capacity_confirm": "Deze toewijzing overschrijdt de bedoelde tafelcapaciteit. Wil je de groep toch toevoegen?",
+  "admin_content_edition_registration_closes": "Inschrijvingen sluiten op",
+  "registration_accessibility_note": "Toegankelijkheidsbehoeften (optioneel)",
+  "registration_accessibility_note_help": "Laat ons weten welke rolstoeltoegang, zitplaats of andere ondersteuning u nodig hebt.",
+  "registration_closed": "Inschrijvingen gesloten"
 }

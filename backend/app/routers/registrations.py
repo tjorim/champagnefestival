@@ -580,6 +580,16 @@ async def _ensure_public_registration_allowed(
                 detail="Registrations for this event are not open yet.",
             )
 
+    if event.registrations_close_at is not None:
+        registrations_close_at = event.registrations_close_at
+        if registrations_close_at.tzinfo is None:
+            registrations_close_at = registrations_close_at.replace(tzinfo=UTC)
+        if registrations_close_at <= now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registrations for this event have closed.",
+            )
+
     if event.max_capacity is None:
         return
 

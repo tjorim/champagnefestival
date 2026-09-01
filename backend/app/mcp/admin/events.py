@@ -38,6 +38,7 @@ async def create_event(
     end_time: str | None = None,
     registration_required: bool = False,
     registrations_open_from: datetime | None = None,
+    registrations_close_at: datetime | None = None,
     max_capacity: int | None = None,
     active: bool = True,
 ) -> dict:
@@ -52,6 +53,7 @@ async def create_event(
         category=category,
         registration_required=registration_required,
         registrations_open_from=registrations_open_from,
+        registrations_close_at=registrations_close_at,
         max_capacity=max_capacity,
         active=active,
     )
@@ -85,10 +87,12 @@ async def update_event(
     category: str | None = None,
     registration_required: bool | None = None,
     registrations_open_from: datetime | None = None,
+    registrations_close_at: datetime | None = None,
     max_capacity: int | None = None,
     active: bool | None = None,
     clear_end_time: bool = False,
     clear_registrations_open_from: bool = False,
+    clear_registrations_close_at: bool = False,
     clear_max_capacity: bool = False,
 ) -> dict:
     """Partially update an event; omitted fields are left unchanged.
@@ -112,6 +116,7 @@ async def update_event(
             "category": category,
             "registration_required": registration_required,
             "registrations_open_from": registrations_open_from,
+            "registrations_close_at": registrations_close_at,
             "max_capacity": max_capacity,
             "active": active,
         }.items()
@@ -121,6 +126,8 @@ async def update_event(
         provided["end_time"] = None
     if clear_registrations_open_from:
         provided["registrations_open_from"] = None
+    if clear_registrations_close_at:
+        provided["registrations_close_at"] = None
     if clear_max_capacity:
         provided["max_capacity"] = None
     body = validate_with_schema(EventUpdate, **provided)

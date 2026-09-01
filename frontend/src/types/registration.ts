@@ -77,6 +77,7 @@ export interface RegistrationFormData {
   guestCount: number;
   orderItems: OrderItem[];
   notes: string;
+  accessibilityNote: string;
   honeypot?: string;
   formStartTime: string;
 }
