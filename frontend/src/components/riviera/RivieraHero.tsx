@@ -6,7 +6,13 @@ interface RivieraHeroProps {
   scheduleLabel: string;
 }
 
-const RivieraHero = ({ festivalName, title, subtitle, learnMoreLabel, scheduleLabel }: RivieraHeroProps) => {
+const RivieraHero = ({
+  festivalName,
+  title,
+  subtitle,
+  learnMoreLabel,
+  scheduleLabel,
+}: RivieraHeroProps) => {
   return (
     <section className="riviera-hero" id="welcome">
       {/* Content first: it takes the wide left grid column; the poster sits right.

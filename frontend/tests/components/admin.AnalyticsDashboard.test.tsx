@@ -57,7 +57,9 @@ describe("AnalyticsDashboard", () => {
     ]);
     renderAnalyticsDashboard();
 
-    await waitFor(() => expect(screen.getByRole("img", { name: "admin_analytics_chart_aria" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("img", { name: "admin_analytics_chart_aria" })).toBeInTheDocument(),
+    );
     expect(screen.getByText("admin_analytics_legend_guests")).toBeInTheDocument();
     expect(screen.getByText("admin_analytics_legend_checked_in")).toBeInTheDocument();
   });

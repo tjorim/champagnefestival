@@ -21,7 +21,9 @@ describe("createOidcConfig", () => {
     const config = createOidcConfig({ navigateTo });
 
     expect("automaticSilentRenew" in config && config.automaticSilentRenew).toBe(true);
-    expect("silent_redirect_uri" in config && config.silent_redirect_uri).toBe(`${window.location.origin}/admin`);
+    expect("silent_redirect_uri" in config && config.silent_redirect_uri).toBe(
+      `${window.location.origin}/admin`,
+    );
   });
 
   it("defaults post-sign-in navigation to the admin route", () => {
@@ -33,16 +35,15 @@ describe("createOidcConfig", () => {
     expect(navigateTo).toHaveBeenCalledWith("/admin");
   });
 
-  it.each([
-    { returnTo: "https://example.com" },
-    { returnTo: "//example.com" },
-    { returnTo: null },
-  ])("rejects unsafe or invalid post-sign-in paths", (state) => {
-    const navigateTo = vi.fn();
-    const config = createOidcConfig({ navigateTo });
+  it.each([{ returnTo: "https://example.com" }, { returnTo: "//example.com" }, { returnTo: null }])(
+    "rejects unsafe or invalid post-sign-in paths",
+    (state) => {
+      const navigateTo = vi.fn();
+      const config = createOidcConfig({ navigateTo });
 
-    config.onSigninCallback?.({ state } as SigninUser);
+      config.onSigninCallback?.({ state } as SigninUser);
 
-    expect(navigateTo).toHaveBeenCalledWith("/admin");
-  });
+      expect(navigateTo).toHaveBeenCalledWith("/admin");
+    },
+  );
 });

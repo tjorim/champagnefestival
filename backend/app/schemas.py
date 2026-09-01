@@ -123,6 +123,21 @@ class PersonOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PersonListEnvelope(BaseModel):
+    """Paginated response for the admin people/members lists.
+
+    ``total`` counts every row matching the current filters, not just this
+    page, so a client can tell ``items`` was truncated instead of silently
+    rendering a partial result as if it were complete — see
+    ``RegistrationListEnvelope``, which this mirrors.
+    """
+
+    items: list[PersonOut]
+    total: int
+    limit: int
+    page: int
+
+
 # ---------------------------------------------------------------------------
 # Edition / event projections used across multiple responses
 # ---------------------------------------------------------------------------
@@ -334,6 +349,21 @@ class RegistrationListOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RegistrationListEnvelope(BaseModel):
+    """Paginated response for the admin registration list.
+
+    ``total`` counts every row matching the current filters, not just this
+    page, so a client can tell ``items`` was truncated (e.g. render "showing
+    20 of 143 matches") instead of silently rendering a partial result as if
+    it were complete.
+    """
+
+    items: list[RegistrationListOut]
+    total: int
+    limit: int
+    page: int
+
+
 class RegistrationGuestOut(BaseModel):
     """Registration data returned to visitors via the self-lookup endpoint."""
 
@@ -475,6 +505,15 @@ class VolunteerOut(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class VolunteerListEnvelope(BaseModel):
+    """Paginated response for the admin volunteers list. See ``PersonListEnvelope``."""
+
+    items: list[VolunteerOut]
+    total: int
+    limit: int
+    page: int
 
 
 # ---------------------------------------------------------------------------

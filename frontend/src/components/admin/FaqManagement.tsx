@@ -266,7 +266,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     [faqItems],
   );
 
-  const isMutating = updateMutation.isPending || deleteMutation.isPending || reorderMutation.isPending;
+  const isMutating =
+    updateMutation.isPending || deleteMutation.isPending || reorderMutation.isPending;
 
   const localeBadge = (label: string, translated: boolean) => (
     <Badge
@@ -369,8 +370,12 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                             variant="outline-secondary"
                             disabled={isMutating}
                             onClick={() => handleToggleActive(item)}
-                            aria-label={item.active ? m.admin_content_archive() : m.admin_content_restore()}
-                            title={item.active ? m.admin_content_archive() : m.admin_content_restore()}
+                            aria-label={
+                              item.active ? m.admin_content_archive() : m.admin_content_restore()
+                            }
+                            title={
+                              item.active ? m.admin_content_archive() : m.admin_content_restore()
+                            }
                           >
                             <i
                               className={item.active ? "bi bi-eye-slash" : "bi bi-eye"}

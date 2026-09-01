@@ -11,6 +11,11 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
+const exportToCsvMock = vi.fn();
+vi.mock("@/utils/csvExport", () => ({
+  exportToCsv: (...args: unknown[]) => exportToCsvMock(...args),
+}));
+
 function makeMember(overrides: Partial<Person> = {}): Person {
   return {
     id: "member-1",
@@ -142,6 +147,39 @@ describe("MembersManagement — delete confirmation", () => {
 
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith("m1");
+  });
+});
+
+describe("MembersManagement — client-side pagination", () => {
+  const manyMembers = Array.from({ length: 25 }, (_, i) =>
+    makeMember({ id: `m${i}`, name: `Member ${String(i).padStart(2, "0")}` }),
+  );
+
+  it("shows only the first page of rows and pages through the rest", () => {
+    renderMembersManagement({ members: manyMembers });
+
+    expect(screen.getByText("Member 00")).toBeInTheDocument();
+    expect(screen.getByText("Member 19")).toBeInTheDocument();
+    expect(screen.queryByText("Member 20")).not.toBeInTheDocument();
+    expect(
+      screen.getByText('admin_table_page_summary({"from":1,"to":20,"total":25})'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("admin_table_page_next"));
+
+    expect(screen.queryByText("Member 00")).not.toBeInTheDocument();
+    expect(screen.getByText("Member 20")).toBeInTheDocument();
+    expect(screen.getByText("Member 24")).toBeInTheDocument();
+  });
+
+  it("exports every filtered row as CSV, not just the rendered page", () => {
+    renderMembersManagement({ members: manyMembers });
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_export_csv" }));
+
+    expect(exportToCsvMock).toHaveBeenCalledTimes(1);
+    const [, rows] = exportToCsvMock.mock.calls[0] as [string, unknown[]];
+    expect(rows).toHaveLength(25);
   });
 });
 

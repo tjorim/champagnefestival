@@ -24,7 +24,7 @@ The table below tracks each user story against its current implementation status
 | 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/registrations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
 | 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)               |
 | 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, member, festival-visitor; one person can have multiple roles                  |
-| 15  | Manager   | Quickly manage members                                    | ✅ Convenience CRUD via `/api/members` (role-filtered view on people)                                                                                              |
+| 15  | Manager   | Quickly manage members                                    | ✅ Create/update/delete via `/api/members`; browse/search via `/api/people?role=member`                                                                            |
 | 14  | Manager   | Group returning attendees by registration history         | ✅ `GET /api/people/{id}/registrations` groups all registrations for that person (linked by person + e-mail)                                                       |
 
 ---
@@ -241,7 +241,7 @@ See `.env.example` for a template.
 | Method   | Path                            | Auth           | Description                                                                |
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | `POST`   | `/api/registrations`             | public / optional user | Create a registration; a valid user Bearer token assigns ownership       |
-| `GET`    | `/api/registrations`             | admin          | List registrations (supports `?q=`, `?status=`, `?event_id=`, `?table_id=`) |
+| `GET`    | `/api/registrations`             | admin          | Paginated registration list (`?q=`, `?status=`, `?event_id=`, `?table_id=`, `?person_id=`, `?edition_id=`, `?edition_type=`, `?edition_category=`, `?event_date=`, `?sort=`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/registrations/export`      | admin          | Export one event's non-cancelled registrations as CSV                       |
 | `POST`   | `/api/registrations/my/request`  | public         | E-mail a short-lived visitor access link                                    |
 | `POST`   | `/api/registrations/my/access`   | public + token | View visitor registrations using a short-lived secure token                 |
@@ -266,18 +266,17 @@ See `.env.example` for a template.
 | `GET`    | `/api/content/{key}`            | public         | Get CMS content (producers / sponsors)                                     |
 | `PUT`    | `/api/content/{key}`            | admin          | Save CMS content                                                           |
 | `POST`   | `/api/volunteers`               | admin          | Create volunteer profile (person with role `volunteer`)                    |
-| `GET`    | `/api/volunteers`               | admin          | List volunteers (supports `?q=` search)                                    |
+| `GET`    | `/api/volunteers`               | admin          | Paginated volunteer list (`?q=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/volunteers/export`        | admin          | Export active volunteer insurance records as CSV                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
 | `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
-| `GET`    | `/api/members`                  | admin          | List members (supports `?q=`, `?active=`)                                  |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
 | `DELETE` | `/api/members/{id}`             | admin          | Delete member                                                              |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
-| `GET`    | `/api/people`                   | admin          | List people (supports `?q=`, `?role=`, `?active=`)                         |
+| `GET`    | `/api/people`                   | admin          | Paginated people list (`?q=`, `?role=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/people/{id}`              | admin          | Get person detail                                                          |
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |

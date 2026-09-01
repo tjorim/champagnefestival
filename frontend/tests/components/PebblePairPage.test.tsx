@@ -90,6 +90,8 @@ describe("PebblePairPage", () => {
     await user.click(screen.getByRole("button", { name: "Retry pairing" }));
 
     await waitFor(() => expect(attempts).toBe(2));
-    expect(await screen.findByText("You can close this window and return to your watch.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("You can close this window and return to your watch."),
+    ).toBeInTheDocument();
   });
 });

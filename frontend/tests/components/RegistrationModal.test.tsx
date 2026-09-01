@@ -30,7 +30,8 @@ vi.mock("@/paraglide/messages", () => ({
     registration_submit: () => "Place Registration",
     registration_submitting: () => "Placing registration...",
     registration_success: () => "Your registration has been received!",
-    registration_reference: ({ reference }: { reference: string }) => `Booking reference: ${reference}`,
+    registration_reference: ({ reference }: { reference: string }) =>
+      `Booking reference: ${reference}`,
     registration_view_my_registrations: () => "View my registrations",
     registration_error: () => "An error occurred. Please try again.",
     registration_network_error: () => "Network error. Please check your connection.",
@@ -153,7 +154,9 @@ describe("RegistrationModal component", () => {
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
-    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), { target: { value: "+32 123 456 789" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => expect(authorization).toBe("Bearer visitor-access-token"));

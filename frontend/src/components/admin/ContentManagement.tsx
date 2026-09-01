@@ -293,14 +293,10 @@ export function ContentSection({
     setBulkArchiveInProgress(true);
     const snapshot = [...activeItems];
     const results = await Promise.allSettled(
-      snapshot.map((item) =>
-        updateItemActiveMutation.mutateAsync({ id: item.id, active: false }),
-      ),
+      snapshot.map((item) => updateItemActiveMutation.mutateAsync({ id: item.id, active: false })),
     );
     const succeededIds = new Set(
-      snapshot
-        .filter((_, i) => results[i]?.status === "fulfilled")
-        .map((item) => item.id),
+      snapshot.filter((_, i) => results[i]?.status === "fulfilled").map((item) => item.id),
     );
     if (succeededIds.size > 0) {
       queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
@@ -312,7 +308,9 @@ export function ContentSection({
     }
     const failedCount = results.filter((r) => r.status === "rejected").length;
     if (failedCount > 0) {
-      setActionError(m.admin_bulk_content_archive_error({ failed: failedCount, total: snapshot.length }));
+      setActionError(
+        m.admin_bulk_content_archive_error({ failed: failedCount, total: snapshot.length }),
+      );
     }
     setBulkArchiveInProgress(false);
     setBulkArchiveOpen(false);
@@ -352,8 +350,7 @@ export function ContentSection({
               placement="top"
               overlay={
                 <Tooltip id={`editions-tooltip-${item.id}`}>
-                  {m.admin_content_used_in_editions()}:{" "}
-                  {editionsByItemId.get(item.id)!.join(", ")}
+                  {m.admin_content_used_in_editions()}: {editionsByItemId.get(item.id)!.join(", ")}
                 </Tooltip>
               }
             >
@@ -582,7 +579,11 @@ export function ContentSection({
           </Button>
           <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
             {bulkArchiveInProgress && (
-              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              />
             )}
             {m.admin_content_archive()}
           </Button>

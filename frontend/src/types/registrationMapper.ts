@@ -8,7 +8,9 @@ import type {
 
 /** Map a FastAPI snake_case registration response to the frontend camelCase Registration type. */
 export function apiToRegistration(d: Record<string, unknown>): Registration {
-  const rawOrders = Array.isArray(d.order_items) ? (d.order_items as Record<string, unknown>[]) : [];
+  const rawOrders = Array.isArray(d.order_items)
+    ? (d.order_items as Record<string, unknown>[])
+    : [];
   const rawPerson =
     typeof d.person === "object" && d.person !== null ? (d.person as Record<string, unknown>) : {};
   const rawEvent =
@@ -30,8 +32,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
       const quantity = Number(item.quantity ?? 1);
       const quantitySafe = Number.isFinite(quantity) ? Math.max(0, quantity) : 0;
       const deliveredQuantityRaw =
-        item.delivered_quantity ??
-        ((item.delivered ?? false) ? quantitySafe : 0);
+        item.delivered_quantity ?? ((item.delivered ?? false) ? quantitySafe : 0);
       const deliveredQuantity = Number(deliveredQuantityRaw);
       const deliveredQuantitySafe = Number.isFinite(deliveredQuantity)
         ? Math.max(0, Math.min(quantitySafe, deliveredQuantity))

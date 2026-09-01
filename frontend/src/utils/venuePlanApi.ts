@@ -21,7 +21,10 @@ export interface VenuePlanLayout {
   areas: Array<{ id: string; label: string; icon: string; x: number; y: number; rotation: number }>;
 }
 
-export interface VenuePlan { edition_id: string; layouts: VenuePlanLayout[] }
+export interface VenuePlan {
+  edition_id: string;
+  layouts: VenuePlanLayout[];
+}
 
 export function fetchVenuePlan(
   editionId: string,

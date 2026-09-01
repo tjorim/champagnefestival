@@ -44,9 +44,7 @@ test.describe("Guest registration", () => {
     await page.locator("#res-guests").fill("2");
 
     // Submit
-    await page
-      .getByRole("button", { name: /submit registration|registratie indienen/i })
-      .click();
+    await page.getByRole("button", { name: /submit registration|registratie indienen/i }).click();
 
     // Success alert should appear inside the modal
     await expect(page.locator(".modal").getByRole("alert")).toBeVisible({ timeout: 10_000 });

@@ -155,6 +155,29 @@ describe("PeopleManagement — delete confirmation", () => {
   });
 });
 
+describe("PeopleManagement — client-side pagination", () => {
+  it("shows only the first page of rows and pages through the rest", () => {
+    const manyPeople = Array.from({ length: 25 }, (_, i) =>
+      makePerson({
+        id: `p${i}`,
+        name: `Person ${String(i).padStart(2, "0")}`,
+        email: `p${i}@x.com`,
+      }),
+    );
+    renderPeopleManagement({ people: manyPeople });
+
+    expect(screen.getByText("Person 00")).toBeInTheDocument();
+    expect(screen.getByText("Person 19")).toBeInTheDocument();
+    expect(screen.queryByText("Person 20")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("admin_table_page_next"));
+
+    expect(screen.queryByText("Person 00")).not.toBeInTheDocument();
+    expect(screen.getByText("Person 20")).toBeInTheDocument();
+    expect(screen.getByText("Person 24")).toBeInTheDocument();
+  });
+});
+
 describe("PeopleManagement — merge duplicates", () => {
   it("shows a merge button for duplicate emails and calls onMerge on confirm", async () => {
     const { onMerge } = renderPeopleManagement({

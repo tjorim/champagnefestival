@@ -111,9 +111,7 @@ export default function EventProductsModal({
   // A product can bundle any other active product on this event, except
   // itself and one that already bundles another (no chaining — see the
   // backend's _validate_inclusion_target).
-  const bundleCandidates = activeProducts.filter(
-    (p) => p.id !== editingId && !p.includedProductId,
-  );
+  const bundleCandidates = activeProducts.filter((p) => p.id !== editingId && !p.includedProductId);
 
   function openAdd() {
     setEditingId(null);
@@ -157,7 +155,10 @@ export default function EventProductsModal({
       return;
     }
     const includedPerGuests = form.includedProductId ? Number(form.includedPerGuests) : undefined;
-    if (form.includedProductId && (!Number.isFinite(includedPerGuests) || (includedPerGuests ?? 0) < 1)) {
+    if (
+      form.includedProductId &&
+      (!Number.isFinite(includedPerGuests) || (includedPerGuests ?? 0) < 1)
+    ) {
       setError(m.admin_products_bundle_ratio_invalid());
       return;
     }
@@ -412,7 +413,10 @@ export default function EventProductsModal({
             <div className="text-secondary small mb-2">{m.admin_products_required_help()}</div>
 
             <div className="d-flex gap-2 flex-wrap mb-2">
-              <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-bundle-target">
+              <Form.Group
+                style={{ minWidth: "200px", flex: "2 1 200px" }}
+                controlId="product-bundle-target"
+              >
                 <Form.Label className="text-secondary small mb-1">
                   {m.admin_products_bundle_target()}
                 </Form.Label>
@@ -420,9 +424,7 @@ export default function EventProductsModal({
                   size="sm"
                   className="bg-dark text-light border-secondary"
                   value={form.includedProductId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, includedProductId: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, includedProductId: e.target.value }))}
                 >
                   <option value="">{m.admin_products_bundle_none()}</option>
                   {bundleCandidates.map((candidate) => (
@@ -444,9 +446,7 @@ export default function EventProductsModal({
                     size="sm"
                     className="bg-dark text-light border-secondary"
                     value={form.includedPerGuests}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, includedPerGuests: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, includedPerGuests: e.target.value }))}
                   />
                 </Form.Group>
               )}

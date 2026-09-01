@@ -22,11 +22,7 @@ import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
-import {
-  getAreaSizePx,
-  getCanvasSizePx,
-  getTableSizePx,
-} from "@/utils/layoutUtils";
+import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
 
@@ -175,18 +171,18 @@ function DraggableTable({
       ? "border-danger"
       : isFull
         ? "border-warning"
-      : assignedCount > 0
-        ? "border-success"
-        : "border-secondary";
+        : assignedCount > 0
+          ? "border-success"
+          : "border-secondary";
   const bgCls = isSelected
     ? "bg-warning bg-opacity-25 text-warning"
     : isOverfilled
       ? "bg-danger bg-opacity-10 text-danger"
       : isFull
         ? "bg-warning bg-opacity-10 text-warning"
-      : assignedCount > 0
-        ? "bg-success bg-opacity-10 text-success"
-        : "bg-dark text-secondary";
+        : assignedCount > 0
+          ? "bg-success bg-opacity-10 text-success"
+          : "bg-dark text-secondary";
 
   return (
     <div
@@ -922,9 +918,9 @@ export default function LayoutEditor({
                       variant="outline-success"
                       onClick={() => {
                         setAddLayoutError(null);
-                    setNewLayout(getInitialNewLayoutState(dayOptions));
-                    setShowAddLayout(true);
-                  }}
+                        setNewLayout(getInitialNewLayoutState(dayOptions));
+                        setShowAddLayout(true);
+                      }}
                       title={m.admin_add_layout()}
                     >
                       <i className="bi bi-plus-lg me-1" aria-hidden="true" />
@@ -1090,7 +1086,8 @@ export default function LayoutEditor({
                 {tableTypes
                   .filter(
                     (tt) =>
-                      (tt.venueId === activeRoom?.venueId || tt.id === selectedTableData.tableTypeId) &&
+                      (tt.venueId === activeRoom?.venueId ||
+                        tt.id === selectedTableData.tableTypeId) &&
                       (tt.active || tt.id === selectedTableData.tableTypeId),
                   )
                   .map((tt) => (
@@ -1411,9 +1408,7 @@ export default function LayoutEditor({
             <Form.Label>{m.admin_layout_copy_from_label()}</Form.Label>
             <Form.Select
               value={newLayout.copyFromLayoutId}
-              onChange={(e) =>
-                setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))
-              }
+              onChange={(e) => setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))}
               className="bg-dark text-light border-secondary"
             >
               <option value="">{m.admin_layout_copy_from_empty()}</option>
@@ -1450,9 +1445,7 @@ export default function LayoutEditor({
                 label={m.admin_layout_copy_areas()}
               />
               {newLayout.copyAreas && (
-                <div className="text-secondary small">
-                  {m.admin_layout_copy_areas_hint()}
-                </div>
+                <div className="text-secondary small">{m.admin_layout_copy_areas_hint()}</div>
               )}
             </div>
           )}

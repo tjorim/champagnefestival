@@ -23,7 +23,12 @@ export default function VenuePlanPage() {
   });
 
   if (!edition) return <Alert variant="warning">{m.venue_plan_missing_edition()}</Alert>;
-  if (query.isLoading) return <div className="text-center p-5"><Spinner /></div>;
+  if (query.isLoading)
+    return (
+      <div className="text-center p-5">
+        <Spinner />
+      </div>
+    );
   if (query.isError) return <Alert variant="danger">{query.error.message}</Alert>;
   if (!query.data?.layouts.length) return <Alert variant="info">{m.venue_plan_empty()}</Alert>;
 
@@ -44,13 +49,23 @@ export default function VenuePlanPage() {
                 aspectRatio: `${layout.room?.width_m ?? 4} / ${layout.room?.length_m ?? 3}`,
                 minHeight: 280,
                 borderColor: layout.room?.color,
-                background: "repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,.05) 32px)",
+                background:
+                  "repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,.05) 32px)",
               }}
               aria-label={layout.room?.name ?? layout.label}
             >
               {layout.areas.map((area) => (
-                <div key={area.id} className="position-absolute text-secondary small" style={{ left: `${area.x}%`, top: `${area.y}%`, transform: `rotate(${area.rotation}deg)` }}>
-                  <i className={`bi ${area.icon} me-1`} aria-hidden="true" />{area.label}
+                <div
+                  key={area.id}
+                  className="position-absolute text-secondary small"
+                  style={{
+                    left: `${area.x}%`,
+                    top: `${area.y}%`,
+                    transform: `rotate(${area.rotation}deg)`,
+                  }}
+                >
+                  <i className={`bi ${area.icon} me-1`} aria-hidden="true" />
+                  {area.label}
                 </div>
               ))}
               {layout.tables.map((item) => {
@@ -68,12 +83,20 @@ export default function VenuePlanPage() {
                   <div
                     key={item.id}
                     className={`position-absolute border rounded px-2 py-1 text-center ${selected ? "border-warning bg-warning text-dark" : occupancyClass}`}
-                    style={{ left: `${item.x}%`, top: `${item.y}%`, transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`, minWidth: 72 }}
+                    style={{
+                      left: `${item.x}%`,
+                      top: `${item.y}%`,
+                      transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+                      minWidth: 72,
+                    }}
                     title={`${item.name}: ${occupied}/${item.capacity}`}
                     aria-current={selected ? "location" : undefined}
                   >
                     <div className="fw-semibold small">{item.name}</div>
-                    <div className="small"><i className="bi bi-people-fill me-1" />{occupied}/{item.capacity}</div>
+                    <div className="small">
+                      <i className="bi bi-people-fill me-1" />
+                      {occupied}/{item.capacity}
+                    </div>
                   </div>
                 );
               })}

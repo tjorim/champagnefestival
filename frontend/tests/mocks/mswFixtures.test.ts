@@ -69,7 +69,9 @@ describe("MSW operational fixtures", () => {
       headers: adminAuthHeaders(),
     });
     expect(registrationsResponse.status).toBe(200);
-    const registrations = (await registrationsResponse.json()) as Array<Record<string, unknown>>;
+    const { items: registrations } = (await registrationsResponse.json()) as {
+      items: Array<Record<string, unknown>>;
+    };
 
     const reg01 = registrations.find((registration) => registration.id === "reg-01");
     expect(reg01?.checked_in).toBe(true);
@@ -84,7 +86,9 @@ describe("MSW operational fixtures", () => {
       headers: adminAuthHeaders(),
     });
     expect(registrationsResponse.status).toBe(200);
-    const registrations = (await registrationsResponse.json()) as Array<Record<string, unknown>>;
+    const { items: registrations } = (await registrationsResponse.json()) as {
+      items: Array<Record<string, unknown>>;
+    };
 
     const reg01 = registrations.find((registration) => registration.id === "reg-01");
     expect(reg01?.checked_in).toBe(false);
@@ -96,20 +100,26 @@ describe("MSW operational fixtures", () => {
       headers: adminAuthHeaders(),
     });
     expect(registrationsResponse.status).toBe(200);
-    const registrations = (await registrationsResponse.json()) as Array<Record<string, unknown>>;
+    const { items: registrations } = (await registrationsResponse.json()) as {
+      items: Array<Record<string, unknown>>;
+    };
 
     const regPartial = registrations.find((registration) => registration.id === "reg-01");
     const regComplete = registrations.find((registration) => registration.id === "reg-02");
     expect(regPartial).toBeTruthy();
     expect(regComplete).toBeTruthy();
 
-    const partialOrder = (regPartial?.order_items as Array<Record<string, unknown>> | undefined)?.[0];
+    const partialOrder = (
+      regPartial?.order_items as Array<Record<string, unknown>> | undefined
+    )?.[0];
     if (!partialOrder) throw new Error("Expected partial delivery order in reg-01");
     expect(partialOrder.quantity).toBe(4);
     expect(partialOrder.delivered_quantity).toBe(2);
     expect(partialOrder.delivered).toBe(false);
 
-    const completedOrder = (regComplete?.order_items as Array<Record<string, unknown>> | undefined)?.[0];
+    const completedOrder = (
+      regComplete?.order_items as Array<Record<string, unknown>> | undefined
+    )?.[0];
     if (!completedOrder) throw new Error("Expected completed delivery order in reg-02");
     expect(completedOrder.quantity).toBe(2);
     expect(completedOrder.delivered_quantity).toBe(2);

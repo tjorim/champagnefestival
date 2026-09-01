@@ -10,7 +10,10 @@ export interface CheckInSearch {
 export interface MyRegistrationsSearch {
   token?: string;
 }
-export interface VenuePlanSearch { edition?: string; table?: string }
+export interface VenuePlanSearch {
+  edition?: string;
+  table?: string;
+}
 
 export function validateCheckInSearch(search: Record<string, unknown>): CheckInSearch {
   return {

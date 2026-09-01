@@ -20,7 +20,9 @@ html[data-visual-theme="remuage"] .bubble {
 }
 
 @keyframes rem-rack-rise {
-  to { transform: translateY(calc(-100vh - 4rem)) rotate(45deg); }
+  to {
+    transform: translateY(calc(-100vh - 4rem)) rotate(45deg);
+  }
 }
 
 /* ------------------------------------------------------------------ responsive */
@@ -104,7 +106,10 @@ html[data-visual-theme="remuage"] .bubble {
     transform: none;
   }
 
-  html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section:not(.remuage-hero) {
+  html[data-visual-theme="remuage"]
+    .App:not(.standalone-app)
+    > main#main-content
+    > section:not(.remuage-hero) {
     padding: 3.5rem 0;
   }
 
@@ -195,7 +200,9 @@ html[data-visual-theme="remuage"] .bubble {
     transition-duration: 0.01ms !important;
   }
 
-  html[data-visual-theme="remuage"] .remuage-hero:has(.remuage-button:is(:hover, :focus-visible)) .remuage-hero__disc {
+  html[data-visual-theme="remuage"]
+    .remuage-hero:has(.remuage-button:is(:hover, :focus-visible))
+    .remuage-hero__disc {
     transform: none !important;
     box-shadow: 0 0 0 5px var(--rem-rose);
   }

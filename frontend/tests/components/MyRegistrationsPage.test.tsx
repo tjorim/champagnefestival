@@ -64,7 +64,8 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_guests_label: () => "guests",
     my_registrations_qr_label: () => "Booking check-in QR code",
     my_registrations_add_calendar: () => "Add to calendar",
-    registration_reference: ({ reference }: { reference: string }) => `Booking reference: ${reference}`,
+    registration_reference: ({ reference }: { reference: string }) =>
+      `Booking reference: ${reference}`,
     my_registrations_request_new_link: () => "Request another secure link",
     admin_status_confirmed: () => "Confirmed",
     admin_status_cancelled: () => "Cancelled",
@@ -302,9 +303,7 @@ describe("MyRegistrationsPage", () => {
 
   it("shows an invalid email error when the API rejects the address", async () => {
     server.use(
-      http.post("/api/registrations/my/request", () =>
-        HttpResponse.json(null, { status: 422 }),
-      ),
+      http.post("/api/registrations/my/request", () => HttpResponse.json(null, { status: 422 })),
     );
 
     await renderPage();

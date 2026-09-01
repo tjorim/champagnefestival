@@ -41,7 +41,13 @@ html[data-visual-theme="remuage"] body {
   color: var(--rem-ink);
   font-family: var(--rem-body);
   background:
-    linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), rgba(23, 32, 51, 0.035) calc(100% - 1px)) 0 0 / 8.333% 100%,
+    linear-gradient(
+        90deg,
+        transparent 0,
+        transparent calc(100% - 1px),
+        rgba(23, 32, 51, 0.035) calc(100% - 1px)
+      )
+      0 0 / 8.333% 100%,
     var(--rem-rack);
 }
 
@@ -55,7 +61,8 @@ html[data-visual-theme="remuage"] ::selection {
   background: var(--rem-rose);
 }
 
-html[data-visual-theme="remuage"] :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+html[data-visual-theme="remuage"]
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid transparent;
   box-shadow: var(--rem-focus) !important;
 }
@@ -124,7 +131,9 @@ html[data-visual-theme="remuage"] .site-nav-link {
   text-decoration: none;
   text-transform: uppercase;
   border-radius: 8px;
-  transition: color 140ms ease, background-color 140ms ease;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
 }
 
 html[data-visual-theme="remuage"] .site-nav-link::before {
@@ -184,7 +193,10 @@ html[data-visual-theme="remuage"] .site-mobile-menu {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-0.4rem);
-  transition: opacity 160ms ease, visibility 160ms ease, transform 160ms ease;
+  transition:
+    opacity 160ms ease,
+    visibility 160ms ease,
+    transform 160ms ease;
 }
 
 html[data-visual-theme="remuage"] .site-mobile-menu.is-open {
@@ -295,7 +307,10 @@ html[data-visual-theme="remuage"] .remuage-button {
   font-weight: 750;
   border: 2px solid var(--rem-blue);
   border-radius: 9px;
-  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
 }
 
 html[data-visual-theme="remuage"] .remuage-button:hover {
@@ -333,9 +348,7 @@ html[data-visual-theme="remuage"] .remuage-hero__rack {
   grid-template-columns: repeat(3, 1fr);
   gap: clamp(0.9rem, 2vw, 1.5rem);
   padding: clamp(1.7rem, 4vw, 3.5rem);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%),
-    var(--rem-blue);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 38%), var(--rem-blue);
   border: 12px solid var(--rem-grape);
   border-radius: 26px;
   box-shadow: 22px 22px 0 rgba(72, 34, 77, 0.13);
@@ -378,7 +391,9 @@ html[data-visual-theme="remuage"] .remuage-hero__disc {
   border: 5px solid var(--rem-paper);
   border-radius: 50%;
   box-shadow: 0 6px 18px rgba(5, 14, 55, 0.32);
-  transition: transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 180ms ease;
+  transition:
+    transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 180ms ease;
 }
 
 html[data-visual-theme="remuage"] .remuage-hero__mark {
@@ -393,11 +408,17 @@ html[data-visual-theme="remuage"] .remuage-hero__mark {
   transform-origin: 50% 165%;
 }
 
-html[data-visual-theme="remuage"] .remuage-hero:has(.remuage-button:is(:hover, :focus-visible)) .remuage-hero__cell:nth-child(even) .remuage-hero__disc {
+html[data-visual-theme="remuage"]
+  .remuage-hero:has(.remuage-button:is(:hover, :focus-visible))
+  .remuage-hero__cell:nth-child(even)
+  .remuage-hero__disc {
   transform: rotate(45deg);
 }
 
-html[data-visual-theme="remuage"] .remuage-hero:has(.remuage-button:is(:hover, :focus-visible)) .remuage-hero__cell:nth-child(odd) .remuage-hero__disc {
+html[data-visual-theme="remuage"]
+  .remuage-hero:has(.remuage-button:is(:hover, :focus-visible))
+  .remuage-hero__cell:nth-child(odd)
+  .remuage-hero__disc {
   background: var(--rem-paper);
   transform: rotate(-45deg);
 }
@@ -411,7 +432,10 @@ html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content 
   padding: 1rem;
 }
 
-html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section:not(.remuage-hero) {
+html[data-visual-theme="remuage"]
+  .App:not(.standalone-app)
+  > main#main-content
+  > section:not(.remuage-hero) {
   min-width: 0;
   padding: clamp(3rem, 5vw, 5.5rem) 0;
   background: var(--rem-paper);
@@ -428,16 +452,36 @@ html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content 
   box-shadow: none;
 }
 
-html[data-visual-theme="remuage"] #what-we-do { grid-column: 1 / 8; }
-html[data-visual-theme="remuage"] #next-festival { grid-column: 8 / -1; }
-html[data-visual-theme="remuage"] #schedule { grid-column: 1 / 9; }
-html[data-visual-theme="remuage"] #community-events { grid-column: 9 / -1; }
-html[data-visual-theme="remuage"] #producers { grid-column: 1 / -1; }
-html[data-visual-theme="remuage"] #faq { grid-column: 1 / 6; }
-html[data-visual-theme="remuage"] #map { grid-column: 6 / -1; }
-html[data-visual-theme="remuage"] #sponsors { grid-column: 1 / -1; }
-html[data-visual-theme="remuage"] #contact { grid-column: 1 / 8; }
-html[data-visual-theme="remuage"] #registrations { grid-column: 8 / -1; }
+html[data-visual-theme="remuage"] #what-we-do {
+  grid-column: 1 / 8;
+}
+html[data-visual-theme="remuage"] #next-festival {
+  grid-column: 8 / -1;
+}
+html[data-visual-theme="remuage"] #schedule {
+  grid-column: 1 / 9;
+}
+html[data-visual-theme="remuage"] #community-events {
+  grid-column: 9 / -1;
+}
+html[data-visual-theme="remuage"] #producers {
+  grid-column: 1 / -1;
+}
+html[data-visual-theme="remuage"] #faq {
+  grid-column: 1 / 6;
+}
+html[data-visual-theme="remuage"] #map {
+  grid-column: 6 / -1;
+}
+html[data-visual-theme="remuage"] #sponsors {
+  grid-column: 1 / -1;
+}
+html[data-visual-theme="remuage"] #contact {
+  grid-column: 1 / 8;
+}
+html[data-visual-theme="remuage"] #registrations {
+  grid-column: 8 / -1;
+}
 
 html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > #next-festival,
 html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > #registrations {
@@ -451,7 +495,11 @@ html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content 
   border-top: 8px solid var(--rem-blue);
 }
 
-html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section > .container {
+html[data-visual-theme="remuage"]
+  .App:not(.standalone-app)
+  > main#main-content
+  > section
+  > .container {
   width: 100%;
   max-width: 100%;
   height: 100%;
@@ -459,7 +507,11 @@ html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content 
 }
 
 html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section .col-lg-8,
-html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section .col-md-10 {
+html[data-visual-theme="remuage"]
+  .App:not(.standalone-app)
+  > main#main-content
+  > section
+  .col-md-10 {
   width: 100%;
   max-width: 100%;
 }

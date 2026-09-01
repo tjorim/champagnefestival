@@ -137,9 +137,7 @@ test.describe("Remuage visual theme", () => {
     expect(modalBox!.x).toBeGreaterThanOrEqual(0);
     expect(modalBox!.x + modalBox!.width).toBeLessThanOrEqual(390);
 
-    await modal
-      .getByRole("button", { name: /Submit Registration|Registratie indienen/i })
-      .click();
+    await modal.getByRole("button", { name: /Submit Registration|Registratie indienen/i }).click();
     await expect(modal.getByRole("alert")).toContainText(
       /registration has been received|registratie is ontvangen/i,
     );
@@ -191,7 +189,9 @@ test.describe("Remuage visual theme", () => {
     await page.setViewportSize({ width: 320, height: 720 });
     await page.goto("/");
 
-    await expect(page.getByRole("group", { name: /visual design preview switcher/i })).toBeVisible();
+    await expect(
+      page.getByRole("group", { name: /visual design preview switcher/i }),
+    ).toBeVisible();
     await expect(page.locator(".remuage-hero__actions a")).toHaveCount(2);
     await expectNoPageHorizontalScroll(page);
   });

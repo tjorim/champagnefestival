@@ -55,9 +55,7 @@ const apiEdition = {
 
 describe("useActiveEdition", () => {
   it("uses the API as the source of truth for edition, venue, dates, and events", async () => {
-    server.use(
-      http.get("/api/editions/active", () => HttpResponse.json(apiEdition)),
-    );
+    server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
 
     const wrapper = createTestQueryClientWrapper();
     const { result } = renderHook(() => useActiveEdition(), { wrapper });
@@ -127,9 +125,7 @@ describe("useActiveEdition", () => {
   });
 
   it("keeps the fallback edition without flagging a load error when there's simply no active edition (404)", async () => {
-    server.use(
-      http.get("/api/editions/active", () => HttpResponse.json(null, { status: 404 })),
-    );
+    server.use(http.get("/api/editions/active", () => HttpResponse.json(null, { status: 404 })));
 
     const wrapper = createTestQueryClientWrapper();
     const { result } = renderHook(() => useActiveEdition(), { wrapper });
@@ -144,9 +140,7 @@ describe("useActiveEdition", () => {
   });
 
   it("flags a load error when the active-edition fetch genuinely fails (e.g. 500 or network error)", async () => {
-    server.use(
-      http.get("/api/editions/active", () => HttpResponse.json(null, { status: 500 })),
-    );
+    server.use(http.get("/api/editions/active", () => HttpResponse.json(null, { status: 500 })));
 
     const wrapper = createTestQueryClientWrapper();
     const { result } = renderHook(() => useActiveEdition(), { wrapper });

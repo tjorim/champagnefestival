@@ -172,7 +172,9 @@ function VenuePlanRoute() {
     <div className="App standalone-app">
       <StandaloneNavBar iconClass="bi bi-map" title={m.venue_plan_title()} />
       <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.venue_plan_error()}><VenuePlanPage /></AppSuspense>
+        <AppSuspense errorFallbackText={m.venue_plan_error()}>
+          <VenuePlanPage />
+        </AppSuspense>
       </main>
     </div>
   );
@@ -340,18 +342,20 @@ function App() {
 
   const registrableEvents = useMemo(() => {
     const now = new Date();
-    return edition.events
-      // Registration is offered for events that require it (capacity-limited),
-      // and also for walk-in events that still have something to order (e.g.
-      // a VIP package) — everyone else can just show up, no RSVP needed.
-      .filter((event) => event.registrationRequired || event.products.length > 0)
-      .filter((event) => {
-        const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
-        return eventEnd >= now;
-      })
-      .filter(
-        (event) => !event.registrationsOpenFrom || new Date(event.registrationsOpenFrom) <= now,
-      );
+    return (
+      edition.events
+        // Registration is offered for events that require it (capacity-limited),
+        // and also for walk-in events that still have something to order (e.g.
+        // a VIP package) — everyone else can just show up, no RSVP needed.
+        .filter((event) => event.registrationRequired || event.products.length > 0)
+        .filter((event) => {
+          const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
+          return eventEnd >= now;
+        })
+        .filter(
+          (event) => !event.registrationsOpenFrom || new Date(event.registrationsOpenFrom) <= now,
+        )
+    );
   }, [edition.events]);
 
   if (isMaintenanceMode) {
@@ -380,11 +384,7 @@ function App() {
       )}
 
       {/* Header & Navigation */}
-      {variant === "classic" ? (
-        <HeaderClassic />
-      ) : (
-        <Header onBrandClick={handleBrandClick} />
-      )}
+      {variant === "classic" ? <HeaderClassic /> : <Header onBrandClick={handleBrandClick} />}
       <EventStructuredData />
 
       <main id="main-content">

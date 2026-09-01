@@ -126,7 +126,8 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
         ? {
             name: rawCoOrganizer.name,
             website:
-              typeof rawCoOrganizer.website === "string" && /^https?:\/\//.test(rawCoOrganizer.website)
+              typeof rawCoOrganizer.website === "string" &&
+              /^https?:\/\//.test(rawCoOrganizer.website)
                 ? rawCoOrganizer.website
                 : undefined,
           }
@@ -142,9 +143,7 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
   });
 }
 
-async function fetchOtherEditionType(
-  editionType: OtherEditionType,
-): Promise<ApiUpcomingEdition[]> {
+async function fetchOtherEditionType(editionType: OtherEditionType): Promise<ApiUpcomingEdition[]> {
   const response = await fetch(`/api/editions/upcoming?edition_type=${editionType}`);
   if (!response.ok) {
     throw new Error(`Failed to load ${editionType} other events: ${response.status}`);
@@ -264,8 +263,6 @@ export default function OtherEvents() {
                           </p>
                         )}
                         <p className="mb-2">{item.event.description}</p>
-
-
                       </div>
 
                       {(item.event.registrationRequired || item.event.products.length > 0) && (

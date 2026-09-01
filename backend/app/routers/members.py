@@ -5,12 +5,12 @@ Business logic lives in ``app.services.members_service`` and is shared with
 ``app.mcp.admin.members``.
 """
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination, get_request_id
+from app.dependencies import get_request_id
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services import members_service
 from app.utils import person_to_dict
@@ -21,6 +21,13 @@ router = APIRouter(
     dependencies=[Depends(require_admin)],
 )
 
+# GET "" was retired — the frontend now reads the member list from
+# GET /api/people?role=member (see PeopleManagement/MembersManagement and
+# app/routers/people.py), since it was functionally identical to that filter
+# and its own hand-rolled search predicate had already drifted from people.py's.
+# The CRUD endpoints below stay: "delete a member" is a role removal (soft
+# archive), not a generic person delete, so it keeps its own named operation.
+
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
 async def create_member(
@@ -30,20 +37,6 @@ async def create_member(
     request_id: str | None = Depends(get_request_id),
 ) -> dict:
     return await members_service.create_member(db, body=body, actor=actor, request_id=request_id)
-
-
-@router.get("", response_model=list[PersonOut])
-async def list_members(
-    db: AsyncSession = Depends(get_db),
-    q: str | None = Query(default=None),
-    active: bool | None = Query(default=None),
-    pagination: Pagination = Depends(),
-) -> list[dict]:
-    stmt = members_service.search_members_stmt(q=q, active=active)
-    stmt = apply_pagination(stmt, pagination)
-    result = await db.execute(stmt)
-    rows = result.scalars().all()
-    return [person_to_dict(p) for p in rows]
 
 
 @router.get("/{person_id}", response_model=PersonOut)

@@ -72,7 +72,7 @@ async def test_merge_transfers_volunteer_help_periods(client):
     assert "volunteer" in r.json()["roles"]
 
     r = await client.get("/api/volunteers", headers=ADMIN_HEADERS)
-    volunteers = {v["id"]: v for v in r.json()}
+    volunteers = {v["id"]: v for v in r.json()["items"]}
     assert canonical_id in volunteers
     assert len(volunteers[canonical_id]["help_periods"]) == 2
     assert duplicate_id not in volunteers

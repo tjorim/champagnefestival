@@ -16,8 +16,8 @@ import io
 import logging
 import re
 import secrets
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select
@@ -29,7 +29,7 @@ from starlette.responses import StreamingResponse
 from app.auth import get_actor_id, get_optional_claims, require_admin
 from app.config import settings
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination
+from app.dependencies import Pagination
 from app.email import send_guest_access_email
 from app.live import live_bus
 from app.live import mapping as live_mapping
@@ -40,7 +40,7 @@ from app.schemas import (
     RegistrationAdminCreate,
     RegistrationCreate,
     RegistrationGuestOut,
-    RegistrationListOut,
+    RegistrationListEnvelope,
     RegistrationLookupRequest,
     RegistrationLookupRequestAccepted,
     RegistrationOut,
@@ -48,12 +48,7 @@ from app.schemas import (
     RegistrationUpdate,
 )
 from app.services import events_service, registrations_service
-from app.services.operational_search import (
-    DEFAULT_RESULT_LIMIT,
-    bounded_limit,
-    person_search_order_by,
-    person_search_predicate,
-)
+from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.services.people_service import parse_phone
 from app.services.users_service import get_or_create_user
@@ -69,6 +64,25 @@ from app.utils import (
 
 router = APIRouter(prefix="/api/registrations", tags=["registrations"])
 logger = logging.getLogger(__name__)
+
+# Applies to GET /api/registrations regardless of whether `q` is set, so an
+# admin paging a guest list gets one predictable page size instead of "20
+# when searching, unbounded when not". The ceiling is `Pagination`'s own
+# `limit` validation (see app/dependencies.py, currently 1000) rather than
+# app.services.operational_search.MAX_RESULT_LIMIT (50) — that constant is
+# sized for the volunteer door-lookup use case (one guest at a time), not an
+# admin browsing or exporting a multi-year guest list.
+ADMIN_LIST_DEFAULT_LIMIT = 50
+
+RegistrationSortKey = Literal["name", "event", "guest_count", "status", "payment_status", "checked_in"]
+_SORT_COLUMNS: dict[RegistrationSortKey, Any] = {
+    "name": Person.name,
+    "event": Event.title,
+    "guest_count": Registration.guest_count,
+    "status": Registration.status,
+    "payment_status": Registration.payment_status,
+    "checked_in": Registration.checked_in,
+}
 
 
 @router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
@@ -169,7 +183,7 @@ async def admin_create_registration(
 
 @router.get(
     "",
-    response_model=list[RegistrationListOut],
+    response_model=RegistrationListEnvelope,
     dependencies=[Depends(require_admin)],
 )
 async def list_registrations(
@@ -180,42 +194,85 @@ async def list_registrations(
     ),
     event_id: str | None = Query(default=None, description="Filter by event ID"),
     table_id: str | None = Query(default=None, description="Filter by table ID"),
-    edition_type: str | None = Query(default=None, description="Filter by the event edition type"),
+    person_id: str | None = Query(default=None, description="Filter by registrant person ID"),
+    edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    edition_type: str | None = Query(default=None, description="Filter by the exact event edition type"),
+    edition_category: Literal["festival", "standalone"] | None = Query(
+        default=None,
+        description="Filter by edition category: 'festival' matches edition_type=festival, "
+        "'standalone' matches every other edition_type (bourse, capsule_exchange, ...)",
+    ),
+    event_date: date | None = Query(default=None, description="Filter by the event's calendar date"),
+    sort: RegistrationSortKey | None = Query(
+        default=None,
+        description="Sort column; overrides the default relevance/newest-first order. "
+        "Applies across the whole filtered set, not just the current page.",
+    ),
+    sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction, used only with `sort`"),
     pagination: Pagination = Depends(),
-) -> list[dict]:
-    stmt = (
-        select(Registration)
-        .options(
-            selectinload(Registration.event).selectinload(Event.edition),
-            selectinload(Registration.event).selectinload(Event.products),
-        )
-        .order_by(Registration.created_at.desc(), Registration.id.desc())
-    )
+) -> dict:
+    q_stripped = q.strip() if q and q.strip() else None
 
-    if q and (q_stripped := q.strip()):
-        stmt = stmt.join(Person, Registration.person_id == Person.id)
-        stmt = stmt.where(person_search_predicate(name=q_stripped, email=q_stripped))
-        stmt = stmt.order_by(None).order_by(
+    person_needed = bool(q_stripped) or sort == "name"
+    event_needed = bool(edition_id or event_date or edition_type or edition_category or sort == "event")
+    edition_needed = bool(edition_type or edition_category)
+
+    filtered_stmt = select(Registration)
+    if person_needed:
+        filtered_stmt = filtered_stmt.join(Person, Registration.person_id == Person.id)
+    if event_needed:
+        filtered_stmt = filtered_stmt.join(Registration.event)
+    if edition_needed:
+        filtered_stmt = filtered_stmt.join(Event.edition)
+
+    if q_stripped:
+        filtered_stmt = filtered_stmt.where(person_search_predicate(name=q_stripped, email=q_stripped))
+    if status_filter:
+        filtered_stmt = filtered_stmt.where(Registration.status == status_filter)
+    if event_id:
+        filtered_stmt = filtered_stmt.where(Registration.event_id == event_id)
+    if table_id:
+        filtered_stmt = filtered_stmt.where(Registration.table_id == table_id)
+    if person_id:
+        filtered_stmt = filtered_stmt.where(Registration.person_id == person_id)
+    if edition_id:
+        filtered_stmt = filtered_stmt.where(Event.edition_id == edition_id)
+    if event_date:
+        filtered_stmt = filtered_stmt.where(Event.date == event_date)
+    if edition_type:
+        filtered_stmt = filtered_stmt.where(Edition.edition_type == edition_type)
+    if edition_category == "festival":
+        filtered_stmt = filtered_stmt.where(Edition.edition_type == "festival")
+    elif edition_category == "standalone":
+        filtered_stmt = filtered_stmt.where(Edition.edition_type != "festival")
+
+    total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
+
+    stmt = filtered_stmt.options(
+        selectinload(Registration.event).selectinload(Event.edition),
+        selectinload(Registration.event).selectinload(Event.products),
+    )
+    if sort is not None:
+        sort_column = _SORT_COLUMNS[sort]
+        order_expr = sort_column.desc() if sort_dir == "desc" else sort_column.asc()
+        stmt = stmt.order_by(order_expr, Registration.id.desc())
+    elif q_stripped:
+        stmt = stmt.order_by(
             *person_search_order_by(name=q_stripped, email=q_stripped),
             Registration.created_at.desc(),
+            Registration.id.desc(),
         )
-        limit = bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT)
-        stmt = stmt.offset((pagination.page - 1) * limit).limit(limit)
-    if status_filter:
-        stmt = stmt.where(Registration.status == status_filter)
-    if event_id:
-        stmt = stmt.where(Registration.event_id == event_id)
-    if table_id:
-        stmt = stmt.where(Registration.table_id == table_id)
-    if edition_type:
-        stmt = stmt.join(Registration.event).join(Event.edition).where(Edition.edition_type == edition_type)
+    else:
+        stmt = stmt.order_by(Registration.created_at.desc(), Registration.id.desc())
 
-    if not (q and q.strip()):
-        stmt = apply_pagination(stmt, pagination)
+    limit = pagination.limit or ADMIN_LIST_DEFAULT_LIMIT
+    page = pagination.page
+    stmt = stmt.offset((page - 1) * limit).limit(limit)
 
     rows = (await db.execute(stmt)).scalars().all()
     person_map = await registrations_service.fetch_person_map(db, list(rows))
-    return [registration_to_list_dict(row, person_map[row.person_id], row.event) for row in rows]
+    items = [registration_to_list_dict(row, person_map[row.person_id], row.event) for row in rows]
+    return {"items": items, "total": total, "limit": limit, "page": page}
 
 
 @router.get("/export", dependencies=[Depends(require_admin)])

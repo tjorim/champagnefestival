@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -14,19 +14,17 @@ import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
-import {
-  useAppTable,
-  createAppColumnHelper,
-  type AdminTableFeatures,
-} from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 import { exportToCsv } from "@/utils/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import {
+  ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
-  fetchRegistrations,
+  fetchRegistrationsPage,
+  type RegistrationSortKey,
 } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { toLocalDateKey } from "@/utils/dateUtils";
@@ -36,6 +34,25 @@ import { useTodayKey } from "@/hooks/useTodayKey";
 import { devError } from "@/utils/devLog";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
+const DEFAULT_PAGE_SIZE = 50;
+// Bulk mutations are one REST call per registration (see executeBulkAction) —
+// batching keeps a large "select all matching" action from firing hundreds
+// of simultaneous requests at once.
+const BULK_ACTION_BATCH_SIZE = 20;
+
+// Maps a sortable table column's id to the backend `sort` query param it
+// corresponds to (see backend/app/routers/registrations.py's _SORT_COLUMNS).
+// Sorting is server-side — the table only ever holds one page of rows — so
+// every sortable column here must have a backend counterpart.
+const SORT_KEY_BY_COLUMN: Record<string, RegistrationSortKey> = {
+  name: "name",
+  event: "event",
+  guestCount: "guest_count",
+  status: "status",
+  paymentStatus: "payment_status",
+  checkedIn: "checked_in",
+};
 
 interface AllocationRef {
   id: number;
@@ -118,19 +135,6 @@ function isStandaloneRegistration(registration: Registration) {
 
 const columnHelper = createAppColumnHelper<Registration>();
 
-const registrationGlobalFilter: FilterFn<AdminTableFeatures, Registration> = (
-  row,
-  _columnId,
-  filterValue: string,
-) => {
-  const s = filterValue.toLowerCase();
-  return (
-    row.original.person.name.toLowerCase().includes(s) ||
-    row.original.person.email.toLowerCase().includes(s)
-  );
-};
-registrationGlobalFilter.autoRemove = (val: unknown) => !val || String(val) === "";
-
 export default function RegistrationList({
   registrations,
   tables,
@@ -158,44 +162,68 @@ export default function RegistrationList({
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
-    () => loadColVis(COL_VIS_KEY),
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() =>
+    loadColVis(COL_VIS_KEY),
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // True only once the user has explicitly expanded a full-page selection to
+  // "every registration matching these filters" (the Gmail-style banner
+  // below) — purely a label/UX flag; `selectedIds` itself always holds the
+  // real set being acted on.
+  const [selectAllMatchingActive, setSelectAllMatchingActive] = useState(false);
+  const [isSelectingAllMatching, setIsSelectingAllMatching] = useState(false);
+  const [selectAllMatchingError, setSelectAllMatchingError] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState<"confirm" | "cancel" | "paid" | null>(null);
   const [bulkInProgress, setBulkInProgress] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [exportingEventId, setExportingEventId] = useState<string | null>(null);
   const [eventExportError, setEventExportError] = useState<string | null>(null);
+  const [exportingAllCsv, setExportingAllCsv] = useState(false);
+  const [csvExportError, setCsvExportError] = useState<string | null>(null);
   const todayKey = useTodayKey();
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const filterDefaultsAppliedRef = useRef<string | null>(null);
+
+  // The set of matching registrations changes under any filter change, so a
+  // held-over selection (page-scoped or "all matching") no longer means what
+  // it did — clear it rather than silently acting on a stale set later.
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectAllMatchingActive(false);
+    setSelectAllMatchingError(null);
+  }, []);
+
+  // Guards against resetting `page` on the vacuous debounce firing 300ms after
+  // every mount (q hasn't actually changed then) — only an actual change to
+  // the debounced search term should knock the user back to page 1.
+  const debouncedQRef = useRef(debouncedQ);
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
+    const timer = setTimeout(() => {
+      const next = q.trim();
+      setDebouncedQ(next);
+      if (next !== debouncedQRef.current) {
+        debouncedQRef.current = next;
+        setPage(1);
+        clearSelection();
+      }
+    }, 300);
     return () => clearTimeout(timer);
-  }, [q]);
-  const registrationSearchQuery = useQuery({
-    queryKey: ["admin", "registrations", "search", debouncedQ],
-    queryFn: () => fetchRegistrations(authHeaders, debouncedQ),
-    enabled: debouncedQ.length > 0,
-    staleTime: 30 * 1000,
-    retry: false,
-  });
+  }, [q, clearSelection]);
+
   const checkInStatsQuery = useQuery({
     queryKey: queryKeys.admin.eventCheckInStats,
     queryFn: () => fetchEventCheckInStats(authHeaders),
     staleTime: 30 * 1000,
     retry: false,
   });
-  const displayedRegistrations = useMemo(
-    () => (debouncedQ ? (registrationSearchQuery.data ?? []) : registrations),
-    [debouncedQ, registrationSearchQuery.data, registrations],
-  );
 
   // Refs so column header/cell can read latest selection state without being in deps
   const selectedIdsRef = useRef<Set<string>>(selectedIds);
   selectedIdsRef.current = selectedIds;
-  const preFilteredRef = useRef<Registration[]>([]);
+  const pageRegistrationsRef = useRef<Registration[]>([]);
 
   const registrationPersonIds = useMemo(
     () => new Set(registrations.map((r) => r.personId)),
@@ -236,34 +264,166 @@ export default function RegistrationList({
     if (filterDefaultsAppliedRef.current === activeEdition.id) return;
     filterDefaultsAppliedRef.current = activeEdition.id;
     setActiveEditionOnly(true);
-  }, [activeEdition.id, isActiveEditionDay]);
+    setPage(1);
+    clearSelection();
+  }, [activeEdition.id, isActiveEditionDay, clearSelection]);
 
-  // Domain-level pre-filter (active edition, date, edition type, status, allocation) — text search handled by TanStack
-  const preFiltered = useMemo(
-    () =>
-      displayedRegistrations.filter((registration) => {
-        if (filter !== "all" && registration.status !== filter) return false;
-        if (filterPersonId && registration.person.id !== filterPersonId) return false;
-        if (activeEditionOnly && !isRegistrationInEdition(registration, activeEdition.id)) {
-          return false;
-        }
-        if (dateFilter === "today" && registration.event?.date !== todayKey) return false;
-        const standalone = isStandaloneRegistration(registration);
-        if (editionFilter === "festival" && standalone) return false;
-        if (editionFilter === "standalone" && !standalone) return false;
-        return true;
-      }),
+  useEffect(() => {
+    if (applyActiveEditionFilterRequest === 0) return;
+    setActiveEditionOnly(true);
+    setPage(1);
+    clearSelection();
+  }, [applyActiveEditionFilterRequest, clearSelection]);
+
+  const changeStatusFilter = useCallback(
+    (next: "all" | RegistrationStatus) => {
+      onFilterChange(next);
+      setPage(1);
+      clearSelection();
+    },
+    [onFilterChange, clearSelection],
+  );
+
+  const changeAllocationFilter = useCallback(
+    (value: string) => {
+      setAllocationFilter(value);
+      setPage(1);
+      clearSelection();
+    },
+    [clearSelection],
+  );
+
+  const changeEditionFilter = useCallback(
+    (value: EditionFilter) => {
+      setEditionFilter(value);
+      setPage(1);
+      clearSelection();
+    },
+    [clearSelection],
+  );
+
+  const toggleActiveEditionOnly = useCallback(() => {
+    setActiveEditionOnly((current) => !current);
+    setPage(1);
+    clearSelection();
+  }, [clearSelection]);
+
+  const toggleDateFilter = useCallback(() => {
+    setDateFilter((current) => (current === "today" ? "all" : "today"));
+    setPage(1);
+    clearSelection();
+  }, [clearSelection]);
+
+  const changePageSize = useCallback((value: number) => {
+    setPageSize(value);
+    setPage(1);
+  }, []);
+
+  const activeSort = sorting[0];
+  const backendSort: RegistrationSortKey | undefined = activeSort
+    ? SORT_KEY_BY_COLUMN[activeSort.id]
+    : undefined;
+  const backendSortDir: "asc" | "desc" = activeSort?.desc ? "desc" : "asc";
+  const backendStatus = filter === "all" ? "" : filter;
+  const backendEditionId = activeEditionOnly ? activeEdition.id : "";
+  const backendEventDate = dateFilter === "today" ? todayKey : "";
+  const backendEditionCategory = editionFilter === "all" ? "" : editionFilter;
+
+  // Shared with the "select all matching" bulk-selection fetch and the CSV
+  // export below, so both act on exactly the same filter set the table is
+  // currently showing — everything except page/limit, which each caller
+  // supplies for itself.
+  const currentFilterParams = useMemo(
+    () => ({
+      query: debouncedQ || undefined,
+      status: backendStatus || undefined,
+      personId: filterPersonId ?? undefined,
+      editionId: backendEditionId || undefined,
+      eventDate: backendEventDate || undefined,
+      editionCategory: backendEditionCategory || undefined,
+      sort: backendSort,
+      sortDir: backendSort ? backendSortDir : undefined,
+    }),
     [
-      displayedRegistrations,
-      filter,
+      debouncedQ,
+      backendStatus,
       filterPersonId,
-      activeEditionOnly,
-      activeEdition.id,
-      dateFilter,
-      todayKey,
-      editionFilter,
+      backendEditionId,
+      backendEventDate,
+      backendEditionCategory,
+      backendSort,
+      backendSortDir,
     ],
   );
+
+  const pageQuery = useQuery({
+    queryKey: queryKeys.admin.registrationsPage({
+      q: debouncedQ,
+      status: backendStatus,
+      personId: filterPersonId ?? "",
+      editionId: backendEditionId,
+      eventDate: backendEventDate,
+      editionCategory: backendEditionCategory,
+      sort: backendSort ?? "",
+      sortDir: backendSortDir,
+      page,
+      pageSize,
+    }),
+    queryFn: () =>
+      fetchRegistrationsPage(authHeaders, { ...currentFilterParams, page, limit: pageSize }),
+    placeholderData: keepPreviousData,
+    staleTime: 15 * 1000,
+    retry: false,
+  });
+
+  // The paginated fetch decides *which* registrations are on this page (and in
+  // what order) — but for the actual row data we prefer whatever the live-synced
+  // full collection (the `registrations` prop) already holds, so a check-in or
+  // table assignment made elsewhere in the admin UI shows up on this page
+  // instantly instead of waiting for the next paginated refetch.
+  const registrationsById = useMemo(
+    () => new Map(registrations.map((r) => [r.id, r] as const)),
+    [registrations],
+  );
+  const pageRegistrations = useMemo(
+    () => (pageQuery.data?.registrations ?? []).map((r) => registrationsById.get(r.id) ?? r),
+    [pageQuery.data, registrationsById],
+  );
+
+  const total = pageQuery.data?.total ?? 0;
+  const effectivePageSize = pageQuery.data?.limit ?? pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
+  const rangeFrom = total === 0 ? 0 : (page - 1) * effectivePageSize + 1;
+  const rangeTo = Math.min(page * effectivePageSize, total);
+
+  // Gmail-style expansion offer: the whole visible page is selected, but the
+  // filters match more than fits on one page, and the user hasn't already
+  // expanded to "all matching" (or manually adjusted the selection since).
+  const canExpandSelectionToAllMatching =
+    !selectAllMatchingActive &&
+    pageRegistrations.length > 0 &&
+    total > pageRegistrations.length &&
+    pageRegistrations.every((r) => selectedIds.has(r.id));
+
+  // Fetches every registration matching the current filters (not just the
+  // current page), bounded the same way fetchAllRegistrations is — used by
+  // "export all matching" and by the "select all N matching" bulk action.
+  const fetchAllMatchingRegistrations = useCallback(async (): Promise<Registration[]> => {
+    const { registrations: matched, total: matchedTotal } = await fetchRegistrationsPage(
+      authHeaders,
+      {
+        ...currentFilterParams,
+        limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
+      },
+    );
+    if (matchedTotal > matched.length) {
+      devError(
+        `Bulk selection/export is covering ${matched.length} of ${matchedTotal} matching registrations; ` +
+          "raise ADMIN_REGISTRATIONS_FULL_LIST_LIMIT if this recurs.",
+      );
+    }
+    return matched.map((r) => registrationsById.get(r.id) ?? r);
+  }, [authHeaders, currentFilterParams, registrationsById]);
 
   const handleAssignTable = useCallback(
     (registrationId: string, tableId: string) => {
@@ -300,18 +460,13 @@ export default function RegistrationList({
     [registrations, todayKey],
   );
 
-  useEffect(() => {
-    if (applyActiveEditionFilterRequest === 0) return;
-    setActiveEditionOnly(true);
-  }, [applyActiveEditionFilterRequest]);
-
   // Isolated memo so that selectedIds changes only rebuild the select column, not all columns
   const selectColumn = useMemo(
     () =>
       columnHelper.display({
         id: "select",
         header: () => {
-          const allIds = preFilteredRef.current.map((r) => r.id);
+          const allIds = pageRegistrationsRef.current.map((r) => r.id);
           const allSelected =
             allIds.length > 0 && allIds.every((id) => selectedIdsRef.current.has(id));
           return (
@@ -319,6 +474,8 @@ export default function RegistrationList({
               type="checkbox"
               checked={allSelected}
               onChange={() => {
+                setSelectAllMatchingActive(false);
+                setSelectAllMatchingError(null);
                 if (allSelected) {
                   setSelectedIds((prev) => {
                     const next = new Set<string>(prev);
@@ -339,6 +496,8 @@ export default function RegistrationList({
             type="checkbox"
             checked={selectedIds.has(row.id)}
             onChange={() => {
+              setSelectAllMatchingActive(false);
+              setSelectAllMatchingError(null);
               setSelectedIds((prev) => {
                 const next = new Set<string>(prev);
                 if (next.has(row.id)) next.delete(row.id);
@@ -391,212 +550,209 @@ export default function RegistrationList({
   );
 
   const dataColumns = useMemo(
-    () => columnHelper.columns([
-      columnHelper.accessor((row) => row.person.name, {
-        id: "name",
-        header: m.registration_name(),
-        cell: ({ row }) => {
-          const reg = row.original;
-          const isLinked = allContactPersonIds.has(reg.person.id);
-          const isStandalone = isStandaloneRegistration(reg);
-          return (
-            <>
-              <div className="fw-semibold d-flex align-items-center gap-1">
-                {reg.person.name}
-                {isLinked && (
-                  <i
-                    className="bi bi-person-badge text-info"
-                    title={m.admin_linked_exhibitor_title()}
-                    aria-label={m.admin_allocation_contact_aria()}
-                  />
-                )}
-                <Badge bg={isStandalone ? "info" : "warning"} text="dark">
-                  {(() => {
-                    const et = reg.event?.edition?.editionType;
-                    if (et === "bourse") return m.admin_edition_type_bourse();
-                    if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
-                    return m.admin_edition_type_festival();
-                  })()}
-                </Badge>
-              </div>
-              <div className="text-secondary small">{reg.person.email}</div>
-              {!isStandalone && reg.orderItems.length > 0 && (
-                <div className="text-warning small">
-                  <i className="bi bi-cart-fill me-1" aria-hidden="true" />
-                  {reg.orderItems.filter((o) => o.delivered).length}/{reg.orderItems.length}{" "}
-                  {m.admin_order_items()}
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor((row) => row.person.name, {
+          id: "name",
+          header: m.registration_name(),
+          cell: ({ row }) => {
+            const reg = row.original;
+            const isLinked = allContactPersonIds.has(reg.person.id);
+            const isStandalone = isStandaloneRegistration(reg);
+            return (
+              <>
+                <div className="fw-semibold d-flex align-items-center gap-1">
+                  {reg.person.name}
+                  {isLinked && (
+                    <i
+                      className="bi bi-person-badge text-info"
+                      title={m.admin_linked_exhibitor_title()}
+                      aria-label={m.admin_allocation_contact_aria()}
+                    />
+                  )}
+                  <Badge bg={isStandalone ? "info" : "warning"} text="dark">
+                    {(() => {
+                      const et = reg.event?.edition?.editionType;
+                      if (et === "bourse") return m.admin_edition_type_bourse();
+                      if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
+                      return m.admin_edition_type_festival();
+                    })()}
+                  </Badge>
                 </div>
-              )}
-            </>
-          );
-        },
-      }),
-      columnHelper.accessor((row) => row.event?.title ?? row.eventId, {
-        id: "event",
-        header: m.admin_event_label(),
-        cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
-        meta: { tdClassName: "d-none d-md-table-cell" },
-      }),
-      columnHelper.accessor("guestCount", {
-        header: m.admin_guests_count(),
-      }),
-      columnHelper.accessor("status", {
-        header: m.admin_status_label(),
-        cell: ({ getValue }) => (
-          <Badge bg={statusBadgeVariant(getValue())}>
-            {statusLabel(getValue())}
-          </Badge>
-        ),
-      }),
-      columnHelper.accessor("paymentStatus", {
-        header: m.admin_payment_label(),
-        cell: ({ getValue }) => (
-          <Badge bg={paymentBadgeVariant(getValue())}>
-            {paymentLabel(getValue())}
-          </Badge>
-        ),
-        meta: { tdClassName: "d-none d-lg-table-cell" },
-      }),
-      columnHelper.accessor("checkedIn", {
-        header: m.admin_check_in_title(),
-        cell: ({ row }) => {
-          const reg = row.original;
-          const isStandalone = isStandaloneRegistration(reg);
-          return (
-            <>
-              {reg.checkedIn ? (
-                <Badge bg="success">
-                  <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
-                  {m.admin_checked_in()}
-                </Badge>
-              ) : (
-                <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
-              )}
-              {!isStandalone && reg.strapIssued && (
-                <Badge bg="info" className="ms-1">
-                  <i className="bi bi-person-badge-fill" aria-hidden="true" />
-                </Badge>
-              )}
-            </>
-          );
-        },
-        meta: { tdClassName: "d-none d-md-table-cell" },
-      }),
-      columnHelper.display({
-        id: "table",
-        header: m.admin_tables_tab(),
-        enableSorting: false,
-        cell: ({ row }) => {
-          const reg = row.original;
-          const isStandalone = isStandaloneRegistration(reg);
-          return isStandalone ? (
-            <span className="text-secondary small">—</span>
-          ) : (
-            <Form.Select
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              value={reg.tableId ?? ""}
-              onChange={(e) => handleAssignTable(reg.id, e.target.value)}
-              aria-label={m.admin_action_assign_table()}
-            >
-              <option value="">{m.admin_unassigned()}</option>
-              {tables.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.capacity})
-                </option>
-              ))}
-            </Form.Select>
-          );
-        },
-        meta: { tdClassName: "d-none d-lg-table-cell" },
-      }),
-      columnHelper.display({
-        id: "actions",
-        header: m.admin_actions_label(),
-        enableSorting: false,
-        cell: ({ row }) => {
-          const reg = row.original;
-          const hasMoreActions = reg.status !== "cancelled" || reg.paymentStatus !== "paid";
-          return (
-            <div className="d-flex flex-wrap gap-1">
-              <Button
+                <div className="text-secondary small">{reg.person.email}</div>
+                {!isStandalone && reg.orderItems.length > 0 && (
+                  <div className="text-warning small">
+                    <i className="bi bi-cart-fill me-1" aria-hidden="true" />
+                    {reg.orderItems.filter((o) => o.delivered).length}/{reg.orderItems.length}{" "}
+                    {m.admin_order_items()}
+                  </div>
+                )}
+              </>
+            );
+          },
+        }),
+        columnHelper.accessor((row) => row.event?.title ?? row.eventId, {
+          id: "event",
+          header: m.admin_event_label(),
+          cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
+          meta: { tdClassName: "d-none d-md-table-cell" },
+        }),
+        columnHelper.accessor("guestCount", {
+          header: m.admin_guests_count(),
+        }),
+        columnHelper.accessor("status", {
+          header: m.admin_status_label(),
+          cell: ({ getValue }) => (
+            <Badge bg={statusBadgeVariant(getValue())}>{statusLabel(getValue())}</Badge>
+          ),
+        }),
+        columnHelper.accessor("paymentStatus", {
+          header: m.admin_payment_label(),
+          cell: ({ getValue }) => (
+            <Badge bg={paymentBadgeVariant(getValue())}>{paymentLabel(getValue())}</Badge>
+          ),
+          meta: { tdClassName: "d-none d-lg-table-cell" },
+        }),
+        columnHelper.accessor("checkedIn", {
+          header: m.admin_check_in_title(),
+          cell: ({ row }) => {
+            const reg = row.original;
+            const isStandalone = isStandaloneRegistration(reg);
+            return (
+              <>
+                {reg.checkedIn ? (
+                  <Badge bg="success">
+                    <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
+                    {m.admin_checked_in()}
+                  </Badge>
+                ) : (
+                  <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
+                )}
+                {!isStandalone && reg.strapIssued && (
+                  <Badge bg="info" className="ms-1">
+                    <i className="bi bi-person-badge-fill" aria-hidden="true" />
+                  </Badge>
+                )}
+              </>
+            );
+          },
+          meta: { tdClassName: "d-none d-md-table-cell" },
+        }),
+        columnHelper.display({
+          id: "table",
+          header: m.admin_tables_tab(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const reg = row.original;
+            const isStandalone = isStandaloneRegistration(reg);
+            return isStandalone ? (
+              <span className="text-secondary small">—</span>
+            ) : (
+              <Form.Select
                 size="sm"
-                variant="outline-light"
-                onClick={() => onViewDetail(reg)}
-                title={m.admin_qr_code()}
-                aria-label={m.admin_qr_code()}
+                className="bg-dark text-light border-secondary"
+                value={reg.tableId ?? ""}
+                onChange={(e) => handleAssignTable(reg.id, e.target.value)}
+                aria-label={m.admin_action_assign_table()}
               >
-                <i className="bi bi-qr-code" aria-hidden="true" />
-              </Button>
-              {reg.status === "pending" && (
+                <option value="">{m.admin_unassigned()}</option>
+                {tables.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} ({t.capacity})
+                  </option>
+                ))}
+              </Form.Select>
+            );
+          },
+          meta: { tdClassName: "d-none d-lg-table-cell" },
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: m.admin_actions_label(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const reg = row.original;
+            const hasMoreActions = reg.status !== "cancelled" || reg.paymentStatus !== "paid";
+            return (
+              <div className="d-flex flex-wrap gap-1">
                 <Button
                   size="sm"
-                  variant="outline-success"
-                  onClick={() => onUpdateStatus(reg.id, "confirmed")}
-                  title={m.admin_action_confirm()}
-                  aria-label={m.admin_action_confirm()}
+                  variant="outline-light"
+                  onClick={() => onViewDetail(reg)}
+                  title={m.admin_qr_code()}
+                  aria-label={m.admin_qr_code()}
                 >
-                  <i className="bi bi-check-lg" aria-hidden="true" />
+                  <i className="bi bi-qr-code" aria-hidden="true" />
                 </Button>
-              )}
-              {!reg.checkedIn && (
-                <Button
-                  size="sm"
-                  variant="outline-success"
-                  onClick={() => handleCheckIn(reg.id)}
-                  disabled={processingIds.has(reg.id)}
-                  title={m.admin_mark_checked_in()}
-                  aria-label={m.admin_mark_checked_in()}
-                >
-                  <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
-                </Button>
-              )}
-              {reg.checkedIn && !reg.strapIssued && !isStandaloneRegistration(reg) && (
-                <Button
-                  size="sm"
-                  variant="outline-info"
-                  onClick={() => handleIssueStrap(reg.id)}
-                  disabled={processingIds.has(reg.id)}
-                  title={m.admin_issue_strap()}
-                  aria-label={m.admin_issue_strap()}
-                >
-                  <i className="bi bi-person-badge" aria-hidden="true" />
-                </Button>
-              )}
-              {hasMoreActions && (
-                <Dropdown>
-                  <Dropdown.Toggle
+                {reg.status === "pending" && (
+                  <Button
                     size="sm"
-                    variant="outline-secondary"
-                    id={`reg-more-${reg.id}`}
-                    aria-label={m.admin_more_actions_for({ name: reg.person.name })}
+                    variant="outline-success"
+                    onClick={() => onUpdateStatus(reg.id, "confirmed")}
+                    title={m.admin_action_confirm()}
+                    aria-label={m.admin_action_confirm()}
                   >
-                    <i className="bi bi-three-dots" aria-hidden="true" />
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu variant="dark">
-                    {reg.status !== "cancelled" && (
-                      <Dropdown.Item
-                        className="text-danger"
-                        onClick={() => onUpdateStatus(reg.id, "cancelled")}
-                      >
-                        <i className="bi bi-x-lg me-2" aria-hidden="true" />
-                        {m.admin_action_cancel()}
-                      </Dropdown.Item>
-                    )}
-                    {reg.paymentStatus !== "paid" && (
-                      <Dropdown.Item onClick={() => onUpdatePayment(reg.id, "paid")}>
-                        <i className="bi bi-currency-euro me-2" aria-hidden="true" />
-                        {m.admin_action_mark_paid()}
-                      </Dropdown.Item>
-                    )}
-                  </Dropdown.Menu>
-                </Dropdown>
-              )}
-            </div>
-          );
-        },
-      }),
-    ]),
+                    <i className="bi bi-check-lg" aria-hidden="true" />
+                  </Button>
+                )}
+                {!reg.checkedIn && (
+                  <Button
+                    size="sm"
+                    variant="outline-success"
+                    onClick={() => handleCheckIn(reg.id)}
+                    disabled={processingIds.has(reg.id)}
+                    title={m.admin_mark_checked_in()}
+                    aria-label={m.admin_mark_checked_in()}
+                  >
+                    <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                  </Button>
+                )}
+                {reg.checkedIn && !reg.strapIssued && !isStandaloneRegistration(reg) && (
+                  <Button
+                    size="sm"
+                    variant="outline-info"
+                    onClick={() => handleIssueStrap(reg.id)}
+                    disabled={processingIds.has(reg.id)}
+                    title={m.admin_issue_strap()}
+                    aria-label={m.admin_issue_strap()}
+                  >
+                    <i className="bi bi-person-badge" aria-hidden="true" />
+                  </Button>
+                )}
+                {hasMoreActions && (
+                  <Dropdown>
+                    <Dropdown.Toggle
+                      size="sm"
+                      variant="outline-secondary"
+                      id={`reg-more-${reg.id}`}
+                      aria-label={m.admin_more_actions_for({ name: reg.person.name })}
+                    >
+                      <i className="bi bi-three-dots" aria-hidden="true" />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu variant="dark">
+                      {reg.status !== "cancelled" && (
+                        <Dropdown.Item
+                          className="text-danger"
+                          onClick={() => onUpdateStatus(reg.id, "cancelled")}
+                        >
+                          <i className="bi bi-x-lg me-2" aria-hidden="true" />
+                          {m.admin_action_cancel()}
+                        </Dropdown.Item>
+                      )}
+                      {reg.paymentStatus !== "paid" && (
+                        <Dropdown.Item onClick={() => onUpdatePayment(reg.id, "paid")}>
+                          <i className="bi bi-currency-euro me-2" aria-hidden="true" />
+                          {m.admin_action_mark_paid()}
+                        </Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                )}
+              </div>
+            );
+          },
+        }),
+      ]),
     [
       allContactPersonIds,
       tables,
@@ -626,46 +782,42 @@ export default function RegistrationList({
   const handleClearRegistrationFilters = useCallback(() => {
     setQ("");
     setDebouncedQ("");
+    debouncedQRef.current = "";
     onFilterChange("all");
     setAllocationFilter("");
     setActiveEditionOnly(false);
     setDateFilter("all");
     setEditionFilter("all");
-  }, [onFilterChange]);
+    setPage(1);
+    clearSelection();
+  }, [onFilterChange, clearSelection]);
 
   const table = useAppTable(
     {
-      data: preFiltered,
+      data: pageRegistrations,
       columns,
-      state: { sorting, globalFilter: "", columnVisibility },
+      state: { sorting, columnVisibility },
       getRowId: (row) => row.id,
-      onSortingChange: setSorting,
-      onGlobalFilterChange: setQ,
+      onSortingChange: (updater) => {
+        const next = typeof updater === "function" ? updater(sorting) : updater;
+        setSorting(next);
+        setPage(1);
+      },
       onColumnVisibilityChange: (updater) => {
-        const next =
-          typeof updater === "function" ? updater(columnVisibility) : updater;
+        const next = typeof updater === "function" ? updater(columnVisibility) : updater;
         setColumnVisibility(next);
         saveColVis(COL_VIS_KEY, next);
       },
-      globalFilterFn: registrationGlobalFilter,
     },
     (state) => ({
       sorting: state.sorting,
-      globalFilter: state.globalFilter,
       columnVisibility: state.columnVisibility,
     }),
   );
-  // Keep ref in sync with currently visible rows (respects text-search filter applied by TanStack).
-  // Memoized so the .map() only runs when preFiltered, sorting, or query change.
-  const visibleRegistrations = useMemo(
-    () => table.getRowModel().rows.map((r) => r.original),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [preFiltered, sorting, q],
-  );
-  preFilteredRef.current = visibleRegistrations;
+  pageRegistrationsRef.current = table.getRowModel().rows.map((r) => r.original);
 
-  // Built from every registration, not the filtered rows: capacity is a property
-  // of the event, so it must not shift when someone searches or filters by status.
+  // Built from every registration, not the current page: capacity is a property
+  // of the event, so it must not shift when someone searches, filters, or pages.
   //
   // The counts themselves come from GET /api/events/checkin-stats — the endpoint
   // built for exactly this, and the one the Android entrance display reads — so
@@ -720,20 +872,32 @@ export default function RegistrationList({
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [registrations, checkInStatsQuery.data]);
 
-  const handleExportCsv = useCallback(() => {
-    const rows = table.getRowModel().rows.map(({ original: reg }) => ({
-      [m.registration_name()]: reg.person.name,
-      [m.registration_email()]: reg.person.email,
-      [m.registration_phone()]: reg.person.phone,
-      [m.admin_event_label()]: reg.event?.title ?? reg.eventId,
-      [m.admin_guests_count()]: reg.guestCount,
-      [m.admin_status_label()]: reg.status,
-      [m.admin_payment_label()]: reg.paymentStatus,
-      [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
-      [m.admin_created_at()]: reg.createdAt,
-    }));
-    exportToCsv("registrations.csv", rows);
-  }, [table]);
+  // Exports every registration matching the current filters, not just the
+  // rendered page — see fetchAllMatchingRegistrations.
+  const handleExportCsv = useCallback(async () => {
+    setCsvExportError(null);
+    setExportingAllCsv(true);
+    try {
+      const matching = await fetchAllMatchingRegistrations();
+      const rows = matching.map((reg) => ({
+        [m.registration_name()]: reg.person.name,
+        [m.registration_email()]: reg.person.email,
+        [m.registration_phone()]: reg.person.phone,
+        [m.admin_event_label()]: reg.event?.title ?? reg.eventId,
+        [m.admin_guests_count()]: reg.guestCount,
+        [m.admin_status_label()]: reg.status,
+        [m.admin_payment_label()]: reg.paymentStatus,
+        [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
+        [m.admin_created_at()]: reg.createdAt,
+      }));
+      exportToCsv("registrations.csv", rows);
+    } catch (err) {
+      devError("Failed to export registrations", err);
+      setCsvExportError(err instanceof Error ? err.message : m.admin_error_load_data());
+    } finally {
+      setExportingAllCsv(false);
+    }
+  }, [fetchAllMatchingRegistrations]);
 
   const handleExportEventCsv = useCallback(
     async (eventId: string) => {
@@ -743,7 +907,9 @@ export default function RegistrationList({
         await downloadRegistrationsCsv(authHeaders, eventId);
       } catch (err) {
         devError("Failed to export guest list", err);
-        setEventExportError(err instanceof Error ? err.message : m.admin_registrations_export_event_csv_error());
+        setEventExportError(
+          err instanceof Error ? err.message : m.admin_registrations_export_event_csv_error(),
+        );
       } finally {
         setExportingEventId(null);
       }
@@ -751,29 +917,58 @@ export default function RegistrationList({
     [authHeaders],
   );
 
+  // Selecting a whole page whose filters match more than fits on it offers a
+  // Gmail-style "select all N matching" expansion. `selectedIds` becomes the
+  // real, materialized set of every matching id (bounded the same way as any
+  // other full-set fetch) rather than a lazily-resolved scope, so everything
+  // downstream (the confirm dialog's count, execution) works unchanged.
+  const handleSelectAllMatching = useCallback(async () => {
+    setIsSelectingAllMatching(true);
+    setSelectAllMatchingError(null);
+    try {
+      const matching = await fetchAllMatchingRegistrations();
+      setSelectedIds(new Set(matching.map((r) => r.id)));
+      setSelectAllMatchingActive(true);
+    } catch (err) {
+      devError("Failed to select all matching registrations", err);
+      setSelectAllMatchingError(err instanceof Error ? err.message : m.admin_error_load_data());
+    } finally {
+      setIsSelectingAllMatching(false);
+    }
+  }, [fetchAllMatchingRegistrations]);
 
   const executeBulkAction = useCallback(async () => {
     if (!bulkAction || selectedIds.size === 0) return;
     setBulkInProgress(true);
     setBulkError(null);
     const ids = [...selectedIds];
-    const results = await Promise.allSettled(
-      ids.map((id) => {
-        if (bulkAction === "confirm") return Promise.resolve(onUpdateStatus(id, "confirmed"));
-        if (bulkAction === "cancel") return Promise.resolve(onUpdateStatus(id, "cancelled"));
-        if (bulkAction === "paid") return Promise.resolve(onUpdatePayment(id, "paid"));
-        return Promise.resolve();
-      }),
-    );
-    const failedCount = results.filter((r) => r.status === "rejected").length;
+    setBulkProgress({ done: 0, total: ids.length });
+    let failedCount = 0;
+    // Bounded concurrency: a "select all matching" batch can be a few hundred
+    // ids, and firing them all as simultaneous requests is unkind to both the
+    // browser and the server compared to the handful a single page ever had.
+    for (let start = 0; start < ids.length; start += BULK_ACTION_BATCH_SIZE) {
+      const batch = ids.slice(start, start + BULK_ACTION_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((id) => {
+          if (bulkAction === "confirm") return Promise.resolve(onUpdateStatus(id, "confirmed"));
+          if (bulkAction === "cancel") return Promise.resolve(onUpdateStatus(id, "cancelled"));
+          if (bulkAction === "paid") return Promise.resolve(onUpdatePayment(id, "paid"));
+          return Promise.resolve();
+        }),
+      );
+      failedCount += results.filter((r) => r.status === "rejected").length;
+      setBulkProgress({ done: Math.min(start + batch.length, ids.length), total: ids.length });
+    }
     setBulkInProgress(false);
+    setBulkProgress(null);
     setBulkAction(null);
     if (failedCount > 0) {
       setBulkError(m.admin_bulk_operations_failed({ failed: failedCount, total: ids.length }));
     } else {
-      setSelectedIds(new Set());
+      clearSelection();
     }
-  }, [bulkAction, onUpdatePayment, onUpdateStatus, selectedIds]);
+  }, [bulkAction, onUpdatePayment, onUpdateStatus, selectedIds, clearSelection]);
 
   return (
     <>
@@ -799,8 +994,22 @@ export default function RegistrationList({
             </div>
             <div className="d-flex gap-2">
               <ColumnVisibilityDropdown table={table} tableId="registrations" />
-              <Button variant="outline-secondary" size="sm" onClick={handleExportCsv}>
-                <i className="bi bi-download me-1" aria-hidden="true" />
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => void handleExportCsv()}
+                disabled={exportingAllCsv}
+                title={m.admin_export_csv_all_title()}
+              >
+                {exportingAllCsv ? (
+                  <span
+                    className="spinner-border spinner-border-sm me-1"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <i className="bi bi-download me-1" aria-hidden="true" />
+                )}
                 {m.admin_export_csv()}
               </Button>
               <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
@@ -814,25 +1023,25 @@ export default function RegistrationList({
             <ButtonGroup size="sm">
               <Button
                 variant={editionFilter === "all" ? "primary" : "outline-secondary"}
-                onClick={() => setEditionFilter("all")}
+                onClick={() => changeEditionFilter("all")}
               >
                 {m.admin_filter_edition_all()} ({editionCounts.all})
               </Button>
               <Button
                 variant={editionFilter === "festival" ? "primary" : "outline-secondary"}
-                onClick={() => setEditionFilter("festival")}
+                onClick={() => changeEditionFilter("festival")}
               >
                 {m.admin_filter_edition_festivals()} ({editionCounts.festival})
               </Button>
               <Button
                 variant={editionFilter === "standalone" ? "primary" : "outline-secondary"}
-                onClick={() => setEditionFilter("standalone")}
+                onClick={() => changeEditionFilter("standalone")}
               >
                 {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
               </Button>
               <Button
                 variant={activeEditionOnly ? "primary" : "outline-secondary"}
-                onClick={() => setActiveEditionOnly((current) => !current)}
+                onClick={toggleActiveEditionOnly}
               >
                 {m.admin_filter_active_edition()} ({editionCounts.active})
               </Button>
@@ -843,7 +1052,7 @@ export default function RegistrationList({
                 className="bg-dark text-light border-secondary"
                 style={{ maxWidth: 200 }}
                 value={allocationFilter}
-                onChange={(e) => setAllocationFilter(e.target.value)}
+                onChange={(e) => changeAllocationFilter(e.target.value)}
                 aria-label={m.admin_filter_allocation_aria()}
               >
                 <option value="">{m.admin_all_allocations()}</option>
@@ -857,7 +1066,7 @@ export default function RegistrationList({
             <ButtonGroup size="sm">
               <Button
                 variant={dateFilter === "today" ? "primary" : "outline-secondary"}
-                onClick={() => setDateFilter((current) => (current === "today" ? "all" : "today"))}
+                onClick={toggleDateFilter}
               >
                 {m.admin_filter_today()} ({todayCount})
               </Button>
@@ -865,19 +1074,19 @@ export default function RegistrationList({
             <ButtonGroup size="sm">
               <Button
                 variant={filter === "all" ? "primary" : "outline-secondary"}
-                onClick={() => onFilterChange("all")}
+                onClick={() => changeStatusFilter("all")}
               >
                 {m.admin_filter_all()} ({statusCounts.all})
               </Button>
               <Button
                 variant={filter === "pending" ? "primary" : "outline-secondary"}
-                onClick={() => onFilterChange("pending")}
+                onClick={() => changeStatusFilter("pending")}
               >
                 {m.admin_filter_pending()} ({statusCounts.pending})
               </Button>
               <Button
                 variant={filter === "confirmed" ? "primary" : "outline-secondary"}
-                onClick={() => onFilterChange("confirmed")}
+                onClick={() => changeStatusFilter("confirmed")}
               >
                 {m.admin_filter_confirmed()} ({statusCounts.confirmed})
               </Button>
@@ -947,7 +1156,12 @@ export default function RegistrationList({
             </div>
           )}
           {bulkError && (
-            <Alert variant="danger" className="py-1 mt-2 mb-0" dismissible onClose={() => setBulkError(null)}>
+            <Alert
+              variant="danger"
+              className="py-1 mt-2 mb-0"
+              dismissible
+              onClose={() => setBulkError(null)}
+            >
               {bulkError}
             </Alert>
           )}
@@ -961,62 +1175,100 @@ export default function RegistrationList({
               {eventExportError}
             </Alert>
           )}
+          {csvExportError && (
+            <Alert
+              variant="danger"
+              className="py-1 mt-2 mb-0"
+              dismissible
+              onClose={() => setCsvExportError(null)}
+            >
+              {csvExportError}
+            </Alert>
+          )}
           {/* Bulk action bar */}
           {selectedIds.size > 0 && (
-            <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary flex-wrap">
-              <span className="text-secondary small">
-                {m.admin_bulk_selected({ count: selectedIds.size })}
-              </span>
-              <Button
-                size="sm"
-                variant="outline-success"
-                onClick={() => setBulkAction("confirm")}
-              >
-                {m.admin_bulk_confirm()}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-danger"
-                onClick={() => setBulkAction("cancel")}
-              >
-                {m.admin_bulk_cancel()}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-info"
-                onClick={() => setBulkAction("paid")}
-              >
-                {m.admin_bulk_mark_paid()}
-              </Button>
-              <Button
-                size="sm"
-                variant="link"
-                className="text-secondary ms-auto p-0"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                {m.admin_bulk_clear()}
-              </Button>
+            <div className="mt-2 pt-2 border-top border-secondary">
+              {canExpandSelectionToAllMatching && (
+                <div className="d-flex align-items-center gap-2 flex-wrap small text-secondary mb-2">
+                  <span>
+                    {m.admin_bulk_select_page_notice({ count: pageRegistrations.length })}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="p-0"
+                    onClick={() => void handleSelectAllMatching()}
+                    disabled={isSelectingAllMatching}
+                  >
+                    {isSelectingAllMatching && (
+                      <span
+                        className="spinner-border spinner-border-sm me-1"
+                        role="status"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {m.admin_bulk_select_all_matching({ total })}
+                  </Button>
+                </div>
+              )}
+              {selectAllMatchingError && (
+                <Alert
+                  variant="danger"
+                  className="py-1 mb-2"
+                  dismissible
+                  onClose={() => setSelectAllMatchingError(null)}
+                >
+                  {selectAllMatchingError}
+                </Alert>
+              )}
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <span className="text-secondary small">
+                  {selectAllMatchingActive
+                    ? m.admin_bulk_all_matching_selected({ total: selectedIds.size })
+                    : m.admin_bulk_selected({ count: selectedIds.size })}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline-success"
+                  onClick={() => setBulkAction("confirm")}
+                >
+                  {m.admin_bulk_confirm()}
+                </Button>
+                <Button size="sm" variant="outline-danger" onClick={() => setBulkAction("cancel")}>
+                  {m.admin_bulk_cancel()}
+                </Button>
+                <Button size="sm" variant="outline-info" onClick={() => setBulkAction("paid")}>
+                  {m.admin_bulk_mark_paid()}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="link"
+                  className="text-secondary ms-auto p-0"
+                  onClick={clearSelection}
+                >
+                  {m.admin_bulk_clear()}
+                </Button>
+              </div>
             </div>
           )}
         </Card.Header>
 
         <Card.Body className="p-0">
           {sectionError && (
-            <Alert
-              variant="danger"
-              dismissible
-              className="m-3 mb-0"
-              onClose={onClearSectionError}
-            >
+            <Alert variant="danger" dismissible className="m-3 mb-0" onClose={onClearSectionError}>
               {sectionError}
             </Alert>
           )}
-          {registrationSearchQuery.isLoading ? (
+          {pageQuery.isLoading ? (
             <p className="text-secondary text-center py-4 mb-0">
-              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              />
               {m.admin_search_person_placeholder()}…
             </p>
-          ) : registrationSearchQuery.isError ? (
+          ) : pageQuery.isError ? (
             <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
           ) : table.getRowModel().rows.length === 0 ? (
             hasActiveRegistrationFilters ? (
@@ -1040,55 +1292,55 @@ export default function RegistrationList({
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
                       {headerGroup.headers.map((header) => {
-                          const canSort = header.column.getCanSort();
-                          const sorted = header.column.getIsSorted();
-                          return (
-                        <th
-                          key={header.id}
-                          className={header.column.columnDef.meta?.tdClassName}
-                          onClick={header.column.getToggleSortingHandler()}
-                          onKeyDown={
-                            canSort
-                              ? (e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    header.column.getToggleSortingHandler()?.(e);
+                        const canSort = header.column.getCanSort();
+                        const sorted = header.column.getIsSorted();
+                        return (
+                          <th
+                            key={header.id}
+                            className={header.column.columnDef.meta?.tdClassName}
+                            onClick={header.column.getToggleSortingHandler()}
+                            onKeyDown={
+                              canSort
+                                ? (e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      header.column.getToggleSortingHandler()?.(e);
+                                    }
                                   }
-                                }
-                              : undefined
-                          }
-                          role={canSort ? "button" : undefined}
-                          tabIndex={canSort ? 0 : undefined}
-                          aria-sort={
-                            canSort
-                              ? sorted === "asc"
-                                ? "ascending"
-                                : sorted === "desc"
-                                  ? "descending"
-                                  : "none"
-                              : undefined
-                          }
-                          style={{
-                            cursor: canSort ? "pointer" : "default",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          <table.FlexRender header={header} />
-                          {header.column.getCanSort() && (
-                            <i
-                              className={`bi ms-1 small ${
-                                header.column.getIsSorted() === "asc"
-                                  ? "bi-arrow-up"
-                                  : header.column.getIsSorted() === "desc"
-                                    ? "bi-arrow-down"
-                                    : "bi-arrow-down-up opacity-25"
-                              }`}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </th>
-                          );
-                        })}
+                                : undefined
+                            }
+                            role={canSort ? "button" : undefined}
+                            tabIndex={canSort ? 0 : undefined}
+                            aria-sort={
+                              canSort
+                                ? sorted === "asc"
+                                  ? "ascending"
+                                  : sorted === "desc"
+                                    ? "descending"
+                                    : "none"
+                                : undefined
+                            }
+                            style={{
+                              cursor: canSort ? "pointer" : "default",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            <table.FlexRender header={header} />
+                            {header.column.getCanSort() && (
+                              <i
+                                className={`bi ms-1 small ${
+                                  header.column.getIsSorted() === "asc"
+                                    ? "bi-arrow-up"
+                                    : header.column.getIsSorted() === "desc"
+                                      ? "bi-arrow-down"
+                                      : "bi-arrow-down-up opacity-25"
+                                }`}
+                                aria-hidden="true"
+                              />
+                            )}
+                          </th>
+                        );
+                      })}
                     </tr>
                   ))}
                 </thead>
@@ -1104,6 +1356,48 @@ export default function RegistrationList({
                   ))}
                 </tbody>
               </Table>
+            </div>
+          )}
+          {!pageQuery.isLoading && !pageQuery.isError && total > 0 && (
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 border-top border-secondary">
+              <span className="text-secondary small">
+                {m.admin_registrations_page_summary({ from: rangeFrom, to: rangeTo, total })}
+              </span>
+              <div className="d-flex align-items-center gap-2">
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  style={{ width: "auto" }}
+                  value={pageSize}
+                  onChange={(e) => changePageSize(Number(e.target.value))}
+                  aria-label={m.admin_registrations_page_size_aria()}
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  disabled={page <= 1 || pageQuery.isFetching}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  {m.admin_registrations_page_previous()}
+                </Button>
+                <span className="text-secondary small">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  disabled={page >= totalPages || pageQuery.isFetching}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  {m.admin_registrations_page_next()}
+                </Button>
+              </div>
             </div>
           )}
         </Card.Body>
@@ -1135,6 +1429,11 @@ export default function RegistrationList({
         </Modal.Header>
         <Modal.Body>
           {m.admin_bulk_confirm_action({ count: selectedIds.size })}
+          {bulkProgress && (
+            <div className="mt-2 text-secondary small">
+              {m.admin_bulk_progress({ done: bulkProgress.done, total: bulkProgress.total })}
+            </div>
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setBulkAction(null)} disabled={bulkInProgress}>
@@ -1146,7 +1445,11 @@ export default function RegistrationList({
             disabled={bulkInProgress}
           >
             {bulkInProgress && (
-              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              />
             )}
             {m.admin_action_confirm()}
           </Button>

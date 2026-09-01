@@ -63,11 +63,19 @@ export function useAdminRegistrationActions({
         );
       } catch (err) {
         devError("Failed to update registration status", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_update_registration());
+        setRegistrationError(
+          err instanceof Error ? err.message : m.admin_error_update_registration(),
+        );
         throw err;
       }
     },
-    [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
+    [
+      queryClient,
+      registrationsQueryKey,
+      setDetailRegistration,
+      setRegistrationError,
+      updateRegistrationMutation,
+    ],
   );
 
   const handleUpdatePayment = useCallback(
@@ -104,7 +112,13 @@ export function useAdminRegistrationActions({
         throw err;
       }
     },
-    [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
+    [
+      queryClient,
+      registrationsQueryKey,
+      setDetailRegistration,
+      setRegistrationError,
+      updateRegistrationMutation,
+    ],
   );
 
   const handleAssignTable = useCallback(
@@ -124,8 +138,11 @@ export function useAdminRegistrationActions({
           response = await assign();
         } catch (err) {
           const isCapacityWarning =
-            tableId !== undefined && err instanceof Error && err.message.includes("seat(s) remaining");
-          if (!isCapacityWarning || !window.confirm(m.admin_table_over_capacity_confirm())) throw err;
+            tableId !== undefined &&
+            err instanceof Error &&
+            err.message.includes("seat(s) remaining");
+          if (!isCapacityWarning || !window.confirm(m.admin_table_over_capacity_confirm()))
+            throw err;
           response = await assign(true);
         }
         const updated = apiToRegistration(response);
@@ -235,7 +252,13 @@ export function useAdminRegistrationActions({
         setRegistrationError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
       }
     },
-    [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
+    [
+      queryClient,
+      registrationsQueryKey,
+      setDetailRegistration,
+      setRegistrationError,
+      updateRegistrationMutation,
+    ],
   );
 
   const handleCheckIn = useCallback(
@@ -261,7 +284,13 @@ export function useAdminRegistrationActions({
         setRegistrationError(err instanceof Error ? err.message : m.admin_error_check_in());
       }
     },
-    [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
+    [
+      queryClient,
+      registrationsQueryKey,
+      setDetailRegistration,
+      setRegistrationError,
+      updateRegistrationMutation,
+    ],
   );
 
   const handleIssueStrap = useCallback(
@@ -287,7 +316,13 @@ export function useAdminRegistrationActions({
         setRegistrationError(err instanceof Error ? err.message : m.admin_error_issue_strap());
       }
     },
-    [queryClient, registrationsQueryKey, setDetailRegistration, setRegistrationError, updateRegistrationMutation],
+    [
+      queryClient,
+      registrationsQueryKey,
+      setDetailRegistration,
+      setRegistrationError,
+      updateRegistrationMutation,
+    ],
   );
 
   return {

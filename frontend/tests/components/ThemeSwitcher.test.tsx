@@ -13,14 +13,8 @@ describe("ThemeSwitcher", () => {
     expect(buttons.map((button) => button.textContent)).toEqual(
       VISUAL_THEMES.map((theme) => theme.label),
     );
-    expect(screen.getByRole("button", { name: "Remuage" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "New" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(screen.getByRole("button", { name: "Remuage" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "New" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("reports the selected registered variant", () => {

@@ -113,7 +113,9 @@ html[data-visual-theme="remuage"] .marquee-logo-frame {
   background: var(--rem-paper);
   border: 10px solid var(--rem-rack);
   border-radius: 50%;
-  box-shadow: inset 0 0 0 2px var(--rem-nickel), 0 8px 20px rgba(23, 32, 51, 0.08) !important;
+  box-shadow:
+    inset 0 0 0 2px var(--rem-nickel),
+    0 8px 20px rgba(23, 32, 51, 0.08) !important;
 }
 
 html[data-visual-theme="remuage"] .marquee-logo-image {
@@ -151,7 +153,9 @@ html[data-visual-theme="remuage"] .swiper-pagination-bullet {
 
 html[data-visual-theme="remuage"] .swiper-pagination-bullet-active {
   background: var(--rem-rose);
-  box-shadow: 0 0 0 3px var(--rem-rack), 0 0 0 5px var(--rem-rose);
+  box-shadow:
+    0 0 0 3px var(--rem-rack),
+    0 0 0 5px var(--rem-rose);
 }
 
 html[data-visual-theme="remuage"] .accordion {
@@ -204,7 +208,9 @@ html[data-visual-theme="remuage"] .leaflet-container {
   min-height: 430px;
   border: 8px solid var(--rem-rack);
   border-radius: var(--rem-radius);
-  box-shadow: inset 0 0 0 1px var(--rem-line), var(--rem-shadow);
+  box-shadow:
+    inset 0 0 0 1px var(--rem-line),
+    var(--rem-shadow);
 }
 
 html[data-visual-theme="remuage"] .leaflet-control a:focus-visible {
@@ -441,8 +447,12 @@ html[data-visual-theme="remuage"] #my-registrations .card::after {
   border-radius: 50%;
 }
 
-html[data-visual-theme="remuage"] #my-registrations .card::before { top: 22%; }
-html[data-visual-theme="remuage"] #my-registrations .card::after { bottom: 22%; }
+html[data-visual-theme="remuage"] #my-registrations .card::before {
+  top: 22%;
+}
+html[data-visual-theme="remuage"] #my-registrations .card::after {
+  bottom: 22%;
+}
 
 html[data-visual-theme="remuage"] .standalone-document-main #privacy-policy .col-lg-8 {
   padding: clamp(1.5rem, 4vw, 3.5rem);

@@ -3,9 +3,19 @@ import { describe, expect, it } from "vitest";
 import RemuageFeatureRack from "@/components/remuage/RemuageFeatureRack";
 
 const ITEMS = [
-  { id: "producer", title: "Cuvée", description: "Rencontrez les producteurs.", iconClass: "bi bi-cup" },
+  {
+    id: "producer",
+    title: "Cuvée",
+    description: "Rencontrez les producteurs.",
+    iconClass: "bi bi-cup",
+  },
   { id: 7, title: "Dégustation", description: "Explorez les styles 🥂", iconClass: "bi bi-stars" },
-  { id: "community", title: "Community", description: "Share the festival.", iconClass: "bi bi-people" },
+  {
+    id: "community",
+    title: "Community",
+    description: "Share the festival.",
+    iconClass: "bi bi-people",
+  },
 ];
 
 describe("RemuageFeatureRack", () => {

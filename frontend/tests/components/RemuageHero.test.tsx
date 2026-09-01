@@ -27,9 +27,6 @@ describe("RemuageHero", () => {
       "href",
       "#schedule",
     );
-    expect(container.querySelector(".remuage-hero__rack")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
+    expect(container.querySelector(".remuage-hero__rack")).toHaveAttribute("aria-hidden", "true");
   });
 });

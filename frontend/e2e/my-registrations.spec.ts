@@ -18,19 +18,21 @@ test.describe("Guest self-service (/my-registrations)", () => {
     await page.locator("#my-registrations-email").fill("alice@moet.com");
 
     // Submit the form
-    await page.getByRole("button", { name: /email me a secure link|mail mij een veilige link/i }).click();
+    await page
+      .getByRole("button", { name: /email me a secure link|mail mij een veilige link/i })
+      .click();
 
     // Confirmation/info alert should appear
-    await expect(
-      page.getByRole("status").first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("status").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("submitting an invalid email shows an error", async ({ page }) => {
     await page.goto("/my-registrations");
 
     await page.locator("#my-registrations-email").fill("not-an-email");
-    await page.getByRole("button", { name: /email me a secure link|mail mij een veilige link/i }).click();
+    await page
+      .getByRole("button", { name: /email me a secure link|mail mij een veilige link/i })
+      .click();
 
     await expect(page.getByRole("alert").first()).toBeVisible({
       timeout: 5_000,

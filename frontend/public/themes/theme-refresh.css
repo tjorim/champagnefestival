@@ -274,7 +274,13 @@ main {
   text-align: left;
   isolation: isolate;
   background:
-    linear-gradient(90deg, rgba(16, 15, 13, 0.96) 0%, rgba(16, 15, 13, 0.86) 33%, rgba(16, 15, 13, 0.34) 68%, rgba(16, 15, 13, 0.62) 100%),
+    linear-gradient(
+      90deg,
+      rgba(16, 15, 13, 0.96) 0%,
+      rgba(16, 15, 13, 0.86) 33%,
+      rgba(16, 15, 13, 0.34) 68%,
+      rgba(16, 15, 13, 0.62) 100%
+    ),
     url("/images/champagne-hero.png") center / cover no-repeat;
 }
 
@@ -819,9 +825,7 @@ main > .content-section .card,
 }
 
 .standalone-document-main {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 20rem),
-    transparent;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 20rem), transparent;
 }
 
 .standalone-document-main #privacy-policy {
@@ -932,7 +936,12 @@ a:focus {
   .hero {
     min-height: 78vh;
     background:
-      linear-gradient(90deg, rgba(16, 15, 13, 0.97) 0%, rgba(16, 15, 13, 0.88) 54%, rgba(16, 15, 13, 0.58) 100%),
+      linear-gradient(
+        90deg,
+        rgba(16, 15, 13, 0.97) 0%,
+        rgba(16, 15, 13, 0.88) 54%,
+        rgba(16, 15, 13, 0.58) 100%
+      ),
       url("/images/champagne-hero.png") 62% center / cover no-repeat;
   }
 
@@ -1131,7 +1140,13 @@ a:focus {
 
   .hero {
     background:
-      linear-gradient(90deg, rgba(18, 15, 11, 0.92) 0%, rgba(18, 15, 11, 0.76) 34%, rgba(18, 15, 11, 0.26) 68%, rgba(18, 15, 11, 0.44) 100%),
+      linear-gradient(
+        90deg,
+        rgba(18, 15, 11, 0.92) 0%,
+        rgba(18, 15, 11, 0.76) 34%,
+        rgba(18, 15, 11, 0.26) 68%,
+        rgba(18, 15, 11, 0.44) 100%
+      ),
       url("/images/champagne-hero.png") center / cover no-repeat;
   }
 

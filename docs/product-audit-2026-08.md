@@ -92,12 +92,11 @@ work is intentionally outside this audit until the bourse requirements are clear
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #931 — search silently truncates at 20 | Fix pagination before new announcement/history lists repeat the same silent-cap contract. | M |
-| 2 | #933 — registration lifecycle gaps | Its #928 prerequisite is complete. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. Any seated guest-count edit must reuse #927's soft-capacity confirmation guard. | M |
-| 3 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
-| 4 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
-| 5 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
-| 6 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 1 | #933 — registration lifecycle gaps | Its #928 prerequisite is complete. Party-size editing is the most-requested sub-item and settles the registration detail surface before #943 adds another action. Any seated guest-count edit must reuse #927's soft-capacity confirmation guard. | M |
+| 2 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
+| 3 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
+| 4 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
+| 5 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -163,6 +162,7 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #931 | Completed | 2026-09-01 | #931, PR (this change) | `GET /api/registrations` now returns a `{items, total, limit, page}` envelope with one shared default page size and filter set (search and browse, including edition/date/person/edition-category filters and server-side sort) instead of "20 when searching, unbounded when not", with a ceiling decoupled from the volunteer door-lookup limit. `RegistrationList` is now genuinely server-paginated (page controls, page-size selector) rather than fetching everything into the browser; per-event capacity and status/edition counts still read the full working set, which they need for correct totals. Bulk actions and CSV export — which paginating the table would otherwise have silently capped at one page — got a Gmail-style "select all N matching" expansion and now cover every filtered row, with bulk mutations batched instead of fired all at once. `GET /api/people`, `/api/volunteers`, and `/api/members` got the same `{items, total, limit, page}` envelope and admin-sized default/ceiling (also decoupled from the door-lookup limit) — `/api/people`'s search path had the same "silently capped at 50" bug as registrations had at 20; the People/Volunteers/Members admin tabs stay full client-side tables (their datasets are far smaller than the guest list), so `fetchPeople`/`fetchPeopleSearch`/`fetchMembers` now fetch one bounded "everything" page and log loudly if it was ever truncated, instead of trusting an unbounded query forever. Kept `/api/volunteers` as a separate endpoint from `/api/people` — it carries `help_periods` plus NISS/eID uniqueness rules that don't map onto generic Person CRUD. `/api/members` was narrower: its `GET` list route was a pure `role=member` filter with an independently-written (and already-drifted) search predicate, so it was retired — the member list is now read via `/api/people?role=member` — while `POST`/`PUT`/`DELETE /api/members` stayed, since "delete a member" is a role removal (soft archive), not a generic person delete, and deserves its own named operation. `admin` and `visitor` are plain `Person.roles` tags with no dedicated endpoint, so `/api/people?role=` already covers them. The People/Volunteers/Members tables also gained TanStack's built-in client-side pagination (`rowPaginationFeature`, opt-in per table via `manualPagination: false` so `RegistrationList`'s server-paginated table is unaffected) — previously every filtered row rendered in one unpaginated `<tbody>`; CSV export and the "no results"/export-disabled checks were updated to read the pre-pagination row model so they still cover every filtered row, not just the visible page. |
 | #926 | Completed | 2026-08-30 | #926, PR (this change) | Removed the dead table reservation column, derived non-cancelled occupancy from registrations, and shipped a volunteer read-only floor plan linked from check-in. |
 | #927 | Completed | 2026-08-30 | #927, PR (this change) | Made the table type the single stored soft capacity source, added locked guest-capacity checks across REST/MCP assignment, preserved plan type editing, and added confirmation, audited override, and distinct overfilled styling. |
 | #928 | Completed | 2026-08-30 | #928, PR (this change) | Re-resolved admin/MCP order edits against event products, preserved clamped delivery state, and restricted volunteer edits to validated delivery counts. |
@@ -196,7 +196,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #928 | backend, mcp (completed 2026-08-30) | bug — broken invariant |
 | #929 | frontend (completed 2026-08-30) | bug — stale state |
 | #930 | backend (completed 2026-08-30) | bug — export safety |
-| #931 | backend, frontend | bug — silent truncation |
+| #931 | backend, frontend (completed 2026-09-01) | bug — silent truncation |
 | #932 | backend | constraint — scaling |
 | #933 | backend, frontend | gap — lifecycle |
 | #934 | backend | gap — compliance |

@@ -6,22 +6,17 @@ create/update/delete/merge transitions — lives in
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Text, cast, or_, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination, get_request_id
+from app.dependencies import Pagination, get_request_id
 from app.models import Event, Person, Registration
-from app.schemas import PersonCreate, PersonOut, PersonUpdate
+from app.schemas import PersonCreate, PersonListEnvelope, PersonOut, PersonUpdate
 from app.services import people_service
-from app.services.operational_search import (
-    DEFAULT_RESULT_LIMIT,
-    bounded_limit,
-    person_search_order_by,
-    person_search_predicate,
-)
+from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.utils import person_to_dict, registration_to_list_dict, roles_contains
 
 router = APIRouter(
@@ -29,6 +24,16 @@ router = APIRouter(
     tags=["people"],
     dependencies=[Depends(require_admin)],
 )
+
+# Applies to GET /api/people regardless of whether `q` is set, so an admin
+# paging the people list gets one predictable page size instead of "20 when
+# searching, unbounded when not" (see backend/app/routers/registrations.py's
+# ADMIN_LIST_DEFAULT_LIMIT, which this mirrors). The ceiling is Pagination's
+# own `limit` validation (1000) rather than
+# app.services.operational_search.MAX_RESULT_LIMIT (50) — that constant is
+# sized for the volunteer door-lookup use case (one guest at a time), not an
+# admin browsing or exporting the full people list.
+ADMIN_LIST_DEFAULT_LIMIT = 200
 
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
@@ -41,26 +46,27 @@ async def create_person(
     return await people_service.create_person(db, body=body, actor=actor, request_id=request_id)
 
 
-@router.get("", response_model=list[PersonOut])
+@router.get("", response_model=PersonListEnvelope)
 async def list_people(
     db: AsyncSession = Depends(get_db),
     q: str | None = Query(default=None),
     role: str | None = Query(default=None, description="Filter by role (case-insensitive)"),
     active: bool | None = Query(default=None),
     pagination: Pagination = Depends(),
-) -> list[dict]:
-    stmt = select(Person)
+) -> dict:
+    filtered_stmt = select(Person)
 
     if active is not None:
-        stmt = stmt.where(Person.active == active)
+        filtered_stmt = filtered_stmt.where(Person.active == active)
 
     if role:
-        stmt = stmt.where(roles_contains(role))
+        filtered_stmt = filtered_stmt.where(roles_contains(role))
 
-    if q and (q_stripped := q.strip()):
+    q_stripped = q.strip() if q and q.strip() else None
+    if q_stripped:
         q_escaped = q_stripped.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
         q_like = f"%{q_escaped}%"
-        stmt = stmt.where(
+        filtered_stmt = filtered_stmt.where(
             or_(
                 person_search_predicate(name=q_stripped, email=q_stripped),
                 Person.phone.ilike(q_like, escape="\\"),
@@ -72,16 +78,22 @@ async def list_people(
                 cast(Person.roles, Text).ilike(q_like, escape="\\"),
             )
         )
-        limit = bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT)
-        stmt = stmt.order_by(*person_search_order_by(name=q_stripped, email=q_stripped))
-        stmt = stmt.offset((pagination.page - 1) * limit).limit(limit)
+
+    total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
+
+    if q_stripped:
+        stmt = filtered_stmt.order_by(*person_search_order_by(name=q_stripped, email=q_stripped))
     else:
-        stmt = stmt.order_by(Person.created_at.desc(), Person.id.desc())
-        stmt = apply_pagination(stmt, pagination)
+        stmt = filtered_stmt.order_by(Person.created_at.desc(), Person.id.desc())
+
+    limit = pagination.limit or ADMIN_LIST_DEFAULT_LIMIT
+    page = pagination.page
+    stmt = stmt.offset((page - 1) * limit).limit(limit)
 
     result = await db.execute(stmt)
     rows = result.scalars().all()
-    return [person_to_dict(p) for p in rows]
+    items = [person_to_dict(p) for p in rows]
+    return {"items": items, "total": total, "limit": limit, "page": page}
 
 
 @router.get("/{person_id}", response_model=PersonOut)

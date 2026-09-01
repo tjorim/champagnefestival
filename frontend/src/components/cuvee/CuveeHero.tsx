@@ -10,7 +10,13 @@ interface CuveeHeroProps {
  * Hero for the Cuvée visual theme: a champagne label on dark bottle glass,
  * crowned by a circular gold-foil seal.
  */
-const CuveeHero = ({ festivalName, title, subtitle, learnMoreLabel, scheduleLabel }: CuveeHeroProps) => {
+const CuveeHero = ({
+  festivalName,
+  title,
+  subtitle,
+  learnMoreLabel,
+  scheduleLabel,
+}: CuveeHeroProps) => {
   return (
     <section className="cuvee-hero" id="welcome">
       <div className="cuvee-hero__label">

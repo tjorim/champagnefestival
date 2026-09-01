@@ -79,9 +79,7 @@ export const publicHandlers = [
         { status: 422 },
       );
     }
-    return HttpResponse.json(
-      publicFaqItemsByLocale[locale as keyof typeof publicFaqItemsByLocale],
-    );
+    return HttpResponse.json(publicFaqItemsByLocale[locale as keyof typeof publicFaqItemsByLocale]);
   }),
 
   /** GET /api/editions/active — returns the active edition. */
@@ -97,9 +95,7 @@ export const publicHandlers = [
   http.get("/api/editions/upcoming", ({ request }) => {
     const editionType = new URL(request.url).searchParams.get("edition_type");
     const result = editions
-      .filter(
-        (edition) => edition.active && (!editionType || edition.edition_type === editionType),
-      )
+      .filter((edition) => edition.active && (!editionType || edition.edition_type === editionType))
       .map(hydrateEditionEvents)
       .filter(isUpcomingEdition);
     return HttpResponse.json(result);

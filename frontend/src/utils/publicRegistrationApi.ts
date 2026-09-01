@@ -266,7 +266,9 @@ function isGuestRegistrationResponse(value: unknown): value is GuestRegistration
     isRecord(value) &&
     typeof value.id === "string" &&
     typeof value.event_title === "string" &&
-    (value.event_date === undefined || value.event_date === null || typeof value.event_date === "string") &&
+    (value.event_date === undefined ||
+      value.event_date === null ||
+      typeof value.event_date === "string") &&
     typeof value.check_in_token === "string" &&
     typeof value.guest_count === "number" &&
     isRegistrationStatus(value.status) &&

@@ -12,6 +12,7 @@
     "typecheck": "pnpm paraglide:compile && tsc -b --noEmit",
     "lint": "oxlint",
     "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:ui": "vitest --ui",

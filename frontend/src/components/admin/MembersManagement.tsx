@@ -1,5 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
-import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
+import {
+  type FilterFn,
+  type SortingState,
+  type ColumnVisibilityState,
+} from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -10,14 +14,11 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
-import {
-  useAppTable,
-  createAppColumnHelper,
-  type AdminTableFeatures,
-} from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
 import { exportToCsv } from "@/utils/csvExport";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { AdminTablePagination } from "./AdminTablePagination";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 
 const COL_VIS_KEY = "admin-col-vis-members";
@@ -72,8 +73,8 @@ export default function MembersManagement({
   const [q, setQ] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
-    () => loadColVis(COL_VIS_KEY),
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() =>
+    loadColVis(COL_VIS_KEY),
   );
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
@@ -119,91 +120,92 @@ export default function MembersManagement({
   };
 
   const columns = useMemo(
-    () => columnHelper.columns([
-      columnHelper.accessor((row) => row.name, {
-        id: "name",
-        header: m.registration_name(),
-        cell: ({ row }) => {
-          const member = row.original;
-          return (
-            <div className="fw-semibold d-flex align-items-center gap-1">
-              {member.name}
-              {!member.active && (
-                <Badge bg="secondary" className="ms-1">
-                  {m.admin_people_inactive_badge_label()}
-                </Badge>
-              )}
-            </div>
-          );
-        },
-      }),
-      columnHelper.accessor("email", {
-        header: m.registration_email(),
-        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      }),
-      columnHelper.accessor("phone", {
-        header: m.registration_phone(),
-        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      }),
-      columnHelper.accessor("clubName", {
-        header: m.admin_people_club_name_label(),
-        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
-      }),
-      columnHelper.accessor("notes", {
-        header: m.registration_notes(),
-        enableSorting: false,
-        cell: ({ row }) => {
-          const notes = row.original.notes;
-          const preview = truncateText(notes);
-          return (
-            <span className="small text-secondary" title={notes || undefined}>
-              {preview || "—"}
-            </span>
-          );
-        },
-      }),
-      columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
-        id: "registrations",
-        header: m.admin_registrations_tab(),
-        cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
-      }),
-      columnHelper.display({
-        id: "actions",
-        header: m.admin_actions_label(),
-        enableSorting: false,
-        cell: ({ row }) => {
-          const member = row.original;
-          return (
-            <div className="d-flex flex-wrap gap-1">
-              <Button
-                size="sm"
-                variant="outline-light"
-                onClick={() => {
-                  setEditingMember(member);
-                  setShowForm(true);
-                }}
-                title={m.admin_members_edit_title()}
-                aria-label={m.admin_members_edit_title()}
-              >
-                <i className="bi bi-pencil" aria-hidden="true" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-danger"
-                onClick={() => {
-                  setDeletingId(member.id);
-                  setDeleteError("");
-                }}
-                title={m.admin_members_delete_title()}
-                aria-label={m.admin_members_delete_title()}
-              >
-                <i className="bi bi-trash" aria-hidden="true" />
-              </Button>
-            </div>
-          );
-        },
-      }),
-    ]),
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor((row) => row.name, {
+          id: "name",
+          header: m.registration_name(),
+          cell: ({ row }) => {
+            const member = row.original;
+            return (
+              <div className="fw-semibold d-flex align-items-center gap-1">
+                {member.name}
+                {!member.active && (
+                  <Badge bg="secondary" className="ms-1">
+                    {m.admin_people_inactive_badge_label()}
+                  </Badge>
+                )}
+              </div>
+            );
+          },
+        }),
+        columnHelper.accessor("email", {
+          header: m.registration_email(),
+          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+        }),
+        columnHelper.accessor("phone", {
+          header: m.registration_phone(),
+          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+        }),
+        columnHelper.accessor("clubName", {
+          header: m.admin_people_club_name_label(),
+          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+        }),
+        columnHelper.accessor("notes", {
+          header: m.registration_notes(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const notes = row.original.notes;
+            const preview = truncateText(notes);
+            return (
+              <span className="small text-secondary" title={notes || undefined}>
+                {preview || "—"}
+              </span>
+            );
+          },
+        }),
+        columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
+          id: "registrations",
+          header: m.admin_registrations_tab(),
+          cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: m.admin_actions_label(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const member = row.original;
+            return (
+              <div className="d-flex flex-wrap gap-1">
+                <Button
+                  size="sm"
+                  variant="outline-light"
+                  onClick={() => {
+                    setEditingMember(member);
+                    setShowForm(true);
+                  }}
+                  title={m.admin_members_edit_title()}
+                  aria-label={m.admin_members_edit_title()}
+                >
+                  <i className="bi bi-pencil" aria-hidden="true" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  onClick={() => {
+                    setDeletingId(member.id);
+                    setDeleteError("");
+                  }}
+                  title={m.admin_members_delete_title()}
+                  aria-label={m.admin_members_delete_title()}
+                >
+                  <i className="bi bi-trash" aria-hidden="true" />
+                </Button>
+              </div>
+            );
+          },
+        }),
+      ]),
     [registrationCountByPersonId, setEditingMember, setShowForm, setDeletingId, setDeleteError],
   );
 
@@ -212,12 +214,13 @@ export default function MembersManagement({
       data: preFiltered,
       columns,
       state: { sorting, globalFilter: q, columnVisibility },
+      initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+      manualPagination: false,
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
       onColumnVisibilityChange: (updater) => {
-        const next =
-          typeof updater === "function" ? updater(columnVisibility) : updater;
+        const next = typeof updater === "function" ? updater(columnVisibility) : updater;
         setColumnVisibility(next);
         saveColVis(COL_VIS_KEY, next);
       },
@@ -227,11 +230,14 @@ export default function MembersManagement({
       sorting: state.sorting,
       globalFilter: state.globalFilter,
       columnVisibility: state.columnVisibility,
+      pagination: state.pagination,
     }),
   );
 
   const handleExportCsv = useCallback(() => {
-    const rows = table.getRowModel().rows.map(({ original: member }) => ({
+    // Export every filtered row, not just the current page — pagination is a
+    // display concern for the table, not a truncation of what gets exported.
+    const rows = table.getPrePaginatedRowModel().rows.map(({ original: member }) => ({
       [m.registration_name()]: member.name,
       [m.registration_email()]: member.email,
       [m.registration_phone()]: member.phone,
@@ -250,7 +256,12 @@ export default function MembersManagement({
             <span className="fw-semibold">{m.admin_members_tab()}</span>
             <div className="d-flex gap-2">
               <ColumnVisibilityDropdown table={table} tableId="members" />
-              <Button size="sm" variant="outline-secondary" onClick={handleExportCsv} disabled={table.getRowModel().rows.length === 0}>
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                onClick={handleExportCsv}
+                disabled={table.getPrePaginatedRowModel().rows.length === 0}
+              >
                 <i className="bi bi-download me-1" aria-hidden="true" />
                 {m.admin_export_csv()}
               </Button>
@@ -328,7 +339,7 @@ export default function MembersManagement({
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
-          ) : table.getRowModel().rows.length === 0 ? (
+          ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_members_no_results()}</p>
           ) : (
             <div className="table-responsive">
@@ -404,6 +415,16 @@ export default function MembersManagement({
               </Table>
             </div>
           )}
+          <AdminTablePagination
+            total={table.getPrePaginatedRowModel().rows.length}
+            pageIndex={table.state.pagination.pageIndex}
+            pageSize={table.state.pagination.pageSize}
+            canPreviousPage={table.getCanPreviousPage()}
+            canNextPage={table.getCanNextPage()}
+            onPreviousPage={() => table.previousPage()}
+            onNextPage={() => table.nextPage()}
+            onPageSizeChange={(size) => table.setPageSize(size)}
+          />
         </Card.Body>
       </Card>
 

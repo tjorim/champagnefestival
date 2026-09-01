@@ -96,10 +96,7 @@ describe("OtherEvents", () => {
     renderOtherEvents();
 
     const headings = await screen.findAllByRole("heading", { level: 5 });
-    expect(headings.map((heading) => heading.textContent)).toEqual([
-      "Capsule Exchange",
-      "Bourse",
-    ]);
+    expect(headings.map((heading) => heading.textContent)).toEqual(["Capsule Exchange", "Bourse"]);
   });
 
   it("renders every active event for an edition, ordered by date and start time", async () => {
@@ -368,9 +365,7 @@ describe("OtherEvents", () => {
 
     renderOtherEvents();
 
-    expect(
-      await screen.findByRole("button", { name: /Reserve VIP package/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Reserve VIP package/ })).toBeInTheDocument();
   });
 
   it("credits the co-organizing producer, linking to them when a website is known", async () => {

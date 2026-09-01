@@ -43,11 +43,11 @@ async def test_people_crud_roles_and_filters(client):
 
     r = await client.get("/api/people", params={"role": "volunteer"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
     r = await client.get("/api/people", params={"q": "treasurer"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 0
+    assert len(r.json()["items"]) == 0
 
     r = await client.put(
         f"/api/people/{person_id}",
@@ -64,7 +64,7 @@ async def test_people_crud_roles_and_filters(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
     # Uncertain match (same email, different name) → new person created; admin sees duplicate.
     r = await _post_registration(
@@ -354,12 +354,16 @@ async def test_people_support_limit_and_page(client):
 
     first_page = await client.get("/api/people", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
     assert first_page.status_code == 200
-    first_page_results = first_page.json()
+    first_page_body = first_page.json()
+    first_page_results = first_page_body["items"]
     assert len(first_page_results) == 2
+    assert first_page_body["limit"] == 2
+    assert first_page_body["page"] == 1
+    assert first_page_body["total"] >= len(created_ids)
 
     second_page = await client.get("/api/people", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
     assert second_page.status_code == 200
-    second_page_results = second_page.json()
+    second_page_results = second_page.json()["items"]
     assert len(second_page_results) >= 1
 
     first_page_ids = {row["id"] for row in first_page_results}
@@ -367,11 +371,36 @@ async def test_people_support_limit_and_page(client):
     assert first_page_ids.isdisjoint(second_page_ids)
 
     # Ordering must be consistent with the unpaginated endpoint
-    all_response = await client.get("/api/people", headers=ADMIN_HEADERS)
+    all_response = await client.get("/api/people", params={"limit": 1000}, headers=ADMIN_HEADERS)
     assert all_response.status_code == 200
-    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    all_results = [r for r in all_response.json()["items"] if r["id"] in created_ids]
     assert all_results[:2] == first_page_results
     assert all_results[2:3] == second_page_results
+
+
+@pytest.mark.anyio
+async def test_people_search_not_capped_at_operational_search_limit(client):
+    """Regression test for a #931-shaped bug: /api/people's search path used to
+    silently cap results at app.services.operational_search.MAX_RESULT_LIMIT
+    (50) — a limit sized for the volunteer door-lookup use case — regardless
+    of what the admin UI asked for. It must honor its own, larger admin
+    default (ADMIN_LIST_DEFAULT_LIMIT) instead."""
+    unique_token = "Zylberschmidt"
+    created_ids: set[str] = set()
+    for i in range(55):
+        r = await client.post(
+            "/api/people",
+            json={"name": f"{unique_token} {i}", "email": f"zyl{i}@example.com"},
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201
+        created_ids.add(r.json()["id"])
+
+    r = await client.get("/api/people", params={"q": unique_token}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 55
+    assert {item["id"] for item in body["items"]} == created_ids
 
 
 # ---------------------------------------------------------------------------
@@ -584,7 +613,7 @@ async def test_merge_people_fills_blank_fields(client):
 
 @pytest.mark.anyio
 async def test_members_require_auth(unauth_client):
-    r = await unauth_client.get("/api/members")
+    r = await unauth_client.get("/api/members/nonexistent")
     assert r.status_code == 401
 
 
@@ -608,9 +637,12 @@ async def test_members_crud(client):
 
     person_id = person["id"]
 
-    r = await client.get("/api/members", params={"q": "spui"}, headers=ADMIN_HEADERS)
+    # There's no GET /api/members list route — the member list is
+    # GET /api/people?role=member (see backend/app/routers/members.py's
+    # module docstring for why the list route was retired).
+    r = await client.get("/api/people", params={"role": "member", "q": "spui"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
     r = await client.put(
         f"/api/members/{person_id}",
@@ -621,9 +653,9 @@ async def test_members_crud(client):
     assert "member" in r.json()["roles"]
     assert r.json()["active"] is False
 
-    r = await client.get("/api/members", params={"active": "false"}, headers=ADMIN_HEADERS)
+    r = await client.get("/api/people", params={"role": "member", "active": "false"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
     r = await client.delete(f"/api/members/{person_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
@@ -720,7 +752,11 @@ async def test_delete_member_removes_existing_registrations(client):
 
 
 @pytest.mark.anyio
-async def test_members_support_limit_and_page(client):
+async def test_members_are_paginated_via_people_role_filter(client):
+    """No GET /api/members list route exists; pagination for the member list
+    is exercised end-to-end via GET /api/people?role=member instead (see
+    test_people_support_limit_and_page for the underlying pagination
+    contract, which this filter shares)."""
     created_ids: set[str] = set()
     for i, name in enumerate(("Member Alpha", "Member Bravo", "Member Charlie")):
         r = await client.post(
@@ -731,23 +767,15 @@ async def test_members_support_limit_and_page(client):
         assert r.status_code == 201
         created_ids.add(r.json()["id"])
 
-    first_page = await client.get("/api/members", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
+    first_page = await client.get(
+        "/api/people", params={"role": "member", "limit": 2, "page": 1}, headers=ADMIN_HEADERS
+    )
     assert first_page.status_code == 200
-    first_page_results = first_page.json()
-    assert len(first_page_results) == 2
+    first_page_body = first_page.json()
+    assert len(first_page_body["items"]) == 2
+    assert first_page_body["total"] >= len(created_ids)
 
-    second_page = await client.get("/api/members", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
-    assert second_page.status_code == 200
-    second_page_results = second_page.json()
-    assert len(second_page_results) >= 1
-
-    first_page_ids = {row["id"] for row in first_page_results}
-    second_page_ids = {row["id"] for row in second_page_results}
-    assert first_page_ids.isdisjoint(second_page_ids)
-
-    # Ordering must be consistent with the unpaginated endpoint
-    all_response = await client.get("/api/members", headers=ADMIN_HEADERS)
+    all_response = await client.get("/api/people", params={"role": "member", "limit": 1000}, headers=ADMIN_HEADERS)
     assert all_response.status_code == 200
-    all_results = [r for r in all_response.json() if r["id"] in created_ids]
-    assert all_results[:2] == first_page_results
-    assert all_results[2:3] == second_page_results
+    all_ids = {row["id"] for row in all_response.json()["items"]}
+    assert created_ids <= all_ids

@@ -80,7 +80,9 @@ describe("VolunteersManagement — rendering", () => {
     expect(scopedWithPeriod.getByText("2025-03-01 → 2025-03-02")).toBeInTheDocument();
 
     const rowNoPeriod = screen.getByText("No Period").closest("tr");
-    expect(within(rowNoPeriod as HTMLElement).getByText("admin_volunteers_no_help_periods")).toBeInTheDocument();
+    expect(
+      within(rowNoPeriod as HTMLElement).getByText("admin_volunteers_no_help_periods"),
+    ).toBeInTheDocument();
   });
 
   it("shows a loading spinner instead of the table when isLoading is true", () => {
@@ -156,6 +158,25 @@ describe("VolunteersManagement — delete confirmation", () => {
 
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith("v1");
+  });
+});
+
+describe("VolunteersManagement — client-side pagination", () => {
+  it("shows only the first page of rows and pages through the rest", () => {
+    const manyVolunteers = Array.from({ length: 25 }, (_, i) =>
+      makeVolunteer({ id: `v${i}`, name: `Volunteer ${String(i).padStart(2, "0")}` }),
+    );
+    renderVolunteersManagement({ volunteers: manyVolunteers });
+
+    expect(screen.getByText("Volunteer 00")).toBeInTheDocument();
+    expect(screen.getByText("Volunteer 19")).toBeInTheDocument();
+    expect(screen.queryByText("Volunteer 20")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("admin_table_page_next"));
+
+    expect(screen.queryByText("Volunteer 00")).not.toBeInTheDocument();
+    expect(screen.getByText("Volunteer 20")).toBeInTheDocument();
+    expect(screen.getByText("Volunteer 24")).toBeInTheDocument();
   });
 });
 

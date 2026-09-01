@@ -3,14 +3,7 @@
  * person-merge helpers used by the admin dashboard.
  */
 
-import type {
-  FloorArea,
-  FloorTable,
-  Layout,
-  Room,
-  TableType,
-  Venue,
-} from "../types/admin";
+import type { FloorArea, FloorTable, Layout, Room, TableType, Venue } from "../types/admin";
 import type { Person } from "../types/person";
 
 import { describe, expect, it } from "vitest";
@@ -491,7 +484,9 @@ describe("apiRoomToRoom", () => {
   });
 
   it("preserves dimensions_placeholder: true when explicitly provided", () => {
-    expect(apiRoomToRoom({ ...minimal, dimensions_placeholder: true }).dimensionsPlaceholder).toBe(true);
+    expect(apiRoomToRoom({ ...minimal, dimensions_placeholder: true }).dimensionsPlaceholder).toBe(
+      true,
+    );
   });
 });
 
@@ -586,7 +581,9 @@ describe("mergePersonUpdate", () => {
   });
 
   it("returns updated directly when updated has no volunteer role", () => {
-    const existing = makePerson({ helpPeriods: [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null }] });
+    const existing = makePerson({
+      helpPeriods: [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null }],
+    });
     const updated = makePerson({ roles: ["member"] });
     expect(mergePersonUpdate(existing, updated)).toBe(updated);
   });
