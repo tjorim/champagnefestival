@@ -20,6 +20,7 @@ import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import {
+  ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
   fetchRegistrationsPage,
@@ -35,6 +36,10 @@ import { devError } from "@/utils/devLog";
 const COL_VIS_KEY = "admin-col-vis-registrations";
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
 const DEFAULT_PAGE_SIZE = 50;
+// Bulk mutations are one REST call per registration (see executeBulkAction) —
+// batching keeps a large "select all matching" action from firing hundreds
+// of simultaneous requests at once.
+const BULK_ACTION_BATCH_SIZE = 20;
 
 // Maps a sortable table column's id to the backend `sort` query param it
 // corresponds to (see backend/app/routers/registrations.py's _SORT_COLUMNS).
@@ -163,14 +168,34 @@ export default function RegistrationList({
     loadColVis(COL_VIS_KEY),
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // True only once the user has explicitly expanded a full-page selection to
+  // "every registration matching these filters" (the Gmail-style banner
+  // below) — purely a label/UX flag; `selectedIds` itself always holds the
+  // real set being acted on.
+  const [selectAllMatchingActive, setSelectAllMatchingActive] = useState(false);
+  const [isSelectingAllMatching, setIsSelectingAllMatching] = useState(false);
+  const [selectAllMatchingError, setSelectAllMatchingError] = useState<string | null>(null);
   const [bulkAction, setBulkAction] = useState<"confirm" | "cancel" | "paid" | null>(null);
   const [bulkInProgress, setBulkInProgress] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
   const [exportingEventId, setExportingEventId] = useState<string | null>(null);
   const [eventExportError, setEventExportError] = useState<string | null>(null);
+  const [exportingAllCsv, setExportingAllCsv] = useState(false);
+  const [csvExportError, setCsvExportError] = useState<string | null>(null);
   const todayKey = useTodayKey();
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const filterDefaultsAppliedRef = useRef<string | null>(null);
+
+  // The set of matching registrations changes under any filter change, so a
+  // held-over selection (page-scoped or "all matching") no longer means what
+  // it did — clear it rather than silently acting on a stale set later.
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectAllMatchingActive(false);
+    setSelectAllMatchingError(null);
+  }, []);
+
   // Guards against resetting `page` on the vacuous debounce firing 300ms after
   // every mount (q hasn't actually changed then) — only an actual change to
   // the debounced search term should knock the user back to page 1.
@@ -182,10 +207,11 @@ export default function RegistrationList({
       if (next !== debouncedQRef.current) {
         debouncedQRef.current = next;
         setPage(1);
+        clearSelection();
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [q]);
+  }, [q, clearSelection]);
 
   const checkInStatsQuery = useQuery({
     queryKey: queryKeys.admin.eventCheckInStats,
@@ -239,41 +265,54 @@ export default function RegistrationList({
     filterDefaultsAppliedRef.current = activeEdition.id;
     setActiveEditionOnly(true);
     setPage(1);
-  }, [activeEdition.id, isActiveEditionDay]);
+    clearSelection();
+  }, [activeEdition.id, isActiveEditionDay, clearSelection]);
 
   useEffect(() => {
     if (applyActiveEditionFilterRequest === 0) return;
     setActiveEditionOnly(true);
     setPage(1);
-  }, [applyActiveEditionFilterRequest]);
+    clearSelection();
+  }, [applyActiveEditionFilterRequest, clearSelection]);
 
   const changeStatusFilter = useCallback(
     (next: "all" | RegistrationStatus) => {
       onFilterChange(next);
       setPage(1);
+      clearSelection();
     },
-    [onFilterChange],
+    [onFilterChange, clearSelection],
   );
 
-  const changeAllocationFilter = useCallback((value: string) => {
-    setAllocationFilter(value);
-    setPage(1);
-  }, []);
+  const changeAllocationFilter = useCallback(
+    (value: string) => {
+      setAllocationFilter(value);
+      setPage(1);
+      clearSelection();
+    },
+    [clearSelection],
+  );
 
-  const changeEditionFilter = useCallback((value: EditionFilter) => {
-    setEditionFilter(value);
-    setPage(1);
-  }, []);
+  const changeEditionFilter = useCallback(
+    (value: EditionFilter) => {
+      setEditionFilter(value);
+      setPage(1);
+      clearSelection();
+    },
+    [clearSelection],
+  );
 
   const toggleActiveEditionOnly = useCallback(() => {
     setActiveEditionOnly((current) => !current);
     setPage(1);
-  }, []);
+    clearSelection();
+  }, [clearSelection]);
 
   const toggleDateFilter = useCallback(() => {
     setDateFilter((current) => (current === "today" ? "all" : "today"));
     setPage(1);
-  }, []);
+    clearSelection();
+  }, [clearSelection]);
 
   const changePageSize = useCallback((value: number) => {
     setPageSize(value);
@@ -290,6 +329,33 @@ export default function RegistrationList({
   const backendEventDate = dateFilter === "today" ? todayKey : "";
   const backendEditionCategory = editionFilter === "all" ? "" : editionFilter;
 
+  // Shared with the "select all matching" bulk-selection fetch and the CSV
+  // export below, so both act on exactly the same filter set the table is
+  // currently showing — everything except page/limit, which each caller
+  // supplies for itself.
+  const currentFilterParams = useMemo(
+    () => ({
+      query: debouncedQ || undefined,
+      status: backendStatus || undefined,
+      personId: filterPersonId ?? undefined,
+      editionId: backendEditionId || undefined,
+      eventDate: backendEventDate || undefined,
+      editionCategory: backendEditionCategory || undefined,
+      sort: backendSort,
+      sortDir: backendSort ? backendSortDir : undefined,
+    }),
+    [
+      debouncedQ,
+      backendStatus,
+      filterPersonId,
+      backendEditionId,
+      backendEventDate,
+      backendEditionCategory,
+      backendSort,
+      backendSortDir,
+    ],
+  );
+
   const pageQuery = useQuery({
     queryKey: queryKeys.admin.registrationsPage({
       q: debouncedQ,
@@ -303,19 +369,7 @@ export default function RegistrationList({
       page,
       pageSize,
     }),
-    queryFn: () =>
-      fetchRegistrationsPage(authHeaders, {
-        query: debouncedQ || undefined,
-        status: backendStatus || undefined,
-        personId: filterPersonId ?? undefined,
-        editionId: backendEditionId || undefined,
-        eventDate: backendEventDate || undefined,
-        editionCategory: backendEditionCategory || undefined,
-        sort: backendSort,
-        sortDir: backendSort ? backendSortDir : undefined,
-        page,
-        limit: pageSize,
-      }),
+    queryFn: () => fetchRegistrationsPage(authHeaders, { ...currentFilterParams, page, limit: pageSize }),
     placeholderData: keepPreviousData,
     staleTime: 15 * 1000,
     retry: false,
@@ -334,6 +388,38 @@ export default function RegistrationList({
     () => (pageQuery.data?.registrations ?? []).map((r) => registrationsById.get(r.id) ?? r),
     [pageQuery.data, registrationsById],
   );
+
+  const total = pageQuery.data?.total ?? 0;
+  const effectivePageSize = pageQuery.data?.limit ?? pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
+  const rangeFrom = total === 0 ? 0 : (page - 1) * effectivePageSize + 1;
+  const rangeTo = Math.min(page * effectivePageSize, total);
+
+  // Gmail-style expansion offer: the whole visible page is selected, but the
+  // filters match more than fits on one page, and the user hasn't already
+  // expanded to "all matching" (or manually adjusted the selection since).
+  const canExpandSelectionToAllMatching =
+    !selectAllMatchingActive &&
+    pageRegistrations.length > 0 &&
+    total > pageRegistrations.length &&
+    pageRegistrations.every((r) => selectedIds.has(r.id));
+
+  // Fetches every registration matching the current filters (not just the
+  // current page), bounded the same way fetchAllRegistrations is — used by
+  // "export all matching" and by the "select all N matching" bulk action.
+  const fetchAllMatchingRegistrations = useCallback(async (): Promise<Registration[]> => {
+    const { registrations: matched, total: matchedTotal } = await fetchRegistrationsPage(authHeaders, {
+      ...currentFilterParams,
+      limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
+    });
+    if (matchedTotal > matched.length) {
+      devError(
+        `Bulk selection/export is covering ${matched.length} of ${matchedTotal} matching registrations; ` +
+          "raise ADMIN_REGISTRATIONS_FULL_LIST_LIMIT if this recurs.",
+      );
+    }
+    return matched.map((r) => registrationsById.get(r.id) ?? r);
+  }, [authHeaders, currentFilterParams, registrationsById]);
 
   const handleAssignTable = useCallback(
     (registrationId: string, tableId: string) => {
@@ -384,6 +470,8 @@ export default function RegistrationList({
               type="checkbox"
               checked={allSelected}
               onChange={() => {
+                setSelectAllMatchingActive(false);
+                setSelectAllMatchingError(null);
                 if (allSelected) {
                   setSelectedIds((prev) => {
                     const next = new Set<string>(prev);
@@ -404,6 +492,8 @@ export default function RegistrationList({
             type="checkbox"
             checked={selectedIds.has(row.id)}
             onChange={() => {
+              setSelectAllMatchingActive(false);
+              setSelectAllMatchingError(null);
               setSelectedIds((prev) => {
                 const next = new Set<string>(prev);
                 if (next.has(row.id)) next.delete(row.id);
@@ -695,7 +785,8 @@ export default function RegistrationList({
     setDateFilter("all");
     setEditionFilter("all");
     setPage(1);
-  }, [onFilterChange]);
+    clearSelection();
+  }, [onFilterChange, clearSelection]);
 
   const table = useAppTable(
     {
@@ -777,20 +868,32 @@ export default function RegistrationList({
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [registrations, checkInStatsQuery.data]);
 
-  const handleExportCsv = useCallback(() => {
-    const rows = table.getRowModel().rows.map(({ original: reg }) => ({
-      [m.registration_name()]: reg.person.name,
-      [m.registration_email()]: reg.person.email,
-      [m.registration_phone()]: reg.person.phone,
-      [m.admin_event_label()]: reg.event?.title ?? reg.eventId,
-      [m.admin_guests_count()]: reg.guestCount,
-      [m.admin_status_label()]: reg.status,
-      [m.admin_payment_label()]: reg.paymentStatus,
-      [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
-      [m.admin_created_at()]: reg.createdAt,
-    }));
-    exportToCsv("registrations.csv", rows);
-  }, [table]);
+  // Exports every registration matching the current filters, not just the
+  // rendered page — see fetchAllMatchingRegistrations.
+  const handleExportCsv = useCallback(async () => {
+    setCsvExportError(null);
+    setExportingAllCsv(true);
+    try {
+      const matching = await fetchAllMatchingRegistrations();
+      const rows = matching.map((reg) => ({
+        [m.registration_name()]: reg.person.name,
+        [m.registration_email()]: reg.person.email,
+        [m.registration_phone()]: reg.person.phone,
+        [m.admin_event_label()]: reg.event?.title ?? reg.eventId,
+        [m.admin_guests_count()]: reg.guestCount,
+        [m.admin_status_label()]: reg.status,
+        [m.admin_payment_label()]: reg.paymentStatus,
+        [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
+        [m.admin_created_at()]: reg.createdAt,
+      }));
+      exportToCsv("registrations.csv", rows);
+    } catch (err) {
+      devError("Failed to export registrations", err);
+      setCsvExportError(err instanceof Error ? err.message : m.admin_error_load_data());
+    } finally {
+      setExportingAllCsv(false);
+    }
+  }, [fetchAllMatchingRegistrations]);
 
   const handleExportEventCsv = useCallback(
     async (eventId: string) => {
@@ -810,34 +913,58 @@ export default function RegistrationList({
     [authHeaders],
   );
 
+  // Selecting a whole page whose filters match more than fits on it offers a
+  // Gmail-style "select all N matching" expansion. `selectedIds` becomes the
+  // real, materialized set of every matching id (bounded the same way as any
+  // other full-set fetch) rather than a lazily-resolved scope, so everything
+  // downstream (the confirm dialog's count, execution) works unchanged.
+  const handleSelectAllMatching = useCallback(async () => {
+    setIsSelectingAllMatching(true);
+    setSelectAllMatchingError(null);
+    try {
+      const matching = await fetchAllMatchingRegistrations();
+      setSelectedIds(new Set(matching.map((r) => r.id)));
+      setSelectAllMatchingActive(true);
+    } catch (err) {
+      devError("Failed to select all matching registrations", err);
+      setSelectAllMatchingError(err instanceof Error ? err.message : m.admin_error_load_data());
+    } finally {
+      setIsSelectingAllMatching(false);
+    }
+  }, [fetchAllMatchingRegistrations]);
+
   const executeBulkAction = useCallback(async () => {
     if (!bulkAction || selectedIds.size === 0) return;
     setBulkInProgress(true);
     setBulkError(null);
     const ids = [...selectedIds];
-    const results = await Promise.allSettled(
-      ids.map((id) => {
-        if (bulkAction === "confirm") return Promise.resolve(onUpdateStatus(id, "confirmed"));
-        if (bulkAction === "cancel") return Promise.resolve(onUpdateStatus(id, "cancelled"));
-        if (bulkAction === "paid") return Promise.resolve(onUpdatePayment(id, "paid"));
-        return Promise.resolve();
-      }),
-    );
-    const failedCount = results.filter((r) => r.status === "rejected").length;
+    setBulkProgress({ done: 0, total: ids.length });
+    let failedCount = 0;
+    // Bounded concurrency: a "select all matching" batch can be a few hundred
+    // ids, and firing them all as simultaneous requests is unkind to both the
+    // browser and the server compared to the handful a single page ever had.
+    for (let start = 0; start < ids.length; start += BULK_ACTION_BATCH_SIZE) {
+      const batch = ids.slice(start, start + BULK_ACTION_BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((id) => {
+          if (bulkAction === "confirm") return Promise.resolve(onUpdateStatus(id, "confirmed"));
+          if (bulkAction === "cancel") return Promise.resolve(onUpdateStatus(id, "cancelled"));
+          if (bulkAction === "paid") return Promise.resolve(onUpdatePayment(id, "paid"));
+          return Promise.resolve();
+        }),
+      );
+      failedCount += results.filter((r) => r.status === "rejected").length;
+      setBulkProgress({ done: Math.min(start + batch.length, ids.length), total: ids.length });
+    }
     setBulkInProgress(false);
+    setBulkProgress(null);
     setBulkAction(null);
     if (failedCount > 0) {
       setBulkError(m.admin_bulk_operations_failed({ failed: failedCount, total: ids.length }));
     } else {
-      setSelectedIds(new Set());
+      clearSelection();
     }
-  }, [bulkAction, onUpdatePayment, onUpdateStatus, selectedIds]);
-
-  const total = pageQuery.data?.total ?? 0;
-  const effectivePageSize = pageQuery.data?.limit ?? pageSize;
-  const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
-  const rangeFrom = total === 0 ? 0 : (page - 1) * effectivePageSize + 1;
-  const rangeTo = Math.min(page * effectivePageSize, total);
+  }, [bulkAction, onUpdatePayment, onUpdateStatus, selectedIds, clearSelection]);
 
   return (
     <>
@@ -863,8 +990,18 @@ export default function RegistrationList({
             </div>
             <div className="d-flex gap-2">
               <ColumnVisibilityDropdown table={table} tableId="registrations" />
-              <Button variant="outline-secondary" size="sm" onClick={handleExportCsv}>
-                <i className="bi bi-download me-1" aria-hidden="true" />
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => void handleExportCsv()}
+                disabled={exportingAllCsv}
+                title={m.admin_export_csv_all_title()}
+              >
+                {exportingAllCsv ? (
+                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+                ) : (
+                  <i className="bi bi-download me-1" aria-hidden="true" />
+                )}
                 {m.admin_export_csv()}
               </Button>
               <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
@@ -1030,29 +1167,74 @@ export default function RegistrationList({
               {eventExportError}
             </Alert>
           )}
+          {csvExportError && (
+            <Alert
+              variant="danger"
+              className="py-1 mt-2 mb-0"
+              dismissible
+              onClose={() => setCsvExportError(null)}
+            >
+              {csvExportError}
+            </Alert>
+          )}
           {/* Bulk action bar */}
           {selectedIds.size > 0 && (
-            <div className="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary flex-wrap">
-              <span className="text-secondary small">
-                {m.admin_bulk_selected({ count: selectedIds.size })}
-              </span>
-              <Button size="sm" variant="outline-success" onClick={() => setBulkAction("confirm")}>
-                {m.admin_bulk_confirm()}
-              </Button>
-              <Button size="sm" variant="outline-danger" onClick={() => setBulkAction("cancel")}>
-                {m.admin_bulk_cancel()}
-              </Button>
-              <Button size="sm" variant="outline-info" onClick={() => setBulkAction("paid")}>
-                {m.admin_bulk_mark_paid()}
-              </Button>
-              <Button
-                size="sm"
-                variant="link"
-                className="text-secondary ms-auto p-0"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                {m.admin_bulk_clear()}
-              </Button>
+            <div className="mt-2 pt-2 border-top border-secondary">
+              {canExpandSelectionToAllMatching && (
+                <div className="d-flex align-items-center gap-2 flex-wrap small text-secondary mb-2">
+                  <span>{m.admin_bulk_select_page_notice({ count: pageRegistrations.length })}</span>
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="p-0"
+                    onClick={() => void handleSelectAllMatching()}
+                    disabled={isSelectingAllMatching}
+                  >
+                    {isSelectingAllMatching && (
+                      <span
+                        className="spinner-border spinner-border-sm me-1"
+                        role="status"
+                        aria-hidden="true"
+                      />
+                    )}
+                    {m.admin_bulk_select_all_matching({ total })}
+                  </Button>
+                </div>
+              )}
+              {selectAllMatchingError && (
+                <Alert
+                  variant="danger"
+                  className="py-1 mb-2"
+                  dismissible
+                  onClose={() => setSelectAllMatchingError(null)}
+                >
+                  {selectAllMatchingError}
+                </Alert>
+              )}
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <span className="text-secondary small">
+                  {selectAllMatchingActive
+                    ? m.admin_bulk_all_matching_selected({ total: selectedIds.size })
+                    : m.admin_bulk_selected({ count: selectedIds.size })}
+                </span>
+                <Button size="sm" variant="outline-success" onClick={() => setBulkAction("confirm")}>
+                  {m.admin_bulk_confirm()}
+                </Button>
+                <Button size="sm" variant="outline-danger" onClick={() => setBulkAction("cancel")}>
+                  {m.admin_bulk_cancel()}
+                </Button>
+                <Button size="sm" variant="outline-info" onClick={() => setBulkAction("paid")}>
+                  {m.admin_bulk_mark_paid()}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="link"
+                  className="text-secondary ms-auto p-0"
+                  onClick={clearSelection}
+                >
+                  {m.admin_bulk_clear()}
+                </Button>
+              </div>
             </div>
           )}
         </Card.Header>
@@ -1231,7 +1413,14 @@ export default function RegistrationList({
             {bulkAction === "paid" && m.admin_bulk_mark_paid()}
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body>{m.admin_bulk_confirm_action({ count: selectedIds.size })}</Modal.Body>
+        <Modal.Body>
+          {m.admin_bulk_confirm_action({ count: selectedIds.size })}
+          {bulkProgress && (
+            <div className="mt-2 text-secondary small">
+              {m.admin_bulk_progress({ done: bulkProgress.done, total: bulkProgress.total })}
+            </div>
+          )}
+        </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setBulkAction(null)} disabled={bulkInProgress}>
             {m.admin_action_cancel()}
