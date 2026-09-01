@@ -16,8 +16,8 @@ import io
 import logging
 import re
 import secrets
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import delete, func, select
@@ -73,6 +73,16 @@ logger = logging.getLogger(__name__)
 # sized for the volunteer door-lookup use case (one guest at a time), not an
 # admin browsing or exporting a multi-year guest list.
 ADMIN_LIST_DEFAULT_LIMIT = 50
+
+RegistrationSortKey = Literal["name", "event", "guest_count", "status", "payment_status", "checked_in"]
+_SORT_COLUMNS: dict[RegistrationSortKey, Any] = {
+    "name": Person.name,
+    "event": Event.title,
+    "guest_count": Registration.guest_count,
+    "status": Registration.status,
+    "payment_status": Registration.payment_status,
+    "checked_in": Registration.checked_in,
+}
 
 
 @router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
@@ -184,26 +194,57 @@ async def list_registrations(
     ),
     event_id: str | None = Query(default=None, description="Filter by event ID"),
     table_id: str | None = Query(default=None, description="Filter by table ID"),
-    edition_type: str | None = Query(default=None, description="Filter by the event edition type"),
+    person_id: str | None = Query(default=None, description="Filter by registrant person ID"),
+    edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    edition_type: str | None = Query(default=None, description="Filter by the exact event edition type"),
+    edition_category: Literal["festival", "standalone"] | None = Query(
+        default=None,
+        description="Filter by edition category: 'festival' matches edition_type=festival, "
+        "'standalone' matches every other edition_type (bourse, capsule_exchange, ...)",
+    ),
+    event_date: date | None = Query(default=None, description="Filter by the event's calendar date"),
+    sort: RegistrationSortKey | None = Query(
+        default=None,
+        description="Sort column; overrides the default relevance/newest-first order. "
+        "Applies across the whole filtered set, not just the current page.",
+    ),
+    sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction, used only with `sort`"),
     pagination: Pagination = Depends(),
 ) -> dict:
     q_stripped = q.strip() if q and q.strip() else None
 
+    person_needed = bool(q_stripped) or sort == "name"
+    event_needed = bool(edition_id or event_date or edition_type or edition_category or sort == "event")
+    edition_needed = bool(edition_type or edition_category)
+
     filtered_stmt = select(Registration)
+    if person_needed:
+        filtered_stmt = filtered_stmt.join(Person, Registration.person_id == Person.id)
+    if event_needed:
+        filtered_stmt = filtered_stmt.join(Registration.event)
+    if edition_needed:
+        filtered_stmt = filtered_stmt.join(Event.edition)
+
     if q_stripped:
-        filtered_stmt = filtered_stmt.join(Person, Registration.person_id == Person.id).where(
-            person_search_predicate(name=q_stripped, email=q_stripped)
-        )
+        filtered_stmt = filtered_stmt.where(person_search_predicate(name=q_stripped, email=q_stripped))
     if status_filter:
         filtered_stmt = filtered_stmt.where(Registration.status == status_filter)
     if event_id:
         filtered_stmt = filtered_stmt.where(Registration.event_id == event_id)
     if table_id:
         filtered_stmt = filtered_stmt.where(Registration.table_id == table_id)
+    if person_id:
+        filtered_stmt = filtered_stmt.where(Registration.person_id == person_id)
+    if edition_id:
+        filtered_stmt = filtered_stmt.where(Event.edition_id == edition_id)
+    if event_date:
+        filtered_stmt = filtered_stmt.where(Event.date == event_date)
     if edition_type:
-        filtered_stmt = (
-            filtered_stmt.join(Registration.event).join(Event.edition).where(Edition.edition_type == edition_type)
-        )
+        filtered_stmt = filtered_stmt.where(Edition.edition_type == edition_type)
+    if edition_category == "festival":
+        filtered_stmt = filtered_stmt.where(Edition.edition_type == "festival")
+    elif edition_category == "standalone":
+        filtered_stmt = filtered_stmt.where(Edition.edition_type != "festival")
 
     total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
@@ -211,7 +252,11 @@ async def list_registrations(
         selectinload(Registration.event).selectinload(Event.edition),
         selectinload(Registration.event).selectinload(Event.products),
     )
-    if q_stripped:
+    if sort is not None:
+        sort_column = _SORT_COLUMNS[sort]
+        order_expr = sort_column.desc() if sort_dir == "desc" else sort_column.asc()
+        stmt = stmt.order_by(order_expr, Registration.id.desc())
+    elif q_stripped:
         stmt = stmt.order_by(
             *person_search_order_by(name=q_stripped, email=q_stripped),
             Registration.created_at.desc(),

@@ -16,6 +16,34 @@ export const queryKeys = {
      * events, reconnect recovery — refreshes them without a separate wiring.
      */
     eventCheckInStats: ["admin", "registrations", "checkin-stats"] as const,
+    /** One server-paginated page of the admin registration table; see RegistrationList. */
+    registrationsPage: (filters: {
+      q: string;
+      status: string;
+      personId: string;
+      editionId: string;
+      eventDate: string;
+      editionCategory: string;
+      sort: string;
+      sortDir: string;
+      page: number;
+      pageSize: number;
+    }) =>
+      [
+        "admin",
+        "registrations",
+        "page",
+        filters.q,
+        filters.status,
+        filters.personId,
+        filters.editionId,
+        filters.eventDate,
+        filters.editionCategory,
+        filters.sort,
+        filters.sortDir,
+        filters.page,
+        filters.pageSize,
+      ] as const,
     tables: ["admin", "tables"] as const,
     venues: ["admin", "venues"] as const,
     rooms: ["admin", "rooms"] as const,

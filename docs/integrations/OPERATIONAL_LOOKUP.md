@@ -47,15 +47,22 @@ GET /api/registrations?q=...
 ```
 
 This admin-only endpoint uses the same person-name and email ranking while
-retaining deterministic matching for admin-only fields. The registration table
-delegates active text searches to the backend instead of filtering its local
-snapshot literally.
+retaining deterministic matching for admin-only fields. The admin registration
+table (`RegistrationList`) is genuinely server-paginated: text search, status,
+edition, edition type/category, event, table, person, and event-date filters,
+plus column sorting (`sort`/`sort_dir`), are all sent as query params and only
+one page of matching rows is ever fetched — the table no longer filters a
+locally held snapshot.
 
 Unlike the volunteer endpoint above, `GET /api/registrations` defaults to 50
 rows per page (an explicit `limit`, up to 1000, overrides it) whether or not
 `q` is set, and returns a `{items, total, limit, page}` envelope rather than
 a bare array — `total` lets a client tell when a page was truncated instead
-of rendering a partial result as if it were complete.
+of rendering a partial result as if it were complete. Aggregate views that
+need the whole working set (per-event capacity, status/edition counts, the
+floor-plan editor's table occupancy) still request a large bounded page
+(`fetchAllRegistrations`, capped at 1000) rather than relying on this
+pagination.
 
 ## MCP Consumers
 

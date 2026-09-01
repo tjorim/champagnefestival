@@ -241,7 +241,7 @@ See `.env.example` for a template.
 | Method   | Path                            | Auth           | Description                                                                |
 | -------- | ------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | `POST`   | `/api/registrations`             | public / optional user | Create a registration; a valid user Bearer token assigns ownership       |
-| `GET`    | `/api/registrations`             | admin          | Paginated registration list (`?q=`, `?status=`, `?event_id=`, `?table_id=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
+| `GET`    | `/api/registrations`             | admin          | Paginated registration list (`?q=`, `?status=`, `?event_id=`, `?table_id=`, `?person_id=`, `?edition_id=`, `?edition_type=`, `?edition_category=`, `?event_date=`, `?sort=`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/registrations/export`      | admin          | Export one event's non-cancelled registrations as CSV                       |
 | `POST`   | `/api/registrations/my/request`  | public         | E-mail a short-lived visitor access link                                    |
 | `POST`   | `/api/registrations/my/access`   | public + token | View visitor registrations using a short-lived secure token                 |

@@ -199,8 +199,17 @@ export const adminHandlers = [
   http.get("/api/registrations", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const items = sharedStore.registrations;
-    return HttpResponse.json({ items, total: items.length, limit: items.length, page: 1 });
+    const url = new URL(request.url);
+    const all = sharedStore.registrations;
+    // Only `limit`/`page` are honored here — the other filters (q, status,
+    // edition, date, person) are exercised against the real endpoint by the
+    // backend test suite; this mock only needs to prove RegistrationList
+    // paginates correctly against whatever the envelope reports.
+    const limit = Number(url.searchParams.get("limit") ?? all.length) || all.length;
+    const page = Number(url.searchParams.get("page") ?? 1) || 1;
+    const start = (page - 1) * limit;
+    const items = all.slice(start, start + limit);
+    return HttpResponse.json({ items, total: all.length, limit, page });
   }),
 
   http.get("/api/volunteer/registrations", ({ request }) => {
@@ -285,7 +294,9 @@ export const adminHandlers = [
         }
         if (typeof orderItem.quantity !== "number" || deliveredQuantity > orderItem.quantity) {
           return HttpResponse.json(
-            { detail: `delivered_quantity for product '${String(productId)}' cannot exceed quantity.` },
+            {
+              detail: `delivered_quantity for product '${String(productId)}' cannot exceed quantity.`,
+            },
             { status: 400 },
           );
         }
@@ -825,8 +836,10 @@ export const adminHandlers = [
       category: String(body.category ?? "other"),
       active: body.active !== false,
       required: body.required === true,
-      included_product_id: typeof body.included_product_id === "string" ? body.included_product_id : null,
-      included_per_guests: typeof body.included_per_guests === "number" ? body.included_per_guests : null,
+      included_product_id:
+        typeof body.included_product_id === "string" ? body.included_product_id : null,
+      included_per_guests:
+        typeof body.included_per_guests === "number" ? body.included_per_guests : null,
       created_at: now(),
       updated_at: now(),
     };
