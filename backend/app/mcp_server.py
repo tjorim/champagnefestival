@@ -1009,6 +1009,7 @@ class ChampagneFestivalMcpBackend:
         end_time: str | None = None,
         registration_required: bool = False,
         registrations_open_from: datetime | None = None,
+        registrations_close_at: datetime | None = None,
         max_capacity: int | None = None,
         active: bool = True,
     ) -> dict:
@@ -1031,6 +1032,7 @@ class ChampagneFestivalMcpBackend:
             end_time=end_time,
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
+            registrations_close_at=registrations_close_at,
             max_capacity=max_capacity,
             active=active,
         )
@@ -1052,10 +1054,12 @@ class ChampagneFestivalMcpBackend:
         category: str | None = None,
         registration_required: bool | None = None,
         registrations_open_from: datetime | None = None,
+        registrations_close_at: datetime | None = None,
         max_capacity: int | None = None,
         active: bool | None = None,
         clear_end_time: bool = False,
         clear_registrations_open_from: bool = False,
+        clear_registrations_close_at: bool = False,
         clear_max_capacity: bool = False,
     ) -> dict:
         """Partially update an event; omitted fields are left unchanged.
@@ -1079,10 +1083,12 @@ class ChampagneFestivalMcpBackend:
             category=category,
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
+            registrations_close_at=registrations_close_at,
             max_capacity=max_capacity,
             active=active,
             clear_end_time=clear_end_time,
             clear_registrations_open_from=clear_registrations_open_from,
+            clear_registrations_close_at=clear_registrations_close_at,
             clear_max_capacity=clear_max_capacity,
         )
 
@@ -1571,6 +1577,7 @@ class ChampagneFestivalMcpBackend:
     async def update_registration(
         self,
         registration_id: str,
+        guest_count: int | None = None,
         status: str | None = None,
         payment_status: str | None = None,
         amount_due: float | None = None,
@@ -1598,6 +1605,7 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             registration_id,
+            guest_count=guest_count,
             status=status,
             payment_status=payment_status,
             amount_due=amount_due,

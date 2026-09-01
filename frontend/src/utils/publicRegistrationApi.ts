@@ -429,6 +429,7 @@ export async function submitRegistration(
         quantity: order.quantity,
       })),
       notes: payload.notes,
+      accessibility_note: payload.accessibilityNote,
       honeypot: payload.honeypot ?? "",
       form_start_time: payload.formStartTime,
     }),

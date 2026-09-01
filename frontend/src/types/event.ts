@@ -49,6 +49,7 @@ export interface Event {
   category: string;
   registrationRequired: boolean;
   registrationsOpenFrom?: string;
+  registrationsCloseAt?: string;
   maxCapacity?: number;
   sortOrder?: number;
   active: boolean;
@@ -72,6 +73,7 @@ export interface EventFormData {
   category: string;
   registrationRequired: boolean;
   registrationsOpenFrom: string;
+  registrationsCloseAt: string;
   maxCapacity: string;
   sortOrder: string;
   active: boolean;
@@ -118,6 +120,8 @@ export function apiToEvent(data: Record<string, unknown>): Event {
     registrationRequired: Boolean(data.registration_required),
     registrationsOpenFrom:
       typeof data.registrations_open_from === "string" ? data.registrations_open_from : undefined,
+    registrationsCloseAt:
+      typeof data.registrations_close_at === "string" ? data.registrations_close_at : undefined,
     maxCapacity: typeof data.max_capacity === "number" ? data.max_capacity : undefined,
     sortOrder: typeof data.sort_order === "number" ? data.sort_order : undefined,
     active: Boolean(data.active),

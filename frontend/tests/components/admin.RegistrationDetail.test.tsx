@@ -150,7 +150,7 @@ describe("RegistrationDetail", () => {
     expect(emailLink).toHaveAttribute("href", "mailto:jane@example.com");
 
     expect(screen.getByText("+32 470 00 00 00")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "admin_guests_count" })).toHaveValue(2);
     expect(screen.getByText("Grand Tasting")).toBeInTheDocument();
     expect(screen.getByText("Please seat near the window.")).toBeInTheDocument();
     expect(screen.getByText("Wheelchair access needed.")).toBeInTheDocument();

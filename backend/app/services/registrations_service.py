@@ -327,6 +327,7 @@ async def apply_registration_update(
     ).scalar_one()
 
     pre_table_id = registration.table_id
+    pre_guest_count = registration.guest_count
     pre_order_items = list(registration.order_items) if registration.order_items else []
     pre_checked_in = registration.checked_in
     pre_strap_issued = registration.strap_issued
@@ -337,6 +338,23 @@ async def apply_registration_update(
     edition_id = registration.event.edition_id
 
     target_status = body.status if body.status is not None else registration.status
+    target_guest_count = body.guest_count if body.guest_count is not None else registration.guest_count
+    if target_guest_count != registration.guest_count:
+        if registration.event.max_capacity is not None and target_status != "cancelled":
+            await db.execute(select(Event).where(Event.id == event_id).with_for_update())
+            reserved_guest_count = (
+                await db.execute(
+                    select(func.coalesce(func.sum(Registration.guest_count), 0)).where(
+                        Registration.event_id == event_id,
+                        Registration.id != registration.id,
+                        Registration.status != "cancelled",
+                    )
+                )
+            ).scalar_one()
+            if reserved_guest_count + target_guest_count > registration.event.max_capacity:
+                raise HTTPException(status_code=400, detail="This event is fully booked.")
+        registration.guest_count = target_guest_count
+
     target_checked_in = body.checked_in if body.checked_in is not None else registration.checked_in
     if target_status == "cancelled" and target_checked_in:
         raise HTTPException(
@@ -361,7 +379,7 @@ async def apply_registration_update(
     )
 
     capacity_override_used = False
-    capacity_may_change = table_id_targeted or body.status is not None
+    capacity_may_change = table_id_targeted or body.status is not None or body.guest_count is not None
     if target_table_id is not None and registration.status != "cancelled" and capacity_may_change:
         if body.confirm_over_capacity:
             await assert_table_matches_edition(db, target_table_id, edition_id)
@@ -388,11 +406,21 @@ async def apply_registration_update(
             )
         await people_service.get_person_or_404(db, body.person_id)
         registration.person_id = body.person_id
-    if body.order_items is not None:
+    if body.order_items is not None or registration.guest_count != pre_guest_count:
         delivered_by_product = {
             item.get("product_id"): int(item.get("delivered_quantity") or 0) for item in pre_order_items
         }
-        resolved_items = resolve_order_items(registration.event, body.order_items, registration.guest_count)
+        requests = body.order_items
+        if requests is None:
+            requests = [
+                OrderItemRequest(
+                    product_id=str(item["product_id"]),
+                    quantity=max(0, int(item.get("quantity") or 0) - int(item.get("included_quantity") or 0)),
+                )
+                for item in pre_order_items
+                if int(item.get("quantity") or 0) - int(item.get("included_quantity") or 0) > 0
+            ]
+        resolved_items = resolve_order_items(registration.event, requests, registration.guest_count)
         for item in resolved_items:
             delivered_quantity = min(delivered_by_product.get(item["product_id"], 0), item["quantity"])
             item["delivered_quantity"] = delivered_quantity
@@ -425,7 +453,15 @@ async def apply_registration_update(
             details={"table_id": registration.table_id, "guest_count": registration.guest_count},
             **audit_base,
         )
-    if body.order_items is not None and registration.order_items != pre_order_items:
+    if registration.guest_count != pre_guest_count:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="guest_count_changed",
+            details={"previous_guest_count": pre_guest_count, "guest_count": registration.guest_count},
+            **audit_base,
+        )
+    if registration.order_items != pre_order_items:
         await write_audit_entry(db, actor=actor, action="order_updated", details={}, **audit_base)
     if body.checked_in is not None and registration.checked_in != pre_checked_in:
         await write_audit_entry(
@@ -475,11 +511,19 @@ async def apply_registration_update(
         scope = {"registration_id": registration.id, "event_id": event_id, "edition_id": edition_id}
         if registration.table_id != pre_table_id:
             await live_bus.publish(live_mapping.seating_changed(table_id=registration.table_id, **scope))
-        if body.order_items is not None and registration.order_items != pre_order_items:
+        if registration.order_items != pre_order_items:
             await live_bus.publish(live_mapping.order_changed(**scope))
         if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:
             await live_bus.publish(live_mapping.check_in_changed(**scope))
-        metadata_fields = {"status", "payment_status", "amount_due", "notes", "accessibility_note", "person_id"}
+        metadata_fields = {
+            "guest_count",
+            "status",
+            "payment_status",
+            "amount_due",
+            "notes",
+            "accessibility_note",
+            "person_id",
+        }
         if any(f in body.model_fields_set for f in metadata_fields) or clear_amount_due:
             await live_bus.publish(live_mapping.registration_changed(action="updated", **scope))
     except Exception:

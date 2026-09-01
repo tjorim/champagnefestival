@@ -785,5 +785,9 @@
   "venue_plan_missing_edition": "Ouvrez le plan depuis une inscription pour sélectionner une édition.",
   "venue_plan_empty": "Aucun plan de salle n’est disponible pour cette édition.",
   "venue_plan_error": "Impossible de charger le plan de salle.",
-  "admin_table_over_capacity_confirm": "Cette attribution dépasse la capacité prévue de la table. Ajouter quand même le groupe ?"
+  "admin_table_over_capacity_confirm": "Cette attribution dépasse la capacité prévue de la table. Ajouter quand même le groupe ?",
+  "admin_content_edition_registration_closes": "Clôture des inscriptions",
+  "registration_accessibility_note": "Besoins d’accessibilité (facultatif)",
+  "registration_accessibility_note_help": "Indiquez-nous vos besoins d’accès en fauteuil roulant, de placement ou d’autre assistance.",
+  "registration_closed": "Inscriptions clôturées"
 }

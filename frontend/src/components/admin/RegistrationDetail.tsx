@@ -22,6 +22,7 @@ interface RegistrationDetailProps {
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
+  onUpdateGuestCount?: (registrationId: string, guestCount: number) => Promise<void>;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
   actionError?: string;
   onClearActionError?: () => void;
@@ -42,6 +43,7 @@ export default function RegistrationDetail({
   onCheckIn,
   onIssueStrap,
   onAssignTable,
+  onUpdateGuestCount,
   onMergeDuplicate,
   actionError,
   onClearActionError,
@@ -231,7 +233,30 @@ export default function RegistrationDetail({
           </ListGroup.Item>
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.admin_guests_count()}</span>
-            <span>{registration.guestCount}</span>
+            <Form.Control
+              type="number"
+              min={1}
+              max={20}
+              size="sm"
+              aria-label={m.admin_guests_count()}
+              className="bg-dark text-light border-secondary"
+              style={{ width: "5rem" }}
+              defaultValue={registration.guestCount}
+              onBlur={(event) => {
+                const value = Number(event.currentTarget.value);
+                if (
+                  Number.isInteger(value) &&
+                  value >= 1 &&
+                  value <= 20 &&
+                  value !== registration.guestCount
+                ) {
+                  const update = onUpdateGuestCount?.(registration.id, value);
+                  if (update) void update.catch(() => undefined);
+                } else {
+                  event.currentTarget.value = String(registration.guestCount);
+                }
+              }}
+            />
           </ListGroup.Item>
           {!simpleRsvp && (
             <ListGroup.Item className="bg-dark text-light border-secondary">

@@ -138,6 +138,7 @@ async def update_registration(
     actor: str,
     registration_id: str,
     *,
+    guest_count: int | None = None,
     status: str | None = None,
     payment_status: str | None = None,
     amount_due: float | None = None,
@@ -165,6 +166,7 @@ async def update_registration(
     provided = {
         k: v
         for k, v in {
+            "guest_count": guest_count,
             "status": status,
             "payment_status": payment_status,
             "amount_due": amount_due,

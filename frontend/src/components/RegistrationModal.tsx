@@ -26,6 +26,7 @@ interface RegistrationFields {
   phone: string;
   guestCount: number;
   notes: string;
+  accessibilityNote: string;
   honeypot: string;
   formStartTime: string;
 }
@@ -56,6 +57,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       phone: "",
       guestCount: 1,
       notes: "",
+      accessibilityNote: "",
       honeypot: "",
       formStartTime: new Date().toISOString(),
     } as RegistrationFields,
@@ -149,6 +151,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       phone: "",
       guestCount: 1,
       notes: "",
+      accessibilityNote: "",
       honeypot: "",
       formStartTime: new Date().toISOString(),
     });
@@ -341,6 +344,27 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   </Form.Group>
                 );
               }}
+            </form.Field>
+
+            <form.Field name="accessibilityNote">
+              {(field) => (
+                <Form.Group className="mb-3" controlId="res-accessibility">
+                  <Form.Label>{m.registration_accessibility_note()}</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    maxLength={2000}
+                    aria-describedby="res-accessibility-help"
+                    className="bg-dark text-light border-secondary"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                  <Form.Text id="res-accessibility-help" className="text-secondary">
+                    {m.registration_accessibility_note_help()}
+                  </Form.Text>
+                </Form.Group>
+              )}
             </form.Field>
 
             {showOrderItems && (

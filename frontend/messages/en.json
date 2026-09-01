@@ -785,5 +785,9 @@
   "venue_plan_missing_edition": "Open the floor plan from a registration to select an edition.",
   "venue_plan_empty": "No floor plan is available for this edition.",
   "venue_plan_error": "Could not load the floor plan.",
-  "admin_table_over_capacity_confirm": "This assignment exceeds the table’s intended capacity. Add the party anyway?"
+  "admin_table_over_capacity_confirm": "This assignment exceeds the table’s intended capacity. Add the party anyway?",
+  "admin_content_edition_registration_closes": "Registrations close at",
+  "registration_accessibility_note": "Accessibility needs (optional)",
+  "registration_accessibility_note_help": "Tell us about wheelchair access, seating or other support you need.",
+  "registration_closed": "Registrations closed"
 }

@@ -186,6 +186,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const {
     handleAddRegistration,
     handleAssignTable,
+    handleUpdateGuestCount,
     handleCheckIn,
     handleIssueStrap,
     handleToggleDelivered,
@@ -653,6 +654,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           onCheckIn={handleCheckIn}
           onIssueStrap={handleIssueStrap}
           onAssignTable={handleAssignTable}
+          onUpdateGuestCount={handleUpdateGuestCount}
           actionError={registrationError}
           onClearActionError={() => setRegistrationError("")}
           onMergeDuplicate={async (canonicalId, duplicateId) => {

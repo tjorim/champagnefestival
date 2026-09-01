@@ -163,6 +163,7 @@ class EventCreate(RequestModel):
     category: str = Field(min_length=1, max_length=50)
     registration_required: bool = False
     registrations_open_from: datetime | None = None
+    registrations_close_at: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
     active: bool = True
 
@@ -177,6 +178,7 @@ class EventUpdate(RequestModel):
     category: str | None = Field(default=None, min_length=1, max_length=50)
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
+    registrations_close_at: datetime | None = None
     max_capacity: int | None = Field(default=None, ge=1)
     active: bool | None = None
 
@@ -192,6 +194,7 @@ class EventOut(BaseModel):
     category: str
     registration_required: bool
     registrations_open_from: datetime | None
+    registrations_close_at: datetime | None
     max_capacity: int | None
     active: bool
     edition: EditionSummaryOut | None = None
@@ -271,16 +274,18 @@ class RegistrationCreate(RequestModel):
     guest_count: int = Field(ge=1, le=20)
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
+    accessibility_note: str = Field(default="", max_length=2000)
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
 
-    @field_validator("name", "phone", "event_id", "notes", mode="before")
+    @field_validator("name", "phone", "event_id", "notes", "accessibility_note", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip() if isinstance(v, str) else v
 
 
 class RegistrationUpdate(RequestModel):
+    guest_count: int | None = Field(default=None, ge=1, le=20)
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)

@@ -37,6 +37,10 @@ def upgrade() -> None:
         ),
     )
     op.alter_column("table_types", "max_capacity", new_column_name="capacity")
+    op.add_column(
+        "events",
+        sa.Column("registrations_close_at", sa.DateTime(timezone=True), nullable=True),
+    )
     op.drop_column("tables", "reservation_ids")
     op.drop_column("tables", "capacity")
     op.create_table(
@@ -89,6 +93,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_column("events", "registrations_close_at")
     op.add_column(
         "tables",
         sa.Column("capacity", sa.Integer(), nullable=False, server_default="4"),

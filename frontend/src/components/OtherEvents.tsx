@@ -76,6 +76,10 @@ function isApiEvent(value: unknown): value is Record<string, unknown> {
     value.registrations_open_from === null ||
     value.registrations_open_from === undefined ||
     typeof value.registrations_open_from === "string";
+  const registrationsCloseAtIsValid =
+    value.registrations_close_at === null ||
+    value.registrations_close_at === undefined ||
+    typeof value.registrations_close_at === "string";
   const maxCapacityIsValid =
     value.max_capacity === null ||
     value.max_capacity === undefined ||
@@ -87,6 +91,7 @@ function isApiEvent(value: unknown): value is Record<string, unknown> {
     typeof value.active === "boolean" &&
     endTimeIsValid &&
     registrationsOpenFromIsValid &&
+    registrationsCloseAtIsValid &&
     maxCapacityIsValid
   );
 }
@@ -175,6 +180,7 @@ export default function OtherEvents() {
   useLegacyAnchorRedirect();
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const {
     data = [],
@@ -209,6 +215,22 @@ export default function OtherEvents() {
         left.event.startTime.localeCompare(right.event.startTime),
     );
   }, [data]);
+
+  useEffect(() => {
+    const nextDeadline = items
+      .map((item) => item.event.registrationsCloseAt)
+      .filter((deadline): deadline is string => Boolean(deadline))
+      .map((deadline) => new Date(deadline).getTime())
+      .filter((deadline) => Number.isFinite(deadline) && deadline > now)
+      .sort((left, right) => left - right)[0];
+    if (nextDeadline === undefined) return;
+
+    const timeout = window.setTimeout(
+      () => setNow(Date.now()),
+      Math.min(nextDeadline - now + 50, 2_147_483_647),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [items, now]);
 
   return (
     <>
@@ -266,13 +288,23 @@ export default function OtherEvents() {
                       </div>
 
                       {(item.event.registrationRequired || item.event.products.length > 0) && (
-                        <Button variant="warning" onClick={() => setSelectedEvent(item.event)}>
+                        <Button
+                          variant="warning"
+                          disabled={Boolean(
+                            item.event.registrationsCloseAt &&
+                            new Date(item.event.registrationsCloseAt).getTime() <= now,
+                          )}
+                          onClick={() => setSelectedEvent(item.event)}
+                        >
                           <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                          {item.event.registrationRequired
-                            ? item.editionType === "bourse"
-                              ? m.other_events_reserve_table()
-                              : m.other_events_rsvp()
-                            : m.other_events_order()}
+                          {item.event.registrationsCloseAt &&
+                          new Date(item.event.registrationsCloseAt).getTime() <= now
+                            ? m.registration_closed()
+                            : item.event.registrationRequired
+                              ? item.editionType === "bourse"
+                                ? m.other_events_reserve_table()
+                                : m.other_events_rsvp()
+                              : m.other_events_order()}
                         </Button>
                       )}
                     </div>
