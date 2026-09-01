@@ -202,14 +202,10 @@ async def list_registrations(
         filtered_stmt = filtered_stmt.where(Registration.table_id == table_id)
     if edition_type:
         filtered_stmt = (
-            filtered_stmt.join(Registration.event)
-            .join(Event.edition)
-            .where(Edition.edition_type == edition_type)
+            filtered_stmt.join(Registration.event).join(Event.edition).where(Edition.edition_type == edition_type)
         )
 
-    total = (
-        await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))
-    ).scalar_one()
+    total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
     stmt = filtered_stmt.options(
         selectinload(Registration.event).selectinload(Event.edition),
