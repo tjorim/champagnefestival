@@ -11,15 +11,15 @@ import csv
 import io
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination, get_request_id
+from app.dependencies import Pagination, get_request_id
 from app.models import Person
-from app.schemas import VolunteerCreate, VolunteerOut, VolunteerUpdate
+from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
 from app.utils import csv_safe, roles_contains
 
@@ -28,6 +28,10 @@ router = APIRouter(
     tags=["volunteers"],
     dependencies=[Depends(require_admin)],
 )
+
+# See app/routers/people.py's ADMIN_LIST_DEFAULT_LIMIT for why this is its own
+# constant rather than app.services.operational_search's door-lookup-sized one.
+ADMIN_LIST_DEFAULT_LIMIT = 200
 
 
 @router.post("", response_model=VolunteerOut, status_code=status.HTTP_201_CREATED)
@@ -40,19 +44,24 @@ async def create_volunteer(
     return await volunteers_service.create_volunteer(db, body=body, actor=actor, request_id=request_id)
 
 
-@router.get("", response_model=list[VolunteerOut])
+@router.get("", response_model=VolunteerListEnvelope)
 async def list_volunteers(
     db: AsyncSession = Depends(get_db),
     q: str | None = Query(default=None, description="Search by name, address, NISS, or eID doc number"),
     active: bool | None = Query(default=None),
     pagination: Pagination = Depends(),
-) -> list[dict]:
-    stmt = volunteers_service.search_volunteers_stmt(q=q, active=active)
-    stmt = apply_pagination(stmt, pagination)
+) -> dict:
+    filtered_stmt = volunteers_service.search_volunteers_stmt(q=q, active=active)
+    total = (await db.execute(select(func.count()).select_from(filtered_stmt.order_by(None).subquery()))).scalar_one()
+
+    limit = pagination.limit or ADMIN_LIST_DEFAULT_LIMIT
+    page = pagination.page
+    stmt = filtered_stmt.offset((page - 1) * limit).limit(limit)
 
     rows = (await db.execute(stmt)).scalars().all()
     periods_map = await volunteers_service.load_periods_map(db, [row.id for row in rows])
-    return [volunteers_service.to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]
+    items = [volunteers_service.to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]
+    return {"items": items, "total": total, "limit": limit, "page": page}
 
 
 @router.get("/export")

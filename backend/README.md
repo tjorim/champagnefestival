@@ -266,18 +266,18 @@ See `.env.example` for a template.
 | `GET`    | `/api/content/{key}`            | public         | Get CMS content (producers / sponsors)                                     |
 | `PUT`    | `/api/content/{key}`            | admin          | Save CMS content                                                           |
 | `POST`   | `/api/volunteers`               | admin          | Create volunteer profile (person with role `volunteer`)                    |
-| `GET`    | `/api/volunteers`               | admin          | List volunteers (supports `?q=` search)                                    |
+| `GET`    | `/api/volunteers`               | admin          | Paginated volunteer list (`?q=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/volunteers/export`        | admin          | Export active volunteer insurance records as CSV                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
 | `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
-| `GET`    | `/api/members`                  | admin          | List members (supports `?q=`, `?active=`)                                  |
+| `GET`    | `/api/members`                  | admin          | Paginated member list (`?q=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
 | `DELETE` | `/api/members/{id}`             | admin          | Delete member                                                              |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
-| `GET`    | `/api/people`                   | admin          | List people (supports `?q=`, `?role=`, `?active=`)                         |
+| `GET`    | `/api/people`                   | admin          | Paginated people list (`?q=`, `?role=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/people/{id}`              | admin          | Get person detail                                                          |
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |

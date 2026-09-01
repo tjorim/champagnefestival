@@ -418,9 +418,14 @@ export const adminHandlers = [
     const url = new URL(request.url);
     const q = url.searchParams.get("q");
     const activeOnly = url.searchParams.get("active") === "true";
+    const role = url.searchParams.get("role");
 
     let result = [...people];
     if (activeOnly) result = result.filter((p) => p.active);
+    if (role) {
+      const lrole = role.toLowerCase();
+      result = result.filter((p) => (p.roles as string[]).includes(lrole));
+    }
     if (q) {
       const lq = q.toLowerCase();
       result = result.filter(
@@ -434,7 +439,11 @@ export const adminHandlers = [
           String(p.phone ?? "").includes(lq),
       );
     }
-    return HttpResponse.json(result);
+    const limit = Number(url.searchParams.get("limit") ?? result.length) || result.length;
+    const page = Number(url.searchParams.get("page") ?? 1) || 1;
+    const start = (page - 1) * limit;
+    const items = result.slice(start, start + limit);
+    return HttpResponse.json({ items, total: result.length, limit, page });
   }),
 
   http.post("/api/people", async ({ request }) => {
@@ -515,7 +524,13 @@ export const adminHandlers = [
   http.get("/api/members", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(people.filter((p) => (p.roles as string[]).includes("member")));
+    const url = new URL(request.url);
+    const result = people.filter((p) => (p.roles as string[]).includes("member"));
+    const limit = Number(url.searchParams.get("limit") ?? result.length) || result.length;
+    const page = Number(url.searchParams.get("page") ?? 1) || 1;
+    const start = (page - 1) * limit;
+    const items = result.slice(start, start + limit);
+    return HttpResponse.json({ items, total: result.length, limit, page });
   }),
 
   http.post("/api/members", async ({ request }) => {
@@ -567,7 +582,13 @@ export const adminHandlers = [
   http.get("/api/volunteers", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(people.filter((p) => (p.roles as string[]).includes("volunteer")));
+    const url = new URL(request.url);
+    const result = people.filter((p) => (p.roles as string[]).includes("volunteer"));
+    const limit = Number(url.searchParams.get("limit") ?? result.length) || result.length;
+    const page = Number(url.searchParams.get("page") ?? 1) || 1;
+    const start = (page - 1) * limit;
+    const items = result.slice(start, start + limit);
+    return HttpResponse.json({ items, total: result.length, limit, page });
   }),
 
   http.post("/api/volunteers", async ({ request }) => {

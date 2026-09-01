@@ -22,11 +22,11 @@ async def test_admin_people_search_handles_diacritics_transliteration_and_typos(
 
     response = await client.get("/api/people", params={"q": "Francoiss", "active": "true"}, headers=ADMIN_HEADERS)
     assert response.status_code == 200
-    assert [person["id"] for person in response.json()] == [francois["id"]]
+    assert [person["id"] for person in response.json()["items"]] == [francois["id"]]
 
     response = await client.get("/api/people", params={"q": "Mueller", "active": "true"}, headers=ADMIN_HEADERS)
     assert response.status_code == 200
-    assert [person["id"] for person in response.json()] == [muller["id"]]
+    assert [person["id"] for person in response.json()["items"]] == [muller["id"]]
 
 
 @pytest.mark.anyio
@@ -36,7 +36,7 @@ async def test_admin_people_search_ranks_exact_email_before_typo_suggestion(clie
 
     response = await client.get("/api/people", params={"q": "guest@gmail.com"}, headers=ADMIN_HEADERS)
     assert response.status_code == 200
-    assert [person["id"] for person in response.json()][:2] == [exact["id"], typo["id"]]
+    assert [person["id"] for person in response.json()["items"]][:2] == [exact["id"], typo["id"]]
 
 
 @pytest.mark.anyio

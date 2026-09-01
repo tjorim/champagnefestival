@@ -47,12 +47,12 @@ async def test_volunteer_crud_and_constraints(client):
 
     r = await client.get("/api/volunteers", params={"q": "bredene"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
     # active filter support
     r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
 
     r = await client.put(
         f"/api/people/{volunteer_id}",
@@ -63,7 +63,7 @@ async def test_volunteer_crud_and_constraints(client):
 
     r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert len(r.json()) == 1
+    assert len(r.json()["items"]) == 1
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",
         json={
@@ -162,12 +162,16 @@ async def test_volunteers_support_limit_and_page(client):
 
     first_page = await client.get("/api/volunteers", params={"limit": 2, "page": 1}, headers=ADMIN_HEADERS)
     assert first_page.status_code == 200
-    first_page_results = first_page.json()
+    first_page_body = first_page.json()
+    first_page_results = first_page_body["items"]
     assert len(first_page_results) == 2
+    assert first_page_body["limit"] == 2
+    assert first_page_body["page"] == 1
+    assert first_page_body["total"] >= len(created_ids)
 
     second_page = await client.get("/api/volunteers", params={"limit": 2, "page": 2}, headers=ADMIN_HEADERS)
     assert second_page.status_code == 200
-    second_page_results = second_page.json()
+    second_page_results = second_page.json()["items"]
     assert len(second_page_results) >= 1
 
     first_page_ids = {row["id"] for row in first_page_results}
@@ -175,8 +179,8 @@ async def test_volunteers_support_limit_and_page(client):
     assert first_page_ids.isdisjoint(second_page_ids)
 
     # Ordering must be consistent with the unpaginated endpoint
-    all_response = await client.get("/api/volunteers", headers=ADMIN_HEADERS)
+    all_response = await client.get("/api/volunteers", params={"limit": 1000}, headers=ADMIN_HEADERS)
     assert all_response.status_code == 200
-    all_results = [r for r in all_response.json() if r["id"] in created_ids]
+    all_results = [r for r in all_response.json()["items"] if r["id"] in created_ids]
     assert all_results[:2] == first_page_results
     assert all_results[2:3] == second_page_results

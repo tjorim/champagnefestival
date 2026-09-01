@@ -235,55 +235,87 @@ export async function fetchAreas(authHeaders: () => Record<string, string>): Pro
   return Array.isArray(payload) ? payload.map(apiAreaToArea) : [];
 }
 
-// NOTE: /api/people and /api/volunteers both support optional limit/page pagination,
-// but we intentionally fetch all records here because client-side deduplication
-// (mergePeopleWithVolunteers) requires the full dataset.
+interface PersonListEnvelope {
+  items?: Record<string, unknown>[];
+  total?: number;
+  limit?: number;
+  page?: number;
+}
+
+// GET /api/people, /api/volunteers, and /api/members all page like
+// GET /api/registrations (see backend/app/routers/{people,volunteers,members}.py)
+// — {items, total, limit, page}. Unlike the registrations table, the People/
+// Volunteers/Members admin tabs are still full client-side tables (see
+// PeopleManagement/VolunteersManagement/MembersManagement), so instead of
+// real server-side pagination we fetch one bounded "everything" page and
+// warn loudly if it was ever truncated, mirroring fetchAllRegistrations.
+export const PEOPLE_FULL_LIST_LIMIT = 1000;
+
+async function fetchPersonListEnvelope(
+  url: string,
+  authHeaders: () => Record<string, string>,
+): Promise<{ people: Person[]; total: number }> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<PersonListEnvelope>(
+    url,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+  if (
+    !Array.isArray(payload.items) ||
+    typeof payload.total !== "number" ||
+    typeof payload.limit !== "number" ||
+    typeof payload.page !== "number"
+  ) {
+    // A bare array (the old, pre-envelope shape) or any other malformed
+    // response must not be swallowed into an empty/zero-valued list — that
+    // would look exactly like the silent-truncation bug this endpoint was
+    // fixed for (see #931).
+    throw new Error(`Invalid ${url} response: expected {items, total, limit, page}.`);
+  }
+  return { people: payload.items.map(apiToPerson), total: payload.total };
+}
+
+function warnIfPersonListTruncated(label: string, count: number, total: number): void {
+  if (total > count) {
+    devError(
+      `Admin ${label} fetch is showing ${count} of ${total}; raise PEOPLE_FULL_LIST_LIMIT or add server-side pagination.`,
+    );
+  }
+}
+
 export async function fetchPeopleSearch(
   authHeaders: () => Record<string, string>,
   query: string,
 ): Promise<Person[]> {
-  const [peoplePayload, volunteers] = await Promise.all([
-    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-      `/api/people?q=${encodeURIComponent(query.trim())}`,
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
+  const [peopleResult, volunteersResult] = await Promise.all([
+    fetchPersonListEnvelope(
+      `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PEOPLE_FULL_LIST_LIMIT}`,
+      authHeaders,
     ),
-    fetchArrayOrThrow(
-      "/api/volunteers",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-      apiToPerson,
-    ),
+    fetchPersonListEnvelope(`/api/volunteers?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
   ]);
-  const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
-  return mergePeopleWithVolunteers(nextPeople, volunteers);
+  warnIfPersonListTruncated("people search", peopleResult.people.length, peopleResult.total);
+  warnIfPersonListTruncated("volunteers", volunteersResult.people.length, volunteersResult.total);
+  return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
 }
 
 export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const [peoplePayload, volunteers] = await Promise.all([
-    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-      "/api/people",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-    ),
-    fetchArrayOrThrow(
-      "/api/volunteers",
-      { headers: authHeaders() },
-      m.admin_error_load_data(),
-      apiToPerson,
-    ),
+  const [peopleResult, volunteersResult] = await Promise.all([
+    fetchPersonListEnvelope(`/api/people?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
+    fetchPersonListEnvelope(`/api/volunteers?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
   ]);
-  const nextPeople = Array.isArray(peoplePayload) ? peoplePayload.map(apiToPerson) : [];
-  return mergePeopleWithVolunteers(nextPeople, volunteers);
+  warnIfPersonListTruncated("people", peopleResult.people.length, peopleResult.total);
+  warnIfPersonListTruncated("volunteers", volunteersResult.people.length, volunteersResult.total);
+  return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
 }
 
 export async function fetchMembers(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  return fetchArrayOrThrow(
-    "/api/members",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-    apiToPerson,
+  const result = await fetchPersonListEnvelope(
+    `/api/members?limit=${PEOPLE_FULL_LIST_LIMIT}`,
+    authHeaders,
   );
+  warnIfPersonListTruncated("members", result.people.length, result.total);
+  return result.people;
 }
 
 export interface AuditEntryFilters {
