@@ -260,6 +260,7 @@ async def list_registrations(
         stmt = stmt.order_by(
             *person_search_order_by(name=q_stripped, email=q_stripped),
             Registration.created_at.desc(),
+            Registration.id.desc(),
         )
     else:
         stmt = stmt.order_by(Registration.created_at.desc(), Registration.id.desc())

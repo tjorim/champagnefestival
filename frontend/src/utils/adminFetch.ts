@@ -103,11 +103,22 @@ export async function fetchRegistrationsPage(
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
+  if (
+    !Array.isArray(payload.items) ||
+    typeof payload.total !== "number" ||
+    typeof payload.limit !== "number" ||
+    typeof payload.page !== "number"
+  ) {
+    // A bare array (the old, pre-#931 shape) or any other malformed response
+    // must not be swallowed into an empty/zero-valued page — that would look
+    // exactly like the silent-truncation bug this endpoint was fixed for.
+    throw new Error("Invalid /api/registrations response: expected {items, total, limit, page}.");
+  }
   return {
-    registrations: Array.isArray(payload.items) ? payload.items.map(apiToRegistration) : [],
-    total: payload.total ?? 0,
-    limit: payload.limit ?? 0,
-    page: payload.page ?? 1,
+    registrations: payload.items.map(apiToRegistration),
+    total: payload.total,
+    limit: payload.limit,
+    page: payload.page,
   };
 }
 

@@ -200,16 +200,27 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const url = new URL(request.url);
-    const all = sharedStore.registrations;
-    // Only `limit`/`page` are honored here — the other filters (q, status,
-    // edition, date, person) are exercised against the real endpoint by the
-    // backend test suite; this mock only needs to prove RegistrationList
-    // paginates correctly against whatever the envelope reports.
-    const limit = Number(url.searchParams.get("limit") ?? all.length) || all.length;
+    const query = (url.searchParams.get("q") ?? "").trim().toLowerCase();
+    const status = url.searchParams.get("status") ?? "";
+    // `q`/`status` are honored so tests can exercise search filtering and
+    // pagination together; the remaining filters (edition, date, person,
+    // sort) are exercised against the real endpoint by the backend test
+    // suite — this mock only needs to prove RegistrationList paginates and
+    // searches correctly against whatever the envelope reports.
+    const filtered = sharedStore.registrations.filter((registration) => {
+      if (status && registration.status !== status) return false;
+      if (!query) return true;
+      const person = registration.person as Record<string, unknown> | undefined;
+      const event = registration.event as Record<string, unknown> | undefined;
+      return [person?.name, person?.email, registration.id, registration.event_id, event?.title]
+        .filter((value): value is string => typeof value === "string")
+        .some((value) => value.toLowerCase().includes(query));
+    });
+    const limit = Number(url.searchParams.get("limit") ?? filtered.length) || filtered.length;
     const page = Number(url.searchParams.get("page") ?? 1) || 1;
     const start = (page - 1) * limit;
-    const items = all.slice(start, start + limit);
-    return HttpResponse.json({ items, total: all.length, limit, page });
+    const items = filtered.slice(start, start + limit);
+    return HttpResponse.json({ items, total: filtered.length, limit, page });
   }),
 
   http.get("/api/volunteer/registrations", ({ request }) => {
