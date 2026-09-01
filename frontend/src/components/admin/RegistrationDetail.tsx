@@ -22,7 +22,7 @@ interface RegistrationDetailProps {
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
-  onUpdateGuestCount?: (registrationId: string, guestCount: number) => void;
+  onUpdateGuestCount?: (registrationId: string, guestCount: number) => Promise<void>;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
   actionError?: string;
   onClearActionError?: () => void;
@@ -250,7 +250,8 @@ export default function RegistrationDetail({
                   value <= 20 &&
                   value !== registration.guestCount
                 ) {
-                  onUpdateGuestCount?.(registration.id, value);
+                  const update = onUpdateGuestCount?.(registration.id, value);
+                  if (update) void update.catch(() => undefined);
                 } else {
                   event.currentTarget.value = String(registration.guestCount);
                 }

@@ -13,6 +13,35 @@ async def test_list_events_requires_auth(unauth_client):
     assert response.status_code == 401
 
 
+@pytest.mark.anyio
+async def test_create_event_accepts_mixed_timezone_registration_window(client):
+    event = await _create_event(
+        client,
+        edition_id="edition-mixed-create-window",
+        registrations_open_from="2099-03-20T18:00:00+01:00",
+        registrations_close_at="2099-03-20T20:00:00",
+    )
+
+    assert event["registrations_close_at"] is not None
+
+
+@pytest.mark.anyio
+async def test_update_event_accepts_mixed_timezone_registration_window(client):
+    event = await _create_event(client, edition_id="edition-mixed-update-window")
+
+    response = await client.put(
+        f"/api/events/{event['id']}",
+        json={
+            "registrations_open_from": "2099-03-20T18:00:00+01:00",
+            "registrations_close_at": "2099-03-20T20:00:00",
+        },
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["registrations_close_at"] is not None
+
+
 async def _register(client, event, *, guest_count, person_name):
     r = await client.post("/api/people", json={"name": person_name}, headers=ADMIN_HEADERS)
     assert r.status_code == 201, r.text
@@ -85,6 +114,28 @@ async def test_checkin_stats_excludes_cancelled_registrations(client):
     stats = {row["event_id"]: row for row in r.json()}
 
     assert event["id"] not in stats
+
+
+@pytest.mark.anyio
+async def test_reactivating_with_guest_count_change_checks_event_capacity(client):
+    event = await _create_event(client, edition_id="edition-reactivate-capacity", max_capacity=3)
+    await _register(client, event, guest_count=2, person_name="Active Guest")
+    cancelled_id = await _register(client, event, guest_count=1, person_name="Cancelled Guest")
+    cancel_response = await client.put(
+        f"/api/registrations/{cancelled_id}",
+        json={"status": "cancelled"},
+        headers=ADMIN_HEADERS,
+    )
+    assert cancel_response.status_code == 200, cancel_response.text
+
+    response = await client.put(
+        f"/api/registrations/{cancelled_id}",
+        json={"status": "confirmed", "guest_count": 2},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "This event is fully booked."
 
 
 @pytest.mark.anyio

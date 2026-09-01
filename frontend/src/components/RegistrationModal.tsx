@@ -354,12 +354,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                     as="textarea"
                     rows={2}
                     maxLength={2000}
+                    aria-describedby="res-accessibility-help"
                     className="bg-dark text-light border-secondary"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />
-                  <Form.Text className="text-secondary">
+                  <Form.Text id="res-accessibility-help" className="text-secondary">
                     {m.registration_accessibility_note_help()}
                   </Form.Text>
                 </Form.Group>

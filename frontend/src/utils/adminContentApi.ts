@@ -10,6 +10,10 @@ import {
 } from "@/types/event";
 import type { OrderItemCategory } from "@/types/registration";
 
+function datetimeLocalToIso(value: string): string {
+  return new Date(value).toISOString();
+}
+
 /**
  * Safe fetch wrapper that handles network errors and non-ok responses
  * with user-friendly error messages.
@@ -264,11 +268,11 @@ export async function saveEditionEvent(
         registration_required: payload.formData.registrationRequired,
         registrations_open_from:
           payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
-            ? payload.formData.registrationsOpenFrom
+            ? datetimeLocalToIso(payload.formData.registrationsOpenFrom)
             : null,
         registrations_close_at:
           payload.formData.registrationRequired && payload.formData.registrationsCloseAt
-            ? payload.formData.registrationsCloseAt
+            ? datetimeLocalToIso(payload.formData.registrationsCloseAt)
             : null,
         max_capacity: (() => {
           if (!payload.formData.registrationRequired || !payload.formData.maxCapacity) return null;

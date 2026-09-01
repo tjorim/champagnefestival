@@ -133,7 +133,7 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 #924 confirmation e-mail ─────┼──────────────> #953 visitor magic-link account
 #947 production delivery ─────┘
 
-#928 order resolution ────────> #933 registration lifecycle
+#928 order resolution ────────> #933 registration lifecycle (complete)
 
 
 #929 SSE recovery ────────────> #932 single-process (bus half)
@@ -198,7 +198,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #930 | backend (completed 2026-08-30) | bug — export safety |
 | #931 | backend, frontend (completed 2026-09-01) | bug — silent truncation |
 | #932 | backend | constraint — scaling |
-| #933 | backend, frontend | gap — lifecycle |
+| #933 | backend, frontend (completed 2026-09-01) | gap — lifecycle |
 | #934 | backend | gap — compliance |
 | #935 | frontend | quality — UI/UX, a11y |
 | #936 | frontend | gap — discoverability |

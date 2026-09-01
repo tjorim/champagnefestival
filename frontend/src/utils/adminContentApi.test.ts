@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { saveEdition } from "./adminContentApi";
+import { saveEdition, saveEditionEvent } from "./adminContentApi";
 
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
 
@@ -62,6 +62,39 @@ describe("saveEdition", () => {
       expect(body.exhibitors).toEqual([]);
     },
   );
+});
+
+describe("saveEditionEvent", () => {
+  it("converts datetime-local registration bounds to ISO datetimes", async () => {
+    const fetchMock = mockFetchResponse({ id: "event-1", products: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveEditionEvent(
+      {
+        editionId: "2026-march",
+        formData: {
+          editionId: "2026-march",
+          title: "Tasting",
+          description: "",
+          date: "2026-03-21",
+          startTime: "18:00",
+          endTime: "20:00",
+          category: "tasting",
+          registrationRequired: true,
+          registrationsOpenFrom: "2026-03-20T18:00",
+          registrationsCloseAt: "2026-03-21T17:00",
+          maxCapacity: "20",
+          sortOrder: "",
+          active: true,
+        },
+      },
+      authHeaders,
+    );
+
+    const body = sentBody(fetchMock);
+    expect(body.registrations_open_from).toBe(new Date("2026-03-20T18:00").toISOString());
+    expect(body.registrations_close_at).toBe(new Date("2026-03-21T17:00").toISOString());
+  });
 });
 
 describe("error handling", () => {

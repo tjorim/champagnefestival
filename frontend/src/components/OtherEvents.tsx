@@ -180,6 +180,7 @@ export default function OtherEvents() {
   useLegacyAnchorRedirect();
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const {
     data = [],
@@ -214,6 +215,22 @@ export default function OtherEvents() {
         left.event.startTime.localeCompare(right.event.startTime),
     );
   }, [data]);
+
+  useEffect(() => {
+    const nextDeadline = items
+      .map((item) => item.event.registrationsCloseAt)
+      .filter((deadline): deadline is string => Boolean(deadline))
+      .map((deadline) => new Date(deadline).getTime())
+      .filter((deadline) => Number.isFinite(deadline) && deadline > now)
+      .sort((left, right) => left - right)[0];
+    if (nextDeadline === undefined) return;
+
+    const timeout = window.setTimeout(
+      () => setNow(Date.now()),
+      Math.min(nextDeadline - now + 50, 2_147_483_647),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [items, now]);
 
   return (
     <>
@@ -275,13 +292,13 @@ export default function OtherEvents() {
                           variant="warning"
                           disabled={Boolean(
                             item.event.registrationsCloseAt &&
-                            new Date(item.event.registrationsCloseAt) <= new Date(),
+                            new Date(item.event.registrationsCloseAt).getTime() <= now,
                           )}
                           onClick={() => setSelectedEvent(item.event)}
                         >
                           <i className="bi bi-calendar-check me-2" aria-hidden="true" />
                           {item.event.registrationsCloseAt &&
-                          new Date(item.event.registrationsCloseAt) <= new Date()
+                          new Date(item.event.registrationsCloseAt).getTime() <= now
                             ? m.registration_closed()
                             : item.event.registrationRequired
                               ? item.editionType === "bourse"

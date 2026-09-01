@@ -14,7 +14,7 @@ into ``MCPToolError`` at its own boundary (see ``app.mcp.utils.as_value_error``)
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -80,10 +80,17 @@ def validate_registration_settings(
     registrations_close_at: datetime | None,
     max_capacity: int | None,
 ) -> None:
+    def as_utc(value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+    normalized_open_from = as_utc(registrations_open_from)
+    normalized_close_at = as_utc(registrations_close_at)
     if (
-        registrations_open_from is not None
-        and registrations_close_at is not None
-        and registrations_close_at <= registrations_open_from
+        normalized_open_from is not None
+        and normalized_close_at is not None
+        and normalized_close_at <= normalized_open_from
     ):
         raise HTTPException(status_code=400, detail="registrations_close_at must be after registrations_open_from.")
     if registration_required:

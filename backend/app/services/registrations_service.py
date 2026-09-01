@@ -337,9 +337,10 @@ async def apply_registration_update(
     event_id = registration.event_id
     edition_id = registration.event.edition_id
 
+    target_status = body.status if body.status is not None else registration.status
     target_guest_count = body.guest_count if body.guest_count is not None else registration.guest_count
     if target_guest_count != registration.guest_count:
-        if registration.event.max_capacity is not None and registration.status != "cancelled":
+        if registration.event.max_capacity is not None and target_status != "cancelled":
             await db.execute(select(Event).where(Event.id == event_id).with_for_update())
             reserved_guest_count = (
                 await db.execute(
@@ -354,7 +355,6 @@ async def apply_registration_update(
                 raise HTTPException(status_code=400, detail="This event is fully booked.")
         registration.guest_count = target_guest_count
 
-    target_status = body.status if body.status is not None else registration.status
     target_checked_in = body.checked_in if body.checked_in is not None else registration.checked_in
     if target_status == "cancelled" and target_checked_in:
         raise HTTPException(
