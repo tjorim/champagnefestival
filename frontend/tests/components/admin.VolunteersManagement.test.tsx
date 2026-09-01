@@ -161,6 +161,25 @@ describe("VolunteersManagement — delete confirmation", () => {
   });
 });
 
+describe("VolunteersManagement — client-side pagination", () => {
+  it("shows only the first page of rows and pages through the rest", () => {
+    const manyVolunteers = Array.from({ length: 25 }, (_, i) =>
+      makeVolunteer({ id: `v${i}`, name: `Volunteer ${String(i).padStart(2, "0")}` }),
+    );
+    renderVolunteersManagement({ volunteers: manyVolunteers });
+
+    expect(screen.getByText("Volunteer 00")).toBeInTheDocument();
+    expect(screen.getByText("Volunteer 19")).toBeInTheDocument();
+    expect(screen.queryByText("Volunteer 20")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("admin_table_page_next"));
+
+    expect(screen.queryByText("Volunteer 00")).not.toBeInTheDocument();
+    expect(screen.getByText("Volunteer 20")).toBeInTheDocument();
+    expect(screen.getByText("Volunteer 24")).toBeInTheDocument();
+  });
+});
+
 describe("VolunteersManagement — active/inactive filter", () => {
   it("filters rows to only inactive volunteers when 'inactive' is selected", () => {
     renderVolunteersManagement({

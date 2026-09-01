@@ -12,6 +12,7 @@ import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
+import { AdminTablePagination } from "./AdminTablePagination";
 import { downloadVolunteersCsv } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 
@@ -220,12 +221,18 @@ export default function VolunteersManagement({
       data: preFiltered,
       columns,
       state: { sorting, globalFilter: q },
+      initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+      manualPagination: false,
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
       globalFilterFn: volunteersGlobalFilter,
     },
-    (state) => ({ sorting: state.sorting, globalFilter: state.globalFilter }),
+    (state) => ({
+      sorting: state.sorting,
+      globalFilter: state.globalFilter,
+      pagination: state.pagination,
+    }),
   );
 
   return (
@@ -328,7 +335,7 @@ export default function VolunteersManagement({
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
-          ) : table.getRowModel().rows.length === 0 ? (
+          ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">
               {m.admin_volunteers_no_results()}
             </p>
@@ -406,6 +413,16 @@ export default function VolunteersManagement({
               </Table>
             </div>
           )}
+          <AdminTablePagination
+            total={table.getPrePaginatedRowModel().rows.length}
+            pageIndex={table.state.pagination.pageIndex}
+            pageSize={table.state.pagination.pageSize}
+            canPreviousPage={table.getCanPreviousPage()}
+            canNextPage={table.getCanNextPage()}
+            onPreviousPage={() => table.previousPage()}
+            onNextPage={() => table.nextPage()}
+            onPageSizeChange={(size) => table.setPageSize(size)}
+          />
         </Card.Body>
       </Card>
 

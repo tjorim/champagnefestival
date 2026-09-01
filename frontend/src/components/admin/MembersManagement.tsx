@@ -18,6 +18,7 @@ import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/h
 import { exportToCsv } from "@/utils/csvExport";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import { AdminTablePagination } from "./AdminTablePagination";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 
 const COL_VIS_KEY = "admin-col-vis-members";
@@ -213,6 +214,8 @@ export default function MembersManagement({
       data: preFiltered,
       columns,
       state: { sorting, globalFilter: q, columnVisibility },
+      initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+      manualPagination: false,
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
@@ -227,11 +230,14 @@ export default function MembersManagement({
       sorting: state.sorting,
       globalFilter: state.globalFilter,
       columnVisibility: state.columnVisibility,
+      pagination: state.pagination,
     }),
   );
 
   const handleExportCsv = useCallback(() => {
-    const rows = table.getRowModel().rows.map(({ original: member }) => ({
+    // Export every filtered row, not just the current page — pagination is a
+    // display concern for the table, not a truncation of what gets exported.
+    const rows = table.getPrePaginatedRowModel().rows.map(({ original: member }) => ({
       [m.registration_name()]: member.name,
       [m.registration_email()]: member.email,
       [m.registration_phone()]: member.phone,
@@ -254,7 +260,7 @@ export default function MembersManagement({
                 size="sm"
                 variant="outline-secondary"
                 onClick={handleExportCsv}
-                disabled={table.getRowModel().rows.length === 0}
+                disabled={table.getPrePaginatedRowModel().rows.length === 0}
               >
                 <i className="bi bi-download me-1" aria-hidden="true" />
                 {m.admin_export_csv()}
@@ -333,7 +339,7 @@ export default function MembersManagement({
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
-          ) : table.getRowModel().rows.length === 0 ? (
+          ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_members_no_results()}</p>
           ) : (
             <div className="table-responsive">
@@ -409,6 +415,16 @@ export default function MembersManagement({
               </Table>
             </div>
           )}
+          <AdminTablePagination
+            total={table.getPrePaginatedRowModel().rows.length}
+            pageIndex={table.state.pagination.pageIndex}
+            pageSize={table.state.pagination.pageSize}
+            canPreviousPage={table.getCanPreviousPage()}
+            canNextPage={table.getCanNextPage()}
+            onPreviousPage={() => table.previousPage()}
+            onNextPage={() => table.nextPage()}
+            onPageSizeChange={(size) => table.setPageSize(size)}
+          />
         </Card.Body>
       </Card>
 

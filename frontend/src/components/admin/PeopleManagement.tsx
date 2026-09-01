@@ -20,6 +20,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
 import { fetchPeopleSearch } from "@/utils/adminFetch";
 import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
+import { AdminTablePagination } from "./AdminTablePagination";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
@@ -371,6 +372,8 @@ export default function PeopleManagement({
       data: preFiltered,
       columns,
       state: { sorting, globalFilter: debouncedQ ? "" : q, columnVisibility },
+      initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
+      manualPagination: false,
       getRowId: (row) => row.id,
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
@@ -385,6 +388,7 @@ export default function PeopleManagement({
       sorting: state.sorting,
       globalFilter: state.globalFilter,
       columnVisibility: state.columnVisibility,
+      pagination: state.pagination,
     }),
   );
 
@@ -505,7 +509,7 @@ export default function PeopleManagement({
             </div>
           ) : peopleSearchQuery.isError ? (
             <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
-          ) : table.getRowModel().rows.length === 0 ? (
+          ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_people_no_results()}</p>
           ) : (
             <div className="table-responsive">
@@ -580,6 +584,16 @@ export default function PeopleManagement({
               </Table>
             </div>
           )}
+          <AdminTablePagination
+            total={table.getPrePaginatedRowModel().rows.length}
+            pageIndex={table.state.pagination.pageIndex}
+            pageSize={table.state.pagination.pageSize}
+            canPreviousPage={table.getCanPreviousPage()}
+            canNextPage={table.getCanNextPage()}
+            onPreviousPage={() => table.previousPage()}
+            onNextPage={() => table.nextPage()}
+            onPageSizeChange={(size) => table.setPageSize(size)}
+          />
         </Card.Body>
       </Card>
 
