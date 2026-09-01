@@ -184,9 +184,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           <Alert variant="success" className="mb-0">
             <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
             {m.registration_success()}
-            <div className="mt-2">
-              {m.registration_reference({ reference: registrationId })}
-            </div>
+            <div className="mt-2">{m.registration_reference({ reference: registrationId })}</div>
             <a href="/my-registrations" className="alert-link">
               {m.registration_view_my_registrations()}
             </a>

@@ -15,6 +15,8 @@
 ```bash
 pnpm dev
 pnpm lint
+pnpm format         # rewrites files in place
+pnpm format:check   # what CI runs — fails on unformatted files, doesn't rewrite
 pnpm typecheck
 pnpm test
 pnpm build

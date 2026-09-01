@@ -32,9 +32,10 @@ const mockActiveEdition: ActiveEdition = {
   sponsors: [],
 };
 
-function renderRegistrationList(
-  { sectionError, onClearSectionError }: { sectionError?: string; onClearSectionError?: () => void } = {},
-) {
+function renderRegistrationList({
+  sectionError,
+  onClearSectionError,
+}: { sectionError?: string; onClearSectionError?: () => void } = {}) {
   const queryClient = createTestQueryClient();
   render(
     <QueryClientProvider client={queryClient}>
@@ -69,7 +70,10 @@ describe("RegistrationList — scoped error display", () => {
 
   it("calls onClearSectionError when the alert is dismissed", () => {
     const onClear = vi.fn();
-    renderRegistrationList({ sectionError: "Failed to assign table.", onClearSectionError: onClear });
+    renderRegistrationList({
+      sectionError: "Failed to assign table.",
+      onClearSectionError: onClear,
+    });
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(onClear).toHaveBeenCalledTimes(1);
   });

@@ -54,7 +54,8 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
   const editions = useMemo(() => statsQuery.data ?? [], [statsQuery.data]);
 
   const yMax = useMemo(
-    () => niceCeiling(Math.max(1, ...editions.map((e) => Math.max(e.totalGuests, e.totalCheckedIn)))),
+    () =>
+      niceCeiling(Math.max(1, ...editions.map((e) => Math.max(e.totalGuests, e.totalCheckedIn)))),
     [editions],
   );
 
@@ -154,7 +155,13 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                         y2={y}
                         className="analytics-gridline"
                       />
-                      <text x={AXIS_LEFT - 8} y={y} className="analytics-axis-label" textAnchor="end" dy="0.32em">
+                      <text
+                        x={AXIS_LEFT - 8}
+                        y={y}
+                        className="analytics-axis-label"
+                        textAnchor="end"
+                        dy="0.32em"
+                      >
                         {tick.toLocaleString()}
                       </text>
                     </g>
@@ -177,7 +184,8 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
 
                 {/* Bars */}
                 {editions.map((edition, index) => {
-                  const groupX = AXIS_LEFT + GROUP_GAP + index * (BAR_WIDTH * 2 + BAR_GAP + GROUP_GAP);
+                  const groupX =
+                    AXIS_LEFT + GROUP_GAP + index * (BAR_WIDTH * 2 + BAR_GAP + GROUP_GAP);
                   const guestsHeight = (edition.totalGuests / yMax) * plotHeight;
                   const checkedInHeight = (edition.totalCheckedIn / yMax) * plotHeight;
                   const baseline = CHART_TOP_PADDING + plotHeight;
@@ -226,9 +234,13 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                           checkedIn: edition.totalCheckedIn,
                         })}
                         onPointerEnter={() => setHoveredIndex(index)}
-                        onPointerLeave={() => setHoveredIndex((current) => (current === index ? null : current))}
+                        onPointerLeave={() =>
+                          setHoveredIndex((current) => (current === index ? null : current))
+                        }
                         onFocus={() => setHoveredIndex(index)}
-                        onBlur={() => setHoveredIndex((current) => (current === index ? null : current))}
+                        onBlur={() =>
+                          setHoveredIndex((current) => (current === index ? null : current))
+                        }
                       />
                     </g>
                   );

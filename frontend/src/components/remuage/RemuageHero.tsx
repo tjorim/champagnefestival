@@ -34,10 +34,7 @@ const RemuageHero = ({
 
       <div className="remuage-hero__rack" aria-hidden="true">
         {RACK_CELLS.map((cell) => (
-          <span
-            key={cell}
-            className={`remuage-hero__cell remuage-hero__cell--${cell + 1}`}
-          >
+          <span key={cell} className={`remuage-hero__cell remuage-hero__cell--${cell + 1}`}>
             <span className="remuage-hero__disc">
               <span className="remuage-hero__mark" />
             </span>

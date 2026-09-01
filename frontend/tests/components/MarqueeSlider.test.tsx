@@ -73,10 +73,7 @@ describe("MarqueeSlider component", () => {
   it("renders the Swiper container with accessibility support", () => {
     render(<MarqueeSlider />);
     expect(screen.getByTestId("swiper")).toHaveAttribute("data-module-count", "4");
-    expect(screen.getByTestId("swiper")).toHaveAttribute(
-      "data-speed",
-      String(CAROUSEL_SPEED_MS),
-    );
+    expect(screen.getByTestId("swiper")).toHaveAttribute("data-speed", String(CAROUSEL_SPEED_MS));
   });
 
   it("disables autoplay when reduced motion is requested", () => {
@@ -168,10 +165,7 @@ describe("MarqueeSlider component", () => {
     );
 
     render(<MarqueeSlider />);
-    expect(screen.getByTestId("swiper")).toHaveAttribute(
-      "data-speed",
-      String(CAROUSEL_SPEED_MS),
-    );
+    expect(screen.getByTestId("swiper")).toHaveAttribute("data-speed", String(CAROUSEL_SPEED_MS));
 
     act(() => {
       matches = true;
@@ -214,10 +208,7 @@ describe("MarqueeSlider component", () => {
     });
 
     expect(autoplayMock.start).toHaveBeenCalledOnce();
-    expect(screen.getByTestId("swiper")).toHaveAttribute(
-      "data-speed",
-      String(CAROUSEL_SPEED_MS),
-    );
+    expect(screen.getByTestId("swiper")).toHaveAttribute("data-speed", String(CAROUSEL_SPEED_MS));
   });
 
   it("renders default items when no items prop provided", () => {

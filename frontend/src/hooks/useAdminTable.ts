@@ -11,11 +11,7 @@ import {
   sortFns,
 } from "@tanstack/react-table";
 
-export const {
-  useAppTable,
-  createAppColumnHelper,
-  appFeatures,
-} = createTableHook({
+export const { useAppTable, createAppColumnHelper, appFeatures } = createTableHook({
   features: tableFeatures({
     columnVisibilityFeature,
     columnFilteringFeature,

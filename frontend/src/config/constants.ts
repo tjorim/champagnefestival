@@ -15,4 +15,3 @@ export const CAROUSEL_AUTOPLAY_DELAY_MS = 3000;
  * and rejects obvious invalid ones. Used consistently across all form components.
  */
 export const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-

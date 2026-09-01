@@ -4,10 +4,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
-import {
-  fetchArrayOrThrow,
-  fetchJsonOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
+import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 
 interface ContactMessage {
@@ -51,7 +48,8 @@ export default function ContactMessagesManagement({
         { method: "PUT", headers: authHeaders() },
         m.admin_error_handle_contact_message(),
       ),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.admin.contactMessages }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.contactMessages }),
     retry: false,
   });
 
@@ -60,26 +58,40 @@ export default function ContactMessagesManagement({
       <Card.Header className="fw-semibold">{m.admin_contact_messages_section()}</Card.Header>
       <Card.Body>
         {messages.isPending && <Spinner animation="border" size="sm" />}
-        {messages.isError && <Alert variant="danger">{m.admin_error_load_contact_messages()}</Alert>}
-        {handled.isError && <Alert variant="danger">{m.admin_error_handle_contact_message()}</Alert>}
-        {messages.data?.length === 0 && <p className="text-secondary mb-0">{m.admin_contact_messages_empty()}</p>}
+        {messages.isError && (
+          <Alert variant="danger">{m.admin_error_load_contact_messages()}</Alert>
+        )}
+        {handled.isError && (
+          <Alert variant="danger">{m.admin_error_handle_contact_message()}</Alert>
+        )}
+        {messages.data?.length === 0 && (
+          <p className="text-secondary mb-0">{m.admin_contact_messages_empty()}</p>
+        )}
         {messages.data?.map((message) => (
           <article key={message.id} className="border-bottom border-secondary pb-3 mb-3">
             <div className="d-flex justify-content-between gap-3 flex-wrap">
               <div>
                 <strong>{message.name}</strong>{" "}
                 <a href={`mailto:${message.email}`}>{message.email}</a>
-                <div className="small text-secondary">{new Date(message.createdAt).toLocaleString()}</div>
+                <div className="small text-secondary">
+                  {new Date(message.createdAt).toLocaleString()}
+                </div>
               </div>
               {message.handledAt ? (
                 <span className="text-success">{m.admin_contact_message_handled()}</span>
               ) : (
-                <Button size="sm" variant="outline-success" onClick={() => handled.mutate(message.id)}>
+                <Button
+                  size="sm"
+                  variant="outline-success"
+                  onClick={() => handled.mutate(message.id)}
+                >
                   {m.admin_contact_message_mark_handled()}
                 </Button>
               )}
             </div>
-            <p className="mt-2 mb-0" style={{ whiteSpace: "pre-wrap" }}>{message.message}</p>
+            <p className="mt-2 mb-0" style={{ whiteSpace: "pre-wrap" }}>
+              {message.message}
+            </p>
           </article>
         ))}
       </Card.Body>

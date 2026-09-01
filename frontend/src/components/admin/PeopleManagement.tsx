@@ -1,5 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { type FilterFn, type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
+import {
+  type FilterFn,
+  type SortingState,
+  type ColumnVisibilityState,
+} from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -15,11 +19,7 @@ import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
 import { fetchPeopleSearch } from "@/utils/adminFetch";
-import {
-  useAppTable,
-  createAppColumnHelper,
-  type AdminTableFeatures,
-} from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
@@ -73,8 +73,8 @@ export default function PeopleManagement({
   const [debouncedQ, setDebouncedQ] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(
-    () => loadColVis(COL_VIS_KEY),
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() =>
+    loadColVis(COL_VIS_KEY),
   );
   const [mergeState, setMergeState] = useState<MergeState | null>(null);
   const [merging, setMerging] = useState(false);
@@ -215,141 +215,144 @@ export default function PeopleManagement({
   const personRegistrationsError = personRegistrationsQuery.isError;
 
   const columns = useMemo(
-    () => columnHelper.columns([
-      columnHelper.accessor((row) => row.name, {
-        id: "name",
-        header: m.registration_name(),
-        cell: ({ row }) => {
-          const person = row.original;
-          const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
-          return (
-            <>
-              <div className="fw-semibold d-flex align-items-center gap-1">
-                {person.name}
-                {!person.active && (
-                  <Badge bg="secondary" className="ms-1">
-                    {m.admin_people_inactive_badge_label()}
-                  </Badge>
-                )}
-              </div>
-              {isDuplicate && (
-                <div className="text-warning small">
-                  <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
-                  {m.admin_people_duplicates_same_email()}
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor((row) => row.name, {
+          id: "name",
+          header: m.registration_name(),
+          cell: ({ row }) => {
+            const person = row.original;
+            const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
+            return (
+              <>
+                <div className="fw-semibold d-flex align-items-center gap-1">
+                  {person.name}
+                  {!person.active && (
+                    <Badge bg="secondary" className="ms-1">
+                      {m.admin_people_inactive_badge_label()}
+                    </Badge>
+                  )}
                 </div>
-              )}
-            </>
-          );
-        },
-      }),
-      columnHelper.accessor("email", {
-        header: m.registration_email(),
-        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-        meta: { tdClassName: "d-none d-md-table-cell" },
-      }),
-      columnHelper.accessor("phone", {
-        header: m.registration_phone(),
-        cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
-        meta: { tdClassName: "d-none d-lg-table-cell" },
-      }),
-      columnHelper.display({
-        id: "roles",
-        header: m.admin_people_roles_label(),
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className="d-flex flex-wrap gap-1">
-            {row.original.roles.map((role) => (
-              <Badge key={role} bg="secondary" className="text-capitalize">
-                {role}
-              </Badge>
-            ))}
-          </div>
-        ),
-        meta: { tdClassName: "d-none d-lg-table-cell" },
-      }),
-      columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
-        id: "registrations",
-        header: m.admin_registrations_tab(),
-        cell: ({ row, getValue }) => {
-          const person = row.original;
-          const resCount = getValue();
-          return (
-            <>
-              <Badge
-                bg={resCount > 0 ? "warning" : "secondary"}
-                text={resCount > 0 ? "dark" : undefined}
-              >
-                {resCount}
-              </Badge>
-              {resCount > 0 && (
-                <Button
-                  size="sm"
-                  variant="link"
-                  className="text-secondary p-0 ms-1"
-                  onClick={() => setViewRegistrationsPerson(person)}
-                  title={m.admin_people_view_registrations()}
-                  aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
-                >
-                  <i className="bi bi-eye" aria-hidden="true" />
-                </Button>
-              )}
-            </>
-          );
-        },
-      }),
-      columnHelper.display({
-        id: "actions",
-        header: m.admin_actions_label(),
-        enableSorting: false,
-        cell: ({ row }) => {
-          const person = row.original;
-          const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
-          const duplicates = isDuplicate
-            ? (emailGroups.get(person.email.toLowerCase()) ?? []).filter((p) => p.id !== person.id)
-            : [];
-          return (
+                {isDuplicate && (
+                  <div className="text-warning small">
+                    <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+                    {m.admin_people_duplicates_same_email()}
+                  </div>
+                )}
+              </>
+            );
+          },
+        }),
+        columnHelper.accessor("email", {
+          header: m.registration_email(),
+          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
+          meta: { tdClassName: "d-none d-md-table-cell" },
+        }),
+        columnHelper.accessor("phone", {
+          header: m.registration_phone(),
+          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "")}</span>,
+          meta: { tdClassName: "d-none d-lg-table-cell" },
+        }),
+        columnHelper.display({
+          id: "roles",
+          header: m.admin_people_roles_label(),
+          enableSorting: false,
+          cell: ({ row }) => (
             <div className="d-flex flex-wrap gap-1">
-              <Button
-                size="sm"
-                variant="outline-light"
-                onClick={() => {
-                  setEditingPerson(person);
-                  setShowForm(true);
-                }}
-                title={m.admin_people_edit_title()}
-                aria-label={m.admin_people_edit_title()}
-              >
-                <i className="bi bi-pencil" aria-hidden="true" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-danger"
-                onClick={() => {
-                  setDeletingId(person.id);
-                  setDeleteError("");
-                }}
-                title={m.admin_people_delete_title()}
-                aria-label={m.admin_people_delete_title()}
-              >
-                <i className="bi bi-trash" aria-hidden="true" />
-              </Button>
-              {duplicates.map((dup) => (
-                <Button
-                  key={dup.id}
-                  size="sm"
-                  variant="outline-warning"
-                  onClick={() => openMerge(person, dup)}
-                  title={`${m.admin_people_merge_title()}: ${dup.name}`}
-                >
-                  <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
-                  {m.admin_people_merge_title()}
-                </Button>
+              {row.original.roles.map((role) => (
+                <Badge key={role} bg="secondary" className="text-capitalize">
+                  {role}
+                </Badge>
               ))}
             </div>
-          );
-        },
-      }),
-    ]),
+          ),
+          meta: { tdClassName: "d-none d-lg-table-cell" },
+        }),
+        columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
+          id: "registrations",
+          header: m.admin_registrations_tab(),
+          cell: ({ row, getValue }) => {
+            const person = row.original;
+            const resCount = getValue();
+            return (
+              <>
+                <Badge
+                  bg={resCount > 0 ? "warning" : "secondary"}
+                  text={resCount > 0 ? "dark" : undefined}
+                >
+                  {resCount}
+                </Badge>
+                {resCount > 0 && (
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="text-secondary p-0 ms-1"
+                    onClick={() => setViewRegistrationsPerson(person)}
+                    title={m.admin_people_view_registrations()}
+                    aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
+                  >
+                    <i className="bi bi-eye" aria-hidden="true" />
+                  </Button>
+                )}
+              </>
+            );
+          },
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: m.admin_actions_label(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const person = row.original;
+            const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
+            const duplicates = isDuplicate
+              ? (emailGroups.get(person.email.toLowerCase()) ?? []).filter(
+                  (p) => p.id !== person.id,
+                )
+              : [];
+            return (
+              <div className="d-flex flex-wrap gap-1">
+                <Button
+                  size="sm"
+                  variant="outline-light"
+                  onClick={() => {
+                    setEditingPerson(person);
+                    setShowForm(true);
+                  }}
+                  title={m.admin_people_edit_title()}
+                  aria-label={m.admin_people_edit_title()}
+                >
+                  <i className="bi bi-pencil" aria-hidden="true" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  onClick={() => {
+                    setDeletingId(person.id);
+                    setDeleteError("");
+                  }}
+                  title={m.admin_people_delete_title()}
+                  aria-label={m.admin_people_delete_title()}
+                >
+                  <i className="bi bi-trash" aria-hidden="true" />
+                </Button>
+                {duplicates.map((dup) => (
+                  <Button
+                    key={dup.id}
+                    size="sm"
+                    variant="outline-warning"
+                    onClick={() => openMerge(person, dup)}
+                    title={`${m.admin_people_merge_title()}: ${dup.name}`}
+                  >
+                    <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                    {m.admin_people_merge_title()}
+                  </Button>
+                ))}
+              </div>
+            );
+          },
+        }),
+      ]),
     [
       duplicateEmails,
       emailGroups,
@@ -372,8 +375,7 @@ export default function PeopleManagement({
       onSortingChange: setSorting,
       onGlobalFilterChange: setQ,
       onColumnVisibilityChange: (updater) => {
-        const next =
-          typeof updater === "function" ? updater(columnVisibility) : updater;
+        const next = typeof updater === "function" ? updater(columnVisibility) : updater;
         setColumnVisibility(next);
         saveColVis(COL_VIS_KEY, next);
       },
@@ -512,55 +514,55 @@ export default function PeopleManagement({
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
                       {headerGroup.headers.map((header) => {
-                          const canSort = header.column.getCanSort();
-                          const sorted = header.column.getIsSorted();
-                          return (
-                            <th
-                              key={header.id}
-                              className={header.column.columnDef.meta?.tdClassName}
-                              onClick={header.column.getToggleSortingHandler()}
-                              onKeyDown={
-                                canSort
-                                  ? (e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        header.column.getToggleSortingHandler()?.(e);
-                                      }
+                        const canSort = header.column.getCanSort();
+                        const sorted = header.column.getIsSorted();
+                        return (
+                          <th
+                            key={header.id}
+                            className={header.column.columnDef.meta?.tdClassName}
+                            onClick={header.column.getToggleSortingHandler()}
+                            onKeyDown={
+                              canSort
+                                ? (e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      header.column.getToggleSortingHandler()?.(e);
                                     }
-                                  : undefined
-                              }
-                              role={canSort ? "button" : undefined}
-                              tabIndex={canSort ? 0 : undefined}
-                              aria-sort={
-                                canSort
-                                  ? sorted === "asc"
-                                    ? "ascending"
+                                  }
+                                : undefined
+                            }
+                            role={canSort ? "button" : undefined}
+                            tabIndex={canSort ? 0 : undefined}
+                            aria-sort={
+                              canSort
+                                ? sorted === "asc"
+                                  ? "ascending"
+                                  : sorted === "desc"
+                                    ? "descending"
+                                    : "none"
+                                : undefined
+                            }
+                            style={{
+                              cursor: canSort ? "pointer" : "default",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            <table.FlexRender header={header} />
+                            {canSort && (
+                              <i
+                                className={`bi ms-1 small ${
+                                  sorted === "asc"
+                                    ? "bi-arrow-up"
                                     : sorted === "desc"
-                                      ? "descending"
-                                      : "none"
-                                  : undefined
-                              }
-                              style={{
-                                cursor: canSort ? "pointer" : "default",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              <table.FlexRender header={header} />
-                              {canSort && (
-                                <i
-                                  className={`bi ms-1 small ${
-                                    sorted === "asc"
-                                      ? "bi-arrow-up"
-                                      : sorted === "desc"
-                                        ? "bi-arrow-down"
-                                        : "bi-arrow-down-up opacity-25"
-                                  }`}
-                                  aria-hidden="true"
-                                />
-                              )}
-                            </th>
-                          );
-                        })}
+                                      ? "bi-arrow-down"
+                                      : "bi-arrow-down-up opacity-25"
+                                }`}
+                                aria-hidden="true"
+                              />
+                            )}
+                          </th>
+                        );
+                      })}
                     </tr>
                   ))}
                 </thead>

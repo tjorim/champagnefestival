@@ -40,7 +40,13 @@ describe("new content items are created, not updated", () => {
     const onSave = vi.fn();
     render(
       withQuery(
-        <ItemModal show initial={null} authHeaders={authHeaders} onSave={onSave} onHide={vi.fn()} />,
+        <ItemModal
+          show
+          initial={null}
+          authHeaders={authHeaders}
+          onSave={onSave}
+          onHide={vi.fn()}
+        />,
       ),
     );
 

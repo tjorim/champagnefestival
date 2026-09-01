@@ -80,7 +80,9 @@ describe("VolunteersManagement — rendering", () => {
     expect(scopedWithPeriod.getByText("2025-03-01 → 2025-03-02")).toBeInTheDocument();
 
     const rowNoPeriod = screen.getByText("No Period").closest("tr");
-    expect(within(rowNoPeriod as HTMLElement).getByText("admin_volunteers_no_help_periods")).toBeInTheDocument();
+    expect(
+      within(rowNoPeriod as HTMLElement).getByText("admin_volunteers_no_help_periods"),
+    ).toBeInTheDocument();
   });
 
   it("shows a loading spinner instead of the table when isLoading is true", () => {

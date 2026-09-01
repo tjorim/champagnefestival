@@ -14,6 +14,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
+import type { RegistrationStatus } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -59,7 +60,12 @@ function buildRawRegistration(index: number): Record<string, unknown> {
   return {
     id: `reg-bulk-${n}`,
     person_id: `person-bulk-${n}`,
-    person: { id: `person-bulk-${n}`, name: `Bulk Guest ${n}`, email: `bulk${n}@example.com`, phone: "" },
+    person: {
+      id: `person-bulk-${n}`,
+      name: `Bulk Guest ${n}`,
+      email: `bulk${n}@example.com`,
+      phone: "",
+    },
     event_id: "event-bulk-test",
     event: {
       id: "event-bulk-test",
@@ -75,7 +81,13 @@ function buildRawRegistration(index: number): Record<string, unknown> {
       active: true,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z",
-      edition: { id: "edition-1", year: 2026, month: "march", edition_type: "festival", active: true },
+      edition: {
+        id: "edition-1",
+        year: 2026,
+        month: "march",
+        edition_type: "festival",
+        active: true,
+      },
     },
     guest_count: 1,
     order_items: [],
@@ -92,7 +104,9 @@ function buildRawRegistration(index: number): Record<string, unknown> {
   };
 }
 
-const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) => buildRawRegistration(i + 1));
+const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>
+  buildRawRegistration(i + 1),
+);
 const registrations = rawRegistrations.map(apiToRegistration);
 
 function installPaginatedHandler() {
@@ -108,9 +122,9 @@ function installPaginatedHandler() {
   );
 }
 
-function renderRegistrationList(overrides: { onUpdateStatus?: ReturnType<typeof vi.fn> } = {}) {
+function renderRegistrationList() {
   const queryClient = createTestQueryClient();
-  const onUpdateStatus = overrides.onUpdateStatus ?? vi.fn().mockResolvedValue(undefined);
+  const onUpdateStatus = vi.fn(async (_id: string, _status: RegistrationStatus) => {});
   render(
     <QueryClientProvider client={queryClient}>
       <RegistrationList
@@ -173,7 +187,9 @@ describe("RegistrationList — Gmail-style select-all-matching", () => {
 
     fireEvent.click(screen.getByText("admin_bulk_confirm"));
     await waitFor(() =>
-      expect(screen.getByText(`admin_bulk_confirm_action({"count":${TOTAL_REGISTRATIONS}})`)).toBeInTheDocument(),
+      expect(
+        screen.getByText(`admin_bulk_confirm_action({"count":${TOTAL_REGISTRATIONS}})`),
+      ).toBeInTheDocument(),
     );
 
     fireEvent.click(screen.getByText("admin_action_confirm"));

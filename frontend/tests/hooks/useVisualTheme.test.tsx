@@ -19,9 +19,13 @@ function mockColorScheme(isLight: boolean): void {
 }
 
 function getThemeColor(mode: "dark" | "light"): string | null {
-  return document
-    .querySelector<HTMLMetaElement>(`meta[name="theme-color"][media="(prefers-color-scheme: ${mode})"]`)
-    ?.getAttribute("content") ?? null;
+  return (
+    document
+      .querySelector<HTMLMetaElement>(
+        `meta[name="theme-color"][media="(prefers-color-scheme: ${mode})"]`,
+      )
+      ?.getAttribute("content") ?? null
+  );
 }
 
 describe("useVisualTheme", () => {
@@ -53,9 +57,9 @@ describe("useVisualTheme", () => {
 
     expect(document.documentElement.dataset.visualTheme).toBe("remuage");
     expect(document.documentElement.dataset.bsTheme).toBe("light");
-    expect(
-      document.getElementById("visual-theme-stylesheet")?.getAttribute("href"),
-    ).toBe("/themes/theme-remuage.css");
+    expect(document.getElementById("visual-theme-stylesheet")?.getAttribute("href")).toBe(
+      "/themes/theme-remuage.css",
+    );
     expect(getThemeColor("dark")).toBe("#edf1f5");
     expect(getThemeColor("light")).toBe("#edf1f5");
   });

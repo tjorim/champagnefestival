@@ -19,10 +19,13 @@ export function useTodayKey(): string {
       const nextMidnight = new Date(now);
       nextMidnight.setHours(24, 0, 0, 0);
       // +1s of slack so the timer never lands a hair before the date rolls over.
-      timer = setTimeout(() => {
-        setTodayKey(toLocalDateKey(new Date()));
-        scheduleNextMidnight();
-      }, nextMidnight.getTime() - now.getTime() + 1000);
+      timer = setTimeout(
+        () => {
+          setTodayKey(toLocalDateKey(new Date()));
+          scheduleNextMidnight();
+        },
+        nextMidnight.getTime() - now.getTime() + 1000,
+      );
     };
 
     scheduleNextMidnight();

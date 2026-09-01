@@ -224,7 +224,9 @@ describe("EventProductsModal", () => {
   });
 
   it("shows an error state and disables adding when the products query fails", async () => {
-    server.use(http.get("/api/products", () => HttpResponse.json({ detail: "boom" }, { status: 500 })));
+    server.use(
+      http.get("/api/products", () => HttpResponse.json({ detail: "boom" }, { status: 500 })),
+    );
     const queryClient = createTestQueryClient();
     render(
       <QueryClientProvider client={queryClient}>

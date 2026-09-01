@@ -29,7 +29,6 @@ interface ItemOption {
   isArchived: boolean;
 }
 
-
 const editionModalExhibitorsQueryKey = queryKeys.admin.editionModalExhibitors;
 
 function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
@@ -85,10 +84,9 @@ export default function EditionModal({
       coOrganizerId: initial?.coOrganizer?.id ? String(initial.coOrganizer.id) : "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
-      selectedExhibitors: [
-        ...(initial?.producers ?? []),
-        ...(initial?.sponsors ?? []),
-      ].map((e) => ({ value: e.id, label: e.name, isArchived: false })) as MultiValue<ItemOption>,
+      selectedExhibitors: [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map(
+        (e) => ({ value: e.id, label: e.name, isArchived: false }),
+      ) as MultiValue<ItemOption>,
     }),
     [fallbackVenueId, initial],
   );

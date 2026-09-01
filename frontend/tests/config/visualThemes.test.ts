@@ -66,9 +66,14 @@ describe("visual theme registry", () => {
     expect(modesMatch?.[1]).toBeDefined();
     expect(colorsMatch?.[1]).toBeDefined();
 
-    const variants = JSON.parse(variantsMatch?.[1] ?? "[]") as string[];
-    const modes = JSON.parse(modesMatch?.[1] ?? "{}") as Record<string, string>;
-    const colors = JSON.parse(colorsMatch?.[1] ?? "{}") as Record<
+    // These are JS object/array literals, not JSON — the pre-paint script keeps
+    // its keys quoted by hand today, but nothing enforces that (a formatter is
+    // free to unquote them), so evaluate as JS rather than assuming JSON.parse
+    // stays valid.
+    const evalLiteral = (source: string): unknown => new Function(`return (${source});`)();
+    const variants = evalLiteral(variantsMatch?.[1] ?? "[]") as string[];
+    const modes = evalLiteral(modesMatch?.[1] ?? "{}") as Record<string, string>;
+    const colors = evalLiteral(colorsMatch?.[1] ?? "{}") as Record<
       string,
       { dark: string; light: string }
     >;

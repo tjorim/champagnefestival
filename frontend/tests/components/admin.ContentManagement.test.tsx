@@ -111,7 +111,9 @@ describe("ContentManagement", () => {
 
   it("shows an error alert when loading exhibitors fails", async () => {
     server.use(
-      http.get("/api/exhibitors", () => HttpResponse.json({ detail: "Server error" }, { status: 500 })),
+      http.get("/api/exhibitors", () =>
+        HttpResponse.json({ detail: "Server error" }, { status: 500 }),
+      ),
     );
 
     renderContentManagement();

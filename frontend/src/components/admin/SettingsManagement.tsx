@@ -116,7 +116,9 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                   disabled={updateMutation.isPending}
                   onChange={(event) => setPublicEmail(event.target.value)}
                 />
-                <Form.Text className="text-secondary">{m.admin_settings_public_email_help()}</Form.Text>
+                <Form.Text className="text-secondary">
+                  {m.admin_settings_public_email_help()}
+                </Form.Text>
               </Form.Group>
               <Form.Group className="mb-3" controlId="public-phone">
                 <Form.Label>{m.admin_settings_public_phone_label()}</Form.Label>
@@ -126,7 +128,9 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                   disabled={updateMutation.isPending}
                   onChange={(event) => setPublicPhone(event.target.value)}
                 />
-                <Form.Text className="text-secondary">{m.admin_settings_public_phone_help()}</Form.Text>
+                <Form.Text className="text-secondary">
+                  {m.admin_settings_public_phone_help()}
+                </Form.Text>
               </Form.Group>
               <Form.Group className="mb-3" controlId="facebook-url">
                 <Form.Label>{m.admin_settings_facebook_url_label()}</Form.Label>
@@ -137,10 +141,14 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                   disabled={updateMutation.isPending}
                   onChange={(event) => setFacebookUrl(event.target.value)}
                 />
-                <Form.Text className="text-secondary">{m.admin_settings_facebook_url_help()}</Form.Text>
+                <Form.Text className="text-secondary">
+                  {m.admin_settings_facebook_url_help()}
+                </Form.Text>
               </Form.Group>
               <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? m.admin_settings_saving() : m.admin_settings_save_contact()}
+                {updateMutation.isPending
+                  ? m.admin_settings_saving()
+                  : m.admin_settings_save_contact()}
               </Button>
             </Form>
           </>

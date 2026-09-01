@@ -109,13 +109,17 @@ describe("MSW operational fixtures", () => {
     expect(regPartial).toBeTruthy();
     expect(regComplete).toBeTruthy();
 
-    const partialOrder = (regPartial?.order_items as Array<Record<string, unknown>> | undefined)?.[0];
+    const partialOrder = (
+      regPartial?.order_items as Array<Record<string, unknown>> | undefined
+    )?.[0];
     if (!partialOrder) throw new Error("Expected partial delivery order in reg-01");
     expect(partialOrder.quantity).toBe(4);
     expect(partialOrder.delivered_quantity).toBe(2);
     expect(partialOrder.delivered).toBe(false);
 
-    const completedOrder = (regComplete?.order_items as Array<Record<string, unknown>> | undefined)?.[0];
+    const completedOrder = (
+      regComplete?.order_items as Array<Record<string, unknown>> | undefined
+    )?.[0];
     if (!completedOrder) throw new Error("Expected completed delivery order in reg-02");
     expect(completedOrder.quantity).toBe(2);
     expect(completedOrder.delivered_quantity).toBe(2);

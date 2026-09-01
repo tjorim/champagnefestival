@@ -105,7 +105,9 @@ describe("MyAccountPage", () => {
 
   it("shows an error and re-enables the button when deletion fails", async () => {
     server.use(
-      http.delete("/api/me", () => HttpResponse.json({ detail: "Something went wrong" }, { status: 500 })),
+      http.delete("/api/me", () =>
+        HttpResponse.json({ detail: "Something went wrong" }, { status: 500 }),
+      ),
     );
 
     const user = userEvent.setup();

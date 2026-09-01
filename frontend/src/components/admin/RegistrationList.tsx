@@ -369,7 +369,8 @@ export default function RegistrationList({
       page,
       pageSize,
     }),
-    queryFn: () => fetchRegistrationsPage(authHeaders, { ...currentFilterParams, page, limit: pageSize }),
+    queryFn: () =>
+      fetchRegistrationsPage(authHeaders, { ...currentFilterParams, page, limit: pageSize }),
     placeholderData: keepPreviousData,
     staleTime: 15 * 1000,
     retry: false,
@@ -408,10 +409,13 @@ export default function RegistrationList({
   // current page), bounded the same way fetchAllRegistrations is — used by
   // "export all matching" and by the "select all N matching" bulk action.
   const fetchAllMatchingRegistrations = useCallback(async (): Promise<Registration[]> => {
-    const { registrations: matched, total: matchedTotal } = await fetchRegistrationsPage(authHeaders, {
-      ...currentFilterParams,
-      limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
-    });
+    const { registrations: matched, total: matchedTotal } = await fetchRegistrationsPage(
+      authHeaders,
+      {
+        ...currentFilterParams,
+        limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
+      },
+    );
     if (matchedTotal > matched.length) {
       devError(
         `Bulk selection/export is covering ${matched.length} of ${matchedTotal} matching registrations; ` +
@@ -998,7 +1002,11 @@ export default function RegistrationList({
                 title={m.admin_export_csv_all_title()}
               >
                 {exportingAllCsv ? (
-                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+                  <span
+                    className="spinner-border spinner-border-sm me-1"
+                    role="status"
+                    aria-hidden="true"
+                  />
                 ) : (
                   <i className="bi bi-download me-1" aria-hidden="true" />
                 )}
@@ -1182,7 +1190,9 @@ export default function RegistrationList({
             <div className="mt-2 pt-2 border-top border-secondary">
               {canExpandSelectionToAllMatching && (
                 <div className="d-flex align-items-center gap-2 flex-wrap small text-secondary mb-2">
-                  <span>{m.admin_bulk_select_page_notice({ count: pageRegistrations.length })}</span>
+                  <span>
+                    {m.admin_bulk_select_page_notice({ count: pageRegistrations.length })}
+                  </span>
                   <Button
                     size="sm"
                     variant="link"
@@ -1217,7 +1227,11 @@ export default function RegistrationList({
                     ? m.admin_bulk_all_matching_selected({ total: selectedIds.size })
                     : m.admin_bulk_selected({ count: selectedIds.size })}
                 </span>
-                <Button size="sm" variant="outline-success" onClick={() => setBulkAction("confirm")}>
+                <Button
+                  size="sm"
+                  variant="outline-success"
+                  onClick={() => setBulkAction("confirm")}
+                >
                   {m.admin_bulk_confirm()}
                 </Button>
                 <Button size="sm" variant="outline-danger" onClick={() => setBulkAction("cancel")}>

@@ -79,9 +79,21 @@
         // after the bootstrap CSS import, so it lands later in the cascade — see useVisualTheme.ts.
         // Keep this registry mirror synchronized with src/config/visualThemes.ts.
         const VISUAL_THEME_KEY = "champagnefestival:visualTheme";
-        const VARIANTS = ["refresh","classic","riviera","cuvee","remuage"];
-        const THEME_MODES = {"refresh":"system","classic":"dark","riviera":"light","cuvee":"light","remuage":"light"};
-        const THEME_COLORS = {"refresh":{"dark":"#100f0d","light":"#fbf4e6"},"classic":{"dark":"#121212","light":"#121212"},"riviera":{"dark":"#f7ecd2","light":"#f7ecd2"},"cuvee":{"dark":"#0c231d","light":"#0c231d"},"remuage":{"dark":"#edf1f5","light":"#edf1f5"}};
+        const VARIANTS = ["refresh", "classic", "riviera", "cuvee", "remuage"];
+        const THEME_MODES = {
+          refresh: "system",
+          classic: "dark",
+          riviera: "light",
+          cuvee: "light",
+          remuage: "light",
+        };
+        const THEME_COLORS = {
+          refresh: { dark: "#100f0d", light: "#fbf4e6" },
+          classic: { dark: "#121212", light: "#121212" },
+          riviera: { dark: "#f7ecd2", light: "#f7ecd2" },
+          cuvee: { dark: "#0c231d", light: "#0c231d" },
+          remuage: { dark: "#edf1f5", light: "#edf1f5" },
+        };
         let visualTheme = "refresh";
         try {
           const stored = window.localStorage.getItem(VISUAL_THEME_KEY);

@@ -19,11 +19,7 @@ export function ColumnVisibilityDropdown<TData extends RowData>({
 
   return (
     <Dropdown align="end">
-      <Dropdown.Toggle
-        variant="outline-secondary"
-        size="sm"
-        id={`col-vis-toggle-${tableId}`}
-      >
+      <Dropdown.Toggle variant="outline-secondary" size="sm" id={`col-vis-toggle-${tableId}`}>
         <i className="bi bi-layout-three-columns me-1" aria-hidden="true" />
         {m.admin_columns()}
       </Dropdown.Toggle>

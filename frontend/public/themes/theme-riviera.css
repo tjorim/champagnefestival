@@ -114,7 +114,9 @@ html[data-visual-theme="riviera"] .bubble-background {
   min-height: var(--header-height);
   background: rgba(255, 250, 240, 0.86);
   border-bottom: 3px solid rgba(0, 127, 131, 0.24);
-  box-shadow: 0 12px 0 rgba(255, 209, 102, 0.28), 0 24px 44px rgba(18, 50, 59, 0.14);
+  box-shadow:
+    0 12px 0 rgba(255, 209, 102, 0.28),
+    0 24px 44px rgba(18, 50, 59, 0.14);
   backdrop-filter: blur(20px) saturate(1.35);
 }
 
@@ -252,7 +254,9 @@ html[data-visual-theme="riviera"] .bubble-background {
     background: rgba(255, 250, 240, 0.86);
     border: 2px solid rgba(18, 50, 59, 0.18);
     border-radius: 1.75rem;
-    box-shadow: 10px 10px 0 rgba(0, 127, 131, 0.18), 0 24px 54px rgba(18, 50, 59, 0.16);
+    box-shadow:
+      10px 10px 0 rgba(0, 127, 131, 0.18),
+      0 24px 54px rgba(18, 50, 59, 0.16);
   }
 
   html[data-visual-theme="riviera"] .site-header .container {
@@ -384,7 +388,9 @@ html[data-visual-theme="riviera"] .bubble-background {
     linear-gradient(160deg, #ffd166 0 34%, #ff7448 34% 58%, #007f83 58% 100%);
   border: 3px solid rgba(18, 50, 59, 0.62);
   border-radius: 2rem;
-  box-shadow: -24px 24px 0 rgba(255, 250, 240, 0.55), -42px 42px 0 rgba(0, 127, 131, 0.18);
+  box-shadow:
+    -24px 24px 0 rgba(255, 250, 240, 0.55),
+    -42px 42px 0 rgba(0, 127, 131, 0.18);
   transform: rotate(4deg);
 }
 
@@ -486,7 +492,12 @@ html[data-visual-theme="riviera"] .bubble-background {
   height: 0.55rem;
   margin: 0.9rem 0 0;
   content: "";
-  background: repeating-linear-gradient(90deg, #007f83 0 1rem, #ffd166 1rem 2rem, #ff7448 2rem 3rem);
+  background: repeating-linear-gradient(
+    90deg,
+    #007f83 0 1rem,
+    #ffd166 1rem 2rem,
+    #ff7448 2rem 3rem
+  );
   border-radius: 999px;
 }
 
@@ -516,8 +527,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   color: var(--ink);
   text-align: left;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.18)),
-    #fffaf0;
+    linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.18)), #fffaf0;
   border: 2px solid rgba(18, 50, 59, 0.16);
   border-radius: 1.35rem;
   box-shadow: 7px 7px 0 rgba(255, 116, 72, 0.16);

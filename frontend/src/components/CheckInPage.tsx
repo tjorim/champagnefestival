@@ -197,10 +197,7 @@ function CheckInCard({
                         onBlur={(event) => {
                           const value = Number(event.currentTarget.value);
                           if (Number.isFinite(value)) {
-                            const bounded = Math.max(
-                              0,
-                              Math.min(item.quantity, Math.trunc(value)),
-                            );
+                            const bounded = Math.max(0, Math.min(item.quantity, Math.trunc(value)));
                             event.currentTarget.value = String(bounded);
                             if (bounded !== item.deliveredQuantity) {
                               onSetOrderItemQuantity(item.productId, bounded);

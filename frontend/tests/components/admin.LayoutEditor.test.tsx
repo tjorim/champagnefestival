@@ -170,7 +170,14 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
 function realisticFixture(): Required<
   Pick<
     RenderOverrides,
-    "dayOptions" | "tables" | "tableTypes" | "layouts" | "registrations" | "rooms" | "exhibitors" | "areas"
+    | "dayOptions"
+    | "tables"
+    | "tableTypes"
+    | "layouts"
+    | "registrations"
+    | "rooms"
+    | "exhibitors"
+    | "areas"
   >
 > {
   return {
@@ -314,7 +321,14 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(saveButton);
 
-    expect(callbacks.onAddArea).toHaveBeenCalledWith("New Area", "bi-shop", "layout-1", 1.5, 1.0, undefined);
+    expect(callbacks.onAddArea).toHaveBeenCalledWith(
+      "New Area",
+      "bi-shop",
+      "layout-1",
+      1.5,
+      1.0,
+      undefined,
+    );
   });
 
   it("deletes a table only after confirm() returns true", () => {

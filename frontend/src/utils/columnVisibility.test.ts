@@ -102,11 +102,9 @@ describe("columnVisibility utils", () => {
     });
 
     it("returns empty object when localStorage throws (e.g. SecurityError)", () => {
-      const getItemSpy = vi
-        .spyOn(Storage.prototype, "getItem")
-        .mockImplementation(() => {
-          throw new Error("SecurityError");
-        });
+      const getItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("SecurityError");
+      });
 
       expect(loadColVis(KEY)).toEqual({});
 
@@ -133,11 +131,9 @@ describe("columnVisibility utils", () => {
     });
 
     it("does not throw when localStorage.setItem throws (e.g. quota exceeded)", () => {
-      const setItemSpy = vi
-        .spyOn(Storage.prototype, "setItem")
-        .mockImplementation(() => {
-          throw new Error("QuotaExceededError");
-        });
+      const setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("QuotaExceededError");
+      });
 
       expect(() => saveColVis(KEY, { name: true })).not.toThrow();
 

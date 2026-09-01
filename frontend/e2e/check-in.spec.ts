@@ -46,9 +46,7 @@ test.describe("Check-in flow", () => {
     await checkInButton.click();
 
     // Success alert should appear
-    await expect(
-      page.getByRole("status").first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("status").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("shows error for invalid registration ID", async ({ page }) => {

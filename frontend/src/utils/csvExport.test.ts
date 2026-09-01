@@ -4,8 +4,7 @@ import { exportToCsv } from "./csvExport";
 // Helpers to capture what was written to the DOM anchor and Blob
 function capturedCsvContent(): string {
   // The Blob constructor is mocked; retrieve the first argument passed to it.
-  const blobCalls = (globalThis.Blob as unknown as ReturnType<typeof vi.fn>).mock
-    .calls;
+  const blobCalls = (globalThis.Blob as unknown as ReturnType<typeof vi.fn>).mock.calls;
   const lastCall = blobCalls[blobCalls.length - 1] as [BlobPart[], BlobPropertyBag];
   const parts = lastCall[0];
   // Concatenate all string parts (BOM + CSV)

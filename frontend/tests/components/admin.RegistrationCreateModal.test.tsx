@@ -29,7 +29,9 @@ describe("RegistrationCreateModal", () => {
 
     server.use(
       http.get("/api/events", ({ request }) => {
-        capturedRegistrationRequired = new URL(request.url).searchParams.get("registration_required");
+        capturedRegistrationRequired = new URL(request.url).searchParams.get(
+          "registration_required",
+        );
         return HttpResponse.json([]);
       }),
     );

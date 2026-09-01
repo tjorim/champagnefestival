@@ -31,7 +31,11 @@ function calendarDateRange(date: string): string {
   return `${start}/${end}`;
 }
 
-export function buildCheckInQrUrl(origin: string, registrationId: string, checkInToken: string): string {
+export function buildCheckInQrUrl(
+  origin: string,
+  registrationId: string,
+  checkInToken: string,
+): string {
   return `${origin}/check-in?id=${encodeURIComponent(registrationId)}#token=${encodeURIComponent(checkInToken)}`;
 }
 
@@ -54,7 +58,13 @@ export default function MyRegistrationsPage() {
   const accessToken = auth.getAccessToken();
   const attemptedToken = useRef("");
   const registrationsMutation = useMutation({
-    mutationFn: async ({ lookupToken, oidcToken }: { lookupToken: string; oidcToken: string | null }) => {
+    mutationFn: async ({
+      lookupToken,
+      oidcToken,
+    }: {
+      lookupToken: string;
+      oidcToken: string | null;
+    }) => {
       await navigate({ search: {}, replace: true });
       if (!oidcToken) {
         return accessMyRegistrations(lookupToken);
