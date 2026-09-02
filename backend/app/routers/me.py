@@ -42,10 +42,9 @@ async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
     return list(
         (
             await db.scalars(
-                select(Person)
-                .join(Registration, Registration.person_id == Person.id)
-                .where(Registration.user_id == user_id)
-                .distinct()
+                select(Person).where(
+                    Person.id.in_(select(Registration.person_id).where(Registration.user_id == user_id))
+                )
             )
         ).all()
     )

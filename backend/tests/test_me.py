@@ -354,6 +354,11 @@ async def test_delete_me_unlinks_account_without_deleting_registration(me_client
 async def test_authenticated_visitor_can_update_communication_preference(me_client, db_session):
     response = await _post_registration_with_admin_setup(me_client, email="language@example.com")
     assert response.status_code == 201
+    await me_client.get("/api/me/registrations")
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "visitor-sub"))
+    registration = await db_session.get(Registration, response.json()["id"])
+    registration.user_id = user.id
+    await db_session.commit()
 
     updated = await me_client.put("/api/me/communication-preference", json={"preferred_language": "fr"})
     assert updated.status_code == 200

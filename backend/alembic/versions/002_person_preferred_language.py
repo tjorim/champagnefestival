@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "002_person_preferred_language"
-down_revision = "001_contact_messages"
+down_revision = "001"
 branch_labels = None
 depends_on = None
 

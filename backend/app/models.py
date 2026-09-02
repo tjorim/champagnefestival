@@ -9,6 +9,7 @@ from decimal import Decimal
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -526,6 +527,10 @@ class Person(Base):
 
     __tablename__ = "people"
     __table_args__ = (
+        CheckConstraint(
+            "preferred_language IS NULL OR preferred_language IN ('nl', 'fr', 'en')",
+            name="ck_people_preferred_language",
+        ),
         # Trigram (pg_trgm) GIN indexes backing fuzzy operational search, in
         # addition to the plain btree index=True below on search_email — the
         # migration creates both, since exact-match lookup and fuzzy search
