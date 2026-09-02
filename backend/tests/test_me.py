@@ -348,3 +348,21 @@ async def test_delete_me_unlinks_account_without_deleting_registration(me_client
     await db_session.refresh(retained_registration)
     assert retained_registration.user_id is None
     assert isinstance(retained_registration.order_items, list)
+
+
+@pytest.mark.anyio
+async def test_authenticated_visitor_can_update_communication_preference(me_client, db_session):
+    response = await _post_registration_with_admin_setup(me_client, email="language@example.com")
+    assert response.status_code == 201
+
+    updated = await me_client.put("/api/me/communication-preference", json={"preferred_language": "fr"})
+    assert updated.status_code == 200
+    assert updated.json() == {"preferred_language": "fr"}
+    fetched = await me_client.get("/api/me/communication-preference")
+    assert fetched.json() == {"preferred_language": "fr"}
+
+    registration = await db_session.get(Registration, response.json()["id"])
+    person = await db_session.get(me_router.Person, registration.person_id)
+    assert person.preferred_language == "fr"
+    audit = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "communication_preference_updated"))
+    assert audit is not None

@@ -76,3 +76,5 @@ concurrent-first-use conflict, and both sides of the 72-hour boundary.
 ## Preferred communication language
 
 Public registration creation writes the explicitly selected communication language to the matched or newly created person in the same transaction as the registration. Registration creation remains non-retryable: a client retry could create a duplicate registration, and the UI does not retry it automatically. Updating an existing matching person's language is last-write-wins and transactionally committed with that registration; no separate preference write is advertised or retried.
+
+`PUT /api/me/communication-preference` assigns one validated scalar value to every person attached to the authenticated user's registrations. Repeating the same request has the same resulting state, so the operation is idempotent and safe for a deliberate user retry. The UI does not retry it automatically and reports success only after the response succeeds.

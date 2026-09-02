@@ -118,7 +118,7 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 12 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
+| 12 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
 
 ### Dependency map
 

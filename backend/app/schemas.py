@@ -415,6 +415,14 @@ class PebbleAccessTokenOut(BaseModel):
     token: str
 
 
+class CommunicationPreferenceOut(BaseModel):
+    preferred_language: Literal["nl", "fr", "en"] | None
+
+
+class CommunicationPreferenceUpdate(RequestModel):
+    preferred_language: Literal["nl", "fr", "en"]
+
+
 class RegistrationLookupRequest(RequestModel):
     email: EmailStr
 

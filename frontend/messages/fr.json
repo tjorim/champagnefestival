@@ -808,5 +808,8 @@
   "admin_email_preview_action": "Prévisualiser l’e-mail",
   "registration_preferred_language": "Langue de communication préférée",
   "registration_preferred_language_help": "Utilisée pour les confirmations et les messages ; vous pouvez choisir une autre langue que celle du site.",
-  "admin_email_language_unknown": "Non précisée"
+  "admin_email_language_unknown": "Non précisée",
+  "my_registrations_save_language": "Enregistrer la langue",
+  "my_registrations_language_saved": "Langue de communication enregistrée.",
+  "my_account_preference_error": "Impossible de mettre à jour votre langue de communication. Réessayez."
 }
