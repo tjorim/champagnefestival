@@ -19,6 +19,7 @@ EditionType = Literal["festival", "bourse", "capsule_exchange"]
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
 FaqLocale = Literal["nl", "en", "fr"]
+AnnouncementLevel = Literal["info", "warning", "urgent"]
 
 
 class RequestModel(BaseModel):
@@ -1280,6 +1281,95 @@ class FaqItemPublicOut(BaseModel):
     id: str
     question: str
     answer: str
+
+
+class AnnouncementWrite(RequestModel):
+    text_nl: str | None = Field(default=None, max_length=500)
+    text_en: str | None = Field(default=None, max_length=500)
+    text_fr: str | None = Field(default=None, max_length=500)
+    level: AnnouncementLevel = "info"
+    active: bool = False
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    link_url: str | None = Field(default=None, max_length=1000, pattern=r"^https://")
+    link_label_nl: str | None = Field(default=None, max_length=120)
+    link_label_en: str | None = Field(default=None, max_length=120)
+    link_label_fr: str | None = Field(default=None, max_length=120)
+
+    @model_validator(mode="after")
+    def validate_announcement(self):
+        if self.active and not any((self.text_nl, self.text_en, self.text_fr)):
+            raise ValueError("an active announcement needs at least one translation")
+        if self.starts_at and self.starts_at.utcoffset() is None:
+            raise ValueError("starts_at must include a timezone")
+        if self.ends_at and self.ends_at.utcoffset() is None:
+            raise ValueError("ends_at must include a timezone")
+        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
+            raise ValueError("ends_at must be later than starts_at")
+        if self.link_url:
+            parsed = urlsplit(self.link_url)
+            if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+                raise ValueError("link_url must be a safe HTTPS URL without credentials")
+            if not any((self.link_label_nl, self.link_label_en, self.link_label_fr)):
+                raise ValueError("a link URL requires at least one translated link label")
+        return self
+
+
+class AnnouncementCreate(AnnouncementWrite):
+    pass
+
+
+class AnnouncementUpdate(RequestModel):
+    text_nl: str | None = Field(default=None, max_length=500)
+    text_en: str | None = Field(default=None, max_length=500)
+    text_fr: str | None = Field(default=None, max_length=500)
+    level: AnnouncementLevel | None = None
+    active: bool | None = None
+    starts_at: datetime | None = None
+    ends_at: datetime | None = None
+    link_url: str | None = Field(default=None, max_length=1000, pattern=r"^https://")
+    link_label_nl: str | None = Field(default=None, max_length=120)
+    link_label_en: str | None = Field(default=None, max_length=120)
+    link_label_fr: str | None = Field(default=None, max_length=120)
+
+    @field_validator("starts_at", "ends_at")
+    @classmethod
+    def timezone_required(cls, value: datetime | None) -> datetime | None:
+        if value and value.utcoffset() is None:
+            raise ValueError("announcement timestamps must include a timezone")
+        return value
+
+
+class AnnouncementReorder(RequestModel):
+    ordered_ids: list[str] = Field(min_length=1)
+
+
+class AnnouncementOut(BaseModel):
+    id: str
+    text_nl: str | None
+    text_en: str | None
+    text_fr: str | None
+    level: AnnouncementLevel
+    active: bool
+    sort_order: int
+    starts_at: datetime | None
+    ends_at: datetime | None
+    link_url: str | None
+    link_label_nl: str | None
+    link_label_en: str | None
+    link_label_fr: str | None
+    published_at: datetime | None
+    published_by: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AnnouncementPublicOut(BaseModel):
+    id: str
+    text: str
+    level: AnnouncementLevel
+    link_url: str | None
+    link_label: str | None
 
 
 class EditionAttendanceStats(BaseModel):

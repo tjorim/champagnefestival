@@ -179,7 +179,7 @@ export default function AdminSidebar({
                 groupKey="content"
                 icon="bi-collection"
                 label={m.admin_content_tab()}
-                itemKeys={["exhibitors", "faq", "contact-messages", "settings"]}
+                itemKeys={["exhibitors", "faq", "announcements", "contact-messages", "settings"]}
                 {...groupProps}
               >
                 <SidebarItem
@@ -192,6 +192,12 @@ export default function AdminSidebar({
                   itemKey="faq"
                   icon="bi-question-circle"
                   label={m.admin_content_faq_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="announcements"
+                  icon="bi-megaphone"
+                  label="Announcements"
                   {...itemProps}
                 />
                 <SidebarItem

@@ -11,6 +11,7 @@ import LayoutEditor from "./LayoutEditor";
 import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
 import FaqManagement from "./FaqManagement";
+import AnnouncementManagement from "./AnnouncementManagement";
 import SettingsManagement from "./SettingsManagement";
 import ContactMessagesManagement from "./ContactMessagesManagement";
 import type { ItemDraft } from "./itemTypes";
@@ -626,6 +627,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "faq" && (
                   <FaqManagement authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "announcements" && (
+                  <AnnouncementManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "settings" && (
                   <SettingsManagement authHeaders={authHeaders} />

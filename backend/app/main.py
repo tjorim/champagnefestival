@@ -17,6 +17,7 @@ from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
 from app.observability import request_metrics_middleware
 from app.routers import (
+    announcements,
     areas,
     audit,
     auth,
@@ -157,6 +158,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
 
 
 app.include_router(registrations.router)
+app.include_router(announcements.router)
 app.include_router(auth.router)
 app.include_router(audit.router)
 app.include_router(members.router)

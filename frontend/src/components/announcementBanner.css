@@ -1,0 +1,31 @@
+.announcement-stack {
+  position: relative;
+  z-index: 20;
+}
+.announcement-banner {
+  padding: 0.75rem 3rem 0.75rem 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+.announcement-info {
+  background: #d9edf7;
+  color: #123f52;
+}
+.announcement-warning {
+  background: #fff0bf;
+  color: #513d00;
+}
+.announcement-urgent {
+  background: #a9192b;
+  color: #fff;
+}
+.announcement-banner a {
+  color: inherit;
+  margin-inline-start: 0.4rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .announcement-banner {
+    animation: none !important;
+    transform: none !important;
+  }
+}
