@@ -715,3 +715,32 @@ class FaqItem(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class Announcement(Base):
+    """A short, scheduled, localized operational notice."""
+
+    __tablename__ = "announcements"
+    __table_args__ = (
+        UniqueConstraint("sort_order", name="uq_announcements_sort_order", deferrable=True, initially="DEFERRED"),
+        CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_announcements_level"),
+        CheckConstraint("ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at", name="ck_announcements_window"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    text_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    text_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    text_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    level: Mapped[str] = mapped_column(String(10), default="info")
+    active: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    link_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    link_label_nl: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    link_label_en: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    link_label_fr: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    published_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

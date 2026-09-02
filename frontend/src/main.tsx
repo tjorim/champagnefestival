@@ -26,6 +26,7 @@ import EventStructuredData from "./components/JsonLd";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
 import RegistrationModal from "./components/RegistrationModal";
+import AnnouncementBanner from "./components/AnnouncementBanner";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import MaintenancePage from "./components/MaintenancePage";
@@ -385,6 +386,7 @@ function App() {
 
       {/* Header & Navigation */}
       {variant === "classic" ? <HeaderClassic /> : <Header onBrandClick={handleBrandClick} />}
+      <AnnouncementBanner />
       <EventStructuredData />
 
       <main id="main-content">
