@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -38,6 +38,7 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const titleId = useId();
 
   const handleConfirm = async () => {
     setPending(true);
@@ -59,10 +60,13 @@ export default function ConfirmModal({
         if (!pending) onHide();
       }}
       onExited={() => setError(null)}
+      aria-labelledby={titleId}
       centered
     >
       <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="fs-6 text-warning">{title}</Modal.Title>
+        <Modal.Title id={titleId} className="fs-6 text-warning">
+          {title}
+        </Modal.Title>
       </Modal.Header>
       <Modal.Body className="bg-dark text-light">
         {error && (
