@@ -553,6 +553,7 @@ class Person(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), default="")
+    preferred_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
     search_name: Mapped[str] = mapped_column(String(200), default="")
     """Trigger-maintained unaccented lower-case name for operational lookup."""
     search_name_alt: Mapped[str] = mapped_column(String(200), default="")

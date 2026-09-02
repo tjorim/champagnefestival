@@ -805,5 +805,7 @@
   "admin_email_template_order": "Récapitulatif de commande",
   "admin_email_template_payment": "Rappel de paiement en attente",
   "admin_email_template_event": "Informations sur l’événement",
-  "admin_email_preview_action": "Prévisualiser l’e-mail"
+  "admin_email_preview_action": "Prévisualiser l’e-mail",
+  "registration_preferred_language": "Langue de communication préférée",
+  "registration_preferred_language_help": "Utilisée pour les confirmations et les messages ; vous pouvez choisir une autre langue que celle du site."
 }

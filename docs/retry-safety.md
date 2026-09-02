@@ -72,3 +72,7 @@ Callers should generate high-entropy values, retain them only for the retry
 window, and reuse a value only for byte-equivalent intent. Tests for a replayed
 write must cover identical replay, payload mismatch, actor isolation, the
 concurrent-first-use conflict, and both sides of the 72-hour boundary.
+
+## Preferred communication language
+
+Public registration creation writes the explicitly selected communication language to the matched or newly created person in the same transaction as the registration. Registration creation remains non-retryable: a client retry could create a duplicate registration, and the UI does not retry it automatically. Updating an existing matching person's language is last-write-wins and transactionally committed with that registration; no separate preference write is advertised or retried.

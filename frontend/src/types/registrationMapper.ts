@@ -24,6 +24,12 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
       name: (rawPerson.name ?? "") as string,
       email: (rawPerson.email ?? "") as string,
       phone: (rawPerson.phone ?? "") as string,
+      preferredLanguage:
+        rawPerson.preferred_language === "nl" ||
+        rawPerson.preferred_language === "fr" ||
+        rawPerson.preferred_language === "en"
+          ? rawPerson.preferred_language
+          : null,
     },
     eventId: (d.event_id ?? "") as string,
     event: rawEvent ? apiToEvent(rawEvent) : null,

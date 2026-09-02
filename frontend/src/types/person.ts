@@ -9,6 +9,7 @@ export interface Person {
   name: string;
   email: string;
   phone: string;
+  preferredLanguage?: "nl" | "fr" | "en" | null;
   address: string;
   roles: string[];
   nationalRegisterNumber: string | null;
@@ -28,6 +29,7 @@ export function apiToPerson(d: Record<string, unknown>): Person {
     name: d.name as string,
     email: (d.email ?? "") as string,
     phone: (d.phone ?? "") as string,
+    preferredLanguage: (d.preferred_language as Person["preferredLanguage"]) ?? null,
     address: (d.address ?? "") as string,
     roles: (d.roles as string[]) ?? [],
     nationalRegisterNumber: (d.national_register_number as string | null) ?? null,

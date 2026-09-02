@@ -36,8 +36,19 @@ describe("emailComposer", () => {
     },
   );
   it("limits the order summary to the selected registration's order context", () => {
-    const draft = buildRegistrationEmailDraft(registration, "order");
+    const draft = buildRegistrationEmailDraft(registration, "order", "en");
     expect(draft.body).toContain("Brut Réserve × 2");
     expect(draft.body).toContain("Amount due: €12.50");
   });
+});
+
+it.each([
+  ["nl", "Beste Zoë", "Te betalen"],
+  ["fr", "Bonjour Zoë", "Montant dû"],
+  ["en", "Dear Zoë", "Amount due"],
+] as const)("localises registration drafts in %s", (language, greeting, amountLabel) => {
+  const draft = buildRegistrationEmailDraft(registration, "payment", language);
+  expect(draft.body).toContain(greeting);
+  expect(draft.body).toContain(amountLabel);
+  expect(draft.language).toBe(language);
 });

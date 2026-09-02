@@ -87,6 +87,7 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
         phone=parse_phone(body.phone),
+        preferred_language=body.preferred_language,
         address=body.address,
         national_register_number=nrr,
         eid_document_number=eid,
@@ -146,7 +147,7 @@ def search_members_stmt(*, q: str | None = None, active: bool | None = None) -> 
 async def apply_member_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    for field in ("name", "address", "visits_per_month", "club_name", "notes", "active"):
+    for field in ("name", "address", "preferred_language", "visits_per_month", "club_name", "notes", "active"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
 

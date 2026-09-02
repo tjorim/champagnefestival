@@ -123,12 +123,15 @@ async def create_registration(
     if person is None:
         person = Person(
             id=make_id("per"),
+            preferred_language=body.preferred_language,
             name=body.name,
             email=email_norm,
             phone=phone_norm,
         )
         db.add(person)
         await db.flush()
+    else:
+        person.preferred_language = body.preferred_language
 
     registration = Registration(
         id=make_id("reg"),

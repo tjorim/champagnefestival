@@ -100,6 +100,7 @@ class PersonSummaryOut(BaseModel):
     name: str
     email: str
     phone: str
+    preferred_language: Literal["nl", "fr", "en"] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -109,6 +110,7 @@ class PersonOut(BaseModel):
     name: str
     email: str
     phone: str
+    preferred_language: Literal["nl", "fr", "en"] | None = None
     address: str
     roles: list[str]
     national_register_number: str | None
@@ -270,6 +272,7 @@ class RegistrationCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
+    preferred_language: Literal["nl", "fr", "en"] = "nl"
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
@@ -585,6 +588,7 @@ class PersonCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr | None = None
     phone: str = Field(default="", max_length=50)
+    preferred_language: Literal["nl", "fr", "en"] | None = None
     address: str = Field(default="", max_length=300)
     roles: list[str] = Field(default_factory=list)
     national_register_number: str | None = Field(default=None, max_length=20)
@@ -599,6 +603,7 @@ class PersonUpdate(RequestModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=50)
+    preferred_language: Literal["nl", "fr", "en"] | None = None
     address: str | None = Field(default=None, max_length=300)
     roles: list[str] | None = None
     national_register_number: str | None = Field(default=None, max_length=20)

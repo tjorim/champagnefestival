@@ -420,6 +420,7 @@ export async function submitRegistration(
       name: payload.name,
       email: payload.email,
       phone: payload.phone,
+      preferred_language: payload.preferredLanguage,
       event_id: payload.eventId,
       guest_count: payload.guestCount,
       // The server resolves name/price/category from the event's real products —

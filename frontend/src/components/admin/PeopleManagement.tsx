@@ -320,7 +320,15 @@ export default function PeopleManagement({
                   <Button
                     size="sm"
                     variant="outline-warning"
-                    onClick={() => setEmailDraft(buildMemberEmailDraft(person.name, person.email))}
+                    onClick={() =>
+                      setEmailDraft(
+                        buildMemberEmailDraft(
+                          person.name,
+                          person.email,
+                          person.preferredLanguage ?? "nl",
+                        ),
+                      )
+                    }
                     title={m.admin_email_compose_for({ name: person.name })}
                     aria-label={m.admin_email_compose_for({ name: person.name })}
                   >

@@ -805,5 +805,7 @@
   "admin_email_template_order": "Besteloverzicht",
   "admin_email_template_payment": "Herinnering openstaande betaling",
   "admin_email_template_event": "Evenementinformatie",
-  "admin_email_preview_action": "E-mail bekijken"
+  "admin_email_preview_action": "E-mail bekijken",
+  "registration_preferred_language": "Voorkeurstaal voor communicatie",
+  "registration_preferred_language_help": "Gebruikt voor bevestigingen en berichten; je kunt een andere taal kiezen dan de taal van de site."
 }

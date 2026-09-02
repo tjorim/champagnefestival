@@ -805,5 +805,7 @@
   "admin_email_template_order": "Order summary",
   "admin_email_template_payment": "Outstanding payment reminder",
   "admin_email_template_event": "Event information",
-  "admin_email_preview_action": "Preview email"
+  "admin_email_preview_action": "Preview email",
+  "registration_preferred_language": "Preferred communication language",
+  "registration_preferred_language_help": "Used for confirmations and messages; you can choose a different language from the site."
 }

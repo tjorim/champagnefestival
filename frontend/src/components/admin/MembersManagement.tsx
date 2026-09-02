@@ -184,7 +184,15 @@ export default function MembersManagement({
                   <Button
                     size="sm"
                     variant="outline-warning"
-                    onClick={() => setEmailDraft(buildMemberEmailDraft(member.name, member.email))}
+                    onClick={() =>
+                      setEmailDraft(
+                        buildMemberEmailDraft(
+                          member.name,
+                          member.email,
+                          member.preferredLanguage ?? "nl",
+                        ),
+                      )
+                    }
                     title={m.admin_email_compose_for({ name: member.name })}
                     aria-label={m.admin_email_compose_for({ name: member.name })}
                   >
