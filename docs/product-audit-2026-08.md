@@ -187,7 +187,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | --- | --- | --- |
 | #921 | backend, android (completed 2026-08-29) | bug — event-day blocker |
 | #922 | backend, auth (completed 2026-08-30) | bug — dead feature |
-| 12 | frontend, backend, auth | gap — visitor account and order-history experience |
+| #953 | frontend, backend, auth | gap — visitor account and order-history experience |
 | #923 | backend, frontend (completed 2026-08-29) | bug — silent data loss |
 | #924 | backend, frontend (completed 2026-08-30) | gap — core flow incomplete |
 | #925 | frontend, backend | bug — availability |
@@ -197,12 +197,12 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #929 | frontend (completed 2026-08-30) | bug — stale state |
 | #930 | backend (completed 2026-08-30) | bug — export safety |
 | #931 | backend, frontend (completed 2026-09-01) | bug — silent truncation |
-| 8 | backend | constraint — scaling |
+| #932 | backend | constraint — scaling |
 | #933 | backend, frontend (completed 2026-09-01) | gap — lifecycle |
-| 6 | backend | gap — compliance |
-| 2 | frontend | quality — UI/UX, a11y |
-| 9 | frontend | gap — discoverability |
-| 3 | frontend | gap — event-day resilience |
+| #934 | backend | gap — compliance |
+| #935 | frontend | quality — UI/UX, a11y |
+| #936 | frontend | gap — discoverability |
+| #937 | frontend | gap — event-day resilience |
 | #938 | docs (completed 2026-08-29) | accuracy |
 | #939 | backend, frontend (completed 2026-08-29) | bug — oversell risk |
 
@@ -215,11 +215,11 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | --- | --- | --- | --- |
 | #940 | backend, frontend, admin (completed 2026-08-29) | public contact settings | Built on #925 failure semantics; related to #923 |
 | #943 | frontend, admin (completed 2026-09-01) | individual email-client actions | Does not replace #924 |
-| 1 | backend, frontend, admin, accessibility | scheduled announcements | Coordinates with #929, #931, and #935 |
-| 7 | backend, frontend, admin, security | versioned policy publishing | Follows #934's policy decisions |
+| #945 | backend, frontend, admin, accessibility | scheduled announcements | Coordinates with #929, #931, and #935 |
+| #944 | backend, frontend, admin, security | versioned policy publishing | Follows #934's policy decisions |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
-| 10 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; coordinates with #937 |
-| 11 | backend, frontend, admin | central composer | Blocked by #945, #941, and #947 |
+| #941 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; coordinates with #937 |
+| #942 | backend, frontend, admin | central composer | Blocked by #945, #941, and #947 |
 
 ## Cross-cutting feature and audit relationships
 
