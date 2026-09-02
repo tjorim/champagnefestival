@@ -70,7 +70,7 @@ async function submitContactForm(form: FormData, submissionId: string): Promise<
  * Contact form component with validation using react-bootstrap components
  */
 const ContactForm = () => {
-  const formStartTime = useRef(new Date().toISOString());
+  const [formStartTime] = useState(() => new Date().toISOString());
   const submissionId = useRef(crypto.randomUUID());
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -88,7 +88,7 @@ const ContactForm = () => {
       email: "",
       message: "",
       honeypot: "",
-      formStartTime: formStartTime.current,
+      formStartTime,
     } as FormData,
     onSubmit: async ({ value }) => {
       setGeneralError(null);
@@ -110,7 +110,7 @@ const ContactForm = () => {
           email: "",
           message: "",
           honeypot: "",
-          formStartTime: formStartTime.current,
+          formStartTime,
         });
       } catch (error) {
         console.warn("Form submission error:", error);

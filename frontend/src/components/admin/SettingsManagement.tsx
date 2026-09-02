@@ -2,7 +2,7 @@
  * SettingsManagement — site-wide toggles. Currently just maintenance mode.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Card from "react-bootstrap/Card";
@@ -60,12 +60,18 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
 
   const maintenanceMode = settingsQuery.data?.maintenance_mode;
 
-  useEffect(() => {
-    if (!settingsQuery.data) return;
-    setPublicEmail(settingsQuery.data.public_email);
-    setPublicPhone(settingsQuery.data.public_phone);
-    setFacebookUrl(settingsQuery.data.facebook_url);
-  }, [settingsQuery.data]);
+  // Seed the editable fields once the settings load. Adjust during render
+  // (comparing against the previous query data) rather than in an effect,
+  // since this only needs to react to that data actually changing.
+  const [prevSettingsData, setPrevSettingsData] = useState(settingsQuery.data);
+  if (settingsQuery.data !== prevSettingsData) {
+    setPrevSettingsData(settingsQuery.data);
+    if (settingsQuery.data) {
+      setPublicEmail(settingsQuery.data.public_email);
+      setPublicPhone(settingsQuery.data.public_phone);
+      setFacebookUrl(settingsQuery.data.facebook_url);
+    }
+  }
 
   return (
     <Card bg="dark" text="white" border="secondary">

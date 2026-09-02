@@ -6,6 +6,7 @@ import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteMyAccount } from "@/utils/meApi";
+import ConfirmModal from "@/components/ConfirmModal";
 
 /**
  * Self-service account page, reachable only by direct link (no site nav entry) —
@@ -26,8 +27,7 @@ export default function MyAccountPage() {
     logout,
   } = useAuth();
   const loginRequested = useRef(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (isLoading || isAuthenticated || authError || loginRequested.current) return;
@@ -36,26 +36,16 @@ export default function MyAccountPage() {
   }, [isLoading, isAuthenticated, authError, login]);
 
   const retrySignIn = () => {
-    setDeleteError("");
     loginRequested.current = true;
     clearAuthError();
     login("/me");
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(m.my_account_delete_confirm())) return;
     const accessToken = getAccessToken();
-    if (!accessToken) return;
-
-    setDeleteError("");
-    setIsDeleting(true);
-    try {
-      await deleteMyAccount(accessToken);
-      logout();
-    } catch (error) {
-      setIsDeleting(false);
-      setDeleteError(error instanceof Error ? error.message : m.my_account_delete_error());
-    }
+    if (!accessToken) throw new Error(m.my_account_delete_error());
+    await deleteMyAccount(accessToken);
+    logout();
   };
 
   return (
@@ -87,28 +77,24 @@ export default function MyAccountPage() {
             </p>
           )}
 
-          {deleteError && (
-            <Alert variant="danger" role="alert">
-              {deleteError}
-            </Alert>
-          )}
-
           <Alert variant="secondary">
             <h2 className="h6">{m.my_account_delete_heading()}</h2>
             <p className="small mb-3">{m.my_account_delete_description()}</p>
-            <Button variant="outline-danger" size="sm" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-2" />
-                  {m.my_account_deleting()}
-                </>
-              ) : (
-                m.my_account_delete_button()
-              )}
+            <Button variant="outline-danger" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+              {m.my_account_delete_button()}
             </Button>
           </Alert>
         </>
       )}
+
+      <ConfirmModal
+        show={showDeleteConfirm}
+        title={m.my_account_delete_heading()}
+        body={m.my_account_delete_confirm()}
+        errorFallback={m.my_account_delete_error()}
+        onConfirm={handleDelete}
+        onHide={() => setShowDeleteConfirm(false)}
+      />
     </Container>
   );
 }

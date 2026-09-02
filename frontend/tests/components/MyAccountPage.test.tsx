@@ -6,14 +6,6 @@ import MyAccountPage from "@/components/MyAccountPage";
 import { useAuth } from "@/contexts/AuthContext";
 import { server } from "@/mocks/server";
 
-// happy-dom does not implement window.confirm, so it must be stubbed rather
-// than wrapped (vi.spyOn requires an existing function).
-function mockConfirm(returnValue: boolean) {
-  const fn = vi.fn().mockReturnValue(returnValue);
-  vi.stubGlobal("confirm", fn);
-  return fn;
-}
-
 vi.mock("@/paraglide/messages", () => ({
   m: {
     my_account_title: () => "My Account",
@@ -27,12 +19,18 @@ vi.mock("@/paraglide/messages", () => ({
     pebble_pair_retry_sign_in: () => "Try signing in again",
     auth_signing_in: () => "Signing in…",
     auth_signing_out: () => "Signing out…",
+    admin_action_cancel: () => "Cancel",
+    admin_action_confirm: () => "Confirm",
   },
 }));
 
+async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Delete my account" }));
+  return screen.getByRole("dialog");
+}
+
 describe("MyAccountPage", () => {
   beforeEach(() => {
-    mockConfirm(true);
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -80,14 +78,14 @@ describe("MyAccountPage", () => {
     render(<MyAccountPage />);
 
     expect(screen.getByText("Signed in as mock-user")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Delete my account" }));
+    await openDeleteConfirm(user);
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
     expect(capturedAuth).toBe("Bearer oidc-access-token");
   });
 
   it("does not delete when the confirmation is declined", async () => {
-    mockConfirm(false);
     let deleteCalled = false;
     server.use(
       http.delete("/api/me", () => {
@@ -98,9 +96,11 @@ describe("MyAccountPage", () => {
 
     const user = userEvent.setup();
     render(<MyAccountPage />);
-    await user.click(screen.getByRole("button", { name: "Delete my account" }));
+    await openDeleteConfirm(user);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(deleteCalled).toBe(false);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("shows an error and re-enables the button when deletion fails", async () => {
@@ -112,10 +112,11 @@ describe("MyAccountPage", () => {
 
     const user = userEvent.setup();
     render(<MyAccountPage />);
-    await user.click(screen.getByRole("button", { name: "Delete my account" }));
+    await openDeleteConfirm(user);
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete my account" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Confirm" })).not.toBeDisabled();
   });
 
   it("offers a way out when sign-in itself fails", async () => {

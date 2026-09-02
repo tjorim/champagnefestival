@@ -166,7 +166,7 @@ export default function MyRegistrationsPage() {
     setIsEmailInvalid(false);
     attemptedToken.current = "";
     registrationsMutation.reset();
-  }, [navigate, registrationsMutation]);
+  }, [navigate, registrationsMutation, setError, setIsEmailInvalid, setRequestSent]);
 
   const handleEmailSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -197,7 +197,7 @@ export default function MyRegistrationsPage() {
         setError(m.my_registrations_error());
       }
     },
-    [email, requestLookupMutation],
+    [email, requestLookupMutation, setError, setIsEmailInvalid, setRequestSent],
   );
 
   return (

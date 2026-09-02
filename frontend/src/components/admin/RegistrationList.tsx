@@ -268,12 +268,20 @@ export default function RegistrationList({
     clearSelection();
   }, [activeEdition.id, isActiveEditionDay, clearSelection]);
 
-  useEffect(() => {
-    if (applyActiveEditionFilterRequest === 0) return;
-    setActiveEditionOnly(true);
-    setPage(1);
-    clearSelection();
-  }, [applyActiveEditionFilterRequest, clearSelection]);
+  // The parent bumps this counter to imperatively request the filter. Adjust
+  // during render (comparing against the previous value) rather than in an
+  // effect, since this only needs to react to that one transition.
+  const [appliedEditionFilterRequest, setAppliedEditionFilterRequest] = useState(
+    applyActiveEditionFilterRequest,
+  );
+  if (applyActiveEditionFilterRequest !== appliedEditionFilterRequest) {
+    setAppliedEditionFilterRequest(applyActiveEditionFilterRequest);
+    if (applyActiveEditionFilterRequest !== 0) {
+      setActiveEditionOnly(true);
+      setPage(1);
+      clearSelection();
+    }
+  }
 
   const changeStatusFilter = useCallback(
     (next: "all" | RegistrationStatus) => {
@@ -1157,6 +1165,8 @@ export default function RegistrationList({
           )}
           {bulkError && (
             <Alert
+              role="alert"
+              aria-live="assertive"
               variant="danger"
               className="py-1 mt-2 mb-0"
               dismissible
@@ -1167,6 +1177,8 @@ export default function RegistrationList({
           )}
           {eventExportError && (
             <Alert
+              role="alert"
+              aria-live="assertive"
               variant="danger"
               className="py-1 mt-2 mb-0"
               dismissible
@@ -1177,6 +1189,8 @@ export default function RegistrationList({
           )}
           {csvExportError && (
             <Alert
+              role="alert"
+              aria-live="assertive"
               variant="danger"
               className="py-1 mt-2 mb-0"
               dismissible
@@ -1213,6 +1227,8 @@ export default function RegistrationList({
               )}
               {selectAllMatchingError && (
                 <Alert
+                  role="alert"
+                  aria-live="assertive"
                   variant="danger"
                   className="py-1 mb-2"
                   dismissible
@@ -1255,7 +1271,14 @@ export default function RegistrationList({
 
         <Card.Body className="p-0">
           {sectionError && (
-            <Alert variant="danger" dismissible className="m-3 mb-0" onClose={onClearSectionError}>
+            <Alert
+              role="alert"
+              aria-live="assertive"
+              variant="danger"
+              dismissible
+              className="m-3 mb-0"
+              onClose={onClearSectionError}
+            >
               {sectionError}
             </Alert>
           )}
@@ -1309,7 +1332,6 @@ export default function RegistrationList({
                                   }
                                 : undefined
                             }
-                            role={canSort ? "button" : undefined}
                             tabIndex={canSort ? 0 : undefined}
                             aria-sort={
                               canSort
