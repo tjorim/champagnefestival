@@ -1,4 +1,5 @@
 """Transactional announcement management shared by API adapters."""
+
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -12,11 +13,28 @@ from app.utils import make_id
 
 
 def to_dict(item: Announcement) -> dict:
-    return {name: getattr(item, name) for name in (
-        "id", "text_nl", "text_en", "text_fr", "level", "active", "sort_order",
-        "starts_at", "ends_at", "link_url", "link_label_nl", "link_label_en",
-        "link_label_fr", "published_at", "published_by", "created_at", "updated_at",
-    )}
+    return {
+        name: getattr(item, name)
+        for name in (
+            "id",
+            "text_nl",
+            "text_en",
+            "text_fr",
+            "level",
+            "active",
+            "sort_order",
+            "starts_at",
+            "ends_at",
+            "link_url",
+            "link_label_nl",
+            "link_label_en",
+            "link_label_fr",
+            "published_at",
+            "published_by",
+            "created_at",
+            "updated_at",
+        )
+    }
 
 
 async def list_all(db: AsyncSession) -> list[dict]:
@@ -32,15 +50,32 @@ async def create(db: AsyncSession, *, actor: str, body: AnnouncementCreate, requ
     if item.active:
         item.published_at, item.published_by = datetime.now(UTC), actor
     db.add(item)
-    await write_audit_entry(db, actor=actor, action="announcement_created", resource_type="announcement", resource_id=item.id, request_id=request_id, details={"active": item.active})
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="announcement_created",
+        resource_type="announcement",
+        resource_id=item.id,
+        request_id=request_id,
+        details={"active": item.active},
+    )
     if item.active:
-        await write_audit_entry(db, actor=actor, action="announcement_published", resource_type="announcement", resource_id=item.id, request_id=request_id)
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="announcement_published",
+            resource_type="announcement",
+            resource_id=item.id,
+            request_id=request_id,
+        )
     await db.commit()
     await db.refresh(item)
     return to_dict(item)
 
 
-async def update(db: AsyncSession, *, actor: str, item_id: str, body: AnnouncementUpdate, request_id: str | None) -> dict:
+async def update(
+    db: AsyncSession, *, actor: str, item_id: str, body: AnnouncementUpdate, request_id: str | None
+) -> dict:
     item = await db.get(Announcement, item_id)
     if item is None:
         raise NotFoundError(f"Announcement '{item_id}' not found.")
@@ -86,7 +121,15 @@ async def reorder(db: AsyncSession, *, actor: str, ordered_ids: list[str], reque
     by_id = {item.id: item for item in items}
     for position, item_id in enumerate(ordered_ids):
         by_id[item_id].sort_order = position
-    await write_audit_entry(db, actor=actor, action="announcements_reordered", resource_type="announcement", resource_id="collection", request_id=request_id, details={"ordered_ids": ordered_ids})
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="announcements_reordered",
+        resource_type="announcement",
+        resource_id="collection",
+        request_id=request_id,
+        details={"ordered_ids": ordered_ids},
+    )
     await db.commit()
     return [to_dict(by_id[item_id]) for item_id in ordered_ids]
 
@@ -96,5 +139,12 @@ async def delete(db: AsyncSession, *, actor: str, item_id: str, request_id: str 
     if item is None:
         raise NotFoundError(f"Announcement '{item_id}' not found.")
     await db.delete(item)
-    await write_audit_entry(db, actor=actor, action="announcement_deleted", resource_type="announcement", resource_id=item_id, request_id=request_id)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="announcement_deleted",
+        resource_type="announcement",
+        resource_id=item_id,
+        request_id=request_id,
+    )
     await db.commit()
