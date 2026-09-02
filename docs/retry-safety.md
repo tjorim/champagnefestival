@@ -86,4 +86,6 @@ the state change, but do not accept an idempotency key. The admin client therefo
 sets mutation retries to `false`; after an ambiguous response, an administrator
 must reload the list before deciding whether to repeat the action. Reorder accepts
 the complete ordered ID set and applies it in one locked transaction, so it cannot
-leave a partial order.
+leave a partial order. Create serializes its internal display-position allocation
+with a transaction-scoped advisory lock; this prevents concurrent valid creates
+from colliding, but does not make a client retry idempotent.

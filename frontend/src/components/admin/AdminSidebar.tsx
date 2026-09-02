@@ -197,7 +197,7 @@ export default function AdminSidebar({
                 <SidebarItem
                   itemKey="announcements"
                   icon="bi-megaphone"
-                  label="Announcements"
+                  label={m.admin_announcements_section()}
                   {...itemProps}
                 />
                 <SidebarItem

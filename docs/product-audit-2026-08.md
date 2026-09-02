@@ -215,11 +215,11 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | --- | --- | --- | --- |
 | #940 | backend, frontend, admin (completed 2026-08-29) | public contact settings | Built on #925 failure semantics; related to #923 |
 | #943 | frontend, admin (completed 2026-09-01) | individual email-client actions | Does not replace #924 |
-| #945 | backend, frontend, admin, accessibility (completed 2026-09-02) | scheduled announcements |
+| #945 | backend, frontend, admin, accessibility (completed 2026-09-02) | scheduled announcements | Coordinated with #929, #931, and #935 |
 | #944 | backend, frontend, admin, security | versioned policy publishing | Follows #934's policy decisions |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
 | #941 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; coordinates with #937 |
-| #942 | backend, frontend, admin | central composer | Blocked by #945, #941, and #947 |
+| #942 | backend, frontend, admin | central composer | Blocked by #941 and #947 |
 
 ## Cross-cutting feature and audit relationships
 

@@ -43,11 +43,17 @@ const empty: Draft = {
   link_label_fr: "",
 };
 
-function localDate(value: string | null) {
-  return value ? value.slice(0, 16) : "";
+export function localDate(value: string | null, timezoneOffsetMinutes?: number) {
+  if (!value) return "";
+  const date = new Date(value);
+  const offset = timezoneOffsetMinutes ?? date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
-function iso(value: string | null) {
-  return value ? new Date(value).toISOString() : null;
+export function iso(value: string | null, timezoneOffsetMinutes?: number) {
+  if (!value) return null;
+  if (timezoneOffsetMinutes === undefined) return new Date(value).toISOString();
+  const localAsUtc = new Date(`${value}:00.000Z`);
+  return new Date(localAsUtc.getTime() + timezoneOffsetMinutes * 60_000).toISOString();
 }
 
 function writePayload(item: Draft) {

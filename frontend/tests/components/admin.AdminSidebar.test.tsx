@@ -12,6 +12,7 @@ vi.mock("@/paraglide/messages", () => ({
     admin_content_tab: () => "Content",
     admin_content_exhibitors_section: () => "Exhibitors",
     admin_content_faq_section: () => "FAQ",
+    admin_announcements_section: () => "Announcements",
     admin_contact_messages_section: () => "Contact messages",
     admin_content_settings_section: () => "Settings",
     admin_venue_group: () => "Venue",

@@ -812,5 +812,7 @@
   "my_registrations_save_language": "Taal opslaan",
   "my_registrations_language_saved": "Communicatietaal opgeslagen.",
   "my_account_preference_error": "Je communicatietaal kon niet worden bijgewerkt. Probeer het opnieuw.",
-  "admin_email_copy_failed": "Kopiëren naar het klembord is mislukt. Selecteer en kopieer de ontvanger, het onderwerp en het bericht hierboven handmatig."
+  "admin_email_copy_failed": "Kopiëren naar het klembord is mislukt. Selecteer en kopieer de ontvanger, het onderwerp en het bericht hierboven handmatig.",
+  "announcements_accessible_label": "Operationele mededelingen",
+  "admin_announcements_section": "Mededelingen"
 }

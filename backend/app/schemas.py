@@ -28,6 +28,16 @@ class RequestModel(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+def _validate_safe_announcement_url(value: str | None) -> str | None:
+    """Accept only absolute HTTPS announcement links without embedded credentials."""
+    if value is None:
+        return None
+    parsed = urlsplit(value)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+        raise ValueError("link_url must be a safe HTTPS URL without credentials")
+    return value
+
+
 # ---------------------------------------------------------------------------
 # Order items
 # ---------------------------------------------------------------------------
@@ -1291,10 +1301,12 @@ class AnnouncementWrite(RequestModel):
     active: bool = False
     starts_at: datetime | None = None
     ends_at: datetime | None = None
-    link_url: str | None = Field(default=None, max_length=1000, pattern=r"^https://")
+    link_url: str | None = Field(default=None, max_length=1000)
     link_label_nl: str | None = Field(default=None, max_length=120)
     link_label_en: str | None = Field(default=None, max_length=120)
     link_label_fr: str | None = Field(default=None, max_length=120)
+
+    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
 
     @model_validator(mode="after")
     def validate_announcement(self):
@@ -1306,12 +1318,8 @@ class AnnouncementWrite(RequestModel):
             raise ValueError("ends_at must include a timezone")
         if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
             raise ValueError("ends_at must be later than starts_at")
-        if self.link_url:
-            parsed = urlsplit(self.link_url)
-            if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-                raise ValueError("link_url must be a safe HTTPS URL without credentials")
-            if not any((self.link_label_nl, self.link_label_en, self.link_label_fr)):
-                raise ValueError("a link URL requires at least one translated link label")
+        if self.link_url and not any((self.link_label_nl, self.link_label_en, self.link_label_fr)):
+            raise ValueError("a link URL requires at least one translated link label")
         return self
 
 
@@ -1327,10 +1335,12 @@ class AnnouncementUpdate(RequestModel):
     active: bool | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None
-    link_url: str | None = Field(default=None, max_length=1000, pattern=r"^https://")
+    link_url: str | None = Field(default=None, max_length=1000)
     link_label_nl: str | None = Field(default=None, max_length=120)
     link_label_en: str | None = Field(default=None, max_length=120)
     link_label_fr: str | None = Field(default=None, max_length=120)
+
+    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
 
     @field_validator("starts_at", "ends_at")
     @classmethod

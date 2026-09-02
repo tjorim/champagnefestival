@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { getLocale } from "@/paraglide/runtime";
+import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import "./announcementBanner.css";
 
@@ -24,11 +25,12 @@ export default function AnnouncementBanner() {
     queryKey: queryKeys.announcements(locale),
     queryFn: () => fetchActiveAnnouncements(locale),
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
   if (!data.length) return null;
 
   return (
-    <section className="announcement-stack" aria-label="Announcements">
+    <section className="announcement-stack" aria-label={m.announcements_accessible_label()}>
       {data.map((item) => (
         <div
           key={item.id}

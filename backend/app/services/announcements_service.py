@@ -43,6 +43,10 @@ async def list_all(db: AsyncSession) -> list[dict]:
 
 
 async def create(db: AsyncSession, *, actor: str, body: AnnouncementCreate, request_id: str | None) -> dict:
+    # Serialize the short max-plus-one allocation. Without this transaction-level
+    # lock, two valid concurrent creates can choose the same sort_order and one
+    # leaks the deferred unique-constraint failure at commit.
+    await db.execute(select(func.pg_advisory_xact_lock(945)))
     maximum = (await db.execute(select(func.max(Announcement.sort_order)))).scalar_one()
     values = body.model_dump()
     values.update(id=make_id("ann"), sort_order=0 if maximum is None else maximum + 1)

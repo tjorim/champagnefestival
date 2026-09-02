@@ -1,11 +1,15 @@
 """Announcement scheduling, localization, CRUD, ordering, and audit tests."""
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import AuditEntry
+from app.models import Announcement, AuditEntry
+from app.schemas import AnnouncementCreate
+from app.services.announcements_service import create
 from tests.helpers import ADMIN_HEADERS
 
 
@@ -66,3 +70,34 @@ async def test_rejects_unsafe_links_naive_dates_and_invalid_windows(client):
         {"text_nl": "Bad", "starts_at": "2026-09-03T12:00:00Z", "ends_at": "2026-09-02T12:00:00Z"},
     ):
         assert (await client.post("/api/announcements", json=payload, headers=ADMIN_HEADERS)).status_code == 422
+
+
+@pytest.mark.anyio
+async def test_update_rejects_credential_bearing_link(client):
+    item = (await client.post("/api/announcements", json={"text_nl": "Veilig"}, headers=ADMIN_HEADERS)).json()
+    response = await client.put(
+        f"/api/announcements/{item['id']}",
+        json={"link_url": "https://user:secret@example.com/info", "link_label_nl": "Meer"},
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_concurrent_creates_allocate_distinct_sequential_positions(engine):
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def create_one(text: str) -> dict:
+        async with sessions() as session:
+            return await create(
+                session,
+                actor="admin-sub",
+                body=AnnouncementCreate(text_nl=text),
+                request_id=None,
+            )
+
+    created = await asyncio.gather(create_one("Eerste"), create_one("Tweede"))
+    assert sorted(item["sort_order"] for item in created) == [0, 1]
+    async with sessions() as session:
+        positions = (await session.execute(select(Announcement.sort_order))).scalars().all()
+    assert sorted(positions) == [0, 1]
