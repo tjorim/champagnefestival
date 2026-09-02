@@ -36,6 +36,12 @@ def upgrade() -> None:
             server_default="nancy.cattrysse@telenet.be",
         ),
     )
+    op.add_column("people", sa.Column("preferred_language", sa.String(length=2), nullable=True))
+    op.create_check_constraint(
+        "ck_people_preferred_language",
+        "people",
+        "preferred_language IS NULL OR preferred_language IN ('nl', 'fr', 'en')",
+    )
     op.alter_column("table_types", "max_capacity", new_column_name="capacity")
     op.add_column(
         "events",
@@ -93,6 +99,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_constraint("ck_people_preferred_language", "people", type_="check")
+    op.drop_column("people", "preferred_language")
     op.drop_column("events", "registrations_close_at")
     op.add_column(
         "tables",
