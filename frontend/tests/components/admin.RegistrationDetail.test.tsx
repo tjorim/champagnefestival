@@ -354,3 +354,23 @@ describe("RegistrationDetail", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+it("offers all registration email templates and previews the selected registration", () => {
+  renderDetail();
+  const template = screen.getByRole("combobox", { name: "admin_email_template_label" });
+  expect(
+    within(template)
+      .getAllByRole("option")
+      .map((option) => option.getAttribute("value")),
+  ).toEqual(["general", "order", "payment", "event"]);
+  fireEvent.change(template, { target: { value: "order" } });
+  fireEvent.click(screen.getByRole("button", { name: "admin_email_preview_action" }));
+  const dialogs = screen.getAllByRole("dialog");
+  const preview = within(dialogs[dialogs.length - 1]!);
+  expect(preview.getByDisplayValue(/Brut Reserve × 3/)).toBeInTheDocument();
+  expect(preview.getByRole("button", { name: "admin_email_open_client" })).toHaveAttribute(
+    "href",
+    expect.stringMatching(/^mailto:/),
+  );
+  expect(preview.queryByText(/Please seat|Wheelchair|token-abc/)).not.toBeInTheDocument();
+});

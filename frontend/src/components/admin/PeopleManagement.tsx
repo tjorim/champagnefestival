@@ -24,6 +24,8 @@ import { AdminTablePagination } from "./AdminTablePagination";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
+import EmailComposeModal from "./EmailComposeModal";
 
 const COL_VIS_KEY = "admin-col-vis-people";
 
@@ -91,6 +93,7 @@ export default function PeopleManagement({
   const [deleteError, setDeleteError] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
@@ -313,6 +316,17 @@ export default function PeopleManagement({
               : [];
             return (
               <div className="d-flex flex-wrap gap-1">
+                {person.email && (
+                  <Button
+                    size="sm"
+                    variant="outline-warning"
+                    onClick={() => setEmailDraft(buildMemberEmailDraft(person.name, person.email))}
+                    title={m.admin_email_compose_for({ name: person.name })}
+                    aria-label={m.admin_email_compose_for({ name: person.name })}
+                  >
+                    <i className="bi bi-envelope" aria-hidden="true" />
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="outline-light"
@@ -400,6 +414,7 @@ export default function PeopleManagement({
 
   return (
     <>
+      <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
       <Card bg="dark" text="white" border="secondary">
         <Card.Header className="pb-2">
           <div className="d-flex align-items-center justify-content-between gap-2 mb-2">

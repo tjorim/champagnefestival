@@ -789,5 +789,21 @@
   "admin_content_edition_registration_closes": "Registrations close at",
   "registration_accessibility_note": "Accessibility needs (optional)",
   "registration_accessibility_note_help": "Tell us about wheelchair access, seating or other support you need.",
-  "registration_closed": "Registrations closed"
+  "registration_closed": "Registrations closed",
+  "admin_email_preview_title": "Email preview",
+  "admin_email_to_label": "To",
+  "admin_email_subject_label": "Subject",
+  "admin_email_body_label": "Message",
+  "admin_email_too_long": "This message is too long to open safely as an email link. Copy the email text instead.",
+  "admin_email_copied": "Email text copied.",
+  "admin_email_copy_text": "Copy email text",
+  "admin_email_open_client": "Open in email client",
+  "admin_email_compose_for": "Prepare email for {name}",
+  "admin_email_registration_title": "Email this registrant",
+  "admin_email_template_label": "Template",
+  "admin_email_template_general": "General registration message",
+  "admin_email_template_order": "Order summary",
+  "admin_email_template_payment": "Outstanding payment reminder",
+  "admin_email_template_event": "Event information",
+  "admin_email_preview_action": "Preview email"
 }

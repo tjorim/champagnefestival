@@ -789,5 +789,21 @@
   "admin_content_edition_registration_closes": "Inschrijvingen sluiten op",
   "registration_accessibility_note": "Toegankelijkheidsbehoeften (optioneel)",
   "registration_accessibility_note_help": "Laat ons weten welke rolstoeltoegang, zitplaats of andere ondersteuning u nodig hebt.",
-  "registration_closed": "Inschrijvingen gesloten"
+  "registration_closed": "Inschrijvingen gesloten",
+  "admin_email_preview_title": "E-mailvoorbeeld",
+  "admin_email_to_label": "Aan",
+  "admin_email_subject_label": "Onderwerp",
+  "admin_email_body_label": "Bericht",
+  "admin_email_too_long": "Dit bericht is te lang om veilig als e-maillink te openen. Kopieer in plaats daarvan de e-mailtekst.",
+  "admin_email_copied": "E-mailtekst gekopieerd.",
+  "admin_email_copy_text": "E-mailtekst kopiëren",
+  "admin_email_open_client": "Openen in e-mailclient",
+  "admin_email_compose_for": "E-mail voorbereiden voor {name}",
+  "admin_email_registration_title": "Deze inschrijver e-mailen",
+  "admin_email_template_label": "Sjabloon",
+  "admin_email_template_general": "Algemeen inschrijvingsbericht",
+  "admin_email_template_order": "Besteloverzicht",
+  "admin_email_template_payment": "Herinnering openstaande betaling",
+  "admin_email_template_event": "Evenementinformatie",
+  "admin_email_preview_action": "E-mail bekijken"
 }

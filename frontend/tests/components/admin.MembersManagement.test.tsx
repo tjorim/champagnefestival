@@ -203,3 +203,17 @@ describe("MembersManagement — active/inactive filter", () => {
     expect(screen.getByText("Inactive Ian")).toBeInTheDocument();
   });
 });
+
+describe("MembersManagement — email action", () => {
+  it("shows an accessible email action only when the member has an address", () => {
+    renderMembersManagement({
+      members: [makeMember(), makeMember({ id: "no-email", name: "No Email", email: "" })],
+    });
+    expect(
+      screen.getByRole("button", { name: 'admin_email_compose_for({"name":"Bob Member"})' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: 'admin_email_compose_for({"name":"No Email"})' }),
+    ).not.toBeInTheDocument();
+  });
+});
