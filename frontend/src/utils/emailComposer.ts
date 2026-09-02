@@ -29,6 +29,9 @@ const copy = {
     event: "Event",
     date: "Date",
     start: "Start time",
+    paid: "paid",
+    partial: "partially paid",
+    unpaid: "unpaid",
   },
   nl: {
     dear: "Beste",
@@ -46,6 +49,9 @@ const copy = {
     event: "Evenement",
     date: "Datum",
     start: "Starttijd",
+    paid: "betaald",
+    partial: "gedeeltelijk betaald",
+    unpaid: "onbetaald",
   },
   fr: {
     dear: "Bonjour",
@@ -63,6 +69,9 @@ const copy = {
     event: "Événement",
     date: "Date",
     start: "Heure de début",
+    paid: "payé",
+    partial: "partiellement payé",
+    unpaid: "non payé",
   },
 } as const;
 export function buildMemberEmailDraft(
@@ -90,7 +99,7 @@ export function buildRegistrationEmailDraft(
     reference = `${t.registration}: ${registration.id}`,
     event = eventDate ? `${eventName} — ${eventDate}` : eventName,
     closing = `\n\n${t.regards},\nChampagnefestival`,
-    payment = `${t.status}: ${registration.paymentStatus}${registration.amountDue != null ? `\n${t.due}: €${registration.amountDue.toFixed(2)}` : ""}`,
+    payment = `${t.status}: ${t[registration.paymentStatus]}${registration.amountDue != null ? `\n${t.due}: €${registration.amountDue.toFixed(2)}` : ""}`,
     orders = registration.orderItems.map((i) => `- ${i.name} × ${i.quantity}`).join("\n") || t.none;
   const content = {
     general: {

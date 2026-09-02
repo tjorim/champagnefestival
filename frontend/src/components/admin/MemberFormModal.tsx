@@ -23,6 +23,7 @@ export interface MemberFormData {
   name: string;
   email: string;
   phone: string;
+  preferredLanguage?: "nl" | "fr" | "en" | null;
   address: string;
   clubName: string;
   notes: string;
@@ -43,6 +44,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             name: member.name,
             email: member.email ?? "",
             phone: member.phone ?? "",
+            preferredLanguage: member.preferredLanguage ?? null,
             address: member.address ?? "",
             clubName: member.clubName ?? "",
             notes: member.notes ?? "",
@@ -52,6 +54,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             name: "",
             email: "",
             phone: "",
+            preferredLanguage: null,
             address: "",
             clubName: "",
             notes: "",
@@ -69,6 +72,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           name: value.name.trim(),
           email: value.email.trim(),
           phone: value.phone.trim(),
+          preferredLanguage: value.preferredLanguage,
           address: value.address.trim(),
           clubName: value.clubName.trim(),
           notes: value.notes.trim(),
@@ -226,6 +230,24 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             </Col>
           </Row>
 
+          <form.Field name="preferredLanguage">
+            {(field) => (
+              <Form.Group className="mb-3" controlId="member-preferred-language">
+                <Form.Label>{m.registration_preferred_language()}</Form.Label>
+                <Form.Select
+                  value={field.state.value ?? ""}
+                  onChange={(event) =>
+                    field.handleChange((event.target.value || null) as "nl" | "fr" | "en" | null)
+                  }
+                >
+                  <option value="">{m.admin_email_language_unknown()}</option>
+                  <option value="nl">Nederlands</option>
+                  <option value="fr">Français</option>
+                  <option value="en">English</option>
+                </Form.Select>
+              </Form.Group>
+            )}
+          </form.Field>
           <Form.Group className="mb-3" controlId="member-club">
             <Form.Label className="text-secondary small fw-semibold text-warning-emphasis">
               {m.admin_people_club_name_label()}

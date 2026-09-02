@@ -23,6 +23,54 @@ from app.models import Event, Person, Registration
 
 logger = logging.getLogger(__name__)
 
+_CONFIRMATION_COPY = {
+    "nl": {
+        "subject": "Champagnefestival-inschrijving",
+        "hello": "Beste",
+        "received": "We hebben je inschrijving ontvangen.",
+        "reference": "Referentie",
+        "event": "Evenement",
+        "date": "Datum",
+        "guests": "Gasten",
+        "due": "Te betalen",
+        "order": "Bestelling",
+        "none": "Geen",
+        "pass": "Open je toegangspas",
+        "keep": "Bewaar deze e-mail voor de toegang.",
+        "qr": "QR-code voor toegang",
+    },
+    "fr": {
+        "subject": "Inscription Champagnefestival",
+        "hello": "Bonjour",
+        "received": "Nous avons bien reçu votre inscription.",
+        "reference": "Référence",
+        "event": "Événement",
+        "date": "Date",
+        "guests": "Participants",
+        "due": "Montant dû",
+        "order": "Commande",
+        "none": "Aucun",
+        "pass": "Ouvrir votre laissez-passer",
+        "keep": "Conservez cet e-mail pour l’entrée.",
+        "qr": "Code QR d’accès",
+    },
+    "en": {
+        "subject": "Champagnefestival registration",
+        "hello": "Hello",
+        "received": "Your registration has been received.",
+        "reference": "Reference",
+        "event": "Event",
+        "date": "Date",
+        "guests": "Guests",
+        "due": "Amount due",
+        "order": "Order",
+        "none": "None",
+        "pass": "Open your check-in pass",
+        "keep": "Keep this email available at the entrance.",
+        "qr": "Registration check-in QR code",
+    },
+}
+
 
 async def deliver_registration_confirmation(registration_id: str) -> bool:
     """Load current booking data and send its durable outbox notification."""
@@ -61,8 +109,10 @@ async def send_registration_confirmation(registration: Registration, person: Per
     qr_buffer = BytesIO()
     qr_image.save(qr_buffer, format="PNG")
 
+    text = _CONFIRMATION_COPY.get(person.preferred_language or "nl", _CONFIRMATION_COPY["nl"])
     order_lines = (
-        "\n".join(f"- {item['name']} × {item['quantity']}" for item in (registration.order_items or [])) or "- None"
+        "\n".join(f"- {item['name']} × {item['quantity']}" for item in (registration.order_items or []))
+        or f"- {text['none']}"
     )
     calculated_due = sum(
         (
@@ -73,17 +123,17 @@ async def send_registration_confirmation(registration: Registration, person: Per
     )
     amount = registration.amount_due if registration.amount_due is not None else calculated_due
     amount_due = f"€{amount:.2f}"
-    event_date = event.date.isoformat() if event.date is not None else "To be announced"
+    event_date = event.date.isoformat() if event.date is not None else "—"
 
     message = EmailMessage()
-    message["Subject"] = f"Champagnefestival booking {registration.id}"
+    message["Subject"] = f"{text['subject']} {registration.id}"
     message["From"] = settings.smtp_from
     message["To"] = person.email
     message.set_content(
-        f"Hello {person.name},\n\nYour booking has been received.\n\n"
-        f"Reference: {registration.id}\nEvent: {event.title}\nDate: {event_date}\n"
-        f"Guests: {registration.guest_count}\nAmount due: {amount_due}\nOrder:\n{order_lines}\n\n"
-        f"Your check-in link:\n{check_in_url}\n\nKeep this email available at the entrance.\n"
+        f"{text['hello']} {person.name},\n\n{text['received']}\n\n"
+        f"{text['reference']}: {registration.id}\n{text['event']}: {event.title}\n{text['date']}: {event_date}\n"
+        f"{text['guests']}: {registration.guest_count}\n{text['due']}: {amount_due}\n{text['order']}:\n{order_lines}\n\n"
+        f"{text['pass']}:\n{check_in_url}\n\n{text['keep']}\n"
     )
     safe_name = escape(person.name)
     safe_event_title = escape(event.title)
@@ -93,17 +143,17 @@ async def send_registration_confirmation(registration: Registration, person: Per
             f"<li>{escape(str(item['name']))} × {int(item['quantity'])}</li>"
             for item in (registration.order_items or [])
         )
-        or "<li>None</li>"
+        or f"<li>{text['none']}</li>"
     )
     message.add_alternative(
         "<html><body>"
-        f"<p>Hello {safe_name},</p><p>Your booking has been received.</p>"
-        f"<p><strong>Reference:</strong> {registration.id}<br>"
-        f"<strong>Event:</strong> {safe_event_title}<br><strong>Date:</strong> {event_date}<br>"
-        f"<strong>Guests:</strong> {registration.guest_count}<br><strong>Amount due:</strong> {amount_due}</p>"
-        f"<p><strong>Order:</strong></p><ul>{html_order_lines}</ul>"
-        f'<p><a href="{safe_check_in_url}">Open your check-in pass</a></p>'
-        '<p><img src="cid:registration-qr" alt="Registration check-in QR code"></p>'
+        f"<p>{text['hello']} {safe_name},</p><p>{text['received']}</p>"
+        f"<p><strong>{text['reference']}:</strong> {registration.id}<br>"
+        f"<strong>{text['event']}:</strong> {safe_event_title}<br><strong>{text['date']}:</strong> {event_date}<br>"
+        f"<strong>{text['guests']}:</strong> {registration.guest_count}<br><strong>{text['due']}:</strong> {amount_due}</p>"
+        f"<p><strong>{text['order']}:</strong></p><ul>{html_order_lines}</ul>"
+        f'<p><a href="{safe_check_in_url}">{text["pass"]}</a></p>'
+        f'<p><img src="cid:registration-qr" alt="{text["qr"]}"></p>'
         "</body></html>",
         subtype="html",
     )
