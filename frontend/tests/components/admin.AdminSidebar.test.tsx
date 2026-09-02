@@ -77,6 +77,7 @@ describe("AdminSidebar", () => {
       "Content",
       "Exhibitors",
       "FAQ",
+      "Announcements",
       "Contact messages",
       "Settings",
       "Venue",
