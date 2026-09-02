@@ -389,7 +389,6 @@ export default function MembersManagement({
                                   }
                                 : undefined
                             }
-                            role={canSort ? "button" : undefined}
                             tabIndex={canSort ? 0 : undefined}
                             aria-sort={
                               canSort

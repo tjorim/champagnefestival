@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import ContentManagement from "@/components/admin/ContentManagement";
@@ -25,7 +26,7 @@ function renderContentManagement() {
   const onExhibitorDeleted = vi.fn();
   const onEditionMutated = vi.fn();
 
-  render(
+  const { container } = render(
     <QueryClientProvider client={queryClient}>
       <ContentManagement
         authHeaders={authHeaders}
@@ -37,7 +38,7 @@ function renderContentManagement() {
     </QueryClientProvider>,
   );
 
-  return { onExhibitorSaved, onExhibitorDeleted, onEditionMutated };
+  return { container, onExhibitorSaved, onExhibitorDeleted, onEditionMutated };
 }
 
 describe("ContentManagement", () => {
@@ -50,6 +51,15 @@ describe("ContentManagement", () => {
     expect(screen.getByText("Champagne Bollinger")).toBeInTheDocument();
 
     expect(screen.queryByText("admin_content_loading")).not.toBeInTheDocument();
+  });
+
+  it("has no axe violations once loaded", async () => {
+    const { container } = renderContentManagement();
+
+    expect(await screen.findByText("Maison Moët & Chandon")).toBeInTheDocument();
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 
   // Primary mutation flow: archiving an exhibitor. We chose this over driving

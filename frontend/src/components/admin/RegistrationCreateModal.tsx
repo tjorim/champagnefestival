@@ -115,16 +115,20 @@ export default function RegistrationCreateModal({
   });
   const resetCreateRegistrationMutation = createRegistrationMutation.reset;
 
-  useEffect(() => {
-    if (!show) {
-      return;
+  // Re-open should always start blank, discarding edits abandoned by closing the
+  // modal. Reset during render rather than in an effect (the "adjusting state
+  // when a prop changes" pattern) since this only needs to react to the
+  // show=false->true transition, not to every render.
+  const [wasShown, setWasShown] = useState(show);
+  if (show !== wasShown) {
+    setWasShown(show);
+    if (show) {
+      form.reset({ eventId: "", guestCount: 1, notes: "", personOption: null });
+      setPersonQuery("");
+      setDebouncedPersonQuery("");
+      resetCreateRegistrationMutation();
     }
-
-    form.reset({ eventId: "", guestCount: 1, notes: "", personOption: null });
-    setPersonQuery("");
-    setDebouncedPersonQuery("");
-    resetCreateRegistrationMutation();
-  }, [form, resetCreateRegistrationMutation, show]);
+  }
 
   useEffect(() => {
     if (!show) {

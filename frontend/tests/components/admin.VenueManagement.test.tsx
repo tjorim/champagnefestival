@@ -1,14 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { axe } from "jest-axe";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import VenueManagement from "@/components/admin/VenueManagement";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 
-// happy-dom does not implement window.confirm, so it must be stubbed rather
-// than wrapped (vi.spyOn requires an existing function).
-function mockConfirm(returnValue: boolean) {
-  const fn = vi.fn().mockReturnValue(returnValue);
-  vi.stubGlobal("confirm", fn);
-  return fn;
+/** The most recently opened ConfirmModal/Modal (react-bootstrap portals stack in mount order). */
+function latestDialog(): HTMLElement {
+  const dialogs = screen.getAllByRole("dialog");
+  return dialogs[dialogs.length - 1] as HTMLElement;
 }
 
 vi.mock("@/paraglide/messages", () => ({
@@ -158,7 +157,7 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
   const onRestoreTableType = overrides.onRestoreTableType ?? vi.fn().mockResolvedValue(undefined);
   const onDeleteTableType = overrides.onDeleteTableType ?? vi.fn().mockResolvedValue(undefined);
 
-  render(
+  const { container } = render(
     <VenueManagement
       venues={overrides.venues ?? [activeVenue, archivedVenue]}
       rooms={overrides.rooms ?? [room1, room2]}
@@ -184,6 +183,7 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
   );
 
   return {
+    container,
     onAdd,
     onUpdate,
     onArchive,
@@ -317,62 +317,66 @@ describe("VenueManagement", () => {
     expect(await dialogScope.findByTestId("venue-map-preview")).toHaveTextContent("50.8503,4.3517");
   });
 
-  it("does not call onArchive when the confirm dialog is cancelled", () => {
-    const confirmFn = mockConfirm(false);
+  it("does not call onArchive when the confirm dialog is cancelled", async () => {
     const { onArchive } = renderVenueManagement();
 
     fireEvent.click(
       within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
     );
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("admin_venue_archive_confirm")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
-    expect(confirmFn).toHaveBeenCalledWith("admin_venue_archive_confirm");
     expect(onArchive).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("calls onArchive with the venue id when the confirm dialog is accepted", () => {
-    mockConfirm(true);
+  it("calls onArchive with the venue id when the confirm dialog is accepted", async () => {
     const { onArchive } = renderVenueManagement();
 
     fireEvent.click(
       within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
     );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_content_archive" }));
 
-    expect(onArchive).toHaveBeenCalledWith("venue-1");
+    await waitFor(() => expect(onArchive).toHaveBeenCalledWith("venue-1"));
   });
 
-  it("does not call onDelete when the confirm dialog is cancelled", () => {
-    const confirmFn = mockConfirm(false);
+  it("does not call onDelete when the confirm dialog is cancelled", async () => {
     const { onDelete } = renderVenueManagement();
 
     fireEvent.click(
       within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
     );
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("admin_venue_delete_confirm")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
-    expect(confirmFn).toHaveBeenCalledWith("admin_venue_delete_confirm");
     expect(onDelete).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("calls onDelete with the venue id when the confirm dialog is accepted", () => {
-    mockConfirm(true);
+  it("calls onDelete with the venue id when the confirm dialog is accepted", async () => {
     const { onDelete } = renderVenueManagement();
 
     fireEvent.click(
       within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
     );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
-    expect(onDelete).toHaveBeenCalledWith("venue-2");
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith("venue-2"));
   });
 
   it("calls onRestore immediately with no confirm prompt", () => {
-    const confirmSpy = vi.fn();
-    vi.stubGlobal("confirm", confirmSpy);
     const { onRestore } = renderVenueManagement();
 
     fireEvent.click(
       within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_content_restore" }),
     );
 
-    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(onRestore).toHaveBeenCalledWith("venue-2");
   });
 
@@ -588,8 +592,6 @@ describe("VenueManagement", () => {
   });
 
   it("confirms the affected table/room count before saving a dimension change on an in-use type, and proceeds when accepted", async () => {
-    const confirmSpy = vi.fn().mockReturnValue(true);
-    vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement();
 
     fireEvent.click(
@@ -603,15 +605,19 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
-    );
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
+    const confirmDialog = within(latestDialog());
+    expect(
+      confirmDialog.getByText(
+        'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_confirm" }));
+
     await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
   });
 
   it("confirms the affected table/room count when only the shape changes", async () => {
-    const confirmSpy = vi.fn().mockReturnValue(true);
-    vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement();
 
     fireEvent.click(
@@ -630,14 +636,18 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
-    );
+    const confirmDialog = within(latestDialog());
+    expect(
+      confirmDialog.getByText(
+        'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_confirm" }));
+
     await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
   });
 
   it("cancels the save when the dimension-change confirmation is declined", async () => {
-    vi.stubGlobal("confirm", vi.fn().mockReturnValue(false));
     const { onUpdateTableType } = renderVenueManagement();
 
     fireEvent.click(
@@ -651,13 +661,16 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
+    const confirmDialog = within(latestDialog());
+    fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_cancel" }));
+
     expect(onUpdateTableType).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // The edit dialog is still open, just the confirm dialog closed.
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1));
+    expect(dialog).toBeInTheDocument();
   });
 
   it("saves a dimension change without confirmation when no tables use the type", async () => {
-    const confirmSpy = vi.fn();
-    vi.stubGlobal("confirm", confirmSpy);
     const { onUpdateTableType } = renderVenueManagement({ tables: [] });
 
     fireEvent.click(
@@ -671,26 +684,22 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
     await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
   });
 
   it("archives an active table type immediately, with no confirm prompt", () => {
-    const confirmSpy = vi.fn();
-    vi.stubGlobal("confirm", confirmSpy);
     const { onArchiveTableType } = renderVenueManagement();
 
     fireEvent.click(
       within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_content_archive" }),
     );
 
-    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(onArchiveTableType).toHaveBeenCalledWith("tt-1");
   });
 
   it("restores an archived table type immediately, with no confirm prompt, and hides the edit button on archived rows", () => {
-    const confirmSpy = vi.fn();
-    vi.stubGlobal("confirm", confirmSpy);
     const { onRestoreTableType } = renderVenueManagement();
 
     const row = listItem("Retired Round");
@@ -698,13 +707,11 @@ describe("VenueManagement", () => {
 
     fireEvent.click(within(row).getByRole("button", { name: "admin_content_restore" }));
 
-    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(onRestoreTableType).toHaveBeenCalledWith("tt-2");
   });
 
-  it("offers delete on archived table types only, and asks for confirmation first", () => {
-    const confirmSpy = vi.fn().mockReturnValue(true);
-    vi.stubGlobal("confirm", confirmSpy);
+  it("offers delete on archived table types only, and asks for confirmation first", async () => {
     const { onDeleteTableType } = renderVenueManagement();
 
     expect(
@@ -715,12 +722,14 @@ describe("VenueManagement", () => {
       within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
     );
 
-    expect(confirmSpy).toHaveBeenCalledWith("admin_table_type_delete_confirm");
-    expect(onDeleteTableType).toHaveBeenCalledWith("tt-2");
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("admin_table_type_delete_confirm")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(onDeleteTableType).toHaveBeenCalledWith("tt-2"));
   });
 
   it("surfaces the API's refusal when tables still use the table type", async () => {
-    vi.stubGlobal("confirm", vi.fn().mockReturnValue(true));
     const onDeleteTableType = vi
       .fn()
       .mockRejectedValue(new Error("Cannot delete: tables are still using this type."));
@@ -729,9 +738,17 @@ describe("VenueManagement", () => {
     fireEvent.click(
       within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
     );
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
     expect(
       await screen.findByText("Cannot delete: tables are still using this type."),
     ).toBeInTheDocument();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = renderVenueManagement();
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

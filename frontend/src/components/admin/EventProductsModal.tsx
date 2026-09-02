@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -74,14 +74,19 @@ export default function EventProductsModal({
     staleTime: 0,
   });
 
-  useEffect(() => {
+  // Clear local state once the modal closes, rather than in an effect (the
+  // "adjusting state when a prop changes" pattern) since this only needs to
+  // react to the show=true->false transition, not to every render.
+  const [wasShown, setWasShown] = useState(show);
+  if (show !== wasShown) {
+    setWasShown(show);
     if (!show) {
       setFormOpen(false);
       setEditingId(null);
       setForm(EMPTY_FORM);
       setError("");
     }
-  }, [show]);
+  }
 
   const saveMutation = useMutation({
     mutationFn: (payload: {

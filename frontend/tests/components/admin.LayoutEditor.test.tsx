@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LayoutEditor from "@/components/admin/LayoutEditor";
 import type { FloorArea, FloorTable, Layout, Room, TableType } from "@/types/admin";
@@ -331,9 +332,7 @@ describe("LayoutEditor", () => {
     );
   });
 
-  it("deletes a table only after confirm() returns true", () => {
-    const confirmMock = vi.fn().mockReturnValue(true);
-    vi.stubGlobal("confirm", confirmMock);
+  it("deletes a table only after the confirm dialog is accepted", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
@@ -345,13 +344,14 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    expect(confirmMock).toHaveBeenCalledWith("admin_layout_table_delete_confirm");
-    expect(callbacks.onDeleteTable).toHaveBeenCalledWith("table-1");
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("admin_layout_table_delete_confirm")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(callbacks.onDeleteTable).toHaveBeenCalledWith("table-1"));
   });
 
-  it("does not delete a table when confirm() returns false", () => {
-    const confirmMock = vi.fn().mockReturnValue(false);
-    vi.stubGlobal("confirm", confirmMock);
+  it("does not delete a table when the confirm dialog is cancelled", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
@@ -363,13 +363,14 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    expect(confirmMock).toHaveBeenCalledWith("admin_layout_table_delete_confirm");
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(callbacks.onDeleteTable).not.toHaveBeenCalled();
   });
 
-  it("deletes an area only after confirm() returns true", () => {
-    const confirmMock = vi.fn().mockReturnValue(true);
-    vi.stubGlobal("confirm", confirmMock);
+  it("deletes an area only after the confirm dialog is accepted", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
@@ -382,13 +383,14 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    expect(confirmMock).toHaveBeenCalledWith("admin_layout_area_delete_confirm");
-    expect(callbacks.onDeleteArea).toHaveBeenCalledWith("area-1");
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("admin_layout_area_delete_confirm")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(callbacks.onDeleteArea).toHaveBeenCalledWith("area-1"));
   });
 
-  it("does not delete an area when confirm() returns false", () => {
-    const confirmMock = vi.fn().mockReturnValue(false);
-    vi.stubGlobal("confirm", confirmMock);
+  it("does not delete an area when the confirm dialog is cancelled", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
@@ -401,31 +403,44 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    expect(confirmMock).toHaveBeenCalledWith("admin_layout_area_delete_confirm");
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(callbacks.onDeleteArea).not.toHaveBeenCalled();
   });
 
-  it("deletes a layout only after confirm() returns true", () => {
-    const confirmMock = vi.fn().mockReturnValue(true);
-    vi.stubGlobal("confirm", confirmMock);
+  it("deletes a layout only after the confirm dialog is accepted", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
     fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
 
-    expect(confirmMock).toHaveBeenCalledWith("admin_layout_delete_confirm");
-    expect(callbacks.onDeleteLayout).toHaveBeenCalledWith("layout-1");
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByText("admin_layout_delete_confirm")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(callbacks.onDeleteLayout).toHaveBeenCalledWith("layout-1"));
   });
 
-  it("does not delete a layout when confirm() returns false", () => {
-    const confirmMock = vi.fn().mockReturnValue(false);
-    vi.stubGlobal("confirm", confirmMock);
+  it("does not delete a layout when the confirm dialog is cancelled", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
     fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
 
-    expect(confirmMock).toHaveBeenCalledWith("admin_layout_delete_confirm");
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(callbacks.onDeleteLayout).not.toHaveBeenCalled();
+  });
+
+  it("has no axe violations", async () => {
+    const fixture = realisticFixture();
+    const { container } = renderLayoutEditor(fixture);
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

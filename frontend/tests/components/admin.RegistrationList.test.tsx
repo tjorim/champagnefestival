@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
@@ -37,7 +38,7 @@ function renderRegistrationList({
   onClearSectionError,
 }: { sectionError?: string; onClearSectionError?: () => void } = {}) {
   const queryClient = createTestQueryClient();
-  render(
+  return render(
     <QueryClientProvider client={queryClient}>
       <RegistrationList
         registrations={[]}
@@ -81,5 +82,11 @@ describe("RegistrationList — scoped error display", () => {
   it("renders no error alert when sectionError is not provided", () => {
     renderRegistrationList();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = renderRegistrationList({ sectionError: "Check-in failed." });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

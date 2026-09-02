@@ -7,7 +7,7 @@
  */
 
 import clsx from "clsx";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
 import { RestrictToElement } from "@dnd-kit/dom/modifiers";
@@ -25,6 +25,7 @@ import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/adm
 import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
+import ConfirmModal from "@/components/ConfirmModal";
 
 // Preset icons available for floor areas — labels resolved at render time for i18n
 function getAreaIcons(): { value: string; label: string }[] {
@@ -372,6 +373,9 @@ function RoomCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // RestrictToElement is called at drag time so canvasRef.current is always current.
+  // The lint rule against reading refs during render can't see that this accessor
+  // is only invoked later (dnd-kit's documented pattern for a not-yet-mounted
+  // element), and oxlint has no way to suppress it inline for this rule.
   const modifiers = useMemo(
     () => [RestrictToElement.configure({ element: () => canvasRef.current })],
     [],
@@ -540,30 +544,30 @@ export default function LayoutEditor({
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [layer, setLayer] = useState<"seating" | "areas">("seating");
 
-  // Auto-select first room
-  useEffect(() => {
-    if (!activeRoomId && rooms.length > 0) {
-      setActiveRoomId(rooms[0]?.id ?? null);
-    }
-  }, [rooms, activeRoomId]);
+  // Auto-select first room. Adjusted during render rather than in an effect:
+  // the guard is idempotent (it stops applying the moment a room is picked),
+  // so this only ever fires the one time it needs to.
+  if (!activeRoomId && rooms.length > 0) {
+    setActiveRoomId(rooms[0]?.id ?? null);
+  }
 
-  // Auto-select first layout when active room changes
-  useEffect(() => {
-    if (activeRoomId) {
-      const roomLayouts = layouts.filter((l) => l.roomId === activeRoomId);
-      if (roomLayouts.length === 0) {
-        setActiveLayoutId(null);
-      } else if (!roomLayouts.find((l) => l.id === activeLayoutId)) {
-        setActiveLayoutId(roomLayouts[0]?.id ?? null);
-      }
+  // Auto-select first layout when active room changes, or clamp back to a
+  // valid one if the current selection is no longer in this room's layouts
+  // (also idempotent — see above).
+  if (activeRoomId) {
+    const roomLayouts = layouts.filter((l) => l.roomId === activeRoomId);
+    if (roomLayouts.length === 0) {
+      if (activeLayoutId !== null) setActiveLayoutId(null);
+    } else if (!roomLayouts.find((l) => l.id === activeLayoutId)) {
+      setActiveLayoutId(roomLayouts[0]?.id ?? null);
     }
-  }, [activeRoomId, layouts, activeLayoutId]);
+  }
 
   // Add Layout modal
   const [showAddLayout, setShowAddLayout] = useState(false);
   const [newLayout, setNewLayout] = useState(() => getInitialNewLayoutState(dayOptions));
   const [addLayoutError, setAddLayoutError] = useState<string | null>(null);
-  const [deleteLayoutError, setDeleteLayoutError] = useState<string | null>(null);
+  const [confirmDeleteLayoutId, setConfirmDeleteLayoutId] = useState<string | null>(null);
 
   const handleAddLayout = useCallback(async () => {
     if (!activeRoomId) return;
@@ -588,19 +592,15 @@ export default function LayoutEditor({
     }
   }, [activeRoomId, dayOptions, newLayout, onAddLayout]);
 
-  useEffect(() => {
-    if (dayOptions.length === 0) return;
-    setNewLayout((current) =>
-      dayOptions.some((day) => day.date === current.date)
-        ? current
-        : { ...current, date: dayOptions[0]!.date },
-    );
-  }, [dayOptions]);
+  // Keep the add-layout form's date valid as dayOptions loads or changes.
+  // Adjusted during render rather than in an effect — idempotent once the
+  // date is valid, same as the room/layout selection above.
+  if (dayOptions.length > 0 && !dayOptions.some((day) => day.date === newLayout.date)) {
+    setNewLayout((current) => ({ ...current, date: dayOptions[0]!.date }));
+  }
 
   const handleDeleteLayout = useCallback(
     async (layoutId: string) => {
-      if (!window.confirm(m.admin_layout_delete_confirm())) return;
-      setDeleteLayoutError(null);
       try {
         await onDeleteLayout(layoutId);
         if (activeLayoutId === layoutId) {
@@ -610,7 +610,7 @@ export default function LayoutEditor({
         }
       } catch (err) {
         devError("Failed to delete layout", err);
-        setDeleteLayoutError(err instanceof Error ? err.message : m.admin_error_delete_layout());
+        throw err;
       }
     },
     [onDeleteLayout, activeLayoutId],
@@ -624,7 +624,7 @@ export default function LayoutEditor({
   });
   const [addTableError, setAddTableError] = useState<string | null>(null);
 
-  const [deleteTableError, setDeleteTableError] = useState<string | null>(null);
+  const [confirmDeleteTableId, setConfirmDeleteTableId] = useState<string | null>(null);
   const [updateTableError, setUpdateTableError] = useState<string | null>(null);
   // Add Area modal
   const [showAddArea, setShowAddArea] = useState(false);
@@ -637,7 +637,7 @@ export default function LayoutEditor({
     assignedId: 0,
   });
   const [addAreaError, setAddAreaError] = useState<string | null>(null);
-  const [deleteAreaError, setDeleteAreaError] = useState<string | null>(null);
+  const [confirmDeleteAreaId, setConfirmDeleteAreaId] = useState<string | null>(null);
   const [assignAreaError, setAssignAreaError] = useState<string | null>(null);
   const [resizeAreaError, setResizeAreaError] = useState<string | null>(null);
 
@@ -656,14 +656,12 @@ export default function LayoutEditor({
 
   const handleDeleteTable = useCallback(
     async (tableId: string) => {
-      if (!window.confirm(m.admin_layout_table_delete_confirm())) return;
-      setDeleteTableError(null);
       try {
         await onDeleteTable(tableId);
         setSelectedTable(null);
       } catch (err) {
         devError("Failed to delete table", err);
-        setDeleteTableError(err instanceof Error ? err.message : m.admin_content_error_save());
+        throw err;
       }
     },
     [onDeleteTable],
@@ -699,14 +697,12 @@ export default function LayoutEditor({
 
   const handleDeleteArea = useCallback(
     async (areaId: string) => {
-      if (!window.confirm(m.admin_layout_area_delete_confirm())) return;
-      setDeleteAreaError(null);
       try {
         await onDeleteArea(areaId);
         setSelectedArea(null);
       } catch (err) {
         devError("Failed to delete area", err);
-        setDeleteAreaError(err instanceof Error ? err.message : m.admin_content_error_save());
+        throw err;
       }
     },
     [onDeleteArea],
@@ -742,14 +738,14 @@ export default function LayoutEditor({
   // The Add Table type list is venue-filtered (below), so a selection carried
   // over from a previously active room in another venue would otherwise let
   // Save submit a table type that doesn't belong to this room's venue (#858).
-  useEffect(() => {
-    setNewTable((p) =>
-      p.tableTypeId &&
-      !tableTypes.some((tt) => tt.id === p.tableTypeId && tt.venueId === activeRoom?.venueId)
-        ? { ...p, tableTypeId: "" }
-        : p,
-    );
-  }, [activeRoom?.venueId, tableTypes]);
+  // Adjusted during render rather than in an effect — idempotent once the
+  // selection is cleared or valid again for the active room's venue.
+  if (
+    newTable.tableTypeId &&
+    !tableTypes.some((tt) => tt.id === newTable.tableTypeId && tt.venueId === activeRoom?.venueId)
+  ) {
+    setNewTable((p) => ({ ...p, tableTypeId: "" }));
+  }
 
   const handleSelectRoom = useCallback((k: string | null) => {
     if (k) {
@@ -897,7 +893,7 @@ export default function LayoutEditor({
                         <Button
                           size="sm"
                           variant="outline-danger"
-                          onClick={() => handleDeleteLayout(layout.id)}
+                          onClick={() => setConfirmDeleteLayoutId(layout.id)}
                           title={m.admin_delete()}
                           aria-label={m.admin_delete()}
                           style={{
@@ -929,11 +925,6 @@ export default function LayoutEditor({
                   </div>
                 </div>
               </div>
-              {deleteLayoutError && (
-                <Alert variant="danger" className="py-1 mb-2 small">
-                  {deleteLayoutError}
-                </Alert>
-              )}
               {activeLayoutId ? (
                 <RoomCanvas
                   room={activeRoom}
@@ -1021,7 +1012,7 @@ export default function LayoutEditor({
               <Button
                 variant="outline-danger"
                 size="sm"
-                onClick={() => handleDeleteTable(selectedTableData.id)}
+                onClick={() => setConfirmDeleteTableId(selectedTableData.id)}
                 title={m.admin_delete()}
                 aria-label={m.admin_delete()}
               >
@@ -1030,13 +1021,13 @@ export default function LayoutEditor({
             </div>
           </Card.Header>
           <Card.Body>
-            {deleteTableError && (
-              <Alert variant="danger" className="py-1 mb-2 small">
-                {deleteTableError}
-              </Alert>
-            )}
             {updateTableError && (
-              <Alert variant="danger" className="py-1 mb-2 small">
+              <Alert
+                role="alert"
+                aria-live="assertive"
+                variant="danger"
+                className="py-1 mb-2 small"
+              >
                 {updateTableError}
               </Alert>
             )}
@@ -1154,7 +1145,7 @@ export default function LayoutEditor({
               <Button
                 variant="outline-danger"
                 size="sm"
-                onClick={() => handleDeleteArea(selectedAreaData.id)}
+                onClick={() => setConfirmDeleteAreaId(selectedAreaData.id)}
                 title={m.admin_delete()}
                 aria-label={m.admin_delete()}
               >
@@ -1163,13 +1154,10 @@ export default function LayoutEditor({
             </div>
           </Card.Header>
           <Card.Body>
-            {deleteAreaError && (
-              <Alert variant="danger" className="py-1 mb-2 small">
-                {deleteAreaError}
-              </Alert>
-            )}
             {assignAreaError && (
               <Alert
+                role="alert"
+                aria-live="assertive"
                 variant="danger"
                 className="py-1 mb-2 small"
                 dismissible
@@ -1180,6 +1168,8 @@ export default function LayoutEditor({
             )}
             {resizeAreaError && (
               <Alert
+                role="alert"
+                aria-live="assertive"
                 variant="danger"
                 className="py-1 mb-2 small"
                 dismissible
@@ -1386,7 +1376,7 @@ export default function LayoutEditor({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addLayoutError && (
-            <Alert variant="danger" className="py-1 mb-3 small">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
               {addLayoutError}
             </Alert>
           )}
@@ -1472,7 +1462,7 @@ export default function LayoutEditor({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addAreaError && (
-            <Alert variant="danger" className="py-1 mb-3 small">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
               {addAreaError}
             </Alert>
           )}
@@ -1591,7 +1581,7 @@ export default function LayoutEditor({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addTableError && (
-            <Alert variant="danger" className="py-1 mb-3 small">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
               {addTableError}
             </Alert>
           )}
@@ -1641,6 +1631,37 @@ export default function LayoutEditor({
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {confirmDeleteLayoutId && (
+        <ConfirmModal
+          show
+          title={m.admin_layout_delete_title()}
+          body={m.admin_layout_delete_confirm()}
+          errorFallback={m.admin_error_delete_layout()}
+          onConfirm={() => handleDeleteLayout(confirmDeleteLayoutId)}
+          onHide={() => setConfirmDeleteLayoutId(null)}
+        />
+      )}
+      {confirmDeleteTableId && (
+        <ConfirmModal
+          show
+          title={m.admin_layout_table_delete_title()}
+          body={m.admin_layout_table_delete_confirm()}
+          errorFallback={m.admin_content_error_save()}
+          onConfirm={() => handleDeleteTable(confirmDeleteTableId)}
+          onHide={() => setConfirmDeleteTableId(null)}
+        />
+      )}
+      {confirmDeleteAreaId && (
+        <ConfirmModal
+          show
+          title={m.admin_layout_area_delete_title()}
+          body={m.admin_layout_area_delete_confirm()}
+          errorFallback={m.admin_content_error_save()}
+          onConfirm={() => handleDeleteArea(confirmDeleteAreaId)}
+          onHide={() => setConfirmDeleteAreaId(null)}
+        />
+      )}
     </div>
   );
 }

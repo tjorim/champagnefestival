@@ -129,13 +129,23 @@ export default function EditionModal({
 
   // Re-open should always start from the record again, discarding edits that were
   // abandoned by closing the modal — `defaultValues` alone can't do that, because
-  // the library skips re-seeding a form the user has already touched.
+  // the library skips re-seeding a form the user has already touched. Reset during
+  // render rather than in an effect (the "adjusting state when a prop changes"
+  // pattern) since this only needs to react to the show=false->true transition.
+  const [wasShown, setWasShown] = useState(show);
+  if (show !== wasShown) {
+    setWasShown(show);
+    if (show) {
+      form.reset(defaultValues);
+      setError(null);
+    }
+  }
+
+  // Ref mutations belong in an effect, not render — this just marks the
+  // exhibitor-hydration effect below as pending again for the fresh form.
   useEffect(() => {
-    if (!show) return;
-    hydratedRef.current = false;
-    form.reset(defaultValues);
-    setError(null);
-  }, [defaultValues, form, show]);
+    if (show) hydratedRef.current = false;
+  }, [show]);
 
   const exhibitorsQuery = useQuery({
     queryKey: editionModalExhibitorsQueryKey,

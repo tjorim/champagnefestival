@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import PeopleManagement from "@/components/admin/PeopleManagement";
 import type { Person } from "@/types/person";
@@ -51,7 +52,7 @@ function renderPeopleManagement(opts: RenderOpts = {}) {
   const onUpdate = opts.onUpdate ?? vi.fn().mockResolvedValue(undefined);
   const onDelete = opts.onDelete ?? vi.fn().mockResolvedValue(undefined);
 
-  render(
+  const { container } = render(
     <QueryClientProvider client={queryClient}>
       <PeopleManagement
         people={opts.people ?? [makePerson()]}
@@ -66,7 +67,7 @@ function renderPeopleManagement(opts: RenderOpts = {}) {
     </QueryClientProvider>,
   );
 
-  return { onMerge, onCreate, onUpdate, onDelete };
+  return { container, onMerge, onCreate, onUpdate, onDelete };
 }
 
 describe("PeopleManagement — rendering", () => {
@@ -195,5 +196,17 @@ describe("PeopleManagement — merge duplicates", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "admin_people_merge_confirm" }));
 
     expect(onMerge).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("PeopleManagement — accessibility", () => {
+  it("has no axe violations", async () => {
+    const { container } = renderPeopleManagement({
+      people: [makePerson({ id: "p1", roles: ["member", "volunteer"] })],
+      registrationCountByPersonId: { p1: 3 },
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

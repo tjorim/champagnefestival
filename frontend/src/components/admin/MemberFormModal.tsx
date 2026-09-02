@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -96,11 +96,18 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
     },
   });
 
-  useEffect(() => {
-    if (!show) return;
-    form.reset(defaultValues);
-    setError(null);
-  }, [defaultValues, form, show]);
+  // Re-open should always start from the record again, discarding edits that were
+  // abandoned by closing the modal. Reset during render rather than in an effect
+  // (the "adjusting state when a prop changes" pattern) since this only needs to
+  // react to the show=false->true transition, not to every render.
+  const [wasShown, setWasShown] = useState(show);
+  if (show !== wasShown) {
+    setWasShown(show);
+    if (show) {
+      form.reset(defaultValues);
+      setError(null);
+    }
+  }
 
   const nameValue = useStore(form.store, (s) => s.values.name);
   const isSubmitting = useStore(form.store, (s) => s.isSubmitting);

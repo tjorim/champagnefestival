@@ -340,7 +340,14 @@ export default function CheckInPage() {
     return () => window.clearTimeout(timer);
   }, [searchTerm]);
 
-  useEffect(() => {
+  // A fresh QR scan brings a new registrationId/checkInToken pair — reset the
+  // local UI state for it. Adjust during render (comparing against the
+  // previous scan) rather than in an effect, since this only needs to react
+  // to that identity actually changing.
+  const scanKey = `${registrationId ?? ""}:${checkInToken ?? ""}`;
+  const [prevScanKey, setPrevScanKey] = useState(scanKey);
+  if (scanKey !== prevScanKey) {
+    setPrevScanKey(scanKey);
     if (hasQrCredentials) {
       setManualRegistration(null);
       setSuccess(false);
@@ -348,7 +355,7 @@ export default function CheckInPage() {
       setSearchTerm("");
       setDebouncedSearchTerm("");
     }
-  }, [registrationId, checkInToken, hasQrCredentials]);
+  }
 
   const registrationQuery = useQuery({
     queryKey: checkInQueryKey,

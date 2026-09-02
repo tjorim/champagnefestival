@@ -117,7 +117,10 @@ const BubbleBackground: React.FC = () => {
     };
   }, [handleResize]);
 
-  // Generate bubbles only after mounting to avoid hydration mismatches
+  // Generate bubbles only after mounting to avoid hydration mismatches. This
+  // stays an effect rather than a memo: the randomization seed is Date.now(),
+  // an impure read that render (and useMemo, which the compiler treats the
+  // same way) is not supposed to perform.
   useEffect(() => {
     if (mounted && bubbleCount > 0) {
       // Create a stable seed for randomization to avoid infinite re-renders

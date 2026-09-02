@@ -92,8 +92,7 @@ work is intentionally outside this audit until the bourse requirements are clear
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #935 — UI/UX consistency pass | Follow #945's completed static-banner and urgent-only live-region pattern rather than creating a parallel convention. Other polish remains independent. | M |
-| 2 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 1 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -101,23 +100,23 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 3 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 4 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 5 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits; #947 separately owns durable job claiming. | L |
-| 6 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 7 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 2 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 3 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 4 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits; #947 separately owns durable job claiming. | L |
+| 5 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 6 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 8 | #942 — central announcement and push composer | **Blocked by #941 and #947; #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 7 | #942 — central announcement and push composer | **Blocked by #941 and #947; #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Phase 6 — deferred visitor account
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 9 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
+| 8 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
 
 ### Dependency map
 
@@ -142,8 +141,6 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 #937 offline/service worker <──── coordinate ────> #941 push/service worker
 
-#935 accessible UI conventions <─ coordinate ────> #945 announcement banner
-
 #945 announcement banner ────────┐
 #941 Web Push foundation ────────┼────────────> #942 central composer
 #947 durable outbox ─────────────┘
@@ -160,6 +157,7 @@ active preferred-order tables.
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
 | #945 | Completed | 2026-09-02 | #945, PR (this change) | Added purpose-built localised announcements with UTC publication windows, safe optional links, deterministic ordering, publication metadata, complete mutation auditing, admin editing/status/preview controls, and an explicitly localised public API. The public site uses a static reduced-motion-safe banner; ordinary notices are not live while urgent notices receive a one-time alert region. |
+| #935 | Completed | 2026-09-02 | #935, PR (this change) | Extracted a shared themed `ConfirmModal` and converted all eight `window.confirm` destructive-action dialogs (venue archive/delete, table-type dimension-change/delete, layout/table/area delete, account delete) to it, fixing the "prevent additional dialogs" browser suppression that silently broke repeated deletes in `LayoutEditor`. Added `role="status"`/`role="alert"` live-region coverage to mutation-result alerts in `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`, and `ContentManagement`, following the pattern already established in `CheckInPage`. Added `jest-axe` assertions to each of those five components' render tests, which caught and fixed a real violation: `aria-sort` on a `<th role="button">` is invalid ARIA (the role override drops the implicit `columnheader` role `aria-sort` requires) — removed the redundant `role="button"` override across `RegistrationList`, `PeopleManagement`, `MembersManagement`, and `VolunteersManagement`, since the existing `tabIndex`/`onKeyDown` already made the header keyboard-operable. Reduced `pnpm lint`'s React Compiler warning count from 30 to 11 by converting the "reset state when a prop changes" effects (all seven form-modal reset-on-open effects, plus `AuthContext`, `AdminDashboard`, `SettingsManagement`, `CheckInPage`, `RegistrationList`, and four in `LayoutEditor`) to the adjust-state-during-render pattern, and fixing three genuine ref-during-render reads (`Countdown`, `ContactForm`, plus one `MyRegistrationsPage` `useCallback` dependency-array gap); the 11 remaining warnings are documented, verified-legitimate exceptions (client-only hydration mount guards, an impure `Date.now()` seed, an async session-recovery effect, and two dnd-kit/TanStack-table ref-accessor patterns that the linter cannot distinguish from an unsafe render-time read). Corrected three genuinely wrong translations (NL check-in mislabelled as clocking-in, NL "Standalone" left in English, FR "Email" missing its hyphen). |
 | #943 | Completed | 2026-09-01 | #943, PR (this change) | Added previewed, individually addressed email-client actions for member/person rows and four localised registration templates and server-delivered confirmations, including an explicit persisted communication-language preference collected during registration and editable by administrators, with encoded `mailto:` links, a long-message clipboard fallback, accessibility labels, and strict exclusion of internal registration fields. No backend write or delivery audit is created. |
 | #933 | Completed | 2026-09-01 | #933, PR (this change) | Added capacity-safe party-size editing with bundled-order recalculation and audit history, optional public accessibility requirements, and validated per-event registration closing deadlines exposed through REST, MCP, admin editing, and the public closed state. |
 | #931 | Completed | 2026-09-01 | #931, PR (this change) | `GET /api/registrations` now returns a `{items, total, limit, page}` envelope with one shared default page size and filter set (search and browse, including edition/date/person/edition-category filters and server-side sort) instead of "20 when searching, unbounded when not", with a ceiling decoupled from the volunteer door-lookup limit. `RegistrationList` is now genuinely server-paginated (page controls, page-size selector) rather than fetching everything into the browser; per-event capacity and status/edition counts still read the full working set, which they need for correct totals. Bulk actions and CSV export — which paginating the table would otherwise have silently capped at one page — got a Gmail-style "select all N matching" expansion and now cover every filtered row, with bulk mutations batched instead of fired all at once. `GET /api/people`, `/api/volunteers`, and `/api/members` got the same `{items, total, limit, page}` envelope and admin-sized default/ceiling (also decoupled from the door-lookup limit) — `/api/people`'s search path had the same "silently capped at 50" bug as registrations had at 20; the People/Volunteers/Members admin tabs stay full client-side tables (their datasets are far smaller than the guest list), so `fetchPeople`/`fetchPeopleSearch`/`fetchMembers` now fetch one bounded "everything" page and log loudly if it was ever truncated, instead of trusting an unbounded query forever. Kept `/api/volunteers` as a separate endpoint from `/api/people` — it carries `help_periods` plus NISS/eID uniqueness rules that don't map onto generic Person CRUD. `/api/members` was narrower: its `GET` list route was a pure `role=member` filter with an independently-written (and already-drifted) search predicate, so it was retired — the member list is now read via `/api/people?role=member` — while `POST`/`PUT`/`DELETE /api/members` stayed, since "delete a member" is a role removal (soft archive), not a generic person delete, and deserves its own named operation. `admin` and `visitor` are plain `Person.roles` tags with no dedicated endpoint, so `/api/people?role=` already covers them. The People/Volunteers/Members tables also gained TanStack's built-in client-side pagination (`rowPaginationFeature`, opt-in per table via `manualPagination: false` so `RegistrationList`'s server-paginated table is unaffected) — previously every filtered row rendered in one unpaginated `<tbody>`; CSV export and the "no results"/export-disabled checks were updated to read the pre-pagination row model so they still cover every filtered row, not just the visible page. |
@@ -200,7 +198,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #932 | backend | constraint — scaling |
 | #933 | backend, frontend (completed 2026-09-01) | gap — lifecycle |
 | #934 | backend | gap — compliance |
-| #935 | frontend | quality — UI/UX, a11y |
+| #935 | frontend (completed 2026-09-02) | quality — UI/UX, a11y |
 | #936 | frontend | gap — discoverability |
 | #937 | frontend | gap — event-day resilience |
 | #938 | docs (completed 2026-08-29) | accuracy |
@@ -233,10 +231,13 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   a working rights channel — have no implementation behind them. Worth deciding
   the retention schedule (#934, step 1) before authoring the policy version that
   describes it.
-- **The announcement banner (#945)** and **#935 (UI/UX pass)** both add live
-  regions. The banner's accessibility criteria are stricter and better specified
-  than anything in #935; if #945 lands first, #935 should adopt its pattern
-  rather than inventing a parallel one.
+- **The announcement banner (#945)** and **#935 (UI/UX pass, complete)** both
+  added live regions, for different surfaces: the banner's static,
+  urgent-only `aria-live` on a persistent public banner, and #935's
+  `role="status"`/`role="alert"` on transient admin mutation-result alerts —
+  the pattern already established in `CheckInPage`, now carried through
+  `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`,
+  and `ContentManagement`. No parallel convention was introduced.
 - **The shared outbox (#947)** is the bridge between the audit's individual
   delivery gaps (#923 and #924) and the roadmap's push/composer work (#941 and
   #942). It owns persistence, claiming, retry, and crash-recovery mechanics, but

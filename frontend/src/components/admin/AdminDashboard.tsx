@@ -78,10 +78,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    if (canManageAdminSections || activeKey === "registrations") return;
-    setActiveKey("registrations");
-  }, [activeKey, canManageAdminSections, setActiveKey]);
+  // A non-admin who lands on a restricted section (stale state, a role
+  // downgrade) has nothing to show there — derive the fallback for render
+  // instead of resetting `activeKey` itself in an effect, which loses one
+  // render to a blank content pane before it takes effect.
+  const effectiveActiveKey = canManageAdminSections ? activeKey : "registrations";
 
   const toggleGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
@@ -329,14 +330,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     onSignOut: handleSessionExpired,
   });
 
-  useEffect(() => {
+  // globalError can also be dismissed independently of loadError (see the
+  // Alert below), so it can't be a pure derivation — adjust it during render
+  // only on the transitions of loadError itself, rather than in an effect.
+  const [prevLoadError, setPrevLoadError] = useState(loadError);
+  if (loadError !== prevLoadError) {
+    setPrevLoadError(loadError);
     if (loadError) {
       devError("Failed to load dashboard data", loadError);
       setGlobalError(m.admin_error_load_data());
     } else {
       setGlobalError("");
     }
-  }, [loadError]);
+  }
 
   const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
     if (!navRef.current) return;
@@ -407,7 +413,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           )}
 
           <AdminSidebar
-            activeKey={activeKey}
+            activeKey={effectiveActiveKey}
             setActiveKey={setActiveKey}
             expandedGroups={expandedGroups}
             toggleGroup={toggleGroup}
@@ -481,10 +487,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             )}
 
             {isAnyPending ? (
-              <AdminSkeleton variant={skeletonVariantForSection(activeKey)} />
+              <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
             ) : (
-              <div className="admin-content-pane" key={activeKey}>
-                {activeKey === "registrations" && (
+              <div className="admin-content-pane" key={effectiveActiveKey}>
+                {effectiveActiveKey === "registrations" && (
                   <RegistrationList
                     registrations={registrations}
                     tables={tables}

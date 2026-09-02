@@ -100,12 +100,19 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
     },
   });
 
-  useEffect(() => {
-    if (!show) return;
-    form.reset(defaultValues);
-    setPersonQuery("");
-    setDebouncedPersonQuery("");
-  }, [defaultValues, form, show]);
+  // Re-open should always start from the record again, discarding edits that were
+  // abandoned by closing the modal. Reset during render rather than in an effect
+  // (the "adjusting state when a prop changes" pattern) since this only needs to
+  // react to the show=false->true transition, not to every render.
+  const [wasShown, setWasShown] = useState(show);
+  if (show !== wasShown) {
+    setWasShown(show);
+    if (show) {
+      form.reset(defaultValues);
+      setPersonQuery("");
+      setDebouncedPersonQuery("");
+    }
+  }
 
   useEffect(() => {
     if (!show) return;

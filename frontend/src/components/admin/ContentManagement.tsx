@@ -495,12 +495,14 @@ export function ContentSection({
       </div>
 
       {itemsQuery.isError && (
-        <Alert variant="danger" className="py-1 mb-2">
+        <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-2">
           {m.admin_content_error_load()}
         </Alert>
       )}
       {actionError && (
         <Alert
+          role="alert"
+          aria-live="assertive"
           variant="danger"
           className="py-1 mb-2"
           dismissible
@@ -696,7 +698,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
         </div>
       )}
       {!editionsQuery.isPending && editionsQuery.isError && (
-        <Alert variant="danger" className="py-2 small">
+        <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 small">
           {m.admin_content_error_load()}
         </Alert>
       )}

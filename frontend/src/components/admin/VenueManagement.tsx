@@ -17,6 +17,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import { m } from "@/paraglide/messages";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const MapComponent = lazy(() => import("@/components/MapComponent"));
 
@@ -229,18 +230,8 @@ export default function VenueManagement({
     }
   }, [editingVenueId, onAdd, onUpdate, venueForm, venueFormIsValid]);
 
-  const handleArchiveVenue = useCallback(
-    async (id: string) => {
-      if (!window.confirm(m.admin_venue_archive_confirm())) return;
-      setDeleteVenueError(null);
-      try {
-        await onArchive(id);
-      } catch (err) {
-        setDeleteVenueError(err instanceof Error ? err.message : m.admin_error_archive_venue());
-      }
-    },
-    [onArchive],
-  );
+  const [confirmArchiveVenueId, setConfirmArchiveVenueId] = useState<string | null>(null);
+  const [confirmDeleteVenueId, setConfirmDeleteVenueId] = useState<string | null>(null);
 
   const handleRestoreVenue = useCallback(
     async (id: string) => {
@@ -252,19 +243,6 @@ export default function VenueManagement({
       }
     },
     [onRestore],
-  );
-
-  const handleDeleteVenue = useCallback(
-    async (id: string) => {
-      if (!window.confirm(m.admin_venue_delete_confirm())) return;
-      setDeleteVenueError(null);
-      try {
-        await onDelete(id);
-      } catch (err) {
-        setDeleteVenueError(err instanceof Error ? err.message : m.admin_error_delete_venue());
-      }
-    },
-    [onDelete],
   );
 
   const isRoomFormValid = useCallback(
@@ -406,6 +384,32 @@ export default function VenueManagement({
     setShowTableTypeModal(true);
   }, []);
 
+  const [tableTypeDimensionConfirm, setTableTypeDimensionConfirm] = useState<{
+    tableCount: number;
+    roomCount: number;
+    payload: typeof emptyTableTypeForm & { widthM: number; lengthM: number };
+    editingId: string;
+  } | null>(null);
+  const [confirmDeleteTableTypeId, setConfirmDeleteTableTypeId] = useState<string | null>(null);
+
+  const commitSaveTableType = useCallback(
+    async (
+      payload: typeof emptyTableTypeForm & { widthM: number; lengthM: number },
+      editingId: string | null,
+    ) => {
+      if (editingId) {
+        const { active: _active, ...updateData } = payload;
+        await onUpdateTableType(editingId, updateData);
+      } else {
+        await onAddTableType(payload);
+      }
+      setTableTypeForm(emptyTableTypeForm);
+      setEditingTableTypeOriginalShape(null);
+      setShowTableTypeModal(false);
+    },
+    [onAddTableType, onUpdateTableType],
+  );
+
   const handleSaveTableType = useCallback(async () => {
     // Every rejected input needs to say why — bailing silently leaves the Save
     // button looking broken.
@@ -426,6 +430,7 @@ export default function VenueManagement({
       setAddTableTypeError(m.admin_table_type_dimensions_positive());
       return;
     }
+    const payload = { ...tableTypeForm, widthM, lengthM };
     // Tables render by joining live against TableType rather than a dimension
     // snapshot taken at placement time, so a shape/dimension change here silently
     // redraws every table of this type on every layout that ever placed one —
@@ -446,30 +451,19 @@ export default function VenueManagement({
           .map((layoutId) => layouts.find((l) => l.id === layoutId)?.roomId)
           .filter((roomId): roomId is string => Boolean(roomId)),
       );
-      if (
-        affectedTableLayoutIds.length > 0 &&
-        !window.confirm(
-          m.admin_table_type_dimension_change_confirm({
-            tableCount: affectedTableLayoutIds.length,
-            roomCount: affectedRoomIds.size,
-          }),
-        )
-      ) {
+      if (affectedTableLayoutIds.length > 0) {
+        setTableTypeDimensionConfirm({
+          tableCount: affectedTableLayoutIds.length,
+          roomCount: affectedRoomIds.size,
+          payload,
+          editingId: editingTableTypeId,
+        });
         return;
       }
     }
     setAddTableTypeError(null);
     try {
-      const payload = { ...tableTypeForm, widthM, lengthM };
-      if (editingTableTypeId) {
-        const { active: _active, ...updateData } = payload;
-        await onUpdateTableType(editingTableTypeId, updateData);
-      } else {
-        await onAddTableType(payload);
-      }
-      setTableTypeForm(emptyTableTypeForm);
-      setEditingTableTypeOriginalShape(null);
-      setShowTableTypeModal(false);
+      await commitSaveTableType(payload, editingTableTypeId);
     } catch (err) {
       setAddTableTypeError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
@@ -479,8 +473,7 @@ export default function VenueManagement({
     editingTableTypeOriginalShape,
     tables,
     layouts,
-    onAddTableType,
-    onUpdateTableType,
+    commitSaveTableType,
   ]);
 
   const handleArchiveTableType = useCallback(
@@ -507,21 +500,6 @@ export default function VenueManagement({
     [onRestoreTableType],
   );
 
-  const handleDeleteTableType = useCallback(
-    async (id: string) => {
-      if (!window.confirm(m.admin_table_type_delete_confirm())) return;
-      setDeleteTableTypeError(null);
-      try {
-        await onDeleteTableType(id);
-      } catch (err) {
-        // The API refuses while tables still use the type; surface that instead
-        // of leaving the button looking inert.
-        setDeleteTableTypeError(err instanceof Error ? err.message : m.admin_content_error_save());
-      }
-    },
-    [onDeleteTableType],
-  );
-
   return (
     <Card bg="dark" text="white" border="secondary">
       <Card.Header className="d-flex align-items-center justify-content-between">
@@ -536,17 +514,17 @@ export default function VenueManagement({
       </Card.Header>
       <Card.Body className="d-flex flex-column gap-3">
         {deleteVenueError && (
-          <Alert variant="danger" className="py-1 mb-0 small">
+          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 small">
             {deleteVenueError}
           </Alert>
         )}
         {deleteRoomError && (
-          <Alert variant="danger" className="py-1 mb-0 small">
+          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 small">
             {deleteRoomError}
           </Alert>
         )}
         {deleteTableTypeError && (
-          <Alert variant="danger" className="py-1 mb-0 small">
+          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 small">
             {deleteTableTypeError}
           </Alert>
         )}
@@ -607,7 +585,7 @@ export default function VenueManagement({
                         <Button
                           variant="outline-danger"
                           size="sm"
-                          onClick={() => handleDeleteVenue(venue.id)}
+                          onClick={() => setConfirmDeleteVenueId(venue.id)}
                           aria-label={m.admin_delete()}
                           title={m.admin_delete()}
                         >
@@ -618,7 +596,7 @@ export default function VenueManagement({
                       <Button
                         variant="outline-secondary"
                         size="sm"
-                        onClick={() => handleArchiveVenue(venue.id)}
+                        onClick={() => setConfirmArchiveVenueId(venue.id)}
                         aria-label={m.admin_content_archive()}
                         title={m.admin_content_archive()}
                       >
@@ -803,7 +781,7 @@ export default function VenueManagement({
                                   <Button
                                     size="sm"
                                     variant="outline-danger"
-                                    onClick={() => handleDeleteTableType(tt.id)}
+                                    onClick={() => setConfirmDeleteTableTypeId(tt.id)}
                                     aria-label={`${m.admin_delete()} ${tt.name}`}
                                     title={m.admin_delete()}
                                   >
@@ -838,7 +816,7 @@ export default function VenueManagement({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addVenueError && (
-            <Alert variant="danger" className="py-1 mb-3 small">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
               {addVenueError}
             </Alert>
           )}
@@ -981,7 +959,7 @@ export default function VenueManagement({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addRoomError && (
-            <Alert variant="danger" className="py-1 mb-3 small">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
               {addRoomError}
             </Alert>
           )}
@@ -1094,7 +1072,7 @@ export default function VenueManagement({
         </Modal.Header>
         <Modal.Body className="bg-dark text-light">
           {addTableTypeError && (
-            <Alert variant="danger" className="py-1 mb-3 small">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
               {addTableTypeError}
             </Alert>
           )}
@@ -1256,6 +1234,61 @@ export default function VenueManagement({
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {confirmArchiveVenueId && (
+        <ConfirmModal
+          show
+          title={m.admin_venue_archive_title()}
+          body={m.admin_venue_archive_confirm()}
+          variant="warning"
+          icon="archive"
+          confirmLabel={m.admin_content_archive()}
+          errorFallback={m.admin_error_archive_venue()}
+          onConfirm={() => onArchive(confirmArchiveVenueId)}
+          onHide={() => setConfirmArchiveVenueId(null)}
+        />
+      )}
+      {confirmDeleteVenueId && (
+        <ConfirmModal
+          show
+          title={m.admin_venue_delete_title()}
+          body={m.admin_venue_delete_confirm()}
+          errorFallback={m.admin_error_delete_venue()}
+          onConfirm={() => onDelete(confirmDeleteVenueId)}
+          onHide={() => setConfirmDeleteVenueId(null)}
+        />
+      )}
+      {tableTypeDimensionConfirm && (
+        <ConfirmModal
+          show
+          title={m.admin_table_type_dimension_change_title()}
+          body={m.admin_table_type_dimension_change_confirm({
+            tableCount: tableTypeDimensionConfirm.tableCount,
+            roomCount: tableTypeDimensionConfirm.roomCount,
+          })}
+          variant="warning"
+          icon="exclamation-triangle"
+          confirmLabel={m.admin_action_confirm()}
+          errorFallback={m.admin_content_error_save()}
+          onConfirm={() =>
+            commitSaveTableType(
+              tableTypeDimensionConfirm.payload,
+              tableTypeDimensionConfirm.editingId,
+            )
+          }
+          onHide={() => setTableTypeDimensionConfirm(null)}
+        />
+      )}
+      {confirmDeleteTableTypeId && (
+        <ConfirmModal
+          show
+          title={m.admin_table_type_delete_title()}
+          body={m.admin_table_type_delete_confirm()}
+          errorFallback={m.admin_error_delete_table_type()}
+          onConfirm={() => onDeleteTableType(confirmDeleteTableTypeId)}
+          onHide={() => setConfirmDeleteTableTypeId(null)}
+        />
+      )}
     </Card>
   );
 }

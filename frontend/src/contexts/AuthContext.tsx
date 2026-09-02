@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import { devError } from "@/utils/devLog";
 
@@ -128,11 +128,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     ? formatAuthError(oidcAuth.error, "Authentication failed. Please try again.")
     : null;
 
-  useEffect(() => {
+  // Clear a stale dismissal once the underlying error itself clears. Adjust
+  // during render (comparing against the previous oidcError) rather than in
+  // an effect, since this only needs to react to that one transition.
+  const [prevOidcError, setPrevOidcError] = useState(oidcError);
+  if (oidcError !== prevOidcError) {
+    setPrevOidcError(oidcError);
     if (oidcError === null) {
       setDismissedOidcError(null);
     }
-  }, [oidcError]);
+  }
 
   const visibleOidcError = oidcError === dismissedOidcError ? null : oidcError;
   const authError = redirectError ?? visibleOidcError;

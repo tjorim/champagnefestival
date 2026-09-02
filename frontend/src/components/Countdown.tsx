@@ -84,7 +84,6 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfte
     seconds: string;
   }
 
-  const tRef = useRef<TimeUnitsTranslations | null>(null);
   const targetDateObjRef = useRef(targetDateObj);
 
   // Update refs when values change
@@ -92,16 +91,18 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfte
     targetDateObjRef.current = targetDateObj;
   }, [targetDateObj]);
 
-  // Set translation ref on mount
-  useEffect(() => {
-    tRef.current = {
+  // Static per render locale — no need for a ref/effect since it's a pure,
+  // synchronous computation available from the very first render.
+  const t: TimeUnitsTranslations = useMemo(
+    () => ({
       months: m.countdown_months(),
       days: m.countdown_days(),
       hours: m.countdown_hours(),
       minutes: m.countdown_minutes(),
       seconds: m.countdown_seconds(),
-    };
-  }, []);
+    }),
+    [],
+  );
   // Set component as mounted after initial render
   useEffect(() => {
     setMounted(true);
@@ -116,8 +117,6 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfte
 
     // Helper function to calculate time left (moved inside effect)
     const calculateTime = (): TimeLeft => {
-      if (!tRef.current) return {};
-
       const targetDate = targetDateObjRef.current;
       const now = Date.now();
       const difference = targetDate.getTime() - now;
@@ -183,21 +182,17 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfte
     };
 
     // Initial calculation and status determination
-    if (tRef.current) {
-      setTimeLeft(calculateTime());
-      setStatus(calculateStatus());
-      lastStatusUpdateMinute = new Date().getMinutes();
-    }
+    setTimeLeft(calculateTime());
+    setStatus(calculateStatus());
+    lastStatusUpdateMinute = new Date().getMinutes();
 
     // Update timeLeft every second and status every minute
     const timer = setInterval(() => {
-      if (tRef.current) {
-        setTimeLeft(calculateTime());
-      }
+      setTimeLeft(calculateTime());
 
       // Update status when minute changes
       const currentMinute = new Date().getMinutes();
-      if (currentMinute !== lastStatusUpdateMinute && tRef.current) {
+      if (currentMinute !== lastStatusUpdateMinute) {
         setStatus(calculateStatus());
         lastStatusUpdateMinute = currentMinute;
       }
@@ -213,9 +208,7 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfte
   const timerComponents = Object.entries(timeLeft).map(([unit, value]) => (
     <div key={unit} className="countdown-unit">
       <span className="countdown-value">{value}</span>
-      <span className="countdown-label">
-        {tRef.current?.[unit as keyof TimeUnitsTranslations] || unit}
-      </span>
+      <span className="countdown-label">{t[unit as keyof TimeUnitsTranslations] || unit}</span>
     </div>
   ));
 

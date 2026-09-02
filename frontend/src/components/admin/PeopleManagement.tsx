@@ -487,6 +487,8 @@ export default function PeopleManagement({
         <Card.Body className="p-0">
           {mergeSuccess && (
             <Alert
+              role="status"
+              aria-live="polite"
               variant="success"
               dismissible
               className="m-3 mb-0"
@@ -497,6 +499,8 @@ export default function PeopleManagement({
           )}
           {createSuccess && (
             <Alert
+              role="status"
+              aria-live="polite"
               variant="success"
               dismissible
               className="m-3 mb-0"
@@ -507,6 +511,8 @@ export default function PeopleManagement({
           )}
           {updateSuccess && (
             <Alert
+              role="status"
+              aria-live="polite"
               variant="success"
               dismissible
               className="m-3 mb-0"
@@ -517,6 +523,8 @@ export default function PeopleManagement({
           )}
           {deleteSuccess && (
             <Alert
+              role="status"
+              aria-live="polite"
               variant="success"
               dismissible
               className="m-3 mb-0"
@@ -558,7 +566,6 @@ export default function PeopleManagement({
                                   }
                                 : undefined
                             }
-                            role={canSort ? "button" : undefined}
                             tabIndex={canSort ? 0 : undefined}
                             aria-sort={
                               canSort
@@ -630,7 +637,11 @@ export default function PeopleManagement({
           </Modal.Header>
 
           <Modal.Body className="bg-dark text-light">
-            {mergeError && <Alert variant="danger">{mergeError}</Alert>}
+            {mergeError && (
+              <Alert role="alert" aria-live="assertive" variant="danger">
+                {mergeError}
+              </Alert>
+            )}
 
             <p className="text-secondary small mb-3">{m.admin_people_duplicates_same_email()}</p>
 
@@ -713,7 +724,11 @@ export default function PeopleManagement({
             </Modal.Title>
           </Modal.Header>
           <Modal.Body className="bg-dark text-light">
-            {deleteError && <Alert variant="danger">{deleteError}</Alert>}
+            {deleteError && (
+              <Alert role="alert" aria-live="assertive" variant="danger">
+                {deleteError}
+              </Alert>
+            )}
             <p>{m.admin_people_delete_confirm()}</p>
           </Modal.Body>
           <Modal.Footer className="bg-dark border-secondary">
@@ -759,7 +774,7 @@ export default function PeopleManagement({
               </div>
             )}
             {!loadingPersonRegistrations && personRegistrationsError && (
-              <Alert variant="danger" className="m-3">
+              <Alert role="alert" aria-live="assertive" variant="danger" className="m-3">
                 {m.admin_people_registrations_load_error()}
               </Alert>
             )}
