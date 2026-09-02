@@ -62,6 +62,10 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_no_results: () => "No registrations found.",
     my_registrations_error: () => "Unable to load your registrations.",
     my_registrations_guests_label: () => "guests",
+    registration_preferred_language: () => "Preferred communication language",
+    my_registrations_save_language: () => "Save language",
+    my_registrations_language_saved: () => "Communication language saved.",
+    my_account_preference_error: () => "Could not update language.",
     my_registrations_qr_label: () => "Booking check-in QR code",
     my_registrations_add_calendar: () => "Add to calendar",
     registration_reference: ({ reference }: { reference: string }) =>
@@ -365,5 +369,84 @@ describe("MyRegistrationsPage", () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+  it("lets an authenticated visitor update the language for their owned registrations", async () => {
+    authState.accessToken = "visitor-access-token";
+    authState.isAuthenticated = true;
+    let savedBody: unknown;
+    server.use(
+      http.post("/api/me/registrations/claim", () => HttpResponse.json([])),
+      http.get("/api/me/registrations", () =>
+        HttpResponse.json([
+          {
+            id: "reg-owned",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.get("/api/me/communication-preference", () =>
+        HttpResponse.json({ preferred_language: "fr" }),
+      ),
+      http.put("/api/me/communication-preference", async ({ request }) => {
+        savedBody = await request.json();
+        return HttpResponse.json({ preferred_language: "en" });
+      }),
+    );
+    await renderPage("/my-registrations?token=email-access-token");
+    const language = await screen.findByLabelText("Preferred communication language");
+    await waitFor(() => expect(language).toHaveValue("fr"));
+    fireEvent.change(language, { target: { value: "en" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save language" }));
+    await screen.findByText("Communication language saved.");
+    expect(savedBody).toEqual({ preferred_language: "en" });
+  });
+
+  it("disables preference editing until the saved preference has loaded", async () => {
+    authState.accessToken = "visitor-access-token";
+    authState.isAuthenticated = true;
+    let resolvePreference!: () => void;
+    const preferenceGate = new Promise<void>((resolve) => {
+      resolvePreference = resolve;
+    });
+    server.use(
+      http.post("/api/me/registrations/claim", () => HttpResponse.json([])),
+      http.get("/api/me/registrations", () =>
+        HttpResponse.json([
+          {
+            id: "reg-owned",
+            event_title: "Grand Opening",
+            event_date: null,
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.get("/api/me/communication-preference", async () => {
+        await preferenceGate;
+        return HttpResponse.json({ preferred_language: "fr" });
+      }),
+    );
+    await renderPage("/my-registrations?token=email-access-token");
+    const language = await screen.findByLabelText("Preferred communication language");
+    expect(language).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save language" })).toBeDisabled();
+    resolvePreference();
+    await waitFor(() => expect(language).toBeEnabled());
+    expect(language).toHaveValue("fr");
   });
 });

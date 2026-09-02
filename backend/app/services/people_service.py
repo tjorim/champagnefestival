@@ -143,6 +143,7 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
         name=body.name,
         email=str(body.email).lower().strip() if body.email else "",
         phone=parse_phone(body.phone),
+        preferred_language=body.preferred_language,
         address=body.address,
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
@@ -175,7 +176,7 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
 async def apply_person_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    for field in ("name", "address", "visits_per_month", "club_name", "notes", "active"):
+    for field in ("name", "address", "preferred_language", "visits_per_month", "club_name", "notes", "active"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
 

@@ -72,3 +72,9 @@ Callers should generate high-entropy values, retain them only for the retry
 window, and reuse a value only for byte-equivalent intent. Tests for a replayed
 write must cover identical replay, payload mismatch, actor isolation, the
 concurrent-first-use conflict, and both sides of the 72-hour boundary.
+
+## Preferred communication language
+
+Public registration creation writes the explicitly selected communication language when it creates a new person. It preserves an existing person's preference unless the authenticated user already owns a registration for that person. Registration creation remains non-retryable: a client retry could create a duplicate registration, and the UI does not retry it automatically. An authorized owner's preference update is last-write-wins and transactionally committed with that registration.
+
+`PUT /api/me/communication-preference` assigns one validated scalar value to every person attached to the authenticated user's registrations. Repeating the same request has the same resulting state, so the operation is idempotent and safe for a deliberate user retry. A repeated request that finds the value already applied creates no duplicate audit entry. The UI does not retry it automatically and reports success only after the response succeeds.

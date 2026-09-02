@@ -22,6 +22,7 @@ export interface PersonFormData {
   name: string;
   email: string;
   phone: string;
+  preferredLanguage?: "nl" | "fr" | "en" | null;
   address: string;
   roles: string[];
   notes: string;
@@ -94,6 +95,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             name: person.name,
             email: person.email ?? "",
             phone: person.phone ?? "",
+            preferredLanguage: person.preferredLanguage ?? null,
             address: person.address ?? "",
             rolesInput: person.roles.join(", "),
             notes: person.notes ?? "",
@@ -104,6 +106,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             name: "",
             email: "",
             phone: "",
+            preferredLanguage: null,
             address: "",
             rolesInput: "",
             notes: "",
@@ -122,6 +125,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
           name: value.name.trim(),
           email: value.email.trim(),
           phone: value.phone.trim(),
+          preferredLanguage: value.preferredLanguage,
           address: value.address.trim(),
           roles: parseRoles(value.rolesInput),
           notes: value.notes.trim(),
@@ -302,6 +306,24 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             </form.Field>
           </Form.Group>
 
+          <form.Field name="preferredLanguage">
+            {(field) => (
+              <Form.Group className="mb-3" controlId="person-preferred-language">
+                <Form.Label>{m.registration_preferred_language()}</Form.Label>
+                <Form.Select
+                  value={field.state.value ?? ""}
+                  onChange={(event) =>
+                    field.handleChange((event.target.value || null) as "nl" | "fr" | "en" | null)
+                  }
+                >
+                  <option value="">{m.admin_email_language_unknown()}</option>
+                  <option value="nl">Nederlands</option>
+                  <option value="fr">Français</option>
+                  <option value="en">English</option>
+                </Form.Select>
+              </Form.Group>
+            )}
+          </form.Field>
           <Form.Group className="mb-3" controlId="person-club">
             <Form.Label className="text-secondary small">
               {m.admin_people_club_name_label()}

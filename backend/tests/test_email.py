@@ -24,7 +24,7 @@ async def test_registration_confirmation_contains_reference_link_and_inline_qr(m
             order_items=[],
         ),
     )
-    person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com"))
+    person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com", preferred_language="en"))
     event = cast(Event, SimpleNamespace(title="Opening", date=None))
 
     assert await email_module.send_registration_confirmation(registration, person, event) is True
@@ -71,3 +71,20 @@ def test_smtp_starttls_uses_certificate_verifying_context(monkeypatch):
     email_module._send_message_sync(EmailMessage())
 
     assert smtp_instances[0].starttls_context is tls_context
+
+
+async def test_registration_confirmation_uses_preferred_language(monkeypatch):
+    sent = []
+    monkeypatch.setattr(email_module.settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(email_module.settings, "smtp_from", "festival@example.com")
+    monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
+    registration = cast(
+        Registration,
+        SimpleNamespace(id="reg-fr", check_in_token="token", guest_count=1, amount_due=None, order_items=[]),
+    )
+    person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com", preferred_language="fr"))
+    event = cast(Event, SimpleNamespace(title="Dégustation", date=None))
+    assert await email_module.send_registration_confirmation(registration, person, event) is True
+    message = sent[0]
+    assert message["Subject"].startswith("Inscription Champagnefestival")
+    assert "Nous avons bien reçu votre inscription" in message.get_body(preferencelist=("plain",)).get_content()

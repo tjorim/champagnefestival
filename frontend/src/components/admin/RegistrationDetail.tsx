@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -9,6 +9,12 @@ import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
 import type { OrderItem, Registration } from "@/types/registration";
+import {
+  buildRegistrationEmailDraft,
+  type EmailDraft,
+  type RegistrationEmailTemplate,
+} from "@/utils/emailComposer";
+import EmailComposeModal from "./EmailComposeModal";
 
 interface RegistrationDetailProps {
   registration: Registration | null;
@@ -48,6 +54,8 @@ export default function RegistrationDetail({
   actionError,
   onClearActionError,
 }: RegistrationDetailProps) {
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
+  const [emailTemplate, setEmailTemplate] = useState<RegistrationEmailTemplate>("general");
   const checkInUrl = registration
     ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}#token=${encodeURIComponent(registration.checkInToken ?? "")}`
     : "";
@@ -108,6 +116,7 @@ export default function RegistrationDetail({
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
+        <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
         {actionError && (
           <Alert
             variant="danger"
@@ -297,6 +306,39 @@ export default function RegistrationDetail({
             </ListGroup.Item>
           )}
         </ListGroup>
+
+        {registration.person.email && (
+          <section className="mb-4" aria-labelledby="registration-email-heading">
+            <h6 id="registration-email-heading" className="text-warning mb-2">
+              <i className="bi bi-envelope me-2" aria-hidden="true" />
+              {m.admin_email_registration_title()}
+            </h6>
+            <div className="d-flex flex-wrap align-items-end gap-2">
+              <Form.Group controlId="registration-email-template" className="flex-grow-1">
+                <Form.Label>{m.admin_email_template_label()}</Form.Label>
+                <Form.Select
+                  value={emailTemplate}
+                  onChange={(event) =>
+                    setEmailTemplate(event.target.value as RegistrationEmailTemplate)
+                  }
+                >
+                  <option value="general">{m.admin_email_template_general()}</option>
+                  <option value="order">{m.admin_email_template_order()}</option>
+                  <option value="payment">{m.admin_email_template_payment()}</option>
+                  <option value="event">{m.admin_email_template_event()}</option>
+                </Form.Select>
+              </Form.Group>
+              <Button
+                variant="outline-warning"
+                onClick={() =>
+                  setEmailDraft(buildRegistrationEmailDraft(registration, emailTemplate))
+                }
+              >
+                {m.admin_email_preview_action()}
+              </Button>
+            </div>
+          </section>
+        )}
 
         {!simpleRsvp && registration.orderItems.length > 0 && (
           <div className="mb-4">

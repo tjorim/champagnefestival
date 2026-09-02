@@ -9,6 +9,7 @@ from decimal import Decimal
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -526,6 +527,10 @@ class Person(Base):
 
     __tablename__ = "people"
     __table_args__ = (
+        CheckConstraint(
+            "preferred_language IS NULL OR preferred_language IN ('nl', 'fr', 'en')",
+            name="ck_people_preferred_language",
+        ),
         # Trigram (pg_trgm) GIN indexes backing fuzzy operational search, in
         # addition to the plain btree index=True below on search_email — the
         # migration creates both, since exact-match lookup and fuzzy search
@@ -553,6 +558,7 @@ class Person(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str] = mapped_column(String(200), default="")
+    preferred_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
     search_name: Mapped[str] = mapped_column(String(200), default="")
     """Trigger-maintained unaccented lower-case name for operational lookup."""
     search_name_alt: Mapped[str] = mapped_column(String(200), default="")

@@ -33,6 +33,7 @@ export interface PersonSummary {
   name: string;
   email: string;
   phone: string;
+  preferredLanguage?: "nl" | "fr" | "en" | null;
 }
 
 export interface Registration {
@@ -73,6 +74,7 @@ export interface RegistrationFormData {
   name: string;
   email: string;
   phone: string;
+  preferredLanguage: "nl" | "fr" | "en";
   eventId: string;
   guestCount: number;
   orderItems: OrderItem[];

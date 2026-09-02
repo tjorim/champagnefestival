@@ -92,10 +92,9 @@ work is intentionally outside this audit until the bourse requirements are clear
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #943 — individual member/registration `mailto:` actions | Add to the now-settled registration/member UI. It complements but never replaces #924's server confirmation delivery. | S–M |
-| 2 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
-| 3 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
-| 4 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 1 | #945 — scheduled localised announcement banner | Operational communication belongs in this phase, not after all platform work. Reuse #929's completed recovery contract if live invalidation is added and #931's explicit pagination shape for admin history. | M–L |
+| 2 | #935 — UI/UX consistency pass | Follow #945's stricter live-region and reduced-motion pattern rather than creating a parallel convention. Other polish remains independent and may run earlier in parallel. | M |
+| 3 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -103,23 +102,23 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 7 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 8 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 9 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
-| 10 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 11 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 4 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 5 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 6 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
+| 7 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 8 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 12 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 9 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Phase 6 — deferred visitor account
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 13 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
+| 10 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
 
 ### Dependency map
 
@@ -161,6 +160,7 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #943 | Completed | 2026-09-01 | #943, PR (this change) | Added previewed, individually addressed email-client actions for member/person rows and four localised registration templates and server-delivered confirmations, including an explicit persisted communication-language preference collected during registration and editable by administrators, with encoded `mailto:` links, a long-message clipboard fallback, accessibility labels, and strict exclusion of internal registration fields. No backend write or delivery audit is created. |
 | #933 | Completed | 2026-09-01 | #933, PR (this change) | Added capacity-safe party-size editing with bundled-order recalculation and audit history, optional public accessibility requirements, and validated per-event registration closing deadlines exposed through REST, MCP, admin editing, and the public closed state. |
 | #931 | Completed | 2026-09-01 | #931, PR (this change) | `GET /api/registrations` now returns a `{items, total, limit, page}` envelope with one shared default page size and filter set (search and browse, including edition/date/person/edition-category filters and server-side sort) instead of "20 when searching, unbounded when not", with a ceiling decoupled from the volunteer door-lookup limit. `RegistrationList` is now genuinely server-paginated (page controls, page-size selector) rather than fetching everything into the browser; per-event capacity and status/edition counts still read the full working set, which they need for correct totals. Bulk actions and CSV export — which paginating the table would otherwise have silently capped at one page — got a Gmail-style "select all N matching" expansion and now cover every filtered row, with bulk mutations batched instead of fired all at once. `GET /api/people`, `/api/volunteers`, and `/api/members` got the same `{items, total, limit, page}` envelope and admin-sized default/ceiling (also decoupled from the door-lookup limit) — `/api/people`'s search path had the same "silently capped at 50" bug as registrations had at 20; the People/Volunteers/Members admin tabs stay full client-side tables (their datasets are far smaller than the guest list), so `fetchPeople`/`fetchPeopleSearch`/`fetchMembers` now fetch one bounded "everything" page and log loudly if it was ever truncated, instead of trusting an unbounded query forever. Kept `/api/volunteers` as a separate endpoint from `/api/people` — it carries `help_periods` plus NISS/eID uniqueness rules that don't map onto generic Person CRUD. `/api/members` was narrower: its `GET` list route was a pure `role=member` filter with an independently-written (and already-drifted) search predicate, so it was retired — the member list is now read via `/api/people?role=member` — while `POST`/`PUT`/`DELETE /api/members` stayed, since "delete a member" is a role removal (soft archive), not a generic person delete, and deserves its own named operation. `admin` and `visitor` are plain `Person.roles` tags with no dedicated endpoint, so `/api/people?role=` already covers them. The People/Volunteers/Members tables also gained TanStack's built-in client-side pagination (`rowPaginationFeature`, opt-in per table via `manualPagination: false` so `RegistrationList`'s server-paginated table is unaffected) — previously every filtered row rendered in one unpaginated `<tbody>`; CSV export and the "no results"/export-disabled checks were updated to read the pre-pagination row model so they still cover every filtered row, not just the visible page. |
 | #926 | Completed | 2026-08-30 | #926, PR (this change) | Removed the dead table reservation column, derived non-cancelled occupancy from registrations, and shipped a volunteer read-only floor plan linked from check-in. |
@@ -214,7 +214,7 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | Issue | Area | Kind | Primary prerequisite or coordination |
 | --- | --- | --- | --- |
 | #940 | backend, frontend, admin (completed 2026-08-29) | public contact settings | Built on #925 failure semantics; related to #923 |
-| #943 | frontend, admin | individual email-client actions | Does not replace #924 |
+| #943 | frontend, admin (completed 2026-09-01) | individual email-client actions | Does not replace #924 |
 | #945 | backend, frontend, admin, accessibility | scheduled announcements | Coordinates with #929, #931, and #935 |
 | #944 | backend, frontend, admin, security | versioned policy publishing | Follows #934's policy decisions |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
@@ -373,14 +373,14 @@ registrations must never be included.
 
 Acceptance criteria:
 
-- [ ] The UI says **Open in email client**, never **Send**.
-- [ ] Admins preview recipient, subject, and body before opening `mailto:`.
-- [ ] Recipient, subject, and body are correctly encoded.
-- [ ] Long messages offer copy-to-clipboard instead of an oversized URL.
-- [ ] The order template uses only the selected registration.
-- [ ] No backend write or false “sent” audit record is created.
-- [ ] Bulk recipients and uploaded address lists are out of scope.
-- [ ] Accessibility and sensitive-field exclusion are tested.
+- [x] The UI says **Open in email client**, never **Send**.
+- [x] Admins preview recipient, subject, and body before opening `mailto:`.
+- [x] Recipient, subject, and body are correctly encoded.
+- [x] Long messages offer copy-to-clipboard instead of an oversized URL.
+- [x] The order template uses only the selected registration.
+- [x] No backend write or false “sent” audit record is created.
+- [x] Bulk recipients and uploaded address lists are out of scope.
+- [x] Accessibility and sensitive-field exclusion are tested.
 
 ### #944 — versioned Markdown policy publishing
 

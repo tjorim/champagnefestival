@@ -13,6 +13,7 @@ import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import type { Event } from "@/types/event";
 import { RegistrationSubmitError, submitRegistration } from "@/utils/publicRegistrationApi";
 import { useAuth } from "@/contexts/AuthContext";
+import { getLocale } from "@/paraglide/runtime";
 
 interface RegistrationModalProps {
   show: boolean;
@@ -24,6 +25,7 @@ interface RegistrationFields {
   name: string;
   email: string;
   phone: string;
+  preferredLanguage: "nl" | "fr" | "en";
   guestCount: number;
   notes: string;
   accessibilityNote: string;
@@ -55,6 +57,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       name: "",
       email: "",
       phone: "",
+      preferredLanguage: getLocale(),
       guestCount: 1,
       notes: "",
       accessibilityNote: "",
@@ -149,6 +152,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       name: "",
       email: "",
       phone: "",
+      preferredLanguage: getLocale(),
       guestCount: 1,
       notes: "",
       accessibilityNote: "",
@@ -344,6 +348,27 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   </Form.Group>
                 );
               }}
+            </form.Field>
+
+            <form.Field name="preferredLanguage">
+              {(field) => (
+                <Form.Group className="mb-3" controlId="res-preferred-language">
+                  <Form.Label>{m.registration_preferred_language()}</Form.Label>
+                  <Form.Select
+                    value={field.state.value}
+                    onChange={(event) =>
+                      field.handleChange(event.target.value as "nl" | "fr" | "en")
+                    }
+                  >
+                    <option value="nl">Nederlands</option>
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                  </Form.Select>
+                  <Form.Text className="text-secondary">
+                    {m.registration_preferred_language_help()}
+                  </Form.Text>
+                </Form.Group>
+              )}
             </form.Field>
 
             <form.Field name="accessibilityNote">

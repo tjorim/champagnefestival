@@ -388,6 +388,7 @@ def person_summary_to_dict(p: Person) -> dict:
         "name": p.name,
         "email": p.email,
         "phone": p.phone,
+        "preferred_language": p.preferred_language,
     }
 
 
@@ -437,6 +438,7 @@ def person_to_dict(p: Person) -> dict:
         "name": p.name,
         "email": p.email,
         "phone": p.phone,
+        "preferred_language": p.preferred_language,
         "address": p.address,
         "roles": p.roles,
         "national_register_number": p.national_register_number,

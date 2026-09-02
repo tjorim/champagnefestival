@@ -22,6 +22,12 @@ import {
 } from "@/utils/publicRegistrationApi";
 import { EMAIL_REGEX } from "@/config/constants";
 import { useAuth } from "@/contexts/AuthContext";
+import { getLocale } from "@/paraglide/runtime";
+import {
+  getCommunicationPreference,
+  updateCommunicationPreference,
+  type CommunicationLanguage,
+} from "@/utils/meApi";
 
 function calendarDateRange(date: string): string {
   const start = date.replaceAll("-", "");
@@ -49,6 +55,10 @@ export default function MyRegistrationsPage() {
   const [requestSent, setRequestSent] = useState(false);
   const [error, setError] = useState("");
   const [isEmailInvalid, setIsEmailInvalid] = useState(false);
+  const [preferredLanguage, setPreferredLanguage] = useState<CommunicationLanguage>(getLocale());
+  const [preferenceStatus, setPreferenceStatus] = useState<"" | "saving" | "saved" | "error">("");
+  const [isPreferenceLoading, setIsPreferenceLoading] = useState(false);
+  const preferenceRequestId = useRef(0);
 
   const requestLookupMutation = useMutation({
     mutationFn: requestRegistrationLookup,
@@ -100,6 +110,36 @@ export default function MyRegistrationsPage() {
   }, [accessToken, auth.isAuthenticated, auth.isLoading, navigate, registrationsMutation, token]);
 
   const registrations = registrationsMutation.data ?? null;
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !accessToken || registrations === null) return;
+    const requestId = ++preferenceRequestId.current;
+    setIsPreferenceLoading(true);
+    void getCommunicationPreference(accessToken)
+      .then((language) => {
+        if (requestId !== preferenceRequestId.current) return;
+        if (language) setPreferredLanguage(language);
+      })
+      .catch(() => {
+        if (requestId === preferenceRequestId.current) setPreferenceStatus("error");
+      })
+      .finally(() => {
+        if (requestId === preferenceRequestId.current) setIsPreferenceLoading(false);
+      });
+  }, [accessToken, auth.isAuthenticated, registrations]);
+
+  const savePreference = async () => {
+    if (!accessToken) return;
+    preferenceRequestId.current += 1;
+    setIsPreferenceLoading(false);
+    setPreferenceStatus("saving");
+    try {
+      await updateCommunicationPreference(accessToken, preferredLanguage);
+      setPreferenceStatus("saved");
+    } catch {
+      setPreferenceStatus("error");
+    }
+  };
   const isSubmittingEmail = requestLookupMutation.isPending;
   const isLoadingRegistrations =
     registrationsMutation.isPending ||
@@ -260,6 +300,49 @@ export default function MyRegistrationsPage() {
                       </Alert>
                     ) : registrations !== null ? (
                       <div className="d-flex flex-column gap-3">
+                        {auth.isAuthenticated && registrations.length > 0 && (
+                          <Card bg="dark" text="white" border="secondary">
+                            <Card.Body>
+                              <Form.Label htmlFor="my-registrations-language">
+                                {m.registration_preferred_language()}
+                              </Form.Label>
+                              <div className="d-flex gap-2">
+                                <Form.Select
+                                  id="my-registrations-language"
+                                  value={preferredLanguage}
+                                  disabled={isPreferenceLoading || preferenceStatus === "saving"}
+                                  onChange={(event) => {
+                                    setPreferredLanguage(
+                                      event.target.value as CommunicationLanguage,
+                                    );
+                                    setPreferenceStatus("");
+                                  }}
+                                >
+                                  <option value="nl">Nederlands</option>
+                                  <option value="fr">Français</option>
+                                  <option value="en">English</option>
+                                </Form.Select>
+                                <Button
+                                  variant="outline-warning"
+                                  disabled={isPreferenceLoading || preferenceStatus === "saving"}
+                                  onClick={() => void savePreference()}
+                                >
+                                  {m.my_registrations_save_language()}
+                                </Button>
+                              </div>
+                              {preferenceStatus === "saved" && (
+                                <div className="small text-success mt-2" role="status">
+                                  {m.my_registrations_language_saved()}
+                                </div>
+                              )}
+                              {preferenceStatus === "error" && (
+                                <div className="small text-danger mt-2" role="alert">
+                                  {m.my_account_preference_error()}
+                                </div>
+                              )}
+                            </Card.Body>
+                          </Card>
+                        )}
                         {registrations.map((registration) => (
                           <Card key={registration.id} bg="dark" text="white" border="secondary">
                             <Card.Header className="d-flex align-items-center justify-content-between">

@@ -16,6 +16,8 @@ from app.auth import get_current_claims
 from app.database import get_db
 from app.models import Event, Person, Registration, User
 from app.schemas import (
+    CommunicationPreferenceOut,
+    CommunicationPreferenceUpdate,
     MyRegistrationOut,
     PaymentStatus,
     PebbleAccessTokenOut,
@@ -34,6 +36,52 @@ from app.utils import registration_to_guest_dict
 router = APIRouter(prefix="/api/me", tags=["me"])
 pebble_router = APIRouter(prefix="/api/pebble", tags=["pebble"])
 _bearer_scheme = HTTPBearer(auto_error=True)
+
+
+async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
+    return list(
+        (
+            await db.scalars(
+                select(Person)
+                .where(Person.id.in_(select(Registration.person_id).where(Registration.user_id == user_id)))
+                .order_by(Person.id)
+            )
+        ).all()
+    )
+
+
+@router.get("/communication-preference", response_model=CommunicationPreferenceOut)
+async def get_communication_preference(
+    claims: dict[str, Any] = Depends(get_current_claims), db: AsyncSession = Depends(get_db)
+) -> CommunicationPreferenceOut:
+    user = await get_or_create_user(db, claims["sub"])
+    people = await _user_people(db, user.id)
+    preferred_language = next((person.preferred_language for person in people if person.preferred_language), None)
+    return CommunicationPreferenceOut.model_validate({"preferred_language": preferred_language})
+
+
+@router.put("/communication-preference", response_model=CommunicationPreferenceOut)
+async def update_communication_preference(
+    body: CommunicationPreferenceUpdate,
+    claims: dict[str, Any] = Depends(get_current_claims),
+    db: AsyncSession = Depends(get_db),
+) -> CommunicationPreferenceOut:
+    user = await get_or_create_user(db, claims["sub"])
+    people = await _user_people(db, user.id)
+    changed_people = [person for person in people if person.preferred_language != body.preferred_language]
+    for person in changed_people:
+        person.preferred_language = body.preferred_language
+    if changed_people:
+        await write_audit_entry(
+            db,
+            actor=claims["sub"],
+            action="communication_preference_updated",
+            resource_type="user",
+            resource_id=user.id,
+            details={"preferred_language": body.preferred_language, "people_updated": len(changed_people)},
+        )
+    await db.commit()
+    return CommunicationPreferenceOut(preferred_language=body.preferred_language)
 
 
 async def _registrations_for_user(db: AsyncSession, user_id: str) -> list[MyRegistrationOut]:
