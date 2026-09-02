@@ -92,7 +92,7 @@ work is intentionally outside this audit until the bourse requirements are clear
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #937 — no scanner, no offline check-in | Its #921 rate-limit prerequisite is complete. Settle one production service-worker ownership/update strategy with #941. Either issue may implement the common worker first, but they must not ship competing registrations or cache policies. | L |
+| 1 | #937 — no scanner, no offline check-in | In-page QR scanning (native `BarcodeDetector`, `jsqr` fallback) and an online/offline connectivity banner have shipped, closing the app-switch and no-visible-connection-state gaps. The offline queue/local guest-list cache remains: it still needs one production service-worker ownership/update strategy settled with #941 before either issue implements it, so IndexedDB caching and check-in replay stay open. | M |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -200,7 +200,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #934 | backend | gap — compliance |
 | #935 | frontend (completed 2026-09-02) | quality — UI/UX, a11y |
 | #936 | frontend | gap — discoverability |
-| #937 | frontend | gap — event-day resilience |
+| #937 | frontend (scanner + connectivity banner shipped 2026-09-02) | gap — event-day resilience |
 | #938 | docs (completed 2026-08-29) | accuracy |
 | #939 | backend, frontend (completed 2026-08-29) | bug — oversell risk |
 

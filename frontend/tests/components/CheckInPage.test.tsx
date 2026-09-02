@@ -55,6 +55,12 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_manual_search_session_expired: () => "Volunteer session expired for search.",
     checkin_manual_not_checked_in: () => "Not checked in",
     checkin_search_error: () => "Could not search registrations.",
+    checkin_scanner_starting: () => "Starting camera…",
+    checkin_scanner_scanning: () => "Point the camera at the guest's QR code.",
+    checkin_scanner_permission_denied: () => "Camera access was denied.",
+    checkin_scanner_unavailable: () => "Camera scanning isn't available.",
+    checkin_scan_next: () => "Scan next",
+    checkin_offline_banner: () => "You're offline.",
     admin_login_button: () => "Login",
     auth_error_title: () => "Authentication problem",
     admin_loading: () => "Loading…",
@@ -454,5 +460,80 @@ describe("CheckInPage", () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  describe("connectivity banner", () => {
+    afterEach(() => {
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    });
+
+    it("shows an offline banner when the connection drops and hides it when it returns", async () => {
+      Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+
+      await renderPage("/check-in");
+
+      expect(screen.getByText("You're offline.")).toBeInTheDocument();
+
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+      fireEvent(window, new Event("online"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("You're offline.")).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("in-page QR scanning", () => {
+    const originalMediaDevices = navigator.mediaDevices;
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: originalMediaDevices,
+        configurable: true,
+      });
+    });
+
+    it("looks up a registration decoded by the in-page scanner without navigating", async () => {
+      const track = { stop: vi.fn() };
+      const stream = new MediaStream();
+      Object.defineProperty(stream, "getTracks", { value: () => [track] });
+      const getUserMedia = vi.fn().mockResolvedValue(stream);
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia },
+        configurable: true,
+      });
+      vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+
+      class FakeBarcodeDetector {
+        detect() {
+          return Promise.resolve([
+            { rawValue: `https://example.com/check-in?id=${SEED_REG_ID}#token=${SEED_REG_TOKEN}` },
+          ]);
+        }
+      }
+      vi.stubGlobal("BarcodeDetector", FakeBarcodeDetector);
+
+      const { container } = await renderPage("/check-in");
+      const video = container.querySelector("video");
+      expect(video).not.toBeNull();
+      Object.defineProperty(video, "readyState", { value: 4, configurable: true });
+
+      await waitFor(() => {
+        expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /scan next/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Scan a QR code to begin.")).toBeInTheDocument();
+      });
+    });
   });
 });
