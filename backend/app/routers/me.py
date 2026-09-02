@@ -42,9 +42,9 @@ async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
     return list(
         (
             await db.scalars(
-                select(Person).where(
-                    Person.id.in_(select(Registration.person_id).where(Registration.user_id == user_id))
-                )
+                select(Person)
+                .where(Person.id.in_(select(Registration.person_id).where(Registration.user_id == user_id)))
+                .order_by(Person.id)
             )
         ).all()
     )
@@ -68,16 +68,18 @@ async def update_communication_preference(
 ) -> CommunicationPreferenceOut:
     user = await get_or_create_user(db, claims["sub"])
     people = await _user_people(db, user.id)
-    for person in people:
+    changed_people = [person for person in people if person.preferred_language != body.preferred_language]
+    for person in changed_people:
         person.preferred_language = body.preferred_language
-    await write_audit_entry(
-        db,
-        actor=claims["sub"],
-        action="communication_preference_updated",
-        resource_type="user",
-        resource_id=user.id,
-        details={"preferred_language": body.preferred_language, "people_updated": len(people)},
-    )
+    if changed_people:
+        await write_audit_entry(
+            db,
+            actor=claims["sub"],
+            action="communication_preference_updated",
+            resource_type="user",
+            resource_id=user.id,
+            details={"preferred_language": body.preferred_language, "people_updated": len(changed_people)},
+        )
     await db.commit()
     return CommunicationPreferenceOut(preferred_language=body.preferred_language)
 

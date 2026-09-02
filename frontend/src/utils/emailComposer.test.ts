@@ -23,7 +23,7 @@ describe("emailComposer", () => {
       body: "Line 1\n€12.50",
     });
     expect(url).toBe(
-      "mailto:zoe%2Bvip%40example.com?subject=Fizz+%26+Food%3F&body=Line+1%0A%E2%82%AC12.50",
+      "mailto:zoe%2Bvip%40example.com?subject=Fizz%20%26%20Food%3F&body=Line%201%0D%0A%E2%82%AC12.50",
     );
   });
   it.each(["general", "order", "payment", "event"] as const)(

@@ -369,5 +369,14 @@ async def test_authenticated_visitor_can_update_communication_preference(me_clie
     registration = await db_session.get(Registration, response.json()["id"])
     person = await db_session.get(me_router.Person, registration.person_id)
     assert person.preferred_language == "fr"
-    audit = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "communication_preference_updated"))
-    assert audit is not None
+    audits = (
+        await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "communication_preference_updated"))
+    ).all()
+    assert len(audits) == 1
+
+    repeated = await me_client.put("/api/me/communication-preference", json={"preferred_language": "fr"})
+    assert repeated.status_code == 200
+    audits = (
+        await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "communication_preference_updated"))
+    ).all()
+    assert len(audits) == 1

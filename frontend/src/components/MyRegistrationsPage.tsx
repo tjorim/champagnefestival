@@ -57,6 +57,8 @@ export default function MyRegistrationsPage() {
   const [isEmailInvalid, setIsEmailInvalid] = useState(false);
   const [preferredLanguage, setPreferredLanguage] = useState<CommunicationLanguage>(getLocale());
   const [preferenceStatus, setPreferenceStatus] = useState<"" | "saving" | "saved" | "error">("");
+  const [isPreferenceLoading, setIsPreferenceLoading] = useState(false);
+  const preferenceRequestId = useRef(0);
 
   const requestLookupMutation = useMutation({
     mutationFn: requestRegistrationLookup,
@@ -111,13 +113,25 @@ export default function MyRegistrationsPage() {
 
   useEffect(() => {
     if (!auth.isAuthenticated || !accessToken || registrations === null) return;
+    const requestId = ++preferenceRequestId.current;
+    setIsPreferenceLoading(true);
     void getCommunicationPreference(accessToken)
-      .then((language) => language && setPreferredLanguage(language))
-      .catch(() => setPreferenceStatus("error"));
+      .then((language) => {
+        if (requestId !== preferenceRequestId.current) return;
+        if (language) setPreferredLanguage(language);
+      })
+      .catch(() => {
+        if (requestId === preferenceRequestId.current) setPreferenceStatus("error");
+      })
+      .finally(() => {
+        if (requestId === preferenceRequestId.current) setIsPreferenceLoading(false);
+      });
   }, [accessToken, auth.isAuthenticated, registrations]);
 
   const savePreference = async () => {
     if (!accessToken) return;
+    preferenceRequestId.current += 1;
+    setIsPreferenceLoading(false);
     setPreferenceStatus("saving");
     try {
       await updateCommunicationPreference(accessToken, preferredLanguage);
@@ -296,6 +310,7 @@ export default function MyRegistrationsPage() {
                                 <Form.Select
                                   id="my-registrations-language"
                                   value={preferredLanguage}
+                                  disabled={isPreferenceLoading || preferenceStatus === "saving"}
                                   onChange={(event) => {
                                     setPreferredLanguage(
                                       event.target.value as CommunicationLanguage,
@@ -309,7 +324,7 @@ export default function MyRegistrationsPage() {
                                 </Form.Select>
                                 <Button
                                   variant="outline-warning"
-                                  disabled={preferenceStatus === "saving"}
+                                  disabled={isPreferenceLoading || preferenceStatus === "saving"}
                                   onClick={() => void savePreference()}
                                 >
                                   {m.my_registrations_save_language()}

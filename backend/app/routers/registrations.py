@@ -130,7 +130,9 @@ async def create_registration(
         )
         db.add(person)
         await db.flush()
-    else:
+    elif user is not None and await db.scalar(
+        select(Registration.id).where(Registration.person_id == person.id, Registration.user_id == user.id).limit(1)
+    ):
         person.preferred_language = body.preferred_language
 
     registration = Registration(

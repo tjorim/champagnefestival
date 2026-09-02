@@ -811,5 +811,6 @@
   "admin_email_language_unknown": "Not specified",
   "my_registrations_save_language": "Save language",
   "my_registrations_language_saved": "Communication language saved.",
-  "my_account_preference_error": "Could not update your communication language. Please try again."
+  "my_account_preference_error": "Could not update your communication language. Please try again.",
+  "admin_email_copy_failed": "Clipboard access failed. Select and copy the recipient, subject, and message above manually."
 }

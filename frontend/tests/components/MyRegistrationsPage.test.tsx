@@ -409,4 +409,44 @@ describe("MyRegistrationsPage", () => {
     await screen.findByText("Communication language saved.");
     expect(savedBody).toEqual({ preferred_language: "en" });
   });
+
+  it("disables preference editing until the saved preference has loaded", async () => {
+    authState.accessToken = "visitor-access-token";
+    authState.isAuthenticated = true;
+    let resolvePreference!: () => void;
+    const preferenceGate = new Promise<void>((resolve) => {
+      resolvePreference = resolve;
+    });
+    server.use(
+      http.post("/api/me/registrations/claim", () => HttpResponse.json([])),
+      http.get("/api/me/registrations", () =>
+        HttpResponse.json([
+          {
+            id: "reg-owned",
+            event_title: "Grand Opening",
+            event_date: null,
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.get("/api/me/communication-preference", async () => {
+        await preferenceGate;
+        return HttpResponse.json({ preferred_language: "fr" });
+      }),
+    );
+    await renderPage("/my-registrations?token=email-access-token");
+    const language = await screen.findByLabelText("Preferred communication language");
+    expect(language).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save language" })).toBeDisabled();
+    resolvePreference();
+    await waitFor(() => expect(language).toBeEnabled());
+    expect(language).toHaveValue("fr");
+  });
 });

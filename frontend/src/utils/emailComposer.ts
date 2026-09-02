@@ -8,9 +8,15 @@ export interface EmailDraft {
   language?: EmailLanguage;
 }
 export type RegistrationEmailTemplate = "general" | "order" | "payment" | "event";
+function encodeMailtoField(value: string): string {
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
 export function buildMailto(draft: EmailDraft): string {
-  const query = new URLSearchParams({ subject: draft.subject, body: draft.body });
-  return `mailto:${encodeURIComponent(draft.recipient)}?${query.toString()}`;
+  const body = draft.body.replace(/\r?\n/g, "\r\n");
+  return `mailto:${encodeMailtoField(draft.recipient)}?subject=${encodeMailtoField(draft.subject)}&body=${encodeMailtoField(body)}`;
 }
 const copy = {
   en: {

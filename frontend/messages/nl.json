@@ -811,5 +811,6 @@
   "admin_email_language_unknown": "Niet opgegeven",
   "my_registrations_save_language": "Taal opslaan",
   "my_registrations_language_saved": "Communicatietaal opgeslagen.",
-  "my_account_preference_error": "Je communicatietaal kon niet worden bijgewerkt. Probeer het opnieuw."
+  "my_account_preference_error": "Je communicatietaal kon niet worden bijgewerkt. Probeer het opnieuw.",
+  "admin_email_copy_failed": "Kopiëren naar het klembord is mislukt. Selecteer en kopieer de ontvanger, het onderwerp en het bericht hierboven handmatig."
 }

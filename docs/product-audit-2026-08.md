@@ -102,23 +102,23 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 6 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 7 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 8 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
-| 9 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 10 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 4 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 5 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 6 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits and any live push invalidation; #947 separately owns durable job claiming. | L |
+| 7 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 8 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 11 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 9 | #942 — central announcement and push composer | **Blocked by #945, #941, and #947.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Phase 6 — deferred visitor account
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 12 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
+| 10 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
 
 ### Dependency map
 

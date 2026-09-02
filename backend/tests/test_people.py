@@ -149,6 +149,26 @@ async def test_reservation_auto_links_certain_person(client):
     assert r.status_code == 201
     assert r.json()["person_id"] == bob_id
 
+    # An unverified public registration may reuse the person, but must not
+    # overwrite an administrator-recorded communication preference.
+    await client.put(
+        f"/api/people/{bob_id}",
+        json={"preferred_language": "en"},
+        headers=ADMIN_HEADERS,
+    )
+    r = await _post_registration(
+        client,
+        path="/api/registrations",
+        event=event,
+        email="bob@example.com",
+        phone=bob_phone,
+        name="Bob Martin",
+        preferred_language="fr",
+    )
+    assert r.status_code == 201
+    person = await client.get(f"/api/people/{bob_id}", headers=ADMIN_HEADERS)
+    assert person.json()["preferred_language"] == "en"
+
     # Case/whitespace variation still matches
     r = await _post_registration(
         client,
