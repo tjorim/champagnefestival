@@ -92,7 +92,7 @@ work is intentionally outside this audit until the bourse requirements are clear
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #937 — no scanner, no offline check-in | In-page QR scanning (native `BarcodeDetector`, `jsqr` fallback) and an online/offline connectivity banner have shipped, closing the app-switch and no-visible-connection-state gaps. The offline queue/local guest-list cache remains: it still needs one production service-worker ownership/update strategy settled with #941 before either issue implements it, so IndexedDB caching and check-in replay stay open. | M |
+| 1 | #937 — no scanner, no offline check-in | In-page QR scanning (native `BarcodeDetector`, `jsqr` fallback) and an online/offline connectivity banner have shipped, closing the app-switch and no-visible-connection-state gaps. The shared service-worker ownership contract with #941 is now settled in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and handlers), so the offline queue/local guest-list cache/check-in replay can proceed without waiting on #941's implementation. | M |
 
 ### Phase 4 — compliance and platform foundations
 
@@ -102,9 +102,9 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 | --- | --- | --- | --- |
 | 2 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
 | 3 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 4 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Its shared-state conclusions govern #941's rate limits; #947 separately owns durable job claiming. | L |
+| 4 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
 | 5 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 6 | #941 — Web Push/VAPID subscription foundation | Uses #947, follows #932's multi-worker decisions, and shares the service-worker contract settled with #937. Remains opt-in/test-delivery infrastructure only. | L |
+| 6 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete), follows #932's multi-worker decisions above, and shares the service-worker contract now settled in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) with #937. That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
@@ -139,7 +139,7 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 #934 retention/erasure decision ─────────────> #944 policy publishing
 
-#937 offline/service worker <──── coordinate ────> #941 push/service worker
+#937 offline/service worker <── contract settled (decisions/941-web-push-foundation.md) ──> #941 push/service worker
 
 #945 announcement banner ────────┐
 #941 Web Push foundation ────────┼────────────> #942 central composer
@@ -243,9 +243,10 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   #942). It owns persistence, claiming, retry, and crash-recovery mechanics, but
   deliberately owns no audience or message-composition product surface.
 - **Web Push (#941)** and **offline web check-in (#937)** both require a
-  production service worker. They need one explicit ownership and update/cache
-  strategy so two independently implemented workers do not overwrite or break
-  each other.
+  production service worker. Their ownership and update/cache strategy is now
+  settled in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md):
+  one worker file, per-feature cache versions, additive event handlers — so
+  neither implementation overwrites or breaks the other.
 - **The central composer (#942)** also depends on the multi-process conclusions
   of #932. Its scheduling and deduplication are DB-backed through #947; its rate
   limits and any live invalidation must not rely on per-process state.
