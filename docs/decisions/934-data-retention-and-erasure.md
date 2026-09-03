@@ -51,13 +51,33 @@ judgment calls this document should not make unilaterally.
 | `audit_entries.actor` when it holds an IP (token-gated check-in) | client IP | Blanked 30 days after `timestamp`; the entry itself (action, resource, timestamp) is kept | `timestamp` | Legitimate interest — abuse investigation for the days after an incident, not indefinitely; the entry's non-IP content still serves the accountability purpose audit logging exists for |
 | `audit_entries` (all other rows) | actor (OIDC sub or `"anonymous"`), subject, action, details | Kept indefinitely, tied to the (now indefinitely retained) operational records they audit; no sweep proposed | — | Same basis as the underlying operational record it audits. Not a PII concern: `write_audit_entry` calls in `people_service`/`registrations_service` store field *names* changed or role lists in `details`, not the personal values themselves, and `actor` for staff-performed actions is the OIDC sub, not the customer — so keeping these forever doesn't extend how long a customer's own personal data is legible from an audit row. |
 | `registrations` — guest counts, orders, accessibility notes, check-in times, table/event links | **Retained indefinitely, never deleted or anonymised.** This is the historical/analytical record (edition-over-edition attendance and order growth) the project owner has confirmed must survive independent of what happens to the person behind it. | No window | — | Legitimate interest — aggregate/attributed-to-a-pseudonym operational history has clear ongoing business value (trend analysis) and, once its `person_id` points to an anonymised row (see next), it no longer carries personal data itself |
-| `people` — identity fields: `name`, `email`, `phone`, `address`, `notes` — **for people who never held the volunteer role, i.e. never have `national_register_number`/`eid_document_number` set** | Visitors and members behind one or more registrations | Anonymise (see below) 3 years after the person's **most recent** registration's event date, unless a shorter statutory period applies | `MAX(events.date)` across all of the person's registrations (a repeat visitor's clock resets on each new registration — anonymising them while they still have a recent registration would need re-identifying them for the next edition) | Storage-limitation principle: once nobody has contacted this person for 3 years, keeping name/e-mail/phone on file has no remaining operational purpose. **This number is the one figure in this table most in need of the owner's own review** — it is a business-retention judgment, not derived from a specific statute this document has checked. `roles`, `visits_per_month`, `club_name`, and `active` are not identity fields and are unaffected — see the mechanism below. |
+| `people` — identity fields: `name`, `email`, `phone`, `address`, `notes` — **for people who never held the volunteer role, i.e. never have `national_register_number`/`eid_document_number` set** | Visitors and members behind one or more registrations | Anonymise (see below) 3 years after the person's **most recent** registration's event date, unless a shorter statutory period applies | `MAX(events.date)` across all of the person's registrations (a repeat visitor's clock resets on each new registration — see "Why the clock resets" below) | Storage-limitation principle: once nobody has contacted this person for 3 years, keeping name/e-mail/phone on file has no remaining operational purpose. **This number is the one figure in this table most in need of the owner's own review** — it is a business-retention judgment, not derived from a specific statute this document has checked. `roles`, `visits_per_month`, `club_name`, and `active` are not identity fields and are unaffected — see the mechanism below. |
 | `people` — the same identity fields, **plus `national_register_number`/`eid_document_number`, for anyone who currently or ever held the volunteer role** | Volunteers — name, contact details, and NISS/eID together are what an insurance claim needs to identify who was covered for a given help period | **Excluded from the general anonymisation sweep entirely.** NISS/eID is volunteer-only (confirmed by the project owner) and must be kept for insurance purposes — and a NISS number with the name stripped off it would be useless for actually filing or defending a claim, so name/contact can't be anonymised in isolation while NISS/eID survives either. Volunteers get their own retention track, not yet defined. | `volunteer_periods.last_help_day` (or `first_help_day` if still open) would be the natural anchor once a window is set | Legal obligation — insurance coverage and potential liability claims require identifying the volunteer. **Open question, not resolved by this document:** for how long after a volunteer's last help period is that identification actually needed (e.g. a Belgian civil-liability limitation period)? Until the owner sets one, the safe default is indefinite retention for anyone who ever volunteered, not silent anonymisation. |
 
 Rows not listed (e.g. `contact_messages`, `outbox_jobs`) already have their
 own documented retention: `outbox_jobs` terminal rows are cleaned daily at 90
 days (`docs/outbox-worker.md`); `contact_messages` is out of this document's
 scope.
+
+### Why the clock resets on each registration
+
+Public registration creation (`backend/app/routers/registrations.py`, around
+the `Person.email == email_norm, Person.phone == phone_norm` lookup) already
+matches a new registration against an existing `Person` by e-mail, phone, and
+name before creating a new one — that's how a returning visitor gets to
+re-order without re-entering their details and how their new registration
+lands on the same person record instead of a duplicate. That lookup only
+works while `email`/`phone`/`name` are still live on the row, which is
+exactly why the anonymisation window is keyed to a person's *most recent*
+registration rather than a fixed date: as long as someone orders again within
+the window, their clock resets and the hassle-free link keeps working. The
+convenience is only lost for someone who hasn't ordered in 3 straight years —
+by definition, nobody currently benefiting from the link is affected by the
+window firing. This is also a reason the 3-year figure might reasonably be
+set longer than a pure "how long is a stale record still useful for
+disputes/fraud" reading would suggest, if the owner wants to reduce how often
+a genuinely-recurring-but-infrequent visitor (e.g. someone who only attends
+every second or third edition) has to start over with a fresh record.
 
 ## Proposed mechanism: anonymise rather than delete
 
@@ -186,7 +206,11 @@ using the mechanism proposed here, once implemented.
 1. Confirmation (or correction) of the retention windows in the schedule
    above from the project owner — the 3-year figure for anonymising a
    non-volunteer person's identity fields most of all, since it is a
-   business judgment this document flagged rather than derived from statute.
+   business judgment this document flagged rather than derived from statute,
+   and it now doubles as the answer to "how long can someone skip editions
+   and still re-order without re-entering their details" (see "Why the clock
+   resets" above) — worth weighing both purposes together, not just the
+   dispute/fraud-window reading alone.
    (`registrations` themselves are settled: retained indefinitely, no
    window, per the project owner's confirmation that historical/analytical
    growth reporting depends on it. NISS/eID retention is also settled as
