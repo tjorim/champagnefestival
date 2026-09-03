@@ -153,7 +153,7 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
-| #937 | Completed | 2026-09-03 | #937, PR #975 | Added in-page QR check-in scanning (native `BarcodeDetector`, `jsqr` fallback) that hands decoded credentials straight to the existing lookup mutation with no navigation or OS-camera-app switch, an auto-return-to-scanner "Scan next" flow, and an online/offline connectivity banner. The offline queue/service-worker precaching from the original proposal was explicitly descoped: check-in requires live connectivity by product decision, so the banner (which already states check-ins can't be submitted while offline) is the intended behaviour rather than a gap. The service-worker ownership contract this issue's coordination with #941 needed either way is documented in `docs/decisions/941-web-push-foundation.md` for whichever feature builds a worker first. |
+| #937 | Completed | 2026-09-03 | #937, PR #975 | Added in-page QR check-in scanning (native `BarcodeDetector`, `jsqr` fallback) that hands decoded credentials straight to the existing lookup mutation with no navigation or OS-camera-app switch, an auto-return-to-scanner "Scan next" flow, and an online/offline connectivity banner. The offline queue/service-worker precaching from the original proposal was explicitly descoped: check-in requires live connectivity by product decision, so the banner (which already states check-ins can't be submitted while offline) is the intended behaviour rather than a gap. This issue no longer needs a service worker at all; the shared-worker contract the audit originally asked it to coordinate with #941 on now belongs to #941 alone, per `docs/decisions/941-web-push-foundation.md`. |
 | #945 | Completed | 2026-09-02 | #945, PR (this change) | Added purpose-built localised announcements with UTC publication windows, safe optional links, deterministic ordering, publication metadata, complete mutation auditing, admin editing/status/preview controls, and an explicitly localised public API. The public site uses a static reduced-motion-safe banner; ordinary notices are not live while urgent notices receive a one-time alert region. |
 | #935 | Completed | 2026-09-02 | #935, PR (this change) | Extracted a shared themed `ConfirmModal` and converted all eight `window.confirm` destructive-action dialogs (venue archive/delete, table-type dimension-change/delete, layout/table/area delete, account delete) to it, fixing the "prevent additional dialogs" browser suppression that silently broke repeated deletes in `LayoutEditor`. Added `role="status"`/`role="alert"` live-region coverage to mutation-result alerts in `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`, and `ContentManagement`, following the pattern already established in `CheckInPage`. Added `jest-axe` assertions to each of those five components' render tests, which caught and fixed a real violation: `aria-sort` on a `<th role="button">` is invalid ARIA (the role override drops the implicit `columnheader` role `aria-sort` requires) — removed the redundant `role="button"` override across `RegistrationList`, `PeopleManagement`, `MembersManagement`, and `VolunteersManagement`, since the existing `tabIndex`/`onKeyDown` already made the header keyboard-operable. Reduced `pnpm lint`'s React Compiler warning count from 30 to 11 by converting the "reset state when a prop changes" effects (all seven form-modal reset-on-open effects, plus `AuthContext`, `AdminDashboard`, `SettingsManagement`, `CheckInPage`, `RegistrationList`, and four in `LayoutEditor`) to the adjust-state-during-render pattern, and fixing three genuine ref-during-render reads (`Countdown`, `ContactForm`, plus one `MyRegistrationsPage` `useCallback` dependency-array gap); the 11 remaining warnings are documented, verified-legitimate exceptions (client-only hydration mount guards, an impure `Date.now()` seed, an async session-recovery effect, and two dnd-kit/TanStack-table ref-accessor patterns that the linter cannot distinguish from an unsafe render-time read). Corrected three genuinely wrong translations (NL check-in mislabelled as clocking-in, NL "Standalone" left in English, FR "Email" missing its hyphen). |
 | #943 | Completed | 2026-09-01 | #943, PR (this change) | Added previewed, individually addressed email-client actions for member/person rows and four localised registration templates and server-delivered confirmations, including an explicit persisted communication-language preference collected during registration and editable by administrators, with encoded `mailto:` links, a long-message clipboard fallback, accessibility labels, and strict exclusion of internal registration fields. No backend write or delivery audit is created. |
@@ -464,7 +464,9 @@ Build secure opt-in and delivery infrastructure before adding an administrator
 broadcast button. There is currently no production notification service worker
 or VAPID subscription lifecycle.
 
-Decisions to record first:
+Decisions to record first — proposed defaults for all of these are in
+[`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md),
+pending the project owner's confirmation:
 
 - Anonymous, authenticated, or both kinds of subscribers.
 - Account- versus device-scoped subscriptions.
@@ -473,12 +475,14 @@ Decisions to record first:
 - Retention and expired-subscription cleanup.
 - Browser/iOS support expectations and future Android boundary.
 - Consent and privacy-policy wording.
-- Shared service-worker ownership, cache, and update strategy with #937.
+- Service-worker ownership, cache, and update strategy — settled: #937 was
+  descoped to need no service worker, so this worker has no other co-tenant
+  today, but the same file/versioning/additive-handler shape from the
+  decision doc still applies to whichever future feature needs one next.
 
 Acceptance criteria:
 
-- [ ] A production service worker coexists safely with application updates and
-      offline check-in work.
+- [ ] A production service worker coexists safely with application updates.
 - [ ] The VAPID public key is client-visible; the private key remains an
       environment secret.
 - [ ] Users explicitly opt in and can unsubscribe.
