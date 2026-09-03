@@ -1,8 +1,12 @@
 # Data retention schedule and anonymisation mechanism
 
 **Status:** Retention schedule and mechanism design proposed, pending owner
-confirmation before implementation starts
-**Date:** 2026-09-03
+confirmation before implementation starts. One question is already settled:
+operational registration data (guest counts, orders, dates, tables) is
+retained indefinitely for historical/analytical use and is never deleted or
+anonymised away — see "Proposed retention schedule" below.
+**Date:** 2026-09-03 (updated same day — indefinite retention of operational
+registration data confirmed)
 **Issues:** [#934](https://github.com/tjorim/champagnefestival/issues/934)
 (primary, `needs-discussion`); [#923](https://github.com/tjorim/champagnefestival/issues/923)
 (contact form — complete, so the rights channel this document assumes now
@@ -45,8 +49,9 @@ judgment calls this document should not make unilaterally.
 | `idempotency_keys` | `actor`, request hash, full response body | 72 hours (already the documented replay window) | `created_at` | Legitimate interest — retry-safety only; no reason to outlive the window callers are told to rely on |
 | `reservation_access_tokens` | e-mail + token hash | Deleted at `expires_at` (currently ~30 min TTL) via a real sweep, not only the opportunistic delete on next request | `expires_at` | Legitimate interest — the token has no purpose once expired or used |
 | `audit_entries.actor` when it holds an IP (token-gated check-in) | client IP | Blanked 30 days after `timestamp`; the entry itself (action, resource, timestamp) is kept | `timestamp` | Legitimate interest — abuse investigation for the days after an incident, not indefinitely; the entry's non-IP content still serves the accountability purpose audit logging exists for |
-| `audit_entries` (all other rows) | actor (OIDC sub or `"anonymous"`), subject, action, details | Kept for the accounting/dispute window below; no separate sweep proposed yet | — | Same basis as the underlying operational record it audits |
-| `registrations`, and the `people` row behind them, once an edition is finished | guest counts, orders, notes, accessibility notes, check-in times, name/email/phone/address/NISS/eID | Anonymise (see below) 3 years after the edition's date, unless a shorter statutory accounting period applies | `events.date` (via the edition) | Belgian accounting record-keeping is commonly 7 years for invoices/ledgers, but this is a festival guest list, not an accounting ledger; 3 years covers dispute/fraud windows without keeping a walk-in visitor's personal data as long as formal bookkeeping requires. **This number is the one figure in this table most in need of the owner's own review** — it is a business-retention judgment, not derived from a specific statute this document has checked. |
+| `audit_entries` (all other rows) | actor (OIDC sub or `"anonymous"`), subject, action, details | Kept indefinitely, tied to the (now indefinitely retained) operational records they audit; no sweep proposed | — | Same basis as the underlying operational record it audits. Not a PII concern: `write_audit_entry` calls in `people_service`/`registrations_service` store field *names* changed or role lists in `details`, not the personal values themselves, and `actor` for staff-performed actions is the OIDC sub, not the customer — so keeping these forever doesn't extend how long a customer's own personal data is legible from an audit row. |
+| `registrations` — guest counts, orders, accessibility notes, check-in times, table/event links | **Retained indefinitely, never deleted or anonymised.** This is the historical/analytical record (edition-over-edition attendance and order growth) the project owner has confirmed must survive independent of what happens to the person behind it. | No window | — | Legitimate interest — aggregate/attributed-to-a-pseudonym operational history has clear ongoing business value (trend analysis) and, once its `person_id` points to an anonymised row (see next), it no longer carries personal data itself |
+| `people` — identity fields only: `name`, `email`, `phone`, `address`, `notes`, `national_register_number`, `eid_document_number` | The person behind one or more registrations | Anonymise (see below) 3 years after the person's **most recent** registration's event date, unless a shorter statutory period applies | `MAX(events.date)` across all of the person's registrations (a repeat visitor's clock resets on each new registration — anonymising them while they still have a recent registration would need re-identifying them for the next edition) | Storage-limitation principle: once nobody has contacted this person for 3 years, keeping name/e-mail/phone on file has no remaining operational purpose. **This number is the one figure in this table most in need of the owner's own review** — it is a business-retention judgment, not derived from a specific statute this document has checked. `roles`, `visits_per_month`, `club_name`, and `active` are not identity fields and are unaffected — see the mechanism below. |
 | `people.national_register_number`, `people.eid_document_number` | Belgian NISS, eID document number | See "NISS segregation" below — proposed separately, not folded into the general 3-year window | Collected for the volunteer insurance export | Legal obligation (insurance coverage requires identifying the volunteer) |
 
 Rows not listed (e.g. `contact_messages`, `outbox_jobs`) already have their
@@ -71,9 +76,14 @@ Add `people_service.anonymise_person(db, person, *, actor, request_id=None)`:
   from search/exports is itself an event worth auditing, same as
   `person_deleted`.
 - **Do not** touch `registrations`, `roles`, `visits_per_month`, or
-  `club_name` — those are the operational record the policy says is kept on
-  purpose. `Registration.person_id` stays `ondelete="RESTRICT"`; anonymising
-  in place is exactly what avoids needing to relax that constraint.
+  `club_name` — those are the operational, historical/analytical record the
+  policy says is kept on purpose, and which the project owner has confirmed
+  must never be deleted or anonymised away (edition-over-edition growth
+  reporting depends on every past registration staying queryable, indefinitely,
+  by event/edition/date/table/guest-count — none of that is personal data
+  once the `Person` it points to is anonymised). `Registration.person_id`
+  stays `ondelete="RESTRICT"`; anonymising in place is exactly what avoids
+  needing to relax that constraint or delete a single registration row.
 
 This is additive to `delete_person`/`delete_member`, which keep their current
 cascade-delete behaviour for cases where the operational history genuinely
@@ -103,12 +113,13 @@ infrastructure:
    (distinguishable via `auth_source` for the token-gated check-in path,
    or a fixed prefix, chosen at implementation time) and `timestamp` is
    older than 30 days.
-4. Person/registration anonymisation is **not** proposed as part of this
-   automated sweep. Unlike the three rows above, "3 years after an edition"
-   is a low-frequency, high-consequence operation on personal data; running
-   it as an admin-triggered action per edition (with the sweep only
-   surfacing which people are due) is safer than a fully automatic delete
-   equivalent, at least for the first implementation.
+4. Person anonymisation (identity fields only — never `registrations`, see
+   above) is **not** proposed as part of this automated sweep. Unlike the
+   three rows above, "3 years since a person's last registration" is a
+   low-frequency, high-consequence operation on personal data; running it as
+   an admin-triggered action (surfacing which people are due, computed from
+   `MAX(events.date)` per person) is safer than a fully automatic run, at
+   least for the first implementation.
 
 Each new sweep gets its own retry-safety entry in `docs/retry-safety.md` per
 `AGENTS.md`, at implementation time — these are convergent deletes/blanks
@@ -160,9 +171,12 @@ using the mechanism proposed here, once implemented.
 ## What remains before implementation starts
 
 1. Confirmation (or correction) of the retention windows in the schedule
-   above from the project owner — the 3-year figure for `registrations`/
-   `people` most of all, since it is a business judgment this document
-   flagged rather than derived from statute.
+   above from the project owner — the 3-year figure for anonymising a
+   person's identity fields most of all, since it is a business judgment
+   this document flagged rather than derived from statute. (`registrations`
+   themselves are settled: retained indefinitely, no window, per the project
+   owner's confirmation that historical/analytical growth reporting depends
+   on it.)
 2. A decision on whether NISS segregation ships alongside the rest of this
    work or as its own follow-up issue, given its larger, differently-shaped
    scope (key management).
