@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { Link, useLocation, useSearch } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import Container from "react-bootstrap/Container";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
@@ -13,8 +13,10 @@ import Form from "react-bootstrap/Form";
 import Collapse from "react-bootstrap/Collapse";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { queryKeys } from "@/utils/queryKeys";
 import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/utils/adminApi";
+import CheckInScanner, { type ScannedCheckInCredentials } from "@/components/CheckInScanner";
 import {
   CheckInError,
   fetchCheckInRegistration,
@@ -26,6 +28,8 @@ import {
   submitVolunteerCheckIn,
   updateVolunteerRegistration,
 } from "@/utils/volunteerApi";
+
+const AUTO_RETURN_TO_SCANNER_MS = 4000;
 
 function formatEntranceActionError(message: string): string {
   if (message === SESSION_EXPIRED_ERROR) {
@@ -48,6 +52,7 @@ interface CheckInCardProps {
   onAdjustOrderItem: (productId: string, delta: number) => void;
   onSetOrderItemQuantity: (productId: string, quantity: number) => void;
   onIssueStrap: () => void;
+  onReturnToScanner: () => void;
 }
 
 function CheckInCard({
@@ -61,6 +66,7 @@ function CheckInCard({
   onAdjustOrderItem,
   onSetOrderItemQuantity,
   onIssueStrap,
+  onReturnToScanner,
 }: CheckInCardProps) {
   const isCancelled = registration.status === "cancelled";
   const canUpdateEntrance = canManageEntranceActions && !isCancelled;
@@ -101,9 +107,19 @@ function CheckInCard({
         <div role="status" aria-live="polite">
           {success && (
             <Alert variant="success" className="mb-3">
-              <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
-              <strong>{m.checkin_success()}</strong>
-              {registration.strapIssued && <div className="mt-1">{m.checkin_strap_issued()}</div>}
+              <div className="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                <span>
+                  <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
+                  <strong>{m.checkin_success()}</strong>
+                  {registration.strapIssued && (
+                    <div className="mt-1">{m.checkin_strap_issued()}</div>
+                  )}
+                </span>
+                <Button variant="outline-success" size="sm" onClick={onReturnToScanner}>
+                  <i className="bi bi-qr-code-scan me-2" aria-hidden="true" />
+                  {m.checkin_scan_next()}
+                </Button>
+              </div>
             </Alert>
           )}
         </div>
@@ -299,15 +315,23 @@ function CheckInCard({
 export default function CheckInPage() {
   const queryClient = useQueryClient();
   const auth = useAuth();
-  const { id: registrationId } = useSearch({
+  const isOnline = useOnlineStatus();
+  const { id: urlRegistrationId } = useSearch({
     from: "/admin-layout/check-in",
   });
+  const navigate = useNavigate({ from: "/check-in" });
   const location = useLocation();
-  const [fragmentCheckInToken] = useState(() => {
+  const [fragmentCheckInToken, setFragmentCheckInToken] = useState(() => {
     const value = new URLSearchParams(location.hash.replace(/^#/, "")).get("token");
     return value ?? undefined;
   });
-  const checkInToken = fragmentCheckInToken;
+  // An in-page scan overrides the URL-driven id/token so the scanner can hand
+  // off to the existing lookup flow without a navigation or app switch.
+  const [scannedCredentials, setScannedCredentials] = useState<ScannedCheckInCredentials | null>(
+    null,
+  );
+  const registrationId = scannedCredentials?.id ?? urlRegistrationId;
+  const checkInToken = scannedCredentials?.token ?? fragmentCheckInToken;
   const [success, setSuccess] = useState(false);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
@@ -524,6 +548,36 @@ export default function CheckInPage() {
     setSearchOpen(false);
   }, []);
 
+  const handleScanDecode = useCallback((result: ScannedCheckInCredentials) => {
+    setScannedCredentials(result);
+  }, []);
+
+  const handleReturnToScanner = useCallback(() => {
+    setScannedCredentials(null);
+    setFragmentCheckInToken(undefined);
+    setManualRegistration(null);
+    setSuccess(false);
+    setAlreadyCheckedIn(false);
+    if (urlRegistrationId) {
+      void navigate({ search: {}, replace: true });
+    }
+  }, [navigate, urlRegistrationId]);
+
+  // Once nothing is left for the volunteer to do on this guest, clear the
+  // card automatically so the next scan can start right away. A pending
+  // strap issuance keeps the card up until it's handled (or "Scan next" is
+  // pressed explicitly) so entrance actions are never skipped silently.
+  const canAutoReturnToScanner =
+    success &&
+    (!canManageEntranceActions ||
+      registration?.status === "cancelled" ||
+      (registration?.strapIssued ?? false));
+  useEffect(() => {
+    if (!canAutoReturnToScanner) return;
+    const timer = window.setTimeout(handleReturnToScanner, AUTO_RETURN_TO_SCANNER_MS);
+    return () => window.clearTimeout(timer);
+  }, [canAutoReturnToScanner, handleReturnToScanner]);
+
   return (
     <section id="check-in" className="py-5" aria-labelledby="checkin-title">
       <Container>
@@ -531,6 +585,13 @@ export default function CheckInPage() {
           <i className="bi bi-qr-code-scan me-2" aria-hidden="true" />
           {m.checkin_title()}
         </h2>
+
+        {!isOnline && (
+          <Alert variant="danger" className="text-center" role="status">
+            <i className="bi bi-wifi-off me-2" aria-hidden="true" />
+            {m.checkin_offline_banner()}
+          </Alert>
+        )}
 
         {auth.authError ? (
           <Alert variant="danger" dismissible onClose={auth.clearAuthError}>
@@ -553,6 +614,8 @@ export default function CheckInPage() {
             <div className="col-12 col-sm-10 col-md-8 col-lg-6">
               {!hasQrCredentials && (
                 <>
+                  <CheckInScanner onDecode={handleScanDecode} />
+
                   <Alert variant="warning" className="text-center">
                     <i className="bi bi-info-circle me-2" aria-hidden="true" />
                     {m.checkin_scan_prompt()}
@@ -734,6 +797,7 @@ export default function CheckInPage() {
                   onAdjustOrderItem={handleAdjustOrderItem}
                   onSetOrderItemQuantity={handleSetOrderItemQuantity}
                   onIssueStrap={handleIssueStrap}
+                  onReturnToScanner={handleReturnToScanner}
                 />
               )}
             </div>
