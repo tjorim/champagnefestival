@@ -51,8 +51,8 @@ judgment calls this document should not make unilaterally.
 | `audit_entries.actor` when it holds an IP (token-gated check-in) | client IP | Blanked 30 days after `timestamp`; the entry itself (action, resource, timestamp) is kept | `timestamp` | Legitimate interest — abuse investigation for the days after an incident, not indefinitely; the entry's non-IP content still serves the accountability purpose audit logging exists for |
 | `audit_entries` (all other rows) | actor (OIDC sub or `"anonymous"`), subject, action, details | Kept indefinitely, tied to the (now indefinitely retained) operational records they audit; no sweep proposed | — | Same basis as the underlying operational record it audits. Not a PII concern: `write_audit_entry` calls in `people_service`/`registrations_service` store field *names* changed or role lists in `details`, not the personal values themselves, and `actor` for staff-performed actions is the OIDC sub, not the customer — so keeping these forever doesn't extend how long a customer's own personal data is legible from an audit row. |
 | `registrations` — guest counts, orders, accessibility notes, check-in times, table/event links | **Retained indefinitely, never deleted or anonymised.** This is the historical/analytical record (edition-over-edition attendance and order growth) the project owner has confirmed must survive independent of what happens to the person behind it. | No window | — | Legitimate interest — aggregate/attributed-to-a-pseudonym operational history has clear ongoing business value (trend analysis) and, once its `person_id` points to an anonymised row (see next), it no longer carries personal data itself |
-| `people` — identity fields only: `name`, `email`, `phone`, `address`, `notes`, `national_register_number`, `eid_document_number` | The person behind one or more registrations | Anonymise (see below) 3 years after the person's **most recent** registration's event date, unless a shorter statutory period applies | `MAX(events.date)` across all of the person's registrations (a repeat visitor's clock resets on each new registration — anonymising them while they still have a recent registration would need re-identifying them for the next edition) | Storage-limitation principle: once nobody has contacted this person for 3 years, keeping name/e-mail/phone on file has no remaining operational purpose. **This number is the one figure in this table most in need of the owner's own review** — it is a business-retention judgment, not derived from a specific statute this document has checked. `roles`, `visits_per_month`, `club_name`, and `active` are not identity fields and are unaffected — see the mechanism below. |
-| `people.national_register_number`, `people.eid_document_number` | Belgian NISS, eID document number | See "NISS segregation" below — proposed separately, not folded into the general 3-year window | Collected for the volunteer insurance export | Legal obligation (insurance coverage requires identifying the volunteer) |
+| `people` — identity fields: `name`, `email`, `phone`, `address`, `notes` — **for people who never held the volunteer role, i.e. never have `national_register_number`/`eid_document_number` set** | Visitors and members behind one or more registrations | Anonymise (see below) 3 years after the person's **most recent** registration's event date, unless a shorter statutory period applies | `MAX(events.date)` across all of the person's registrations (a repeat visitor's clock resets on each new registration — anonymising them while they still have a recent registration would need re-identifying them for the next edition) | Storage-limitation principle: once nobody has contacted this person for 3 years, keeping name/e-mail/phone on file has no remaining operational purpose. **This number is the one figure in this table most in need of the owner's own review** — it is a business-retention judgment, not derived from a specific statute this document has checked. `roles`, `visits_per_month`, `club_name`, and `active` are not identity fields and are unaffected — see the mechanism below. |
+| `people` — the same identity fields, **plus `national_register_number`/`eid_document_number`, for anyone who currently or ever held the volunteer role** | Volunteers — name, contact details, and NISS/eID together are what an insurance claim needs to identify who was covered for a given help period | **Excluded from the general anonymisation sweep entirely.** NISS/eID is volunteer-only (confirmed by the project owner) and must be kept for insurance purposes — and a NISS number with the name stripped off it would be useless for actually filing or defending a claim, so name/contact can't be anonymised in isolation while NISS/eID survives either. Volunteers get their own retention track, not yet defined. | `volunteer_periods.last_help_day` (or `first_help_day` if still open) would be the natural anchor once a window is set | Legal obligation — insurance coverage and potential liability claims require identifying the volunteer. **Open question, not resolved by this document:** for how long after a volunteer's last help period is that identification actually needed (e.g. a Belgian civil-liability limitation period)? Until the owner sets one, the safe default is indefinite retention for anyone who ever volunteered, not silent anonymisation. |
 
 Rows not listed (e.g. `contact_messages`, `outbox_jobs`) already have their
 own documented retention: `outbox_jobs` terminal rows are cleaned daily at 90
@@ -63,11 +63,16 @@ scope.
 
 Add `people_service.anonymise_person(db, person, *, actor, request_id=None)`:
 
+- **Refuse (or no-op with a logged skip) if `person.national_register_number`
+  or `person.eid_document_number` is set.** That covers every current or
+  former volunteer — see the retention-schedule row above. This function is
+  for the ordinary-visitor/member track only until a volunteer retention
+  window is decided; it must not be the thing that silently strips a
+  volunteer's identity out from under their insurance record.
 - Overwrite `name` with a stable pseudonym (`f"Guest #{person.id[-6:]}"` or
   similar — stable so repeated anonymisation of an already-anonymised row is
   a no-op, not a second rewrite).
-- Blank `email`, `phone`, `address`, `national_register_number`,
-  `eid_document_number`, `notes`.
+- Blank `email`, `phone`, `address`, `notes`.
 - Clear `search_name`, `search_name_alt`, `search_email` (trigger-maintained;
   clearing the source columns lets the existing trigger recompute them to
   empty rather than writing to them directly).
@@ -114,10 +119,12 @@ infrastructure:
    or a fixed prefix, chosen at implementation time) and `timestamp` is
    older than 30 days.
 4. Person anonymisation (identity fields only — never `registrations`, see
-   above) is **not** proposed as part of this automated sweep. Unlike the
-   three rows above, "3 years since a person's last registration" is a
-   low-frequency, high-consequence operation on personal data; running it as
-   an admin-triggered action (surfacing which people are due, computed from
+   above, and never anyone with `national_register_number`/
+   `eid_document_number` set — see the volunteer carve-out above) is **not**
+   proposed as part of this automated sweep. Unlike the three rows above,
+   "3 years since a person's last registration" is a low-frequency,
+   high-consequence operation on personal data; running it as an
+   admin-triggered action (surfacing which people are due, computed from
    `MAX(events.date)` per person) is safer than a fully automatic run, at
    least for the first implementation.
 
@@ -139,25 +146,31 @@ in a hashed/comparable form beyond 30 days.
 
 ## NISS segregation
 
-The issue's proposal (encrypt at rest, restrict reads to the export path,
-audit every access) is a materially larger change than the rest of this
-document — it needs an encryption-key management decision (env-var secret vs.
-KMS, rotation story) that doesn't have an existing pattern elsewhere in this
-codebase to follow, unlike the sweep mechanism above. Rather than bolt that
-onto this PR's scope, this document proposes splitting it into its own
-follow-up once the schedule above is confirmed:
+The project owner has confirmed NISS/eID must be kept for volunteer insurance
+purposes — so this section is no longer about *whether* to purge it (the
+issue had raised that as an open question; it's settled: no, not on the
+general schedule). What's still open is *how long* and *how securely*:
 
-- At minimum, restrict which admin views/exports render
-  `national_register_number` in full (today it is a plain field on every
-  `Person` read).
-- Application-level encryption (not just at-rest disk encryption, which the
-  hosting stack likely already provides) needs a key-management decision this
-  document defers rather than picks.
-- Whether NISS should be purged outright once the insurance export for an
-  edition has been produced, instead of retained for the general 3-year
-  window, is the owner's call — the issue raises it as an open question, and
-  `docs/product-audit-2026-08.md`'s "Open questions for the maintainer"
-  section already flags it as such.
+- **Retention window.** Not yet defined — see the retention-schedule row
+  above. Proposed default until the owner sets one: keep indefinitely for
+  anyone who ever held the volunteer role, rather than guess at a limitation
+  period. A future PR can add a real window once the owner specifies one
+  (e.g. a Belgian civil-liability limitation period counted from
+  `volunteer_periods.last_help_day`).
+- **Access restriction.** Restrict which admin views/exports render
+  `national_register_number`/`eid_document_number` in full (today they are
+  plain fields on every `Person` read, not just the volunteer insurance
+  export at `GET /api/volunteers/export`) — this is worth doing regardless of
+  the retention window, since it reduces exposure without touching retention
+  at all.
+- **Encryption at rest.** The issue's proposal (encrypt at rest, restrict
+  reads to the export path, audit every access) is a materially larger
+  change than the rest of this document — it needs an encryption-key
+  management decision (env-var secret vs. KMS, rotation story) that doesn't
+  have an existing pattern elsewhere in this codebase to follow, unlike the
+  sweep mechanism above. This document proposes splitting it into its own
+  follow-up once the retention window above is confirmed, rather than
+  bolting key management onto this PR's scope.
 
 ## Rights channel dependency
 
@@ -172,14 +185,19 @@ using the mechanism proposed here, once implemented.
 
 1. Confirmation (or correction) of the retention windows in the schedule
    above from the project owner — the 3-year figure for anonymising a
-   person's identity fields most of all, since it is a business judgment
-   this document flagged rather than derived from statute. (`registrations`
-   themselves are settled: retained indefinitely, no window, per the project
-   owner's confirmation that historical/analytical growth reporting depends
-   on it.)
-2. A decision on whether NISS segregation ships alongside the rest of this
-   work or as its own follow-up issue, given its larger, differently-shaped
-   scope (key management).
+   non-volunteer person's identity fields most of all, since it is a
+   business judgment this document flagged rather than derived from statute.
+   (`registrations` themselves are settled: retained indefinitely, no
+   window, per the project owner's confirmation that historical/analytical
+   growth reporting depends on it. NISS/eID retention is also settled as
+   "keep it, don't anonymise it away" — only its specific window is still
+   open, per the volunteer row above.)
+2. A decision on the volunteer NISS/eID retention window (or confirmation
+   that "indefinite, for anyone who ever volunteered" is acceptable as the
+   long-term answer, not just the interim default), and on whether NISS
+   access-restriction/encryption ships alongside the rest of this work or as
+   its own follow-up issue, given its larger, differently-shaped scope (key
+   management).
 3. Once confirmed: implement `anonymise_person`, the three worker sweeps, the
    audit-entry IP blanking, and the retry-safety documentation for each new
    write, then update `docs/product-audit-2026-08.md`'s #934 row and
