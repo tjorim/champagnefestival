@@ -99,7 +99,7 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. A proposed retention schedule, anonymisation mechanism, and sweep design are documented in [`docs/decisions/934-data-retention-and-erasure.md`](decisions/934-data-retention-and-erasure.md), pending the project owner's confirmation before implementation starts. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
 | 2 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
 | 3 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
 | 4 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
@@ -566,4 +566,8 @@ Two findings propose changes that are judgement calls rather than clear fixes:
    the public registration response continues to omit it.
 2. **#934** needs a retention schedule decided per table before any code, and
    raises whether `national_register_number` should be stored outside the window
-   in which the insurance export is produced.
+   in which the insurance export is produced. A proposed schedule and
+   mechanism are drafted in
+   [`docs/decisions/934-data-retention-and-erasure.md`](decisions/934-data-retention-and-erasure.md);
+   the NISS question and the multi-year retention window remain open pending
+   the owner's confirmation.
