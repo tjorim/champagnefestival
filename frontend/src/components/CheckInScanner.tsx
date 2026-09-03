@@ -101,6 +101,8 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
       try {
         await video.play();
       } catch {
+        for (const track of stream.getTracks()) track.stop();
+        video.srcObject = null;
         if (!cancelled) setStatus("error");
         return;
       }
@@ -120,6 +122,7 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
           const text = detector
             ? await detectWithBarcodeDetector(detector, video)
             : detectWithJsQr(video, canvas);
+          if (cancelled) return;
           if (text) {
             const parsed = parseCheckInUrl(text);
             if (parsed) {

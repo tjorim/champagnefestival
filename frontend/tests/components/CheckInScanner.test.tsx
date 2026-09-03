@@ -11,6 +11,12 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
+vi.mock("jsqr", () => ({
+  default: vi.fn(() => ({
+    data: "https://example.com/check-in?id=reg-1#token=abc",
+  })),
+}));
+
 describe("parseCheckInUrl", () => {
   it("extracts the id and token from a scanned check-in URL", () => {
     expect(parseCheckInUrl("https://example.com/check-in?id=reg-1#token=abc")).toEqual({
@@ -105,13 +111,23 @@ describe("CheckInScanner", () => {
       configurable: true,
     });
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    const fakeContext = {
+      drawImage: vi.fn(),
+      getImageData: vi.fn().mockReturnValue({ data: new Uint8ClampedArray(4) }),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      fakeContext as unknown as CanvasRenderingContext2D,
+    );
 
-    const { container } = render(<CheckInScanner onDecode={vi.fn()} />);
+    const onDecode = vi.fn();
+    const { container } = render(<CheckInScanner onDecode={onDecode} />);
     const video = container.querySelector("video");
     expect(video).not.toBeNull();
     Object.defineProperty(video, "readyState", { value: 4, configurable: true });
-    Object.defineProperty(video, "videoWidth", { value: 0, configurable: true });
+    Object.defineProperty(video, "videoWidth", { value: 640, configurable: true });
+    Object.defineProperty(video, "videoHeight", { value: 480, configurable: true });
 
-    await screen.findByText("Point the camera at the guest's QR code.");
+    await waitFor(() => expect(onDecode).toHaveBeenCalledWith({ id: "reg-1", token: "abc" }));
+    expect(fakeContext.drawImage).toHaveBeenCalled();
   });
 });
