@@ -90,9 +90,8 @@ work is intentionally outside this audit until the bourse requirements are clear
 
 ### Phase 3 — operational workflows and admin communication
 
-| Order | Issue | Notes | Effort |
-| --- | --- | --- | --- |
-| 1 | #937 — no scanner, no offline check-in | In-page QR scanning (native `BarcodeDetector`, `jsqr` fallback) and an online/offline connectivity banner have shipped, closing the app-switch and no-visible-connection-state gaps. The shared service-worker ownership contract with #941 is now settled in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and handlers), so the offline queue/local guest-list cache/check-in replay can proceed without waiting on #941's implementation. | M |
+No sufficiently defined Phase 3 findings remain open — #937 is complete (see
+below).
 
 ### Phase 4 — compliance and platform foundations
 
@@ -100,17 +99,17 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 2 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 3 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 4 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
-| 5 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 6 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete), follows #932's multi-worker decisions above, and shares the service-worker contract now settled in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) with #937. That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
+| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
+| 2 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
+| 3 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
+| 4 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 5 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 7 | #942 — central announcement and push composer | **Blocked by #941 and #947; #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 6 | #942 — central announcement and push composer | **Blocked by #941 and #947; #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Phase 6 — deferred visitor account
 
@@ -139,8 +138,6 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 #934 retention/erasure decision ─────────────> #944 policy publishing
 
-#937 offline/service worker <── contract settled (decisions/941-web-push-foundation.md) ──> #941 push/service worker
-
 #945 announcement banner ────────┐
 #941 Web Push foundation ────────┼────────────> #942 central composer
 #947 durable outbox ─────────────┘
@@ -156,6 +153,7 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #937 | Completed | 2026-09-03 | #937, PR #975 | Added in-page QR check-in scanning (native `BarcodeDetector`, `jsqr` fallback) that hands decoded credentials straight to the existing lookup mutation with no navigation or OS-camera-app switch, an auto-return-to-scanner "Scan next" flow, and an online/offline connectivity banner. The offline queue/service-worker precaching from the original proposal was explicitly descoped: check-in requires live connectivity by product decision, so the banner (which already states check-ins can't be submitted while offline) is the intended behaviour rather than a gap. The service-worker ownership contract this issue's coordination with #941 needed either way is documented in `docs/decisions/941-web-push-foundation.md` for whichever feature builds a worker first. |
 | #945 | Completed | 2026-09-02 | #945, PR (this change) | Added purpose-built localised announcements with UTC publication windows, safe optional links, deterministic ordering, publication metadata, complete mutation auditing, admin editing/status/preview controls, and an explicitly localised public API. The public site uses a static reduced-motion-safe banner; ordinary notices are not live while urgent notices receive a one-time alert region. |
 | #935 | Completed | 2026-09-02 | #935, PR (this change) | Extracted a shared themed `ConfirmModal` and converted all eight `window.confirm` destructive-action dialogs (venue archive/delete, table-type dimension-change/delete, layout/table/area delete, account delete) to it, fixing the "prevent additional dialogs" browser suppression that silently broke repeated deletes in `LayoutEditor`. Added `role="status"`/`role="alert"` live-region coverage to mutation-result alerts in `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`, and `ContentManagement`, following the pattern already established in `CheckInPage`. Added `jest-axe` assertions to each of those five components' render tests, which caught and fixed a real violation: `aria-sort` on a `<th role="button">` is invalid ARIA (the role override drops the implicit `columnheader` role `aria-sort` requires) — removed the redundant `role="button"` override across `RegistrationList`, `PeopleManagement`, `MembersManagement`, and `VolunteersManagement`, since the existing `tabIndex`/`onKeyDown` already made the header keyboard-operable. Reduced `pnpm lint`'s React Compiler warning count from 30 to 11 by converting the "reset state when a prop changes" effects (all seven form-modal reset-on-open effects, plus `AuthContext`, `AdminDashboard`, `SettingsManagement`, `CheckInPage`, `RegistrationList`, and four in `LayoutEditor`) to the adjust-state-during-render pattern, and fixing three genuine ref-during-render reads (`Countdown`, `ContactForm`, plus one `MyRegistrationsPage` `useCallback` dependency-array gap); the 11 remaining warnings are documented, verified-legitimate exceptions (client-only hydration mount guards, an impure `Date.now()` seed, an async session-recovery effect, and two dnd-kit/TanStack-table ref-accessor patterns that the linter cannot distinguish from an unsafe render-time read). Corrected three genuinely wrong translations (NL check-in mislabelled as clocking-in, NL "Standalone" left in English, FR "Email" missing its hyphen). |
 | #943 | Completed | 2026-09-01 | #943, PR (this change) | Added previewed, individually addressed email-client actions for member/person rows and four localised registration templates and server-delivered confirmations, including an explicit persisted communication-language preference collected during registration and editable by administrators, with encoded `mailto:` links, a long-message clipboard fallback, accessibility labels, and strict exclusion of internal registration fields. No backend write or delivery audit is created. |
@@ -200,7 +198,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #934 | backend | gap — compliance |
 | #935 | frontend (completed 2026-09-02) | quality — UI/UX, a11y |
 | #936 | frontend | gap — discoverability |
-| #937 | frontend (scanner + connectivity banner shipped 2026-09-02) | gap — event-day resilience |
+| #937 | frontend (completed 2026-09-03) | gap — event-day resilience |
 | #938 | docs (completed 2026-08-29) | accuracy |
 | #939 | backend, frontend (completed 2026-08-29) | bug — oversell risk |
 
@@ -216,7 +214,7 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | #945 | backend, frontend, admin, accessibility (completed 2026-09-02) | scheduled announcements | Coordinated with #929, #931, and #935 |
 | #944 | backend, frontend, admin, security | versioned policy publishing | Follows #934's policy decisions |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
-| #941 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; coordinates with #937 |
+| #941 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; service-worker contract documented for reuse |
 | #942 | backend, frontend, admin | central composer | Blocked by #941 and #947 |
 
 ## Cross-cutting feature and audit relationships
@@ -242,11 +240,13 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   delivery gaps (#923 and #924) and the roadmap's push/composer work (#941 and
   #942). It owns persistence, claiming, retry, and crash-recovery mechanics, but
   deliberately owns no audience or message-composition product surface.
-- **Web Push (#941)** and **offline web check-in (#937)** both require a
-  production service worker. Their ownership and update/cache strategy is now
-  settled in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md):
-  one worker file, per-feature cache versions, additive event handlers — so
-  neither implementation overwrites or breaks the other.
+- **Web Push (#941)** requires a production service worker. Offline web
+  check-in (#937) was decided **not** to need one — check-ins require live
+  connectivity by design; the connectivity banner covers the failure mode
+  instead of a queue-and-replay flow. The service-worker contract in
+  [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md)
+  (one worker file, per-feature cache versions, additive event handlers) still
+  stands so a future consumer can share #941's worker without redesigning it.
 - **The central composer (#942)** also depends on the multi-process conclusions
   of #932. Its scheduling and deduplication are DB-backed through #947; its rate
   limits and any live invalidation must not rely on per-process state.

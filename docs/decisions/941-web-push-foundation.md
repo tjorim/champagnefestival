@@ -1,47 +1,57 @@
 # Service-worker ownership and Web Push subscription foundation
 
-**Status:** Service-worker contract decided; subscription/consent policy
-proposed, pending owner confirmation before implementation starts
-**Date:** 2026-09-03
-**Issues:** [#937](https://github.com/tjorim/champagnefestival/issues/937),
-[#941](https://github.com/tjorim/champagnefestival/issues/941)
+**Status:** Service-worker contract decided (now for #941 alone — see
+"Update" below); subscription/consent policy proposed, pending owner
+confirmation before implementation starts
+**Date:** 2026-09-03 (updated same day)
+**Issues:** [#941](https://github.com/tjorim/champagnefestival/issues/941)
+(primary); [#937](https://github.com/tjorim/champagnefestival/issues/937)
+(historical context — no longer a co-tenant, see below)
 
 ---
 
+## Update: #937 no longer needs a service worker
+
+This document originally settled a shared service-worker contract between
+offline check-in (#937) and Web Push (#941), per the product audit's
+coordination note. #937's offline queue/precache work was subsequently
+descoped by product decision: check-in requires live connectivity, so a
+guest whose device is offline is expected to wait or use the volunteer
+manual-search fallback, not have their check-in queued and replayed later.
+The connectivity banner shipped in #937 (which states check-ins can't be
+submitted while offline) is the intended behaviour, not a stopgap for a
+queue that's coming later. #937 shipped without a service worker and won't
+need one.
+
+The contract below is kept for #941 alone, and for any future feature that
+does need a production service worker — the additive-module structure means
+a later consumer still doesn't have to redesign it.
+
 ## Context
 
-Both offline check-in (#937) and Web Push (#941) need a production service
-worker, and the product audit already flags that they must not ship
-competing registrations or cache policies. #937's in-page QR scanning and
-connectivity banner have shipped without a service worker; its remaining
-offline-queue/precache work and all of #941 still need one. This document
-settles the shared contract so whichever of the two lands its service-worker
-code first doesn't foreclose the other's needs, and separately proposes
-answers to the questions #941 lists as required "before implementation."
+Web Push (#941) needs a production service worker. This document settles
+its shape now, before implementation starts, and separately proposes answers
+to the questions #941 lists as required "before implementation."
 
-## Decision: one service worker, two independent feature modules
+## Decision: one service worker, additive per-feature modules
 
 - **One file, one registration.** `frontend/src/sw.ts`, built by Vite as a
   separate entry (`build.rollupOptions.input`) and registered once from
-  `main.tsx` via `navigator.serviceWorker.register`. Neither feature
-  registers its own worker or scope.
-- **Versioned cache names.** Each feature owns a cache name with an embedded
-  version segment it controls independently — e.g. `checkin-shell-v1`,
+  `main.tsx` via `navigator.serviceWorker.register`.
+- **Versioned cache names.** Each feature that needs caching owns a cache
+  name with an embedded version segment it controls independently — e.g.
   `push-assets-v1` — so bumping one feature's cache in `activate` (deleting
-  stale versions) never touches the other's.
+  stale versions) never touches another's.
 - **Additive event handlers.** The worker's `install`, `activate`, and
   `fetch` handlers are composed from small per-feature functions imported
-  into `sw.ts` (`registerCheckInCaching()`, later `registerPushHandlers()`
-  adding its own `push` and `notificationclick` listeners). A feature that
-  doesn't need a given event type simply doesn't contribute a handler for
-  it — `push`/`notificationclick` are additive and don't require touching
-  `install`/`fetch`.
-- **Consequence for sequencing.** #937 can implement the worker file and
-  `registerCheckInCaching()` now without waiting on #941; when #941 is
-  implemented it adds `registerPushHandlers()` to the same file rather than
-  standing up a second worker. This resolves the audit's "either may go
-  first" note by making "going first" mean *creating the shared file*, not
-  *deciding the other feature's design*.
+  into `sw.ts` (`registerPushHandlers()` adding its own `push` and
+  `notificationclick` listeners). A feature that doesn't need a given event
+  type simply doesn't contribute a handler for it.
+- **Why keep this structure with only one consumer.** Even with #937 out of
+  the picture, the same shared-worker constraint applies to any second
+  future consumer (there can only ever be one production service worker
+  registration for the site), so the additive-module shape is worth building
+  correctly from #941 onward rather than revisiting it later.
 
 ## #941's required pre-implementation decisions (proposed defaults)
 
@@ -78,7 +88,8 @@ and retention consequences:
 ## References
 
 - [#937](https://github.com/tjorim/champagnefestival/issues/937) — offline
-  web check-in (scanner + banner shipped; offline queue/precache pending)
+  web check-in (completed; offline queue/precache explicitly descoped, see
+  "Update" above)
 - [#941](https://github.com/tjorim/champagnefestival/issues/941) — Web
   Push/VAPID subscription foundation
 - [#947](https://github.com/tjorim/champagnefestival/issues/947) — durable
