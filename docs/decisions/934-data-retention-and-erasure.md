@@ -192,6 +192,46 @@ general schedule). What's still open is *how long* and *how securely*:
   follow-up once the retention window above is confirmed, rather than
   bolting key management onto this PR's scope.
 
+## Reaching out about future events (marketing) — a separate track
+
+This is a real gap the schedule above creates, but it can't be closed by
+just keeping e-mail around longer under the *operational* purpose already in
+the privacy policy ("to organise the current and upcoming edition... and to
+meet our legal, accounting, dispute-resolution, and fraud-prevention
+obligations"). Belgian/EU e-marketing rules (ePrivacy Directive, Book XII of
+the Code of Economic Law) require its own legal basis — in practice, opt-in
+consent — before an old visitor's e-mail can be used to tell them about a
+*new* event. There's a narrow "existing customer, similar product, opt-out
+offered" soft-opt-in exception in some EU states, but this document does not
+assume Champagnefestival can rely on it without the owner's own legal read.
+Quietly repurposing operational data for marketing without consent would be
+exactly the kind of purpose-limitation violation this document is trying to
+close a gap on, not open a new one.
+
+Proposed shape, **not implemented or fully designed by this document**:
+
+- An explicit, unticked-by-default opt-in at registration
+  (`Person.marketing_opt_in: bool = False` +
+  `marketing_opt_in_at: datetime | None`), with its own consent copy
+  separate from the transactional confirmation e-mail, and a one-click
+  unsubscribe link on every marketing send (required, not optional, under
+  the same rules).
+- **Carve-out in `anonymise_person`, same pattern as the volunteer one:**
+  skip (or only partially blank — keep `email` and the opt-in flag,
+  blank the rest) a person who currently has `marketing_opt_in = True`, so
+  agreeing to be contacted isn't silently undone by the 3-year sweep.
+  Whether opting in should also reset a person's general anonymisation
+  clock, or run on a fully separate "consent still active, review
+  periodically" track, is a decision for whoever designs this feature —
+  this document only makes sure the sweep proposed here won't quietly break
+  it once it exists.
+- **The send itself is a new outbound channel.** `docs/product-audit-2026-08.md`'s
+  #942 (central announcement/push composer) is explicitly scoped today as
+  adding *no* bulk e-mail channel — reaching out to past visitors about a
+  new edition is exactly the kind of use case that would widen that scope,
+  or justify its own issue. This document flags the connection rather than
+  designing a marketing-send feature inside a retention document.
+
 ## Rights channel dependency
 
 The issue notes the contact form (#923) is "the *only* channel the policy
@@ -222,7 +262,12 @@ using the mechanism proposed here, once implemented.
    access-restriction/encryption ships alongside the rest of this work or as
    its own follow-up issue, given its larger, differently-shaped scope (key
    management).
-3. Once confirmed: implement `anonymise_person`, the three worker sweeps, the
+3. A decision on whether the marketing opt-in described above becomes part
+   of this same implementation, a fast-follow, or a new tracked issue — it
+   isn't required to satisfy the privacy-policy commitments #934 is about,
+   but the anonymisation sweep's carve-out for it is cheap to build now
+   versus retrofitted later once opted-in visitors already exist.
+4. Once confirmed: implement `anonymise_person`, the three worker sweeps, the
    audit-entry IP blanking, and the retry-safety documentation for each new
    write, then update `docs/product-audit-2026-08.md`'s #934 row and
    "Completed or superseded work" per `AGENTS.md`.
