@@ -47,8 +47,8 @@
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.25.0",
-    "@inlang/plugin-m-function-matcher": "^2.2.12",
-    "@inlang/plugin-message-format": "^4.4.3",
+    "@inlang/plugin-m-function-matcher": "^2.2.13",
+    "@inlang/plugin-message-format": "^4.4.4",
     "@playwright/test": "^1.62.1",
     "@tanstack/table-core": "9.2.4",
     "@testing-library/jest-dom": "^7.0.1",
