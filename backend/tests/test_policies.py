@@ -109,7 +109,11 @@ async def test_create_edit_and_publish_draft_from_scratch(client, db_session):
 
     updated = await client.put(
         "/api/policies/privacy/draft",
-        json={"content_nl": "## Titel\n\nInhoud.", "content_en": "## Title\n\nContent.", "content_fr": "## Titre\n\nContenu."},
+        json={
+            "content_nl": "## Titel\n\nInhoud.",
+            "content_en": "## Title\n\nContent.",
+            "content_fr": "## Titre\n\nContenu.",
+        },
         headers=ADMIN_HEADERS,
     )
     assert updated.status_code == 200
@@ -299,8 +303,14 @@ async def test_concurrent_publish_attempts_do_not_double_publish(engine):
 
     async with sessions() as verify:
         published = (
-            await verify.execute(
-                select(PolicyVersion).where(PolicyVersion.policy_key == "privacy", PolicyVersion.status == "published")
+            (
+                await verify.execute(
+                    select(PolicyVersion).where(
+                        PolicyVersion.policy_key == "privacy", PolicyVersion.status == "published"
+                    )
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert len(published) == 1
