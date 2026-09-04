@@ -827,5 +827,6 @@
   "my_account_preference_error": "Could not update your communication language. Please try again.",
   "admin_email_copy_failed": "Clipboard access failed. Select and copy the recipient, subject, and message above manually.",
   "announcements_accessible_label": "Operational announcements",
-  "admin_announcements_section": "Announcements"
+  "admin_announcements_section": "Announcements",
+  "admin_policies_section": "Legal Policies"
 }

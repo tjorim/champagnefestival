@@ -2,6 +2,7 @@ export const queryKeys = {
   activeEdition: ["active-edition"] as const,
   faq: (locale: string) => ["faq", locale] as const,
   announcements: (locale: string) => ["announcements", locale] as const,
+  policy: (policyKey: string, locale: string) => ["policy", policyKey, locale] as const,
   maintenanceMode: ["maintenance-mode"] as const,
   myRegistrations: (token: string) => ["my-registrations", token] as const,
   checkInRegistration: (registrationId: string, checkInToken: string) =>
@@ -88,6 +89,7 @@ export const queryKeys = {
     editionStats: ["admin", "edition-stats"] as const,
     faqItems: ["admin", "faq-items"] as const,
     announcements: ["admin", "announcements"] as const,
+    policy: (policyKey: string) => ["admin", "policies", policyKey] as const,
     settings: ["admin", "settings"] as const,
     contactMessages: ["admin", "contact-messages"] as const,
     contentManagement: {

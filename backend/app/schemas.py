@@ -1382,6 +1382,82 @@ class AnnouncementPublicOut(BaseModel):
     link_label: str | None
 
 
+PolicyVersionStatus = Literal["draft", "published", "superseded"]
+
+
+class PolicyVersionOut(BaseModel):
+    """Admin shape: full per-locale Markdown source and provenance for one version."""
+
+    id: str
+    policy_key: str
+    version_number: int
+    status: PolicyVersionStatus
+    content_nl: str | None
+    content_en: str | None
+    content_fr: str | None
+    change_summary: str | None
+    created_at: datetime
+    created_by: str
+    updated_at: datetime
+    published_at: datetime | None
+    published_by: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class PolicyOut(BaseModel):
+    """Admin shape: the policy plus its full version history, newest first."""
+
+    key: str
+    title_nl: str
+    title_en: str | None
+    title_fr: str | None
+    required_locales: list[FaqLocale]
+    versions: list[PolicyVersionOut]
+
+
+class PolicyDraftCreate(RequestModel):
+    """Seed a new draft.
+
+    Omit ``source_version_number`` to copy the current published version (the
+    normal "edit from current" flow). Pass an older, historical version's
+    number instead to seed a rollback draft with that version's content —
+    publishing it is what actually performs the rollback.
+    """
+
+    source_version_number: int | None = None
+
+
+class PolicyDraftUpdate(RequestModel):
+    content_nl: str | None = Field(default=None, max_length=200_000)
+    content_en: str | None = Field(default=None, max_length=200_000)
+    content_fr: str | None = Field(default=None, max_length=200_000)
+    change_summary: str | None = Field(default=None, max_length=2000)
+
+
+class PolicyRenderRequest(RequestModel):
+    """Render arbitrary, not-yet-saved Markdown for live preview.
+
+    Uses the exact same renderer/sanitizer as the public endpoint, so what an
+    admin previews here is guaranteed to match what publishing would produce.
+    """
+
+    markdown: str = Field(default="", max_length=200_000)
+
+
+class PolicyRenderOut(BaseModel):
+    html: str
+
+
+class PolicyPublicOut(BaseModel):
+    key: str
+    title: str
+    locale: FaqLocale
+    html: str
+    version_number: int
+    published_at: datetime
+
+
 class EditionAttendanceStats(BaseModel):
     edition_id: str
     year: int
