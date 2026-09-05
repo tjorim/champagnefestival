@@ -9,7 +9,13 @@ import { fileURLToPath } from "node:url";
 import { loadEnv } from "vite";
 
 const frontendDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const mode = process.env.NODE_ENV || "production";
+// Hardcoded, not derived from NODE_ENV: the "vite build" step in the same
+// pnpm build pipeline always resolves its own mode to "production" (Vite's
+// default for the build command, independent of NODE_ENV) since it's never
+// called with --mode. Deriving this script's mode from NODE_ENV instead risked
+// the two steps disagreeing — e.g. baking http://localhost:5173 into
+// robots.txt/sitemap.xml while vite build still produced a production bundle.
+const mode = "production";
 const env = loadEnv(mode, frontendDir, "VITE_");
 const publicUrl = env.VITE_PUBLIC_URL;
 
