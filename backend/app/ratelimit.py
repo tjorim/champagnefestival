@@ -2,8 +2,9 @@
 
 NOTE: these limiters are process-local. In a multi-worker deployment each worker
 maintains its own buckets, so the effective limit is
-max_requests × number_of_workers per client IP. Replace with a Redis-backed
-implementation if strict per-IP enforcement across workers is required.
+max_requests × number_of_workers per client IP. Replace with a Postgres-backed
+implementation if strict per-IP enforcement across workers is required — see
+docs/decisions/932-multi-worker-state.md.
 """
 
 from __future__ import annotations
