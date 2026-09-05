@@ -91,7 +91,7 @@ and retention consequences:
 
 1. Confirmation (or correction) of the defaults above from the project
    owner.
-2. The Redis-backed rate limiter from
+2. The Postgres-backed rate limiter from
    [`docs/decisions/932-multi-worker-state.md`](./932-multi-worker-state.md),
    at least for the subscription-mutation and test-send endpoints (or an
    explicit acceptance of single-worker deployment for that low-volume path
