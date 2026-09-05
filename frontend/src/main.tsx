@@ -32,6 +32,7 @@ import LanguageSwitcher from "./components/LanguageSwitcher";
 import MaintenancePage from "./components/MaintenancePage";
 import { useLanguage } from "./hooks/useLanguage";
 import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
+import { useNoIndex } from "./hooks/useNoIndex";
 import { initializeVisualTheme, useVisualTheme } from "./hooks/useVisualTheme";
 import { getFestivalDateRange, useActiveEdition } from "./hooks/useActiveEdition";
 import { m } from "./paraglide/messages";
@@ -136,6 +137,7 @@ function SuspendedMarqueeSlider({
 
 /** Route component for /admin */
 function AdminPage() {
+  useNoIndex();
   return (
     <div className="App standalone-app">
       <a href="#main-content" className="skip-link">
@@ -153,6 +155,7 @@ function AdminPage() {
 
 /** Route component for /check-in */
 function CheckInRoute() {
+  useNoIndex();
   return (
     <div className="App standalone-app">
       <a href="#main-content" className="skip-link">
@@ -169,6 +172,7 @@ function CheckInRoute() {
 }
 
 function VenuePlanRoute() {
+  useNoIndex();
   return (
     <div className="App standalone-app">
       <StandaloneNavBar iconClass="bi bi-map" title={m.venue_plan_title()} />
@@ -183,6 +187,7 @@ function VenuePlanRoute() {
 
 /** Route component for /my-registrations */
 function MyRegistrationsRoute() {
+  useNoIndex();
   return (
     <div className="App standalone-app">
       <a href="#main-content" className="skip-link">
@@ -217,6 +222,7 @@ function PrivacyPolicyRoute() {
 
 /** Route component for /pebble-pair */
 function PebblePairRoute() {
+  useNoIndex();
   return (
     <div className="App standalone-app">
       <a href="#main-content" className="skip-link">
@@ -234,6 +240,7 @@ function PebblePairRoute() {
 
 /** Route component for /me — unlinked, direct-URL-only self-service account page. */
 function MyAccountRoute() {
+  useNoIndex();
   return (
     <div className="App standalone-app">
       <a href="#main-content" className="skip-link">
