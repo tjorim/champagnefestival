@@ -8,7 +8,7 @@
     "dev": "vite",
     "sync-version": "node scripts/sync-version.mjs",
     "generate-seo": "node scripts/generate-seo-files.mjs",
-    "build": "pnpm sync-version && pnpm generate-seo && pnpm paraglide:compile && tsc -b && vite build",
+    "build": "pnpm sync-version && pnpm generate-seo && pnpm paraglide:compile && tsc -b && vite build && vite build --config vite.sw.config.ts",
     "preview": "vite preview",
     "typecheck": "pnpm paraglide:compile && tsc -b --noEmit",
     "lint": "oxlint",

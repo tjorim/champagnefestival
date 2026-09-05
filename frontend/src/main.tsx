@@ -732,6 +732,18 @@ async function enableMocking(): Promise<void> {
   }
 }
 
+// Registers the production service worker (src/sw.ts) purely for PWA
+// installability — see that file and docs/decisions/941-web-push-foundation.md.
+// Skipped outside production so it never fights the dev server or the
+// opt-in MSW mock worker above, which only ever runs in DEV.
+function registerServiceWorker(): void {
+  if (import.meta.env.PROD && "serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .catch((err: unknown) => console.error("[SW] Registration failed:", err));
+  }
+}
+
 function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
@@ -745,6 +757,8 @@ function renderApp(): void {
     </React.StrictMode>,
   );
 }
+
+registerServiceWorker();
 
 enableMocking()
   .then(renderApp)
