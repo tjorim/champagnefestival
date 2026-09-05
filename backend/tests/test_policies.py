@@ -247,6 +247,23 @@ async def test_public_endpoint_never_silently_serves_another_locale(client, db_s
     assert missing.status_code == 404
 
 
+@pytest.mark.anyio
+async def test_public_endpoint_treats_whitespace_only_content_as_missing(client, db_session):
+    await _seed_policy(db_session, required_locales="nl")
+    await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
+    # fr isn't required, so a stray whitespace-only value doesn't block publish —
+    # but it must still 404 publicly rather than serve blank HTML with a 200.
+    await client.put(
+        "/api/policies/privacy/draft",
+        json={"content_nl": "Nederlands", "content_fr": "   "},
+        headers=ADMIN_HEADERS,
+    )
+    assert (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).status_code == 200
+
+    response = await client.get("/api/policies/privacy/current", params={"locale": "fr"})
+    assert response.status_code == 404
+
+
 # ---------------------------------------------------------------------------
 # Preview uses the same renderer/sanitizer as public output
 # ---------------------------------------------------------------------------

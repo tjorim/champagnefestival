@@ -144,16 +144,24 @@ export default function PolicyManagement({
       setPreview("");
       return;
     }
+    let cancelled = false;
     const timer = window.setTimeout(() => {
       fetchJsonOrThrowWithUnauthorized<{ html: string }>(
         "/api/policies/render",
         { method: "POST", headers: authHeaders(), body: JSON.stringify({ markdown }) },
         "Preview could not be rendered.",
       )
-        .then((result) => setPreview(result.html))
-        .catch(() => setPreview(""));
+        .then((result) => {
+          if (!cancelled) setPreview(result.html);
+        })
+        .catch(() => {
+          if (!cancelled) setPreview("");
+        });
     }, 400);
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [contentByLocale, locale, authHeaders]);
 
   const createDraft = useMutation({

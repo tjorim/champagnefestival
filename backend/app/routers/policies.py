@@ -46,7 +46,7 @@ async def get_current(
     """
     policy, version = await _call(service.get_published(db, policy_key=policy_key))
     content = getattr(version, f"content_{locale}")
-    if not content:
+    if not (content or "").strip():
         raise to_http_exception(NotFoundError(f"Policy '{policy_key}' has no published content for locale '{locale}'."))
     return {
         "key": policy.key,
