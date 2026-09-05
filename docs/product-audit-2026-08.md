@@ -95,14 +95,15 @@ below).
 
 ### Phase 4 — compliance and platform foundations
 
-Two of these need a decision before code, and are labelled `needs-discussion`.
+Three of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
 | 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. #944 (versioned policy publishing) shipped ahead of this item rather than waiting: its initial migrated version tightened the data-retention and rights-request text so it stops short of claiming an automated deletion/anonymisation pipeline, so the current publication does not overstate what exists yet. Decide and implement the retention schedule and rights workflow, then publish an updated version through #944's admin editor. | L |
 | 2 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
-| 3 | #936 — public-site discoverability | **Partially complete.** The **S** part shipped: `robots.txt`/`sitemap.xml` are now generated from `VITE_PUBLIC_URL` (`frontend/scripts/generate-seo-files.mjs`) instead of hardcoding `champagnefestival.be`, the same fix applied to `JsonLd.tsx`'s `baseUrl` (`frontend/src/config/site.ts`); the sitemap gained the missing `/privacy` entry and now expresses locale variants as one `<url>` per page with `xhtml:link` hreflang alternates instead of separate `?lng=` entries; `robots.txt` disallows the staff routes (`/admin`, `/check-in`, `/venue-plan`, `/my-registrations`, `/me`, `/pebble-pair`) and each now sets `<meta name="robots" content="noindex, nofollow">` while mounted (`useNoIndex`); the static shell's description/`og:description`/`twitter:description` now match the `nl` base locale (matching the existing `x-default` hreflang) instead of a generic English sentence, with `og:locale`/`og:locale:alternate` added; `site.webmanifest` gained `lang`/`id`, and the site now registers a production service worker (`frontend/src/sw.ts`, built by `vite.sw.config.ts`) purely so it meets PWA installability criteria — no caching, no offline queue, per the shared-worker contract in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md), which #941 will extend rather than replace. Remaining **M** part, still open: per-route `<title>`/description (the shell is still one static document per build, not per locale or per route) and prerendering the public routes so schedule/FAQ/exhibitor content and `EventStructuredData` are visible without JS. | M |
+| 3 | #936 — public-site discoverability | **Partially complete.** The **S** part shipped: `robots.txt`/`sitemap.xml` are now generated from `VITE_PUBLIC_URL` (`frontend/scripts/generate-seo-files.mjs`) instead of hardcoding `champagnefestival.be`, the same fix applied to `JsonLd.tsx`'s `baseUrl` (`frontend/src/config/site.ts`); the sitemap gained the missing `/privacy` entry and now expresses locale variants as one `<url>` per page with `xhtml:link` hreflang alternates instead of separate `?lng=` entries; `robots.txt` disallows the staff routes (`/admin`, `/check-in`, `/venue-plan`, `/my-registrations`, `/me`, `/pebble-pair`) and each now sets `<meta name="robots" content="noindex, nofollow">` while mounted (`useNoIndex`); the static shell's description/`og:description`/`twitter:description` now match the `nl` base locale (matching the existing `x-default` hreflang) instead of a generic English sentence, with `og:locale`/`og:locale:alternate` added; `site.webmanifest` gained `lang`/`id`, and the site now registers a production service worker (`frontend/src/sw.ts`, built by `vite.sw.config.ts`) purely so it meets PWA installability criteria — no caching, no offline queue, per the shared-worker contract in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md), which #941 will extend rather than replace. Remaining **M** part redefined and split out to #992: build-time prerendering turned out to be the wrong fit, since the schedule/FAQ/edition content and `/privacy`'s body (via #944) are all live, admin-editable data with no redeploy involved — a build- or deploy-time snapshot would just go stale. #992 instead proposes rendering `/` and `/privacy` live from the backend on every request. | M |
 | 4 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
+| 5 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936's "M" part once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content (see #936's row above). Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a small Caddyfile routing change in `tjorim/apps`. Needs a decision on templating approach and cache-invalidation strategy before implementation. | L |
 
 ### Phase 5 — central composer
 
@@ -201,6 +202,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #937 | frontend (completed 2026-09-03) | gap — event-day resilience |
 | #938 | docs (completed 2026-08-29) | accuracy |
 | #939 | backend, frontend (completed 2026-08-29) | bug — oversell risk |
+| #992 | backend, frontend | gap — discoverability (split from #936's "M" part) |
 
 ## Communications roadmap index
 
@@ -569,7 +571,7 @@ Recorded so this ground does not get re-covered:
 
 ## Open questions for the maintainer
 
-Two findings propose changes that are judgement calls rather than clear fixes:
+Three findings propose changes that are judgement calls rather than clear fixes:
 
 1. **#924** exposes `check_in_token` only from the short-lived, single-use
    email-token-protected guest endpoint so a guest can retrieve their own QR;
@@ -577,3 +579,7 @@ Two findings propose changes that are judgement calls rather than clear fixes:
 2. **#934** needs a retention schedule decided per table before any code, and
    raises whether `national_register_number` should be stored outside the window
    in which the insurance export is produced.
+3. **#992** (split from #936) needs a backend templating approach picked
+   for a service that's been a pure JSON API until now, and a decision on
+   whether its render cache should invalidate proactively on the relevant
+   admin mutations or purely on a short TTL.
