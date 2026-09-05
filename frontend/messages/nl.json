@@ -827,5 +827,6 @@
   "my_account_preference_error": "Je communicatietaal kon niet worden bijgewerkt. Probeer het opnieuw.",
   "admin_email_copy_failed": "Kopiëren naar het klembord is mislukt. Selecteer en kopieer de ontvanger, het onderwerp en het bericht hierboven handmatig.",
   "announcements_accessible_label": "Operationele mededelingen",
-  "admin_announcements_section": "Mededelingen"
+  "admin_announcements_section": "Mededelingen",
+  "admin_policies_section": "Juridisch beleid"
 }

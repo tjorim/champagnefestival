@@ -99,11 +99,10 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. Decide and implement the retention schedule and rights workflow before publishing policy text through #944. | L |
-| 2 | #944 — versioned Markdown policy publishing | Follow #934 directly so the migrated policy describes implemented behaviour. Use existing audit provenance and the proven row-lock pattern for atomic publication. | L |
-| 3 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
-| 4 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 5 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
+| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. #944 (versioned policy publishing) shipped ahead of this item rather than waiting: its initial migrated version tightened the data-retention and rights-request text so it stops short of claiming an automated deletion/anonymisation pipeline, so the current publication does not overstate what exists yet. Decide and implement the retention schedule and rights workflow, then publish an updated version through #944's admin editor. | L |
+| 2 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
+| 3 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
+| 4 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
 
 ### Phase 5 — central composer
 
@@ -136,7 +135,7 @@ Two of these need a decision before code, and are labelled `needs-discussion`.
 
 #925 settings failure semantics ─────────────> #940 public contact settings (complete)
 
-#934 retention/erasure decision ─────────────> #944 policy publishing
+#934 retention/erasure decision ─────────────> #944 policy publishing (complete, ahead of this item — see Phase 4 notes)
 
 #945 announcement banner ────────┐
 #941 Web Push foundation ────────┼────────────> #942 central composer
@@ -153,6 +152,7 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #944 | Completed | 2026-09-04 | #944, PR (this change) | Added a versioned Markdown policy model (`policies`/`policy_versions`) with a draft → publish → superseded lifecycle enforced by partial-unique indexes and a policy-row lock (concurrency-tested against a double-publish race), a full audit trail, per-locale content with an explicit required-locale contract enforced at publish time (never silently serves another locale), and rollback by seeding a new draft from an older version's content and republishing it. Markdown renders through one shared `markdown-it-py` + `nh3` allowlist renderer/sanitizer used identically by the admin live preview and the public endpoint — raw HTML, scripts, iframes, event handlers, and unsafe link schemes are stripped or sanitised, and only h2/h3, paragraphs, emphasis, links, lists, blockquotes, and code survive. Added an admin editor (Markdown source, a small formatting toolbar, live preview, version history, rollback) and switched the public privacy-policy page from static compiled content to this backend. Migrated the currently-published privacy policy text into the initial published version unchanged, except that the data-retention and rights-request sections were tightened to stop asserting an automated deletion/anonymisation pipeline that #934 has not built yet — per this document's own guidance that the migration "must not preserve promises the product still cannot fulfil." #934 remains open; its retention schedule and rights workflow should be published as a new version through this editor once implemented. |
 | #937 | Completed | 2026-09-03 | #937, PR #975 | Added in-page QR check-in scanning (native `BarcodeDetector`, `jsqr` fallback) that hands decoded credentials straight to the existing lookup mutation with no navigation or OS-camera-app switch, an auto-return-to-scanner "Scan next" flow, and an online/offline connectivity banner. The offline queue/service-worker precaching from the original proposal was explicitly descoped: check-in requires live connectivity by product decision, so the banner (which already states check-ins can't be submitted while offline) is the intended behaviour rather than a gap. This issue no longer needs a service worker at all; the shared-worker contract the audit originally asked it to coordinate with #941 on now belongs to #941 alone, per `docs/decisions/941-web-push-foundation.md`. |
 | #945 | Completed | 2026-09-02 | #945, PR (this change) | Added purpose-built localised announcements with UTC publication windows, safe optional links, deterministic ordering, publication metadata, complete mutation auditing, admin editing/status/preview controls, and an explicitly localised public API. The public site uses a static reduced-motion-safe banner; ordinary notices are not live while urgent notices receive a one-time alert region. |
 | #935 | Completed | 2026-09-02 | #935, PR (this change) | Extracted a shared themed `ConfirmModal` and converted all eight `window.confirm` destructive-action dialogs (venue archive/delete, table-type dimension-change/delete, layout/table/area delete, account delete) to it, fixing the "prevent additional dialogs" browser suppression that silently broke repeated deletes in `LayoutEditor`. Added `role="status"`/`role="alert"` live-region coverage to mutation-result alerts in `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`, and `ContentManagement`, following the pattern already established in `CheckInPage`. Added `jest-axe` assertions to each of those five components' render tests, which caught and fixed a real violation: `aria-sort` on a `<th role="button">` is invalid ARIA (the role override drops the implicit `columnheader` role `aria-sort` requires) — removed the redundant `role="button"` override across `RegistrationList`, `PeopleManagement`, `MembersManagement`, and `VolunteersManagement`, since the existing `tabIndex`/`onKeyDown` already made the header keyboard-operable. Reduced `pnpm lint`'s React Compiler warning count from 30 to 11 by converting the "reset state when a prop changes" effects (all seven form-modal reset-on-open effects, plus `AuthContext`, `AdminDashboard`, `SettingsManagement`, `CheckInPage`, `RegistrationList`, and four in `LayoutEditor`) to the adjust-state-during-render pattern, and fixing three genuine ref-during-render reads (`Countdown`, `ContactForm`, plus one `MyRegistrationsPage` `useCallback` dependency-array gap); the 11 remaining warnings are documented, verified-legitimate exceptions (client-only hydration mount guards, an impure `Date.now()` seed, an async session-recovery effect, and two dnd-kit/TanStack-table ref-accessor patterns that the linter cannot distinguish from an unsafe render-time read). Corrected three genuinely wrong translations (NL check-in mislabelled as clocking-in, NL "Standalone" left in English, FR "Email" missing its hyphen). |
@@ -212,7 +212,7 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | #940 | backend, frontend, admin (completed 2026-08-29) | public contact settings | Built on #925 failure semantics; related to #923 |
 | #943 | frontend, admin (completed 2026-09-01) | individual email-client actions | Does not replace #924 |
 | #945 | backend, frontend, admin, accessibility (completed 2026-09-02) | scheduled announcements | Coordinated with #929, #931, and #935 |
-| #944 | backend, frontend, admin, security | versioned policy publishing | Follows #934's policy decisions |
+| #944 | backend, frontend, admin, security (completed 2026-09-04) | versioned policy publishing | Shipped ahead of #934's policy decisions; migrated text tightened to avoid overstating them |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
 | #941 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; service-worker contract documented for reuse |
 | #942 | backend, frontend, admin | central composer | Blocked by #941 and #947 |
@@ -223,12 +223,17 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   submissions)** both concern the contact path. #940 moves the public-facing
   values into settings; #923 established persistence, organiser notification,
   and an admin inbox independently of those settings.
-- **Versioned policy publishing (#944)** and **#934 (retention and erasure)**
-  are two halves of the same compliance story. Publishing a policy version is
-  of limited value while the commitments in its text — deletion, anonymisation,
-  a working rights channel — have no implementation behind them. Worth deciding
-  the retention schedule (#934, step 1) before authoring the policy version that
-  describes it.
+- Completed **versioned policy publishing (#944)** and open **#934 (retention
+  and erasure)** are two halves of the same compliance story. #944 shipped the
+  infrastructure — draft/publish, immutability, locale enforcement, sanitized
+  Markdown, audit trail — ahead of #934 rather than waiting on it; its initial
+  migrated version carried the previously-compiled policy text over unchanged,
+  except that the data-retention and rights-request sections were rewritten to
+  stop asserting an automated deletion/anonymisation pipeline that doesn't
+  exist yet, so the publication does not overstate what #934 has not built.
+  #934 still needs its retention schedule and rights workflow decided and
+  implemented, after which the policy should be republished through #944's
+  admin editor to describe the real behaviour.
 - **The announcement banner (#945)** and **#935 (UI/UX pass, complete)** both
   added live regions, for different surfaces: the banner's static,
   urgent-only `aria-live` on a persistent public banner, and #935's
@@ -410,24 +415,29 @@ Publication rules:
 - “Last updated” is `published_at`, never manually entered.
 - Rollback republishes old content as a new version.
 - Concurrent publication is protected by a precondition or database row lock.
-- The initial migration follows #934's retention and rights decisions and must
-  not preserve promises the product still cannot fulfil.
+- The initial migration does not preserve promises the product still cannot
+  fulfil: rather than wait for #934's retention/rights decisions, the migrated
+  text was carried over unchanged except for tightening the data-retention and
+  rights-request sections, which are the two that claimed an automated
+  deletion/anonymisation pipeline #934 has not built. #934 remains open; its
+  eventual retention schedule and rights workflow should be published as a new
+  version through this editor.
 
 Markdown safety and acceptance criteria:
 
-- [ ] Support an explicit Markdown subset only.
-- [ ] Disallow raw HTML and unsafe URL schemes.
-- [ ] Sanitize rendered HTML with an allowlist and apply safe link attributes.
-- [ ] Preview and public output use exactly the same renderer/sanitizer.
-- [ ] Admins can create a draft from the current version and preview every
+- [x] Support an explicit Markdown subset only.
+- [x] Disallow raw HTML and unsafe URL schemes.
+- [x] Sanitize rendered HTML with an allowlist and apply safe link attributes.
+- [x] Preview and public output use exactly the same renderer/sanitizer.
+- [x] Admins can create a draft from the current version and preview every
       locale.
-- [ ] Locale publication requirements are explicit and enforced.
-- [ ] Publish is atomic, audited, and concurrency-tested.
-- [ ] The public page serves only the latest published version.
-- [ ] Historical versions and publishing actors remain visible to admins.
-- [ ] The compiled policy is migrated into an initial published version.
-- [ ] Tests cover scripts, raw HTML, unsafe links, and malformed Markdown.
-- [ ] Publish retry-safety is implemented and documented before automatic
+- [x] Locale publication requirements are explicit and enforced.
+- [x] Publish is atomic, audited, and concurrency-tested.
+- [x] The public page serves only the latest published version.
+- [x] Historical versions and publishing actors remain visible to admins.
+- [x] The compiled policy is migrated into an initial published version.
+- [x] Tests cover scripts, raw HTML, unsafe links, and malformed Markdown.
+- [x] Publish retry-safety is implemented and documented before automatic
       retry.
 
 ### #947 — durable outbox and scheduled-delivery worker

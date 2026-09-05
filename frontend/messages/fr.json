@@ -827,5 +827,6 @@
   "my_account_preference_error": "Impossible de mettre à jour votre langue de communication. Réessayez.",
   "admin_email_copy_failed": "La copie dans le presse-papiers a échoué. Sélectionnez et copiez manuellement le destinataire, l’objet et le message ci-dessus.",
   "announcements_accessible_label": "Annonces opérationnelles",
-  "admin_announcements_section": "Annonces"
+  "admin_announcements_section": "Annonces",
+  "admin_policies_section": "Politiques légales"
 }

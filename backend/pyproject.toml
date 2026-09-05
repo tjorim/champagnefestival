@@ -29,6 +29,8 @@ dependencies = [
   "slowapi==0.1.10",
   "sqlalchemy==2.0.52",
   "uvicorn[standard]==0.52.4",
+  "markdown-it-py==4.0.0",
+  "nh3==0.3.2",
 ]
 
 [project.optional-dependencies]
