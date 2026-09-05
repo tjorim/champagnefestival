@@ -95,14 +95,14 @@ below).
 
 ### Phase 4 — compliance and platform foundations
 
-Two of these need a decision before code, and are labelled `needs-discussion`.
+Three of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
 | 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. #944 (versioned policy publishing) shipped ahead of this item rather than waiting: its initial migrated version tightened the data-retention and rights-request text so it stops short of claiming an automated deletion/anonymisation pipeline, so the current publication does not overstate what exists yet. Decide and implement the retention schedule and rights workflow, then publish an updated version through #944's admin editor. | L |
 | 2 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Redis-backed rate limiter (with #921's keying work), Postgres `LISTEN`/`NOTIFY` for the live bus, metrics deferred. Implementation still open. | L |
-| 3 | #936 — public-site discoverability | The wrong-domain sitemap is an **S** fix worth pulling forward independently; per-locale metadata and prerendering are the **M** part. | S + M |
-| 4 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
+| 3 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
+| 4 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a small Caddyfile routing change in `tjorim/apps`. Needs a decision on templating approach and cache-invalidation strategy before implementation. | L |
 
 ### Phase 5 — central composer
 
@@ -152,6 +152,7 @@ active preferred-order tables.
 
 | Issue | Outcome | Completed | Evidence | Verified change |
 | --- | --- | --- | --- | --- |
+| #936 | Superseded | 2026-09-05 | #936, PR #990 | Fixed the wrong-domain `robots.txt`/`sitemap.xml`/`baseUrl` (generated from `VITE_PUBLIC_URL` instead of hardcoding `champagnefestival.be`), added the missing `/privacy` sitemap entry with `xhtml:link` hreflang alternates, disallowed and `noindex`'d the staff-only routes, localised the static shell's default description/OG/Twitter tags to the `nl` base locale with `og:locale`/`og:locale:alternate` added, and added a minimal installability-only production service worker (no caching, no offline queue) per the shared-worker contract in `docs/decisions/941-web-push-foundation.md`. The remaining part — making schedule/FAQ/exhibitor content and `EventStructuredData` visible without JS — turned out not to be a prerendering problem: that content is live, admin-editable data (schedule/FAQ via the API, `/privacy`'s body via #944) with no redeploy involved, so a build- or deploy-time snapshot would go stale. Split out to #992, which proposes rendering `/` and `/privacy` live from the backend on every request instead. |
 | #944 | Completed | 2026-09-04 | #944, PR (this change) | Added a versioned Markdown policy model (`policies`/`policy_versions`) with a draft → publish → superseded lifecycle enforced by partial-unique indexes and a policy-row lock (concurrency-tested against a double-publish race), a full audit trail, per-locale content with an explicit required-locale contract enforced at publish time (never silently serves another locale), and rollback by seeding a new draft from an older version's content and republishing it. Markdown renders through one shared `markdown-it-py` + `nh3` allowlist renderer/sanitizer used identically by the admin live preview and the public endpoint — raw HTML, scripts, iframes, event handlers, and unsafe link schemes are stripped or sanitised, and only h2/h3, paragraphs, emphasis, links, lists, blockquotes, and code survive. Added an admin editor (Markdown source, a small formatting toolbar, live preview, version history, rollback) and switched the public privacy-policy page from static compiled content to this backend. Migrated the currently-published privacy policy text into the initial published version unchanged, except that the data-retention and rights-request sections were tightened to stop asserting an automated deletion/anonymisation pipeline that #934 has not built yet — per this document's own guidance that the migration "must not preserve promises the product still cannot fulfil." #934 remains open; its retention schedule and rights workflow should be published as a new version through this editor once implemented. |
 | #937 | Completed | 2026-09-03 | #937, PR #975 | Added in-page QR check-in scanning (native `BarcodeDetector`, `jsqr` fallback) that hands decoded credentials straight to the existing lookup mutation with no navigation or OS-camera-app switch, an auto-return-to-scanner "Scan next" flow, and an online/offline connectivity banner. The offline queue/service-worker precaching from the original proposal was explicitly descoped: check-in requires live connectivity by product decision, so the banner (which already states check-ins can't be submitted while offline) is the intended behaviour rather than a gap. This issue no longer needs a service worker at all; the shared-worker contract the audit originally asked it to coordinate with #941 on now belongs to #941 alone, per `docs/decisions/941-web-push-foundation.md`. |
 | #945 | Completed | 2026-09-02 | #945, PR (this change) | Added purpose-built localised announcements with UTC publication windows, safe optional links, deterministic ordering, publication metadata, complete mutation auditing, admin editing/status/preview controls, and an explicitly localised public API. The public site uses a static reduced-motion-safe banner; ordinary notices are not live while urgent notices receive a one-time alert region. |
@@ -197,10 +198,11 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #933 | backend, frontend (completed 2026-09-01) | gap — lifecycle |
 | #934 | backend | gap — compliance |
 | #935 | frontend (completed 2026-09-02) | quality — UI/UX, a11y |
-| #936 | frontend | gap — discoverability |
+| #936 | frontend (superseded 2026-09-05, split to #992) | gap — discoverability |
 | #937 | frontend (completed 2026-09-03) | gap — event-day resilience |
 | #938 | docs (completed 2026-08-29) | accuracy |
 | #939 | backend, frontend (completed 2026-08-29) | bug — oversell risk |
+| #992 | backend, frontend | gap — discoverability (split from #936's "M" part) |
 
 ## Communications roadmap index
 
@@ -569,7 +571,7 @@ Recorded so this ground does not get re-covered:
 
 ## Open questions for the maintainer
 
-Two findings propose changes that are judgement calls rather than clear fixes:
+Three findings propose changes that are judgement calls rather than clear fixes:
 
 1. **#924** exposes `check_in_token` only from the short-lived, single-use
    email-token-protected guest endpoint so a guest can retrieve their own QR;
@@ -577,3 +579,7 @@ Two findings propose changes that are judgement calls rather than clear fixes:
 2. **#934** needs a retention schedule decided per table before any code, and
    raises whether `national_register_number` should be stored outside the window
    in which the insurance export is produced.
+3. **#992** (split from #936) needs a backend templating approach picked
+   for a service that's been a pure JSON API until now, and a decision on
+   whether its render cache should invalidate proactively on the relevant
+   admin mutations or purely on a short TTL.

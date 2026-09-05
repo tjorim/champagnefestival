@@ -1,7 +1,9 @@
 {
+  "id": "/",
   "name": "Champagnefestival",
   "short_name": "Champagnefestival",
-  "description": "A celebration of fine champagne and community",
+  "description": "Een viering van fijne champagne en gemeenschap",
+  "lang": "nl",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#100f0d",
