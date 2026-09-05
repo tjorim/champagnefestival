@@ -1,14 +1,28 @@
 # Service-worker ownership and Web Push subscription foundation
 
-**Status:** Service-worker contract decided (now for #941 alone — see
-"Update" below); subscription/consent policy proposed, pending owner
-confirmation before implementation starts
-**Date:** 2026-09-03 (updated same day)
+**Status:** Service-worker contract decided and the base file shipped (see
+"Update: base worker shipped for #936" below); subscription/consent policy
+proposed, pending owner confirmation before #941's own implementation starts
+**Date:** 2026-09-03 (updated 2026-09-05)
 **Issues:** [#941](https://github.com/tjorim/champagnefestival/issues/941)
-(primary); [#937](https://github.com/tjorim/champagnefestival/issues/937)
+(primary); [#936](https://github.com/tjorim/champagnefestival/issues/936)
+(shipped the base file — see below); [#937](https://github.com/tjorim/champagnefestival/issues/937)
 (historical context — no longer a co-tenant, see below)
 
 ---
+
+## Update: base worker shipped for #936
+
+`frontend/src/sw.ts` now exists, built by `vite.sw.config.ts` into
+`dist/sw.js` and registered from `main.tsx` in production — exactly the
+shape this document specifies below, brought forward by #936 (public-site
+discoverability) because a registered service worker is one of the PWA
+installability criteria browsers check before offering "Add to Home
+Screen." It ships with only the bare `install`/`activate`/`fetch`
+skeleton — plain network passthrough, no caching, no queued writes — so it
+does not preempt any of #941's decisions below. #941 adds its `push` /
+`notificationclick` listeners and versioned cache name into this same file
+rather than creating it.
 
 ## Update: #937 no longer needs a service worker
 
@@ -77,7 +91,7 @@ and retention consequences:
 
 1. Confirmation (or correction) of the defaults above from the project
    owner.
-2. The Redis-backed rate limiter from
+2. The Postgres-backed rate limiter from
    [`docs/decisions/932-multi-worker-state.md`](./932-multi-worker-state.md),
    at least for the subscription-mutation and test-send endpoints (or an
    explicit acceptance of single-worker deployment for that low-volume path
@@ -87,6 +101,9 @@ and retention consequences:
 
 ## References
 
+- [#936](https://github.com/tjorim/champagnefestival/issues/936) — public-site
+  discoverability (shipped the base `frontend/src/sw.ts` file, for PWA
+  installability only — see "Update" above)
 - [#937](https://github.com/tjorim/champagnefestival/issues/937) — offline
   web check-in (completed; offline queue/precache explicitly descoped, see
   "Update" above)

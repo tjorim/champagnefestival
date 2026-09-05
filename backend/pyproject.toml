@@ -15,11 +15,11 @@ dependencies = [
   "alembic==1.19.1",
   "asyncpg==0.31.0",
   "fastapi==0.141.1",
-  "fastmcp==4.0.0b5",
+  "fastmcp==4.0.0",
   "httpx==0.28.1",
   "limits==5.8.0",
   "phonenumbers==9.0.38",
-  "psycopg[binary]==3.3.4",
+  "psycopg[binary]==3.3.5",
   "pydantic[email]==2.13.5",
   "pydantic-settings==2.15.0",
   "PyJWT[crypto]==2.13.0",
@@ -29,13 +29,15 @@ dependencies = [
   "slowapi==0.1.10",
   "sqlalchemy==2.0.52",
   "uvicorn[standard]==0.52.4",
+  "markdown-it-py==4.0.0",
+  "nh3==0.3.2",
 ]
 
 [project.optional-dependencies]
 sentry = ["sentry-sdk[fastapi]==2.68.1"]
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.14.2", "ruff==0.16.5", "ty==0.0.75"]
+dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.14.2", "ruff==0.16.5", "ty==0.0.77"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

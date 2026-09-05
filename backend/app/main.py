@@ -35,6 +35,7 @@ from app.routers import (
     members,
     outbox,
     people,
+    policies,
     products,
     registrations,
     rooms,
@@ -184,6 +185,7 @@ app.include_router(me.pebble_router)
 app.include_router(live.router)
 app.include_router(health.router)
 app.include_router(faq.router)
+app.include_router(policies.router)
 app.include_router(settings_router.router)
 app.include_router(integration_clients.router)
 

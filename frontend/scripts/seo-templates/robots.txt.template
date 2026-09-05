@@ -7,4 +7,4 @@ Disallow: /my-registrations
 Disallow: /me
 Disallow: /pebble-pair
 
-Sitemap: https://champagnefestival.tjor.im/sitemap.xml
+Sitemap: %VITE_PUBLIC_URL%/sitemap.xml
