@@ -99,7 +99,7 @@ Three of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. #944 (versioned policy publishing) shipped ahead of this item rather than waiting: its initial migrated version tightened the data-retention and rights-request text so it stops short of claiming an automated deletion/anonymisation pipeline, so the current publication does not overstate what exists yet. Decide and implement the retention schedule and rights workflow, then publish an updated version through #944's admin editor. | L |
+| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. #944 (versioned policy publishing) shipped ahead of this item rather than waiting: its initial migrated version tightened the data-retention and rights-request text so it stops short of claiming an automated deletion/anonymisation pipeline, so the current publication does not overstate what exists yet. A proposed retention schedule, anonymisation mechanism, and sweep design are documented in [`docs/decisions/934-data-retention-and-erasure.md`](decisions/934-data-retention-and-erasure.md), pending the project owner's confirmation before implementation starts. Decide and implement the retention schedule and rights workflow, then publish an updated version through #944's admin editor. | L |
 | 2 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Postgres-backed rate limiter (with #921's keying work) — corrected from an earlier Redis-backed proposal, since the deployed infra (`tjorim/apps`) has no Redis and no plan to add one — plus Postgres `LISTEN`/`NOTIFY` for the live bus (`tjorim/worktime` already runs this pattern in production), metrics deferred. Implementation still open. | L |
 | 3 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
 | 4 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a small Caddyfile routing change in `tjorim/apps`. Needs a decision on templating approach and cache-invalidation strategy before implementation. | L |
@@ -578,7 +578,11 @@ Three findings propose changes that are judgement calls rather than clear fixes:
    the public registration response continues to omit it.
 2. **#934** needs a retention schedule decided per table before any code, and
    raises whether `national_register_number` should be stored outside the window
-   in which the insurance export is produced.
+   in which the insurance export is produced. A proposed schedule and
+   mechanism are drafted in
+   [`docs/decisions/934-data-retention-and-erasure.md`](decisions/934-data-retention-and-erasure.md);
+   the NISS question and the multi-year retention window remain open pending
+   the owner's confirmation.
 3. **#992** (split from #936) needs a backend templating approach picked
    for a service that's been a pure JSON API until now, and a decision on
    whether its render cache should invalidate proactively on the relevant
