@@ -11,7 +11,11 @@ registration data confirmed)
 (primary, `needs-discussion`); [#923](https://github.com/tjorim/champagnefestival/issues/923)
 (contact form — complete, so the rights channel this document assumes now
 exists); [#944](https://github.com/tjorim/champagnefestival/issues/944)
-(versioned policy publishing — blocked on this document)
+(versioned policy publishing — shipped ahead of this document rather than
+waiting on it; its migrated text was tightened to stop short of claiming an
+automated deletion/anonymisation pipeline, so it doesn't overstate what
+exists yet. The policy should be republished through #944's admin editor
+once this document's schedule is implemented)
 
 ---
 
@@ -279,8 +283,9 @@ using the mechanism proposed here, once implemented.
 - [#923](https://github.com/tjorim/champagnefestival/issues/923) — contact
   form (complete; rights channel this document assumes)
 - [#944](https://github.com/tjorim/champagnefestival/issues/944) — versioned
-  policy publishing, blocked on this document per
-  `docs/product-audit-2026-08.md`
+  policy publishing, shipped ahead of this document with tightened text per
+  `docs/product-audit-2026-08.md`; the policy should be republished through
+  its admin editor once this document's schedule is implemented
 - `docs/outbox-worker.md` — existing daily-sweep pattern this document
   extends, and the line noting "Issue #934 may revise the window when the
   broader retention schedule is approved"
