@@ -12,6 +12,8 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { m } from "@/paraglide/messages";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 interface Announcement {
   id: string;
@@ -83,7 +85,7 @@ export default function AnnouncementManagement({
     queryKey: key,
     queryFn: async () => {
       const response = await fetch("/api/announcements", { headers: authHeaders() });
-      if (!response.ok) throw new Error("Announcements could not be loaded.");
+      if (!response.ok) throw new Error(m.admin_error_load_announcements());
       return response.json() as Promise<Announcement[]>;
     },
   });
@@ -92,6 +94,7 @@ export default function AnnouncementManagement({
   const [editing, setEditing] = useState<string | null>(null);
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
+  const { confirm, confirmDialog } = useConfirmDialog();
   const refresh = () => client.invalidateQueries({ queryKey: key });
   const save = useMutation({
     mutationFn: () =>
@@ -107,7 +110,7 @@ export default function AnnouncementManagement({
             link_url: draft.link_url || null,
           }),
         },
-        "Announcement could not be saved.",
+        m.admin_error_save_announcement(),
       ),
     onSuccess: () => {
       setDraft(empty);
@@ -121,11 +124,19 @@ export default function AnnouncementManagement({
       fetchVoidOrThrowWithUnauthorized(
         `/api/announcements/${id}`,
         { method: "DELETE", headers: authHeaders() },
-        "Announcement could not be deleted.",
+        m.admin_error_delete_announcement_request(),
       ),
     onSuccess: () => void refresh(),
     retry: false,
   });
+  const handleDelete = async (id: string) => {
+    const confirmed = await confirm({
+      title: m.admin_announcement_delete_title(),
+      body: m.admin_announcement_delete_confirm(),
+      errorFallback: m.admin_error_delete_announcement(),
+    });
+    if (confirmed) remove.mutate(id);
+  };
   const update = async (item: Announcement, values: Partial<Announcement>) =>
     fetchJsonOrThrowWithUnauthorized(
       `/api/announcements/${item.id}`,
@@ -134,7 +145,7 @@ export default function AnnouncementManagement({
         headers: authHeaders(),
         body: JSON.stringify(writePayload({ ...item, ...values })),
       },
-      "Announcement could not be updated.",
+      m.admin_error_update_announcement(),
     );
   const move = async (index: number, direction: number) => {
     const ordered = [...items];
@@ -152,23 +163,36 @@ export default function AnnouncementManagement({
         headers: authHeaders(),
         body: JSON.stringify({ ordered_ids: ordered.map((item) => item.id) }),
       },
-      "Announcements could not be reordered.",
+      m.admin_error_reorder_announcements(),
     );
     await refresh();
   };
-  const status = (item: Announcement) =>
+  type AnnouncementStatus = "disabled" | "scheduled" | "expired" | "active";
+  const status = (item: Announcement): AnnouncementStatus =>
     !item.active
-      ? "Disabled"
+      ? "disabled"
       : item.starts_at && new Date(item.starts_at) > new Date()
-        ? "Scheduled"
+        ? "scheduled"
         : item.ends_at && new Date(item.ends_at) <= new Date()
-          ? "Expired"
-          : "Active";
+          ? "expired"
+          : "active";
+  const statusLabel = (value: AnnouncementStatus) => {
+    switch (value) {
+      case "disabled":
+        return m.admin_announcement_status_disabled();
+      case "scheduled":
+        return m.admin_announcement_status_scheduled();
+      case "expired":
+        return m.admin_announcement_status_expired();
+      case "active":
+        return m.admin_announcement_status_active();
+    }
+  };
 
   return (
     <Card className="admin-card">
       <Card.Header>
-        <h2 className="h5 mb-0">Announcements</h2>
+        <h2 className="h5 mb-0">{m.admin_announcements_section()}</h2>
       </Card.Header>
       <Card.Body>
         {error && <Alert variant="danger">{error}</Alert>}
@@ -182,7 +206,9 @@ export default function AnnouncementManagement({
           <div className="row g-2">
             {(["nl", "en", "fr"] as const).map((locale) => (
               <Form.Group className="col-md-4" key={locale}>
-                <Form.Label>Text ({locale.toUpperCase()})</Form.Label>
+                <Form.Label>
+                  {m.admin_announcement_text_label({ locale: locale.toUpperCase() })}
+                </Form.Label>
                 <Form.Control
                   maxLength={500}
                   value={draft[`text_${locale}`] ?? ""}
@@ -195,20 +221,20 @@ export default function AnnouncementManagement({
           </div>
           <div className="row g-2 mt-1">
             <Form.Group className="col-md-3">
-              <Form.Label>Level</Form.Label>
+              <Form.Label>{m.admin_announcement_level_label()}</Form.Label>
               <Form.Select
                 value={draft.level}
                 onChange={(event) =>
                   setDraft({ ...draft, level: event.target.value as Draft["level"] })
                 }
               >
-                <option>info</option>
-                <option>warning</option>
-                <option>urgent</option>
+                <option value="info">{m.admin_announcement_level_info()}</option>
+                <option value="warning">{m.admin_announcement_level_warning()}</option>
+                <option value="urgent">{m.admin_announcement_level_urgent()}</option>
               </Form.Select>
             </Form.Group>
             <Form.Group className="col-md-3">
-              <Form.Label>Starts (local time)</Form.Label>
+              <Form.Label>{m.admin_announcement_starts_label()}</Form.Label>
               <Form.Control
                 type="datetime-local"
                 value={localDate(draft.starts_at)}
@@ -216,7 +242,7 @@ export default function AnnouncementManagement({
               />
             </Form.Group>
             <Form.Group className="col-md-3">
-              <Form.Label>Ends (local time)</Form.Label>
+              <Form.Label>{m.admin_announcement_ends_label()}</Form.Label>
               <Form.Control
                 type="datetime-local"
                 value={localDate(draft.ends_at)}
@@ -224,7 +250,7 @@ export default function AnnouncementManagement({
               />
             </Form.Group>
             <Form.Group className="col-md-3">
-              <Form.Label>Safe HTTPS link</Form.Label>
+              <Form.Label>{m.admin_announcement_link_url_label()}</Form.Label>
               <Form.Control
                 type="url"
                 value={draft.link_url ?? ""}
@@ -235,7 +261,9 @@ export default function AnnouncementManagement({
           <div className="row g-2 mt-1">
             {(["nl", "en", "fr"] as const).map((locale) => (
               <Form.Group className="col-md-4" key={locale}>
-                <Form.Label>Link label ({locale.toUpperCase()})</Form.Label>
+                <Form.Label>
+                  {m.admin_announcement_link_label_field({ locale: locale.toUpperCase() })}
+                </Form.Label>
                 <Form.Control
                   value={draft[`link_label_${locale}`] ?? ""}
                   onChange={(event) =>
@@ -247,13 +275,13 @@ export default function AnnouncementManagement({
           </div>
           <Form.Check
             className="mt-3"
-            label="Publish immediately"
+            label={m.admin_announcement_publish_immediately()}
             checked={draft.active}
             onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
           />
           <div className="d-flex gap-2 mt-3">
             <Button type="submit" disabled={save.isPending}>
-              {editing ? "Save" : "Create"}
+              {editing ? m.admin_save() : m.admin_create_action()}
             </Button>
             {editing && (
               <Button
@@ -263,7 +291,7 @@ export default function AnnouncementManagement({
                   setDraft(empty);
                 }}
               >
-                Cancel
+                {m.admin_action_cancel()}
               </Button>
             )}
           </div>
@@ -271,22 +299,22 @@ export default function AnnouncementManagement({
         <hr />
         <Form.Select
           className="mb-3 w-auto"
-          aria-label="Preview language"
+          aria-label={m.admin_announcement_preview_language_label()}
           value={preview}
           onChange={(event) => setPreview(event.target.value as typeof preview)}
         >
-          <option value="nl">Dutch preview</option>
-          <option value="en">English preview</option>
-          <option value="fr">French preview</option>
+          <option value="nl">{m.admin_announcement_preview_nl()}</option>
+          <option value="en">{m.admin_announcement_preview_en()}</option>
+          <option value="fr">{m.admin_announcement_preview_fr()}</option>
         </Form.Select>
         <Table responsive>
           <thead>
             <tr>
-              <th>Order</th>
-              <th>Preview</th>
-              <th>Locales</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>{m.admin_announcement_order_column()}</th>
+              <th>{m.admin_announcement_preview_column()}</th>
+              <th>{m.admin_announcement_locales_column()}</th>
+              <th>{m.admin_status_label()}</th>
+              <th>{m.admin_actions_label()}</th>
             </tr>
           </thead>
           <tbody>
@@ -310,7 +338,9 @@ export default function AnnouncementManagement({
                     ↓
                   </Button>
                 </td>
-                <td>{item[`text_${preview}`] || <em>Missing translation</em>}</td>
+                <td>
+                  {item[`text_${preview}`] || <em>{m.admin_announcement_missing_translation()}</em>}
+                </td>
                 <td>
                   {(["nl", "en", "fr"] as const).map((locale) => (
                     <Badge
@@ -323,8 +353,8 @@ export default function AnnouncementManagement({
                   ))}
                 </td>
                 <td>
-                  <Badge bg={status(item) === "Active" ? "success" : "secondary"}>
-                    {status(item)}
+                  <Badge bg={status(item) === "active" ? "success" : "secondary"}>
+                    {statusLabel(status(item))}
                   </Badge>
                 </td>
                 <td className="text-nowrap">
@@ -339,7 +369,7 @@ export default function AnnouncementManagement({
                       });
                     }}
                   >
-                    Edit
+                    {m.admin_edit()}
                   </Button>{" "}
                   <Button
                     size="sm"
@@ -350,16 +380,12 @@ export default function AnnouncementManagement({
                         .catch((reason) => setError(String(reason)))
                     }
                   >
-                    {item.active ? "Disable" : "Publish"}
+                    {item.active
+                      ? m.admin_announcement_disable_action()
+                      : m.admin_announcement_publish_action()}
                   </Button>{" "}
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() =>
-                      window.confirm("Delete this announcement?") && remove.mutate(item.id)
-                    }
-                  >
-                    Delete
+                  <Button size="sm" variant="danger" onClick={() => void handleDelete(item.id)}>
+                    {m.admin_delete()}
                   </Button>
                 </td>
               </tr>
@@ -367,6 +393,7 @@ export default function AnnouncementManagement({
           </tbody>
         </Table>
       </Card.Body>
+      {confirmDialog}
     </Card>
   );
 }

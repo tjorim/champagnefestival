@@ -23,6 +23,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { FaqItem } from "@/types/admin";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { fetchFaqItemsAdmin } from "@/utils/adminFetch";
 import {
   fetchJsonOrThrowWithUnauthorized,
@@ -84,6 +85,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   const [form, setForm] = useState<FaqFormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirmDialog();
 
   const createMutation = useMutation({
     mutationFn: (data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) =>
@@ -226,7 +228,12 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const handleDelete = useCallback(
     async (item: FaqItem) => {
-      if (!window.confirm(m.admin_faq_delete_confirm())) return;
+      const confirmed = await confirm({
+        title: m.admin_faq_delete_title(),
+        body: m.admin_faq_delete_confirm(),
+        errorFallback: m.admin_error_delete_faq_item(),
+      });
+      if (!confirmed) return;
       setRowError(null);
       try {
         await deleteMutation.mutateAsync(item.id);
@@ -234,7 +241,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
         setRowError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
-    [deleteMutation],
+    [confirm, deleteMutation],
   );
 
   const handleMove = useCallback(
@@ -509,6 +516,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           </Button>
         </Modal.Footer>
       </Modal>
+      {confirmDialog}
     </>
   );
 }

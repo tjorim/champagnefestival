@@ -31,6 +31,7 @@ import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions";
 import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin, removeAuthenticatedQueries } from "@/utils/queryInvalidation";
@@ -164,6 +165,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     registrations,
   });
 
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const confirmOverCapacity = useCallback(
+    () =>
+      confirm({
+        title: m.admin_table_over_capacity_title(),
+        body: m.admin_table_over_capacity_confirm(),
+        confirmLabel: m.admin_action_confirm(),
+        variant: "warning",
+        icon: "exclamation-triangle",
+        errorFallback: m.admin_error_assign_table(),
+      }),
+    [confirm],
+  );
+
   const {
     handleCreateMember,
     handleCreatePerson,
@@ -203,6 +218,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     tablesQueryKey,
     setDetailRegistration,
     setRegistrationError,
+    confirmOverCapacity,
   });
 
   const {
@@ -684,6 +700,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           }}
         />
       )}
+      {confirmDialog}
     </section>
   );
 }

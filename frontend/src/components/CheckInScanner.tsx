@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
@@ -30,6 +30,15 @@ export function parseCheckInUrl(text: string): ScannedCheckInCredentials | null 
 }
 
 type ScannerStatus = "starting" | "scanning" | "permission-denied" | "error" | "unsupported";
+
+// A named predicate rather than repeating `navigator.mediaDevices?.getUserMedia`
+// at each call site: referencing that method without invoking it, twice in the
+// same component, reads to `tsc` as the classic "forgot the ()" mistake and it
+// flags the second occurrence (TS2774) — wrapping it in a real boolean-returning
+// function is what actually resolves the ambiguity, not just works around it.
+function isCameraSupported(): boolean {
+  return Boolean(navigator.mediaDevices?.getUserMedia);
+}
 
 async function detectWithBarcodeDetector(
   detector: BarcodeDetector,
@@ -65,12 +74,21 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onDecodeRef = useRef(onDecode);
-  onDecodeRef.current = onDecode;
-  const [status, setStatus] = useState<ScannerStatus>("starting");
+  // Refs are written from an effect (not during render) so React doesn't flag
+  // the mutation. A *layout* effect specifically (not the usual passive one),
+  // so the assignment lands synchronously right after commit — before the
+  // browser's next requestAnimationFrame, which is when the scanning loop
+  // below reads it. A passive effect can be scheduled after that next frame,
+  // which would let a stale onDecode fire once after a prop change.
+  useLayoutEffect(() => {
+    onDecodeRef.current = onDecode;
+  });
+  const [status, setStatus] = useState<ScannerStatus>(() =>
+    isCameraSupported() ? "starting" : "unsupported",
+  );
 
   useEffect(() => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setStatus("unsupported");
+    if (!isCameraSupported()) {
       return;
     }
 
