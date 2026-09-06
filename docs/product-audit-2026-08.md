@@ -99,10 +99,11 @@ Three of these need a decision before code, and are labelled `needs-discussion`.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. #944 (versioned policy publishing) shipped ahead of this item rather than waiting: its initial migrated version tightened the data-retention and rights-request text so it stops short of claiming an automated deletion/anonymisation pipeline, so the current publication does not overstate what exists yet. Decide and implement the retention schedule and rights workflow, then publish an updated version through #944's admin editor. | L |
-| 2 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Postgres-backed rate limiter (with #921's keying work) — corrected from an earlier Redis-backed proposal, since the deployed infra (`tjorim/apps`) has no Redis and no plan to add one — plus Postgres `LISTEN`/`NOTIFY` for the live bus (`tjorim/worktime` already runs this pattern in production), metrics deferred. Implementation still open. | L |
+| 1 | #934 — no retention or erasure mechanism | Its #923 persistence prerequisite is complete. #944 (versioned policy publishing) shipped ahead of this item rather than waiting: its initial migrated version tightened the data-retention and rights-request text so it stops short of claiming an automated deletion/anonymisation pipeline, so the current publication does not overstate what exists yet. Retention schedule and anonymisation mechanism confirmed by the project owner in [`docs/decisions/934-data-retention-and-erasure.md`](decisions/934-data-retention-and-erasure.md): 7-year anonymisation window for non-volunteer identity fields, indefinite retention for volunteer NISS/eID with read access restricted (encryption at rest declined), audit-entry IPs blanked at 30 days, and a marketing opt-in built alongside it. Implementation still open; publish an updated policy version through #944's admin editor once it lands. | L |
+| 2 | #932 — single-process state | Its #921 limiter prerequisite and #929 bus-recovery prerequisite are complete. Direction decided in [`docs/decisions/932-multi-worker-state.md`](decisions/932-multi-worker-state.md): Postgres-backed rate limiter (with #921's keying work) — corrected from an earlier Redis-backed proposal, since the deployed infra (`tjorim/apps`) has no Redis and no plan to add one — plus Postgres `LISTEN`/`NOTIFY` for the live bus (`tjorim/worktime` already runs this pattern in production), metrics deferred. #992's render-cache invalidation is a second, later consumer of the same bus, on its own channel rather than overloading the SSE one — noted in the decision doc so its implementation doesn't hard-code a single-consumer assumption. Implementation still open. | L |
 | 3 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions above. Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
-| 4 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a small Caddyfile routing change in `tjorim/apps`. Needs a decision on templating approach and cache-invalidation strategy before implementation. | L |
+| 4 | #953 — visitor passwordless account and order history | Its #922, #924, and #947 prerequisites are all complete — nothing technical blocks this, unlike the other Phase 4 rows. Promoted ahead of #992 on 2026-09-06: it delivers a concrete, requested capability (a visitor checking their order days or weeks ahead of an event, not only in the minutes after booking), where #992 is SEO/crawler-preview polish on top of a discoverability defect already fixed in #990. Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. Session mechanism and lifetimes confirmed by the project owner in [`docs/decisions/953-visitor-passwordless-session.md`](decisions/953-visitor-passwordless-session.md): extend `User` with a nullable `verified_email` identity alongside its existing `oidc_subject` rather than a parallel identity model, a 30-minute single-use magic link matching the existing guest-lookup precedent, a 7-day idle / 30-day hard-cap sliding session matching `worktime`'s existing Keycloak realm precedent, and an `HttpOnly` server-stored session cookie rather than a frontend-held JWT. Implementation still open. | L |
+| 5 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a routing change in `tjorim/apps`. Its required pre-implementation decisions are proposed in [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md): inject into the Vite-built shell through inert markers rather than adopting a template engine that would drift from the build artifact; a 60-second TTL with a last-known-good fallback as the correctness floor, with proactive invalidation deferred until #932's `LISTEN`/`NOTIFY` bus can reach every worker; the backend as the single JSON-LD source for these routes, with a shared fixture and contract tests on both sides; and equivalent, not pixel-matched, server markup. That document also surfaces an infra requirement #992 missed — the API container needs the built frontend mounted read-only, not just the Caddyfile route. Pending the project owner's confirmation before implementation starts. Moved behind #953 on 2026-09-06 — see that row's note. | L |
 
 ### Phase 5 — central composer
 
@@ -112,9 +113,10 @@ Three of these need a decision before code, and are labelled `needs-discussion`.
 
 ### Phase 6 — deferred visitor account
 
-| Order | Issue | Notes | Effort |
-| --- | --- | --- | --- |
-| 8 | #953 — visitor passwordless account and order history | Follow #922's ownership model and require verified production delivery from #924/#947 before exposing the navigation entry. The existing authenticated `/my-registrations` view now lets owners update the communication preference across their linked registration people; the broader navigation and passwordless-account acceptance criteria remain active. Visitors use single-use email magic links; staff remain on OIDC. Treat registrations and their line items as the customer order history rather than inventing a parallel order concept. | L |
+No Phase 6 items remain. #953 was promoted into Phase 4 on 2026-09-06 once its
+remaining prerequisites (#922, #924, #947) turned out to already be complete —
+its "deferred" placement had been an ordering choice, not a technical
+blocker, and it was sitting behind lower-value work as a result.
 
 ### Dependency map
 
@@ -571,15 +573,22 @@ Recorded so this ground does not get re-covered:
 
 ## Open questions for the maintainer
 
-Three findings propose changes that are judgement calls rather than clear fixes:
+Two findings propose changes that are judgement calls rather than clear fixes.
+(#934's were resolved by the project owner on 2026-09-06 — see
+[`docs/decisions/934-data-retention-and-erasure.md`](decisions/934-data-retention-and-erasure.md)
+for the confirmed retention windows and scope calls; it's no longer listed
+here, though implementation is still open — see Phase 4.)
 
 1. **#924** exposes `check_in_token` only from the short-lived, single-use
    email-token-protected guest endpoint so a guest can retrieve their own QR;
    the public registration response continues to omit it.
-2. **#934** needs a retention schedule decided per table before any code, and
-   raises whether `national_register_number` should be stored outside the window
-   in which the insurance export is produced.
-3. **#992** (split from #936) needs a backend templating approach picked
+2. **#992** (split from #936) needs a backend templating approach picked
    for a service that's been a pure JSON API until now, and a decision on
    whether its render cache should invalidate proactively on the relevant
-   admin mutations or purely on a short TTL.
+   admin mutations or purely on a short TTL. Both are now proposed in
+   [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md)
+   — marker injection into the built shell with no new templating dependency,
+   and a TTL floor with proactive invalidation deferred behind #932 — along
+   with a third question that document raises rather than settles: the
+   read-only frontend mount the API container needs, which lands in
+   `tjorim/apps` rather than here.
