@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 import { configureAxe, toHaveNoViolations } from "jest-axe";
 import { expect } from "vitest";
 import type { ReactNode } from "react";
