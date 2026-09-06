@@ -261,6 +261,35 @@ In scope for this implementation:
   justify its own issue. Flagged here rather than designed inside a retention
   document.
 
+## NISS and eID are not the same kind of identifier — noted, not resolved here
+
+Worth being explicit about, since this document has been treating "NISS/eID"
+as one unit throughout: the **NISS** (`national_register_number`) is a fixed,
+lifelong identifier — it never changes for a given person, which is exactly
+why the retention decision above (keep indefinitely) is straightforward for
+it. The **eID document number** (`eid_document_number`) is different — it's
+the physical card's own serial number, and it changes every time the card is
+renewed or replaced (typically every 5–10 years for an adult). Nothing in the
+system re-verifies or re-prompts for this, so a long-tenured volunteer's
+stored `eid_document_number` will predictably drift from their current card.
+
+This is not treated as a defect in the schedule above: the field is captured
+once, at volunteer sign-up, to support an insurance claim referencing *that
+specific document* at the time of a given incident — not to re-identify the
+person later, which is the NISS's job. A stale `eid_document_number` is a
+point-in-time record doing exactly what it was captured for, not a live
+field that has failed to update.
+
+What this document does not solve, and files as [#1006](https://github.com/tjorim/champagnefestival/issues/1006)
+instead of designing here: both fields are admin-only today (the entire
+`/api/volunteers` router requires the `admin` role), so the person best
+positioned to notice their eID has changed — the volunteer — has no way to
+see or correct it. Building that would first require linking an authenticated
+volunteer identity to their `Person` record, which does not exist in any form
+today (the `volunteer` OIDC realm role proves "this token has the volunteer
+role," not "this token belongs to person X"). Deliberately out of scope for
+this implementation; #1006 exists so it isn't lost.
+
 ## Rights channel dependency
 
 The issue notes the contact form (#923) is "the *only* channel the policy
@@ -323,3 +352,6 @@ Every question this document raised was answered by the project owner on
 - `backend/app/services/people_service.py` — `delete_person`/`merge_people`,
   which `anonymise_person` would sit alongside
 - `docs/retry-safety.md` — inventory this document's future sweeps must join
+- [#1006](https://github.com/tjorim/champagnefestival/issues/1006) — volunteer
+  self-service NISS/eID access and eID staleness, filed out of this
+  document's scope, not resolved by it
