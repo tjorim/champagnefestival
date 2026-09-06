@@ -1,11 +1,11 @@
 // @types/jest-axe only augments the `jest` namespace, which Vitest 5 no
-// longer bridges into its own `Assertion` type (unlike Vitest 4). Mirror
-// what @testing-library/jest-dom/vitest does for its own matchers.
+// longer bridges into its own matcher types (unlike Vitest 4). Mirror the
+// same `toHaveNoViolations(): R` signature @types/jest-axe declares for
+// `jest.Matchers<R, T>`, on Vitest's own `Matchers<R, T>` extension point.
 import "vitest";
-import type { IToHaveNoViolations } from "jest-axe";
 
 declare module "vitest" {
-  interface Assertion<T = any> {
-    toHaveNoViolations: IToHaveNoViolations;
+  interface Matchers<R = void, T = unknown> {
+    toHaveNoViolations(): R;
   }
 }
