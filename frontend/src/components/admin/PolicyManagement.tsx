@@ -63,6 +63,17 @@ function statusVariant(status: PolicyVersion["status"]): string {
   }
 }
 
+function statusLabel(status: PolicyVersion["status"]): string {
+  switch (status) {
+    case "draft":
+      return m.admin_policy_status_draft();
+    case "published":
+      return m.admin_policy_status_published();
+    default:
+      return m.admin_policy_status_superseded();
+  }
+}
+
 /** Wraps or inserts Markdown syntax around the current textarea selection. */
 export function applyMarkdownSnippet(
   textarea: HTMLTextAreaElement,
@@ -95,7 +106,7 @@ export default function PolicyManagement({
       fetchJsonOrThrowWithUnauthorized<Policy>(
         `/api/policies/${POLICY_KEY}`,
         { headers: authHeaders() },
-        "Policy could not be loaded.",
+        m.admin_error_load_policy(),
       ),
   });
   const refresh = () => client.invalidateQueries({ queryKey: key });
@@ -124,19 +135,20 @@ export default function PolicyManagement({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Load the open draft's content into the editor whenever it (re)appears.
-  useEffect(() => {
-    if (!draft) {
-      setContentByLocale({ nl: "", en: "", fr: "" });
-      setChangeSummary("");
-      return;
-    }
+  // Reset during render rather than in an effect (the "adjusting state when a
+  // prop changes" pattern, see PersonFormModal) since this only needs to react
+  // to the draft identity changing, not to every refetch of the same draft —
+  // a background refresh after saveDraft must not stomp on unsaved edits.
+  const [lastDraftId, setLastDraftId] = useState(draft?.id);
+  if (draft?.id !== lastDraftId) {
+    setLastDraftId(draft?.id);
     setContentByLocale({
-      nl: draft.content_nl ?? "",
-      en: draft.content_en ?? "",
-      fr: draft.content_fr ?? "",
+      nl: draft?.content_nl ?? "",
+      en: draft?.content_en ?? "",
+      fr: draft?.content_fr ?? "",
     });
-    setChangeSummary(draft.change_summary ?? "");
-  }, [draft?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setChangeSummary(draft?.change_summary ?? "");
+  }
 
   // Live preview: render the currently-edited locale's content through the
   // same backend renderer/sanitizer used for public output (#944), debounced
@@ -144,7 +156,6 @@ export default function PolicyManagement({
   useEffect(() => {
     const markdown = contentByLocale[locale];
     if (!markdown.trim()) {
-      setPreview("");
       return;
     }
     let cancelled = false;
@@ -152,7 +163,7 @@ export default function PolicyManagement({
       fetchJsonOrThrowWithUnauthorized<{ html: string }>(
         "/api/policies/render",
         { method: "POST", headers: authHeaders(), body: JSON.stringify({ markdown }) },
-        "Preview could not be rendered.",
+        m.admin_error_render_preview(),
       )
         .then((result) => {
           if (!cancelled) setPreview(result.html);
@@ -176,7 +187,7 @@ export default function PolicyManagement({
           headers: authHeaders(),
           body: JSON.stringify({ source_version_number: sourceVersionNumber ?? null }),
         },
-        "Draft could not be created.",
+        m.admin_error_create_draft(),
       ),
     onSuccess: () => void refresh(),
     retry: false,
@@ -196,7 +207,7 @@ export default function PolicyManagement({
             change_summary: changeSummary || null,
           }),
         },
-        "Draft could not be saved.",
+        m.admin_error_save_draft(),
       ),
     onSuccess: () => void refresh(),
     retry: false,
@@ -207,7 +218,7 @@ export default function PolicyManagement({
       fetchVoidOrThrowWithUnauthorized(
         `/api/policies/${POLICY_KEY}/draft`,
         { method: "DELETE", headers: authHeaders() },
-        "Draft could not be discarded.",
+        m.admin_error_discard_draft_request(),
       ),
     onSuccess: () => void refresh(),
     retry: false,
@@ -218,7 +229,7 @@ export default function PolicyManagement({
       fetchJsonOrThrowWithUnauthorized<PolicyVersion>(
         `/api/policies/${POLICY_KEY}/draft/publish`,
         { method: "POST", headers: authHeaders() },
-        "Draft could not be published.",
+        m.admin_error_publish_draft_request(),
       ),
     onSuccess: () => void refresh(),
     retry: false,
@@ -269,18 +280,18 @@ export default function PolicyManagement({
   return (
     <Card className="admin-card">
       <Card.Header>
-        <h2 className="h5 mb-0">Legal Policies</h2>
+        <h2 className="h5 mb-0">{m.admin_policies_section()}</h2>
       </Card.Header>
       <Card.Body>
         {error && <Alert variant="danger">{error}</Alert>}
-        {query.isError && <Alert variant="danger">Policy could not be loaded.</Alert>}
+        {query.isError && <Alert variant="danger">{m.admin_error_load_policy()}</Alert>}
         {policy && (
           <>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div>
                 <strong>{policy.title_en ?? policy.title_nl}</strong>{" "}
                 <span className="text-secondary">
-                  — required locales:{" "}
+                  {m.admin_policy_required_locales_label()}{" "}
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
@@ -293,16 +304,18 @@ export default function PolicyManagement({
                 </span>
                 {published && (
                   <div className="text-secondary small">
-                    Currently published: version {published.version_number}, last updated{" "}
-                    {published.published_at
-                      ? new Date(published.published_at).toLocaleDateString()
-                      : "—"}
+                    {m.admin_policy_currently_published({
+                      version: published.version_number,
+                      date: published.published_at
+                        ? new Date(published.published_at).toLocaleDateString()
+                        : "—",
+                    })}
                   </div>
                 )}
               </div>
               {!draft && (
                 <Button size="sm" onClick={() => handleCreateDraft()}>
-                  Create draft from current version
+                  {m.admin_policy_create_draft_action()}
                 </Button>
               )}
             </div>
@@ -310,7 +323,7 @@ export default function PolicyManagement({
             {draft ? (
               <>
                 <div className="mb-2 text-secondary small">
-                  Editing draft version {draft.version_number} — locales:{" "}
+                  {m.admin_policy_editing_draft_label({ version: draft.version_number })}{" "}
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
@@ -338,37 +351,37 @@ export default function PolicyManagement({
                       variant="outline-secondary"
                       onClick={() => insertSnippet("**", "**", "bold text")}
                     >
-                      Bold
+                      {m.admin_policy_markdown_bold()}
                     </Button>
                     <Button
                       variant="outline-secondary"
                       onClick={() => insertSnippet("_", "_", "italic text")}
                     >
-                      Italic
+                      {m.admin_policy_markdown_italic()}
                     </Button>
                     <Button
                       variant="outline-secondary"
                       onClick={() => insertSnippet("## ", "", "Heading")}
                     >
-                      H2
+                      {m.admin_policy_markdown_h2()}
                     </Button>
                     <Button
                       variant="outline-secondary"
                       onClick={() => insertSnippet("### ", "", "Heading")}
                     >
-                      H3
+                      {m.admin_policy_markdown_h3()}
                     </Button>
                     <Button
                       variant="outline-secondary"
                       onClick={() => insertSnippet("[", "](https://example.com)", "link text")}
                     >
-                      Link
+                      {m.admin_policy_markdown_link()}
                     </Button>
                     <Button
                       variant="outline-secondary"
                       onClick={() => insertSnippet("- ", "", "List item")}
                     >
-                      List
+                      {m.admin_policy_markdown_list()}
                     </Button>
                   </ButtonGroup>
                   <Form.Control
@@ -384,68 +397,70 @@ export default function PolicyManagement({
                   <div className="row mt-3">
                     <div className="col-md-6">
                       <Form.Label className="small text-secondary">
-                        Preview (rendered with the public renderer/sanitizer)
+                        {m.admin_policy_preview_label()}
                       </Form.Label>
                       <div
                         className="border rounded p-3 bg-body-tertiary"
                         style={{ minHeight: "8rem" }}
                         // Trusted: `preview` is always the sanitized HTML the
-                        // backend's shared render_markdown() returned.
-                        dangerouslySetInnerHTML={{ __html: preview }}
+                        // backend's shared render_markdown() returned. Blanked
+                        // here (not via setState in the effect above) once the
+                        // markdown is empty, so clearing the box doesn't wait
+                        // on the debounce timer.
+                        dangerouslySetInnerHTML={{
+                          __html: contentByLocale[locale].trim() ? preview : "",
+                        }}
                       />
                     </div>
                     <div className="col-md-6">
                       <Form.Label className="small text-secondary">
-                        Internal change summary (optional)
+                        {m.admin_policy_change_summary_label()}
                       </Form.Label>
                       <Form.Control
                         as="textarea"
                         rows={4}
                         value={changeSummary}
                         onChange={(event) => setChangeSummary(event.target.value)}
-                        placeholder="Why is this version changing? Not shown publicly."
+                        placeholder={m.admin_policy_change_summary_placeholder()}
                       />
                     </div>
                   </div>
                   <div className="d-flex gap-2 mt-3">
                     <Button disabled={saveDraft.isPending} onClick={handleSaveDraft}>
-                      Save draft
+                      {m.admin_policy_save_draft_action()}
                     </Button>
                     <Button
                       variant="success"
                       disabled={publishDraft.isPending}
                       onClick={() => void handlePublishDraft()}
                     >
-                      Publish
+                      {m.admin_policy_publish_action()}
                     </Button>
                     <Button
                       variant="outline-danger"
                       disabled={discardDraft.isPending}
                       onClick={() => void handleDiscardDraft()}
                     >
-                      Discard draft
+                      {m.admin_policy_discard_draft_action()}
                     </Button>
                   </div>
                 </div>
               </>
             ) : (
-              <Alert variant="secondary">
-                No open draft. Create one from the current published version, or roll back to an
-                older version below.
-              </Alert>
+              <Alert variant="secondary">{m.admin_policy_no_draft_message()}</Alert>
             )}
 
             <hr />
-            <h3 className="h6">Version history</h3>
+            <h3 className="h6">{m.admin_policy_version_history_heading()}</h3>
             <Table responsive size="sm">
               <thead>
                 <tr>
-                  <th>Version</th>
-                  <th>Status</th>
-                  <th>Published</th>
-                  <th>By</th>
-                  <th>Change summary</th>
-                  <th>Actions</th>
+                  <th>{m.admin_policy_version_column()}</th>
+                  <th>{m.admin_status_label()}</th>
+                  <th>{m.admin_policy_published_column()}</th>
+                  <th>{m.admin_policy_by_column()}</th>
+                  <th>{m.admin_policy_change_summary_column()}</th>
+                  <th>{m.admin_actions_label()}</th>
                 </tr>
               </thead>
               <tbody>
@@ -453,7 +468,9 @@ export default function PolicyManagement({
                   <tr key={version.id}>
                     <td>{version.version_number}</td>
                     <td>
-                      <Badge bg={statusVariant(version.status)}>{version.status}</Badge>
+                      <Badge bg={statusVariant(version.status)}>
+                        {statusLabel(version.status)}
+                      </Badge>
                     </td>
                     <td>
                       {version.published_at ? new Date(version.published_at).toLocaleString() : "—"}
@@ -467,7 +484,7 @@ export default function PolicyManagement({
                           variant="outline-warning"
                           onClick={() => handleCreateDraft(version.version_number)}
                         >
-                          Roll back to this version
+                          {m.admin_policy_rollback_action()}
                         </Button>
                       )}
                     </td>
@@ -477,7 +494,7 @@ export default function PolicyManagement({
             </Table>
             {contentFor(published, locale) === "" && published && (
               <p className="text-secondary small">
-                No published content for {locale.toUpperCase()} yet.
+                {m.admin_policy_no_published_content({ locale: locale.toUpperCase() })}
               </p>
             )}
           </>
