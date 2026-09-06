@@ -1,8 +1,13 @@
 # Visitor passwordless magic-link session
 
-**Status:** Session mechanism and lifetime proposed, pending owner confirmation
-before implementation starts.
-**Date:** 2026-09-06
+**Status:** Decided — the project owner confirmed all four questions on
+2026-09-06. Ready to implement. The confirmed calls: extend `User` with a
+nullable `verified_email` rather than a parallel identity model; a 30-minute
+single-use magic link; a **7-day idle / 30-day hard-cap** visitor session
+(tighter than this document's original 30-day/180-day proposal — see
+Decision 2); and an `HttpOnly` server-stored session cookie rather than a
+frontend-held JWT.
+**Date:** 2026-09-06 (confirmed same day)
 **Issues:** [#953](https://github.com/tjorim/champagnefestival/issues/953)
 (primary); [#922](https://github.com/tjorim/champagnefestival/issues/922)
 (registration ownership — the read model this reuses); [#924](https://github.com/tjorim/champagnefestival/issues/924),
@@ -43,11 +48,11 @@ gap, and the reasoning below, follow the pattern of
 [`992-live-public-render.md`](./992-live-public-render.md): concrete
 defaults, flagged for confirmation rather than treated as settled.
 
-## Decision 1 — extend `User`, don't invent a parallel identity model
+## Decision 1 — extend `User`, don't invent a parallel identity model (confirmed)
 
-**Proposed: `User.oidc_subject` becomes nullable, add `User.verified_email:
-str | None` (unique, nullable), with a check constraint that exactly one of
-the two is set.**
+**Confirmed by the project owner on 2026-09-06: `User.oidc_subject` becomes
+nullable, add `User.verified_email: str | None` (unique, nullable), with a
+check constraint that exactly one of the two is set.**
 
 `Registration.user_id` already points at `User`, and every `/me` read
 (`_registrations_for_user`, `list_my_registrations`,
@@ -80,7 +85,7 @@ answer (`Registration.user_id`) regardless of how the owner authenticated.
 Splitting that into two tables reintroduces exactly the two-source-of-truth
 problem #922 exists to remove upstream of it.
 
-## Decision 2 — two lifetimes, not one: a short link, a long session
+## Decision 2 — two lifetimes, not one: a short link, a long session (confirmed)
 
 This is the question the "check before the coast weekend" scenario is
 actually about, and it's two separate numbers that #953's acceptance
@@ -89,7 +94,7 @@ visitor can sign out and clearly see when their session expires").
 Conflating them is what would make the persistent session accidentally as
 short-lived as a login link.
 
-**The magic link itself — proposed 30 minutes, single-use, matching the
+**The magic link itself — confirmed at 30 minutes, single-use, matching the
 existing precedent.** This is a credential sent over email; the shorter it
 lives, the smaller the window in which a compromised inbox or a forwarded
 email grants access. `settings.guest_access_token_ttl_minutes` already
@@ -98,50 +103,42 @@ emailed access credential live," for the same reason, in the existing
 one-shot lookup. No reason to pick a different number for a structurally
 identical credential.
 
-**The session established after redemption — proposed a sliding 30-day idle
-window with a 180-day hard cap.** This is the number that actually answers
-the motivating question: checking an order today and again in three weeks
-must not require a fresh email each time, so the session must outlive the
-gap between visits, not just the redemption moment.
+**The session established after redemption — confirmed at a sliding 7-day
+idle window with a 30-day hard cap.** This is the number that actually
+answers the motivating question: checking an order today and again in a
+week or two must not require a fresh email each time, so the session must
+outlive the gap between visits, not just the redemption moment.
 
-- **Idle timeout (30 days):** each visit resets the clock, so a visitor who
-  checks in every few weeks — exactly the "book, then check before a
-  weekend trip" pattern — never sees a lapsed session. `worktime`'s Keycloak
-  realm sets an analogous idle/max split for staff (`sso_session_idle_timeout:
-  604800` / 7 days, `sso_session_max_lifespan: 2592000` / 30 days, in
-  `tjorim/apps`'s `ansible/playbooks/keycloak.yml`) for the same reason:
-  bound how long a session can go unused before it's worth re-verifying,
-  without punishing someone who's actually using the thing regularly.
-- **Hard cap (180 days):** regardless of activity, the session dies after six
-  months, so a stolen or forgotten session token cannot grant access
-  indefinitely just because someone keeps visiting. Six months rather than
-  worktime's 30 days because the two have different threat models: a
-  visitor's session grants read access to their own order history and a
-  narrow set of self-service writes (communication preference, account
-  deletion — see Decision 3's scope limit), not the admin/volunteer
-  operational surface worktime's staff sessions guard. A once-a-season
-  visitor (the festival runs annually) plausibly wants to check something six
-  months out; a shorter cap would make the "long-lived, no re-verification
-  hassle" property this document is solving for disappear for exactly the
-  visitor who registers once a year and doesn't return to the site until the
-  next one.
+- **Idle timeout (7 days):** each visit resets the clock, so a visitor who
+  checks in every week or so never sees a lapsed session.
+- **Hard cap (30 days):** regardless of activity, the session dies after a
+  month, so a stolen or forgotten session token cannot grant access
+  indefinitely just because someone keeps visiting.
+- **Confirmed over this document's original proposal (30-day idle / 180-day
+  hard cap):** the project owner chose to match `worktime`'s existing
+  Keycloak realm precedent exactly (`sso_session_idle_timeout: 604800` / 7
+  days, `sso_session_max_lifespan: 2592000` / 30 days, in `tjorim/apps`'s
+  `ansible/playbooks/keycloak.yml`) rather than the longer, differently-sized
+  cap this document argued for on the basis of the visitor session's
+  narrower threat model (read access to one's own order history, not the
+  staff operational surface). Worth flagging plainly for a future reader:
+  under this confirmed number, a visitor who registers once and does not
+  return to the site for more than a month between visits — plausible for
+  an annual event — will need a fresh magic link even if they're well within
+  the "days or weeks ahead" scenario that motivated this document, just not
+  within 30 days of it. That's an accepted trade for consistency with the
+  organization's existing session-length posture, not an oversight.
 - **Recovery when either boundary is hit:** request a new magic link — same
   generic, non-enumerating flow as first sign-in. #953's acceptance criteria
   already require this ("expiry has a clear recovery path"); this document
   proposes that the recovery path is simply the same entry point, not a
   distinct "renew" flow.
 
-**These two numbers — 30 minutes and 30/180 days — are exactly the kind of
-business judgment call this project has consistently sent to the owner for
-confirmation rather than picking silently (see #934's retention windows,
-#932's rate-limit buckets). Flagged here on the same basis, not treated as
-settled.**
+## Decision 3 — session delivery: an HttpOnly cookie, not a bearer token in `localStorage` (confirmed)
 
-## Decision 3 — session delivery: an HttpOnly cookie, not a bearer token in `localStorage`
-
-**Proposed: the visitor session is an `HttpOnly`, `Secure`, `SameSite=Lax`
-cookie holding an opaque, server-stored session ID — not a JWT the frontend
-attaches as a Bearer header.**
+**Confirmed by the project owner on 2026-09-06: the visitor session is an
+`HttpOnly`, `Secure`, `SameSite=Lax` cookie holding an opaque, server-stored
+session ID — not a JWT the frontend attaches as a Bearer header.**
 
 This deliberately departs from how staff OIDC tokens are handled today
 (`WebStorageStateStore` over `localStorage`, attached as a header via
@@ -220,22 +217,38 @@ are already documented there):
   safe to retry, unlike the two above. Worth documenting as the positive
   example alongside them.
 
-## What remains before implementation starts
+## Confirmed decisions
 
-1. Confirmation (or correction) of the two proposed lifetimes: the 30-minute
-   magic link, and the 30-day idle / 180-day hard-cap visitor session.
-2. Confirmation of the `User` schema extension (nullable `oidc_subject`,
-   new `verified_email`) versus the rejected parallel-table alternative.
-3. Confirmation of cookie-based, server-stored sessions over a
-   frontend-held JWT, given the precedent this deliberately departs from.
-4. Once confirmed: implement the migration, `visitor_sessions` table, the
-   shared caller-resolution dependency, the magic-link request/redemption
-   endpoints, the session-refresh/sign-out endpoints, the frontend "My
-   orders" flow and its states (per #953's acceptance criteria), the two new
-   `docs/retry-safety.md` entries, and update
-   `docs/product-audit-2026-08.md`'s #953 row per that document's
-   maintenance procedure — with the navigation entry itself left disabled
-   until production email delivery is verified end to end.
+Every question this document raised was answered by the project owner on
+2026-09-06. Nothing here is still waiting on an answer.
+
+| Question | Decision |
+| --- | --- |
+| `User` identity model | **Extend `User`** with a nullable `verified_email` alongside its existing nullable `oidc_subject`, rather than a separate `VisitorIdentity` table |
+| Magic-link lifetime | **30 minutes**, single-use — matches the existing guest-access-token precedent |
+| Visitor session lifetime | **7-day idle / 30-day hard cap** — matches `worktime`'s existing Keycloak realm precedent exactly, in place of this document's original 30-day/180-day proposal (see Decision 2 for the accepted trade-off) |
+| Session delivery | **`HttpOnly` server-stored cookie**, not a frontend-held JWT |
+
+## What implementation covers
+
+1. The migration: `User.oidc_subject` becomes nullable, add
+   `User.verified_email` with its uniqueness and check constraints, and the
+   new `visitor_sessions` table (id, `user_id`, `created_at`,
+   `last_seen_at`, `expires_at`).
+2. The shared caller-resolution dependency that accepts either an OIDC
+   bearer token or the visitor-session cookie and resolves both to the same
+   `User.id`, replacing the OIDC-only resolution in every `/me` handler.
+3. The magic-link request and redemption endpoints, rate-limited and
+   non-enumerating like the existing guest-access-token flow.
+4. Session-refresh (sliding idle extension) and sign-out endpoints.
+5. The frontend "My orders" flow and its states, per #953's acceptance
+   criteria — with the navigation entry itself left disabled until
+   production email delivery is verified end to end.
+6. Two new `docs/retry-safety.md` entries (magic-link request/redemption,
+   not retry-safe with the same credential; session refresh, safely
+   retryable) per `AGENTS.md`.
+7. Updating `docs/product-audit-2026-08.md`'s #953 row per that document's
+   maintenance procedure.
 
 ## References
 
