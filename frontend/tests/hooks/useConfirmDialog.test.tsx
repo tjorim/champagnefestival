@@ -82,4 +82,19 @@ describe("useConfirmDialog", () => {
     const { result } = renderHook(() => useConfirmDialog());
     expect(result.current.confirmDialog).toBeNull();
   });
+
+  it("settles a pending confirmation when the component unmounts", async () => {
+    // Otherwise a caller mid-`await confirm(...)` hangs forever once the
+    // dialog it was waiting on is gone — e.g. the admin navigates away
+    // while a confirmation is still open.
+    const { result, unmount } = renderHook(() => useConfirmDialog());
+
+    let pending!: Promise<boolean>;
+    act(() => {
+      pending = result.current.confirm(REQUEST);
+    });
+    unmount();
+
+    await expect(pending).resolves.toBe(false);
+  });
 });

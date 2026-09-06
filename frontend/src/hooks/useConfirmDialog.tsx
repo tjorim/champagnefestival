@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
 
@@ -48,6 +48,18 @@ export function useConfirmDialog() {
         resolveRef.current = resolve;
         setRequest(next);
       }),
+    [],
+  );
+
+  // Settles any outstanding promise if the component using this hook unmounts
+  // while a dialog is open (e.g. the admin navigates away mid-confirmation),
+  // so `await confirm(...)` can't hang forever with the dialog it was waiting
+  // on already gone.
+  useEffect(
+    () => () => {
+      resolveRef.current?.(false);
+      resolveRef.current = null;
+    },
     [],
   );
 

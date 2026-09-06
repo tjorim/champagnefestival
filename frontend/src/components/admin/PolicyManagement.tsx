@@ -349,37 +349,73 @@ export default function PolicyManagement({
                   <ButtonGroup size="sm" className="mb-2">
                     <Button
                       variant="outline-secondary"
-                      onClick={() => insertSnippet("**", "**", "bold text")}
+                      onClick={() =>
+                        insertSnippet(
+                          "**",
+                          "**",
+                          m.admin_policy_markdown_bold_placeholder({}, { locale }),
+                        )
+                      }
                     >
                       {m.admin_policy_markdown_bold()}
                     </Button>
                     <Button
                       variant="outline-secondary"
-                      onClick={() => insertSnippet("_", "_", "italic text")}
+                      onClick={() =>
+                        insertSnippet(
+                          "_",
+                          "_",
+                          m.admin_policy_markdown_italic_placeholder({}, { locale }),
+                        )
+                      }
                     >
                       {m.admin_policy_markdown_italic()}
                     </Button>
                     <Button
                       variant="outline-secondary"
-                      onClick={() => insertSnippet("## ", "", "Heading")}
+                      onClick={() =>
+                        insertSnippet(
+                          "## ",
+                          "",
+                          m.admin_policy_markdown_heading_placeholder({}, { locale }),
+                        )
+                      }
                     >
                       {m.admin_policy_markdown_h2()}
                     </Button>
                     <Button
                       variant="outline-secondary"
-                      onClick={() => insertSnippet("### ", "", "Heading")}
+                      onClick={() =>
+                        insertSnippet(
+                          "### ",
+                          "",
+                          m.admin_policy_markdown_heading_placeholder({}, { locale }),
+                        )
+                      }
                     >
                       {m.admin_policy_markdown_h3()}
                     </Button>
                     <Button
                       variant="outline-secondary"
-                      onClick={() => insertSnippet("[", "](https://example.com)", "link text")}
+                      onClick={() =>
+                        insertSnippet(
+                          "[",
+                          "](https://example.com)",
+                          m.admin_policy_markdown_link_placeholder({}, { locale }),
+                        )
+                      }
                     >
                       {m.admin_policy_markdown_link()}
                     </Button>
                     <Button
                       variant="outline-secondary"
-                      onClick={() => insertSnippet("- ", "", "List item")}
+                      onClick={() =>
+                        insertSnippet(
+                          "- ",
+                          "",
+                          m.admin_policy_markdown_list_placeholder({}, { locale }),
+                        )
+                      }
                     >
                       {m.admin_policy_markdown_list()}
                     </Button>

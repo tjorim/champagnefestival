@@ -902,5 +902,10 @@
   "admin_policy_status_superseded": "Vervangen",
   "admin_policy_rollback_action": "Terugkeren naar deze versie",
   "admin_policy_no_published_content": "Nog geen gepubliceerde inhoud voor {locale}.",
-  "admin_error_delete_announcement_request": "Mededeling kon niet worden verwijderd."
+  "admin_error_delete_announcement_request": "Mededeling kon niet worden verwijderd.",
+  "admin_policy_markdown_bold_placeholder": "vet tekst",
+  "admin_policy_markdown_italic_placeholder": "cursieve tekst",
+  "admin_policy_markdown_heading_placeholder": "Kop",
+  "admin_policy_markdown_link_placeholder": "linktekst",
+  "admin_policy_markdown_list_placeholder": "Lijstitem"
 }

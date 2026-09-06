@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
@@ -75,9 +75,12 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onDecodeRef = useRef(onDecode);
   // Refs are written from an effect (not during render) so React doesn't flag
-  // the mutation; running after every render (no dependency array) keeps it
-  // current well before the scanning loop below ever reads it.
-  useEffect(() => {
+  // the mutation. A *layout* effect specifically (not the usual passive one),
+  // so the assignment lands synchronously right after commit — before the
+  // browser's next requestAnimationFrame, which is when the scanning loop
+  // below reads it. A passive effect can be scheduled after that next frame,
+  // which would let a stale onDecode fire once after a prop change.
+  useLayoutEffect(() => {
     onDecodeRef.current = onDecode;
   });
   const [status, setStatus] = useState<ScannerStatus>(() =>

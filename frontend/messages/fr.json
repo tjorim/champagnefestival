@@ -902,5 +902,10 @@
   "admin_policy_status_superseded": "Remplacée",
   "admin_policy_rollback_action": "Revenir à cette version",
   "admin_policy_no_published_content": "Aucun contenu publié pour {locale} pour l'instant.",
-  "admin_error_delete_announcement_request": "L'annonce n'a pas pu être supprimée."
+  "admin_error_delete_announcement_request": "L'annonce n'a pas pu être supprimée.",
+  "admin_policy_markdown_bold_placeholder": "texte en gras",
+  "admin_policy_markdown_italic_placeholder": "texte en italique",
+  "admin_policy_markdown_heading_placeholder": "Titre",
+  "admin_policy_markdown_link_placeholder": "texte du lien",
+  "admin_policy_markdown_list_placeholder": "Élément de liste"
 }

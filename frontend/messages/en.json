@@ -902,5 +902,10 @@
   "admin_policy_status_superseded": "Superseded",
   "admin_policy_rollback_action": "Roll back to this version",
   "admin_policy_no_published_content": "No published content for {locale} yet.",
-  "admin_error_delete_announcement_request": "Announcement could not be deleted."
+  "admin_error_delete_announcement_request": "Announcement could not be deleted.",
+  "admin_policy_markdown_bold_placeholder": "bold text",
+  "admin_policy_markdown_italic_placeholder": "italic text",
+  "admin_policy_markdown_heading_placeholder": "Heading",
+  "admin_policy_markdown_link_placeholder": "link text",
+  "admin_policy_markdown_list_placeholder": "List item"
 }
