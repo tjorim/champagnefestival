@@ -4,7 +4,8 @@
 original Redis proposal — see "Update" below) and live bus; metrics deferred.
 One sub-detail (the blanket per-route default limiter) is a proposed default,
 flagged for confirmation.
-**Date:** 2026-09-03 (updated 2026-09-05)
+**Date:** 2026-09-03 (updated 2026-09-05, then 2026-09-06 — noted #992 as a
+second consumer of decision 2's bus)
 **Issue:** [#932](https://github.com/tjorim/champagnefestival/issues/932)
 
 ---
@@ -147,6 +148,22 @@ rate-limiter migration landing (or, short term, on accepting single-worker
 deployment for the admin test-send path, which is explicitly restricted to
 administrators and low-volume by design).
 
+#992's live-rendered `/` and `/privacy` (see
+[`992-live-public-render.md`](./992-live-public-render.md)) is a second,
+later consumer of decision 2's `LISTEN`/`NOTIFY` bus, for a different reason
+than #941: #992 ships a 60-second TTL render cache as its own correctness
+floor regardless of worker count, and explicitly defers *proactive*
+cache invalidation on FAQ/edition/policy mutations until this decision's bus
+exists to carry it to every worker — under today's single worker, proactive
+invalidation happens to work by accident, and #992 declines to build on that
+accident. This is a read of #992's design against this document, not a change
+to the scope decided above: #992 needs its own `NOTIFY` channel (a render
+cache invalidated by "FAQ changed" is a different message than "an SSE client
+needs this event," so it should not simply overload `live_events` with a
+second payload shape) — worth keeping in mind so decision 2's implementation
+doesn't hard-code a single-channel, single-consumer assumption that #992
+would then have to work around.
+
 ## References
 
 - [#932](https://github.com/tjorim/champagnefestival/issues/932) — original
@@ -158,6 +175,10 @@ administrators and low-volume by design).
 - [#934](https://github.com/tjorim/champagnefestival/issues/934) — the
   worker sweep loop decision 1's cleanup extends is proposed in
   [`docs/decisions/934-data-retention-and-erasure.md`](934-data-retention-and-erasure.md)
+- [#992](https://github.com/tjorim/champagnefestival/issues/992) — a second
+  consumer of decision 2's bus, for render-cache invalidation rather than
+  SSE fan-out; proposed in
+  [`docs/decisions/992-live-public-render.md`](992-live-public-render.md)
 - `tjorim/apps`'s `infra/compose.yaml` — confirms no Redis in the deployed
   stack
 - `tjorim/worktime`'s `backend/app/utils/sse_manager.py` — working
