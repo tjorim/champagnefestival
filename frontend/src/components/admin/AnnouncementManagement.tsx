@@ -12,6 +12,8 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { m } from "@/paraglide/messages";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 interface Announcement {
   id: string;
@@ -92,6 +94,7 @@ export default function AnnouncementManagement({
   const [editing, setEditing] = useState<string | null>(null);
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
+  const { confirm, confirmDialog } = useConfirmDialog();
   const refresh = () => client.invalidateQueries({ queryKey: key });
   const save = useMutation({
     mutationFn: () =>
@@ -126,6 +129,14 @@ export default function AnnouncementManagement({
     onSuccess: () => void refresh(),
     retry: false,
   });
+  const handleDelete = async (id: string) => {
+    const confirmed = await confirm({
+      title: m.admin_announcement_delete_title(),
+      body: m.admin_announcement_delete_confirm(),
+      errorFallback: m.admin_error_delete_announcement(),
+    });
+    if (confirmed) remove.mutate(id);
+  };
   const update = async (item: Announcement, values: Partial<Announcement>) =>
     fetchJsonOrThrowWithUnauthorized(
       `/api/announcements/${item.id}`,
@@ -352,13 +363,7 @@ export default function AnnouncementManagement({
                   >
                     {item.active ? "Disable" : "Publish"}
                   </Button>{" "}
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() =>
-                      window.confirm("Delete this announcement?") && remove.mutate(item.id)
-                    }
-                  >
+                  <Button size="sm" variant="danger" onClick={() => void handleDelete(item.id)}>
                     Delete
                   </Button>
                 </td>
@@ -367,6 +372,7 @@ export default function AnnouncementManagement({
           </tbody>
         </Table>
       </Card.Body>
+      {confirmDialog}
     </Card>
   );
 }

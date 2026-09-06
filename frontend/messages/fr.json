@@ -828,5 +828,18 @@
   "admin_email_copy_failed": "La copie dans le presse-papiers a échoué. Sélectionnez et copiez manuellement le destinataire, l’objet et le message ci-dessus.",
   "announcements_accessible_label": "Annonces opérationnelles",
   "admin_announcements_section": "Annonces",
-  "admin_policies_section": "Politiques légales"
+  "admin_policies_section": "Politiques légales",
+  "admin_faq_delete_title": "Supprimer la question",
+  "admin_table_over_capacity_title": "Capacité dépassée",
+  "admin_announcement_delete_title": "Supprimer l’annonce",
+  "admin_announcement_delete_confirm": "Supprimer cette annonce ? Cette action est irréversible.",
+  "admin_error_delete_announcement": "Échec de la suppression de l’annonce.",
+  "admin_policy_publish_title": "Publier le brouillon",
+  "admin_policy_publish_confirm": "Publier ce brouillon ? Les versions publiées sont immuables — elles ne peuvent plus être modifiées ni retirées.",
+  "admin_policy_publish_action": "Publier",
+  "admin_error_publish_policy": "Échec de la publication du brouillon.",
+  "admin_policy_discard_title": "Supprimer le brouillon",
+  "admin_policy_discard_confirm": "Supprimer ce brouillon ? Les modifications non publiées seront perdues.",
+  "admin_policy_discard_action": "Supprimer",
+  "admin_error_discard_policy": "Échec de la suppression du brouillon."
 }

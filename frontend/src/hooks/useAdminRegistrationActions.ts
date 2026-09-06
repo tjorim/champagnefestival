@@ -20,6 +20,13 @@ interface UseAdminRegistrationActionsOptions {
   tablesQueryKey: QueryKey;
   setDetailRegistration: Dispatch<SetStateAction<Registration | null>>;
   setRegistrationError: Dispatch<SetStateAction<string>>;
+  /**
+   * Asks the operator to confirm an over-capacity write, which is only known
+   * to be needed after the first attempt comes back rejected. Supplied by the
+   * rendering component (see `useConfirmDialog`) because a hook can't render
+   * the dialog itself.
+   */
+  confirmOverCapacity: () => Promise<boolean>;
 }
 
 export function useAdminRegistrationActions({
@@ -29,6 +36,7 @@ export function useAdminRegistrationActions({
   tablesQueryKey,
   setDetailRegistration,
   setRegistrationError,
+  confirmOverCapacity,
 }: UseAdminRegistrationActionsOptions) {
   const { updateRegistrationMutation } = useRegistrationAdminMutations({
     queryClient,
@@ -96,7 +104,7 @@ export function useAdminRegistrationActions({
         if (
           err instanceof Error &&
           err.message.includes("seat(s) remaining") &&
-          window.confirm(m.admin_table_over_capacity_confirm())
+          (await confirmOverCapacity())
         ) {
           const updated = apiToRegistration(
             await updateRegistrationMutation.mutateAsync({
@@ -118,6 +126,7 @@ export function useAdminRegistrationActions({
       }
     },
     [
+      confirmOverCapacity,
       queryClient,
       registrationsQueryKey,
       setDetailRegistration,
@@ -171,12 +180,12 @@ export function useAdminRegistrationActions({
 
   const handleAssignTable = useCallback(
     async (registrationId: string, tableId: string | undefined) => {
-      const assign = (confirmOverCapacity = false) =>
+      const assign = (overCapacityConfirmed = false) =>
         updateRegistrationMutation.mutateAsync({
           id: registrationId,
           payload: {
             table_id: tableId ?? null,
-            ...(confirmOverCapacity ? { confirm_over_capacity: true } : {}),
+            ...(overCapacityConfirmed ? { confirm_over_capacity: true } : {}),
           },
           fallbackMessage: m.admin_error_assign_table(),
         });
@@ -189,8 +198,7 @@ export function useAdminRegistrationActions({
             tableId !== undefined &&
             err instanceof Error &&
             err.message.includes("seat(s) remaining");
-          if (!isCapacityWarning || !window.confirm(m.admin_table_over_capacity_confirm()))
-            throw err;
+          if (!isCapacityWarning || !(await confirmOverCapacity())) throw err;
           response = await assign(true);
         }
         const updated = apiToRegistration(response);
@@ -232,6 +240,7 @@ export function useAdminRegistrationActions({
       }
     },
     [
+      confirmOverCapacity,
       queryClient,
       registrationsQueryKey,
       setDetailRegistration,

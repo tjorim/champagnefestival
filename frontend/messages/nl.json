@@ -828,5 +828,18 @@
   "admin_email_copy_failed": "Kopiëren naar het klembord is mislukt. Selecteer en kopieer de ontvanger, het onderwerp en het bericht hierboven handmatig.",
   "announcements_accessible_label": "Operationele mededelingen",
   "admin_announcements_section": "Mededelingen",
-  "admin_policies_section": "Juridisch beleid"
+  "admin_policies_section": "Juridisch beleid",
+  "admin_faq_delete_title": "Vraag verwijderen",
+  "admin_table_over_capacity_title": "Boven capaciteit",
+  "admin_announcement_delete_title": "Aankondiging verwijderen",
+  "admin_announcement_delete_confirm": "Deze aankondiging verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "admin_error_delete_announcement": "Verwijderen van de aankondiging is mislukt.",
+  "admin_policy_publish_title": "Concept publiceren",
+  "admin_policy_publish_confirm": "Dit concept publiceren? Gepubliceerde versies liggen vast — ze kunnen daarna niet meer worden bewerkt of ingetrokken.",
+  "admin_policy_publish_action": "Publiceren",
+  "admin_error_publish_policy": "Publiceren van het concept is mislukt.",
+  "admin_policy_discard_title": "Concept verwerpen",
+  "admin_policy_discard_confirm": "Dit concept verwerpen? Niet-gepubliceerde wijzigingen gaan verloren.",
+  "admin_policy_discard_action": "Verwerpen",
+  "admin_error_discard_policy": "Verwerpen van het concept is mislukt."
 }

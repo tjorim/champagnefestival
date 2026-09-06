@@ -828,5 +828,18 @@
   "admin_email_copy_failed": "Clipboard access failed. Select and copy the recipient, subject, and message above manually.",
   "announcements_accessible_label": "Operational announcements",
   "admin_announcements_section": "Announcements",
-  "admin_policies_section": "Legal Policies"
+  "admin_policies_section": "Legal Policies",
+  "admin_faq_delete_title": "Delete question",
+  "admin_table_over_capacity_title": "Over capacity",
+  "admin_announcement_delete_title": "Delete announcement",
+  "admin_announcement_delete_confirm": "Delete this announcement? This cannot be undone.",
+  "admin_error_delete_announcement": "Failed to delete the announcement.",
+  "admin_policy_publish_title": "Publish draft",
+  "admin_policy_publish_confirm": "Publish this draft? Published versions are immutable — they cannot be edited or withdrawn afterwards.",
+  "admin_policy_publish_action": "Publish",
+  "admin_error_publish_policy": "Failed to publish the draft.",
+  "admin_policy_discard_title": "Discard draft",
+  "admin_policy_discard_confirm": "Discard this draft? Any unpublished changes will be lost.",
+  "admin_policy_discard_action": "Discard",
+  "admin_error_discard_policy": "Failed to discard the draft."
 }

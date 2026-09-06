@@ -14,6 +14,8 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import { m } from "@/paraglide/messages";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 type Locale = "nl" | "en" | "fr";
 const LOCALES: Locale[] = ["nl", "en", "fr"];
@@ -118,6 +120,7 @@ export default function PolicyManagement({
   const [changeSummary, setChangeSummary] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
+  const { confirm, confirmDialog } = useConfirmDialog();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Load the open draft's content into the editor whenever it (re)appears.
@@ -229,11 +232,27 @@ export default function PolicyManagement({
     setError("");
     saveDraft.mutate(undefined, { onError: (reason) => setError(String(reason)) });
   };
-  const handleDiscardDraft = () => {
+  const handleDiscardDraft = async () => {
+    const confirmed = await confirm({
+      title: m.admin_policy_discard_title(),
+      body: m.admin_policy_discard_confirm(),
+      confirmLabel: m.admin_policy_discard_action(),
+      errorFallback: m.admin_error_discard_policy(),
+    });
+    if (!confirmed) return;
     setError("");
     discardDraft.mutate(undefined, { onError: (reason) => setError(String(reason)) });
   };
-  const handlePublishDraft = () => {
+  const handlePublishDraft = async () => {
+    const confirmed = await confirm({
+      title: m.admin_policy_publish_title(),
+      body: m.admin_policy_publish_confirm(),
+      confirmLabel: m.admin_policy_publish_action(),
+      variant: "warning",
+      icon: "megaphone",
+      errorFallback: m.admin_error_publish_policy(),
+    });
+    if (!confirmed) return;
     setError("");
     publishDraft.mutate(undefined, { onError: (reason) => setError(String(reason)) });
   };
@@ -395,20 +414,14 @@ export default function PolicyManagement({
                     <Button
                       variant="success"
                       disabled={publishDraft.isPending}
-                      onClick={() => {
-                        if (
-                          window.confirm("Publish this draft? Published versions are immutable.")
-                        ) {
-                          handlePublishDraft();
-                        }
-                      }}
+                      onClick={() => void handlePublishDraft()}
                     >
                       Publish
                     </Button>
                     <Button
                       variant="outline-danger"
                       disabled={discardDraft.isPending}
-                      onClick={() => window.confirm("Discard this draft?") && handleDiscardDraft()}
+                      onClick={() => void handleDiscardDraft()}
                     >
                       Discard draft
                     </Button>
@@ -470,6 +483,7 @@ export default function PolicyManagement({
           </>
         )}
       </Card.Body>
+      {confirmDialog}
     </Card>
   );
 }
