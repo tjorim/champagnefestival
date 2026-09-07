@@ -451,7 +451,13 @@ export async function getVisitorSessionStatus(): Promise<VisitorSessionStatus> {
 }
 
 export async function signOutVisitorSession(): Promise<void> {
-  await fetch("/api/visitor-sessions/sign-out", { method: "POST" });
+  const response = await fetch("/api/visitor-sessions/sign-out", { method: "POST" });
+  if (!response.ok) {
+    // The caller must not clear local "signed in" state on a failed sign-out
+    // — the server session and cookie are still valid, and showing the sign-in
+    // form anyway would be misleading (PR #1012 review).
+    throw new RegistrationLookupError("request_failed", m.my_registrations_error());
+  }
 }
 
 export class RegistrationSubmitError extends Error {

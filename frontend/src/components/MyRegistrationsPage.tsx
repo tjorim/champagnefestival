@@ -75,6 +75,7 @@ export default function MyRegistrationsPage() {
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
 
   const requestLookupMutation = useMutation({
     mutationFn: (targetEmail: string) =>
@@ -151,18 +152,6 @@ export default function MyRegistrationsPage() {
     };
   }, [token, auth.isLoading, auth.isAuthenticated, sessionChecked]);
 
-  const handleSignOut = useCallback(async () => {
-    setIsSigningOut(true);
-    try {
-      await signOutVisitorSession();
-    } finally {
-      setIsSigningOut(false);
-      setSessionRegistrations(null);
-      setSessionExpiresAt(null);
-      setSessionChecked(true);
-    }
-  }, []);
-
   const registrations = registrationsMutation.data ?? sessionRegistrations ?? null;
 
   useEffect(() => {
@@ -228,6 +217,29 @@ export default function MyRegistrationsPage() {
     attemptedToken.current = "";
     registrationsMutation.reset();
   }, [navigate, registrationsMutation, setError, setIsEmailInvalid, setRequestSent]);
+
+  const handleSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    setSignOutError("");
+    try {
+      await signOutVisitorSession();
+    } catch {
+      // Local "signed in" state must only clear once sign-out actually
+      // succeeded server-side — otherwise the UI would show the sign-in
+      // form while the session and cookie are still valid (PR #1012 review).
+      // Shown next to the sign-out button itself: the generic `error` state
+      // above only renders in the email-request form, which isn't visible
+      // while viewing results.
+      setIsSigningOut(false);
+      setSignOutError(m.my_registrations_error());
+      return;
+    }
+    setIsSigningOut(false);
+    setSessionRegistrations(null);
+    setSessionExpiresAt(null);
+    setSessionChecked(true);
+    resetToRequestForm();
+  }, [resetToRequestForm]);
 
   const handleEmailSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -514,13 +526,20 @@ export default function MyRegistrationsPage() {
                       </p>
                     )}
 
+                    {showSignOut && signOutError && (
+                      <Alert variant="danger" className="mt-3 mb-0" role="alert">
+                        <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                        {signOutError}
+                      </Alert>
+                    )}
+
                     {showSignOut ? (
                       <Button
                         variant="outline-secondary"
                         size="sm"
                         className="mt-2 w-100"
                         disabled={isSigningOut}
-                        onClick={() => void handleSignOut().then(resetToRequestForm)}
+                        onClick={() => void handleSignOut()}
                       >
                         {isSigningOut ? (
                           <Spinner

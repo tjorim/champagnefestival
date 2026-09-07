@@ -322,6 +322,22 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # #953: restoring users.oidc_subject to NOT NULL below would violate that
+    # constraint for any visitor account (magic-link sign-in, oidc_subject IS
+    # NULL by design). Fail loudly with an operational precondition rather
+    # than silently deleting those accounts and their registration ownership,
+    # or letting Postgres abort mid-migration with a raw constraint error
+    # (PR #1012 review).
+    bind = op.get_bind()
+    visitor_user_count = bind.execute(sa.text("SELECT COUNT(*) FROM users WHERE oidc_subject IS NULL")).scalar()
+    if visitor_user_count:
+        raise RuntimeError(
+            f"Cannot downgrade past 001: {visitor_user_count} visitor account(s) "
+            "(#953 magic-link sign-in, users.oidc_subject IS NULL) exist. "
+            "Downgrading restores oidc_subject to NOT NULL, which these rows "
+            "violate. Resolve them first (e.g. delete the accounts, accepting "
+            "the loss of their registration ownership) before downgrading."
+        )
     op.drop_index("ix_visitor_sessions_hard_expires_at", table_name="visitor_sessions")
     op.drop_index("ix_visitor_sessions_expires_at", table_name="visitor_sessions")
     op.drop_index("ix_visitor_sessions_user_id", table_name="visitor_sessions")

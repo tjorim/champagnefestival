@@ -186,7 +186,9 @@ async def redeem_visitor_magic_link(
 
 
 @router.get("/status", response_model=VisitorSessionStatus)
-async def visitor_session_status(request: Request, db: AsyncSession = Depends(get_db)) -> VisitorSessionStatus:
+async def visitor_session_status(
+    request: Request, response: Response, db: AsyncSession = Depends(get_db)
+) -> VisitorSessionStatus:
     """Report whether the caller currently holds a valid visitor session.
 
     Never 401s — an absent or expired session is a normal, expected state
@@ -194,6 +196,10 @@ async def visitor_session_status(request: Request, db: AsyncSession = Depends(ge
     sign-in form or the orders list), not an error. Refreshes the sliding
     idle window on a valid session, same as any other authenticated call.
     """
+    # Authentication state for the current cookie must never be served stale
+    # by a browser or intermediary cache — e.g. after sign-out or a different
+    # identity signing in from the same client (PR #1012 review).
+    response.headers["Cache-Control"] = "no-store"
     session_id = request.cookies.get(COOKIE_NAME)
     if not session_id:
         return VisitorSessionStatus(authenticated=False)

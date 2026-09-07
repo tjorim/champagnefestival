@@ -54,8 +54,16 @@ async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
 
 @router.get("/communication-preference", response_model=CommunicationPreferenceOut)
 async def get_communication_preference(
-    user: User = Depends(get_current_portal_user), db: AsyncSession = Depends(get_db)
+    response: Response,
+    user: User = Depends(get_current_portal_user),
+    db: AsyncSession = Depends(get_db),
 ) -> CommunicationPreferenceOut:
+    # Identity-linked data reachable via a visitor-session cookie (#953), not
+    # just an Authorization header — a shared/intermediary cache may not treat
+    # a cookie-only request as inherently uncacheable, so this is explicit
+    # rather than assumed (PR #1012 review; same pattern as create_pebble_token
+    # below).
+    response.headers["Cache-Control"] = "no-store"
     people = await _user_people(db, user.id)
     preferred_language = next((person.preferred_language for person in people if person.preferred_language), None)
     return CommunicationPreferenceOut.model_validate({"preferred_language": preferred_language})
@@ -122,6 +130,7 @@ async def _registrations_for_user(db: AsyncSession, user_id: str) -> list[MyRegi
 
 @router.get("/registrations", response_model=list[RegistrationGuestOut])
 async def list_my_registrations(
+    response: Response,
     user: User = Depends(get_current_portal_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
@@ -130,6 +139,10 @@ async def list_my_registrations(
     ``user`` may be resolved from either an OIDC bearer token or a visitor
     magic-link session (#953) — the read itself doesn't care which.
     """
+    # Includes check-in tokens; reachable via a cookie now, not just a Bearer
+    # header, so an intermediary cache must not be allowed to reuse it across
+    # sessions (PR #1012 review).
+    response.headers["Cache-Control"] = "no-store"
     rows = (
         await db.execute(
             select(Registration, Person, Event)
