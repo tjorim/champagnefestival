@@ -1,9 +1,12 @@
 # Service-worker ownership and Web Push subscription foundation
 
-**Status:** Service-worker contract decided and the base file shipped (see
-"Update: base worker shipped for #936" below); subscription/consent policy
-proposed, pending owner confirmation before #941's own implementation starts
-**Date:** 2026-09-03 (updated 2026-09-05)
+**Status:** Decided — the project owner confirmed all pre-implementation
+questions on 2026-09-07 (see "Confirmed decisions" below), correcting one
+proposed default in the process: subscriptions are **anonymous and public**,
+not authenticated-only — "administrator-only" in the issue describes who can
+*trigger* a send (the admin test-send button), not who can *subscribe* to
+receive one. Ready to implement.
+**Date:** 2026-09-03 (updated 2026-09-05, confirmed 2026-09-07)
 **Issues:** [#941](https://github.com/tjorim/champagnefestival/issues/941)
 (primary); [#936](https://github.com/tjorim/champagnefestival/issues/936)
 (shipped the base file — see below); [#937](https://github.com/tjorim/champagnefestival/issues/937)
@@ -67,37 +70,41 @@ to the questions #941 lists as required "before implementation."
   registration for the site), so the additive-module shape is worth building
   correctly from #941 onward rather than revisiting it later.
 
-## #941's required pre-implementation decisions (proposed defaults)
+## #941's pre-implementation decisions (confirmed 2026-09-07)
 
-The issue lists these as decisions to document before implementation. The
-following are proposed defaults, chosen to match the issue's own stated
-scope ("opt-in/test-delivery infrastructure only," "administrator-only test
-notification," "no general broadcast composer") — **flagged for your
-confirmation, not treated as settled**, since several carry real user-privacy
-and retention consequences:
+The issue lists these as decisions to document before implementation. Two
+diverge from this document's original proposed defaults — the project owner
+corrected the subscriber model and expanded the category/event scope beyond
+"admin test-send only":
 
-| Question | Proposed default | Rationale |
+| Question | Confirmed decision | Rationale |
 | --- | --- | --- |
-| Anonymous vs. authenticated subscriptions | Authenticated only (admin/volunteer accounts) | The issue scopes this to admin test-sends only; there's no public broadcast feature to justify anonymous subscriptions yet |
+| Anonymous vs. authenticated subscriptions | **Anonymous, public.** Any visitor can subscribe, no account needed | Corrected from this document's original "authenticated only" proposal: "administrator-only" in the issue describes who can *send* (the admin test-send button), not who can *subscribe*. #941 ships only the admin test-send, not a public composer (#942 still owns that), but restricting subscriptions to staff accounts would leave #942 nothing to eventually broadcast to |
 | Account vs. device scope | Per-device | A push subscription is inherently tied to a browser/device endpoint; per-account fan-out to all of a user's devices can be layered on later without a schema change |
-| Categories/defaults | Single category ("system test"), default off | Matches "administrator-only test notification"; no per-event categories exist to subscribe to yet |
-| Event-specific subscriptions | Not implemented in this phase | No event-scoped notification content exists yet to subscribe to |
-| Retention | Subscription rows retained until explicit unsubscribe or a 404/410 push response retires them | Matches the issue's own "retire subscriptions on 404/410" requirement; avoids inventing a separate TTL |
-| Browser/iOS expectations | Document that iOS Safari requires the PWA to be installed to the home screen for Web Push (a platform constraint, not a choice) | Factual constraint, not a design decision |
-| Future Android boundary | Out of scope — the existing native Android app has its own notification channel | Avoids conflating browser push with the native app's FCM/notification path |
-| GDPR/privacy consent language | Draft copy to be reviewed against `privacyPolicy.ts` and the site's actual legal basis before shipping | This is a legal/policy judgment call this document should not make unilaterally |
+| Categories/defaults | **Multi-category schema, built now** (not the originally-proposed single "system test" category) | Owner chose to build real category support upfront rather than a single-category placeholder, to avoid a second migration when #942 needs categories |
+| Event-specific subscriptions | **Built now** (not deferred, as originally proposed) | Owner chose to add event-scoping to the subscription model in this phase rather than waiting for #942 to need it |
+| Retention | Subscription rows retained until explicit unsubscribe or a 404/410 push response retires them, **plus a time-based expiry sweep** (auto-retire subscriptions with no successful delivery in N months) for accounts that go stale without the push service ever reporting it (e.g. browser data cleared) | Matches the issue's "retire subscriptions on 404/410" requirement as the primary path, with the sweep as a documented addition covering the gap that mechanism can't see |
+| Browser/iOS expectations | Confirmed: iOS Safari requires the PWA installed to the home screen for Web Push (a platform constraint, not a choice) | Factual constraint, not a design decision |
+| Future Android boundary | Confirmed out of scope — the existing native Android app is a volunteer/staff-only tool (check-in scanning) with its own notification channel, unrelated to this public-facing web-push feature | Avoids conflating browser push with the native app's FCM/notification path |
+| GDPR/privacy consent language | Claude drafts consent copy during implementation, matching the existing `privacyPolicy.ts` pattern (`privacy_camera_title`/`privacy_camera_content`); project owner reviews and approves before shipping | Anonymous public subscriptions (see above) make this copy load-bearing, not optional — still not something to finalize unilaterally, but drafting a reviewable starting point is more useful than leaving it a placeholder |
 
 ## What remains before #941 can be implemented
 
-1. Confirmation (or correction) of the defaults above from the project
-   owner.
-2. The Postgres-backed rate limiter from
-   [`docs/decisions/932-multi-worker-state.md`](./932-multi-worker-state.md),
-   at least for the subscription-mutation and test-send endpoints (or an
-   explicit acceptance of single-worker deployment for that low-volume path
-   in the interim).
+1. ~~Confirmation (or correction) of the defaults above from the project
+   owner.~~ Done — see "confirmed 2026-09-07" above.
+2. Rate limiting for the subscription-mutation endpoints
+   (subscribe/unsubscribe): now that subscriptions are anonymous and public
+   (corrected above), these are public unauthenticated write endpoints in
+   the same abuse-sensitive category check-in's own limiter covers per
+   [`docs/decisions/932-multi-worker-state.md`](./932-multi-worker-state.md)
+   decision 1 — implementation should extend `check_rate_limit_pg` to a new
+   scope for them rather than the in-process `check_rate_limit`, since #932
+   already shipped the Postgres-backed counter. The admin test-send endpoint
+   is lower-volume and authenticated; the in-process limiter is an
+   acceptable choice there, consistent with #932's own narrower scope.
 3. Actual GDPR/consent copy, reviewed the same way `privacy_camera_title` /
-   `privacy_camera_content` were added to `privacyPolicy.ts`.
+   `privacy_camera_content` were added to `privacyPolicy.ts` — Claude drafts
+   during implementation, project owner reviews (see table above).
 
 ## References
 

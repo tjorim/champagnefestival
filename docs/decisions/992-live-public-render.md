@@ -1,12 +1,13 @@
 # Live backend rendering of `/` and `/privacy`
 
-**Status:** Templating approach and cache strategy proposed, pending owner
-confirmation before implementation starts. Decision 2's `#932` dependency
-shipped 2026-09-07 (`docs/decisions/932-multi-worker-state.md`), so the
-Postgres `LISTEN`/`NOTIFY` bus this document's proactive-invalidation step
-needs already exists — that step is no longer blocked, only still
-unimplemented pending this document's own confirmation.
-**Date:** 2026-09-06
+**Status:** Decided — the project owner confirmed decisions 1 and 2 on
+2026-09-07: marker replacement with a hand-rolled escaping helper (no new
+dependency), and — since #932's bus already exists — proactive `NOTIFY`-based
+invalidation ships together with the TTL cache in the same change, not as a
+deferred follow-up. Decisions 3 and 4 (JSON-LD ownership, no pixel-match) and
+the infra companion requirement proceed as originally proposed below, not
+separately re-litigated. Ready to implement.
+**Date:** 2026-09-06 (confirmed 2026-09-07)
 **Issues:** [#992](https://github.com/tjorim/champagnefestival/issues/992)
 (primary); [#936](https://github.com/tjorim/champagnefestival/issues/936)
 (superseded parent — its "S" part shipped in PR #990, this document covers the
@@ -41,8 +42,8 @@ defaults, flagged for confirmation rather than treated as settled.
 
 ## Decision 1 — inject into the built shell; no template engine owns the document
 
-**Proposed: marker replacement into `index.html` as built by Vite, with
-per-fragment autoescaping. No Jinja2.**
+**Confirmed 2026-09-07: marker replacement into `index.html` as built by Vite,
+with per-fragment autoescaping. No Jinja2.**
 
 The tempting FastAPI-idiomatic answer is Jinja2, and it is the wrong shape
 here. The document being served is a *build artifact*: `frontend/index.html`
@@ -94,10 +95,14 @@ rendered surface ever grows past these two routes; not worth it for them.
 Jinja2-for-fragments is the fallback pick and nothing else in this document
 changes.**
 
-## Decision 2 — a short TTL is the correctness floor; proactive invalidation is an optimisation on top
+## Decision 2 — a short TTL is the correctness floor; proactive invalidation ships alongside it
 
-**Proposed: a 60-second in-process TTL cache with a last-known-good fallback,
-and no proactive invalidation until #932's `LISTEN`/`NOTIFY` bus exists.**
+**Confirmed 2026-09-07: a 60-second in-process TTL cache with a last-known-good
+fallback, plus `NOTIFY`-based proactive invalidation, built together in this
+change.** This corrects the original proposal below, which suggested
+deferring invalidation as a follow-up — the project owner chose to build both
+now since #932's `LISTEN`/`NOTIFY` bus already exists (shipped 2026-09-07),
+rather than shipping a TTL-only cache and reopening this decision later.
 
 This is the question with a dependency the issue did not draw out. #992
 suggests invalidating proactively on the relevant admin mutations. That works
@@ -108,7 +113,9 @@ cache, and every other worker keeps serving stale HTML with nothing to correct
 it. Proactive invalidation would be a correctness regression the moment #932
 ships, and a silent one.
 
-The ordering that survives both states:
+The ordering that survives both states — both pieces below ship in this same
+change, since #932's bus already exists; the reasoning is kept because it's
+still what makes the combination correct, not just a rollout plan:
 
 - **TTL first, always.** A 60-second expiry bounds staleness regardless of how
   many workers run, and satisfies #992's acceptance criterion ("reflected on
@@ -120,11 +127,11 @@ The ordering that survives both states:
   per worker per minute and nothing else. This distinction is worth stating
   explicitly so a future reader of #932 doesn't sweep this cache up with the
   state that genuinely has to move.
-- **Proactive invalidation later, over `NOTIFY`.** Once #932's Postgres
-  `LISTEN`/`NOTIFY` bus is in place, a publish on FAQ/edition/policy mutation
-  reaches *every* worker, and the TTL becomes a backstop rather than the only
-  mechanism. That is the point at which proactive invalidation is safe, and it
-  arrives as a latency improvement on a design that was already correct.
+- **Proactive invalidation over `NOTIFY`, on top.** #932's Postgres
+  `LISTEN`/`NOTIFY` bus already reaches every worker, so a publish on
+  FAQ/edition/policy mutation is safe from the correctness regression
+  described above from day one — no single-worker-only interim to pass
+  through, so there is no reason to withhold it as a separate follow-up.
 - **Never proactive-only.** Even with `NOTIFY`, the TTL stays, so a dropped
   notification degrades to one minute of staleness instead of unbounded.
 
@@ -143,8 +150,9 @@ TTL, and the `?lng=` query parameter is part of the cache key on both sides
 
 ## Decision 3 — the backend owns JSON-LD for these two routes; a fixture keeps both sides honest
 
-**Proposed: the server-rendered JSON-LD is the one a crawler sees; the client
-component stops emitting a duplicate when one is already present.**
+**Confirmed 2026-09-07, proceeding as originally proposed: the server-rendered
+JSON-LD is the one a crawler sees; the client component stops emitting a
+duplicate when one is already present.**
 
 #992 flags that `frontend/src/components/JsonLd.tsx` (TypeScript) and a new
 backend builder (Python) cannot share an implementation. There is a concrete
@@ -165,9 +173,9 @@ type="application/ld+json">` on mount, so once the backend renders one into
 
 ## Decision 4 — equivalent content, not a pixel match
 
-**Proposed: server-rendered FAQ/schedule markup targets crawler-visible text
-and a non-embarrassing no-JS page, and is allowed to be replaced wholesale
-when React mounts.**
+**Confirmed 2026-09-07, proceeding as originally proposed: server-rendered
+FAQ/schedule markup targets crawler-visible text and a non-embarrassing no-JS
+page, and is allowed to be replaced wholesale when React mounts.**
 
 #992's third open question asks whether the server markup must closely match
 the client render to avoid a flash. Proposed answer: no, and the reasoning is
@@ -218,18 +226,25 @@ here" is the decision.
 
 ## What remains before implementation starts
 
-1. Confirmation of Decision 1's no-new-dependency approach, or a preference
-   for Jinja2-for-fragments instead.
-2. Confirmation of the 60-second TTL, and of deferring proactive invalidation
-   behind #932 rather than shipping it now against a single worker.
-3. Agreement that the frontend `index.html` gains inert `<!--ssr:*-->` markers
-   — a small change to a file the backend otherwise never touches.
+All decisions above are confirmed as of 2026-09-07. What's left is
+implementation:
+
+1. ~~Confirmation of Decision 1's no-new-dependency approach~~ — done,
+   marker replacement, no Jinja2.
+2. ~~Confirmation of the 60-second TTL and the invalidation-timing
+   question~~ — done, TTL and proactive `NOTIFY` invalidation ship together.
+3. Add the inert `<!--ssr:*-->` markers to the frontend `index.html` — a
+   small change to a file the backend otherwise never touches.
 4. A companion change in `tjorim/apps`: the exact-path `handle` for `/` and
    `/privacy`, **and** the read-only mount of the built frontend into the API
-   container. Both land there, not in this repository.
-5. Once confirmed: implement the two route handlers, the fragment builder and
-   its escaping helper, the shared JSON-LD fixture and its two contract tests,
-   the client-side duplicate-suppression in `JsonLd.tsx`, and update
+   container. Both land there, not in this repository — same cross-repo
+   pattern #934's `tjorim/apps#192` already established.
+5. Implement the two route handlers, the fragment builder and its escaping
+   helper, the shared JSON-LD fixture and its two contract tests, the
+   `NOTIFY`-driven proactive invalidation on its own channel (not overloading
+   `live_events` — see the cross-cutting note in
+   [`932-multi-worker-state.md`](932-multi-worker-state.md)), the
+   client-side duplicate-suppression in `JsonLd.tsx`, and update
    `docs/product-audit-2026-08.md`'s #992 row per `AGENTS.md`.
 
 ## References
