@@ -24,6 +24,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.models import Edition, Event, Registration
 from app.schemas import EventCreate, EventUpdate
+from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import event_to_summary_dict, get_or_404, make_id
 
 
@@ -163,6 +164,7 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         request_id=request_id,
         details={"title": event.title, "edition_id": event.edition_id},
     )
+    await notify_render_cache_invalidate(db)
     await db.commit()
     event = await get_event_or_404(db, event.id)
     return event_to_summary_dict(event, include_edition=True)
@@ -224,6 +226,7 @@ async def apply_event_update(
         request_id=request_id,
         details={"fields_changed": sorted(body.model_fields_set)},
     )
+    await notify_render_cache_invalidate(db)
     await db.commit()
     event = await get_event_or_404(db, event.id)
     return event_to_summary_dict(event, include_edition=True)
@@ -242,5 +245,6 @@ async def delete_event(db: AsyncSession, event: Event, *, actor: str, request_id
         request_id=request_id,
         details={},
     )
+    await notify_render_cache_invalidate(db)
     await db.commit()
     return {"deleted": True, "id": event_id}

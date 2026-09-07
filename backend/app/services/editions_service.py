@@ -21,7 +21,7 @@ boundary (see ``app.mcp.utils.as_value_error``).
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -32,6 +32,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.models import Edition, Event, Exhibitor, Venue
 from app.schemas import EditionCreate, EditionType, EditionUpdate
+from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
 
 logger = logging.getLogger(__name__)
@@ -223,6 +224,24 @@ def edition_end_date(events: list[Event]) -> date | None:
     return events[-1].date if events else None
 
 
+async def find_active_edition(db: AsyncSession, *, edition_type: EditionType | None = None) -> Edition | None:
+    """The current or next upcoming active edition, or ``None`` — never raises.
+
+    Shared by ``app.routers.editions.get_active_edition`` (404s on ``None``)
+    and ``app.routers.public_pages`` (renders without a hero/JSON-LD section
+    on ``None`` instead — see #992's "never advertise a fake event").
+    """
+    editions = await load_editions(db, include_inactive=False, edition_type=edition_type)
+    if not editions:
+        return None
+    today = datetime.now(UTC).date()
+    dated = sorted_editions(editions, active_only=True)
+    return next(
+        (edition for edition in dated if (end_date := edition_end_date(active_events(edition))) and end_date >= today),
+        None,
+    )
+
+
 def sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Edition]:
     def sort_key(edition: Edition) -> tuple:
         events = active_events(edition) if active_only else edition.events
@@ -346,6 +365,7 @@ async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, r
         request_id=request_id,
         details=details,
     )
+    await notify_render_cache_invalidate(db)
     await commit_or_conflict(db)
     edition = await get_edition_or_404(db, edition.id)
     return await edition_payload(db, edition, active_only=False)
@@ -420,6 +440,7 @@ async def apply_edition_update(
         request_id=request_id,
         details=details,
     )
+    await notify_render_cache_invalidate(db)
     await commit_or_conflict(db)
     edition = await get_edition_or_404(db, edition.id)
     return await edition_payload(db, edition, active_only=False)
@@ -437,5 +458,6 @@ async def delete_edition(db: AsyncSession, edition: Edition, *, actor: str, requ
         request_id=request_id,
         details={},
     )
+    await notify_render_cache_invalidate(db)
     await db.commit()
     return {"deleted": True, "id": edition_id}

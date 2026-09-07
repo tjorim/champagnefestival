@@ -1,0 +1,13 @@
+{
+  "year": 2027,
+  "dates": ["2027-03-19", "2027-03-20", "2027-03-21"],
+  "venue": {
+    "name": "Kursaal Oostende",
+    "address": "Monacoplein 24",
+    "city": "Oostende",
+    "postal_code": "8400",
+    "country": "Belgium",
+    "lat": 51.2298,
+    "lng": 2.9203
+  }
+}

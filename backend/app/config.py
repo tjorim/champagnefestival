@@ -184,6 +184,24 @@ class Settings(BaseSettings):
     covers accounts that go stale without the push service ever reporting
     it (e.g. browser data cleared). See docs/decisions/941-web-push-foundation.md."""
 
+    # --- Public page rendering (#992) ---
+    public_url: str = "https://champagnefestival.tjor.im"
+    """The deployed site's canonical origin, no trailing slash — shares its
+    source of truth with `frontend/.env.production`'s `VITE_PUBLIC_URL`
+    (frontend/src/config/site.ts's own comment explains why that one exists);
+    duplicated here because this process cannot read a Vite env file. Used
+    for og:url/twitter:url/canonical rewriting and JSON-LD absolute URLs."""
+    frontend_dist_path: str = "../frontend/dist"
+    """Directory containing the built frontend (`index.html` plus its hashed
+    assets) that `GET /` and `GET /privacy` inject server-rendered content
+    into. In production this is a read-only bind mount of the same directory
+    Caddy serves the rest of the SPA from — see
+    docs/decisions/992-live-public-render.md's infra companion requirement.
+    The default assumes a sibling checkout, matching this repo's layout for
+    local `uv run uvicorn`. A missing or unbuilt directory makes both routes
+    404 rather than crash, so backend tests and development work without a
+    prior `pnpm build`."""
+
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
     recaptcha_secret: str = ""
     """Google reCAPTCHA v2/v3 secret key.

@@ -27,6 +27,7 @@ from app.audit import write_audit_entry
 from app.models import Policy, PolicyVersion
 from app.schemas import PolicyDraftCreate, PolicyDraftUpdate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
+from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import make_id
 
 _LOCALE_FIELDS = ("content_nl", "content_en", "content_fr")
@@ -263,6 +264,10 @@ async def publish_draft(db: AsyncSession, *, actor: str, policy_key: str, reques
             "superseded_version_number": superseded_version_number,
         },
     )
+    # Only publish invalidates GET /privacy's render (#992) — draft edits
+    # aren't publicly visible yet, so invalidating on every draft save would
+    # be pure waste.
+    await notify_render_cache_invalidate(db)
     await db.commit()
     await db.refresh(draft)
     return _version_to_dict(draft)

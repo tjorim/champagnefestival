@@ -4,12 +4,32 @@ import { getLocale } from "@/paraglide/runtime";
 import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
 import { baseUrl } from "@/config/site";
 
+/** Marks the JSON-LD <script> the backend renders into <head> for GET / (#992,
+ * docs/decisions/992-live-public-render.md decision 3) — kept in sync with
+ * backend/app/services/public_render.py's json_ld_script. */
+const SSR_JSON_LD_SELECTOR = 'script[data-ssr-jsonld="true"]';
+
 /**
  * Renders JSON-LD structured data for the active festival edition. Renders nothing
- * when there's no active/upcoming edition, so it never advertises a fake event.
+ * when there's no active/upcoming edition, so it never advertises a fake event —
+ * and nothing when the backend already rendered one into <head> on this page
+ * load, so a crawler never sees two conflicting Event objects.
+ *
+ * Known limitation, accepted deliberately: the SSR marker is checked once
+ * per mount and never cleared, so a visitor who navigates away from `/` and
+ * back via client-side routing (no full page load) keeps seeing the
+ * original server-rendered JSON-LD even if the edition data has since
+ * changed. This is invisible metadata with no effect on what a visitor
+ * actually sees, and crawlers — the audience this data is for — always
+ * fetch `/` fresh rather than navigating client-side, so they never hit
+ * this path. Revisit only if that stops being true.
  */
 const EventStructuredData: React.FC = () => {
   const { edition, hasEdition } = useActiveEdition();
+
+  if (document.querySelector(SSR_JSON_LD_SELECTOR)) {
+    return null;
+  }
 
   if (!hasEdition) {
     return null;

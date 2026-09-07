@@ -37,21 +37,7 @@ async def get_active_edition(
     event neither keeps an otherwise-finished edition classified as upcoming, nor
     appears in the response.
     """
-    editions = await editions_service.load_editions(db, include_inactive=False, edition_type=edition_type)
-    if not editions:
-        raise HTTPException(status_code=404, detail="No active editions found.")
-
-    today = datetime.now(UTC).date()
-    dated = editions_service.sorted_editions(editions, active_only=True)
-    active = next(
-        (
-            edition
-            for edition in dated
-            if (edition_end_date := editions_service.edition_end_date(editions_service.active_events(edition)))
-            and edition_end_date >= today
-        ),
-        None,
-    )
+    active = await editions_service.find_active_edition(db, edition_type=edition_type)
     if active is None:
         raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
     return await editions_service.edition_payload(db, active, active_only=True)

@@ -11,10 +11,12 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 import app.ratelimit as ratelimit_module
+import app.routers.public_pages as public_pages_module
 from app.auth import get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
+from app.services.public_render_cache import public_render_cache
 from app.services.users_service import get_or_create_user
 from app.visitor_session import get_current_user
 
@@ -44,6 +46,20 @@ def reset_rate_limiter(monkeypatch):
 def reset_general_rate_limiter():
     """Reset the general slowapi rate limiter's storage before every test for isolation."""
     app.state.limiter.reset()
+
+
+@pytest.fixture(autouse=True)
+def reset_public_render_cache():
+    """Reset the #992 render cache and shell-file cache before every test.
+
+    Both are process-global singletons (see app.services.public_render_cache
+    and app.routers.public_pages._shell_cache); without a reset, a test that
+    changes settings.frontend_dist_path or seeds different FAQ/edition data
+    could see another test's cached render instead of its own.
+    """
+    public_render_cache.invalidate()
+    public_pages_module._shell_cache._content = None
+    public_pages_module._shell_cache._mtime = None
 
 
 def _assert_test_database_url(url: str) -> None:
@@ -97,6 +113,17 @@ async def pg_live_listener(engine):
     lifespan, so it's started here instead, once per test session.
     """
     from app.live.listener import pg_live_listener as listener
+
+    await listener.start(TEST_DATABASE_URL)
+    yield
+    await listener.stop()
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def pg_render_cache_listener(engine):
+    """Run the real #992 render-cache invalidation LISTEN relay for the whole
+    test session — same rationale as ``pg_live_listener`` above."""
+    from app.live.render_cache_listener import pg_render_cache_listener as listener
 
     await listener.start(TEST_DATABASE_URL)
     yield
