@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import get_request_id
-from app.schemas import PersonCreate, PersonOut, PersonUpdate
+from app.schemas import PersonAdminSummaryOut, PersonCreate, PersonOut, PersonUpdate
 from app.services import members_service
 from app.utils import person_to_dict
 
@@ -39,7 +39,7 @@ async def create_member(
     return await members_service.create_member(db, body=body, actor=actor, request_id=request_id)
 
 
-@router.get("/{person_id}", response_model=PersonOut)
+@router.get("/{person_id}", response_model=PersonAdminSummaryOut)
 async def get_member(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     person = await members_service.get_member_or_404(db, person_id)
     return person_to_dict(person)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
+from app.audit import write_audit_entry
 from app.models import AuditEntry
 from tests.helpers import (
     ADMIN_HEADERS,
@@ -66,6 +67,50 @@ def test_audit_entry_model_has_required_fields():
     assert {"id", "timestamp", "actor", "action", "resource_type", "resource_id", "request_id", "details"} <= cols
 
 
+@pytest.mark.anyio
+async def test_write_audit_entry_auth_source_override_bypasses_provenance(db_session):
+    """An explicit auth_source must win over audit_provenance's inference.
+
+    Without this, an actor that is a client IP (no OIDC subject at all) falls
+    through audit_provenance's default branch and is mislabelled
+    auth_source="keycloak" — indistinguishable from a real staff action.
+    """
+    await write_audit_entry(
+        db_session,
+        actor="203.0.113.5",
+        action="check_in",
+        resource_type="registration",
+        resource_id="reg_test",
+        auth_source="token",
+    )
+    await db_session.commit()
+
+    entries = await _all_audit_entries(db_session)
+    entry = next(e for e in entries if e.resource_id == "reg_test")
+    assert entry.actor == "203.0.113.5"
+    assert entry.auth_source == "token"
+    assert entry.subject is None
+    assert entry.integration_client_id is None
+
+
+@pytest.mark.anyio
+async def test_write_audit_entry_without_auth_source_still_infers_it(db_session):
+    """Every other caller is unaffected — inference is still the default."""
+    await write_audit_entry(
+        db_session,
+        actor="integration:ic-1",
+        action="some_action",
+        resource_type="registration",
+        resource_id="reg_test_2",
+    )
+    await db_session.commit()
+
+    entries = await _all_audit_entries(db_session)
+    entry = next(e for e in entries if e.resource_id == "reg_test_2")
+    assert entry.auth_source == "integration"
+    assert entry.integration_client_id == "ic-1"
+
+
 # ---------------------------------------------------------------------------
 # Check-in audit entries
 # ---------------------------------------------------------------------------
@@ -94,6 +139,13 @@ async def test_check_in_writes_audit_entry(client, db_session):
     assert entry.resource_id == reg["id"]
     assert entry.actor  # non-empty
     assert entry.request_id is not None  # set by middleware
+    # Guest check-in has no OIDC subject — the actor is a client IP, not a
+    # real "keycloak" auth. Without an explicit auth_source, audit_provenance
+    # would silently mislabel it as "keycloak", which the 30-day IP-blanking
+    # sweep (docs/decisions/934-data-retention-and-erasure.md) relies on not
+    # happening: it would otherwise either blank real staff actions or never
+    # find this row.
+    assert entry.auth_source == "token"
 
 
 @pytest.mark.anyio

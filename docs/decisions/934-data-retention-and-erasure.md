@@ -1,17 +1,19 @@
 # Data retention schedule and anonymisation mechanism
 
-**Status:** Decided — the project owner confirmed every open window and scope
-question on 2026-09-06. Ready to implement; no question in this document is
-still waiting on an answer. The confirmed calls: identity fields anonymise
-**7 years** after a person's most recent event; volunteer NISS/eID is retained
-**indefinitely** (settled as the long-term policy, not an interim default);
-NISS/eID **read access is restricted** but **not encrypted at rest**; the
-**marketing opt-in ships as part of this work**; and audit-entry IPs are
-blanked at 30 days with no write-time hashing. Operational registration data
-(guest counts, orders, dates, tables) is retained indefinitely and is never
-deleted or anonymised away.
+**Status:** Implemented (2026-09-07) — see "Implemented" near the end for
+exactly what shipped and the one item deliberately left for the project
+owner (republishing the privacy policy). The confirmed calls this executed:
+identity fields anonymise **7 years** after a person's most recent event;
+volunteer NISS/eID is retained **indefinitely** (settled as the long-term
+policy, not an interim default); NISS/eID **read access is restricted** but
+**not encrypted at rest**; the **marketing opt-in shipped**; and audit-entry
+IPs are blanked at 30 days with no write-time hashing. Operational
+registration data (guest counts, orders, dates, tables) is retained
+indefinitely and is never deleted or anonymised away.
 **Date:** 2026-09-03 (updated 2026-09-06 — all remaining windows and scope
-questions confirmed by the project owner)
+questions confirmed by the project owner; updated 2026-09-07 — implemented,
+with a correction to "Scheduled sweeps" on how two of the three sweeps were
+actually delivered)
 **Issues:** [#934](https://github.com/tjorim/champagnefestival/issues/934)
 (primary, `needs-discussion`); [#923](https://github.com/tjorim/champagnefestival/issues/923)
 (contact form — complete, so the rights channel this document assumes now
@@ -135,40 +137,60 @@ the person."
 
 ## Scheduled sweeps
 
-Extend the existing worker loop (`backend/app/worker.py`), which already runs
-one time-boxed daily task (`cleanup_completed_jobs` for `outbox_jobs`), with
-the same `next_cleanup` pattern rather than introducing new scheduling
-infrastructure:
+**Correction on implementation, 2026-09-07:** this section originally
+proposed extending the in-process worker loop (`backend/app/worker.py`) for
+all three sweeps below, on the assumption that `idempotency_keys` cleanup
+didn't exist yet. That assumption was wrong — checking `tjorim/apps#177`
+(closed 2026-08-23) directly showed it does, and so does a
+`reservation_access_tokens` sweep, both as VPS-scheduled SQL jobs
+(`infra/scheduled-jobs/champagnefestival-purge-idempotency-keys.sql` /
+`-purge-reservation-access-tokens.sql` in `tjorim/apps`, on daily systemd
+timers), not as anything in this repo. `docs/retry-safety.md` already
+documented this for the idempotency case ("Production cleanup deletes
+expired rows daily under `tjorim/apps#177`; the application does not run a
+local cleanup scheduler") — this document's author simply hadn't checked
+before writing the sweep proposal below. Items 1 and 2 needed no backend
+change as a result. Item 3 (the only genuinely new sweep) follows the same
+established VPS-scheduled-SQL-job pattern instead of the in-process
+`next_cleanup` loop originally proposed for it, for consistency with 1 and 2
+rather than introducing a second, different scheduling mechanism for
+one-third of this list.
 
-1. `idempotency_keys` older than `IDEMPOTENCY_REPLAY_WINDOW` (72h) — this is
-   the sweep `idempotency.py`'s own docstring already claims exists
-   ("Production infrastructure removes older `idempotency_keys` rows
-   daily") but doesn't; this closes that gap and makes the docstring true.
-2. `reservation_access_tokens` where `expires_at < now()` — today this only
-   happens opportunistically inside `request_registration_access` right
-   before inserting a new token for the *same* email
-   (`registrations.py`, `delete(ReservationAccessToken).where(expires_at < now)`
-   scoped to that one write path); a real sweep catches every expired token,
-   not only ones whose email happens to request a new link.
-3. `audit_entries.actor` blanked to `""` where it currently holds an IP
-   (distinguishable via `auth_source` for the token-gated check-in path,
-   or a fixed prefix, chosen at implementation time) and `timestamp` is
-   older than 30 days.
+1. `idempotency_keys` older than `IDEMPOTENCY_REPLAY_WINDOW` (72h) — **already
+   done**, via `tjorim/apps#177`. `idempotency.py`'s docstring claiming a daily
+   production cleanup exists was accurate, not aspirational.
+2. `reservation_access_tokens` where `expires_at < now()` — **already done**,
+   also via `tjorim/apps#177` (with a 24-hour grace period past expiry for
+   operational diagnosis, a refinement on this document's original "at
+   `expires_at`" proposal, not a gap).
+3. `audit_entries.actor` blanked to `""` where it currently holds an IP and
+   `timestamp` is older than 30 days — **new**, implemented as a fourth VPS
+   job (`champagnefestival-redact-audit-entry-ips.sql` in `tjorim/apps#192`)
+   following the same pattern as 1 and 2. Distinguished from a real OIDC
+   subject via a new explicit `auth_source="token"` tag
+   (`write_audit_entry`'s `auth_source` parameter), passed by the check-in
+   router's two audit writes — `audit_provenance`'s existing inference had no
+   case for "client IP, no OIDC subject at all" and was silently mislabelling
+   these rows `auth_source="keycloak"`, which would have made this sweep
+   either blank real staff actions or miss its target entirely depending on
+   which way it was scoped.
 4. Person anonymisation (identity fields only — never `registrations`, see
    above, and never anyone with `national_register_number`/
    `eid_document_number` set — see the volunteer carve-out above) is **not**
-   proposed as part of this automated sweep. Unlike the three rows above,
-   "7 years since a person's last registration" is a low-frequency,
-   high-consequence operation on personal data; running it as an
-   admin-triggered action (surfacing which people are due, computed from
-   `MAX(events.date)` per person) is safer than a fully automatic run, at
-   least for the first implementation.
+   part of any automated sweep. Unlike the three rows above, "7 years since a
+   person's last registration" is a low-frequency, high-consequence operation
+   on personal data; it ships as `GET /api/people/due-for-anonymisation`
+   (surfacing candidates, computed from `MAX(events.date)` per person) plus
+   an admin-triggered `POST /api/people/{id}/anonymise`, safer than a fully
+   automatic run for a first implementation.
 
-Each new sweep gets its own retry-safety entry in `docs/retry-safety.md` per
-`AGENTS.md`, at implementation time — these are convergent deletes/blanks
-(repeating a sweep that finds nothing to do is a no-op), consistent with the
-"Deletes... natural resource key, convergent state only" entry already in that
-inventory.
+Item 3's retry-safety entry lives in `docs/retry-safety.md` as a VPS-scheduled
+job note, matching how items 1 and 2 are documented there rather than as a
+client-facing retry contract — nothing external retries a nightly sweep in
+the sense that inventory otherwise covers. The admin-triggered anonymisation
+endpoint (item 4) *is* a normal client-facing write and has its own inventory
+row: convergent, natural resource key, consistent with the "Deletes... natural
+resource key, convergent state only" entry already in that inventory.
 
 ## IP handling — confirmed
 
@@ -314,25 +336,49 @@ Every question this document raised was answered by the project owner on
 | Audit-entry IP addresses | **Blanked at 30 days**, no write-time hashing |
 | Marketing opt-in | **Ships as part of this work** — consent capture and the sweep carve-out only; no send channel |
 
-## What implementation covers
+## Implemented (2026-09-07)
 
 1. `people_service.anonymise_person`, with the volunteer refusal and the
-   marketing-consent carve-out described above.
-2. The three automated worker sweeps (`idempotency_keys` at 72h,
-   expired `reservation_access_tokens`, `audit_entries.actor` IP blanking at
-   30 days), plus the admin-triggered person-anonymisation action — kept
-   deliberately manual for its first implementation, per "Scheduled sweeps"
-   item 4.
-3. Restricting `national_register_number`/`eid_document_number` reads to the
-   volunteer insurance export path.
+   marketing-consent carve-out described above. Exposed as
+   `POST /api/people/{id}/anonymise` (admin-only), with
+   `GET /api/people/due-for-anonymisation` surfacing candidates — see
+   "Scheduled sweeps" item 4.
+2. The two pre-existing VPS-scheduled sweeps (`idempotency_keys`,
+   `reservation_access_tokens`) needed no change. The one new sweep
+   (`audit_entries.actor` IP blanking at 30 days) ships the same way, as a
+   third VPS job — see "Scheduled sweeps" above for the correction on how
+   this was actually delivered versus originally proposed. `write_audit_entry`
+   gained an explicit `auth_source` parameter and the check-in router's two
+   audit writes now pass `auth_source="token"`, without which the sweep could
+   not distinguish an IP from a real OIDC subject.
+3. `national_register_number`/`eid_document_number` removed from the generic
+   people/members **list and single-person reads** (REST `PersonSummaryOut`;
+   MCP `get_person`/`get_member`/`list_members`), both admin-only surfaces.
+   Create, update, and merge (REST and MCP) are unchanged and still return
+   them — those responses echo back data the caller just explicitly provided
+   or is actively verifying (a merge adopting an identity field from a
+   duplicate has existing, passing tests asserting exactly that), which is a
+   materially different exposure than a list an admin scrolls through for
+   unrelated reasons. `/api/volunteers` is unaffected either way — it already
+   has its own schema and was never the leak.
 4. `Person.marketing_opt_in` / `marketing_opt_in_at`, the unticked-by-default
-   registration consent control, and its consent copy in `nl`/`en`/`fr`.
-5. A `docs/retry-safety.md` entry for each new write, per `AGENTS.md`.
-6. Republishing the privacy policy through #944's admin editor, now that the
-   automated deletion/anonymisation pipeline its text stops short of claiming
-   will actually exist.
-7. Updating `docs/product-audit-2026-08.md`'s #934 row and "Completed or
-   superseded work" per that document's maintenance procedure.
+   registration consent checkbox and its copy in `nl`/`en`/`fr`, plus an
+   admin-only correction path via `PersonUpdate` (e.g. to process an opt-out
+   received through the contact form) that the registration form itself does
+   not expose.
+5. `docs/retry-safety.md` entries: the new admin anonymisation endpoint in the
+   main inventory, and the VPS-scheduled audit-IP job documented alongside
+   the pre-existing idempotency-key job's equivalent note.
+6. `docs/product-audit-2026-08.md`'s #934 row and "Completed or superseded
+   work", per that document's maintenance procedure.
+
+**Not done, and deliberately not attempted here:** republishing the privacy
+policy through #944's admin editor. Its current text was already tightened
+(2026-09-03, see the header above) to stop short of claiming a pipeline that
+didn't exist; now that one does, the policy's wording could be strengthened,
+but that is a legal-content edit for the project owner to make and publish
+through #944's editor themselves, not something this document's
+implementation should author unilaterally.
 
 ## References
 
@@ -344,14 +390,22 @@ Every question this document raised was answered by the project owner on
   policy publishing, shipped ahead of this document with tightened text per
   `docs/product-audit-2026-08.md`; the policy should be republished through
   its admin editor once this document's schedule is implemented
-- `docs/outbox-worker.md` — existing daily-sweep pattern this document
-  extends, and the line noting "Issue #934 may revise the window when the
-  broader retention schedule is approved"
-- `backend/app/services/idempotency.py` — replay window and the
-  currently-inaccurate "removed... daily" docstring claim
+- `docs/outbox-worker.md` — the daily in-process sweep pattern (`outbox_jobs`
+  cleanup) this document originally, mistakenly proposed extending for all
+  three sweeps here; see "Scheduled sweeps" for the correction
+- [`tjorim/apps#177`](https://github.com/tjorim/apps/issues/177) — the
+  VPS-scheduled-SQL-job mechanism (closed 2026-08-23) that already covered
+  `idempotency_keys` and `reservation_access_tokens` cleanup before this work,
+  and that the new audit-IP job extends
+- [`tjorim/apps#192`](https://github.com/tjorim/apps/pull/192) — the new
+  `champagnefestival-redact-audit-entry-ips` scheduled job
+- `backend/app/services/idempotency.py` — replay window; its "removed...
+  daily" docstring claim was accurate all along, contrary to this document's
+  original assumption
 - `backend/app/services/people_service.py` — `delete_person`/`merge_people`,
-  which `anonymise_person` would sit alongside
-- `docs/retry-safety.md` — inventory this document's future sweeps must join
+  which `anonymise_person` sits alongside
+- `docs/retry-safety.md` — inventory the new anonymisation endpoint and
+  audit-IP job joined
 - [#1006](https://github.com/tjorim/champagnefestival/issues/1006) — volunteer
   self-service NISS/eID access and eID staleness, filed out of this
   document's scope, not resolved by it

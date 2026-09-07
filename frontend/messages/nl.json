@@ -907,5 +907,7 @@
   "admin_policy_markdown_italic_placeholder": "cursieve tekst",
   "admin_policy_markdown_heading_placeholder": "Kop",
   "admin_policy_markdown_link_placeholder": "linktekst",
-  "admin_policy_markdown_list_placeholder": "Lijstitem"
+  "admin_policy_markdown_list_placeholder": "Lijstitem",
+  "registration_marketing_opt_in": "Houd me op de hoogte van toekomstige edities",
+  "registration_marketing_opt_in_help": "Optioneel en standaard niet aangevinkt — we gebruiken dit enkel om je af en toe te mailen over een nieuwe editie, nooit voor iets anders."
 }

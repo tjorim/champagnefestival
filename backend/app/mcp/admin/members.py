@@ -17,7 +17,7 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import members_service
-from app.utils import person_to_dict
+from app.utils import person_summary_dict
 
 
 async def create_member(
@@ -63,7 +63,7 @@ async def get_member(session_factory: Any, person_id: str) -> dict:
             person = await members_service.get_member_or_404(db, person_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return person_to_dict(person)
+        return person_summary_dict(person)
 
 
 async def list_members(session_factory: Any, q: str | None = None, active: bool | None = None) -> dict:
@@ -71,7 +71,7 @@ async def list_members(session_factory: Any, q: str | None = None, active: bool 
         stmt = members_service.search_members_stmt(q=q, active=active)
         result = await db.execute(stmt)
         rows = result.scalars().all()
-        return {"members": [person_to_dict(p) for p in rows]}
+        return {"members": [person_summary_dict(p) for p in rows]}
 
 
 async def update_member(

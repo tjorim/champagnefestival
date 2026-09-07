@@ -173,3 +173,19 @@ async def test_delete_member_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
         await mcp_members.delete_member(factory, "admin-1", "nonexistent")
+
+
+async def test_get_and_list_member_omit_identity_fields(db_session):
+    factory = mcp_session_factory(db_session)
+
+    created = await mcp_members.create_member(
+        factory, "admin-1", name="Dana", national_register_number="85010199997"
+    )
+    assert created["national_register_number"] == "85010199997"
+
+    fetched = await mcp_members.get_member(factory, created["id"])
+    assert "national_register_number" not in fetched
+
+    listed = await mcp_members.list_members(factory)
+    dana = next(m for m in listed["members"] if m["id"] == created["id"])
+    assert "national_register_number" not in dana

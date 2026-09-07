@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.live import live_bus
-from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
+from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration, _registration_body
 
 # ---------------------------------------------------------------------------
 # People (admin)
@@ -789,3 +789,192 @@ async def test_members_are_paginated_via_people_role_filter(client):
     assert all_response.status_code == 200
     all_ids = {row["id"] for row in all_response.json()["items"]}
     assert created_ids <= all_ids
+
+
+# ---------------------------------------------------------------------------
+# Anonymisation (#934)
+# ---------------------------------------------------------------------------
+
+VOLUNTEER_PAYLOAD = {
+    "name": "Bram Peeters",
+    "address": "Kerkstraat 5",
+    "national_register_number": "85010112399",
+    "eid_document_number": "BEV445566",
+    "active": True,
+    "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": "2024-03-17"}],
+}
+
+
+@pytest.mark.anyio
+async def test_anonymise_refuses_person_with_national_register_number(client):
+    r = await client.post("/api/volunteers", json=VOLUNTEER_PAYLOAD, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, r.text
+    volunteer_id = r.json()["id"]
+
+    r = await client.post(f"/api/people/{volunteer_id}/anonymise", headers=ADMIN_HEADERS)
+    assert r.status_code == 409
+
+    # Unchanged.
+    r = await client.get(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.json()["name"] == "Bram Peeters"
+
+
+@pytest.mark.anyio
+async def test_anonymise_person_blanks_identity_fields_and_keeps_registrations(client):
+    event = await _create_event(client)
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(event, name="Elke Van Damme", email="elke@example.com", phone="+32470000111"),
+    )
+    assert r.status_code == 201, r.text
+    reg = r.json()
+    person_id = reg["person_id"]
+
+    r = await client.post(f"/api/people/{person_id}/anonymise", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["name"] == f"Guest #{person_id[-6:]}"
+    assert body["email"] == ""
+    assert body["phone"] == ""
+    assert body["address"] == ""
+    assert body["notes"] == ""
+    assert body["active"] is False
+
+    # The registration itself — the operational/historical record — survives.
+    r = await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["guest_count"] == reg["guest_count"]
+
+
+@pytest.mark.anyio
+async def test_anonymise_person_keeps_email_when_marketing_opt_in(client):
+    r = await client.post(
+        "/api/people",
+        json={"name": "Opted In Person", "email": "opted@example.com", "phone": "+32470000222"},
+        headers=ADMIN_HEADERS,
+    )
+    person_id = r.json()["id"]
+    r = await client.put(
+        f"/api/people/{person_id}",
+        json={"marketing_opt_in": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert r.json()["marketing_opt_in"] is True
+
+    r = await client.post(f"/api/people/{person_id}/anonymise", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["email"] == "opted@example.com"
+    assert body["marketing_opt_in"] is True
+    # The other identity fields are still blanked — opting in only preserves
+    # email/consent, not the rest of the record.
+    assert body["phone"] == ""
+    assert body["address"] == ""
+
+
+@pytest.mark.anyio
+async def test_anonymise_person_is_idempotent(client):
+    r = await client.post(
+        "/api/people",
+        json={"name": "Repeat Anonymise", "email": "repeat@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    person_id = r.json()["id"]
+
+    first = await client.post(f"/api/people/{person_id}/anonymise", headers=ADMIN_HEADERS)
+    assert first.status_code == 200
+    second = await client.post(f"/api/people/{person_id}/anonymise", headers=ADMIN_HEADERS)
+    assert second.status_code == 200
+    assert first.json()["name"] == second.json()["name"]
+
+
+@pytest.mark.anyio
+async def test_marketing_opt_in_admin_correction_sets_and_clears_timestamp(client):
+    r = await client.post(
+        "/api/people",
+        json={"name": "Consent Test", "email": "consent@example.com"},
+        headers=ADMIN_HEADERS,
+    )
+    person_id = r.json()["id"]
+    assert r.json()["marketing_opt_in"] is False
+    assert r.json()["marketing_opt_in_at"] is None
+
+    r = await client.put(f"/api/people/{person_id}", json={"marketing_opt_in": True}, headers=ADMIN_HEADERS)
+    assert r.json()["marketing_opt_in"] is True
+    assert r.json()["marketing_opt_in_at"] is not None
+
+    r = await client.put(f"/api/people/{person_id}", json={"marketing_opt_in": False}, headers=ADMIN_HEADERS)
+    assert r.json()["marketing_opt_in"] is False
+    assert r.json()["marketing_opt_in_at"] is None
+
+
+@pytest.mark.anyio
+async def test_due_for_anonymisation_excludes_volunteers_and_recent_registrations(client):
+    # Public registration creation rejects a past-dated event outright, but a
+    # registration made 7+ years ago was created when its event was still
+    # upcoming — the event date only moved into the past afterwards, with
+    # time. Register normally against a future date, then backdate the event
+    # the same way years of elapsed time would, via the admin update path.
+    # Different edition_type so creating the second doesn't trip the "one
+    # active edition per type" invariant (#832) and silently deactivate the
+    # first — both editions need to stay active simultaneously here.
+    old_event = await _create_event(client, edition_id="edition-old", edition_type="festival", date="2099-06-01")
+    recent_event = await _create_event(client, edition_id="edition-recent", edition_type="bourse", date="2099-01-01")
+
+    old_r = await client.post(
+        "/api/registrations",
+        json=_registration_body(old_event, name="Due Person", email="due@example.com", phone="+32470000333"),
+    )
+    assert old_r.status_code == 201, old_r.text
+    due_person_id = old_r.json()["person_id"]
+
+    recent_r = await client.post(
+        "/api/registrations",
+        json=_registration_body(recent_event, name="Not Due Person", email="notdue@example.com", phone="+32470000444"),
+    )
+    assert recent_r.status_code == 201, recent_r.text
+    not_due_person_id = recent_r.json()["person_id"]
+
+    volunteer_r = await client.post(
+        "/api/volunteers",
+        json={**VOLUNTEER_PAYLOAD, "name": "Old Volunteer"},
+        headers=ADMIN_HEADERS,
+    )
+    volunteer_id = volunteer_r.json()["id"]
+    await client.post(
+        "/api/registrations",
+        json=_registration_body(old_event, name="Old Volunteer", email="oldvol@example.com", phone="+32470000555"),
+    )
+
+    r = await client.put(f"/api/events/{old_event['id']}", json={"date": "2010-01-01"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+
+    r = await client.get("/api/people/due-for-anonymisation", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    due_ids = {p["id"] for p in r.json()}
+    assert due_person_id in due_ids
+    assert not_due_person_id not in due_ids
+    assert volunteer_id not in due_ids
+
+
+@pytest.mark.anyio
+async def test_national_register_number_hidden_from_list_and_single_get_but_visible_elsewhere(client):
+    r = await client.post("/api/volunteers", json=VOLUNTEER_PAYLOAD, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, r.text
+    volunteer_id = r.json()["id"]
+    assert "national_register_number" in r.json()  # create still shows it
+
+    # The generic people list and single-fetch must not render it.
+    r = await client.get("/api/people", params={"role": "volunteer"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert all("national_register_number" not in item for item in r.json()["items"])
+
+    r = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert "national_register_number" not in r.json()
+
+    # The dedicated volunteer endpoint is unaffected.
+    r = await client.get(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["national_register_number"] == "85010112399"

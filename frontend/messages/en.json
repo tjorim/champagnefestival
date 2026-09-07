@@ -907,5 +907,7 @@
   "admin_policy_markdown_italic_placeholder": "italic text",
   "admin_policy_markdown_heading_placeholder": "Heading",
   "admin_policy_markdown_link_placeholder": "link text",
-  "admin_policy_markdown_list_placeholder": "List item"
+  "admin_policy_markdown_list_placeholder": "List item",
+  "registration_marketing_opt_in": "Keep me informed about future editions",
+  "registration_marketing_opt_in_help": "Optional and unticked by default — we'll only use this to occasionally email you about a new edition, never for anything else."
 }

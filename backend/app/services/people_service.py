@@ -27,6 +27,7 @@ for REST, ``get_or_error`` for MCP) and passes it in for update/delete/merge.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import NoReturn
 
 import phonenumbers
@@ -204,6 +205,10 @@ async def apply_person_update(
     if body.roles is not None:
         person.roles = normalise_roles(body.roles)
 
+    if body.marketing_opt_in is not None and body.marketing_opt_in != person.marketing_opt_in:
+        person.marketing_opt_in = body.marketing_opt_in
+        person.marketing_opt_in_at = datetime.now(UTC) if body.marketing_opt_in else None
+
     await write_audit_entry(
         db,
         actor=actor,
@@ -218,6 +223,53 @@ async def apply_person_update(
     except IntegrityError:
         await db.rollback()
         raise_identity_conflict()
+    await db.refresh(person)
+    return person_to_dict(person)
+
+
+async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+    """Blank a person's identity fields in place, keeping their registrations.
+
+    See docs/decisions/934-data-retention-and-erasure.md for the retention
+    schedule this implements. Refuses anyone who currently or ever held the
+    volunteer role (identified by having a NISS/eID on file) — that
+    population's retention is settled as indefinite, and stripping their
+    identity would leave a NISS/eID that's useless for the insurance purpose
+    it's kept for. Someone with ``marketing_opt_in`` set keeps their `email`
+    and the opt-in fields; blanking those would silently revoke a still-active
+    consent the anonymisation window was never meant to touch.
+
+    Deterministic and safe to call again on an already-anonymised person: the
+    pseudonym is derived from the stable person ID, so a repeat produces the
+    same row rather than a second, different rewrite.
+
+    Does not touch ``registrations``, ``roles``, ``visits_per_month``, or
+    ``club_name`` — those are the operational/historical record this
+    anonymisation is deliberately scoped to leave alone.
+    """
+    if person.national_register_number or person.eid_document_number:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This person has a national register number or eID on file and cannot be anonymised.",
+        )
+
+    person.name = f"Guest #{person.id[-6:]}"
+    if not person.marketing_opt_in:
+        person.email = ""
+    person.phone = ""
+    person.address = ""
+    person.notes = ""
+    person.active = False
+
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="person_anonymised",
+        resource_type="person",
+        resource_id=person.id,
+        request_id=request_id,
+    )
+    await db.commit()
     await db.refresh(person)
     return person_to_dict(person)
 

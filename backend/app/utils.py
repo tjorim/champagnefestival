@@ -447,6 +447,24 @@ def person_to_dict(p: Person) -> dict:
         "club_name": p.club_name,
         "notes": p.notes,
         "active": p.active,
+        "marketing_opt_in": p.marketing_opt_in,
+        "marketing_opt_in_at": p.marketing_opt_in_at,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }
+
+
+_IDENTITY_FIELDS = ("national_register_number", "eid_document_number")
+
+
+def person_summary_dict(p: Person) -> dict:
+    """``person_to_dict`` without the volunteer-only NISS/eID fields.
+
+    For reads that browse or look up a person without editing or verifying
+    those specific fields — see ``PersonAdminSummaryOut`` in ``app.schemas`` for
+    the REST-side equivalent restriction and why create/update/merge don't
+    use this (docs/decisions/934-data-retention-and-erasure.md). MCP tools
+    return plain dicts with no response-model filtering, so this is applied
+    explicitly rather than relying on schema validation to drop the keys.
+    """
+    return {k: v for k, v in person_to_dict(p).items() if k not in _IDENTITY_FIELDS}

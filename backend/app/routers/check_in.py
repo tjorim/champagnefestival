@@ -119,6 +119,7 @@ async def post_check_in(
                 resource_id=r.id,
                 request_id=request_id,
                 details={"event_id": r.event_id},
+                auth_source="token",
             )
         if strap_newly_issued:
             await write_audit_entry(
@@ -129,6 +130,7 @@ async def post_check_in(
                 resource_id=r.id,
                 request_id=request_id,
                 details={"event_id": r.event_id},
+                auth_source="token",
             )
         await db.commit()
         await db.refresh(r)
