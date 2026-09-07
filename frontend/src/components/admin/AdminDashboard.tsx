@@ -13,6 +13,7 @@ import { ContentSection, EditionsSection } from "./ContentManagement";
 import FaqManagement from "./FaqManagement";
 import AnnouncementManagement from "./AnnouncementManagement";
 import PolicyManagement from "./PolicyManagement";
+import PushOptIn from "@/components/PushOptIn";
 import SettingsManagement from "./SettingsManagement";
 import ContactMessagesManagement from "./ContactMessagesManagement";
 import type { ItemDraft } from "./itemTypes";
@@ -658,7 +659,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <PolicyManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "settings" && (
-                  <SettingsManagement authHeaders={authHeaders} />
+                  <div className="d-flex flex-column gap-3">
+                    <SettingsManagement authHeaders={authHeaders} />
+                    <PushOptIn authHeaders={authHeaders} />
+                  </div>
                 )}
                 {canManageAdminSections && activeKey === "contact-messages" && (
                   <ContactMessagesManagement authHeaders={authHeaders} />

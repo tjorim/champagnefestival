@@ -163,6 +163,27 @@ class Settings(BaseSettings):
     outbox_lease_seconds: int = 300
     outbox_retention_days: int = 90
 
+    # --- Web Push (#941) ---
+    vapid_public_key: str = ""
+    """Base64url-encoded VAPID public key. Safe to expose to clients
+    (served by GET /api/push/vapid-public-key) — this is the *public* half."""
+    vapid_private_key: str = ""
+    """VAPID private key: a raw, base64url-encoded 32-byte string (not PEM —
+    py_vapid.Vapid.from_string only accepts a PEM *file path*, not PEM text,
+    for this setting). Deployment-managed secret, never exposed to any
+    client. Generate a pair with:
+    uv run python scripts/generate_vapid_keys.py"""
+    vapid_subject: str = ""
+    """Contact URI required by the Web Push protocol's VAPID claims — a
+    mailto: address or an https:// URL push services may contact if a
+    sender's traffic needs throttling. Web Push is disabled when
+    vapid_private_key, vapid_public_key, or vapid_subject is empty."""
+    push_subscription_expiry_days: int = 180
+    """Auto-retire a subscription after this many days with no successful
+    delivery, on top of explicit unsubscribe and 404/410 retirement —
+    covers accounts that go stale without the push service ever reporting
+    it (e.g. browser data cleared). See docs/decisions/941-web-push-foundation.md."""
+
     # --- TODO: reCAPTCHA (planned, not yet implemented) ---
     recaptcha_secret: str = ""
     """Google reCAPTCHA v2/v3 secret key.

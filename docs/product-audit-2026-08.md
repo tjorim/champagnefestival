@@ -95,23 +95,22 @@ below).
 
 ### Phase 4 — compliance and platform foundations
 
-#941 and #992 were `needs-discussion` pending owner confirmation; both were
-confirmed 2026-09-07 (see their decision docs) and are ready to implement.
-#953's backend and frontend session mechanism is implemented; one acceptance
-criterion (the public navigation entry) stays deliberately undone — see its
-row below.
+#992 was `needs-discussion` pending owner confirmation; confirmed 2026-09-07
+(see its decision doc) and ready to implement. #953's backend and frontend
+session mechanism is implemented; one acceptance criterion (the public
+navigation entry) stays deliberately undone — see its row below. #941 is
+complete — see **Completed or superseded work**.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions (complete — see **Completed or superseded work**). Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). Pre-implementation decisions confirmed 2026-09-07: subscriptions are anonymous and public (corrected from the doc's original authenticated-only proposal — "administrator-only" describes who can *send* a test push, not who can *subscribe*), per-device scope, multi-category and event-scoped subscriptions built now rather than deferred, retention via unsubscribe/404-410 plus a time-based expiry sweep, and Claude drafts GDPR consent copy for owner review during implementation. Ready to implement; still opt-in/admin-test-send only — no general broadcast composer (that's #942). | L |
-| 2 | #953 — visitor passwordless account and order history | Implemented 2026-09-07 per [`docs/decisions/953-visitor-passwordless-session.md`](decisions/953-visitor-passwordless-session.md), with one acceptance criterion deliberately left undone. `User.oidc_subject` is now nullable alongside a new `verified_email` (exactly one set, DB-enforced), backing a magic-link request/redeem/status/sign-out flow (`visitor_magic_links`, `visitor_sessions` — 7-day idle / 30-day hard-cap, `HttpOnly` cookie) that establishes the same `User` read paths `/api/me/*` already had for OIDC — `list_my_registrations`, the communication-preference endpoints, and `claim_my_registrations` now resolve the caller through either credential via a single `get_current_user` dependency structurally separate from `require_admin`/`require_volunteer` (never wired into either, so a visitor session cannot reach them). Redeeming a link immediately claims any currently-unowned registration matching the verified email, sharing `claim_unowned_registrations_for_email` with the pre-existing OIDC claim path rather than duplicating it. The frontend's pre-existing `/my-registrations` page (built for the one-shot guest lookup) now also auto-detects a returning visitor's session on load, so checking an order weeks later needs no fresh email, with a sign-out control and session-expiry display added. **Left undone, on purpose:** the public navigation entry stays off — advertising "My orders" before production transactional email delivery is verified end to end (per #953 and #924/#947's own gate) would be worse than not offering it — and the DB-stored privacy/account policy text (#944) hasn't been republished to describe the new session, the same kind of legal-content edit #934 left for the project owner rather than auto-editing. The old one-shot `POST /api/registrations/my/access` lookup stays in the backend, unused by this page now but not removed — a separate cleanup decision, not part of this scope. | L |
-| 3 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a routing change in `tjorim/apps`. Decisions confirmed 2026-09-07 in [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md): inject into the Vite-built shell through inert markers rather than adopting a template engine that would drift from the build artifact; a 60-second TTL with a last-known-good fallback as the correctness floor, with proactive `NOTIFY`-based invalidation built in the same change rather than deferred — since #932's bus already exists, there's no single-worker-only interim to wait out; the backend as the single JSON-LD source for these routes, with a shared fixture and contract tests on both sides; and equivalent, not pixel-matched, server markup. That document also surfaces an infra requirement #992 missed — the API container needs the built frontend mounted read-only, not just the Caddyfile route (a companion `tjorim/apps` change, same cross-repo pattern as #934's `tjorim/apps#192`). Ready to implement. Moved behind #953 on 2026-09-06 — see that row's note. | L |
+| 1 | #953 — visitor passwordless account and order history | Implemented 2026-09-07 per [`docs/decisions/953-visitor-passwordless-session.md`](decisions/953-visitor-passwordless-session.md), with one acceptance criterion deliberately left undone. `User.oidc_subject` is now nullable alongside a new `verified_email` (exactly one set, DB-enforced), backing a magic-link request/redeem/status/sign-out flow (`visitor_magic_links`, `visitor_sessions` — 7-day idle / 30-day hard-cap, `HttpOnly` cookie) that establishes the same `User` read paths `/api/me/*` already had for OIDC — `list_my_registrations`, the communication-preference endpoints, and `claim_my_registrations` now resolve the caller through either credential via a single `get_current_user` dependency structurally separate from `require_admin`/`require_volunteer` (never wired into either, so a visitor session cannot reach them). Redeeming a link immediately claims any currently-unowned registration matching the verified email, sharing `claim_unowned_registrations_for_email` with the pre-existing OIDC claim path rather than duplicating it. The frontend's pre-existing `/my-registrations` page (built for the one-shot guest lookup) now also auto-detects a returning visitor's session on load, so checking an order weeks later needs no fresh email, with a sign-out control and session-expiry display added. **Left undone, on purpose:** the public navigation entry stays off — advertising "My orders" before production transactional email delivery is verified end to end (per #953 and #924/#947's own gate) would be worse than not offering it — and the DB-stored privacy/account policy text (#944) hasn't been republished to describe the new session, the same kind of legal-content edit #934 left for the project owner rather than auto-editing. The old one-shot `POST /api/registrations/my/access` lookup stays in the backend, unused by this page now but not removed — a separate cleanup decision, not part of this scope. | L |
+| 2 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a routing change in `tjorim/apps`. Decisions confirmed 2026-09-07 in [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md): inject into the Vite-built shell through inert markers rather than adopting a template engine that would drift from the build artifact; a 60-second TTL with a last-known-good fallback as the correctness floor, with proactive `NOTIFY`-based invalidation built in the same change rather than deferred — since #932's bus already exists, there's no single-worker-only interim to wait out; the backend as the single JSON-LD source for these routes, with a shared fixture and contract tests on both sides; and equivalent, not pixel-matched, server markup. That document also surfaces an infra requirement #992 missed — the API container needs the built frontend mounted read-only, not just the Caddyfile route (a companion `tjorim/apps` change, same cross-repo pattern as #934's `tjorim/apps#192`). Ready to implement. Moved behind #953 on 2026-09-06 — see that row's note. | L |
 
 ### Phase 5 — central composer
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 4 | #942 — central announcement and push composer | **Blocked by #941 and #947; #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+| 3 | #942 — central announcement and push composer | **Blocked by #947 (complete); #941 is complete (see Completed or superseded work); #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
 
 ### Phase 6 — deferred visitor account
 
@@ -155,6 +154,7 @@ active preferred-order tables.
 | --- | --- | --- | --- | --- |
 | #932 | Completed | 2026-09-07 | #932, `docs/decisions/932-multi-worker-state.md` | Moved check-in's per-registration limit and shared-IP backstop (`app.ratelimit.check_check_in_rate_limit`) off the in-process deque onto a Postgres-backed fixed-window counter (`rate_limit_buckets`, one atomic `INSERT ... ON CONFLICT ... RETURNING`), swept daily by `app.worker` alongside the outbox cleanup; the remaining three `check_rate_limit` scopes (contact submission, registration create, registration access-request) stay in-process, an accepted narrower-than-module scope matching the decision doc's own text and given the same treatment as slowapi's blanket per-route limiter. Replaced the live bus's fire-and-forget post-commit `live_bus.publish` at all 22 call sites with a transactional `notify_live_event` (`SELECT pg_notify(...)`) issued before `db.commit()` on the same session, so publication is atomic with the mutation; a new `app.live.listener.PgLiveListener` (dedicated asyncpg LISTEN connection, reconnect with backoff, started/stopped from `app.main`'s lifespan) relays every notification — including a worker's own — into that worker's local `LiveBus`, so delivery is uniform across single- and multi-worker deployments. `GET /api/metrics` gained a `per_process: true` response field and a docstring caveat (decision 3, documented rather than fixed). `DEPLOYMENT.md` documents the interim single-worker constraint and its two remaining exceptions (slowapi's blanket limiter, the in-memory metrics collector). |
 | #934 | Completed | 2026-09-07 | #934, `docs/decisions/934-data-retention-and-erasure.md`, `tjorim/apps#192` | Added `people_service.anonymise_person` (blanks name/phone/address/notes, keeps email and consent for anyone with `marketing_opt_in`, refuses anyone with a NISS/eID on file since volunteer retention is indefinite by separate decision), exposed as admin-triggered `POST /api/people/{id}/anonymise` plus `GET /api/people/due-for-anonymisation` surfacing candidates by `MAX(events.date)` — never a fully automatic sweep. Restricted `national_register_number`/`eid_document_number` out of the generic people/members list and single-person reads (REST `PersonSummaryOut`; MCP `get_person`/`get_member`/`list_members`), leaving create/update/merge and `/api/volunteers` unchanged since those already show the caller data they just provided or are actively verifying, with existing tests asserting exactly that for merge. Added `Person.marketing_opt_in`/`marketing_opt_in_at` with an unticked-by-default registration checkbox in `nl`/`en`/`fr` and an admin-only correction path. Corrected a pre-existing mislabelling: `write_audit_entry` had no way to record a client-IP actor as anything but a spurious OIDC subject; added an explicit `auth_source` parameter, and check-in's two audit writes now pass `auth_source="token"`. Two of the three proposed retention sweeps turned out to already exist as VPS-scheduled jobs (`tjorim/apps#177`, closed before this work) rather than needing new backend code; the third (30-day audit-IP redaction) ships the same way (`tjorim/apps#192`) rather than as in-process worker code, correcting the decision doc's original assumption that none of the three existed. Not done: republishing the privacy policy through #944's editor to describe the new pipeline — left for the project owner, since it's a legal-content edit outside this implementation's scope. |
+| #941 | Completed | 2026-09-07 | #941, `docs/decisions/941-web-push-foundation.md`, PR (this change) | Added an anonymous, device-scoped `PushSubscription` model (natural-key upsert by `endpoint`, free-form `categories`/`event_ids` built now rather than deferred, consent/created/last-seen timestamps) with `GET /api/push/vapid-public-key` and `POST /api/push/subscriptions`(`/unsubscribe`), VAPID-signed delivery via `pywebpush` in `app/push.py` that retires a subscription on a 404/410 response instead of retrying it, and a `POST /api/push/test` admin-only endpoint that enqueues through #947's durable outbox (its own `"delivery_queued"` audit entry, not a second one). Subscribe/unsubscribe extend #932's Postgres-backed `check_rate_limit_pg` with a new `push-subscription-mutation` scope (anonymous public writes); the authenticated admin test-send uses the in-process limiter, matching #932's narrower scope for lower-volume admin actions. Retention combines 404/410 retirement and explicit unsubscribe with a new daily `cleanup_expired_subscriptions` sweep (`push_subscription_expiry_days`, default 180) in `app/worker.py`. Frontend: `usePushSubscription` hook and a `PushOptIn` consent card (explicit checkbox before the browser permission prompt, matching #934's marketing opt-in) on both the public landing page and the admin dashboard (with a test-send button there only); `frontend/src/sw/push.ts` adds `push`/`notificationclick` listeners to the shared service worker per the additive-module contract in the decision doc, with `notificationclick` always navigating to a fixed `"/"` path rather than any payload-supplied URL. 23 backend tests and 15 frontend tests (including axe accessibility checks) cover both opt-in states, rate limiting, retirement, and cleanup. Not built: #942's actual broadcast composer — #941 was scoped to the subscription foundation plus a one-off admin test-send only. |
 | #936 | Superseded | 2026-09-05 | #936, PR #990 | Fixed the wrong-domain `robots.txt`/`sitemap.xml`/`baseUrl` (generated from `VITE_PUBLIC_URL` instead of hardcoding `champagnefestival.be`), added the missing `/privacy` sitemap entry with `xhtml:link` hreflang alternates, disallowed and `noindex`'d the staff-only routes, localised the static shell's default description/OG/Twitter tags to the `nl` base locale with `og:locale`/`og:locale:alternate` added, and added a minimal installability-only production service worker (no caching, no offline queue) per the shared-worker contract in `docs/decisions/941-web-push-foundation.md`. The remaining part — making schedule/FAQ/exhibitor content and `EventStructuredData` visible without JS — turned out not to be a prerendering problem: that content is live, admin-editable data (schedule/FAQ via the API, `/privacy`'s body via #944) with no redeploy involved, so a build- or deploy-time snapshot would go stale. Split out to #992, which proposes rendering `/` and `/privacy` live from the backend on every request instead. |
 | #944 | Completed | 2026-09-04 | #944, PR (this change) | Added a versioned Markdown policy model (`policies`/`policy_versions`) with a draft → publish → superseded lifecycle enforced by partial-unique indexes and a policy-row lock (concurrency-tested against a double-publish race), a full audit trail, per-locale content with an explicit required-locale contract enforced at publish time (never silently serves another locale), and rollback by seeding a new draft from an older version's content and republishing it. Markdown renders through one shared `markdown-it-py` + `nh3` allowlist renderer/sanitizer used identically by the admin live preview and the public endpoint — raw HTML, scripts, iframes, event handlers, and unsafe link schemes are stripped or sanitised, and only h2/h3, paragraphs, emphasis, links, lists, blockquotes, and code survive. Added an admin editor (Markdown source, a small formatting toolbar, live preview, version history, rollback) and switched the public privacy-policy page from static compiled content to this backend. Migrated the currently-published privacy policy text into the initial published version unchanged, except that the data-retention and rights-request sections were tightened to stop asserting an automated deletion/anonymisation pipeline that #934 had not built yet — per this document's own guidance that the migration "must not preserve promises the product still cannot fulfil." #934's retention schedule and anonymisation mechanism are now implemented; the policy text has not yet been republished to describe them — a legal-content edit for the project owner to make through this editor. |
 | #937 | Completed | 2026-09-03 | #937, PR #975 | Added in-page QR check-in scanning (native `BarcodeDetector`, `jsqr` fallback) that hands decoded credentials straight to the existing lookup mutation with no navigation or OS-camera-app switch, an auto-return-to-scanner "Scan next" flow, and an online/offline connectivity banner. The offline queue/service-worker precaching from the original proposal was explicitly descoped: check-in requires live connectivity by product decision, so the banner (which already states check-ins can't be submitted while offline) is the intended behaviour rather than a gap. This issue no longer needs a service worker at all; the shared-worker contract the audit originally asked it to coordinate with #941 on now belongs to #941 alone, per `docs/decisions/941-web-push-foundation.md`. |
@@ -219,8 +219,8 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | #945 | backend, frontend, admin, accessibility (completed 2026-09-02) | scheduled announcements | Coordinated with #929, #931, and #935 |
 | #944 | backend, frontend, admin, security (completed 2026-09-04) | versioned policy publishing | Shipped ahead of #934's policy decisions; migrated text tightened to avoid overstating them |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
-| #941 | backend, frontend, security | Web Push foundation | Uses #947; accounts for #932; service-worker contract documented for reuse |
-| #942 | backend, frontend, admin | central composer | Blocked by #941 and #947 |
+| #941 | backend, frontend, security (completed 2026-09-07) | Web Push foundation | Uses #947; accounts for #932; service-worker contract documented for reuse |
+| #942 | backend, frontend, admin | central composer | Blocked by #947 (complete); #941 is complete |
 
 ## Cross-cutting feature and audit relationships
 
@@ -249,11 +249,13 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`,
   and `ContentManagement`. No parallel convention was introduced.
 - **The shared outbox (#947)** is the bridge between the audit's individual
-  delivery gaps (#923 and #924) and the roadmap's push/composer work (#941 and
-  #942). It owns persistence, claiming, retry, and crash-recovery mechanics, but
-  deliberately owns no audience or message-composition product surface.
-- **Web Push (#941)** requires a production service worker. Offline web
-  check-in (#937) was decided **not** to need one — check-ins require live
+  delivery gaps (#923 and #924) and the roadmap's push/composer work (#941,
+  complete, and #942). It owns persistence, claiming, retry, and
+  crash-recovery mechanics, but deliberately owns no audience or
+  message-composition product surface.
+- **Web Push (#941, complete)** added the production service worker's `push`/
+  `notificationclick` listeners. Offline web check-in (#937) was decided
+  **not** to need a service worker at all — check-ins require live
   connectivity by design; the connectivity banner covers the failure mode
   instead of a queue-and-replay flow. The service-worker contract in
   [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md)
@@ -505,25 +507,29 @@ Decisions confirmed 2026-09-07 in
 
 Acceptance criteria:
 
-- [ ] A production service worker coexists safely with application updates.
-- [ ] The VAPID public key is client-visible; the private key remains an
+- [x] A production service worker coexists safely with application updates.
+- [x] The VAPID public key is client-visible; the private key remains an
       environment secret.
-- [ ] Users explicitly opt in and can unsubscribe.
-- [ ] Subscription locale, preferences, consent, and lifecycle are persisted.
-- [ ] Mutation endpoints and test delivery are authorised and rate-limited
-      through multi-worker-safe state.
-- [ ] `404`/`410` responses retire invalid subscriptions.
-- [ ] Payload size and target URLs are validated.
-- [ ] A restricted admin test notification uses #947 and is audited.
-- [ ] Consent, retention, privacy, and retry/idempotency decisions are tested
+- [x] Users explicitly opt in and can unsubscribe.
+- [x] Subscription locale, preferences, consent, and lifecycle are persisted.
+- [x] Mutation endpoints and test delivery are authorised and rate-limited
+      through multi-worker-safe state. Subscribe/unsubscribe use #932's
+      Postgres-backed limiter (public, anonymous endpoints); the
+      authenticated admin test-send uses the in-process limiter, the same
+      narrower-scope treatment #932 already gives contact/registration
+      endpoints.
+- [x] `404`/`410` responses retire invalid subscriptions.
+- [x] Payload size and target URLs are validated.
+- [x] A restricted admin test notification uses #947 and is audited.
+- [x] Consent, retention, privacy, and retry/idempotency decisions are tested
       and documented.
-- [ ] No general broadcast composer is included.
+- [x] No general broadcast composer is included.
 
 ### #942 — central announcement and push composer
 
 [GitHub issue](https://github.com/tjorim/champagnefestival/issues/942)
 
-Blocked by #941 and #947; #945's announcement destination is complete. Compose one operational message centrally and
+#941 and #947 are complete; #945's announcement destination is complete. Compose one operational message centrally and
 deliver it only through explicitly selected public-announcement and Web Push
 channels. Server-sent bulk email remains out of scope.
 
@@ -586,7 +592,7 @@ One remaining note, kept for historical context; the judgement calls
 themselves have all been resolved by the project owner as decision docs
 (#934 on 2026-09-06; #941, #953, and #992 on 2026-09-07 — see
 `docs/decisions/`; #953 and #992's implementation status is tracked in
-Phase 4 above, #941's decisions are confirmed and ready to implement).
+Phase 4 above; #941 is implemented — see **Completed or superseded work**).
 
 1. **#924** exposes `check_in_token` only from the short-lived, single-use
    email-token-protected guest endpoint so a guest can retrieve their own QR;

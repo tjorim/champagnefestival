@@ -38,6 +38,7 @@ from app.routers import (
     people,
     policies,
     products,
+    push,
     registrations,
     rooms,
     table_types,
@@ -184,6 +185,7 @@ app.include_router(exhibitors.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(products.router)
+app.include_router(push.router)
 app.include_router(volunteers.router)
 app.include_router(volunteer_ops.router)
 app.include_router(areas.router)

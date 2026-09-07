@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, and visitor passwordless sessions.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, and Web Push subscriptions.
 
 Revision ID: 001
 Revises: 000
@@ -320,6 +320,24 @@ def upgrade() -> None:
     op.create_index("ix_visitor_sessions_expires_at", "visitor_sessions", ["expires_at"])
     op.create_index("ix_visitor_sessions_hard_expires_at", "visitor_sessions", ["hard_expires_at"])
 
+    # #941: anonymous, device-scoped Web Push subscriptions — see
+    # app.models.PushSubscription.
+    op.create_table(
+        "push_subscriptions",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("endpoint", sa.String(600), nullable=False),
+        sa.Column("p256dh_key", sa.String(200), nullable=False),
+        sa.Column("auth_key", sa.String(50), nullable=False),
+        sa.Column("locale", sa.String(2), nullable=False),
+        sa.Column("categories", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
+        sa.Column("event_ids", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
+        sa.Column("consent_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    op.create_index("ix_push_subscriptions_endpoint", "push_subscriptions", ["endpoint"], unique=True)
+    op.create_index("ix_push_subscriptions_last_seen_at", "push_subscriptions", ["last_seen_at"])
+
 
 def downgrade() -> None:
     # #953: restoring users.oidc_subject to NOT NULL below would violate that
@@ -338,6 +356,9 @@ def downgrade() -> None:
             "violate. Resolve them first (e.g. delete the accounts, accepting "
             "the loss of their registration ownership) before downgrading."
         )
+    op.drop_index("ix_push_subscriptions_last_seen_at", table_name="push_subscriptions")
+    op.drop_index("ix_push_subscriptions_endpoint", table_name="push_subscriptions")
+    op.drop_table("push_subscriptions")
     op.drop_index("ix_visitor_sessions_hard_expires_at", table_name="visitor_sessions")
     op.drop_index("ix_visitor_sessions_expires_at", table_name="visitor_sessions")
     op.drop_index("ix_visitor_sessions_user_id", table_name="visitor_sessions")

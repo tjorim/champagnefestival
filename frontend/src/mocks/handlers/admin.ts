@@ -1216,6 +1216,17 @@ export const adminHandlers = [
     areas.splice(idx, 1);
     return new HttpResponse(null, { status: 204 });
   }),
+
+  /** POST /api/push/test — admin-only test send (#941). */
+  http.post("/api/push/test", async ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const body = (await request.json()) as { subscription_id: string };
+    return HttpResponse.json(
+      { queued: true, job_id: `mock-job-${body.subscription_id}` },
+      { status: 202 },
+    );
+  }),
 ];
 
 /** Reset all admin mutable state (useful for tests). */

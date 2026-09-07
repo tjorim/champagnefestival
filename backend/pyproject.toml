@@ -31,6 +31,7 @@ dependencies = [
   "uvicorn[standard]==0.52.4",
   "markdown-it-py==4.2.0",
   "nh3==0.3.7",
+  "pywebpush>=2.5.0",
 ]
 
 [project.optional-dependencies]

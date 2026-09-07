@@ -1,12 +1,7 @@
 # Service-worker ownership and Web Push subscription foundation
 
-**Status:** Decided — the project owner confirmed all pre-implementation
-questions on 2026-09-07 (see "Confirmed decisions" below), correcting one
-proposed default in the process: subscriptions are **anonymous and public**,
-not authenticated-only — "administrator-only" in the issue describes who can
-*trigger* a send (the admin test-send button), not who can *subscribe* to
-receive one. Ready to implement.
-**Date:** 2026-09-03 (updated 2026-09-05, confirmed 2026-09-07)
+**Status:** Implemented (2026-09-07) — see "Implementation summary" below.
+**Date:** 2026-09-03 (updated 2026-09-05, confirmed and implemented 2026-09-07)
 **Issues:** [#941](https://github.com/tjorim/champagnefestival/issues/941)
 (primary); [#936](https://github.com/tjorim/champagnefestival/issues/936)
 (shipped the base file — see below); [#937](https://github.com/tjorim/champagnefestival/issues/937)
@@ -92,19 +87,59 @@ corrected the subscriber model and expanded the category/event scope beyond
 
 1. ~~Confirmation (or correction) of the defaults above from the project
    owner.~~ Done — see "confirmed 2026-09-07" above.
-2. Rate limiting for the subscription-mutation endpoints
-   (subscribe/unsubscribe): now that subscriptions are anonymous and public
-   (corrected above), these are public unauthenticated write endpoints in
-   the same abuse-sensitive category check-in's own limiter covers per
-   [`docs/decisions/932-multi-worker-state.md`](./932-multi-worker-state.md)
-   decision 1 — implementation should extend `check_rate_limit_pg` to a new
-   scope for them rather than the in-process `check_rate_limit`, since #932
-   already shipped the Postgres-backed counter. The admin test-send endpoint
-   is lower-volume and authenticated; the in-process limiter is an
-   acceptable choice there, consistent with #932's own narrower scope.
-3. Actual GDPR/consent copy, reviewed the same way `privacy_camera_title` /
-   `privacy_camera_content` were added to `privacyPolicy.ts` — Claude drafts
-   during implementation, project owner reviews (see table above).
+2. ~~Rate limiting for the subscription-mutation endpoints.~~ Done — see
+   "Implementation summary" below.
+3. ~~Actual GDPR/consent copy.~~ Done — see "Implementation summary" below.
+   The UI opt-in copy shipped as reviewable i18n strings; the formal
+   privacy-policy document text is deliberately left for the project owner
+   to add via #944's admin editor, matching the precedent #934 already set
+   for its own consent surfaces, rather than auto-migrated into a document
+   the owner hasn't reviewed.
+
+## Implementation summary (2026-09-07)
+
+Shipped per the confirmed decisions above:
+
+- **Backend:** `PushSubscription` model (anonymous, `endpoint`-keyed,
+  `categories`/`event_ids` free-form arrays), migration, `app/push.py`
+  (VAPID-signed delivery via `pywebpush`, retires a subscription on a
+  404/410 response instead of retrying it), `app/services/push_service.py`
+  (subscribe/unsubscribe/cleanup), and `POST /api/push/*` +
+  `GET /api/push/vapid-public-key` routes.
+- **Delivery reuses the #947 outbox** as the confirmed decision required:
+  the admin test-send enqueues a `web_push_test` job: dispatched through
+  the same lease/backoff worker as every other outbox job type, with its
+  own `"delivery_queued"` audit entry from `enqueue_job`.
+- **Rate limiting:** `check_push_subscription_rate_limit` extends #932's
+  Postgres-backed `check_rate_limit_pg` with a `push-subscription-mutation`
+  scope (20 requests/10 minutes) for the anonymous, public
+  subscribe/unsubscribe endpoints, per item 2 above. The admin test-send
+  endpoint uses the in-process `check_rate_limit` (10 requests/10 minutes,
+  keyed by admin actor rather than IP), consistent with #932's narrower
+  in-process-limiter scope for lower-volume authenticated admin actions.
+- **Retention:** subscriptions are retired on a 404/410 push response, on
+  explicit unsubscribe, and by a new daily `cleanup_expired_subscriptions`
+  sweep (`push_subscription_expiry_days`, default 180) added to
+  `worker.py`'s existing daily cleanup block — the "time-based expiry
+  sweep" the confirmed decision added beyond the issue's original
+  404/410-only proposal.
+- **Frontend:** `usePushSubscription` hook (support detection, subscribe/
+  unsubscribe, VAPID key fetch), `PushOptIn` opt-in card (explicit
+  checkbox consent shown *before* the browser permission prompt, matching
+  #934's marketing-opt-in pattern) rendered on both the public landing
+  page and, with an admin test-send button, the admin dashboard. Push/
+  `notificationclick` listeners were added to the shared service worker
+  as `frontend/src/sw/push.ts`, following the additive-module contract
+  above; the click handler always navigates to a fixed `"/"` path rather
+  than any payload-supplied URL, per the issue's requirement.
+- **Tests:** 23 backend tests (`backend/tests/test_push.py`) and 15
+  frontend tests (`usePushSubscription.test.ts`, `PushOptIn.test.tsx`,
+  including axe accessibility checks) cover both opt-in states, rate
+  limiting, admin-only test-send auth, subscription retirement, and
+  cleanup.
+- **Not built:** #942's actual notification composer/broadcast UI — #941
+  was scoped to the subscription foundation plus a one-off admin test-send,
+  not general-purpose sending.
 
 ## References
 

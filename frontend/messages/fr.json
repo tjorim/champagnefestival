@@ -911,5 +911,16 @@
   "admin_policy_markdown_link_placeholder": "texte du lien",
   "admin_policy_markdown_list_placeholder": "Élément de liste",
   "registration_marketing_opt_in": "Tenez-moi informé(e) des futures éditions",
-  "registration_marketing_opt_in_help": "Facultatif et décoché par défaut — nous l'utiliserons uniquement pour vous informer occasionnellement d'une nouvelle édition, jamais pour autre chose."
+  "registration_marketing_opt_in_help": "Facultatif et décoché par défaut — nous l'utiliserons uniquement pour vous informer occasionnellement d'une nouvelle édition, jamais pour autre chose.",
+  "push_section_heading": "Notifications",
+  "push_opt_in_title": "Activer les notifications",
+  "push_opt_in_description": "Recevez des notifications du navigateur sur les actualités du festival. Votre appareil reçoit une clé d'abonnement sans information personnelle associée — nous ne savons pas qui vous êtes, seulement que ce navigateur s'est inscrit. Vous pouvez retirer votre consentement à tout moment en désactivant les notifications ci-dessous.",
+  "push_opt_in_consent_label": "J'accepte de recevoir des notifications du navigateur de la part de Champagnefestival.",
+  "push_opt_in_subscribe_button": "Activer les notifications",
+  "push_opt_in_unsubscribe_button": "Désactiver les notifications",
+  "push_opt_in_subscribed_status": "Les notifications sont activées sur cet appareil.",
+  "push_opt_in_error": "Une erreur s'est produite. Veuillez réessayer.",
+  "push_test_send_button": "Envoyer une notification de test",
+  "push_test_send_success": "Notification de test envoyée — vérifiez cet appareil.",
+  "push_error_generic": "Une erreur s'est produite. Veuillez réessayer."
 }

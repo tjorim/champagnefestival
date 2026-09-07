@@ -379,6 +379,36 @@ export const publicHandlers = [
       },
     });
   }),
+
+  /** GET /api/push/vapid-public-key — Web Push foundation (#941). Enabled by
+   * default so component tests exercising the opt-in card don't need their
+   * own override; tests for the disabled/unsupported states use
+   * `server.use(...)` to shadow this. */
+  http.get("/api/push/vapid-public-key", () =>
+    HttpResponse.json({
+      public_key: "BNJxw-mock-vapid-public-key-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      enabled: true,
+    }),
+  ),
+
+  /** POST /api/push/subscriptions — natural-key upsert by endpoint (#941). */
+  http.post("/api/push/subscriptions", async ({ request }) => {
+    const body = (await request.json()) as {
+      categories?: string[];
+      event_ids?: string[];
+    };
+    return HttpResponse.json(
+      {
+        id: "mock-push-subscription-id",
+        categories: body.categories ?? ["system_test"],
+        event_ids: body.event_ids ?? [],
+      },
+      { status: 201 },
+    );
+  }),
+
+  /** POST /api/push/subscriptions/unsubscribe — convergent delete (#941). */
+  http.post("/api/push/subscriptions/unsubscribe", () => new HttpResponse(null, { status: 204 })),
 ];
 
 /** Reset public mutable state (useful for tests). */
