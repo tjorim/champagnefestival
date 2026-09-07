@@ -15,6 +15,8 @@ from app.auth import get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
+from app.services.users_service import get_or_create_user
+from app.visitor_session import get_current_user
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -201,17 +203,23 @@ async def volunteer_client(db_session):
 
 @pytest.fixture()
 async def me_client(db_session):
-    """Client that simulates an authenticated visitor for ``/api/me/*`` endpoints.
+    """Client that simulates an authenticated (OIDC) visitor for ``/api/me/*`` endpoints.
 
-    ``get_current_claims`` is overridden to return a fixed set of claims so that
-    tests can exercise the self-service endpoints without a real OIDC provider.
+    ``get_current_claims`` is overridden for the still-OIDC-only handlers
+    (Pebble token, account deletion); ``app.visitor_session.get_current_user``
+    is overridden for the dual-mode handlers (#953) so both resolve to the
+    same OIDC-backed ``User`` without a real OIDC provider.
     """
 
     async def override_get_db():
         yield db_session
 
+    async def override_get_current_user():
+        return await get_or_create_user(db_session, str(VISITOR_CLAIMS["sub"]))
+
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_claims] = lambda: VISITOR_CLAIMS
+    app.dependency_overrides[get_current_user] = override_get_current_user
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c

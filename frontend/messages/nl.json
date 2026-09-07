@@ -559,6 +559,8 @@
   "my_registrations_qr_label": "QR-code voor toegang",
   "my_registrations_add_calendar": "Aan agenda toevoegen",
   "my_registrations_request_new_link": "Nog een veilige link aanvragen",
+  "my_registrations_sign_out": "Afmelden",
+  "my_registrations_session_expires": "Aangemeld tot {date}",
   "admin_members_add": "Lid toevoegen",
   "admin_members_create_title": "Nieuw lid aanmaken",
   "admin_members_edit_title": "Lid bewerken",

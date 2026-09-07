@@ -14,11 +14,16 @@ import Spinner from "react-bootstrap/Spinner";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import {
-  accessMyRegistrations,
   claimMyRegistrations,
   fetchOwnedRegistrations,
+  fetchOwnedRegistrationsViaSession,
+  getVisitorSessionStatus,
   isRegistrationLookupError,
+  redeemVisitorMagicLink,
   requestRegistrationLookup,
+  requestVisitorMagicLink,
+  signOutVisitorSession,
+  type GuestRegistration,
 } from "@/utils/publicRegistrationApi";
 import { EMAIL_REGEX } from "@/config/constants";
 import { useAuth } from "@/contexts/AuthContext";
@@ -60,8 +65,23 @@ export default function MyRegistrationsPage() {
   const [isPreferenceLoading, setIsPreferenceLoading] = useState(false);
   const preferenceRequestId = useRef(0);
 
+  // A returning visitor's passwordless session (#953) — checked once on
+  // mount so "check my order again next week" works without a fresh email,
+  // separate from the token-redemption mutation below (which handles a
+  // *new* link being opened).
+  const [sessionRegistrations, setSessionRegistrations] = useState<GuestRegistration[] | null>(
+    null,
+  );
+  const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
+
   const requestLookupMutation = useMutation({
-    mutationFn: requestRegistrationLookup,
+    mutationFn: (targetEmail: string) =>
+      auth.isAuthenticated
+        ? requestRegistrationLookup(targetEmail)
+        : requestVisitorMagicLink(targetEmail),
     retry: false,
   });
 
@@ -77,7 +97,7 @@ export default function MyRegistrationsPage() {
     }) => {
       await navigate({ search: {}, replace: true });
       if (!oidcToken) {
-        return accessMyRegistrations(lookupToken);
+        return redeemVisitorMagicLink(lookupToken);
       }
       try {
         await claimMyRegistrations(lookupToken, oidcToken);
@@ -109,7 +129,30 @@ export default function MyRegistrationsPage() {
     });
   }, [accessToken, auth.isAuthenticated, auth.isLoading, navigate, registrationsMutation, token]);
 
-  const registrations = registrationsMutation.data ?? null;
+  useEffect(() => {
+    if (token || auth.isLoading || auth.isAuthenticated || sessionChecked) return;
+    let cancelled = false;
+    void getVisitorSessionStatus().then((status) => {
+      if (cancelled) return;
+      if (!status.authenticated) {
+        setSessionChecked(true);
+        return;
+      }
+      setSessionExpiresAt(status.expiresAt);
+      void fetchOwnedRegistrationsViaSession()
+        .then((regs) => {
+          if (!cancelled) setSessionRegistrations(regs);
+        })
+        .finally(() => {
+          if (!cancelled) setSessionChecked(true);
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, auth.isLoading, auth.isAuthenticated, sessionChecked]);
+
+  const registrations = registrationsMutation.data ?? sessionRegistrations ?? null;
 
   useEffect(() => {
     if (!auth.isAuthenticated || !accessToken || registrations === null) return;
@@ -153,6 +196,13 @@ export default function MyRegistrationsPage() {
     registrationsMutation.isError &&
     isRegistrationLookupError(registrationsMutation.error) &&
     registrationsMutation.error.code === "invalid_token";
+  const showSignOut = !auth.isAuthenticated && registrations !== null;
+  // Not gated on the returning-visitor session check (sessionChecked) below:
+  // the common case has no session, and gating this would flash a loading
+  // spinner in front of the email form on every visit just to rule that out.
+  // A session, when one exists, instead promotes registrations from null to
+  // non-null once found, which the registrations !== null branch already
+  // switches this on for.
   const showRegistrationFlow =
     token.length > 0 ||
     registrations !== null ||
@@ -167,6 +217,29 @@ export default function MyRegistrationsPage() {
     attemptedToken.current = "";
     registrationsMutation.reset();
   }, [navigate, registrationsMutation, setError, setIsEmailInvalid, setRequestSent]);
+
+  const handleSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    setSignOutError("");
+    try {
+      await signOutVisitorSession();
+    } catch {
+      // Local "signed in" state must only clear once sign-out actually
+      // succeeded server-side — otherwise the UI would show the sign-in
+      // form while the session and cookie are still valid (PR #1012 review).
+      // Shown next to the sign-out button itself: the generic `error` state
+      // above only renders in the email-request form, which isn't visible
+      // while viewing results.
+      setIsSigningOut(false);
+      setSignOutError(m.my_registrations_error());
+      return;
+    }
+    setIsSigningOut(false);
+    setSessionRegistrations(null);
+    setSessionExpiresAt(null);
+    setSessionChecked(true);
+    resetToRequestForm();
+  }, [resetToRequestForm]);
 
   const handleEmailSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -445,15 +518,53 @@ export default function MyRegistrationsPage() {
                       </div>
                     ) : null}
 
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      className="mt-3 w-100"
-                      onClick={resetToRequestForm}
-                    >
-                      <i className="bi bi-arrow-repeat me-2" aria-hidden="true" />
-                      {m.my_registrations_request_new_link()}
-                    </Button>
+                    {showSignOut && sessionExpiresAt && (
+                      <p className="small text-secondary text-center mt-3 mb-0">
+                        {m.my_registrations_session_expires({
+                          date: new Date(sessionExpiresAt).toLocaleDateString(),
+                        })}
+                      </p>
+                    )}
+
+                    {showSignOut && signOutError && (
+                      <Alert variant="danger" className="mt-3 mb-0" role="alert">
+                        <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                        {signOutError}
+                      </Alert>
+                    )}
+
+                    {showSignOut ? (
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        className="mt-2 w-100"
+                        disabled={isSigningOut}
+                        onClick={() => void handleSignOut()}
+                      >
+                        {isSigningOut ? (
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <i className="bi bi-box-arrow-right me-2" aria-hidden="true" />
+                        )}
+                        {m.my_registrations_sign_out()}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        className="mt-3 w-100"
+                        onClick={resetToRequestForm}
+                      >
+                        <i className="bi bi-arrow-repeat me-2" aria-hidden="true" />
+                        {m.my_registrations_request_new_link()}
+                      </Button>
+                    )}
                   </>
                 )}
               </>

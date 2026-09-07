@@ -559,6 +559,8 @@
   "my_registrations_qr_label": "Code QR d’entrée de la réservation",
   "my_registrations_add_calendar": "Ajouter au calendrier",
   "my_registrations_request_new_link": "Demander un nouveau lien sécurisé",
+  "my_registrations_sign_out": "Se déconnecter",
+  "my_registrations_session_expires": "Connecté jusqu'au {date}",
   "admin_members_add": "Ajouter un membre",
   "admin_members_create_title": "Créer un nouveau membre",
   "admin_members_edit_title": "Modifier le membre",

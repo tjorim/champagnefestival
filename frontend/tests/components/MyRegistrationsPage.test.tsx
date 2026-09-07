@@ -71,6 +71,8 @@ vi.mock("@/paraglide/messages", () => ({
     registration_reference: ({ reference }: { reference: string }) =>
       `Booking reference: ${reference}`,
     my_registrations_request_new_link: () => "Request another secure link",
+    my_registrations_sign_out: () => "Sign out",
+    my_registrations_session_expires: ({ date }: { date: string }) => `Signed in until ${date}`,
     admin_status_confirmed: () => "Confirmed",
     admin_status_cancelled: () => "Cancelled",
     admin_status_pending: () => "Pending",
@@ -208,7 +210,7 @@ describe("MyRegistrationsPage", () => {
   it("does not replay an anonymous token exchange after successful remount", async () => {
     let accessCalls = 0;
     server.use(
-      http.post("/api/registrations/my/access", () => {
+      http.post("/api/visitor-sessions/redeem", () => {
         accessCalls += 1;
         return HttpResponse.json([]);
       }),
@@ -235,7 +237,7 @@ describe("MyRegistrationsPage", () => {
       finishExchange = resolve;
     });
     server.use(
-      http.post("/api/registrations/my/access", async () => {
+      http.post("/api/visitor-sessions/redeem", async () => {
         accessCalls += 1;
         await exchangePending;
         return HttpResponse.json([]);
@@ -279,7 +281,7 @@ describe("MyRegistrationsPage", () => {
 
   it("shows an invalid-link message when the token is rejected", async () => {
     server.use(
-      http.post("/api/registrations/my/access", () => HttpResponse.json(null, { status: 401 })),
+      http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
     );
 
     await renderPage("/my-registrations?token=expired-token");
@@ -307,7 +309,7 @@ describe("MyRegistrationsPage", () => {
 
   it("shows an invalid email error when the API rejects the address", async () => {
     server.use(
-      http.post("/api/registrations/my/request", () => HttpResponse.json(null, { status: 422 })),
+      http.post("/api/visitor-sessions/request", () => HttpResponse.json(null, { status: 422 })),
     );
 
     await renderPage();
@@ -358,7 +360,7 @@ describe("MyRegistrationsPage", () => {
 
   it("has no axe violations when showing a token error", async () => {
     server.use(
-      http.post("/api/registrations/my/access", () => HttpResponse.json(null, { status: 401 })),
+      http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
     );
 
     const { container } = await renderPage("/my-registrations?token=expired-token");
@@ -448,5 +450,96 @@ describe("MyRegistrationsPage", () => {
     resolvePreference();
     await waitFor(() => expect(language).toBeEnabled());
     expect(language).toHaveValue("fr");
+  });
+
+  it("shows a returning visitor's orders from an existing session, with no token and no email form", async () => {
+    server.use(
+      http.get("/api/visitor-sessions/status", () =>
+        HttpResponse.json({ authenticated: true, expires_at: "2026-09-14T00:00:00Z" }),
+      ),
+      http.get("/api/me/registrations", () =>
+        HttpResponse.json([
+          {
+            id: "reg-returning",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    // toLocaleDateString's exact format is locale-dependent (varies between
+    // dev machines and CI runners); only assert the locale-independent parts.
+    expect(screen.getByText(/^Signed in until /)).toBeInTheDocument();
+  });
+
+  it("shows the email form directly when there is no existing session", async () => {
+    await renderPage();
+
+    expect(await screen.findByLabelText("Email")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+  });
+
+  it("returns to the email form after signing out of a returning-visitor session", async () => {
+    let signedOut = false;
+    server.use(
+      http.get("/api/visitor-sessions/status", () =>
+        signedOut
+          ? HttpResponse.json({ authenticated: false, expires_at: null })
+          : HttpResponse.json({ authenticated: true, expires_at: "2026-09-14T00:00:00Z" }),
+      ),
+      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.post("/api/visitor-sessions/sign-out", () => {
+        signedOut = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await renderPage();
+
+    const signOutButton = await screen.findByRole("button", { name: "Sign out" });
+    fireEvent.click(signOutButton);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the session and shows an error when sign-out fails", async () => {
+    server.use(
+      http.get("/api/visitor-sessions/status", () =>
+        HttpResponse.json({ authenticated: true, expires_at: "2026-09-14T00:00:00Z" }),
+      ),
+      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.post("/api/visitor-sessions/sign-out", () => HttpResponse.json(null, { status: 500 })),
+    );
+
+    await renderPage();
+
+    const signOutButton = await screen.findByRole("button", { name: "Sign out" });
+    fireEvent.click(signOutButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Unable to load your registrations.")).toBeInTheDocument();
+    });
+    // Must still show the signed-in view, not fall back to the email form —
+    // the server session and cookie are still valid after a failed sign-out.
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 });

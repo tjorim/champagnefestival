@@ -17,6 +17,7 @@ from app.auth import require_admin
 from app.main import app
 from app.models import AuditEntry, PebbleAccessToken, Registration, ReservationAccessToken, User
 from app.routers import me as me_router
+from app.routers import registrations as registrations_router
 from app.schemas import RegistrationAccessLookupRequest
 from app.services import users_service
 from app.services.pebble_access import rotate_pebble_token
@@ -171,30 +172,40 @@ async def test_concurrent_first_use_claims_only_allow_one_owner(
     )
     await db_session.commit()
 
-    first_provisioned = asyncio.Event()
+    # User resolution now happens in the get_current_user dependency, outside
+    # claim_my_registrations itself (#953), so the deterministic pause moves
+    # to _get_guest_access_token_or_401 — the row lock that actually
+    # serializes two concurrent claims of the same token in production.
+    # Pausing there, right after acquiring that lock, reproduces the same
+    # race the original test drove through user provisioning.
+    first_locked = asyncio.Event()
     release_first = asyncio.Event()
-    original_get_or_create_user = me_router.get_or_create_user
+    original_get_token = registrations_router._get_guest_access_token_or_401
+    paused = False
 
-    async def pause_first_claim(db, oidc_subject, *, commit=True):
-        user = await original_get_or_create_user(db, oidc_subject, commit=commit)
-        if oidc_subject == "first-claim-sub":
-            first_provisioned.set()
+    async def pause_first_lookup(db, tok):
+        nonlocal paused
+        token_row = await original_get_token(db, tok)
+        if not paused:
+            paused = True
+            first_locked.set()
             await release_first.wait()
-        return user
+        return token_row
 
-    monkeypatch.setattr(me_router, "get_or_create_user", pause_first_claim)
+    monkeypatch.setattr(registrations_router, "_get_guest_access_token_or_401", pause_first_lookup)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     body = RegistrationAccessLookupRequest(token=token)
 
     async def attempt_claim(subject: str):
         async with session_factory() as session:
+            user = await users_service.get_or_create_user(session, subject)
             try:
-                return await me_router.claim_my_registrations(body, {"sub": subject}, session)
+                return await me_router.claim_my_registrations(body, user, session)
             except HTTPException as exc:
                 return exc.status_code
 
     first_task = asyncio.create_task(attempt_claim("first-claim-sub"))
-    await asyncio.wait_for(first_provisioned.wait(), timeout=2)
+    await asyncio.wait_for(first_locked.wait(), timeout=2)
     second_task = asyncio.create_task(attempt_claim("second-claim-sub"))
     await asyncio.sleep(0.05)
     release_first.set()

@@ -493,6 +493,13 @@ class RegistrationAccessLookupRequest(RequestModel):
     token: str = Field(min_length=20)
 
 
+class VisitorSessionStatus(BaseModel):
+    """Whether the caller currently holds a valid visitor session (#953)."""
+
+    authenticated: bool
+    expires_at: datetime | None = None
+
+
 class RegistrationAdminCreate(RequestModel):
     """Admin-only registration creation — skips spam checks, accepts person_id directly."""
 

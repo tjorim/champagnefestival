@@ -559,6 +559,8 @@
   "my_registrations_qr_label": "Booking check-in QR code",
   "my_registrations_add_calendar": "Add to calendar",
   "my_registrations_request_new_link": "Request another secure link",
+  "my_registrations_sign_out": "Sign out",
+  "my_registrations_session_expires": "Signed in until {date}",
   "admin_members_add": "Add member",
   "admin_members_create_title": "Create new member",
   "admin_members_edit_title": "Edit member",
