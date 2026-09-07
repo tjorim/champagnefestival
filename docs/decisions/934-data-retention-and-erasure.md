@@ -222,17 +222,36 @@ answered on 2026-09-06:
   retention answer is "keep it forever", narrowing who can read it is the
   control that actually reduces exposure here, and it introduces no new
   pattern — so it ships alongside the sweeps rather than waiting.
-- **Encryption at rest — not doing it.** The issue proposed encrypting at
-  rest, restricting reads to the export path, and auditing every access. The
-  middle item is covered by the access restriction above; the encryption
-  itself is declined. It needs an encryption-key management decision (env-var
-  secret vs. KMS, rotation story) with no existing pattern in this codebase to
-  follow, and the field sits behind an authenticated admin API whose read
-  surface is being narrowed in the same change — so the key-management
-  liability buys little over the restriction. Recorded as a deliberate
-  decision, not a deferral: no follow-up issue is filed for it. Revisit only
-  if the threat model changes (e.g. database backups leaving controlled
-  storage).
+- **Encryption at rest — not doing it. The accepted risk, stated plainly:**
+  a compromise of the production database or an unencrypted backup would
+  expose every current and former volunteer's plaintext NISS/eID —
+  retained indefinitely per the decision above, so this is not a
+  time-bounded exposure. That is the concrete downside of this decision,
+  not a hypothetical one.
+
+  **Why it's accepted anyway, with the controls that exist today:**
+  production backups are already encrypted in transit and at rest via
+  `restic` before leaving the VPS (`tjorim/apps`'s
+  `docs/backup-recovery.md`) — the scenario this document's earlier draft
+  cited as the revisit trigger ("database backups leaving controlled
+  storage") is already mitigated at the infra layer, independent of
+  anything in this codebase. Live database access is gated behind the same
+  authenticated admin API whose NISS/eID read surface this document is
+  actively narrowing in the same change (only the volunteer export path
+  keeps full visibility), and there is no separate, wider-access path to
+  the underlying table. Application-level encryption on top of that would
+  protect against one additional scenario specifically — a database
+  credential or direct DB-host compromise that backup encryption doesn't
+  cover — and needs a key-management decision (env-var secret vs. KMS,
+  rotation story) with no existing pattern in this codebase to follow. That
+  narrower, harder-to-execute threat is judged not to justify introducing a
+  new secret-management dependency for a field already behind two other
+  controls.
+
+  Recorded as a deliberate decision, not a deferral: no follow-up issue is
+  filed for it. Revisit only if the threat model changes — e.g. database
+  credentials become more widely held than the admin API surface itself, or
+  the infra stack's backup encryption is ever weakened or removed.
 
 ## Reaching out about future events (marketing) — consent now, sending later
 
@@ -282,6 +301,38 @@ In scope for this implementation:
   reaching out to past visitors about a new edition would widen that scope or
   justify its own issue. Flagged here rather than designed inside a retention
   document.
+
+### The checkbox is single opt-in, not double opt-in — an accepted, bounded gap
+
+Worth being explicit about, since it wasn't raised when this was confirmed:
+the registration form has no email-ownership verification step at all — it
+never has, for any field. Ticking the marketing checkbox therefore records
+consent attributed to whatever email address was typed, not necessarily
+one the person ticking the box actually controls. Someone could in principle
+tick it while registering under an email address that isn't theirs.
+
+GDPR-grade "double opt-in" (a confirmation link sent to the address, clicked
+before consent is recorded as valid) is the standard mitigation, and this
+implementation does **not** build it. That's a deliberate scope line, not an
+oversight: verifying consent is part of the same pipeline as *sending* to
+that consent — a confirmation email is itself a marketing-adjacent send, and
+this document already puts "the send itself" out of scope, per the section
+above. Building verification without a send channel to use it would be
+half a feature.
+
+**Why the accepted risk is small enough to ship without it:** the worst case
+is an unwanted marketing email reaching an address the ticker doesn't own,
+with a mandatory one-click unsubscribe already required of whatever feature
+eventually sends it (see above) — not a new disclosure of personal data,
+since that same address is already being processed for the registration's
+own operational purpose (the transactional confirmation email) regardless of
+the checkbox. This is a materially smaller exposure than, say, recording
+someone else's NISS, which is why it doesn't get the same treatment.
+
+Not resolved here; flagged for whoever eventually builds the sending
+feature (#942 or its own issue) to decide whether double opt-in is worth
+adding before that feature goes live, given it will be the first thing that
+actually *acts* on this consent flag.
 
 ## NISS and eID are not the same kind of identifier — noted, not resolved here
 

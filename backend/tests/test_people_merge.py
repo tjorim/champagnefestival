@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.helpers import ADMIN_HEADERS
+from tests.helpers import ADMIN_HEADERS, _create_event, _registration_body
 
 VOLUNTEER = {
     "name": "Sofie De Smet",
@@ -76,6 +76,62 @@ async def test_merge_transfers_volunteer_help_periods(client):
     assert canonical_id in volunteers
     assert len(volunteers[canonical_id]["help_periods"]) == 2
     assert duplicate_id not in volunteers
+
+
+@pytest.mark.anyio
+async def test_merge_adopts_marketing_opt_in_from_duplicate(client):
+    """Merging away a duplicate must not silently discard their consent —
+    docs/decisions/934-data-retention-and-erasure.md."""
+    event = await _create_event(client)
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(
+            event, name="Opted In", email="optedin@example.com", phone="+32470000777", marketing_opt_in=True
+        ),
+    )
+    assert r.status_code == 201, r.text
+    duplicate_id = r.json()["person_id"]
+
+    r = await client.post("/api/people", json=PLAIN, headers=ADMIN_HEADERS)
+    canonical_id = r.json()["id"]
+    assert r.json()["marketing_opt_in"] is False
+
+    r = await _merge(client, canonical_id, duplicate_id)
+    assert r.status_code == 200, r.text
+    assert r.json()["marketing_opt_in"] is True
+    assert r.json()["marketing_opt_in_at"] is not None
+
+
+@pytest.mark.anyio
+async def test_merge_keeps_canonical_opt_in_and_timestamp_when_both_have_one(client):
+    event = await _create_event(client)
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(
+            event, name="Opted In Dup", email="dup@example.com", phone="+32470000888", marketing_opt_in=True
+        ),
+    )
+    assert r.status_code == 201, r.text
+    duplicate_id = r.json()["person_id"]
+
+    # Opt the canonical person in via the legitimate channel too, so both
+    # sides of the merge already have their own consent and timestamp.
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(
+            event, name="Sofie De Smet", email="sofie@example.com", phone="+32470000999", marketing_opt_in=True
+        ),
+    )
+    assert r.status_code == 201, r.text
+    canonical_id = r.json()["person_id"]
+    r = await client.get(f"/api/people/{canonical_id}", headers=ADMIN_HEADERS)
+    canonical_opted_in_at = r.json()["marketing_opt_in_at"]
+    assert canonical_opted_in_at is not None
+
+    r = await _merge(client, canonical_id, duplicate_id)
+    assert r.status_code == 200, r.text
+    assert r.json()["marketing_opt_in"] is True
+    assert r.json()["marketing_opt_in_at"] == canonical_opted_in_at
 
 
 @pytest.mark.anyio

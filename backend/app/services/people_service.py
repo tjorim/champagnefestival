@@ -27,7 +27,6 @@ for REST, ``get_or_error`` for MCP) and passes it in for update/delete/merge.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
 from typing import NoReturn
 
 import phonenumbers
@@ -205,9 +204,24 @@ async def apply_person_update(
     if body.roles is not None:
         person.roles = normalise_roles(body.roles)
 
-    if body.marketing_opt_in is not None and body.marketing_opt_in != person.marketing_opt_in:
-        person.marketing_opt_in = body.marketing_opt_in
-        person.marketing_opt_in_at = datetime.now(UTC) if body.marketing_opt_in else None
+    if body.marketing_opt_in is not None:
+        # Enforces PersonUpdate.marketing_opt_in's own contract: this path
+        # exists to process an opt-out received through another channel
+        # (e.g. the contact form), never to record consent — that can only
+        # come from the person themselves, via the registration form. A
+        # reject rather than a silent no-op, so an admin who tries it learns
+        # why nothing happened instead of assuming the correction worked.
+        if body.marketing_opt_in:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "marketing_opt_in can only be corrected to false here — "
+                    "consent can only be recorded through the registration form."
+                ),
+            )
+        if person.marketing_opt_in:
+            person.marketing_opt_in = False
+            person.marketing_opt_in_at = None
 
     await write_audit_entry(
         db,
@@ -327,6 +341,9 @@ async def merge_people(
     - All reservations and exhibitor contacts linked to the duplicate are
       re-pointed to the canonical person.
     - Blank string fields on the canonical person are filled from the duplicate.
+    - Marketing consent (marketing_opt_in / marketing_opt_in_at) is adopted from
+      the duplicate if the canonical person hasn't already given it — merging
+      away a duplicate must never silently discard a consent record.
     - Roles are merged (union).
     - Unique identity fields (national_register_number, eid_document_number)
       are adopted from the duplicate only if the canonical person lacks them;
@@ -370,6 +387,14 @@ async def merge_people(
     for field in ("visits_per_month",):
         if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
             setattr(canonical, field, getattr(duplicate, field))
+
+    # Marketing consent is one-way (docs/decisions/934-data-retention-and-erasure.md):
+    # adopt the duplicate's opt-in if canonical hasn't already given it, so
+    # deleting the duplicate below can never silently discard a consent
+    # record. Canonical's own consent (and its timestamp) wins if already set.
+    if duplicate.marketing_opt_in and not canonical.marketing_opt_in:
+        canonical.marketing_opt_in = True
+        canonical.marketing_opt_in_at = duplicate.marketing_opt_in_at
 
     # Merge roles (union).
     canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))

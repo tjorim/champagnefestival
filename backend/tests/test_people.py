@@ -848,18 +848,17 @@ async def test_anonymise_person_blanks_identity_fields_and_keeps_registrations(c
 
 @pytest.mark.anyio
 async def test_anonymise_person_keeps_email_when_marketing_opt_in(client):
+    event = await _create_event(client)
     r = await client.post(
-        "/api/people",
-        json={"name": "Opted In Person", "email": "opted@example.com", "phone": "+32470000222"},
-        headers=ADMIN_HEADERS,
+        "/api/registrations",
+        json=_registration_body(
+            event, name="Opted In Person", email="opted@example.com", phone="+32470000222", marketing_opt_in=True
+        ),
     )
-    person_id = r.json()["id"]
-    r = await client.put(
-        f"/api/people/{person_id}",
-        json={"marketing_opt_in": True},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 200
+    assert r.status_code == 201, r.text
+    person_id = r.json()["person_id"]
+
+    r = await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.json()["marketing_opt_in"] is True
 
     r = await client.post(f"/api/people/{person_id}/anonymise", headers=ADMIN_HEADERS)
@@ -890,21 +889,43 @@ async def test_anonymise_person_is_idempotent(client):
 
 
 @pytest.mark.anyio
-async def test_marketing_opt_in_admin_correction_sets_and_clears_timestamp(client):
+async def test_marketing_opt_in_admin_correction_can_only_clear_never_set(client):
+    """Consent can only come from the person themselves via the registration
+    form (docs/decisions/934-data-retention-and-erasure.md) — the admin
+    PersonUpdate path exists purely to process an opt-out received through
+    another channel, never to record consent on someone's behalf."""
     r = await client.post(
         "/api/people",
-        json={"name": "Consent Test", "email": "consent@example.com"},
+        json={"name": "Consent Test", "email": "consent@example.com", "phone": "+32470000666"},
         headers=ADMIN_HEADERS,
     )
     person_id = r.json()["id"]
     assert r.json()["marketing_opt_in"] is False
-    assert r.json()["marketing_opt_in_at"] is None
 
     r = await client.put(f"/api/people/{person_id}", json={"marketing_opt_in": True}, headers=ADMIN_HEADERS)
+    assert r.status_code == 400
+    r = await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
+    assert r.json()["marketing_opt_in"] is False
+
+    # The legitimate channel: the person opts in themselves via registration.
+    event = await _create_event(client)
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(
+            event, name="Consent Test", email="consent@example.com", phone="+32470000666", marketing_opt_in=True
+        ),
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["person_id"] == person_id
+
+    r = await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)
     assert r.json()["marketing_opt_in"] is True
     assert r.json()["marketing_opt_in_at"] is not None
 
+    # Admin correction can clear a real opt-in (e.g. an unsubscribe request
+    # received through the contact form).
     r = await client.put(f"/api/people/{person_id}", json={"marketing_opt_in": False}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
     assert r.json()["marketing_opt_in"] is False
     assert r.json()["marketing_opt_in_at"] is None
 
