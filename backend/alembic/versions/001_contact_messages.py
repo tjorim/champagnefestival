@@ -304,13 +304,18 @@ def upgrade() -> None:
     op.create_table(
         "visitor_sessions",
         sa.Column("id", sa.String(64), primary_key=True),
-        sa.Column("session_hash", sa.String(64), nullable=False, unique=True),
+        sa.Column("session_hash", sa.String(64), nullable=False),
         sa.Column("user_id", sa.String(64), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("hard_expires_at", sa.DateTime(timezone=True), nullable=False),
     )
+    # Matches models.py's session_hash = mapped_column(unique=True, index=True):
+    # a unique *index*, not a unique table constraint (op.create_table's
+    # column-level unique=True would add a constraint instead, drifting from
+    # what SQLAlchemy would autogenerate — caught by `alembic check` in CI).
+    op.create_index("ix_visitor_sessions_session_hash", "visitor_sessions", ["session_hash"], unique=True)
     op.create_index("ix_visitor_sessions_user_id", "visitor_sessions", ["user_id"])
     op.create_index("ix_visitor_sessions_expires_at", "visitor_sessions", ["expires_at"])
     op.create_index("ix_visitor_sessions_hard_expires_at", "visitor_sessions", ["hard_expires_at"])
@@ -320,6 +325,7 @@ def downgrade() -> None:
     op.drop_index("ix_visitor_sessions_hard_expires_at", table_name="visitor_sessions")
     op.drop_index("ix_visitor_sessions_expires_at", table_name="visitor_sessions")
     op.drop_index("ix_visitor_sessions_user_id", table_name="visitor_sessions")
+    op.drop_index("ix_visitor_sessions_session_hash", table_name="visitor_sessions")
     op.drop_table("visitor_sessions")
     op.drop_table("visitor_magic_links")
     op.drop_constraint("ck_users_exactly_one_identity", "users", type_="check")

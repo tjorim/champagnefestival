@@ -215,7 +215,7 @@ async def me_client(db_session):
         yield db_session
 
     async def override_get_current_user():
-        return await get_or_create_user(db_session, VISITOR_CLAIMS["sub"])
+        return await get_or_create_user(db_session, str(VISITOR_CLAIMS["sub"]))
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_claims] = lambda: VISITOR_CLAIMS

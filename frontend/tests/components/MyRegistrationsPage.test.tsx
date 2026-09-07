@@ -483,7 +483,9 @@ describe("MyRegistrationsPage", () => {
     });
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
-    expect(screen.getByText("Signed in until 14/09/2026")).toBeInTheDocument();
+    // toLocaleDateString's exact format is locale-dependent (varies between
+    // dev machines and CI runners); only assert the locale-independent parts.
+    expect(screen.getByText(/^Signed in until /)).toBeInTheDocument();
   });
 
   it("shows the email form directly when there is no existing session", async () => {
